@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT24-046",
+    "colors": "Green Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Gabumon] in name or w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Gabumon] in name or w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Jamming＞ [On Play] [When Digivolving] Suspend 1 of your opponent's Digimon."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "0f15dc5e6c0db29535874b6bcd8e577f3322e5e8d972aeeeedf7d854470858c2",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "4ea77705b75c744f3bf2edf6cfad33a2711c4f86c21f576c602aa23c0ab98695",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-046",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-046"
+}

@@ -30,6 +30,20 @@ pub fn resolve_binding_ref(
     match r {
         CompiledBindingRef::SelfRef => Some(ResolvedBinding::Card(ctx.source_card)),
         CompiledBindingRef::Source => resolve_source_permanent(ctx).map(ResolvedBinding::Permanent),
+        CompiledBindingRef::TopOf(name) => {
+            let ResolvedBinding::Permanent(host) =
+                resolve_binding_ref(&CompiledBindingRef::Named(name.clone()), ctx, bindings)?
+            else {
+                return None;
+            };
+            let player = ctx.game.players.get(host.player as usize)?;
+            let permanent = if host.index == crate::action::space::BREEDING_TARGET as u8 {
+                player.breeding_area.as_ref()?
+            } else {
+                player.battle_area.get(host.index as usize)?
+            };
+            permanent.card_sources.last().map(|card| ResolvedBinding::Card(card.handle()))
+        }
         CompiledBindingRef::Carrier => ctx.source_permanent.map(ResolvedBinding::Permanent),
         CompiledBindingRef::Named(name)
         | CompiledBindingRef::Binding(name)
@@ -46,10 +60,20 @@ pub fn resolve_binding_ref(
             // `IsPermanentExistsOnBattleArea(selectedPermanent)` semantics.
             // See change `fix-played-binding-uses-provenance`.
             if let Some(BindingValue::PlayedPermanent { token, .. }) = bindings.get_ref(name) {
+                if let Some((player, identity)) = bindings.played_identity_pin(name) {
+                    let captured = ctx.game.resolve_digivolve_host_identity(player, identity)?;
+                    return (ctx.game.resolve_token_as_battle_area_top(*token) == Some(captured))
+                        .then_some(ResolvedBinding::Permanent(captured));
+                }
                 return ctx
                     .game
                     .resolve_token_as_battle_area_top(*token)
                     .map(ResolvedBinding::Permanent);
+            }
+            if let Some(BindingValue::HandIndex(player, _)) = bindings.get_ref(name) {
+                if let Some(position) = bindings.resolve_pinned_hand_index(name, &ctx.game.player(*player).hand) {
+                    return position.map(|index| ResolvedBinding::HandIndex(*player, index));
+                }
             }
             // G-DSL-TRASH-INDEX-BINDING-STALE: a pinned trash pick resolves
             // by the card's identity, not the (possibly shifted) index.
@@ -67,6 +91,12 @@ pub fn resolve_binding_ref(
             ctx.game.current_trigger_context.as_ref().and_then(|t| {
                 if let Some(snapshot) = t.deleted_object.as_ref() {
                     return Some(ResolvedBinding::Card(snapshot.top_card));
+                }
+                if t.event_permanent_identity.is_some() {
+                    // A departed subject is gone, even if its physical card was
+                    // replayed or became part of a new DNA Digimon. Do not fall
+                    // back to Card, which card-source verbs can rebind to play.
+                    return t.resolve_event_permanent(ctx.game).map(ResolvedBinding::Permanent);
                 }
                 if let Some(handle) = t.event_permanent {
                     // Primary liveness check: top card of the event permanent
@@ -267,6 +297,13 @@ pub fn resolve_played_permanent_permissive(
 ) -> Option<PermanentHandle> {
     match bindings.get(binding_name)? {
         BindingValue::PlayedPermanent { token, .. } => {
+            if let Some((player, identity)) = bindings.played_identity_pin(binding_name) {
+                let captured = ctx.game.resolve_digivolve_host_identity(player, identity)?;
+                return match ctx.game.resolve_provenance_token(token) {
+                    Some(crate::trigger_context::EventSubject::Permanent(h)) if h == captured => Some(h),
+                    _ => None,
+                };
+            }
             match ctx.game.resolve_provenance_token(token) {
                 Some(crate::trigger_context::EventSubject::Permanent(h)) => Some(h),
                 _ => None,

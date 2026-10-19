@@ -470,7 +470,8 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
     assert_eq!(view.selecting_player, 0);
     assert!(
         view.is_optional,
-        "Partition activation is the player's choice"
+        "Partition activation is the player's choice; kind={:?}, prompt={}, choices={:?}",
+        view.kind, view.prompt, view.effect_choices
     );
     assert!(
         r.game.players[0]
@@ -721,4 +722,68 @@ fn q30_partition_second_play_hook_clones_faithfully_mid_chain() {
         orig_ids, clone_ids,
         "original replays identically to the clone"
     );
+}
+
+#[test]
+fn q26_limbo_replacement_accept_and_decline_are_both_executable_after_clone() {
+    let (mut r, before) = stage_q26_board();
+    if r.pending_selection()
+        .is_some_and(|s| s.kind == digimon_engine::selection::SelectionKind::Material)
+    {
+        assert_eq!(
+            build_action_mask(&r.game, 0)[digimon_engine::action::space::PASS as usize],
+            1.0
+        );
+        r.execute_action(0, digimon_engine::action::space::PASS)
+            .unwrap();
+    }
+    let view = r
+        .pending_selection_view()
+        .expect("BT17 leave replacement must be offered");
+    assert_eq!(
+        view.kind,
+        digimon_engine::selection::SelectionKind::Replacement
+    );
+    assert_eq!(view.selecting_player, 0);
+    let accept = digimon_engine::action::space::REPLACEMENT_ACCEPT;
+    let pass = digimon_engine::action::space::PASS;
+    assert_eq!(build_action_mask(&r.game, 0)[accept as usize], 1.0);
+    assert_eq!(build_action_mask(&r.game, 0)[pass as usize], 1.0);
+    let saved = r.game.clone();
+    r.execute_action(0, accept).unwrap();
+    assert!(
+        r.pending_selection().is_some(),
+        "accept must execute the still-eligible Delay body despite subject being in limbo"
+    );
+    r.auto_resolve().unwrap();
+    assert!(r
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "EX3-014"));
+    assert!(!r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == "EX3-014"));
+    assert_eq!(r.memory(), before);
+    r.game = saved;
+    r.execute_action(0, pass).unwrap();
+    r.auto_resolve().unwrap();
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "EX3-014"),
+        "decline preserves the original legal DigiXros play"
+    );
+    assert!(!r
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "EX3-014"));
 }

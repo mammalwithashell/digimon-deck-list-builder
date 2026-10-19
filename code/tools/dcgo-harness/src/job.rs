@@ -21,8 +21,10 @@ pub struct JobLimits {
     /// Abandon the game past this many turns. Guards against a bot that loops
     /// forever; the partial recording is still filed and still useful.
     pub max_turns: u32,
-    /// Wall-clock budget. The CLI (not Unity) enforces this by age of the
-    /// claimed file, so a hung Unity process is still detected.
+    /// Wall-clock budget from the claim. The player enforces it (JobWatcher
+    /// files the job `failed`, "timeout after Ns", and moves on); the CLI also
+    /// checks the claimed file's age, so a Unity process too hung to file
+    /// anything is still detected.
     pub timeout_seconds: u64,
 }
 

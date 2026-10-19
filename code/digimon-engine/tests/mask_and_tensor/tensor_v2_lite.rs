@@ -292,6 +292,7 @@ fn v2_lite_pending_choice_rows_include_choice_source_kind_timing_and_source_card
         is_optional: false,
         prompt: "choose trigger".to_string(),
         effect_choices: Some(vec![EffectChoiceEntry {
+                count_choice: None,
             label: "choice trigger".to_string(),
             action_id: 1003,
             source_card: Some(choice_source_card),
@@ -349,6 +350,7 @@ fn v2_lite_pending_choice_rows_encode_effect_category_metadata() {
         is_optional: false,
         prompt: "choose trigger".to_string(),
         effect_choices: Some(vec![EffectChoiceEntry {
+                count_choice: None,
             label: "delete trigger".to_string(),
             action_id: 1003,
             source_card: Some(source_card),

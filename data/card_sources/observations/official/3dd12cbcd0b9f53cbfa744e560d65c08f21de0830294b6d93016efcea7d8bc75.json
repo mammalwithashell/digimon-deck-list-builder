@@ -1,0 +1,86 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "P-097",
+    "card_type": "Digimon",
+    "colors": [
+      "Red"
+    ],
+    "dp": 1000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 1000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Zubamon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[On Play] By placing this Digimon as 1 of your other Digimon's bottom digivolution card, reveal the top 3 cards of your deck. Return the revealed cards to the top or bottom of the deck. Then, if you have a Digimon with the [Legend-Arms] trait, gain 2 memory."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[Your Turn] While you have a black or [Legend Arms] trait Digimon, this Digimon gains ＜Raid＞."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Zubamon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522902",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-097_P1.png?260529",
+      "printing_id": "P-097_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] By placing this Digimon as 1 of your other Digimon's bottom digivolution card, reveal the top 3 cards of your deck. Return the revealed cards to the top or bottom of the deck. Then, if you have a Digimon with the [Legend-Arms] trait, gain 2 memory."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] While you have a black or [Legend Arms] trait Digimon, this Digimon gains ＜Raid＞."
+      }
+    ],
+    "type": "Weapon/Legend-Arms"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "3dd12cbcd0b9f53cbfa744e560d65c08f21de0830294b6d93016efcea7d8bc75",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "21a0bd2f0ac472bf751dcaad6c79231ead53bfebf72afc5fdbc64e961501c104",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522902:P-097:P-097_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+}

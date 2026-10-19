@@ -1,0 +1,57 @@
+# qa:Q3414 (2024-03-28) -- "This card's effect reveals 4 cards. If both a green or blue card with
+# [Dramon] in its name and a card with [Examon] in its name are among the cards revealed, can I choose
+# to only add one of them to my hand, and place the remaining card at the bottom of my deck?" ->
+# "No. This card's effect reads 'Add [...] to your hand,' so you must add as many cards to your hand
+# as possible."
+# P0 plays Dracomon EX3-037 on turn 1; the reveal (stack[10..13]) is Coredramon EX3-018 (blue, a
+# [Dramon] name), Homer Yushima BT13-096, Examon BT20-045 and Dracomon BT20-007 (red; not a [Dramon]
+# name). Each bucket has exactly one candidate, so the only question is whether both picks are forced:
+# both are authored as plain, non-declinable picks and the end row must show BOTH EX3-018 and BT20-045
+# in P0's hand. DCGO EX3_037.cs: two SimplifiedSelectCardConditionClass entries, maxCount 1 each,
+# mutualConditions: true; RevealLibrary.cs asks the [Examon] prompt with canNoSelect false because the
+# first pick (Coredramon) does not also satisfy the second condition. Ours (EX3-037.yaml reveal_search,
+# two buckets max 1, no optional) parks two mandatory RevealBucket picks.
+# Measured intermediate hand difference: DCGO's step 3 already includes EX3-018;
+# ours collects both buckets before moving the selected cards to hand. Both
+# requested selection_can_decline observations are false, and later rows agree.
+# Independent triage evidence is retained in interaction-review/triage-Q3414.
+# Rule 15-15-10-1 alone does not establish simultaneous zone movement.
+# Step 4: the two remaining cards go to the bottom in any order -- one DCGO multi-pick row; ours asks
+# the first position then a singleton; the single 2-id `cards:` row answers both (as in the confirmed
+# EX3-037-effect1.yaml).
+# Live verdict remains diverged; the independently encoded Q3414 ruling agrees.
+card: EX3-037
+clause: EX3-037#effect#1
+covers: [EX3-037#effect#1]
+interaction: { id: "qa:Q3414", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: EX3-037, BT23-047 x3, BT20-044 | security bottom->top: BT20-027 x3, BT20-044 x2 | deck top (the reveal): EX3-018, BT13-096, BT20-045, BT20-007 | then BT20-093
+    stack: [EX3-037, BT23-047, BT23-047, BT23-047, BT20-044, BT20-027, BT20-027, BT20-027, BT20-044, BT20-044, EX3-018, BT13-096, BT20-045, BT20-007, BT20-093]
+    rest: examon-core-fixture
+  p1:
+    # hand: BT20-027, BT23-047 x3, BT20-044 | security bottom->top: BT20-027 x2, BT20-044 x2, BT13-096 | draw: BT13-096
+    stack: [BT20-027, BT23-047, BT23-047, BT23-047, BT20-044, BT20-027, BT20-027, BT20-044, BT20-044, BT13-096, BT13-096]
+    rest: examon-core-fixture
+steps:
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+# [On Play]: reveal EX3-018, BT13-096, BT20-045, BT20-007.
+- { actor: 0, do: { play: { card: EX3-037, from: hand } }, expect: { prompt: main_phase } }
+# Green/blue-[Dramon] bucket: Coredramon EX3-018 (mandatory).
+- { actor: 0, do: { select: { cards: [EX3-018] } }, expect: { prompt: SelectCardEffect } }
+# [Examon] bucket: Examon BT20-045 (mandatory -- the ruling: both must be added). DCGO's row here already holds EX3-018 in hand: the documented quirk.
+- { actor: 0, do: { select: { cards: [BT20-045] } }, expect: { prompt: SelectCardEffect } }
+# The rest, bottom of the deck in any order (2 remaining).
+- { actor: 0, do: { select: { cards: [BT13-096, BT20-007] } } }
+# Memory -3 handed the turn to P1; this row is the post-resolution observation: both EX3-018 and BT20-045 in P0's hand.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q3414
+  assert:
+  - at: 2
+    that:
+      p0.selection_can_decline: false
+  - at: 3
+    that:
+      p0.selection_can_decline: false

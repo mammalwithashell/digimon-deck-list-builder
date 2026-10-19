@@ -1,0 +1,109 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Blue"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Bulucomon",
+      "dp": 2000,
+      "effect_description_eng": "[Security] At the end of the battle, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, add this card to its owner's hand.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "cost": 0,
+          "from_level": 3
+        }
+      ],
+      "form_eng": [
+        "Rookie"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 3,
+      "play_cost": 3,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Mini Dragon"
+      ]
+    },
+    "card_id": "P-067",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Blue",
+        "cost": 0,
+        "derived": false,
+        "level": 3,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": 2000,
+        "effect_text": "[Security] At the end of the battle, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, add this card to its owner's hand.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 3,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Blue",
+      "color2": null,
+      "date_added": "2025-11-25 15:15:54",
+      "digi_type": "Mini Dragon",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 2000,
+      "evolution_color": "Blue",
+      "evolution_cost": 0,
+      "evolution_level": 3,
+      "form": "Rookie",
+      "id": "P-067",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Security] At the end of the battle, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, add this card to its owner's hand.",
+      "name": "Bulucomon",
+      "play_cost": 3,
+      "pretty_url": "bulucomon-p-067",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-12: Limited Card Pack",
+        "RB-01: Resurgence Booster"
+      ],
+      "source_effect": "",
+      "stage": "Rookie",
+      "tcgplayer_id": 533167,
+      "tcgplayer_name": "Bulucomon - P-067 (Championship 2023 Gold Card Set)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "01514e8426b1706fbbe9c3a45d4a05d7ce7ad25e6f738ba2cd151afab3184698",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "P-067#3",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

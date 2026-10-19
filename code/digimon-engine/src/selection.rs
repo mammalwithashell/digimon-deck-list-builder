@@ -267,6 +267,8 @@ pub struct EffectChoiceEntry {
     /// two engines (see the exam's `ordinal:`).
     pub keyword: Option<crate::enums::Keyword>,
     pub observation_metadata: crate::effect::EffectObservationMetadata,
+    /// Dedicated count/page semantics. Never inferred from label or action ID.
+    pub count_choice: Option<crate::count_choice::CountChoiceMetadata>,
 }
 
 /// A parked selection. Installed by `EffectContext::select_*` helpers and the
@@ -751,15 +753,15 @@ pub enum TriggerSource {
     /// (BT25-020 Marsmon; G-DSL-BATTLE-WINNER-BOARDWIDE). Scans EVERY player's
     /// battle area — the winner-owner/trait gate lives in the observer's
     /// `active_when:`. `winner` is `None` on a tie (mutual destruction), which
-    /// has no winner. Fired only for Digimon-vs-Digimon battles (direct player
-    /// attacks route through the security loop and never fire `EndOfBattle`).
+    /// has no winner. Security Digimon battles also fire this event; a winning
+    /// Security Digimon has no permanent handle, so `winner` is `None` there.
+    /// An attack that performs no battle (including a direct attack against
+    /// a player with zero security) does not fire `EndOfBattle`.
     BattleResolved {
         winner: Option<PermanentHandle>,
-        /// The combatant that survived while its battle opponent was actually
-        /// deleted (also on a tie whose survivor was protected). `None` when
-        /// the loser's deletion was prevented or nobody survived.
-        /// G-DSL-BATTLE-DELETER.
-        deleter: Option<PermanentHandle>,
+        /// Immutable identities of every combatant that actually deleted
+        /// its battle opponent, including both sides of mutual deletion.
+        deleters: Vec<crate::trigger_context::BattleCombatantSnapshot>,
     },
     /// `OnDiscardHand` observer fan-out fired after an EFFECT trashes one or
     /// more cards from a player's hand (G-ENGINE-ON-DISCARD-HAND). Scans EVERY
@@ -864,6 +866,7 @@ pub struct PendingEffectSecurityRemoval {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionSubtype {
     Standard,
+    OrdinaryField,
     Delay(crate::enums::DelayTrigger),
     Link,
     Training,
@@ -955,12 +958,25 @@ pub enum OptionResolutionPhase {
 ///
 /// Official rule 13-1-7 and Q6813: immediate Security, then captured
 /// simultaneous check/removal observers, then security battle and disposal.
+/// The security battle and all of its triggered/scheduled processing finish
+/// before check disposal or the next check (general_rule.pdf 13-1-7 / 14-2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SecurityPhase {
     /// Enqueue + drain `SecuritySkill` effects on the revealed card.
     SecuritySkillDrain,
     /// Digimon-vs-security DP battle (skipped for non-Digimon security).
     BattleResolved,
+    /// Finish deletion/replacement processing, then notify battle observers
+    /// before disposing of the revealed card or starting another check.
+    /// The comparison is captured once; a paused effect must not rerun it.
+    EndOfSecurityBattleDrain {
+        attacker: PermanentHandle,
+        attacker_top: Option<CardHandle>,
+        winner: Option<PermanentHandle>,
+    },
+    /// Scheduled battle effects wait for ordinary battle observers and have
+    /// their own one-shot enqueue guard across parked choices.
+    EndOfSecurityBattleScheduledDrain,
     /// Drain the occurrence-captured check/removal batch and derived effects,
     /// before the security DP battle. No rescan occurs here.
     OnSecurityCheckDrain,
@@ -1086,11 +1102,14 @@ pub enum AttackTarget {
 
 /// In-flight attack. Set by `begin_attack`, advanced by
 /// `advance_pending_attack`, cleared by `cleanup_attack`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PendingAttack {
     pub attacker: PermanentHandle,
     pub original_target: AttackTarget,
     pub effective_target: AttackTarget,
+    /// DNA made the effective target a new Digimon despite retaining its slot.
+    /// A later explicit redirect/block/Raid selection installs a new live target.
+    pub effective_target_removed_by_dna: bool,
     pub is_blocked: bool,
     pub blocker: Option<PermanentHandle>,
     pub is_vortex: bool,
@@ -1108,14 +1127,13 @@ pub struct PendingAttack {
     /// Phase 9: set by a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
     /// replacement whose process calls `rctx.cancel()`. `advance_pending_attack`
     /// detects this and short-circuits directly to `Cleanup`. EndOfAttack
-    /// still fires in cleanup; EndOfBattle does NOT (no battle occurred).
+    /// still fires in cleanup; no further battle occurs. An effect battle
+    /// already completed before the cancellation retains its own EndOfBattle.
     pub cancelled: bool,
-    /// Phase 9: set to `true` by `resolve_battle` once a Digimon-vs-Digimon
-    /// DP comparison has run. Used by cleanup to decide whether EndOfBattle
-    /// should fire — Phase 1 fires it unconditionally inside `resolve_battle`,
-    /// so this flag is currently informational / test-visible only. Player
-    /// security attacks leave this `false`, matching the Python semantics
-    /// where EndOfBattle only fires for Digimon-vs-Digimon battles.
+    /// Set by `resolve_battle` when two battle-area Digimon compare stats.
+    /// Informational / test-visible; this does not gate EndOfBattle emission.
+    /// Security battles leave this field false and emit their own EndOfBattle
+    /// through the resumable security-resolution phases.
     pub battle_occurred: bool,
     /// Set by `resolve_battle` when the attack's own Digimon-vs-Digimon
     /// battle (attacker == `pending_attack.attacker`, defender ==
@@ -1127,6 +1145,12 @@ pub struct PendingAttack {
     /// shifts down into its slot, so re-probing `effective_target` with
     /// `handle_valid` misreads the bystander as a surviving defender.
     pub battle_defender_deleted: bool,
+    /// A battle caused by an effect earned Piercing for this attacking Digimon.
+    /// Processing waits until immediately before the attack ends (16-6-4).
+    pub effect_battle_piercing_pending: bool,
+    /// Only one transition to security checking is allowed during one attack,
+    /// including ordinary checks and any number of Piercing activations.
+    pub security_check_started: bool,
     /// Phase to return to once the attack finishes (`Main` for normal
     /// attacks, `EndOfTurnAction` for end-of-turn vortex attacks, etc.).
     pub return_phase: GamePhase,
@@ -1138,6 +1162,38 @@ pub struct PendingAttack {
     /// otherwise recurse from a counter body's side-effects. Spec §5.4.
     pub counter_depth: u8,
 }
+
+// PendingAttack participates in both legacy-v2 and v3 verification via Debug.
+// Keep the exact former derived representation when the new state is false;
+// true is an explicit suffix so distinct future behavior cannot hash equally.
+impl std::fmt::Debug for PendingAttack {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Exhaustive destructuring makes future state additions a review point.
+        let Self { attacker, original_target, effective_target, effective_target_removed_by_dna, is_blocked, blocker, is_vortex, is_overclock, declaration_committed, cancelled, battle_occurred, battle_defender_deleted, effect_battle_piercing_pending, security_check_started, return_phase, state, counter_depth } = self;
+        let mut debug = f.debug_struct("PendingAttack");
+        debug.field("attacker", attacker);
+        debug.field("original_target", original_target);
+        debug.field("effective_target", effective_target);
+        debug.field("is_blocked", is_blocked);
+        debug.field("blocker", blocker);
+        debug.field("is_vortex", is_vortex);
+        debug.field("is_overclock", is_overclock);
+        debug.field("declaration_committed", declaration_committed);
+        debug.field("cancelled", cancelled);
+        debug.field("battle_occurred", battle_occurred);
+        debug.field("battle_defender_deleted", battle_defender_deleted);
+        debug.field("effect_battle_piercing_pending", effect_battle_piercing_pending);
+        debug.field("security_check_started", security_check_started);
+        debug.field("return_phase", return_phase);
+        debug.field("state", state);
+        debug.field("counter_depth", counter_depth);
+        if *effective_target_removed_by_dna {
+            debug.field("effective_target_removed_by_dna", effective_target_removed_by_dna);
+        }
+        debug.finish()
+    }
+}
+
 
 /// Helper type alias so callers can spell `Game.effect_queue` without
 /// importing `std::collections::VecDeque` every time.

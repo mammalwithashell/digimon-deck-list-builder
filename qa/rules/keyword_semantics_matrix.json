@@ -248,7 +248,7 @@
       "display": "<Decoy (X)>",
       "kind": "optional_cost_then_mandatory",
       "type_when": "Immediate; another of your (X) Digimon would be deleted by opp effect",
-      "semantics": "*By deleting this Digimon* (optional), prevent that deletion (then mandatory); only one of simultaneous deletions; can't if this is itself deleted",
+      "semantics": "*By deleting this Digimon* (optional), prevent that deletion (then mandatory); only one of simultaneous deletions; may pay even when this Digimon is also threatened in that deletion (official Rule Q&A Q228); an already deleted carrier cannot activate",
       "rule": "16-17",
       "source": "rules",
       "optionality": "optional_cost_then_mandatory",

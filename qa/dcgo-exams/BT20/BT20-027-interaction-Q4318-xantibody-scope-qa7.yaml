@@ -1,0 +1,199 @@
+card: BT20-027
+clause: BT20-027#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-025
+    - BT20-027
+    - EX3-074
+    - BT20-042
+    - BT23-047
+    - BT20-044
+    - BT20-044
+    - BT20-044
+    - BT23-047
+    - BT23-047
+    - BT13-096
+    - BT13-096
+    rest: Q4318-private-p0
+  p1:
+    stack:
+    - BT20-025
+    - ST1-16
+    - BT23-047
+    - BT23-047
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT20-044
+    - BT20-027
+    - BT20-027
+    - BT13-096
+    - BT13-096
+    rest: Q4318-private-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-025
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-027
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 3
+  expect:
+    prompt: SelectCountEffect
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-025
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX3-074
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+  expect:
+    prompt: SelectHandEffect
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-16
+      from: hand.0
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.1
+- actor: 0
+  do:
+    select:
+      'yes': true
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+interaction:
+  id: qa:Q4318
+  source: qa
+  kind: positive
+expect_ruling:
+  q_id: Q4318
+  assert:
+  - at: 22
+    that:
+      p0.field:
+      - card_id: EX3-074
+        sources:
+        - BT20-025
+        - BT20-027
+      - card_id: BT20-042
+  - at: 24
+    that:
+      p0.field:
+      - card_id: EX3-074
+        sources:
+        - BT20-025
+        - BT20-027
+      - card_id: BT20-042
+      p0.trash: []

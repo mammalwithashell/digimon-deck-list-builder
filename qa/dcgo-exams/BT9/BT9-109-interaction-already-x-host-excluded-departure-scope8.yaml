@@ -1,0 +1,106 @@
+card: BT9-109
+clause: BT9-109#effect#1
+interaction:
+  id: probe:BT9-109#effect#1:scope:neg
+  source: probe
+  kind: negative
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-03
+    - ST1-02
+    - BT9-109
+    - BT9-109
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: BT9-109-interaction-already-x-host-excluded-departure-scope8-p0
+  p1:
+    stack:
+    - ST1-11
+    - BT1-090
+    - BT1-090
+    - ST1-06
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: BT9-109-interaction-already-x-host-excluded-departure-scope8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT9-109
+      from: hand.1
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 0
+  do:
+    play:
+      card: BT9-109
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 8
+  that:
+    memory: 9
+    p0.field:
+    - card_id: ST1-03
+      sources:
+      - BT9-109
+    p0.trash:
+    - BT9-109

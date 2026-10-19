@@ -182,7 +182,11 @@ fn bt3_103_compiles_as_option_card() {
         CompiledCardKind::Option,
         "must be an Option card"
     );
-    assert_eq!(card.cost, Some(4), "play cost must be 4");
+    assert_eq!(
+        card.cost,
+        Some(0),
+        "official observation and card image print cost 0"
+    );
 
     // Color is not stored in CompiledCard but we can verify via the raw
     // card registry instead.
@@ -522,7 +526,7 @@ fn bt3_103_cost_reduction_does_not_fire_on_non_green_digimon() {
 }
 
 /// The suspend cost is a real player choice: declining the prompt keeps the
-/// full digivolution cost and leaves the reducer armed
+/// full digivolution cost and consumes the next-digivolution reducer
 /// (`G-PAY-COST-SELECT-ARBITRARY-SUSPEND`).
 #[test]
 fn bt3_103_cost_reduction_requires_player_to_suspend_one_digimon() {
@@ -547,10 +551,9 @@ fn bt3_103_cost_reduction_requires_player_to_suspend_one_digimon() {
         memory_before - 4,
         "declining keeps the full digivolution cost (no suspend, no -5)"
     );
-    assert_eq!(
-        r.game.player_digivolve_cost_reducers.len(),
-        1,
-        "a declined prompt must leave the single-fire reducer armed"
+    assert!(
+        r.game.player_digivolve_cost_reducers.is_empty(),
+        "next digivolution consumes the reducer even when declined (DCGO AfterPayCost removal)"
     );
 }
 
@@ -606,4 +609,52 @@ fn bt3_103_cost_reduction_fires_at_most_once_per_play() {
         memory_before - 4,
         "second digivolution pays the full cost — the reducer is one-shot"
     );
+}
+
+/// The next qualifying evolution consumes HPD even if all Digimon are
+/// suspended and its optional cost cannot be paid. DCGO's removal observer
+/// is independent of CanActivateCondition1.
+#[test]
+fn bt3_103_unpayable_suspend_cost_consumes_next_digivolution() {
+    let (mut r, green_base, red_base) = digivolve_scenario();
+    r.game.activate_hand_main(0, 0);
+    r.game.players[0].battle_area[green_base].is_suspended = true;
+    r.game.players[0].battle_area[red_base].is_suspended = true;
+    let before = r.memory();
+    assert!(r
+        .game
+        .digivolve_from_hand(0, 1, green_base, PlaySource::ByDigivolve));
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.memory(), before - 4);
+    assert!(
+        r.game.player_digivolve_cost_reducers.is_empty(),
+        "unpayable optional cost must not save a next-digivolution effect for later"
+    );
+}
+
+/// Suspended friendly Digimon cannot pay; the remaining unsuspended ally
+/// is exposed as an explicit choice, including when it is not green.
+#[test]
+fn bt3_103_suspend_choice_excludes_suspended_source_and_allows_red_ally() {
+    let (mut r, green_base, red_base) = digivolve_scenario();
+    r.game.players[0].battle_area[green_base].is_suspended = true;
+    r.game.activate_hand_main(0, 0);
+    r.game
+        .digivolve_from_hand(0, 1, green_base, PlaySource::ByDigivolve);
+    let gate = r.game.pending_selection.as_ref().unwrap();
+    assert!(gate.is_optional);
+    assert_eq!(gate.valid_action_ids, vec![HAND_EFFECT_START]);
+    r.game.resolve_selection(0, HAND_EFFECT_START).unwrap();
+    let prompt = r.game.pending_selection.as_ref().unwrap();
+    assert_eq!(
+        prompt.valid_action_ids,
+        vec![encode_attack(0, red_base as u16)]
+    );
+    assert!(!prompt
+        .valid_action_ids
+        .contains(&encode_attack(0, green_base as u16)));
+    r.game
+        .resolve_selection(0, encode_attack(0, red_base as u16))
+        .unwrap();
+    assert!(r.game.players[0].battle_area[red_base].is_suspended);
 }

@@ -1,0 +1,42 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "P-117",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Your Turn][Once Per Turn] When this Digimon would digivolve into a card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] If this Digimon has 2 or more colors, ＜Draw 1＞."
+      }
+    ],
+    "type": "Mini Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "c728d2e7f6cc2a6ea53669deac72023e207d265c857167013dde2af5c730a743",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "4cffe6f68ef44f18a556ce4707e8b4a44f18d13be49bb74108f9db8be780cae2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:P-117",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/P-117"
+}

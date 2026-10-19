@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT25-012",
+    "colors": "Red Green",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Champion",
+    "play_cost": "5",
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] 1 of your Digimon with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits or the [Shaman] or [TS] trait gains ＜Raid＞ and +3000 DP for the turn."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] This Digimon gets +1000 DP."
+      }
+    ],
+    "type": "Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "a721959b08bdc7b362c06e57979a8815dacdebdf494c6a7d30add190060c48b2",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "11801d9a0901fe0bfa9d97ae07b761886904a61a082dc80ad8c781bef22af044",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-012",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-012"
+}

@@ -159,8 +159,8 @@ fn revealed_card_subject_controller_is_not_fallback_player_zero() {
         .expect("optional replacement prompt is installed");
     assert_eq!(selection.kind, SelectionKind::Replacement);
     assert_eq!(
-        selection.selecting_player, 1,
-        "revealed card owner chooses the optional replacement"
+        selection.selecting_player, 0,
+        "the P0 replacement effect controller chooses; revealed subject ownership remains P1"
     );
 }
 

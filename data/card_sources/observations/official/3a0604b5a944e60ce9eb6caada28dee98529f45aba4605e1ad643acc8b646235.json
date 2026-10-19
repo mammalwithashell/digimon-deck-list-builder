@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT13-112",
+    "colors": "White",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "14000",
+    "form": "Mega",
+    "play_cost": "14",
+    "qa": [
+      "No, this effect plays 1 of each Digimon with the [Royal Knight] trait and different names from among the digivolution cards. For example, if the target digivolution cards are [Omnimon], [Alphamon], [Alphamon], [Gallantmon], and [Gallantmon (X Antibody)], you would leave 1 [Alphamon] since it has the same name, then play[Omnimon], [Alphamon], [Gallantmon], and [Gallantmon (X Antibody)]. Note that the [Omnimon] where this effect activated isn't a digivolution card, therefore you can use this effect to play 1 [Omnimon] from among the target cards."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play][When Digivolving] You may delete 1 of your opponent's Digimon, or play 1 of each [Royal Knight] trait Digimon with different names from the digivolution cards of your Digimon in the breeding area without paying the costs. If this effect played, trash your Digimon in the breeding area, and all your Digimon gain ＜Rush＞ for the turn."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3a0604b5a944e60ce9eb6caada28dee98529f45aba4605e1ad643acc8b646235",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c3209842b37bd13f57edc0964c72aee9900f6d69373845250b72da8daa6da395",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT13-112",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT13-112"
+}

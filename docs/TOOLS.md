@@ -602,7 +602,9 @@ Exported files are consumed by:
 - **Hosted API / training**: `OnnxMlpPolicy` / `OnnxLstmPolicy` in `code/digimon_gym/inference/onnx_policy.py`; served via the `/games/models` API route.
 - **Desktop app**: `code/digimon-engine/src/inference/` loads the same `.onnx` at runtime after it's downloaded from the hosted manifest and cached under `dirs::data_dir()/digimon-tcg/models/<id>/policy.onnx`.
 
-Newly-exported models reach desktop users by being published to the admin model manifest (`/models/manifest.json`). The export sidecar records `observation_profile` and `tensor_layout_hash` for tools, loaders, and workflows that consume that metadata. The hosted manifest / desktop publication path currently records and validates `tensor_size`, `action_space_size`, and the file hash; rejecting profile or layout-hash mismatches from the manifest is future work unless implemented in that publication path.
+Newly exported models reach desktop users through the admin model manifest (`/models/manifest.json`). Training checkpoints retain their six-field `digimon_contract`: `observation_profile`, `tensor_version`, `feature_schema_version`, `tensor_size`, `tensor_layout_hash`, and `action_space_size`. Export verifies that training contract against the selected live Rust profile before embedding it in ONNX custom metadata and writing the `.onnx.meta.json` sidecar. Missing or stale checkpoint metadata requires retraining or a separately justified migration; adding current metadata to an old checkpoint is not a supported conversion.
+
+Admin upload requires the matching exported sidecar. The server compares the declared tuple, the artifact's embedded tuple, and the live registry at confirmation/publication; inference also validates actual rank-2 float32 observation/logit dimensions. Desktop download/use requires the engine's exact default profile contract. Same-shaped older schemas are incompatible. Hosted deployments must apply Alembic revision `20261011_0022` before using the added manifest fields; existing rows retain null metadata and remain incompatible until an authentic matching artifact is published.
 
 ---
 

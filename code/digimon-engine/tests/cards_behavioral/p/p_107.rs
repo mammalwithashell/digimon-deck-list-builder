@@ -87,6 +87,25 @@ fn card_ids_in_hand(runner: &DebugRunner, player: usize) -> Vec<String> {
 
 // ─── Structural tests ────────────────────────────────────────────────────────
 
+// Body-only fixtures model an Option already placed by its printed Main effect.
+// Keep the real placing turn: this is not permission to activate Delay early.
+fn place_delayed_fixture(
+    runner: &mut DebugRunner,
+    owner: u8,
+    card: &str,
+) -> digimon_engine::permanent::PermanentHandle {
+    let handle = runner.place_on_field(owner, card, Some(owner as u16));
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.player_mut(owner).battle_area[handle.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn,
+        };
+    handle
+}
+
 #[test]
 fn p_107_yaml_parses_and_compiles() {
     let _runner = p_107_runner();
@@ -416,8 +435,8 @@ fn p_107_delay_body_digivolves_into_black_with_cost_minus_2() {
         .memory(10)
         .start();
 
-    let delay_perm = runner.place_on_field(0, "P-107", Some(0));
     let carrier = runner.place_on_field(0, "BLACK-BASE", Some(0));
+    let delay_perm = place_delayed_fixture(&mut runner, 0, "P-107");
 
     runner.game.enqueue_triggered(
         EffectTiming::DelayEffect,
@@ -476,8 +495,8 @@ fn p_107_delay_target_pick_can_be_declined_with_pass() {
         .memory(10)
         .start();
 
-    let delay_perm = runner.place_on_field(0, "P-107", Some(0));
     let carrier = runner.place_on_field(0, "BLACK-BASE", Some(0));
+    let delay_perm = place_delayed_fixture(&mut runner, 0, "P-107");
 
     runner.game.enqueue_triggered(
         EffectTiming::DelayEffect,

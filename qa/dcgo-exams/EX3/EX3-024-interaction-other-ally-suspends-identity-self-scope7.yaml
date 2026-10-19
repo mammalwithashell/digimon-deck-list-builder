@@ -1,0 +1,173 @@
+card: EX3-024
+clause: EX3-024#effect#1
+interaction:
+  id: probe:EX3-024#effect#1:scope:neg
+  source: probe
+  kind: negative
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-03
+    - EX3-024
+    - BT1-090
+    - ST2-11
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX3-024-interaction-other-ally-suspends-identity-self-scope7-v2-p0-suspended-host-v5
+  p1:
+    stack:
+    - ST1-11
+    - BT20-042
+    - ST1-03
+    - BT1-090
+    - BT3-093
+    - ST1-06
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST3-04
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX3-024-interaction-other-ally-suspends-identity-self-scope7-v2-p1-suspended-host-v5
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-024
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.1
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    attack:
+      attacker: field.1
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    play:
+      card: ST2-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.2
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 17
+  that:
+    memory: -2
+    p0.field:
+    - card_id: ST1-03
+      suspended: true
+    - card_id: EX3-024
+      suspended: true
+    - card_id: ST2-11
+      suspended: false
+    p1.field:
+    - card_id: ST1-11
+      suspended: false
+    - card_id: BT20-042
+      suspended: false
+    p1.security: 3
+    p1.trash:
+    - ST3-04
+    - ST1-05

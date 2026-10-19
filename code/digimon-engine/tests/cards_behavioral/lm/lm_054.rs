@@ -494,6 +494,18 @@ fn lm_054_delay_body_selects_target_then_yellow_or_black_evolution_card() {
         .memory(5)
         .start();
     let delay_perm = runner.place_on_field(0, "LM-054", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[delay_perm.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn,
+        };
+
     runner.place_on_field(0, "BASE", Some(0));
 
     runner.game.enqueue_triggered(

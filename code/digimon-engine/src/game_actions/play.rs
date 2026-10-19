@@ -22,6 +22,40 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
+    /// Card-aware PLAY prohibition across origin zones and costs. The controller
+    /// is the native actor or causing effect controller, not the destination.
+    /// Consult printed DP, never battle-area DP modifiers.
+    pub(crate) fn card_data_play_is_prohibited(&self, controller: PlayerId, data: &CardData) -> bool {
+        if !matches!(data.card_kind, CardKind::Digimon | CardKind::Dual | CardKind::Token | CardKind::DigiEgg) {
+            return false;
+        }
+        let Some(dp) = data.digimon_dp() else { return false; };
+        self.modifiers.player_max_modifier_value(controller, ModifierType::CannotPlayDigimonWithDPAtMost)
+            .is_some_and(|ceiling| i64::from(dp) <= i64::from(ceiling))
+    }
+
+    pub(crate) fn card_play_is_prohibited(&self, controller: PlayerId, card: &CardSource) -> bool {
+        self.card_data.get(card.data_index)
+            .is_none_or(|data| self.card_data_play_is_prohibited(controller, data))
+    }
+
+    /// Effect-play locks restrict the causing effect's controller, regardless of
+    /// which player chooses the card, owns it, or receives the new permanent.
+    /// Direct Game API callers without an executing effect retain the convention
+    /// that the destination player is also the acting player. EffectContext callers
+    /// explicitly scope their controller before reaching this gate.
+    pub(crate) fn effect_play_is_prohibited(&self, destination: PlayerId, kind: CardKind) -> bool {
+        let controller = self.effect_source_player.unwrap_or(destination);
+        let modifier = match kind {
+            CardKind::Digimon | CardKind::Dual | CardKind::Token => {
+                ModifierType::CannotPlayDigimonByEffect
+            }
+            CardKind::Tamer => ModifierType::CannotPlayTamerByEffect,
+            _ => return false,
+        };
+        self.modifiers.player_has(controller, modifier)
+    }
+
     /// Play a card from hand to field for a player, paying the printed cost.
     ///
     /// Delegates to [`Self::play_from_hand_with_cost`] with
@@ -138,25 +172,13 @@ impl Game {
             card.card_kind(&self.card_data)
         };
 
-        // Phase 6: CannotPlayDigimonByEffect — when source is ByEffect and the
-        // card is a Digimon, gate on the player-scoped modifier.
-        if source == PlaySource::ByEffect
-            && card_kind == CardKind::Digimon
-            && self
-                .modifiers
-                .player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
-        {
+        if source == PlaySource::ByEffect && self.effect_play_is_prohibited(player_id, card_kind) {
             return None;
         }
-
-        // Phase 6: CannotPlayTamerByEffect — when source is ByEffect and the
-        // card is a Tamer, gate on the player-scoped modifier.
-        if source == PlaySource::ByEffect
-            && card_kind == CardKind::Tamer
-            && self
-                .modifiers
-                .player_has(player_id, ModifierType::CannotPlayTamerByEffect)
-        {
+        let controller = if source == PlaySource::ByEffect {
+            self.effect_source_player.unwrap_or(player_id)
+        } else { player_id };
+        if self.card_play_is_prohibited(controller, &self.player(player_id).trash[trash_index]) {
             return None;
         }
 
@@ -309,6 +331,23 @@ impl Game {
         self.exit_deferred_drain_and_flush();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
+    /// Enqueue one explicitly simultaneous play event after all physical entries.
+    pub(crate) fn fire_simultaneous_play_event_triggers(
+        &mut self, entries: &[(PlayerId, u64, bool, bool, Option<(PlayerId, EffectSourceKind)>)],
+    ) {
+        self.enter_deferred_drain();
+        let first = self.effect_queue.len();
+        let previous_suppressor = self.on_play_suppressor.take();
+        for &(player, identity, by_effect, suppress, suppressor) in entries {
+            let Some(index) = self.player(player).battle_area.iter().position(|p| p.battle_identity == Some(identity)) else { continue; };
+            self.on_play_suppressor = suppressor;
+            self.fire_play_event_triggers(player, index, by_effect, suppress);
+        }
+        self.on_play_suppressor = previous_suppressor;
+        self.collapse_simultaneous_play_event_batch(first);
+        self.exit_deferred_drain_and_flush();
     }
 
     /// Activate a `[Main]` effect on the card at `player_id`'s hand slot

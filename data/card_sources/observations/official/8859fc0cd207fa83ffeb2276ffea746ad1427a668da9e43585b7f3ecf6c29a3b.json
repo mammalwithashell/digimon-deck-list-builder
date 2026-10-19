@@ -1,0 +1,92 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT6-024",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue"
+    ],
+    "dp": 5000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "cost": 2,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": 5000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "Mojyamon",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Your Turn] While your opponent has no Digimon with digivolution cards in play, this Digimon gains ＜Jamming＞. (This Digimon can't be deleted in battles against Security Digimon.)"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] Trash 1 digivolution card from the bottom of 1 of your opponent's Digimon."
+          }
+        ]
+      }
+    ],
+    "form": "Champion",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 4,
+    "name": "Mojyamon",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522005",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT6-024.png?260529",
+      "printing_id": "BT6-024"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, it's met.",
+        "date": "Mar. 13, 2026",
+        "number": "Q1417",
+        "question": "Is a \"while your opponent has no Digimon with XX\" condition also met when my opponent has no Digimon?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Your Turn] While your opponent has no Digimon with digivolution cards in play, this Digimon gains ＜Jamming＞. (This Digimon can't be deleted in battles against Security Digimon.)"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] Trash 1 digivolution card from the bottom of 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Elusive Beast"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "8859fc0cd207fa83ffeb2276ffea746ad1427a668da9e43585b7f3ecf6c29a3b",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "dd830f0089f3061f2de474c3ddc7082d60159778c8b2db782f234273b6c69aa8",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522005:BT6-024:BT6-024",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522005"
+}

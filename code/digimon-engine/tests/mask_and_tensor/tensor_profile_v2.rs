@@ -15,7 +15,7 @@ fn standard_lite_v2_layout_matches_spec() {
     // Task S1.4: PERM_MAX_SOURCES 11 -> 12 grows each permanent slot by 3
     // floats (96 -> 99); permanent_slots 2880 -> 2970, tensor_size
     // 8320 -> 8410, and every section after permanent_slots shifts +90.
-    assert_eq!(profile.feature_schema_version, "standard_lite_v2.2");
+    assert_eq!(profile.feature_schema_version, "standard_lite_v2.3");
     assert_eq!(profile.tensor_size, 8410);
     assert_eq!(profile.card_id_slot_count, 572);
     assert_eq!(profile.scalar_slot_count, 7838);

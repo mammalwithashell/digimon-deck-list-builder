@@ -1,0 +1,51 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT22-013",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[Greymon] in name or w/[CS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[Greymon] in name or w/[CS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Main] If you have [Nokia Shiramine], 1 of your [Agumon] digivolves into this card for a digivolution cost of 6, ignoring digivolution requirements. [When Digivolving] Activate 1 of the effects below: ・1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring digivolution requirements and without paying the cost. ・Delete 1 of your opponent's Digimon with the lowest DP."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, trash your opponent's top security card."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "{Hand} [Main] If you have [Nokia Shiramine], 1 of your [Agumon] digivolves into this card for a digivolution cost of 6, ignoring digivolution requirements. [When Digivolving] Activate 1 of the effects below: ・1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring digivolution requirements and without paying the cost. ・Delete 1 of your opponent's Digimon with the lowest DP."
+      }
+    ],
+    "type": "Dragonkin/CS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "b0be08d8a0550004c50b4dfb000adb08982195449f27ab5694c8dc5f06fc15de",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "b9b4e5fad235f7b7e976a234353f8ff4cb43ca26037d4de8b82dfe1e9cd2f22b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-013",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-013"
+}

@@ -1,0 +1,109 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Green"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Pomumon",
+      "dp": 2000,
+      "effect_description_eng": "[Your Turn] When an effect suspends this Digimon, suspend 1 of your opponent's Digimon.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Green"
+          ],
+          "cost": 0,
+          "from_level": 2
+        }
+      ],
+      "form_eng": [
+        "Rookie"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 3,
+      "play_cost": 3,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Vegetation"
+      ]
+    },
+    "card_id": "EX3-038",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Green",
+        "cost": 0,
+        "derived": false,
+        "level": 2,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 2000,
+        "effect_text": "[Your Turn] When an effect suspends this Digimon, suspend 1 of your opponent's Digimon.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 3,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Green",
+      "color2": null,
+      "date_added": "2025-11-25 15:15:02",
+      "digi_type": "Vegetation",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 2000,
+      "evolution_color": "Green",
+      "evolution_cost": 0,
+      "evolution_level": 2,
+      "form": "Rookie",
+      "id": "EX3-038",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Your Turn] When an effect suspends this Digimon, suspend 1 of your opponent's Digimon.",
+      "name": "Pomumon",
+      "play_cost": 3,
+      "pretty_url": "pomumon-ex3-038",
+      "rarity": "U",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "EX-03: Theme Booster Draconic Roar",
+        "Tamer Battle Pack 18"
+      ],
+      "source_effect": "",
+      "stage": "Rookie",
+      "tcgplayer_id": 538468,
+      "tcgplayer_name": "Pomumon (Official Tournament Pack Vol.12)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "f3a9e2f992b256bb8c81a28dacca528fdaf2684970e2bef93b8a74fcf8db9ba9",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "EX3-038#2",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

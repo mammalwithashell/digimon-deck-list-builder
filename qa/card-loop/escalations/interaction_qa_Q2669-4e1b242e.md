@@ -293,3 +293,8 @@ This item is **not adjudicated**: it is terminal for the run but blocks readines
 2. Record the decision on the verdict row: our engine right / DCGO differs -> `cargo run -p dcgo-harness -- verdict-triage --clause <clause id> --triage dcgo_quirk --citation "<source>"`; our engine wrong -> `--triage ours_wrong` with the citation, then fix it under the fix gate (or let the loop's fix stage take it on the next run).
 3. Record which family's call was wrong as a late correction (`tools.card_loop.corrections.detect_escalation_resolution`) so the scorecard penalises it.
 4. Delete this file. The next `python -m tools.card_loop resume` re-reads the committed ledgers; the row in `index.jsonl` stays as history.
+
+## Owner decision (2026-10-10)
+Approved: replace the `phase: breeding` assert. It can never hold while the reveal prompt is open, and it would not discriminate even if it could. Nothing observable changes between the end of the breeding phase and the start of the main phase, so a zone or count check can't witness Q2669 either.
+The witness needs ordering. Put a [Start of Your Main Phase] trigger on the board (e.g. Tomoro & Kyo ST23-13), then show that Ukkomon's (BT16-082) effect fully resolves before that trigger is offered.
+This needs re-authoring and an oracle run, so the escalation stays open until then.

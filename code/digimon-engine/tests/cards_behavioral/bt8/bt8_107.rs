@@ -57,6 +57,28 @@ use digimon_engine::debug_runner::{make_test_card_with_level, DebugRunner};
 use digimon_engine::enums::CardColor;
 use digimon_engine::selection::SelectionKind;
 
+fn option_color_provider() -> digimon_engine::card_data::CardData {
+    let mut card =
+        digimon_engine::debug_runner::make_test_card("OPTION-PROVIDER", "OptionProvider");
+    card.colors = vec![CardColor::Purple];
+    card
+}
+fn use_printed_option(runner: &mut DebugRunner) {
+    use digimon_engine::action::{mask::build_action_mask, space::PLAY_HAND_START};
+    runner.skip_mulligan();
+    runner.place_in_breeding(0, "OPTION-PROVIDER");
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert!(!runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "BT8-107"));
+}
+
 // ─── Card-data helpers ────────────────────────────────────────────────────────
 
 /// Own Digimon the controller may delete as the cost. `level` is the pivot
@@ -87,6 +109,7 @@ fn pandemonium_flame_runner() -> DebugRunner {
         .add_card(opp_digimon("OPP-L4", 4))
         .add_card(opp_digimon("OPP-L5", 5))
         .add_card(opp_digimon("OPP-L3", 3))
+        .add_card(option_color_provider())
         .hand(0, &["BT8-107"])
         .memory(10)
         .start()
@@ -185,7 +208,7 @@ fn bt8_107_main_with_own_digimon_prompts_optional_delete() {
     let mut runner = pandemonium_flame_runner();
     runner.place_on_field(0, "OWN-L4", Some(0));
 
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
 
     let sel = runner
         .pending_selection_view()
@@ -202,7 +225,7 @@ fn bt8_107_main_with_no_own_digimon_installs_no_prompt() {
     let mut runner = pandemonium_flame_runner();
     // No own Digimon placed.
 
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -223,7 +246,7 @@ fn bt8_107_main_declining_own_digimon_delete_aborts_effect() {
     // `main_from_hand` clause it occupies a battle-area slot itself
     // (face-up scope), so the pre-play size is not the right baseline
     // (BT9-108 idiom: snapshot immediately around the action under test).
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
     let battle_before_decline_p0 = runner.battle_area_size(0);
     let battle_before_decline_p1 = runner.battle_area_size(1);
 
@@ -263,7 +286,7 @@ fn bt8_107_main_accepting_delete_prompts_opponent_target_with_level_cap() {
     let low = runner.place_on_field(1, "OPP-L3", Some(0)); // level 3 <= 4: legal
     runner.place_on_field(1, "OPP-L5", Some(0)); // level 5 > 4: illegal
 
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
     let own_sel = runner
         .pending_selection_view()
         .expect("own-Digimon delete prompt installs");
@@ -293,7 +316,7 @@ fn bt8_107_main_equal_level_opponent_is_a_legal_target() {
     runner.place_on_field(0, "OWN-L4", Some(0)); // level 4 pivot
     let equal = runner.place_on_field(1, "OPP-L4", Some(0)); // level 4 == 4: legal ("less than or equal")
 
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
     let own_sel = runner
         .pending_selection_view()
         .expect("own-Digimon delete prompt installs");
@@ -318,7 +341,7 @@ fn bt8_107_main_higher_level_opponent_only_installs_no_prompt() {
     runner.place_on_field(0, "OWN-L2", Some(0)); // level 2 pivot
     runner.place_on_field(1, "OPP-L4", Some(0)); // level 4 > 2: illegal, only candidate
 
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
     let own_sel = runner
         .pending_selection_view()
         .expect("own-Digimon delete prompt installs");
@@ -345,7 +368,7 @@ fn bt8_107_main_suspended_opponent_digimon_is_not_a_legal_target() {
     let suspended = runner.place_on_field(1, "OPP-L3", Some(0)); // level 3 <= 4 but suspended
     runner.game.suspend(suspended);
 
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
     let own_sel = runner
         .pending_selection_view()
         .expect("own-Digimon delete prompt installs");
@@ -376,7 +399,7 @@ fn bt8_107_main_deletes_own_digimon_when_cost_accepted() {
     // Snapshot AFTER playing BT8-107 — while the Option resolves its
     // `main_from_hand` clause it occupies a battle-area slot itself
     // (face-up scope), so the pre-play size is not the right baseline.
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
     let battle_before_delete = runner.battle_area_size(0);
 
     runner
@@ -403,7 +426,7 @@ fn bt8_107_main_deletes_chosen_opponent_target_and_leaves_own_deletion_intact() 
     runner.place_on_field(0, "OWN-L4", Some(0));
     runner.place_on_field(1, "OPP-L3", Some(0));
 
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
     let battle_before_delete = runner.battle_area_size(0);
 
     let own_sel = runner
@@ -446,7 +469,7 @@ fn bt8_107_main_multiple_legal_opponent_targets_offers_a_choice() {
     let low1 = runner.place_on_field(1, "OPP-L3", Some(0)); // level 3 <= 4
     let low2 = runner.place_on_field(1, "OPP-L4", Some(0)); // level 4 <= 4
 
-    runner.play(0, 0).expect("play BT8-107 from hand");
+    use_printed_option(&mut runner);
     let own_sel = runner
         .pending_selection_view()
         .expect("own-Digimon delete prompt installs");

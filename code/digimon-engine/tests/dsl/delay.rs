@@ -31,8 +31,8 @@ use std::sync::Arc;
 /// and therefore not optional.
 ///
 /// Tests about `<Delay>`'s §16-16-2 optionality need an ACTIVATABLE Delay, so
-/// they use this instead. Added rather than changing `fixture_delay`, which
-/// seven passing tests depend on for its marker-only shape.
+/// they use this instead. Trigger-mapping tests also require an activatable
+/// body; structural marker tests retain `fixture_delay`.
 fn fixture_delay_activatable(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard {
     let mut card = fixture_delay(scope, trigger);
     if let CompiledClause::Declarative(CompiledDeclarativeClause::Delay { process, .. }) =
@@ -48,6 +48,7 @@ fn fixture_delay_activatable(scope: CompiledScope, trigger: CompiledTiming) -> C
 
 fn fixture_delay(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-DELAY".into(),
         name: "Fixture Delay".into(),
         kind: CompiledCardKind::Option,
@@ -84,7 +85,7 @@ fn fixture_delay(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard 
 /// and the emitted effect has `timing == DelayEffect`.
 #[test]
 fn delay_end_of_your_turn_maps_to_end_of_this_turn() {
-    let dsl = DslCardEffect::new(Arc::new(fixture_delay(
+    let dsl = DslCardEffect::new(Arc::new(fixture_delay_activatable(
         CompiledScope::FaceUp,
         CompiledTiming::EndOfYourTurn,
     )));
@@ -108,7 +109,7 @@ fn delay_end_of_your_turn_maps_to_end_of_this_turn() {
 /// `timing == DelayEffect`.
 #[test]
 fn delay_delayed_trigger_maps_to_main_phase_activated() {
-    let dsl = DslCardEffect::new(Arc::new(fixture_delay(
+    let dsl = DslCardEffect::new(Arc::new(fixture_delay_activatable(
         CompiledScope::FaceUp,
         CompiledTiming::Delayed,
     )));
@@ -131,7 +132,7 @@ fn delay_delayed_trigger_maps_to_main_phase_activated() {
 /// explicitly and everything else is event-gated by construction.
 #[test]
 fn delay_other_timing_is_event_gated() {
-    let dsl = DslCardEffect::new(Arc::new(fixture_delay(
+    let dsl = DslCardEffect::new(Arc::new(fixture_delay_activatable(
         CompiledScope::FaceUp,
         CompiledTiming::OnPlay,
     )));
@@ -194,7 +195,7 @@ fn delay_inherited_scope_sets_inherited_flag() {
 
 #[test]
 fn delay_start_of_your_turn_maps_to_start_of_your_next_turn() {
-    let dsl = DslCardEffect::new(Arc::new(fixture_delay(
+    let dsl = DslCardEffect::new(Arc::new(fixture_delay_activatable(
         CompiledScope::FaceUp,
         CompiledTiming::StartOfYourTurn,
     )));

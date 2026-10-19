@@ -309,7 +309,7 @@ fn lm_027_has_exactly_two_triggered_clauses() {
 #[test]
 fn lm_027_main_installs_selection_when_eligible_digimon_on_field() {
     let source_digi = make_red_digimon("LM027-SRC", 3, 2000, 3);
-    let evo_target = make_red_digimon("LM027-EVO", 4, 5000, 4);
+    let evo_target = make_red_evo_target("LM027-EVO");
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(LM_027_YAML)
@@ -565,6 +565,18 @@ fn lm_027_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
     runner.place_on_field(1, "LM027-OPP-DIGI", Some(0));
     // LM-027 parked on P0's field as the Delay carrier.
     let lm027 = runner.place_on_field(0, "LM-027", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[lm027.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::StartOfYourNextTurn,
+            placed_on_turn,
+        };
+
     // A red Digimon in P0's trash is the mandatory return target.
     push_to_trash(&mut runner, 0, "LM027-DLY-RED");
 
@@ -597,6 +609,18 @@ fn lm_027_delay_does_not_fire_when_opponent_has_no_digimon() {
 
     // No opponent Digimon on the field → the Delay `active_when` fails.
     let lm027 = runner.place_on_field(0, "LM-027", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[lm027.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::StartOfYourNextTurn,
+            placed_on_turn,
+        };
+
     push_to_trash(&mut runner, 0, "LM027-DLY-RED2");
     let trash_before = runner.trash_size(0);
 
@@ -638,6 +662,18 @@ fn lm_027_delay_body_returns_red_digimon_to_top_of_deck() {
     // fires only "if you don't have a Digimon") is skipped.
     runner.place_on_field(0, "LM027-OWN-D3", Some(0));
     let lm027 = runner.place_on_field(0, "LM-027", Some(1));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[lm027.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::StartOfYourNextTurn,
+            placed_on_turn,
+        };
+
     push_to_trash(&mut runner, 0, "LM027-RET-RED");
 
     runner
@@ -701,6 +737,18 @@ fn lm_027_delay_body_play_from_trash_only_when_no_field_digimon() {
     runner.place_on_field(1, "LM027-OPP-D4", Some(0));
     // P0 has NO Digimon on the field → the conditional play sub-clause fires.
     let lm027 = runner.place_on_field(0, "LM-027", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[lm027.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::StartOfYourNextTurn,
+            placed_on_turn,
+        };
+
     // Two red Digimon in trash: one is returned to deck, the other remains as
     // the play-from-trash candidate.
     push_to_trash(&mut runner, 0, "LM027-PFT-A");
@@ -1101,4 +1149,250 @@ fn accept_scheduled_delay(runner: &mut DebugRunner) {
     runner
         .execute_action(view.selecting_player, action)
         .expect("accept the <Delay> cost");
+}
+
+// Tail audit: official Q&A forbids ignoring requirements; DCGO gates BOTH picks.
+fn lm_027_tail_runner() -> DebugRunner {
+    let mut evo = make_red_evo_target("TAIL-EVO");
+    evo.evo_costs.push(EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost: 3,
+    });
+    DebugRunner::builder()
+        .from_dsl_yaml(LM_027_YAML)
+        .unwrap()
+        .add_card(make_red_digimon("TAIL-BASE", 3, 2000, 3))
+        .add_card(make_red_digimon("TAIL-WRONG-BASE", 5, 6000, 6))
+        .add_card(make_red_digimon("TAIL-ILLEGAL", 6, 9000, 9))
+        .add_card(evo)
+        .add_card(make_filler("TAIL-FILL"))
+        .memory(10)
+        .hand(0, &["LM-027", "TAIL-EVO", "TAIL-ILLEGAL"])
+        .deck(0, &["TAIL-FILL"; 10])
+        .deck(1, &["TAIL-FILL"; 10])
+        .start()
+}
+
+#[test]
+fn lm_027_tail_filters_hosts_without_a_compatible_hand_card() {
+    let mut r = lm_027_tail_runner();
+    r.place_on_field(0, "TAIL-BASE", None);
+    r.place_on_field(0, "TAIL-WRONG-BASE", None);
+    assert!(r.game.activate_hand_main(0, 0));
+    let v = r.pending_selection_view().unwrap();
+    assert_eq!(v.kind, SelectionKind::OwnField);
+    assert_eq!(
+        v.valid_action_ids.len(),
+        1,
+        "only the red host with a legal hand route is offered"
+    );
+    assert_eq!(
+        build_action_mask(&r.game, 0)[digimon_engine::action::space::PASS as usize],
+        1.0
+    );
+}
+
+#[test]
+fn lm_027_tail_no_legal_route_skips_both_picks() {
+    let mut r = lm_027_tail_runner();
+    r.place_on_field(0, "TAIL-WRONG-BASE", None);
+    assert!(r.game.activate_hand_main(0, 0));
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no host has a legal route"
+    );
+    assert_eq!(r.memory(), 10);
+}
+
+#[test]
+fn lm_027_tail_hand_pick_excludes_red_cards_without_a_route() {
+    let mut r = lm_027_tail_runner();
+    r.place_on_field(0, "TAIL-BASE", None);
+    assert!(r.game.activate_hand_main(0, 0));
+    let v = r.pending_selection_view().unwrap();
+    r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    let v = r.pending_selection_view().unwrap();
+    assert_eq!(v.kind, SelectionKind::Hand);
+    assert_eq!(
+        v.valid_action_ids.len(),
+        1,
+        "red color alone must not make a card eligible"
+    );
+}
+
+#[test]
+fn lm_027_tail_reduced_native_routes_offer_zero_and_one_and_survive_clone() {
+    use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
+    let mut r = lm_027_tail_runner();
+    let h = r.place_on_field(0, "TAIL-BASE", None);
+    assert!(r.game.activate_hand_main(0, 0));
+    for _ in 0..2 {
+        let v = r.pending_selection_view().unwrap();
+        r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    }
+    let v = r
+        .pending_selection_view()
+        .expect("distinct payable costs remain explicit");
+    assert_eq!(
+        v.effect_choices
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|e| e.label.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Digivolve for cost 0", "Digivolve for cost 1"]
+    );
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(mask[HAND_EFFECT_START as usize], 1.0);
+    assert_eq!(mask[HAND_EFFECT_START as usize + 1], 1.0);
+    assert_eq!(mask[PASS as usize], 0.0);
+    let mut clone = r.game.clone();
+    r.execute_action(0, HAND_EFFECT_START).unwrap();
+    clone.decode_action(HAND_EFFECT_START + 1, 0);
+    for (g, cost) in [(&r.game, 0), (&clone, 1)] {
+        assert_eq!(g.memory, 10 - cost);
+        assert_eq!(
+            g.players[0].battle_area[h.index as usize]
+                .top_card()
+                .card_id(&g.card_data),
+            "TAIL-EVO"
+        );
+        assert_eq!(g.players[0].deck.len(), 9);
+        assert!(g.pending_selection.is_none());
+    }
+}
+
+#[test]
+fn lm_027_tail_result_pick_can_be_declined() {
+    use digimon_engine::action::space::PASS;
+    let mut r = lm_027_tail_runner();
+    r.place_on_field(0, "TAIL-BASE", None);
+    assert!(r.game.activate_hand_main(0, 0));
+    let v = r.pending_selection_view().unwrap();
+    r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    let v = r.pending_selection_view().unwrap();
+    assert!(
+        v.is_optional,
+        "DCGO DigivolveIntoHandOrTrashCard defaults isOptional=true"
+    );
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+    r.execute_action(0, PASS).unwrap();
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.memory(), 10);
+    assert_eq!(r.game.players[0].battle_area[0].card_sources.len(), 1);
+}
+
+#[test]
+fn lm_027_tail_declining_evolution_still_pays_and_parks_option() {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    for decline_hand in [false, true] {
+        let mut r = lm_027_tail_runner();
+        r.place_on_field(0, "TAIL-BASE", None);
+        assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+        r.game.decode_action(PLAY_HAND_START, 0);
+        if decline_hand {
+            let v = r.pending_selection_view().unwrap();
+            r.execute_action(0, v.valid_action_ids[0]).unwrap();
+        }
+        assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+        r.execute_action(0, PASS).unwrap();
+        assert!(r.game.pending_selection.is_none());
+        assert_eq!(r.memory(), 8);
+        assert_eq!(r.game.players[0].battle_area.len(), 2);
+        assert_eq!(
+            r.game.players[0].battle_area[1]
+                .top_card()
+                .card_id(&r.game.card_data),
+            "LM-027"
+        );
+        assert_eq!(r.game.players[0].hand.len(), 2);
+    }
+}
+
+#[test]
+fn lm_027_tail_security_decline_still_returns_option_to_hand() {
+    use digimon_engine::action::space::PASS;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(LM_027_YAML)
+        .unwrap()
+        .add_card(make_small_red_digimon("TAIL-SMALL"))
+        .add_card(make_red_digimon("TAIL-ATTACKER", 4, 5000, 5))
+        .memory(10)
+        .security(1, &["LM-027"])
+        .start();
+    push_to_trash(&mut r, 1, "TAIL-SMALL");
+    let h = r.place_on_field(0, "TAIL-ATTACKER", Some(0));
+    let _ = r.attack_player(h, 1, false);
+    let v = r.pending_selection_view().unwrap();
+    assert_eq!(v.selecting_player, 1);
+    assert!(v.is_optional);
+    assert_eq!(build_action_mask(&r.game, 1)[PASS as usize], 1.0);
+    r.execute_action(1, PASS).unwrap();
+    assert_eq!(
+        r.game.players[1].hand[0].card_id(&r.game.card_data),
+        "LM-027"
+    );
+    assert_eq!(r.trash_size(1), 1);
+    assert_eq!(r.battle_area_size(1), 0);
+}
+
+#[test]
+fn lm_027_tail_delay_decline_preserves_option_and_trash() {
+    use digimon_engine::action::space::PASS;
+    let mut r = lm_027_tail_runner();
+    let h = r.place_on_field(0, "LM-027", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = r.game.turn_count;
+    r.game.turn_count = placed_on_turn + 2;
+    r.game.player_mut(0).battle_area[h.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::StartOfYourNextTurn,
+            placed_on_turn,
+        };
+
+    r.place_on_field(1, "TAIL-BASE", None);
+    push_to_trash(&mut r, 0, "TAIL-BASE");
+    r.game
+        .enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(h));
+    r.game.drain_effect_queue();
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+    r.execute_action(0, PASS).unwrap();
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.battle_area_size(0), 1);
+    assert_eq!(r.trash_size(0), 1);
+}
+
+#[test]
+fn lm_027_tail_ordinary_alternate_requirement_remains_available() {
+    const ALT: &str = "card: TAIL-ALT\nname: Tail Alternate\nkind: digimon\nlevel: 5\ncolor: [red]\ncost: 7\ndp: 7000\nalt_paths:\n  - kind: digivolve\n    from: { name_is: TAIL-BASE }\n    cost: 4\neffects: []\n";
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(LM_027_YAML)
+        .unwrap()
+        .from_dsl_yaml(ALT)
+        .unwrap()
+        .add_card(make_red_digimon("TAIL-BASE", 3, 2000, 3))
+        .add_card(make_filler("TAIL-FILL"))
+        .memory(10)
+        .hand(0, &["LM-027", "TAIL-ALT"])
+        .deck(0, &["TAIL-FILL"; 5])
+        .start();
+    let h = r.place_on_field(0, "TAIL-BASE", None);
+    assert!(r.game.activate_hand_main(0, 0));
+    for _ in 0..2 {
+        let v = r
+            .pending_selection_view()
+            .expect("ordinary alternate route is eligible");
+        r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    }
+    assert_eq!(r.memory(), 9);
+    assert_eq!(
+        r.game.players[0].battle_area[h.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TAIL-ALT"
+    );
 }

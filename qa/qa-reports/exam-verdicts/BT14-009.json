@@ -1,0 +1,43 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-11T04:22:58.622191+00:00",
+  "clauses": {
+    "BT14-009#effect#0": {
+      "clause_id": "BT14-009#effect#0",
+      "card_id": "BT14-009",
+      "verdict": "unavailable",
+      "label": "Effect",
+      "text_sha256": "b05deeffac1820e5153abb91e2cf8d23fbfe3bd5fa12e5fe21d6de6a1be940a1",
+      "reason": "No BT14_009.cs in base DCGO Assets/Scripts/CardEffect/BT14 and no BT14_009 or BT14-009 reference anywhere in Assets/Scripts at commit 7221db7e525fa04217b1d0a6c04515b1cb3e479a. Per-card check on 2026-10-11; not inferred from set availability.",
+      "recorded_at": "2026-10-11T03:13:53.231804+00:00"
+    }
+  },
+  "interactions": {
+    "qa:Q2374": {
+      "interaction_id": "qa:Q2374",
+      "card_ids": [
+        "BT14-009"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "unavailable",
+      "text_sha256": "d06a3cd555440f5d092a097ae61c03be9c0ee16e169b5d6cea4034dd3538074a",
+      "reason": "BT14-009 has no per-card script or class/reference in base DCGO Assets/Scripts at 7221db7e525fa04217b1d0a6c04515b1cb3e479a; exact per-card availability check, not an inference from set support. No oracle behavior is claimed.",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "recorded_at": "2026-10-11T04:22:58.622191+00:00"
+    },
+    "qa:Q5209": {
+      "interaction_id": "qa:Q5209",
+      "card_ids": [
+        "BT14-009"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "unavailable",
+      "text_sha256": "8a163eb6bc71057e355be7aa7d064dbfd169ab11e54af4c6c22b1276196c8d70",
+      "reason": "BT14-009 has no per-card script or class/reference in base DCGO Assets/Scripts at 7221db7e525fa04217b1d0a6c04515b1cb3e479a; exact per-card availability check, not an inference from set support. No oracle behavior is claimed.",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "recorded_at": "2026-10-11T04:22:58.622191+00:00"
+    }
+  }
+}

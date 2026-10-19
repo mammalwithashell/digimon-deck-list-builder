@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "last_updated": "2026-10-11T03:01:23.552661900+00:00",
+  "clauses": {
+    "BT11-022#effect#0": {
+      "clause_id": "BT11-022#effect#0",
+      "card_id": "BT11-022",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "45b2cbfb76106108d87bddacd0be08d628ecb3447dd3a29c718748f135cbf7b5",
+      "scenario_path": "qa/dcgo-exams/BT11/BT11-022-tail-all.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT11-022-tail-all",
+      "recorded_at": "2026-10-11T03:01:23.552661900+00:00"
+    },
+    "BT11-022#effect#1": {
+      "clause_id": "BT11-022#effect#1",
+      "card_id": "BT11-022",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "896c07c79fa229aa236dcf5ae52876d4bca92d0aa9357c1a87aaddd3ea3cfb9f",
+      "scenario_path": "qa/dcgo-exams/BT11/BT11-022-tail-all.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT11-022-tail-all",
+      "recorded_at": "2026-10-11T03:01:23.552661900+00:00"
+    },
+    "BT11-022#inherited#0": {
+      "clause_id": "BT11-022#inherited#0",
+      "card_id": "BT11-022",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "1791be096baca23174f0d71d84aae5b5d6ee7ff825fda8bc743b6e81802c30f6",
+      "scenario_path": "qa/dcgo-exams/BT11/BT11-022-tail-all.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT11-022-tail-all",
+      "recorded_at": "2026-10-11T03:01:23.552661900+00:00"
+    }
+  }
+}

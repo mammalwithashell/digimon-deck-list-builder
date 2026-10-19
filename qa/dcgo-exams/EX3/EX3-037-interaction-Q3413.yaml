@@ -1,0 +1,53 @@
+# qa:Q3413 (2024-03-28) -- "This card's effect reveals 4 cards. If the cards revealed only include a
+# green or blue card with [Dramon] in its name OR a card with [Examon] in its name, can I still add a
+# card to my hand?" -> "Yes, as long as either ... is among the cards revealed, you can add it."
+# P0 plays Dracomon EX3-037 on turn 1; the reveal (stack[10..13]) is Homer Yushima BT13-096 (blue
+# Tamer, no [Dramon]/[Examon] name), Examon BT20-045, Dracomon BT20-007 (red; "Dracomon" does not
+# contain "Dramon") and Unleash the Dragon Gene BT20-093 (Option). The green/blue-[Dramon] bucket has
+# NO candidate; the [Examon] bucket has exactly one. The question is whether the second add still
+# happens when the first half of the single "Add 1 ... and 1 ..." instruction cannot.
+# DCGO RevealLibrary.cs RevealDeckTopCardsAndSelect: a bucket with maxCount 0 is skipped (the
+# `if (maxCount >= 1)` block), the [Examon] SelectCardEffect is asked with canNoSelect false (it is the
+# first prompt actually opened, so the mutualConditions relaxation never applies). Ours: the empty
+# first bucket is skipped by install_reveal_bucket_resume_step (valid_action_ids empty -> next bucket).
+# Only ONE bucket picks here, so the documented multi-bucket hand-timing quirk (docs/DCGO_EXAM.md,
+# "RevealBucket add timing") does not arise on this line.
+# Step 3: the three remaining cards go to the bottom "in any order": DCGO asks ONE multi-pick
+# SelectCardEffect whose click order is the permutation; ours asks once per position (the last being
+# a singleton) -- the single 3-id `cards:` row answers all of ours and emits DCGO's one row.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: EX3-037
+clause: EX3-037#effect#1
+covers: [EX3-037#effect#1]
+interaction: { id: "qa:Q3413", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: EX3-037, BT23-047 x3, BT20-044 | security bottom->top: BT20-027 x3, BT20-044 x2 | deck top (the reveal): BT13-096, BT20-045, BT20-007, BT20-093
+    stack: [EX3-037, BT23-047, BT23-047, BT23-047, BT20-044, BT20-027, BT20-027, BT20-027, BT20-044, BT20-044, BT13-096, BT20-045, BT20-007, BT20-093]
+    rest: examon-core-fixture
+  p1:
+    # hand: EX3-018, BT23-047 x3, BT20-027 | security bottom->top: BT20-027 x2, BT20-044 x3 | draws: BT13-096, BT13-096
+    stack: [EX3-018, BT23-047, BT23-047, BT23-047, BT20-027, BT20-027, BT20-027, BT20-044, BT20-044, BT20-044, BT13-096, BT13-096]
+    rest: examon-core-fixture
+steps:
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+# [On Play]: reveal BT13-096, BT20-045, BT20-007, BT20-093. Green/blue-[Dramon] bucket: no candidate (skipped on both engines).
+- { actor: 0, do: { play: { card: EX3-037, from: hand } }, expect: { prompt: main_phase } }
+# [Examon] bucket: the lone Examon is added even though the other half of the instruction had nothing to add.
+- { actor: 0, do: { select: { cards: [BT20-045] } }, expect: { prompt: SelectCardEffect } }
+# The rest, bottom of the deck in any order (3 remaining: one DCGO row, three of our per-position picks).
+- { actor: 0, do: { select: { cards: [BT13-096, BT20-007, BT20-093] } } }
+# Memory -3 handed the turn to P1; this row is the post-resolution observation: BT20-045 in P0's hand.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q3413
+  assert:
+  - at: 4
+    that:
+      p0.hand:
+      - BT23-047
+      - BT23-047
+      - BT23-047
+      - BT20-044
+      - BT20-045

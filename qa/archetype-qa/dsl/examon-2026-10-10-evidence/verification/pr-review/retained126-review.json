@@ -1,0 +1,60 @@
+{
+  "approved_bounded_retained_completion": true,
+  "root_final_disposition_required": true,
+  "scope": "155 cohort comparisons, not155 unique new-live or whole-card claims",
+  "main": {
+    "count": 126,
+    "clean": 125,
+    "known_reference_gap": [
+      "074-EX13-041"
+    ],
+    "original": 124,
+    "extras": 2
+  },
+  "supplemental": {
+    "count": 3,
+    "keys": [
+      "Q4367",
+      "Q1775",
+      "EX3-024"
+    ],
+    "native_candidate_assertion_reexecuted": false
+  },
+  "outside": {
+    "count": 26,
+    "clean": 23,
+    "diagnostics": [
+      "qa:Q1123",
+      "qa:Q1923",
+      "qa:Q3414"
+    ],
+    "terminal_outcome_approval": false
+  },
+  "total_comparisons": 155,
+  "clean_comparisons": 151,
+  "known_diagnostic_comparisons": 4,
+  "q7339": "Exactstep16 security4vs5 plus trash[ST1-06,ST1-10]vs[ST1-10],6officialchecks; oracleagreementfalse",
+  "outside_diagnostics": "Q1123step3/1check,Q1923step53/4checks,Q3414step3/2checks; historicalproducerproof limitations retained",
+  "artifact": {
+    "path": "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-pinned\\dcgo-harness.exe",
+    "sha256": "66becb673b1fb306d2590309961e86771ce63b1e5189bace9a412afe45a09f56"
+  },
+  "source_closure_unchanged": true,
+  "mechanical_review": {
+    "path": "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-retained-completion-mechanical-audit-v1\\review.json",
+    "sha256": "270514a6cd64b2ab7cc14893c83a2543fa058e93662b47150826e400d75e04a6"
+  },
+  "root_exit_proof": {
+    "path": "C:/Users/james/.codex/visualizations/2026/10/10/01a1269c-a05f-7f21-978c-93246d80a989/build22-retained155-root-exits-v1.json",
+    "sha256": "6bd4b676564638f459448e64a9948d04743f864be05c0da2b6cbbaa5809301e1"
+  },
+  "verified_mechanical_output_pins": 729,
+  "main_final_input_pins_checked": 11441,
+  "new_live": false,
+  "canonical_promotion": false,
+  "native_candidate_assertion_reexecuted": false,
+  "whole_pipeline_complete": false,
+  "remaining": "Original build22 golden STOP remains pending independent disposition. Ladder/wheel completion does not erase it.",
+  "authorship_limit": "Reviewer authored completion checker and replay reviews; independently rechecked final membership, all729 captured output hashes, current closure pins, raw diagnostic parser and root exit proof. Root owns final disposition.",
+  "runtime_executed_by_reviewer": false
+}

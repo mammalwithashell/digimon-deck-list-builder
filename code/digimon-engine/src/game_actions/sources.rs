@@ -371,6 +371,7 @@ impl Game {
         target: PermanentHandle,
         cause: Option<crate::trigger_context::EffectAttribution>,
     ) -> bool {
+        if self.is_token_source_destination(target) { return false; }
         if source.index == crate::action::space::BREEDING_TARGET as u8 {
             return false;
         }

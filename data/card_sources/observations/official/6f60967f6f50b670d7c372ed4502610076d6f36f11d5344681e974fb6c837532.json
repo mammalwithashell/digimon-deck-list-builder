@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Entertainment",
+    "card_id": "BT22-009",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Sup./Appmon",
+    "play_cost": "4",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less."
+      },
+      {
+        "label": "Link DP",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less."
+      }
+    ],
+    "type": "Effect"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "6f60967f6f50b670d7c372ed4502610076d6f36f11d5344681e974fb6c837532",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "35bf443c266a89e82e3d2b674c902f9cdaa79004cfb819af0d7a5ac4b00c589a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-009",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-009"
+}

@@ -1,0 +1,101 @@
+# Official observation d65ce267e6147e770d19a689be54b78549981c509f633db5dfd204a4ecc0b7b0; actual image; Q4315-4319.
+card: BT20-027
+name: Slayerdramon
+kind: digimon
+level: 6
+color: [blue, red]
+cost: 12
+dp: 12000
+traits: [Dragonkin]
+form: Mega
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: Wingdramon }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Groundramon }
+    cost: 3
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+  - when: [on_play, when_digivolving]
+    summary: "Trash any 3 digivolution cards of 1 opponent Digimon. Then delete 1 opponent Digimon with no digivolution cards."
+    process:
+      - select_opponent_permanent:
+          bind_as: host
+          filter: { kind: digimon, source_count: { filter: {}, at_least: 1 } }
+          prompt: "Choose 1 opponent Digimon to trash sources from"
+      - select_opponent_sources:
+          target: host
+          min: 3
+          max: 3
+          clamp_to_available: true
+          bind_as: stripped
+          prompt: "Trash any 3 digivolution cards"
+          then:
+            - trash_selected_sources: { source_refs: stripped }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            kind: digimon
+            not: { source_count: { filter: {}, at_least: 1 } }
+          prompt: "Delete 1 opponent Digimon with no digivolution cards"
+      - if:
+          condition: { binding_present: victim }
+          then:
+            - delete_permanent: { target: victim }
+  - when: on_opponent_security_removed
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: you
+        kind: digimon
+        can_unsuspend: true
+        any_of: [{ in_text_contains: Dracomon }, { in_text_contains: Examon }]
+    summary: "[All Turns][OPT] When opponent security is removed from, 1 of your Digimon with Dracomon or Examon in its text may unsuspend."
+    process:
+      - select_own_permanent:
+          bind_as: ally
+          optional: true
+          continue_on_decline: true
+          filter:
+            kind: digimon
+            can_unsuspend: true
+            any_of: [{ in_text_contains: Dracomon }, { in_text_contains: Examon }]
+          prompt: "You may unsuspend 1 Digimon with Dracomon or Examon in its text"
+      - if:
+          condition: { binding_present: ally }
+          then:
+            - unsuspend: { target: ally }
+          else:
+            - refund_opt: {}
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - any_of: [{ in_text_contains: Dracomon }, { in_text_contains: Examon }]
+        - none_of: [{ replacement_cause: battle }]
+        - source_is_unsuspended: true
+        - any_permanent: { of: you, is_source: true, can_change_orientation: true }
+    summary: "Inherited [All Turns][OPT] When any of your Dracomon/Examon-text Digimon would leave other than in battle, by suspending this Digimon, they don't leave."
+    process:
+      - suspend_and_cancel_all_matching_leaves:
+          target: source
+          filter:
+            all_of:
+              - replacement_subject_is_mine: true
+              - kind: digimon
+              - any_of: [{ in_text_contains: Dracomon }, { in_text_contains: Examon }]
+              - none_of: [{ replacement_cause: battle }]

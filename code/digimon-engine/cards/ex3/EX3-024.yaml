@@ -1,0 +1,105 @@
+# Official observation ece42c6d13eec9504c73ba88ccba471f93b28a897583789dcfd02ee7d7baa42c,
+# errata image and Q3394-3401. Opponent chooses even a Digimon unable to attack.
+card: EX3-024
+name: Slayerdramon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+form: Mega
+attribute: Vaccine
+traits: [Dragonkin]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { any_of: [{ name_is: Wingdramon }, { name_is: Groundramon }] }
+    cost: 3
+effects:
+  - when: on_suspend
+    once_per_turn: true
+    condition: { event_target_is_source: true }
+    summary: "[All Turns][Once Per Turn] When this Digimon suspends, unsuspend it"
+    process:
+      - unsuspend: { target: source }
+  - when: start_of_opponents_main_phase
+    summary: "By suspending your Dramon or Examon, your opponent attacks with 1 of their Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: cost_target
+          filter:
+            kind: digimon
+            is_unsuspended: true
+            can_change_orientation: true
+            any_of: [{ name_contains: Dramon }, { name_contains: Examon }]
+          optional: true
+          prompt: "Suspend 1 of your Dramon or Examon Digimon to make your opponent attack"
+      - suspend: { target: cost_target }
+      # Check the actual selected permanent's state, not an attempted-suspend flag.
+      # Q3400: the cost is still payable while an attack is already in progress.
+      - if:
+          condition:
+            all_of:
+              - binding_present: cost_target
+              - during_attack: false
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  is_suspended: true
+                  none_of: [{ not_in_binding: cost_target }]
+          then:
+            - as_selecting_player:
+                of: opponent
+                body:
+                  - select_opponent_permanent:
+                      bind_as: attacker
+                      filter: { kind: digimon }
+                      prompt: "Choose 1 of your Digimon to attack (even one that cannot attack)"
+                  - force_attack:
+                      attacker: attacker
+                      targets: any
+                      prompt: "Attack with the selected Digimon"
+  - when: start_of_opponents_main_phase
+    scope: inherited
+    summary: "By suspending your Dramon or Examon, your opponent attacks with 1 of their Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: cost_target
+          filter:
+            kind: digimon
+            is_unsuspended: true
+            can_change_orientation: true
+            any_of: [{ name_contains: Dramon }, { name_contains: Examon }]
+          optional: true
+          prompt: "Suspend 1 of your Dramon or Examon Digimon to make your opponent attack"
+      - suspend: { target: cost_target }
+      # Check the actual selected permanent's state, not an attempted-suspend flag.
+      # Q3400: the cost is still payable while an attack is already in progress.
+      - if:
+          condition:
+            all_of:
+              - binding_present: cost_target
+              - during_attack: false
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  is_suspended: true
+                  none_of: [{ not_in_binding: cost_target }]
+          then:
+            - as_selecting_player:
+                of: opponent
+                body:
+                  - select_opponent_permanent:
+                      bind_as: attacker
+                      filter: { kind: digimon }
+                      prompt: "Choose 1 of your Digimon to attack (even one that cannot attack)"
+                  - force_attack:
+                      attacker: attacker
+                      targets: any
+                      prompt: "Attack with the selected Digimon"
+

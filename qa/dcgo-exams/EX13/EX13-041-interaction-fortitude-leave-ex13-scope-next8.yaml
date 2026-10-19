@@ -1,0 +1,144 @@
+# Source-derived draft; independent verification pending.
+card: EX13-041
+clause: EX13-041#effect#1
+interaction:
+  id: probe:EX13-041#effect#1:leave_play
+  source: probe
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-07
+    - EX13-041
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX13-041-interaction-fortitude-leave-ex13-scope-next8-p0
+  p1:
+    stack:
+    - ST1-11
+    - ST1-16
+    - ST1-02
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX13-041-interaction-fortitude-leave-ex13-scope-next8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-07
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX13-041
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-16
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 14
+  that:
+    memory: 5
+    p0.field:
+    - card_id: EX13-041
+      suspended: false
+      sources: []
+    p0.trash:
+    - ST1-07
+    p1.field:
+    - card_id: ST1-11
+      suspended: true
+    p1.trash:
+    - ST1-16

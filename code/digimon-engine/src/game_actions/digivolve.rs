@@ -66,18 +66,93 @@ pub(crate) struct DigivolveCostChoiceState {
     pub routes: Vec<crate::dna_digivolve::DigivolveRouteMatch>,
 }
 
+/// A cost choice inside an effect, independent of the main-action resume.
+/// Zone indices may move while parked; physical cards and the original zones
+/// remain pinned. A changed host top fails instead of following DNA materials.
+#[derive(Debug, Clone)]
+pub(crate) struct EffectDigivolveCostChoiceState {
+    pub acting_player: PlayerId,
+    pub source_ref: CardSourceRef,
+    pub result_card: CardHandle,
+    pub source_carrier_top: Option<CardHandle>,
+    pub source_carrier_identity: Option<u64>,
+    pub target_player: PlayerId,
+    pub target_top: CardHandle,
+    pub target_identity: u64,
+    pub dna_origin: Option<bool>,
+    pub cost_delta: CostDelta,
+    pub waiver: DigivolveRequirementWaiver,
+    pub source: PlaySource,
+    pub printed_costs: Vec<crate::dna_digivolve::DigivolveRouteMatch>,
+    pub effect_source_player: Option<PlayerId>,
+    pub trigger_context: Option<TriggerContext>,
+    /// Only the initiating DSL clause receives the completed result.
+    pub result_clause: Option<(CardHandle, PlayerId)>,
+    pub outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+/// An effect-owned declaration; distinct from the native action's single slot.
+#[derive(Debug, Clone)]
+pub(crate) struct EffectDigivolveScope {
+    pub(crate) declaration: EffectDigivolveCostChoiceState,
+    pub(crate) identity: PendingWouldDigivolveResume,
+}
+
 /// make-engine-cloneable: resumable-VM frame state for the player-scoped
 /// digivolve cost-reducer prompts (`G-COST-REDUCE-ALLY-DIGIVOLVE`). Shared by
 /// the accept/decline prompt frame and the suspend-cost frame it chains into.
 /// All a player-digivolve action (never mid-DSL-clause) → no `outer_conts`.
 #[derive(Debug, Clone)]
+pub(crate) enum DigivolveReducerChoice {
+    Player {
+        index: usize,
+        reducer: crate::player_cost_reducer::PlayerDigivolveCostReducer,
+    },
+    Field(CostReductionCandidate),
+}
+
+impl DigivolveReducerChoice {
+    fn source_card(&self) -> CardHandle {
+        match self {
+            Self::Player { reducer, .. } => reducer.source_card,
+            Self::Field(candidate) => candidate.key.source_card,
+        }
+    }
+
+    fn label(&self) -> String {
+        match self {
+            Self::Player { reducer, .. } => {
+                format!("Suspend 1 Digimon (digivolution cost -{})", reducer.amount)
+            }
+            Self::Field(candidate) => format!("{} (-{})", candidate.label, candidate.amount),
+        }
+    }
+
+    fn optional(&self) -> bool {
+        match self {
+            Self::Player { .. } => true,
+            Self::Field(candidate) => candidate.optional && !candidate.pay_cost_self_gated,
+        }
+    }
+}
+
+/// Entire before-payment chain, including field-hosted payment effects.
+/// A parked field payment carries this same state in AfterSelectionHook;
+/// selected effects are removed from `remaining` before any payment can park.
+#[derive(Debug, Clone)]
 pub(crate) struct DigivolveReducerState {
-    pub reducer_idx: usize,
-    pub reducer: crate::player_cost_reducer::PlayerDigivolveCostReducer,
+    pub current: Option<DigivolveReducerChoice>,
     pub acting_player: PlayerId,
-    pub hand_index: usize,
-    pub field_index: usize,
+    pub host_identity: u64,
     pub source: PlaySource,
+    pub target: CostTargetContext,
+    pub remaining: Vec<DigivolveReducerChoice>,
+    pub reduction: i32,
+    pub choosing_order: bool,
+    /// Isolated affordability search stops before committing the evolution.
+    pub affordability_probe: bool,
+    /// Effect declarations retain their zone, selected route and DSL continuations.
+    pub effect: Option<EffectDigivolveCostChoiceState>,
 }
 
 /// make-engine-cloneable: first material pick for a normal DNA digivolve from
@@ -103,7 +178,456 @@ pub struct DnaDigivolveSecondMaterialState {
     pub route_window: crate::dna_digivolve::DnaRouteWindow,
 }
 
+impl DigivolveReducerState {
+    pub(crate) fn result_card(&self) -> CardHandle { self.target.card }
+}
+
 impl Game {
+    /// Physical declaration owning the current selection, captured before its
+    /// resolution can remove an inner scope. An inner reducer gate can have no
+    /// payment hook yet, which must not assign its decline to an outer hook.
+    pub(crate) fn digivolve_selection_owner(
+        &self, stack: &crate::resume::ResumeStack,
+    ) -> Option<CardHandle> {
+        fn direct(stack: &crate::resume::ResumeStack) -> Option<CardHandle> {
+            use crate::resume::ResumeFrame as F;
+            match stack.frames.last()? {
+                F::EffectDigivolveCostChoice(s) => Some(s.result_card),
+                F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) => Some(s.result_card()),
+                F::ReplacementBody { inner, .. } | F::FieldTopSourceBatch { inner, .. }
+                | F::DelayCancelAfterSelection { inner, .. } | F::DelayHandDigivolveAfterSelection { inner, .. }
+                | F::DelayDnaAfterSelection { inner, .. } | F::DelayFieldDnaAfterPayment { inner, .. }
+                | F::DelayPlayFromHandAfterSelection { inner, .. } | F::DelayPlayFromUnionAfterSelection { inner, .. }
+                | F::DelayBodyAfterCost { inner, .. } => direct(inner),
+                _ => None,
+            }
+        }
+        direct(stack)
+            .or_else(|| crate::replacement::active_effect_digivolve_window_card(stack))
+            .or_else(|| self.effect_digivolve_scopes.last().map(|s| s.declaration.result_card))
+            .or_else(|| self.pending_would_digivolve_resume.as_ref().map(|s| s.card))
+            .or_else(|| self.after_selection_resume_hooks.0.iter().rev().find_map(|hook| {
+                match hook {
+                    crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => Some(state.result_card()),
+                    _ => None,
+                }
+            }))
+    }
+
+    pub(crate) fn remove_effect_digivolve_scope(&mut self, card: CardHandle) {
+        if let Some(index) = self
+            .effect_digivolve_scopes
+            .iter()
+            .rposition(|s| s.declaration.result_card == card)
+        {
+            let scope = self.effect_digivolve_scopes.remove(index);
+            self.clear_would_digivolve_identity(&scope.identity);
+        }
+    }
+    pub(crate) fn abort_effect_digivolve_scopes(&mut self) {
+        for scope in std::mem::take(&mut self.effect_digivolve_scopes) {
+            self.clear_would_digivolve_identity(&scope.identity);
+        }
+    }
+    pub(crate) fn effect_digivolve_window_card(
+        &self,
+        subject: crate::replacement::ReplacementSubject,
+    ) -> Option<CardHandle> {
+        let crate::replacement::ReplacementSubject::Permanent(h) = subject else {
+            return None;
+        };
+        self.effect_digivolve_scopes
+            .iter()
+            .rev()
+            .find(|s| {
+                s.identity.window_started
+                    && self.resolve_digivolve_host_identity(
+                        s.identity.player,
+                        s.identity.host_identity,
+                    ) == Some(h)
+            })
+            .map(|s| s.declaration.result_card)
+    }
+    pub(crate) fn commit_effect_would_digivolve(
+        &mut self,
+        card: CardHandle,
+        outcome: crate::replacement::ReplacementOutcome,
+        run_continuations: bool,
+    ) -> bool {
+        let Some(index) = self
+            .effect_digivolve_scopes
+            .iter()
+            .rposition(|s| s.declaration.result_card == card)
+        else {
+            return false;
+        };
+        let scope = self.effect_digivolve_scopes.remove(index);
+        let blocked = self
+            .resolve_digivolve_host_identity(scope.identity.player, scope.identity.host_identity)
+            .is_some_and(|h| self.modifiers.has(h, ModifierType::CannotDigivolve));
+        self.clear_would_digivolve_identity(&scope.identity);
+        let previous_source = self.effect_source_player;
+        let previous_trigger = self.current_trigger_context.clone();
+        let previous_dna = self.current_dna_origin;
+        self.effect_source_player = scope.declaration.effect_source_player;
+        self.current_trigger_context = scope.declaration.trigger_context.clone();
+        self.current_dna_origin = scope.declaration.dna_origin;
+        let result = outcome == crate::replacement::ReplacementOutcome::None
+            && !blocked
+            && !self.game_over
+            && self.commit_effect_digivolve_no_replace(
+                &scope.declaration,
+                scope.identity.effective_cost,
+            );
+        if run_continuations {
+            self.finish_effect_digivolve_continuations(scope.declaration, result);
+        }
+        self.effect_source_player = previous_source;
+        self.current_trigger_context = previous_trigger;
+        self.current_dna_origin = previous_dna;
+        result
+    }
+    fn resolve_effect_digivolve_choice_source(
+        &self,
+        state: &EffectDigivolveCostChoiceState,
+    ) -> Option<CardSourceRef> {
+        use CardSourceRef::*;
+        let located = match state.source_ref {
+            DeckTop(_) | PendingSecurity => state.source_ref,
+            _ => self.locate_card_source_ref(state.result_card)?,
+        };
+        let same_zone = match (state.source_ref, located) {
+            (Hand(a, _), Hand(b, _))
+            | (Trash(a, _), Trash(b, _))
+            | (Security(a, _), Security(b, _)) => a == b,
+            (DeckTop(a), DeckTop(b)) => a == b,
+            (PendingSecurity, PendingSecurity) | (Reveal(_), Reveal(_)) => true,
+            (Material(a, _), Material(b, _)) | (Link(a, _), Link(b, _)) => {
+                a.player == b.player
+                    && self
+                        .player(b.player)
+                        .battle_area
+                        .get(b.index as usize)
+                        .and_then(|p| p.card_sources.last())
+                        .map(CardSource::handle)
+                        == state.source_carrier_top
+                    && self
+                        .player(b.player)
+                        .battle_area
+                        .get(b.index as usize)
+                        .and_then(|p| p.battle_identity)
+                        == state.source_carrier_identity
+            }
+            _ => false,
+        };
+        (same_zone
+            && self
+                .card_source_ref_peek(located)
+                .is_some_and(|card| card.handle() == state.result_card))
+        .then_some(located)
+    }
+
+    /// The active effect declaration can be parked directly or behind a field
+    /// payment's DSL selection. The latter is owned by the chain hook.
+    /// Attribute the initiating clause to its exact physical declaration even
+    /// when a mandatory payment has already parked a nested declaration.
+    pub(crate) fn bind_effect_digivolve_clause_owner(
+        &mut self, result: CardHandle, clause: CardHandle, player: PlayerId,
+    ) -> bool {
+        fn bind(state: &mut EffectDigivolveCostChoiceState, result: CardHandle,
+                clause: CardHandle, player: PlayerId) -> bool {
+            if state.result_card != result { return false; }
+            state.result_clause = Some((clause, player));
+            state.effect_source_player = Some(player);
+            true
+        }
+        fn frame(stack: &mut crate::resume::ResumeStack, result: CardHandle,
+                 clause: CardHandle, player: PlayerId) -> bool {
+            use crate::resume::ResumeFrame as F;
+            let mut found = false;
+            for item in &mut stack.frames {
+                found |= match item {
+                    F::EffectDigivolveCostChoice(s) => bind(s,result,clause,player),
+                    F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) =>
+                        s.effect.as_mut().is_some_and(|s| bind(s,result,clause,player)),
+                    F::ReplacementBody { inner, .. } | F::FieldTopSourceBatch { inner, .. }
+                    | F::DelayCancelAfterSelection { inner, .. } | F::DelayHandDigivolveAfterSelection { inner, .. }
+                    | F::DelayDnaAfterSelection { inner, .. } | F::DelayFieldDnaAfterPayment { inner, .. }
+                    | F::DelayPlayFromHandAfterSelection { inner, .. } | F::DelayPlayFromUnionAfterSelection { inner, .. }
+                    | F::DelayBodyAfterCost { inner, .. } => frame(inner,result,clause,player),
+                    _ => false,
+                };
+            }
+            found
+        }
+        let mut found = self.pending_selection_resume.as_mut()
+            .is_some_and(|s| frame(s,result,clause,player));
+        for hook in &mut self.after_selection_resume_hooks.0 {
+            if let crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } = hook {
+                found |= state.effect.as_mut().is_some_and(|s| bind(s,result,clause,player));
+            }
+        }
+        for scope in &mut self.effect_digivolve_scopes {
+            found |= bind(&mut scope.declaration,result,clause,player);
+        }
+        found
+    }
+
+    /// Find the parked declaration of this initiating clause, including an
+    /// enclosing payment whose child declaration owns the visible prompt.
+    pub(crate) fn effect_digivolve_declaration_for_clause_mut(
+        &mut self, clause: CardHandle, player: PlayerId,
+    ) -> Option<&mut EffectDigivolveCostChoiceState> {
+        fn frame(stack: &mut crate::resume::ResumeStack, clause: CardHandle,
+                 player: PlayerId) -> Option<&mut EffectDigivolveCostChoiceState> {
+            use crate::resume::ResumeFrame as F;
+            for item in stack.frames.iter_mut().rev() {
+                let found = match item {
+                    F::EffectDigivolveCostChoice(s) if s.result_clause == Some((clause,player)) => Some(s),
+                    F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) =>
+                        s.effect.as_mut().filter(|s| s.result_clause == Some((clause,player))),
+                    F::ReplacementBody { inner, .. } | F::FieldTopSourceBatch { inner, .. }
+                    | F::DelayCancelAfterSelection { inner, .. } | F::DelayHandDigivolveAfterSelection { inner, .. }
+                    | F::DelayDnaAfterSelection { inner, .. } | F::DelayFieldDnaAfterPayment { inner, .. }
+                    | F::DelayPlayFromHandAfterSelection { inner, .. } | F::DelayPlayFromUnionAfterSelection { inner, .. }
+                    | F::DelayBodyAfterCost { inner, .. } => frame(inner,clause,player),
+                    _ => None,
+                };
+                if found.is_some() { return found; }
+            }
+            None
+        }
+        if let Some(s) = self.pending_selection_resume.as_mut()
+            .and_then(|s| frame(s,clause,player)) { return Some(s); }
+        for hook in self.after_selection_resume_hooks.0.iter_mut().rev() {
+            if let crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } = hook {
+                if state.effect.as_ref().is_some_and(|s| s.result_clause == Some((clause,player))) {
+                    return state.effect.as_mut();
+                }
+            }
+        }
+        self.effect_digivolve_scopes.iter_mut().rev()
+            .find(|s| s.declaration.result_clause == Some((clause,player)))
+            .map(|s| &mut s.declaration)
+    }
+
+    pub(crate) fn pending_effect_digivolve_declaration_mut(
+        &mut self,
+    ) -> Option<&mut EffectDigivolveCostChoiceState> {
+        let active_card = self
+            .pending_selection_resume
+            .as_ref()
+            .and_then(crate::replacement::active_effect_digivolve_window_card);
+        // A field payment can itself start an effect evolution. Its current
+        // frame is more deeply nested than the parked outer payment hook.
+        if let Some(frame) = self
+            .pending_selection_resume
+            .as_mut()
+            .and_then(|s| s.frames.last_mut())
+        {
+            match frame {
+                crate::resume::ResumeFrame::EffectDigivolveCostChoice(state) => return Some(state),
+                crate::resume::ResumeFrame::DigivolveReducerPrompt(state)
+                | crate::resume::ResumeFrame::DigivolveReducerSuspend(state)
+                    if state.effect.is_some() =>
+                {
+                    return state.effect.as_mut();
+                }
+                _ => {}
+            }
+        }
+        // A would-evolve decision belongs to the nested declaration that
+        // opened it, before any enclosing reducer's parked continuation.
+        if let Some(index) = active_card.and_then(|card| {
+            self.effect_digivolve_scopes.iter().rposition(|scope| {
+                scope.declaration.result_card == card && scope.identity.window_started
+            })
+        }) {
+            return Some(&mut self.effect_digivolve_scopes[index].declaration);
+        }
+        for hook in self.after_selection_resume_hooks.0.iter_mut().rev() {
+            if let crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } = hook {
+                if state.effect.is_some() {
+                    return state.effect.as_mut();
+                }
+            }
+        }
+        self.effect_digivolve_scopes
+            .iter_mut()
+            .rev()
+            .find(|scope| scope.identity.window_started)
+            .map(|scope| &mut scope.declaration)
+    }
+
+    fn resolve_effect_digivolve_declaration(
+        &self,
+        state: &EffectDigivolveCostChoiceState,
+    ) -> Option<(CardSourceRef, PermanentHandle)> {
+        let target =
+            self.resolve_digivolve_host_identity(state.target_player, state.target_identity)?;
+        if self.player(target.player).battle_area[target.index as usize]
+            .top_card()
+            .handle()
+            != state.target_top
+        {
+            return None;
+        }
+        Some((self.resolve_effect_digivolve_choice_source(state)?, target))
+    }
+
+    fn finish_effect_digivolve_continuations(
+        &mut self,
+        mut state: EffectDigivolveCostChoiceState,
+        success: bool,
+    ) {
+        // A route selection can transition into a reducer/payment selection.
+        // Transfer ownership, rather than treating an asynchronous false as failure.
+        if !success {
+            if let Some(parked) = self.pending_effect_digivolve_declaration_mut() {
+                if parked.result_card == state.result_card {
+                    parked.result_clause = state.result_clause;
+                    parked.outer_conts.append(&mut state.outer_conts);
+                    return;
+                }
+            }
+        }
+        if success {
+            if let Some(index) = self
+                .player(state.target_player)
+                .battle_area
+                .iter()
+                .position(|p| {
+                    p.card_sources
+                        .last()
+                        .is_some_and(|c| c.handle() == state.result_card)
+                })
+            {
+                let result = PermanentHandle {
+                    player: state.target_player,
+                    index: index as u8,
+                };
+                for cont in &mut state.outer_conts {
+                    if state.result_clause == Some((cont.source_card, cont.player)) {
+                        cont.bindings.record_digivolved(result);
+                    }
+                }
+            }
+        }
+        self.remove_effect_digivolve_scope(state.result_card);
+        crate::dsl_cards::step::selections::run_outer_conts(self, state.outer_conts);
+    }
+
+    fn resume_effect_digivolve_declaration(
+        &mut self,
+        state: EffectDigivolveCostChoiceState,
+        chosen: Option<crate::dna_digivolve::DigivolveRouteMatch>,
+        reducers_resolved: bool,
+    ) -> bool {
+        self.remove_effect_digivolve_scope(state.result_card);
+        let previous_source = self.effect_source_player;
+        let previous_trigger = self.current_trigger_context.clone();
+        let previous_dna = self.current_dna_origin;
+        self.effect_source_player = state.effect_source_player;
+        self.current_trigger_context = state.trigger_context.clone();
+        self.current_dna_origin = state.dna_origin;
+        let success = if let (Some(cost), Some((source_ref, target))) =
+            (chosen, self.resolve_effect_digivolve_declaration(&state))
+        {
+            self.effect_initiated_digivolve_with_chosen_cost_inner(
+                state.acting_player,
+                source_ref,
+                target,
+                state.cost_delta,
+                state.waiver,
+                state.source,
+                Some(cost),
+                reducers_resolved,
+            )
+        } else {
+            self.pending_player_digivolve_reduction = 0;
+            self.pending_interactive_digivolve_reduction = 0;
+            self.pending_cost_reduction_amount_override = None;
+            false
+        };
+        if !success && self.pending_selection.is_none() {
+            self.pending_player_digivolve_reduction = 0;
+            self.pending_interactive_digivolve_reduction = 0;
+            self.pending_cost_reduction_amount_override = None;
+        }
+        self.finish_effect_digivolve_continuations(state, success);
+        self.effect_source_player = previous_source;
+        self.current_trigger_context = previous_trigger;
+        self.current_dna_origin = previous_dna;
+        success
+    }
+
+    pub(crate) fn run_effect_digivolve_cost_choice_step(
+        &mut self,
+        state: EffectDigivolveCostChoiceState,
+        action_id: u16,
+    ) {
+        let chosen = action_id
+            .checked_sub(crate::action::space::HAND_EFFECT_START)
+            .and_then(|i| state.printed_costs.get(i as usize))
+            .copied();
+        self.resume_effect_digivolve_declaration(state, chosen, false);
+    }
+
+    fn install_effect_digivolve_cost_choice(
+        &mut self,
+        state: EffectDigivolveCostChoiceState,
+        delta: CostDelta,
+    ) {
+        let source_card = state.result_card;
+        let entries: Vec<EffectChoiceEntry> = state
+            .printed_costs
+            .iter()
+            .enumerate()
+            .map(|(i, cost)| EffectChoiceEntry {
+                count_choice: None,
+                label: format!(
+                    "Digivolve for cost {}{}",
+                    delta.resolve(cost.memory_cost),
+                    if cost.treated_as.is_some() {
+                        " (treated as Digimon)"
+                    } else {
+                        ""
+                    }
+                ),
+                action_id: crate::action::space::HAND_EFFECT_START + i as u16,
+                source_card: Some(source_card),
+                source_kind: Some(EffectSourceKind::Digimon),
+                timing: None,
+                is_optional: false,
+                keyword: None,
+                observation_metadata: Default::default(),
+            })
+            .collect();
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+        let callback_state = state.clone();
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::EffectChoice,
+            selecting_player: state.acting_player,
+            previous_phase,
+            valid_action_ids: entries.iter().map(|entry| entry.action_id).collect(),
+            is_optional: false,
+            prompt: "Choose which digivolution cost to pay".into(),
+            effect_choices: Some(entries),
+            source_card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(move |game, action| {
+                game.run_effect_digivolve_cost_choice_step(callback_state, action)
+            }),
+            on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::EffectDigivolveCostChoice(state)],
+        });
+    }
+
     /// Resolve a parked digivolve cost-choice (resumable VM). Mirrors
     /// `install_digivolve_cost_choice_prompt`'s callback exactly: decode the
     /// chosen route index, pin it as `pending_digivolve_route_choice`, then
@@ -137,65 +661,58 @@ impl Game {
         );
     }
 
-    /// Resolve a parked digivolve cost-reducer accept/decline prompt (resumable
-    /// VM). Mirrors `install_player_digivolve_reducer_prompt`'s callback / on_decline:
-    /// PASS (decline) → zero the reduction and re-enter the digivolve at full
-    /// cost; accept → run `player_digivolve_reducer_accept` (which installs the
-    /// suspend-cost pick or applies the reduction directly).
+    /// Resolve ordering or one effect's optional gate without losing other
+    /// effects triggered by this same digivolution.
     pub(crate) fn run_digivolve_reducer_prompt_step(
         &mut self,
-        state: DigivolveReducerState,
+        mut state: DigivolveReducerState,
+        action_id: u16,
         is_pass: bool,
     ) {
-        if is_pass {
-            self.pending_player_digivolve_reduction = 0;
-            self.digivolve_from_hand_inner(
-                state.acting_player,
-                state.hand_index,
-                state.field_index,
-                state.source,
-                true,
-            );
+        if state.choosing_order {
+            let index = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+            if index >= state.remaining.len() {
+                return;
+            }
+            state.current = Some(state.remaining.remove(index));
+            state.choosing_order = false;
+            self.install_player_digivolve_reducer_prompt(state);
+        } else if is_pass {
+            if let Some(DigivolveReducerChoice::Player { index, reducer }) = &state.current {
+                self.consume_player_digivolve_reducer(*index, reducer, reducer.single_fire);
+            }
+            self.resume_player_digivolve_reducers(state);
         } else {
-            self.player_digivolve_reducer_accept(
-                state.reducer_idx,
-                state.reducer,
-                state.acting_player,
-                state.hand_index,
-                state.field_index,
-                state.source,
-            );
+            self.player_digivolve_reducer_accept(state);
         }
     }
 
-    /// Resolve a parked digivolve cost-reducer suspend-cost pick (resumable VM).
-    /// Mirrors the OwnField callback in `player_digivolve_reducer_accept`: decode
-    /// the suspend target, suspend it, consume the reducer (if single-fire),
-    /// credit the reduction, then re-enter the digivolve.
     pub(crate) fn run_digivolve_reducer_suspend_step(
         &mut self,
-        state: DigivolveReducerState,
+        mut state: DigivolveReducerState,
         action_id: u16,
     ) {
         use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
-        let offset = action_id.saturating_sub(ATTACK_START);
-        let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
-        let suspend_target = PermanentHandle {
-            player: state.acting_player,
-            index: target_index,
+        let Some(DigivolveReducerChoice::Player {
+            index: reducer_index,
+            reducer,
+        }) = state.current.clone()
+        else {
+            return;
         };
-        self.suspend(suspend_target);
-        let single_fire = state.reducer.single_fire;
-        let amount = state.reducer.amount;
-        self.consume_player_digivolve_reducer(state.reducer_idx, &state.reducer, single_fire);
-        self.pending_player_digivolve_reduction = amount;
-        self.digivolve_from_hand_inner(
-            state.acting_player,
-            state.hand_index,
-            state.field_index,
-            state.source,
-            true,
-        );
+        let index = (action_id.saturating_sub(ATTACK_START) % TARGETS_PER_ATTACKER) as usize;
+        if self
+            .suspendable_own_digimon(state.acting_player)
+            .contains(&index)
+        {
+            self.suspend(PermanentHandle {
+                player: state.acting_player,
+                index: index as u8,
+            });
+            state.reduction += reducer.amount;
+        }
+        self.consume_player_digivolve_reducer(reducer_index, &reducer, reducer.single_fire);
+        self.resume_player_digivolve_reducers(state);
     }
 
     /// Resolve a parked normal DNA-digivolve first-material prompt. Mirrors
@@ -385,6 +902,31 @@ impl Game {
         source: PlaySource,
         player_reducer_resolved: bool,
     ) -> bool {
+        // A parked cost re-enters against the printed source to validate the
+        // selected route again, then reinstalls its temporary identity before
+        // further cost effects. Do not leave an overlay after any failed exit.
+        self.abort_would_digivolve_declaration();
+        let result = self.digivolve_from_hand_inner_body(
+            player_id,
+            hand_index,
+            field_index,
+            source,
+            player_reducer_resolved,
+        );
+        if self.pending_selection.is_none() {
+            self.abort_would_digivolve_declaration();
+        }
+        result
+    }
+
+    fn digivolve_from_hand_inner_body(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+        player_reducer_resolved: bool,
+    ) -> bool {
         if self.current_phase != GamePhase::Main {
             self.logger.log(&format!(
                 "[Rejected] digivolve_from_hand: not in Main phase (phase={:?})",
@@ -462,6 +1004,22 @@ impl Game {
         // cheapest. `route` carries both the printed cost and app-fusion-ness.
         let route = self.pending_digivolve_route_choice.unwrap_or(min_route);
         let printed_cost = route.memory_cost;
+        let host_identity = self.capture_digivolve_host_identity(handle);
+        let treated_identity_orders = route
+            .treated_as
+            .and_then(|profile| self.install_would_digivolve_identity(handle, profile));
+        if treated_identity_orders.is_some() {
+            self.pending_would_digivolve_resume = Some(PendingWouldDigivolveResume {
+                host_identity,
+                treated_identity_orders,
+                window_started: false,
+                player: player_id,
+                permanent: handle,
+                card: card.handle(),
+                effective_cost: 0,
+                app_fusion: route.app_fusion,
+            });
+        }
 
         // G-COST-REDUCE-ALLY-DIGIVOLVE — player-scoped one-shot future-digivolve
         // cost reducer prompt. Runs BEFORE the synchronous field-hosted
@@ -469,16 +1027,12 @@ impl Game {
         // installs an interactive accept/decline PendingSelection and returns
         // — the accept/decline callbacks re-enter `digivolve_from_hand_inner`
         // with `player_reducer_resolved = true`.
-        if !player_reducer_resolved
-            && self.try_prompt_player_digivolve_cost_reducer(
-                player_id,
-                handle,
-                hand_index,
-                field_index,
-                source,
-            )
-        {
-            return false;
+        if !player_reducer_resolved {
+            if let Some(result) =
+                self.try_prompt_player_digivolve_cost_reducer(player_id, handle, hand_index, source)
+            {
+                return result;
+            }
         }
         // Pre-resolved player-scoped reduction (set by the accept callback,
         // 0 on decline). Consumed once here.
@@ -497,29 +1051,6 @@ impl Game {
             target_permanents: [Some(handle), None],
         };
 
-        // G-COST-REDUCTION-INTERACTIVE-PAY-COST (digivolve half) — a
-        // field-hosted reducer whose `pay_cost` INSTALLS A SELECTION (the
-        // interactive `trash_bottom_face_down_source_under_tamer` Tamer pick,
-        // ST23-03 / ST23-11) cannot be resolved by the synchronous scan below
-        // (a park would leave a dangling `pending_selection` mid-digivolve).
-        // Handle it through a dedicated interactive prompt FIRST: it runs the
-        // parking pay_cost, credits the reduction into
-        // `pending_interactive_digivolve_reduction` on resolution, and
-        // re-enters with `player_reducer_resolved = true`. The synchronous scan
-        // skips `pay_cost_interactive` reducers so they are never
-        // double-applied. Runs only on the first attempt
-        // (`!player_reducer_resolved`).
-        if !player_reducer_resolved
-            && self.try_prompt_interactive_digivolve_cost_reducer(
-                player_id,
-                target,
-                hand_index,
-                field_index,
-                source,
-            )
-        {
-            return false;
-        }
         // Pre-resolved interactive field reduction (set by the prompt's parked
         // pay_cost success continuation, 0 otherwise). Consumed once here.
         let interactive_reduction =
@@ -531,22 +1062,63 @@ impl Game {
             Some(target),
         ) + player_reduction
             + interactive_reduction;
+        let Some(handle) = self.resolve_digivolve_host_identity(player_id, host_identity) else {
+            self.clear_digivolve_reducer_chain_credit();
+            return false;
+        };
+        if !self
+            .player(player_id)
+            .hand
+            .iter()
+            .any(|hand_card| hand_card.handle() == target.card)
+        {
+            self.clear_digivolve_reducer_chain_credit();
+            return false;
+        }
+        let target = CostTargetContext {
+            target_permanents: [Some(handle), None],
+            ..target
+        };
         // Fire BeforePayCost observers (e.g. gain_memory) AFTER reduction
         // is computed but BEFORE pay_memory — G-BEFORE-PAY-COST-GAIN-MEMORY.
         self.scan_before_pay_cost_observers(player_id, Some(target));
+        let Some(handle) = self.resolve_digivolve_host_identity(player_id, host_identity) else {
+            self.clear_digivolve_reducer_chain_credit();
+            return false;
+        };
+        if !self
+            .player(player_id)
+            .hand
+            .iter()
+            .any(|hand_card| hand_card.handle() == target.card)
+        {
+            self.clear_digivolve_reducer_chain_credit();
+            return false;
+        }
         let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
 
         // Consume the cost choice now — past this point the resume carries the
         // route's app-fusion-ness, so the choice field is no longer needed and
         // must be cleared before the replacement resume / next attempt.
         self.pending_digivolve_route_choice = None;
-        self.pending_would_digivolve_resume = Some(PendingWouldDigivolveResume {
-            player: player_id,
-            permanent: handle,
-            card: card.handle(),
-            effective_cost,
-            app_fusion: route.app_fusion,
-        });
+        if self.game_over {
+            return false;
+        }
+        let resume =
+            self.pending_would_digivolve_resume
+                .get_or_insert(PendingWouldDigivolveResume {
+                    host_identity,
+                    treated_identity_orders: None,
+                    window_started: false,
+                    player: player_id,
+                    permanent: handle,
+                    card: card.handle(),
+                    effective_cost,
+                    app_fusion: route.app_fusion,
+                });
+        resume.permanent = handle;
+        resume.effective_cost = effective_cost;
+        resume.window_started = true;
         let cause = match source {
             PlaySource::ByEffect => crate::replacement::ReplacementCause::OwnEffect,
             PlaySource::ByHand | PlaySource::ByDigivolve => {
@@ -562,29 +1134,19 @@ impl Game {
         if self.pending_selection.is_some() {
             return false;
         }
+        let Some(resume) = self.pending_would_digivolve_resume.take() else {
+            return false;
+        };
+        self.clear_would_digivolve_identity(&resume);
         match outcome {
             crate::replacement::ReplacementOutcome::None => {
-                self.pending_would_digivolve_resume = None;
+                self.commit_digivolve_from_hand_no_replace(resume)
             }
             crate::replacement::ReplacementOutcome::Cancelled
-            | crate::replacement::ReplacementOutcome::CustomHandled => {
-                self.pending_would_digivolve_resume = None;
-                return false;
-            }
-            crate::replacement::ReplacementOutcome::Redirected(_)
-            | crate::replacement::ReplacementOutcome::Substituted(_) => {
-                self.pending_would_digivolve_resume = None;
-                return false;
-            }
+            | crate::replacement::ReplacementOutcome::CustomHandled
+            | crate::replacement::ReplacementOutcome::Redirected(_)
+            | crate::replacement::ReplacementOutcome::Substituted(_) => false,
         }
-
-        self.commit_digivolve_from_hand_no_replace(PendingWouldDigivolveResume {
-            player: player_id,
-            permanent: handle,
-            card: card.handle(),
-            effective_cost,
-            app_fusion: route.app_fusion,
-        })
     }
 
     /// Install the `EffectChoice` "which digivolution cost do you pay?" prompt
@@ -622,8 +1184,17 @@ impl Game {
             .iter()
             .enumerate()
             .map(|(i, r)| EffectChoiceEntry {
+                count_choice: None,
                 label: if r.app_fusion {
                     format!("Digivolve for cost {} (App Fusion)", r.memory_cost)
+                } else if let Some(profile) = r.treated_as {
+                    format!(
+                        "Digivolve for cost {} (treat base as Lv.{} {:?} {:?})",
+                        r.memory_cost,
+                        profile.level,
+                        profile.colors(),
+                        profile.kind
+                    )
                 } else {
                     format!("Digivolve for cost {}", r.memory_cost)
                 },
@@ -692,198 +1263,446 @@ impl Game {
         });
     }
 
-    /// Install the accept/decline `PendingSelection` for a player-scoped
-    /// digivolve cost reducer. On accept → install the suspend-cost
-    /// selection, then re-enter the digivolve with the reduction applied.
-    /// On decline → re-enter the digivolve at full cost (reducer stays
-    /// armed). `G-COST-REDUCE-ALLY-DIGIVOLVE`.
-    pub(crate) fn install_player_digivolve_reducer_prompt(
+    /// Re-check remaining payment preconditions after every resolution. All
+    /// player one-shots expire on the event; field effects retain ordinary OPT
+    /// accounting and are never selected twice from this snapshot.
+    pub(crate) fn advance_player_digivolve_reducers(
         &mut self,
-        reducer_idx: usize,
-        reducer: crate::player_cost_reducer::PlayerDigivolveCostReducer,
-        acting_player: PlayerId,
-        hand_index: usize,
-        field_index: usize,
-        source: PlaySource,
-    ) {
-        use crate::action::space::HAND_EFFECT_START;
-        use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
-
-        let source_card = reducer.source_card;
-        let source_kind = self.effect_source_kind_for_handle(source_card);
-        let amount = reducer.amount;
-        // make-engine-cloneable: capture a copy for the data frame before the
-        // accept closure moves the reducer.
-        let reducer_for_resume = reducer.clone();
-
-        // Accept branch — pay the suspend cost (if any), apply the reduction,
-        // consume the reducer if single-fire, then re-enter the digivolve.
-        let accept = {
-            let reducer = reducer.clone();
-            move |game: &mut Game, _action_id: u16| {
-                game.player_digivolve_reducer_accept(
-                    reducer_idx,
-                    reducer,
-                    acting_player,
-                    hand_index,
-                    field_index,
-                    source,
-                );
+        mut state: DigivolveReducerState,
+    ) -> bool {
+        let Some((_, field)) = self.resolve_digivolve_reducer_target(&state) else {
+            if let Some(effect) = &state.effect {
+                // Failure belongs to this effect declaration, not an enclosing
+                // native declaration waiting for its payment to finish.
+                self.remove_effect_digivolve_scope(effect.result_card);
+            } else {
+                self.clear_digivolve_reducer_chain_credit();
             }
+            return false;
         };
-        // Decline branch — leave the reducer armed, re-enter the digivolve
-        // at the unreduced cost.
-        let decline = move |game: &mut Game| {
-            game.pending_player_digivolve_reduction = 0;
-            game.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, true);
-        };
+        state.target.target_permanents = [
+            Some(PermanentHandle {
+                player: state.acting_player,
+                index: field as u8,
+            }),
+            None,
+        ];
+        let prohibited = self
+            .modifiers
+            .player_has(state.acting_player, ModifierType::CannotReduceCost)
+            || self
+                .modifiers
+                .player_has(state.acting_player, ModifierType::CannotReduceDigivolveCost)
+            || self.modifiers.any_other_player_has(
+                state.acting_player,
+                ModifierType::OpponentCannotReduceDigivolveCost,
+            );
+        let payable = !self.suspendable_own_digimon(state.acting_player).is_empty();
+        let live_fields = self.collect_before_pay_cost_reducers(
+            state.acting_player,
+            Some(state.target),
+            &[],
+            CostReductionKind::Digivolve,
+        );
+        let remaining = std::mem::take(&mut state.remaining);
+        for choice in remaining {
+            match choice {
+                DigivolveReducerChoice::Player { index, reducer } => {
+                    if prohibited || (reducer.suspend_cost && !payable) {
+                        self.consume_player_digivolve_reducer(index, &reducer, reducer.single_fire);
+                    } else if !reducer.suspend_cost {
+                        state.reduction += reducer.amount;
+                        self.consume_player_digivolve_reducer(index, &reducer, reducer.single_fire);
+                    } else {
+                        state
+                            .remaining
+                            .push(DigivolveReducerChoice::Player { index, reducer });
+                    }
+                }
+                DigivolveReducerChoice::Field(candidate) => {
+                    // Resolve by physical source, not an index shifted by an
+                    // earlier payment deleting another battle-area permanent.
+                    if let Some(live) = live_fields.iter().find(|live| {
+                        live.key.source_card == candidate.key.source_card
+                            && live.key.controller == candidate.key.controller
+                            && live.key.effect_slot == candidate.key.effect_slot
+                            && live.key.is_under == candidate.key.is_under
+                    }) {
+                        if self.cost_reducer_pay_cost_payable(&live.key) {
+                            state
+                                .remaining
+                                .push(DigivolveReducerChoice::Field(live.clone()));
+                        }
+                    }
+                }
+            }
+        }
+        if prohibited {
+            state.reduction = 0;
+        }
+        if state.remaining.is_empty() {
+            self.pending_player_digivolve_reduction = state.reduction;
+            return false;
+        }
+        state.choosing_order = state.remaining.len() > 1;
+        if !state.choosing_order {
+            state.current = Some(state.remaining.remove(0));
+            if let Some(DigivolveReducerChoice::Field(candidate)) = state.current.clone() {
+                if !state.current.as_ref().unwrap().optional() {
+                    return match self.run_digivolve_reducer_chain_payment(state, candidate) {
+                        Some(next) => self.advance_player_digivolve_reducers(next),
+                        None => true,
+                    };
+                }
+            }
+        }
+        self.install_player_digivolve_reducer_prompt(state);
+        true
+    }
 
+    /// Existential search over the same legal payment prompts used at commit.
+    /// Only isolated clones consume payments or OPTs; the live declaration
+    /// retains every player choice, including an optional decline.
+    fn effect_digivolve_route_is_affordable(
+        &self,
+        declaration: &EffectDigivolveCostChoiceState,
+        target: CostTargetContext,
+        base_cost: u16,
+        route: crate::dna_digivolve::DigivolveRouteMatch,
+    ) -> bool {
+        let mut initial = self.clone();
+        // Keep synchronous payment triggers deferred throughout this clone-only
+        // search. The speculative scope is discarded, never flushed.
+        initial.enter_deferred_drain();
+        // Caller continuations are outside this payment. Retain only hooks
+        // installed by the probe's own nested cost effects.
+        initial.after_selection_resume_hooks.0.clear();
+        let Some((_, host)) = initial.resolve_effect_digivolve_declaration(declaration) else {
+            return false;
+        };
+        let orders = route.treated_as
+            .and_then(|profile| initial.install_would_digivolve_identity(host, profile));
+        // The speculative declaration owns its payment choices just as the
+        // real declaration does. Caller scopes remain for physical identity,
+        // but cannot receive this probe's decline/abort attribution.
+        initial.effect_digivolve_scopes.push(EffectDigivolveScope {
+            declaration: declaration.clone(),
+            identity: PendingWouldDigivolveResume {
+                window_started: false,
+                host_identity: declaration.target_identity,
+                treated_identity_orders: orders,
+                player: host.player,
+                permanent: host,
+                card: declaration.result_card,
+                effective_cost: 0,
+                app_fusion: false,
+            },
+        });
+        initial.try_prompt_digivolve_reducer_chain_mode(
+            declaration.acting_player,
+            host,
+            target,
+            declaration.source,
+            Some(declaration.clone()),
+            true,
+        );
+        let mut frontier = vec![initial];
+        while let Some(mut branch) = frontier.pop() {
+            if let Some(pending) = branch.pending_selection.as_ref() {
+                let player = pending.selecting_player;
+                let mask = crate::action::mask::build_action_mask(&branch, player);
+                // Stack in reverse order so the first offered legal choice is
+                // explored first. No choices are silently auto-selected.
+                for action in (0..mask.len()).rev() {
+                    if mask[action] == 0.0 {
+                        continue;
+                    }
+                    let mut next = branch.clone();
+                    if next
+                        .resolve_payment_probe_selection(player, action as u16)
+                        .is_ok()
+                    {
+                        frontier.push(next);
+                    }
+                }
+                continue;
+            }
+            let Some((source, host)) = branch.resolve_effect_digivolve_declaration(declaration)
+            else {
+                continue;
+            };
+            let cost_target = CostTargetContext {
+                card: declaration.result_card,
+                from_hand: matches!(source, CardSourceRef::Hand(_, _)),
+                is_digivolve: true,
+                target_permanents: [Some(host), None],
+            };
+            let reduction = std::mem::take(&mut branch.pending_player_digivolve_reduction)
+                + branch.scan_before_pay_cost_reduction_with_target(
+                    declaration.acting_player,
+                    CostReductionKind::Digivolve,
+                    Some(cost_target),
+                );
+            branch.scan_before_pay_cost_observers(declaration.acting_player, Some(cost_target));
+            if branch
+                .resolve_effect_digivolve_declaration(declaration)
+                .is_none()
+            {
+                continue;
+            }
+            let payable = (i32::from(base_cost) - reduction).max(0);
+            if i32::from(branch.memory) - payable >= i32::from(branch.rules.memory_range.0) {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub(crate) fn capture_digivolve_host_identity(&mut self, handle: PermanentHandle) -> u64 {
+        if let Some(identity) =
+            self.player(handle.player).battle_area[handle.index as usize].battle_identity
+        {
+            return identity;
+        }
+        let identity = self.next_battle_identity;
+        self.next_battle_identity = identity.checked_add(1).expect("stack identity exhausted");
+        self.player_mut(handle.player).battle_area[handle.index as usize].battle_identity =
+            Some(identity);
+        identity
+    }
+
+    pub(crate) fn resolve_digivolve_host_identity(
+        &self,
+        player: PlayerId,
+        identity: u64,
+    ) -> Option<PermanentHandle> {
+        self.player(player)
+            .battle_area
+            .iter()
+            .position(|perm| perm.battle_identity == Some(identity))
+            .map(|index| PermanentHandle {
+                player,
+                index: index as u8,
+            })
+    }
+
+    fn resolve_digivolve_reducer_target(
+        &self,
+        state: &DigivolveReducerState,
+    ) -> Option<(usize, usize)> {
+        if let Some(effect) = &state.effect {
+            let (source, target) = self.resolve_effect_digivolve_declaration(effect)?;
+            let source_index = match source {
+                CardSourceRef::Hand(_, index) => index,
+                _ => 0,
+            };
+            return Some((source_index, target.index as usize));
+        }
+        let player = self.player(state.acting_player);
+        let hand = player
+            .hand
+            .iter()
+            .position(|card| card.handle() == state.target.card)?;
+        let field = player
+            .battle_area
+            .iter()
+            .position(|permanent| permanent.battle_identity == Some(state.host_identity))?;
+        Some((hand, field))
+    }
+
+    fn clear_digivolve_reducer_chain_credit(&mut self) {
+        self.abort_would_digivolve_declaration();
+        self.pending_player_digivolve_reduction = 0;
+        self.pending_interactive_digivolve_reduction = 0;
+        self.pending_cost_reduction_amount_override = None;
+        self.pending_digivolve_route_choice = None;
+    }
+
+    pub(crate) fn finish_player_digivolve_reducer_chain(
+        &mut self,
+        state: DigivolveReducerState,
+    ) -> bool {
+        let previous_source = self.effect_source_player;
+        let previous_trigger = self.current_trigger_context.clone();
+        let previous_dna = self.current_dna_origin;
+        if let Some(effect) = &state.effect {
+            self.effect_source_player = effect.effect_source_player;
+            self.current_trigger_context = effect.trigger_context.clone();
+            self.current_dna_origin = effect.dna_origin;
+        }
+        let result = self.finish_player_digivolve_reducer_chain_inner(state);
+        self.effect_source_player = previous_source;
+        self.current_trigger_context = previous_trigger;
+        self.current_dna_origin = previous_dna;
+        result
+    }
+
+    fn finish_player_digivolve_reducer_chain_inner(
+        &mut self,
+        state: DigivolveReducerState,
+    ) -> bool {
+        // Payment effects may compact either zone, or remove/replay the host.
+        // Preserve the declaration's physical card and battle-stack identity.
+        let declaration = state.clone();
+        if self.advance_player_digivolve_reducers(state) {
+            return false;
+        }
+        if declaration.affordability_probe {
+            return false;
+        }
+        if let Some(effect) = declaration.effect.clone() {
+            let chosen = effect.printed_costs.first().copied();
+            return self.resume_effect_digivolve_declaration(effect, chosen, true);
+        }
+        let Some((hand, field)) = self.resolve_digivolve_reducer_target(&declaration) else {
+            self.clear_digivolve_reducer_chain_credit();
+            return false;
+        };
+        let result = self.digivolve_from_hand_inner(
+            declaration.acting_player,
+            hand,
+            field,
+            declaration.source,
+            true,
+        );
+        if !result && self.pending_selection.is_none() {
+            self.clear_digivolve_reducer_chain_credit();
+        }
+        result
+    }
+
+    pub(crate) fn resume_player_digivolve_reducers(&mut self, state: DigivolveReducerState) {
+        self.finish_player_digivolve_reducer_chain(state);
+    }
+
+    /// Ordering covers both field and player effects: either kind can consume
+    /// a permanent needed by another payment. The payment's own optionality is
+    /// independent of this mandatory order choice.
+    pub(crate) fn install_player_digivolve_reducer_prompt(&mut self, state: DigivolveReducerState) {
+        use crate::action::space::HAND_EFFECT_START;
+        let ordering = state.choosing_order;
+        if !ordering && !state.current.as_ref().expect("selected reducer").optional() {
+            self.player_digivolve_reducer_accept(state);
+            return;
+        }
+        let choices_to_show: Vec<_> = if ordering {
+            state.remaining.iter().collect()
+        } else {
+            vec![state.current.as_ref().expect("selected reducer")]
+        };
+        let source_card = choices_to_show[0].source_card();
+        let source_kind = self.effect_source_kind_for_handle(source_card);
+        let source_permanent = match state.current.as_ref() {
+            Some(DigivolveReducerChoice::Field(candidate)) if !ordering => {
+                candidate.key.source_permanent
+            }
+            _ => None,
+        };
+        let choices: Vec<_> = choices_to_show
+            .iter()
+            .enumerate()
+            .map(|(index, choice)| EffectChoiceEntry {
+                count_choice: None,
+                label: choice.label(),
+                action_id: HAND_EFFECT_START + index as u16,
+                source_card: Some(choice.source_card()),
+                source_kind: Some(self.effect_source_kind_for_handle(choice.source_card())),
+                timing: Some(EffectTiming::BeforePayCost),
+                is_optional: !ordering,
+                keyword: None,
+                observation_metadata: Default::default(),
+            })
+            .collect();
+        let prompt = if ordering {
+            "Choose which digivolution cost reducer to resolve next".to_string()
+        } else {
+            format!("Use {} to reduce digivolution cost?", choices[0].label)
+        };
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
+        let accepted = state.clone();
+        let declined = state.clone();
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
-            selecting_player: acting_player,
+            selecting_player: state.acting_player,
             previous_phase,
-            valid_action_ids: vec![HAND_EFFECT_START],
-            is_optional: true,
-            prompt: format!(
-                "Suspend 1 of your Digimon to reduce the digivolution cost by {}?",
-                amount
-            ),
-            effect_choices: Some(vec![EffectChoiceEntry {
-                label: format!("Suspend 1 Digimon (digivolution cost -{})", amount),
-                action_id: HAND_EFFECT_START,
-                source_card: Some(source_card),
-                source_kind: Some(source_kind),
-                timing: Some(crate::enums::EffectTiming::BeforePayCost),
-                is_optional: true,
-                keyword: None,
-                observation_metadata: Default::default(),
-            }]),
+            valid_action_ids: choices.iter().map(|entry| entry.action_id).collect(),
+            is_optional: !ordering,
+            prompt,
+            effect_choices: Some(choices),
             source_card,
-            source_permanent: None,
+            source_permanent,
             source_kind,
-            callback: Box::new(accept),
-            on_decline: Some(Box::new(decline)),
+            callback: Box::new(move |game, action| {
+                game.run_digivolve_reducer_prompt_step(accepted.clone(), action, false)
+            }),
+            on_decline: if ordering {
+                None
+            } else {
+                Some(Box::new(move |game: &mut Game| {
+                    game.run_digivolve_reducer_prompt_step(
+                        declined.clone(),
+                        crate::action::space::PASS,
+                        true,
+                    )
+                }))
+            },
         });
-        // Park the data frame: accept/decline resolve via
-        // `run_digivolve_reducer_prompt_step` through the resumable VM.
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::DigivolveReducerPrompt(
-                DigivolveReducerState {
-                    reducer_idx,
-                    reducer: reducer_for_resume,
-                    acting_player,
-                    hand_index,
-                    field_index,
-                    source,
-                },
-            )],
+            frames: vec![crate::resume::ResumeFrame::DigivolveReducerPrompt(state)],
         });
     }
 
-    /// Accept-branch continuation for a player-scoped digivolve cost
-    /// reducer: install the suspend-cost selection (`select 1 unsuspended
-    /// own Digimon`). On suspend resolution → suspend it, apply the
-    /// reduction, consume the reducer if single-fire, and re-enter the
-    /// digivolve. `G-COST-REDUCE-ALLY-DIGIVOLVE` / `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`.
-    pub(crate) fn player_digivolve_reducer_accept(
-        &mut self,
-        reducer_idx: usize,
-        reducer: crate::player_cost_reducer::PlayerDigivolveCostReducer,
-        acting_player: PlayerId,
-        hand_index: usize,
-        field_index: usize,
-        source: PlaySource,
-    ) {
-        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
-        use crate::selection::{PendingSelection, SelectionKind};
-
-        let amount = reducer.amount;
-        let single_fire = reducer.single_fire;
+    pub(crate) fn player_digivolve_reducer_accept(&mut self, state: DigivolveReducerState) {
+        use crate::action::space::encode_attack;
+        let current = state.current.as_ref().expect("selected reducer").clone();
+        let DigivolveReducerChoice::Player { index, reducer } = current else {
+            if let DigivolveReducerChoice::Field(candidate) = current {
+                if let Some(next) = self.run_digivolve_reducer_chain_payment(state, candidate) {
+                    self.resume_player_digivolve_reducers(next);
+                }
+            }
+            return;
+        };
+        let suspendable = self.suspendable_own_digimon(state.acting_player);
+        if suspendable.is_empty() {
+            self.consume_player_digivolve_reducer(index, &reducer, reducer.single_fire);
+            self.resume_player_digivolve_reducers(state);
+            return;
+        }
         let source_card = reducer.source_card;
         let source_kind = self.effect_source_kind_for_handle(source_card);
-        // make-engine-cloneable: capture a copy for the data frame before the
-        // suspend-pick closure moves the reducer.
-        let reducer_for_resume = reducer.clone();
-
-        if !reducer.suspend_cost {
-            // No suspend cost — apply the reduction directly.
-            self.consume_player_digivolve_reducer(reducer_idx, &reducer, single_fire);
-            self.pending_player_digivolve_reduction = amount;
-            self.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, true);
-            return;
-        }
-
-        let suspendable = self.suspendable_own_digimon(acting_player);
-        if suspendable.is_empty() {
-            // Cost became unpayable between prompt-install and accept — leave
-            // the reducer armed and continue at the unreduced cost.
-            self.pending_player_digivolve_reduction = 0;
-            self.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, true);
-            return;
-        }
-
-        let valid_action_ids: Vec<u16> = suspendable
-            .iter()
-            .map(|i| encode_attack(0, *i as u16))
-            .collect();
-
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
+        let resumed = state.clone();
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
             kind: SelectionKind::OwnField,
-            selecting_player: acting_player,
+            selecting_player: state.acting_player,
             previous_phase,
-            valid_action_ids,
+            valid_action_ids: suspendable
+                .iter()
+                .map(|index| encode_attack(0, *index as u16))
+                .collect(),
             is_optional: false,
             prompt: "Suspend 1 of your Digimon (digivolution cost reduction)".to_string(),
             effect_choices: None,
             source_card,
             source_permanent: None,
             source_kind,
-            callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                let suspend_target = PermanentHandle {
-                    player: acting_player,
-                    index: target_index,
-                };
-                game.suspend(suspend_target);
-                game.consume_player_digivolve_reducer(reducer_idx, &reducer, single_fire);
-                game.pending_player_digivolve_reduction = amount;
-                game.digivolve_from_hand_inner(
-                    acting_player,
-                    hand_index,
-                    field_index,
-                    source,
-                    true,
-                );
+            callback: Box::new(move |game, action| {
+                game.run_digivolve_reducer_suspend_step(resumed.clone(), action)
             }),
             on_decline: None,
         });
-        // Park the data frame: the suspend pick resolves via
-        // `run_digivolve_reducer_suspend_step` through the resumable VM.
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::DigivolveReducerSuspend(
-                DigivolveReducerState {
-                    reducer_idx,
-                    reducer: reducer_for_resume,
-                    acting_player,
-                    hand_index,
-                    field_index,
-                    source,
-                },
-            )],
+            frames: vec![crate::resume::ResumeFrame::DigivolveReducerSuspend(state)],
         });
     }
 
-    /// Remove a single-fire player-scoped digivolve cost reducer after a
-    /// successful application. The reducer is located by identity (player +
-    /// source card + amount) rather than by stale index, since the vector
-    /// may have shifted between prompt-install and resolution.
+    /// Consume a next-event reducer by identity; earlier resolutions may have
+    /// shifted its recorded vector index. Reusable reducers are retained.
     pub(crate) fn consume_player_digivolve_reducer(
         &mut self,
         reducer_idx: usize,
@@ -916,11 +1735,100 @@ impl Game {
         }
     }
 
+    fn install_would_digivolve_identity(
+        &mut self,
+        handle: PermanentHandle,
+        profile: crate::dna_digivolve::DigivolveTreatedIdentity,
+    ) -> Option<(u64, Option<u64>)> {
+        use crate::modifiers::{ModifierEntry, ModifierPayload};
+        let identity = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)?
+            .synth_identity(&self.card_data, &self.modifiers, handle);
+        self.modifiers.add(
+            handle,
+            ModifierEntry::simple(
+                ModifierType::TreatAsDigimon,
+                0,
+                crate::enums::Expiry::Permanent,
+                handle.player,
+            )
+            .with_payload(ModifierPayload::SynthIdentity {
+                kind: profile.kind,
+                level: profile.level,
+                colors: profile.colors(),
+                traits: identity.traits,
+                dp: identity.dp.unwrap_or(0),
+            }),
+        );
+        let identity_order = self
+            .modifiers
+            .get(handle, ModifierType::TreatAsDigimon)
+            .last()
+            .expect("just installed identity")
+            .install_order;
+        let no_dp_order = if identity.dp.is_none() {
+            self.modifiers.add(
+                handle,
+                ModifierEntry::simple(
+                    ModifierType::DontHaveDp,
+                    0,
+                    crate::enums::Expiry::Permanent,
+                    handle.player,
+                ),
+            );
+            Some(
+                self.modifiers
+                    .get(handle, ModifierType::DontHaveDp)
+                    .last()
+                    .expect("just installed no-DP identity")
+                    .install_order,
+            )
+        } else {
+            None
+        };
+        self.modifiers.invalidate_declarative_memo();
+        self.tick_declarative_effects();
+        Some((identity_order, no_dp_order))
+    }
+
+    pub(crate) fn abort_would_digivolve_declaration(&mut self) {
+        if let Some(resume) = self.pending_would_digivolve_resume.take() {
+            self.clear_would_digivolve_identity(&resume);
+        }
+    }
+
+    pub(crate) fn clear_would_digivolve_identity(&mut self, resume: &PendingWouldDigivolveResume) {
+        let Some((identity_order, no_dp_order)) = resume.treated_identity_orders else {
+            return;
+        };
+        if let Some(handle) =
+            self.resolve_digivolve_host_identity(resume.player, resume.host_identity)
+        {
+            let subject = crate::modifiers::ModifierSubject::Permanent(handle);
+            self.modifiers
+                .remove_until_condition_by_order(subject, identity_order);
+            if let Some(order) = no_dp_order {
+                self.modifiers
+                    .remove_until_condition_by_order(subject, order);
+            }
+        }
+        self.modifiers.invalidate_declarative_memo();
+        self.tick_declarative_effects();
+    }
+
     pub(crate) fn commit_digivolve_from_hand_no_replace(
         &mut self,
-        resume: PendingWouldDigivolveResume,
+        mut resume: PendingWouldDigivolveResume,
     ) -> bool {
-        let field_index = resume.permanent.index as usize;
+        let Some(handle) =
+            self.resolve_digivolve_host_identity(resume.player, resume.host_identity)
+        else {
+            return false;
+        };
+        resume.permanent = handle;
+        let field_index = handle.index as usize;
         if resume.permanent.player != resume.player {
             return false;
         }
@@ -1024,26 +1932,7 @@ impl Game {
 
         self.player_mut(resume.player).draw();
 
-        self.enqueue_triggered(
-            EffectTiming::WhenDigivolving,
-            TriggerSource::Permanent(resume.permanent),
-        );
-        self.drain_effect_queue();
-
-        // OnDigivolve: global observer — fires in every player's battle area
-        // after the evolving permanent's WhenDigivolving resolves. Distinct
-        // from WhenDigivolving (self-timing on the evolving permanent).
-        self.enqueue_triggered(
-            EffectTiming::OnDigivolve,
-            TriggerSource::Digivolved {
-                player: resume.player,
-                permanent: resume.permanent,
-                card: event_card,
-                effect_initiated: false,
-                dna_origin: false,
-            },
-        );
-        self.drain_effect_queue();
+        self.fire_digivolve_event_triggers(resume.permanent, event_card, false, false);
 
         // Reward-shaping counter — bumped here at the user-action choke
         // point that both `digivolve_from_hand_inner` and the
@@ -1175,23 +2064,7 @@ impl Game {
             memory_paid: 0,
         });
 
-        self.enqueue_triggered(
-            EffectTiming::WhenDigivolving,
-            TriggerSource::Permanent(host),
-        );
-        self.drain_effect_queue();
-
-        self.enqueue_triggered(
-            EffectTiming::OnDigivolve,
-            TriggerSource::Digivolved {
-                player: player_id,
-                permanent: host,
-                card: event_card,
-                effect_initiated: true,
-                dna_origin: false,
-            },
-        );
-        self.drain_effect_queue();
+        self.fire_digivolve_event_triggers(host, event_card, true, false);
 
         true
     }
@@ -1490,8 +2363,9 @@ impl Game {
     /// the digivolution process is resolved"), not a benefit of the main-phase
     /// action, so it applies however the digivolution was initiated.
     ///
-    /// Returns `true` on success, `false` if validation fails (bad index,
-    /// no matching evo cost, or insufficient memory).
+    /// Returns `true` on synchronous success. `false` means validation failed
+    /// or a mandatory cost-choice prompt was installed; the latter resumes
+    /// through `EffectDigivolveCostChoice` before any payment is made.
     pub fn effect_initiated_digivolve(
         &mut self,
         player_id: PlayerId,
@@ -1574,8 +2448,8 @@ impl Game {
     /// requirement is waived: the result card's colour-matching printed
     /// circles (any level) and its DSL alt-digivolve paths (with their
     /// subject-level leaves dropped) still decide whether the digivolve is
-    /// legal, and the cheapest such route's printed memory cost is the base
-    /// that `cost_delta` adjusts (e.g. EX13-071 "ignoring level and with the
+    /// legal, and the chosen route's printed memory cost is the base that
+    /// `cost_delta` adjusts (e.g. EX13-071 "ignoring level and with the
     /// cost reduced by 1" = `CostDelta::Reduce(1)` off that printed cost).
     /// See `Game::digivolve_routes_ignoring_level`.
     /// G-DIGIVOLVE-IGNORE-LEVEL-PRINTED-COST.
@@ -1606,6 +2480,55 @@ impl Game {
         waiver: DigivolveRequirementWaiver,
         source: PlaySource,
     ) -> bool {
+        self.effect_initiated_digivolve_with_chosen_cost(
+            player_id, source_ref, target, cost_delta, waiver, source, None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn effect_initiated_digivolve_with_chosen_cost(
+        &mut self,
+        player_id: PlayerId,
+        source_ref: CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: CostDelta,
+        waiver: DigivolveRequirementWaiver,
+        source: PlaySource,
+        chosen_cost: Option<crate::dna_digivolve::DigivolveRouteMatch>,
+    ) -> bool {
+        let card = self
+            .card_source_ref_peek(source_ref)
+            .map(CardSource::handle);
+        let result = self.effect_initiated_digivolve_with_chosen_cost_inner(
+            player_id,
+            source_ref,
+            target,
+            cost_delta,
+            waiver,
+            source,
+            chosen_cost,
+            false,
+        );
+        if self.pending_selection.is_none() {
+            if let Some(card) = card {
+                self.remove_effect_digivolve_scope(card);
+            }
+        }
+        result
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn effect_initiated_digivolve_with_chosen_cost_inner(
+        &mut self,
+        player_id: PlayerId,
+        source_ref: CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: CostDelta,
+        waiver: DigivolveRequirementWaiver,
+        source: PlaySource,
+        chosen_cost: Option<crate::dna_digivolve::DigivolveRouteMatch>,
+        reducers_resolved: bool,
+    ) -> bool {
         let ignore_color = matches!(
             waiver,
             DigivolveRequirementWaiver::Color | DigivolveRequirementWaiver::All
@@ -1619,6 +2542,15 @@ impl Game {
             self.logger.log(
                 "[Rejected] effect_initiated_digivolve: blocked by CannotDigivolveDigimonByEffect",
             );
+            return false;
+        }
+
+        // Recheck the host prohibition after a hand/source or cost-choice
+        // prompt resumes, before taking cards or paying memory. Waiving
+        // digivolution requirements never waives a prohibiting effect.
+        if self.modifiers.has(target, ModifierType::CannotDigivolve) {
+            self.logger
+                .log("[Rejected] effect_initiated_digivolve: target blocked by CannotDigivolve");
             return false;
         }
 
@@ -1663,15 +2595,17 @@ impl Game {
             identity.level
         };
 
-        let matching_memory_cost = if ignore_requirements {
-            Some(0)
+        let mut route_costs: Vec<crate::dna_digivolve::DigivolveRouteMatch> = if ignore_requirements
+        {
+            vec![crate::dna_digivolve::DigivolveRouteMatch::digivolve(0)]
         } else if waiver == DigivolveRequirementWaiver::Level {
-            self.card_source_ref_peek(source_ref).and_then(|card| {
-                self.digivolve_routes_ignoring_level(card, target)
-                    .into_iter()
-                    .map(|route| route.memory_cost)
-                    .min()
-            })
+            self.card_source_ref_peek(source_ref)
+                .map(|card| {
+                    self.digivolve_routes_ignoring_level(card, target)
+                        .into_iter()
+                        .collect()
+                })
+                .unwrap_or_default()
         } else {
             // Route through the SAME machinery as the player main-phase
             // digivolve action (`all_digivolve_routes_for_card`) so
@@ -1683,46 +2617,52 @@ impl Game {
             // EX12-047 "Lv.5 w/[Shambala] trait: Cost 3"), and the
             // `CanOnlyDigivolveInto` restriction gate. App Fusion is excluded:
             // it is an alt-PLAY mechanic with its own linked-card consumption
-            // commit path, not a digivolve circle. Costs auto-min (rule-17
-            // cost CHOICE for effect digivolves is a known follow-up).
-            let route_cost = self.card_source_ref_peek(source_ref).and_then(|card| {
-                self.all_digivolve_routes_for_card(card, target)
-                    .into_iter()
-                    .filter(|route| !route.app_fusion)
-                    .map(|route| route.memory_cost)
-                    .min()
-            });
+            // commit path, not a digivolve circle.
+            let mut route_costs: Vec<crate::dna_digivolve::DigivolveRouteMatch> = self
+                .card_source_ref_peek(source_ref)
+                .map(|card| {
+                    self.all_digivolve_routes_for_card(card, target)
+                        .into_iter()
+                        .filter(|route| !route.app_fusion)
+                        .collect()
+                })
+                .unwrap_or_default();
             if ignore_color {
                 // The alt-path predicate evaluation has no color-waiver hook,
                 // so keep the color-waived printed-circle scan as an
-                // ADDITIONAL candidate and take the min across both.
-                let waived = self.card_data[evo_card_data_index]
-                    .evo_costs
-                    .iter()
-                    .filter(|ec| Some(ec.level) == base_level)
-                    .map(|ec| ec.memory_cost)
-                    .min();
-                match (route_cost, waived) {
-                    (Some(a), Some(b)) => Some(a.min(b)),
-                    (a, b) => a.or(b),
-                }
-            } else {
-                route_cost
+                // additional candidates, preserving every printed cost.
+                route_costs.extend(
+                    self.card_data[evo_card_data_index]
+                        .evo_costs
+                        .iter()
+                        .filter(|ec| Some(ec.level) == base_level)
+                        .map(|ec| {
+                            crate::dna_digivolve::DigivolveRouteMatch::digivolve(ec.memory_cost)
+                        }),
+                );
             }
+            route_costs
         };
-        let Some(matching_memory_cost) = matching_memory_cost else {
+        route_costs.sort_by_key(|r| {
+            (
+                r.memory_cost,
+                r.treated_as.map(|p| (p.kind as u8, p.level, p.colors)),
+            )
+        });
+        route_costs.dedup();
+        if route_costs.is_empty() {
             self.logger.log(&format!(
                 "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={:?}, waiver={:?})",
                 base_level, waiver
             ));
             return false;
-        };
+        }
         // An effect-granted "cost reduced by N" is still a cost REDUCTION: a
         // flood-gate such as BT5-021 Syakomon's "[Opponent's Turn] your opponent
         // can't reduce digivolution costs" voids it (Q&A Q7148: the digivolve
         // still happens, at the unreduced cost). Mirrors the gates in
         // `collect_before_pay_cost_reducers`.
-        let cost_delta = match cost_delta {
+        let effective_delta = match cost_delta {
             crate::enums::CostDelta::Reduce(n)
                 if n > 0
                     && (self
@@ -1740,19 +2680,194 @@ impl Game {
             }
             other => other,
         };
-        let base_cost = cost_delta.resolve(matching_memory_cost);
+        let cost_target_ctx = CostTargetContext {
+            card: evo_card_handle,
+            from_hand: matches!(source_ref, CardSourceRef::Hand(_, _)),
+            is_digivolve: true,
+            target_permanents: [Some(target), None],
+        };
+        let source_carrier_identity = match source_ref {
+            CardSourceRef::Material(h, _) | CardSourceRef::Link(h, _) => {
+                Some(self.capture_digivolve_host_identity(h))
+            }
+            _ => None,
+        };
+        let target_identity = self.capture_digivolve_host_identity(target);
+        let target_top = self.player(target.player).battle_area[target.index as usize]
+            .top_card()
+            .handle();
+        let source_carrier_top = match source_ref {
+            CardSourceRef::Material(h, _) | CardSourceRef::Link(h, _) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|p| p.card_sources.last())
+                .map(CardSource::handle),
+            _ => None,
+        };
+        let matching_memory_cost = if let Some(chosen) = chosen_cost {
+            // A vanished route is not permission to choose a different cost.
+            if !route_costs.contains(&chosen) {
+                return false;
+            }
+            chosen
+        } else {
+            // Fixed/free effects and reductions that collapse both routes to
+            // the same cost have no distinct payable decision.
+            route_costs.dedup_by_key(|route| {
+                (effective_delta.resolve(route.memory_cost), route.treated_as)
+            });
+            if route_costs.len() > 1 {
+                // Search real payment choices on clones. Summing optional
+                // reductions would reuse the same suspend/payment resource.
+                let declaration = EffectDigivolveCostChoiceState {
+                    acting_player: player_id,
+                    source_ref,
+                    result_card: evo_card_handle,
+                    source_carrier_top,
+                    source_carrier_identity,
+                    target_player: target.player,
+                    target_identity,
+                    target_top,
+                    dna_origin: self.current_dna_origin,
+                    cost_delta,
+                    waiver,
+                    source,
+                    printed_costs: Vec::new(),
+                    effect_source_player: self.effect_source_player,
+                    trigger_context: self.current_trigger_context.clone(),
+                    result_clause: None,
+                    outer_conts: Vec::new(),
+                };
+                route_costs.retain(|cost| {
+                    self.effect_digivolve_route_is_affordable(
+                        &declaration,
+                        cost_target_ctx,
+                        effective_delta.resolve(cost.memory_cost),
+                        *cost,
+                    )
+                });
+                if route_costs.is_empty() {
+                    return false;
+                }
+            }
+            if route_costs.len() > 1 {
+                let source_carrier_top = match source_ref {
+                    CardSourceRef::Material(h, _) | CardSourceRef::Link(h, _) => self
+                        .player(h.player)
+                        .battle_area
+                        .get(h.index as usize)
+                        .and_then(|p| p.card_sources.last())
+                        .map(CardSource::handle),
+                    _ => None,
+                };
+                self.install_effect_digivolve_cost_choice(
+                    EffectDigivolveCostChoiceState {
+                        acting_player: player_id,
+                        source_ref,
+                        result_card: evo_card_handle,
+                        source_carrier_top,
+                        source_carrier_identity,
+                        target_player: target.player,
+                        target_identity,
+                        dna_origin: self.current_dna_origin,
+                        target_top: self.player(target.player).battle_area[target.index as usize]
+                            .top_card()
+                            .handle(),
+                        cost_delta,
+                        waiver,
+                        source,
+                        printed_costs: route_costs,
+                        effect_source_player: self.effect_source_player,
+                        trigger_context: self.current_trigger_context.clone(),
+                        result_clause: None,
+                        outer_conts: Vec::new(),
+                    },
+                    effective_delta,
+                );
+                return false;
+            }
+            route_costs[0]
+        };
+        let declaration = EffectDigivolveCostChoiceState {
+            acting_player: player_id,
+            source_ref,
+            result_card: evo_card_handle,
+            source_carrier_top,
+            source_carrier_identity,
+            target_player: target.player,
+            target_identity,
+            target_top,
+            dna_origin: self.current_dna_origin,
+            cost_delta,
+            waiver,
+            source,
+            printed_costs: vec![matching_memory_cost],
+            effect_source_player: self.effect_source_player,
+            trigger_context: self.current_trigger_context.clone(),
+            result_clause: None,
+            outer_conts: Vec::new(),
+        };
+        self.remove_effect_digivolve_scope(evo_card_handle);
+        let orders = matching_memory_cost
+            .treated_as
+            .and_then(|p| self.install_would_digivolve_identity(target, p));
+        self.effect_digivolve_scopes.push(EffectDigivolveScope {
+            declaration,
+            identity: PendingWouldDigivolveResume {
+                window_started: false,
+                host_identity: target_identity,
+                treated_identity_orders: orders,
+                player: target.player,
+                permanent: target,
+                card: evo_card_handle,
+                effective_cost: 0,
+                app_fusion: false,
+            },
+        });
+        if !reducers_resolved {
+            let declaration = EffectDigivolveCostChoiceState {
+                acting_player: player_id,
+                source_ref,
+                result_card: evo_card_handle,
+                source_carrier_top,
+                source_carrier_identity,
+                target_player: target.player,
+                target_identity,
+                target_top: self.player(target.player).battle_area[target.index as usize]
+                    .top_card()
+                    .handle(),
+                dna_origin: self.current_dna_origin,
+                cost_delta,
+                waiver,
+                source,
+                printed_costs: vec![matching_memory_cost],
+                effect_source_player: self.effect_source_player,
+                trigger_context: self.current_trigger_context.clone(),
+                result_clause: None,
+                outer_conts: Vec::new(),
+            };
+            if let Some(result) = self.try_prompt_digivolve_reducer_chain(
+                player_id,
+                target,
+                cost_target_ctx,
+                source,
+                Some(declaration),
+            ) {
+                return result;
+            }
+        }
+        let chain_reduction = if reducers_resolved {
+            std::mem::take(&mut self.pending_player_digivolve_reduction)
+        } else {
+            0
+        };
+        let base_cost = effective_delta.resolve(matching_memory_cost.memory_cost);
         // Pass the evolving card as the cost-target so target-aware
         // predicates can fire — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET. The
         // `target` permanent here is the one being digivolved into
         // (effect-initiated digivolves stack a hand/trash/security card
         // onto an existing battle-area permanent).
-        let from_hand = matches!(source_ref, crate::enums::CardSourceRef::Hand(_, _));
-        let cost_target_ctx = CostTargetContext {
-            card: evo_card_handle,
-            from_hand,
-            is_digivolve: true,
-            target_permanents: [Some(target), None],
-        };
         let total_reduction = self.scan_before_pay_cost_reduction_with_target(
             player_id,
             CostReductionKind::Digivolve,
@@ -1760,8 +2875,82 @@ impl Game {
         );
         // Observer dispatch — G-BEFORE-PAY-COST-GAIN-MEMORY.
         self.scan_before_pay_cost_observers(player_id, Some(cost_target_ctx));
-        let effective_cost = (base_cost as i32 - total_reduction).max(0) as u16;
+        let effective_cost = (base_cost as i32 - total_reduction - chain_reduction).max(0) as u16;
 
+        let Some(target) = self.resolve_digivolve_host_identity(target.player, target_identity)
+        else {
+            return false;
+        };
+        if self.player(target.player).battle_area[target.index as usize]
+            .top_card()
+            .handle()
+            != target_top
+        {
+            return false;
+        }
+        let source_check = EffectDigivolveCostChoiceState {
+            acting_player: player_id,
+            source_ref,
+            result_card: evo_card_handle,
+            source_carrier_top,
+            source_carrier_identity,
+            target_player: target.player,
+            target_identity,
+            target_top: self.player(target.player).battle_area[target.index as usize]
+                .top_card()
+                .handle(),
+            dna_origin: self.current_dna_origin,
+            cost_delta,
+            waiver,
+            source,
+            printed_costs: vec![matching_memory_cost],
+            effect_source_player: self.effect_source_player,
+            trigger_context: self.current_trigger_context.clone(),
+            result_clause: None,
+            outer_conts: Vec::new(),
+        };
+        let Some(source_ref) = self.resolve_effect_digivolve_choice_source(&source_check) else {
+            return false;
+        };
+        if let Some(scope) = self
+            .effect_digivolve_scopes
+            .iter_mut()
+            .rev()
+            .find(|s| s.declaration.result_card == evo_card_handle)
+        {
+            scope.identity.effective_cost = effective_cost;
+            scope.identity.window_started = true;
+        }
+        let outcome = self.try_replace(
+            EffectTiming::WhenPermanentWouldDigivolve,
+            crate::replacement::ReplacementSubject::Permanent(target),
+            crate::replacement::ReplacementCause::OwnEffect,
+            Some(Zone::BattleArea),
+        );
+        if self.pending_selection.is_some() {
+            return false;
+        }
+        self.commit_effect_would_digivolve(evo_card_handle, outcome, false)
+    }
+
+    fn commit_effect_digivolve_no_replace(
+        &mut self,
+        state: &EffectDigivolveCostChoiceState,
+        effective_cost: u16,
+    ) -> bool {
+        let Some((source_ref, target)) = self.resolve_effect_digivolve_declaration(state) else {
+            return false;
+        };
+        if self.modifiers.has(target, ModifierType::CannotDigivolve)
+            || (state.source == PlaySource::ByEffect
+                && self.modifiers.player_has(
+                    state.acting_player,
+                    ModifierType::CannotDigivolveDigimonByEffect,
+                ))
+        {
+            return false;
+        }
+        let player_id = state.acting_player;
         // 3. Remove the card from its source and pay memory. If payment fails,
         // restore the source exactly where it came from.
         if let crate::enums::CardSourceRef::Security(defender, index) = source_ref {
@@ -1852,26 +3041,114 @@ impl Game {
         self.player_mut(player_id).draw();
 
         // 5. Fire WhenDigivolving triggers.
-        self.enqueue_triggered(
-            EffectTiming::WhenDigivolving,
-            TriggerSource::Permanent(target),
-        );
-        self.drain_effect_queue();
-
-        // OnDigivolve: global observer — carries the evolved permanent/card
-        // plus effect-origin provenance for "digivolved by an effect" gates.
-        self.enqueue_triggered(
-            EffectTiming::OnDigivolve,
-            TriggerSource::Digivolved {
-                player: player_id,
-                permanent: target,
-                card: event_card,
-                effect_initiated: true,
-                dna_origin: false,
-            },
-        );
-        self.drain_effect_queue();
+        self.fire_digivolve_event_triggers(target, event_card, true, false);
 
         true
+    }
+}
+
+#[cfg(test)]
+mod q1157_ordinary_cost_state_tests {
+    const OBSERVER: &str = r#"
+card: TEST-Q1157-OBSERVER
+name: Would Evolve Cost Observer
+kind: tamer
+color: [white]
+cost: 2
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    optional: true
+    when_any_ally_digivolves_into: {card_number_is: BT4-011}
+    condition:
+      any_permanent: {of: you, zone: [battle_area], kind: digimon}
+    amount: 1
+    pay_cost:
+      - suspend: {target: source}
+"#;
+    use crate::{
+        action::{build_action_mask, encode_digivolve, space::PLAY_HAND_START},
+        card_data::EvoCost,
+        debug_runner::DebugRunner,
+        enums::{CardKind, GamePhase},
+    };
+    fn setup(option: bool) -> DebugRunner {
+        setup_observer(option, OBSERVER)
+    }
+    fn setup_observer(option: bool, observer: &str) -> DebugRunner {
+        let path = std::env::var("BT4_011_TEST_YAML")
+            .unwrap_or_else(|_| format!("{}/cards/bt4/BT4-011.yaml", env!("CARGO_MANIFEST_DIR")));
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(&std::fs::read_to_string(path).unwrap())
+            .unwrap()
+            .from_dsl_yaml(include_str!("../../cards/st1/ST1-12.yaml"))
+            .unwrap()
+            .from_dsl_yaml(include_str!("../../cards/st2/ST2-12.yaml"))
+            .unwrap()
+            .from_dsl_yaml(include_str!("../../cards/st1/ST1-03.yaml"))
+            .unwrap()
+            .from_dsl_yaml(include_str!("../../cards/LM/LM-027.yaml"))
+            .unwrap()
+            .from_dsl_yaml(observer)
+            .unwrap()
+            .hand(
+                0,
+                if option {
+                    &["LM-027", "BT4-011"][..]
+                } else {
+                    &["BT4-011"][..]
+                },
+            )
+            .deck(0, &["ST1-03"; 12])
+            .deck(1, &["ST1-03"; 12])
+            .memory(5)
+            .start();
+        // Exact printed circle; DebugRunner compiled metadata omits compatibility evo_costs.
+        r.game
+            .card_data
+            .iter_mut()
+            .find(|c| c.card_id == "BT4-011")
+            .unwrap()
+            .evo_costs = vec![EvoCost {
+            card_color: 0,
+            level: 3,
+            memory_cost: 2,
+        }];
+        r.game.current_phase = GamePhase::Main;
+        r
+    }
+
+    #[test]
+    fn ordinary_cost_prompt_has_no_treated_declaration_or_digest_extension() {
+        let mut r = setup(false);
+        r.place_on_field(0, "ST1-03", None);
+        r.place_on_field(0, "TEST-Q1157-OBSERVER", None);
+        r.game.tick_declarative_effects();
+        r.game.decode_action(encode_digivolve(0, 0), 0);
+        assert!(r.game.pending_selection.is_some());
+        let mut legacy_state = r.game.clone();
+        legacy_state.pending_would_digivolve_resume = None;
+        assert_eq!(
+            r.game.verification_digest(),
+            legacy_state.verification_digest(),
+            "ordinary cost prompt must retain the existing hidden-state contract"
+        );
+        assert!(r.game.pending_would_digivolve_resume.is_none());
+    }
+    #[test]
+    fn treated_cost_prompt_retains_owned_identity_receipt() {
+        let mut r = setup(false);
+        r.place_on_field(0, "ST1-12", None);
+        r.place_on_field(0, "TEST-Q1157-OBSERVER", None);
+        r.game.tick_declarative_effects();
+        r.game.decode_action(encode_digivolve(0, 0), 0);
+        assert!(r.game.pending_selection.is_some());
+        assert!(r
+            .game
+            .pending_would_digivolve_resume
+            .as_ref()
+            .unwrap()
+            .treated_identity_orders
+            .is_some());
     }
 }

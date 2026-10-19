@@ -8,7 +8,7 @@ fn standard_lite_deck_v2_layout_matches_spec() {
     assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.version, 2);
     assert_eq!(profile.tensor_version, 2);
-    assert_eq!(profile.feature_schema_version, "standard_lite_deck_v2.1");
+    assert_eq!(profile.feature_schema_version, "standard_lite_deck_v2.2");
     assert_eq!(profile.tensor_size, 8850);
     assert_eq!(profile.card_id_slot_count, 627);
     assert_eq!(profile.scalar_slot_count, 8223);

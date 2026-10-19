@@ -1,0 +1,78 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "BT8-099",
+    "card_type": "Option",
+    "colors": [
+      "Blue",
+      "Red"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Red"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "option",
+        "level": null,
+        "name": "Giga Death",
+        "play_cost": 9,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Main] Suspend 1 of your opponent's Digimon. Then, place up to 10 of your opponent's suspended Digimon at the bottom of their owners' decks in any order."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Security] Suspend 1 of your opponent's Digimon. Then, return 1 of your opponent's suspended Digimon to the bottom of its owner's deck."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "Giga Death",
+    "play_cost": 9,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522008",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT8-099.png?260529",
+      "printing_id": "BT8-099"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Main] Suspend 1 of your opponent's Digimon. Then, place up to 10 of your opponent's suspended Digimon at the bottom of their owners' decks in any order."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[Security] Suspend 1 of your opponent's Digimon. Then, return 1 of your opponent's suspended Digimon to the bottom of its owner's deck."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "b8c421a2fbb94b19c50fe235c83dbbd555cd48b3d905f5a9a7835dc1b4c54ccd",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "99fc2d419bfe1296a574fcc1ae098d613d1d4db279d37f1daae223b63bf4720e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522008:BT8-099:BT8-099",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522008"
+}

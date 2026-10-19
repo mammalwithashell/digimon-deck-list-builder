@@ -153,11 +153,15 @@ impl<'g> ReplacementContext<'g> {
 #[doc(hidden)]
 #[derive(Debug, Clone)]
 pub struct ParkedReplacement {
+    pub window: Option<ReplacementWindow>,
+    pub outer_conts: Vec<crate::resume::OuterContinuation>,
+    pub deletion_receipt: Option<u64>,
     /// The window this event parked on, stamped by `try_replace_impl` on the
     /// way out (it has `timing` in scope; the park site, several frames
     /// deeper, does not). Replayed as `Game::replacement_commit_key`.
     pub timing: Option<EffectTiming>,
     pub subject: ReplacementSubject,
+    pub stable_subject_card: Option<(PlayerId, CardHandle, u64)>,
     pub cause: ReplacementCause,
     /// Observer-facing deletion-cause override (e.g. `Overclock`) captured
     /// when the replacement was offered. Threaded so the deferred-decline
@@ -201,6 +205,10 @@ impl crate::game::Game {
 
 #[derive(Debug, Clone)]
 pub struct OptionalReplacementState {
+    pub(crate) window: Option<ReplacementWindow>,
+    pub(crate) order: Option<ReplacementOrder>,
+    pub(crate) source_identity: Option<(PlayerId, CardHandle, u64)>,
+    pub(crate) deletion_receipt: Option<u64>,
     /// The window this optional replacement was offered for. Replayed as
     /// `Game::replacement_commit_key` when the accepted-but-non-replacing
     /// outcome is committed, so that commit cannot re-offer it.
@@ -210,6 +218,7 @@ pub struct OptionalReplacementState {
     pub(crate) source_permanent: Option<PermanentHandle>,
     pub(crate) controller: PlayerId,
     pub(crate) subject: ReplacementSubject,
+    pub(crate) stable_subject_card: Option<(PlayerId, CardHandle, u64)>,
     pub(crate) cause: ReplacementCause,
     pub(crate) event_cause_override: Option<crate::trigger_context::EventCause>,
     pub(crate) original_destination: Option<Zone>,
@@ -224,6 +233,100 @@ pub(crate) fn subject_controller_id(
     subject: ReplacementSubject,
 ) -> Option<PlayerId> {
     subject.controller(game)
+}
+
+// Track the same permanent across compaction and ordinary stack edits. DNA
+// and replay create a different Digimon, so the original departure expires
+// without targeting the new permanent that happens to contain the same card.
+fn capture_subject_card(
+    game: &mut crate::game::Game,
+    subject: ReplacementSubject,
+) -> Option<(PlayerId, CardHandle, u64)> {
+    let handle = subject.permanent()?;
+    let permanent = if crate::digixros::is_limbo_index(handle.index) {
+        game.digixros_leaving_limbo
+            .get((handle.index - crate::digixros::LIMBO_INDEX_BASE) as usize)
+            .map(|(_, _, p)| p)
+    } else {
+        game.player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+    }?;
+    let card = permanent.top_card().handle();
+    let identity = match permanent.battle_identity {
+        Some(identity) => identity,
+        None => {
+            // The existing stack identity survives ordinary evolution and
+            // compaction, but DNA/replay starts a new Digimon (8-2-2-1).
+            let identity = game.next_battle_identity;
+            game.next_battle_identity = identity.checked_add(1).expect("stack identity exhausted");
+            let permanent = if crate::digixros::is_limbo_index(handle.index) {
+                &mut game.digixros_leaving_limbo
+                    [(handle.index - crate::digixros::LIMBO_INDEX_BASE) as usize]
+                    .2
+            } else {
+                &mut game.player_mut(handle.player).battle_area[handle.index as usize]
+            };
+            permanent.battle_identity = Some(identity);
+            identity
+        }
+    };
+    Some((handle.player, card, identity))
+}
+
+fn resolve_subject_card(
+    game: &mut crate::game::Game,
+    subject: ReplacementSubject,
+    stable: Option<(PlayerId, CardHandle, u64)>,
+) -> Option<ReplacementSubject> {
+    let Some((player, _card, identity)) = stable else {
+        return Some(subject);
+    };
+    let resolved = game
+        .player(player)
+        .battle_area
+        .iter()
+        .position(|p| p.battle_identity == Some(identity))
+        .map(|index| PermanentHandle {
+            player,
+            index: index as u8,
+        })
+        .or_else(|| {
+            game.digixros_leaving_limbo
+                .iter()
+                .enumerate()
+                .find(|(_, (owner, _, permanent))| {
+                    *owner == player && permanent.battle_identity == Some(identity)
+                })
+                .map(|(index, _)| PermanentHandle {
+                    player,
+                    index: crate::digixros::LIMBO_INDEX_BASE + index as u8,
+                })
+        })
+        .map(ReplacementSubject::Permanent);
+    let Some(resolved) = resolved else {
+        // A destroyed/recreated donor cannot finish its old source-placement intent.
+        game.pending_field_top_source_moves
+            .retain(|m| m.donor != (player, identity));
+        game.pending_security_moves
+            .retain(|m| m.donor != (player, identity));
+        return None;
+    };
+    if resolved != subject {
+        // Already-offered windows belong to the event's physical subject too.
+        // Without rebasing this ledger, declining after compaction re-offers
+        // the same replacement at the new slot instead of committing it.
+        let timings: Vec<_> = game
+            .replacement_fired
+            .iter()
+            .filter_map(|(timing, previous)| (*previous == subject).then_some(*timing))
+            .collect();
+        for timing in timings {
+            game.replacement_fired.remove(&(timing, subject));
+            game.replacement_fired.insert((timing, resolved));
+        }
+    }
+    Some(resolved)
 }
 
 /// What kind of candidate this is, for dispatch at run time.
@@ -378,6 +481,11 @@ pub(crate) fn try_replace_impl(
         return ReplacementOutcome::None;
     }
     game.replacement_fired.insert(key);
+    // One impending deletion exposes both immediate timing families together.
+    // Mark its leave super-timing covered so a parked no-op commit cannot replay it.
+    if timing == EffectTiming::WhenWouldBeDeleted {
+        game.replacement_fired.insert((EffectTiming::WhenWouldLeaveBattleArea, subject));
+    }
 
     game.replacement_depth = game.replacement_depth.saturating_add(1);
 
@@ -405,69 +513,7 @@ fn try_replace_inner(
     cause: ReplacementCause,
     original_destination: Option<Zone>,
 ) -> ReplacementOutcome {
-    // Collect candidates. We layer by controller: own_reps (subject's
-    // controller) first, then opp_reps.
-    let Some(subject_controller) = subject_controller_id(game, subject) else {
-        return ReplacementOutcome::None;
-    };
-    let candidates = collect_candidates(game, timing, subject, cause);
-
-    if candidates.is_empty() {
-        return ReplacementOutcome::None;
-    }
-
-    let (own_reps, opp_reps): (Vec<_>, Vec<_>) = candidates
-        .into_iter()
-        .partition(|c| c.source_controller == subject_controller);
-
-    // TODO(phase-7-followup): when either side has >1 candidates, install a
-    // TriggerOrder-style selection so the controller picks the order. v1
-    // runs them in collection order.
-    let ordered: Vec<Candidate> = own_reps.into_iter().chain(opp_reps.into_iter()).collect();
-
-    // Walk candidates. Mandatory candidates compose (the last non-None
-    // outcome wins for v1 — documented). Optional candidates install a
-    // PendingSelection and break the loop; when the selection resolves,
-    // the callback writes `game.replacement_pending_outcome` and the caller
-    // is responsible for re-entering if more candidates remain.
-    //
-    // A mandatory candidate may also park a nested selection (e.g.
-    // `Keyword::Fragment(N)`: pick N sources to trash). When that happens,
-    // `run_candidate_inner` populates `Game.parked_replacement` and yields
-    // — we break out of the candidate walk so the parked-replacement drain
-    // hook (`try_drain_parked_replacement_with_guard` in `effect_queue.rs`)
-    // commits the outcome after the user resolves the nested chain. Any
-    // remaining candidates are dropped, mirroring the optional-install break
-    // below; v1 supports at most one parked replacement per call chain.
-    let mut acc_outcome = ReplacementOutcome::None;
-    for cand in ordered {
-        if cand.is_mandatory {
-            let o = run_mandatory_candidate(game, &cand, subject, cause, original_destination);
-            if o != ReplacementOutcome::None {
-                acc_outcome = o;
-            }
-            if game.pending_selection.is_some() {
-                // Mandatory candidate parked a nested selection. Yield to
-                // the user; the drain hook commits when the chain unwinds.
-                return acc_outcome;
-            }
-        } else {
-            install_optional_selection(
-                game,
-                timing,
-                &cand,
-                subject_controller,
-                subject,
-                cause,
-                original_destination,
-            );
-            // Selection is pending — caller resumes via resolve_selection.
-            // Outcome will be written to game.replacement_pending_outcome.
-            return acc_outcome;
-        }
-    }
-
-    acc_outcome
+    start_replacement_window(game, timing, subject, cause, original_destination)
 }
 
 /// Walk the sources of candidate replacement effects and emit one
@@ -486,7 +532,10 @@ fn try_replace_inner(
 /// leave" — EX13-051 Guardromon).
 pub(crate) type CandidateIdentity = (CardHandle, u8, u8);
 
-pub(crate) fn candidate_identity(source_card: CardHandle, kind: &CandidateKind) -> CandidateIdentity {
+pub(crate) fn candidate_identity(
+    source_card: CardHandle,
+    kind: &CandidateKind,
+) -> CandidateIdentity {
     match kind {
         CandidateKind::EffectClosure { effect_slot, .. } => (source_card, 0, *effect_slot),
         CandidateKind::GrantedKeywordEffect { effect_slot, .. } => (source_card, 1, *effect_slot),
@@ -514,6 +563,53 @@ fn collect_candidates(
     subject: ReplacementSubject,
     cause: ReplacementCause,
 ) -> Vec<Candidate> {
+    collect_event_candidates(game, timing, subject, cause, true)
+}
+/// Candidate effects keep their own effect slots/timings; this collection
+/// groups only the two families triggered by the same impending deletion.
+fn collect_event_candidates(
+    game: &crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    check_conditions: bool,
+) -> Vec<Candidate> {
+    let mut candidates = collect_candidates_inner(game, timing, subject, cause, check_conditions);
+    if timing == EffectTiming::WhenWouldBeDeleted {
+        candidates.extend(collect_candidates_inner(game, EffectTiming::WhenWouldLeaveBattleArea, subject, cause, check_conditions));
+    }
+    candidates
+}
+
+/// Resolve a captured replacement carrier without turning limbo into a field zone.
+/// Only the event subject is collected from limbo; general candidate scans stay on field.
+pub(crate) fn replacement_carrier(
+    game: &crate::game::Game,
+    h: PermanentHandle,
+) -> Option<&crate::permanent::Permanent> {
+    if h.index == BREEDING_TARGET as u8 {
+        return game.players.get(h.player as usize)?.breeding_area.as_ref();
+    }
+    if crate::digixros::is_limbo_index(h.index) {
+        return game
+            .digixros_leaving_limbo
+            .get((h.index - crate::digixros::LIMBO_INDEX_BASE) as usize)
+            .filter(|(owner, _, _)| *owner == h.player)
+            .map(|(_, _, p)| p);
+    }
+    game.players
+        .get(h.player as usize)?
+        .battle_area
+        .get(h.index as usize)
+}
+
+fn collect_candidates_inner(
+    game: &crate::game::Game,
+    timing: EffectTiming,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    eligible_only: bool,
+) -> Vec<Candidate> {
     let mut out: Vec<Candidate> = Vec::new();
     let replacement_source_controller = game.effect_source_player;
     let replacement_subject_controller = subject.controller(game);
@@ -527,10 +623,7 @@ fn collect_candidates(
     // Collect from a permanent's effects, filtering by timing and
     // replacement_process presence.
     let push_from_perm = |out: &mut Vec<Candidate>, h: PermanentHandle| {
-        let Some(player) = game.players.get(h.player as usize) else {
-            return;
-        };
-        let Some(perm) = player.battle_area.get(h.index as usize) else {
+        let Some(perm) = replacement_carrier(game, h) else {
             return;
         };
         let stack_size = perm.card_sources.len();
@@ -594,7 +687,7 @@ fn collect_candidates(
                             replacement_source_controller,
                             replacement_subject_controller,
                         );
-                    if !cond(&ctx) {
+                    if eligible_only && !cond(&ctx) {
                         continue;
                     }
                 }
@@ -610,7 +703,7 @@ fn collect_candidates(
                             replacement_source_controller,
                             replacement_subject_controller,
                         );
-                    if !rcond(&ctx, &subject) {
+                    if eligible_only && !rcond(&ctx, &subject) {
                         continue;
                     }
                 }
@@ -631,6 +724,13 @@ fn collect_candidates(
         if let Some(top) = perm.card_sources.last() {
             let source_card = top.handle();
             for keyword in game.modifiers.granted_keywords(h) {
+                // Printed, inherited, linked and self-grant origins already
+                // synthesize this keyword's body in effects_for_card. Only a
+                // genuinely external grant needs a recipient-side extra body.
+                // Mirror the triggered-effect dispatch's origin de-duplication.
+                if game.has_keyword_from_card_sources(h, keyword) {
+                    continue;
+                }
                 let effects =
                     crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card);
                 for (slot, effect) in effects.iter().enumerate() {
@@ -647,7 +747,7 @@ fn collect_candidates(
                                 replacement_source_controller,
                                 replacement_subject_controller,
                             );
-                        if !cond(&ctx) {
+                        if eligible_only && !cond(&ctx) {
                             continue;
                         }
                     }
@@ -658,7 +758,7 @@ fn collect_candidates(
                                 replacement_source_controller,
                                 replacement_subject_controller,
                             );
-                        if !rcond(&ctx, &subject) {
+                        if eligible_only && !rcond(&ctx, &subject) {
                             continue;
                         }
                     }
@@ -702,17 +802,10 @@ fn collect_candidates(
                 if !effect.linked {
                     continue;
                 }
-                // A `scope: linked` keyword grant also materializes onto the
-                // host (the linked-card pass of `tick_declarative_effects`),
-                // and the `granted_keywords` scan in `push_from_perm` offers
-                // that keyword's replacement from there. Skip the grant's
-                // synthesized copy so the host is offered it once.
-                if effect
-                    .keyword_source
-                    .is_some_and(|kw| game.modifiers.granted_keywords(h).contains(&kw))
-                {
-                    continue;
-                }
+                // Card-source keyword bodies, including linked grants, are
+                // offered from their physical source. The recipient-side
+                // granted-keyword scan already skips these origins; skipping
+                // this linked body too would suppress the keyword entirely.
                 if effect.timing != timing {
                     continue;
                 }
@@ -736,7 +829,7 @@ fn collect_candidates(
                             replacement_source_controller,
                             replacement_subject_controller,
                         );
-                    if !cond(&ctx) {
+                    if eligible_only && !cond(&ctx) {
                         continue;
                     }
                 }
@@ -747,7 +840,7 @@ fn collect_candidates(
                             replacement_source_controller,
                             replacement_subject_controller,
                         );
-                    if !rcond(&ctx, &subject) {
+                    if eligible_only && !rcond(&ctx, &subject) {
                         continue;
                     }
                 }
@@ -1085,6 +1178,7 @@ fn run_effect_inner(
     // shifted-down permanent). Re-point it to the limbo-encoded handle so the
     // parked process reads the right card (G-DIGIXROS-REDIRECT-EXTRACTION).
     let subject = game.remap_digixros_limbo_subject(subject);
+    let stable_subject_card = capture_subject_card(game, subject);
 
     // The source permanent's `battle_area` index may have shifted between when
     // this optional replacement's accept gate was installed and when the player
@@ -1201,8 +1295,12 @@ fn run_effect_inner(
         // it so OnDeletion observers see the same refined cause.
         let event_cause_override = game.current_deletion_event_cause_override;
         let entry = ParkedReplacement {
+            window: None,
+            outer_conts: Vec::new(),
+            deletion_receipt: game.current_deletion_receipt,
             timing: None,
             subject,
+            stable_subject_card,
             cause,
             event_cause_override,
             original_destination,
@@ -1234,17 +1332,7 @@ fn source_permanent_activation_count(
     source_card: CardHandle,
     effect_slot: u8,
 ) -> Option<u8> {
-    if handle.index == BREEDING_TARGET as u8 {
-        return game
-            .players
-            .get(handle.player as usize)
-            .and_then(|p| p.breeding_area.as_ref())
-            .map(|perm| perm.activation_count(source_card, effect_slot));
-    }
-    game.players
-        .get(handle.player as usize)
-        .and_then(|p| p.battle_area.get(handle.index as usize))
-        .map(|perm| perm.activation_count(source_card, effect_slot))
+    replacement_carrier(game, handle).map(|perm| perm.activation_count(source_card, effect_slot))
 }
 
 fn record_source_permanent_activation(
@@ -1258,6 +1346,16 @@ fn record_source_permanent_activation(
             .players
             .get_mut(handle.player as usize)
             .and_then(|p| p.breeding_area.as_mut())
+        {
+            perm.record_activation(source_card, effect_slot);
+        }
+        return;
+    }
+    if crate::digixros::is_limbo_index(handle.index) {
+        if let Some((_, _, perm)) = game
+            .digixros_leaving_limbo
+            .get_mut((handle.index - crate::digixros::LIMBO_INDEX_BASE) as usize)
+            .filter(|(owner, _, _)| *owner == handle.player)
         {
             perm.record_activation(source_card, effect_slot);
         }
@@ -1320,18 +1418,27 @@ fn install_optional_selection(
     // to re-establish it around the deferred OnDeletion enqueue.
     let event_cause_override = game.current_deletion_event_cause_override;
 
+    let stable_subject_card = capture_subject_card(game, subject);
     let callback = make_accept_callback(
+        game.current_deletion_receipt,
         candidate_kind.clone(),
         source_card,
         source_permanent,
         controller,
         subject,
+        stable_subject_card,
         cause,
         event_cause_override,
         original_destination,
     );
-    let on_decline =
-        make_decline_callback(subject, cause, event_cause_override, original_destination);
+    let on_decline = make_decline_callback(
+        game.current_deletion_receipt,
+        subject,
+        stable_subject_card,
+        cause,
+        event_cause_override,
+        original_destination,
+    );
 
     game.pending_selection = Some(PendingSelection {
         zone_owner: None,
@@ -1351,12 +1458,17 @@ fn install_optional_selection(
     game.pending_selection_resume = Some(crate::resume::ResumeStack {
         frames: vec![crate::resume::ResumeFrame::OptionalReplacement(
             OptionalReplacementState {
+                window: None,
+                order: None,
+                source_identity: None,
+                deletion_receipt: game.current_deletion_receipt,
                 timing,
                 candidate_kind,
                 source_card,
                 source_permanent,
                 controller,
                 subject,
+                stable_subject_card,
                 cause,
                 event_cause_override,
                 original_destination,
@@ -1427,10 +1539,24 @@ fn run_commit_with_flag<F>(
 /// intentionally avoids writing it. The `debug_assert!` catches future
 /// regressions that would leak a stale outcome.
 pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Game) {
+    drain_parked_replacement_for_receipt(game, None);
+}
+
+/// Finish only the nested deletion whose receipt a continuation consumes.
+/// Different receipts belong to enclosing events and remain parked.
+pub(crate) fn drain_parked_replacement_for_receipt(
+    game: &mut crate::game::Game,
+    receipt: Option<u64>,
+) {
     // LIFO: commit the innermost parked event first. A commit may open a new
     // selection (e.g. a further Would* window of the same inner event); stop
     // there — the next resolution re-enters this drain for the rest.
     while game.pending_selection.is_none() {
+        if let Some(receipt) = receipt {
+            if !game.parked_replacement.last().is_some_and(|p| p.deletion_receipt == Some(receipt)) {
+                return;
+            }
+        }
         let Some(parked) = game.parked_replacement.pop() else {
             return;
         };
@@ -1438,7 +1564,20 @@ pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Ga
     }
 }
 
-fn drain_one_parked_replacement(game: &mut crate::game::Game, mut parked: ParkedReplacement) {
+fn drain_one_parked_replacement(game: &mut crate::game::Game, parked: ParkedReplacement) {
+    game.with_deletion_receipt(parked.deletion_receipt, |game| {
+        drain_one_parked_replacement_scoped(game, parked)
+    });
+}
+fn drain_one_parked_replacement_scoped(
+    game: &mut crate::game::Game,
+    mut parked: ParkedReplacement,
+) {
+    let Some(subject) = resolve_subject_card(game, parked.subject, parked.stable_subject_card)
+    else {
+        return;
+    };
+    parked.subject = subject;
     if let Some((owner, card)) = parked.cancel_if_deleted {
         let deleted = game
             .players
@@ -1457,6 +1596,11 @@ fn drain_one_parked_replacement(game: &mut crate::game::Game, mut parked: Parked
          callers of `game.replacement_pending_outcome = Some(_)`."
     );
 
+    if let Some(window) = parked.window.take() {
+        finish_window_result(game, window, parked.outcome);
+        crate::dsl_cards::step::selections::run_outer_conts(game, parked.outer_conts);
+        return;
+    }
     let fired = parked.outcome != ReplacementOutcome::None;
     let commit_key = parked.timing.map(|tm| (tm, parked.subject));
     run_commit_with_flag(game, fired, commit_key, move |game| {
@@ -1482,75 +1626,88 @@ fn drain_one_parked_replacement(game: &mut crate::game::Game, mut parked: Parked
 /// printed optional keywords (Barrier/Evade/Fragment/Decode) behave
 /// end-to-end without additional fire-site plumbing.
 fn make_accept_callback(
+    deletion_receipt: Option<u64>,
     candidate_kind: CandidateKind,
     source_card: CardHandle,
     source_permanent: Option<PermanentHandle>,
     controller: PlayerId,
     subject: ReplacementSubject,
+    stable_subject_card: Option<(PlayerId, CardHandle, u64)>,
     cause: ReplacementCause,
     event_cause_override: Option<crate::trigger_context::EventCause>,
     original_destination: Option<Zone>,
 ) -> crate::selection::SelectionCallback {
     Box::new(move |game: &mut crate::game::Game, _action_id: u16| {
-        let stack_before = game.parked_replacement.len();
-        let outcome = run_candidate_kind_inner(
-            game,
-            &candidate_kind,
-            source_card,
-            source_permanent,
-            controller,
-            subject,
-            cause,
-            original_destination,
-        );
-
-        // Phase C §4.3: if the process parked a selection, leave
-        // `replacement_pending_outcome` UNSET — the post-callback drain hook
-        // (Task 7) reads `parked_replacement.outcome` instead. Writing
-        // `Some(outcome)` here (where `outcome == ReplacementOutcome::None`
-        // because the post-process hook returned `None`) would leak a stale
-        // value that other consumers (e.g. `OptionResolutionPhase::Disposing`
-        // in `effect_queue.rs`, which `take()`s the slot and treats `None`
-        // as "decline → original event proceeds") misinterpret.
-        // Order matters: parked-check BEFORE the slot write.
-        // This accept's own park (if any) sits at `stack_before`; entries a
-        // nested event pushed during the process may sit above it.
-        let current_accept_parked = game.parked_replacement.get(stack_before).is_some_and(|parked| {
-            parked.subject == subject
-                && parked.cause == cause
-                && parked.original_destination == original_destination
-                && parked.source_card == source_card
-                && parked.source_permanent == source_permanent
-                && parked.controller == controller
-        });
-        if current_accept_parked {
-            return;
-        }
-        let has_unrelated_parked_replacement = !game.parked_replacement.is_empty();
-
-        game.replacement_pending_outcome = Some(outcome);
-
-        // §7.5: mark this as a callback-commit continuation so the fired-set
-        // from the original call chain survives the zone-mover re-entry.
-        // `run_commit_with_flag` is panic-safe — if anything in the commit
-        // body panics, the flag is restored before the unwind propagates.
-        // An accepted candidate whose process left the outcome at `None`
-        // (a non-replacing rider like <Decode>, or a whiffed process) commits
-        // in DECLINED mode — the event proceeds unchanged, so the remaining
-        // Would* windows must still dispatch.
-        run_commit_with_flag(game, outcome != ReplacementOutcome::None, None, |game| {
-            commit_deferred_outcome(
+        game.with_deletion_receipt(deletion_receipt, |game| {
+            let Some(subject) = resolve_subject_card(game, subject, stable_subject_card) else {
+                return;
+            };
+            let stack_before = game.parked_replacement.len();
+            let outcome = run_candidate_kind_inner(
                 game,
+                &candidate_kind,
+                source_card,
+                source_permanent,
+                controller,
                 subject,
                 cause,
-                event_cause_override,
                 original_destination,
-                outcome,
             );
+
+            // Phase C §4.3: if the process parked a selection, leave
+            // `replacement_pending_outcome` UNSET — the post-callback drain hook
+            // (Task 7) reads `parked_replacement.outcome` instead. Writing
+            // `Some(outcome)` here (where `outcome == ReplacementOutcome::None`
+            // because the post-process hook returned `None`) would leak a stale
+            // value that other consumers (e.g. `OptionResolutionPhase::Disposing`
+            // in `effect_queue.rs`, which `take()`s the slot and treats `None`
+            // as "decline → original event proceeds") misinterpret.
+            // Order matters: parked-check BEFORE the slot write.
+            // This accept's own park (if any) sits at `stack_before`; entries a
+            // nested event pushed during the process may sit above it.
+            let current_accept_parked =
+                game.parked_replacement
+                    .get(stack_before)
+                    .is_some_and(|parked| {
+                        parked.subject == subject
+                            && parked.cause == cause
+                            && parked.original_destination == original_destination
+                            && parked.source_card == source_card
+                            && parked.source_permanent == source_permanent
+                            && parked.controller == controller
+                    });
+            if current_accept_parked {
+                return;
+            }
+            let has_unrelated_parked_replacement = !game.parked_replacement.is_empty();
+
+            let Some(subject) = resolve_subject_card(game, subject, stable_subject_card) else {
+                return;
+            };
+            game.replacement_pending_outcome = Some(outcome);
+
+            // §7.5: mark this as a callback-commit continuation so the fired-set
+            // from the original call chain survives the zone-mover re-entry.
+            // `run_commit_with_flag` is panic-safe — if anything in the commit
+            // body panics, the flag is restored before the unwind propagates.
+            // An accepted candidate whose process left the outcome at `None`
+            // (a non-replacing rider like <Decode>, or a whiffed process) commits
+            // in DECLINED mode — the event proceeds unchanged, so the remaining
+            // Would* windows must still dispatch.
+            run_commit_with_flag(game, outcome != ReplacementOutcome::None, None, |game| {
+                commit_deferred_outcome(
+                    game,
+                    subject,
+                    cause,
+                    event_cause_override,
+                    original_destination,
+                    outcome,
+                );
+            });
+            if has_unrelated_parked_replacement {
+                game.replacement_pending_outcome = None;
+            }
         });
-        if has_unrelated_parked_replacement {
-            game.replacement_pending_outcome = None;
-        }
     })
 }
 
@@ -1560,28 +1717,35 @@ fn make_accept_callback(
 /// replacement was offered) using `original_destination` as a routing hint.
 /// Leaves `replacement_pending_outcome` at `None` per prior behavior.
 fn make_decline_callback(
+    deletion_receipt: Option<u64>,
     subject: ReplacementSubject,
+    stable_subject_card: Option<(PlayerId, CardHandle, u64)>,
     cause: ReplacementCause,
     event_cause_override: Option<crate::trigger_context::EventCause>,
     original_destination: Option<Zone>,
 ) -> crate::selection::DeclineCallback {
     Box::new(move |game: &mut crate::game::Game| {
-        // Decline → outcome stays None → commit the original event.
-        // §7.5: mark this as a callback-commit continuation so the fired-set
-        // from the original call chain survives the zone-mover re-entry.
-        // DECLINED mode (`fired = false`): the not-yet-offered Would* windows
-        // of the same event must still dispatch during the commit.
-        // `run_commit_with_flag` is panic-safe — if anything in the commit
-        // body panics, the flag is restored before the unwind propagates.
-        run_commit_with_flag(game, false, None, |game| {
-            commit_deferred_outcome(
-                game,
-                subject,
-                cause,
-                event_cause_override,
-                original_destination,
-                ReplacementOutcome::None,
-            );
+        game.with_deletion_receipt(deletion_receipt, |game| {
+            let Some(subject) = resolve_subject_card(game, subject, stable_subject_card) else {
+                return;
+            };
+            // Decline → outcome stays None → commit the original event.
+            // §7.5: mark this as a callback-commit continuation so the fired-set
+            // from the original call chain survives the zone-mover re-entry.
+            // DECLINED mode (`fired = false`): the not-yet-offered Would* windows
+            // of the same event must still dispatch during the commit.
+            // `run_commit_with_flag` is panic-safe — if anything in the commit
+            // body panics, the flag is restored before the unwind propagates.
+            run_commit_with_flag(game, false, None, |game| {
+                commit_deferred_outcome(
+                    game,
+                    subject,
+                    cause,
+                    event_cause_override,
+                    original_destination,
+                    ReplacementOutcome::None,
+                );
+            });
         });
     })
 }
@@ -1589,8 +1753,26 @@ fn make_decline_callback(
 pub(crate) fn run_optional_replacement_step(
     game: &mut crate::game::Game,
     state: OptionalReplacementState,
+    action: u16,
     is_pass: bool,
 ) {
+    if state.window.is_some() {
+        run_window_step(game, state, action, is_pass);
+        return;
+    }
+    game.with_deletion_receipt(state.deletion_receipt, |game| {
+        run_optional_replacement_step_scoped(game, state, is_pass)
+    });
+}
+fn run_optional_replacement_step_scoped(
+    game: &mut crate::game::Game,
+    mut state: OptionalReplacementState,
+    is_pass: bool,
+) {
+    let Some(subject) = resolve_subject_card(game, state.subject, state.stable_subject_card) else {
+        return;
+    };
+    state.subject = subject;
     if is_pass {
         // DECLINED mode — see `make_decline_callback`.
         run_commit_with_flag(game, false, None, |game| {
@@ -1618,14 +1800,17 @@ pub(crate) fn run_optional_replacement_step(
         state.original_destination,
     );
 
-    let current_accept_parked = game.parked_replacement.get(stack_before).is_some_and(|parked| {
-        parked.subject == state.subject
-            && parked.cause == state.cause
-            && parked.original_destination == state.original_destination
-            && parked.source_card == state.source_card
-            && parked.source_permanent == state.source_permanent
-            && parked.controller == state.controller
-    });
+    let current_accept_parked = game
+        .parked_replacement
+        .get(stack_before)
+        .is_some_and(|parked| {
+            parked.subject == state.subject
+                && parked.cause == state.cause
+                && parked.original_destination == state.original_destination
+                && parked.source_card == state.source_card
+                && parked.source_permanent == state.source_permanent
+                && parked.controller == state.controller
+        });
     if current_accept_parked {
         // The accepted window's park was created here, after the original
         // `try_replace_impl` frame unwound, so nothing stamped its window.
@@ -1642,6 +1827,10 @@ pub(crate) fn run_optional_replacement_step(
     }
     let has_unrelated_parked_replacement = !game.parked_replacement.is_empty();
 
+    let Some(subject) = resolve_subject_card(game, state.subject, state.stable_subject_card) else {
+        return;
+    };
+    state.subject = subject;
     game.replacement_pending_outcome = Some(outcome);
     // Accepted-but-non-replacing (outcome `None`) commits in DECLINED mode —
     // see `make_accept_callback`.
@@ -1683,6 +1872,17 @@ fn commit_deferred_outcome(
     original_destination: Option<Zone>,
     outcome: ReplacementOutcome,
 ) {
+    if original_destination == Some(Zone::Security)
+        && game.resume_security_move(subject, cause, outcome)
+    {
+        game.replacement_pending_outcome = None;
+        return;
+    }
+    if original_destination.is_none() && game.resume_field_top_source_move(subject, cause, outcome)
+    {
+        game.replacement_pending_outcome = None;
+        return;
+    }
     // TODO(phase-7-followup): parallel commit logic. The outcome-commit arms
     // here MUST stay in sync with the synchronous commit arms in each fire-site
     // (combat.rs::delete_permanent_with_cause,
@@ -1786,7 +1986,16 @@ fn commit_deferred_outcome(
                 if game
                     .pending_would_digivolve_resume
                     .as_ref()
-                    .is_some_and(|resume| resume.permanent == perm) =>
+                    .is_some_and(|resume| {
+                        resume.window_started
+                            && game.replacement_commit_key.is_some_and(|(timing, _)| {
+                                timing == EffectTiming::WhenPermanentWouldDigivolve
+                            })
+                            && game.resolve_digivolve_host_identity(
+                                resume.player,
+                                resume.host_identity,
+                            ) == Some(perm)
+                    }) =>
             {
                 game.commit_pending_would_digivolve(outcome);
                 game.replacement_pending_outcome = None;
@@ -1878,7 +2087,11 @@ fn commit_deferred_outcome(
                 let prior_override = game.current_deletion_event_cause_override;
                 game.current_deletion_event_cause_override = event_cause_override;
                 let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    game.delete_permanent_with_cause(perm, cause);
+                    game.delete_permanents_batch_with_receipt(
+                        vec![perm],
+                        cause,
+                        game.current_deletion_receipt,
+                    );
                 }));
                 game.current_deletion_event_cause_override = prior_override;
                 if let Err(payload) = result {
@@ -1897,7 +2110,11 @@ fn commit_deferred_outcome(
         }
         (Zone::Trash, ReplacementOutcome::Redirected(_)) => {}
         (Zone::Trash, ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other))) => {
-            game.delete_permanent_with_cause(other, cause);
+            game.delete_permanents_batch_with_receipt(
+                vec![other],
+                cause,
+                game.current_deletion_receipt,
+            );
         }
         (Zone::Trash, ReplacementOutcome::Substituted(_)) => {}
 
@@ -1990,3 +2207,8 @@ fn commit_permanent_deletion_no_replace(
         std::panic::resume_unwind(payload);
     }
 }
+
+include!("replacement_window.rs");
+include!("replacement_deletion_batch.rs");
+
+include!("replacement_departure_batch.rs");

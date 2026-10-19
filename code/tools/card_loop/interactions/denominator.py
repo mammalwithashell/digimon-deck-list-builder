@@ -185,19 +185,23 @@ def extract_clauses(card_ids: Iterable[str], *, cards_json: Path | None = None,
     from tools.clause_coverage.card_sources import (
         extract_card_clauses,
         load_cards_index,
+        load_image_cache,
         load_official_index,
         load_overrides_index,
     )
-    from tools.clause_coverage.extract import DEFAULT_OFFICIAL_JSON
+    from tools.clause_coverage.extract import DEFAULT_IMAGE_CACHE, DEFAULT_OFFICIAL_JSON
 
     cards_index = load_cards_index(cards_json or CARDS_JSON)
     overrides_index = load_overrides_index(overrides or CARD_OVERRIDES)
     official_index = load_official_index(official or DEFAULT_OFFICIAL_JSON)
+    # Use the same committed, reviewed image text as canonical clause coverage.
+    # An empty scrape must not erase a real security clause from risk probes.
+    image_cache = load_image_cache(DEFAULT_IMAGE_CACHE)
     out: list[dict] = []
     for cid in card_ids:
         for c in extract_card_clauses(
             cid, cards_index=cards_index, overrides_index=overrides_index,
-            official_index=official_index, image_cache={}, dcgo_root=None,
+            official_index=official_index, image_cache=image_cache, dcgo_root=None,
         ):
             out.append(c.to_dict())
     return bind_clause_semantics(out)

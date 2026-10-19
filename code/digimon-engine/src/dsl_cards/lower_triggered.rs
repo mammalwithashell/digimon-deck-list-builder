@@ -511,7 +511,8 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         CompiledStep::Optional(_) => true,
         // Single-pick selection steps carry their own `optional` flag; when
         // set, the player can PASS the prompt — itself the decline path.
-        CompiledStep::SelectHand { optional, .. }
+        CompiledStep::PaySourcePrefix { optional, .. }
+        | CompiledStep::SelectHand { optional, .. }
         | CompiledStep::SelectTrash { optional, .. }
         | CompiledStep::SelectReveal { optional, .. }
         | CompiledStep::SelectSecurity { optional, .. }
@@ -559,8 +560,8 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
     }
 }
 
-/// True when a cost-reduction `pay_cost` body's FIRST step INSTALLS A SELECTION
-/// (parks on a `pending_selection`) rather than completing synchronously. Such
+/// True when a cost-reduction `pay_cost` body's FIRST step may install a
+/// selection (`pending_selection`) rather than always completing synchronously. Such
 /// a reducer cannot be resolved by the synchronous digivolve / Option-use cost
 /// scan; the engine routes it through a dedicated interactive prompt instead
 /// (`Effect::pay_cost_interactive`). `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
@@ -574,7 +575,11 @@ pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool 
     };
     matches!(
         first,
-        CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+        // Effect evolution can park at a route, reduction payment, or would
+        // window even when this clause has no explicit leading selector.
+        CompiledStep::EffectInitiatedDigivolve { .. }
+            | CompiledStep::PaySourcePrefix { .. }
+            | CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
             | CompiledStep::TrashLinkCardOfOwnDigimon { .. }
             | CompiledStep::SelectHand { .. }
             | CompiledStep::SelectTrash { .. }
@@ -625,14 +630,52 @@ fn digi_burst_main_activation_guard(
     if let Some(CompiledStep::SelectOwnSources {
         target: Some(CompiledBindingRef::Source),
         min,
+        filter,
+        bind_as,
+        then,
         ..
     }) = step
     {
         let need = *min as usize;
+        let filter = filter.clone();
+        let trash_cost = crate::dsl_cards::step::selections::source_selection_pays_trash_cost(
+            then,
+            bind_as.as_deref(),
+        );
         Some(Box::new(move |rctx| {
-            rctx.source_permanent
-                .and_then(|h| rctx.game.player(h.player).battle_area.get(h.index as usize))
-                .is_some_and(|perm| perm.card_sources.len() > need)
+            rctx.source_permanent.is_some_and(|host| {
+                rctx.game
+                    .player(host.player)
+                    .battle_area
+                    .get(host.index as usize)
+                    .is_some_and(|perm| {
+                        perm.card_sources
+                            .iter()
+                            .take(perm.card_sources.len().saturating_sub(1))
+                            .enumerate()
+                            .filter(|(index, card)| {
+                                let source = crate::selection::SourceSelectionRef {
+                                    permanent: host,
+                                    field_index: host.index,
+                                    source_index: *index as u8,
+                                    card: card.handle(),
+                                };
+                                (!trash_cost
+                                    || !rctx.game.source_card_trash_blocked(
+                                        host,
+                                        card.handle(),
+                                        rctx.player,
+                                    ))
+                                    && eval_predicate(
+                                        &filter,
+                                        rctx,
+                                        PredicateSubject::Source(source),
+                                    )
+                            })
+                            .count()
+                            >= need
+                    })
+            })
         }))
     } else {
         None
@@ -753,6 +796,7 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         EffectTiming::StartOfYourTurn => Effect::start_of_your_turn(card),
         EffectTiming::StartOfOpponentsTurn => Effect::start_of_opponents_turn(card),
         EffectTiming::StartOfYourMainPhase => Effect::start_of_your_main_phase(card),
+        EffectTiming::StartOfOpponentsMainPhase => Effect::start_of_opponents_main_phase(card),
         EffectTiming::EndOfYourTurn => Effect::end_of_your_turn(card),
         EffectTiming::EndOfOpponentsTurn => Effect::end_of_opponents_turn(card),
         EffectTiming::OnEnterFieldAnyone => Effect::on_enter_field_anyone(card),

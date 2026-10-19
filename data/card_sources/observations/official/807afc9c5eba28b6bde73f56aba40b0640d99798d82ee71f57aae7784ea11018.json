@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT5-112",
+    "colors": "White",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "15",
+    "qa": [
+      "If this card is flipped over as a Security Digimon, it's played in its owner's battle area without battling the attacking Digimon. Even if the attacking Digimon has lower DP than this card, no battle occurs, and the attacking Digimon is not deleted."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] Play this card without battling and without paying the cost. [When Digivolving] Delete 1 of your opponent's Tamers. [On Deletion] Delete 1 of your opponent’s Digimon."
+      }
+    ],
+    "type": "Holy Warrior"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "807afc9c5eba28b6bde73f56aba40b0640d99798d82ee71f57aae7784ea11018",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c3d0576d1f2f0d2bd525396f7ab65e573a769b58aa481777a9c9ef57b191056e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT5-112",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT5-112"
+}

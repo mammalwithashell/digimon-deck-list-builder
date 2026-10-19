@@ -14,6 +14,9 @@
 
 #![allow(dead_code)]
 
+// Audit: official observation 71671fa55340ba8944d21b8e7f20fa89f26e7ef0ce621239fb97891031b4c2d4,
+// actual LM-055 image, and base-repository DCGO LM_055.cs.
+
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledPredicate,
     CompiledScope, CompiledStep, CompiledTiming,
@@ -135,24 +138,16 @@ fn lm_055_has_color_bypass_main_delay_and_security_clauses() {
     let card = compiled();
     assert_eq!(
         card.effects.len(),
-        4,
-        "expected flood_gate, main_from_hand, delay, and inherited security"
+        3,
+        "expected main_from_hand, delay, and inherited security"
     );
 
-    assert!(card.effects.iter().any(|clause| matches!(
-        clause,
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-            modifier,
-            target,
-            active_when: Some(active_when),
-            ..
-        }) if modifier == "IgnoreColorRequirement"
-            && target
-                .as_ref()
-                .and_then(|t| t.card_number_is.as_deref())
-                == Some("LM-055")
-            && active_when.no_permanent.is_some()
-    )));
+    assert!(card
+        .use_requirement
+        .as_ref()
+        .unwrap()
+        .no_permanent
+        .is_some());
     assert!(
         card.effects.iter().any(|clause| matches!(
             clause,
@@ -179,7 +174,10 @@ fn lm_055_main_clause_has_reveal_add_remainder_and_place_steps() {
     else {
         panic!("main step 1 must select from reveal");
     };
-    assert!(*optional, "selecting among revealed cards is optional");
+    assert!(
+        !*optional,
+        "printed add 1 is mandatory when an eligible card exists"
+    );
     assert!(has_red_or_green_filter(filter));
     assert!(matches!(
         main.process[2],
@@ -235,8 +233,8 @@ fn lm_055_delay_clause_structure_matches_effect_digivolve_cost_reduce_2() {
         panic!("delay step 1 must choose a Digimon card in hand");
     };
     assert!(
-        !optional,
-        "hand evolution choice follows the optional base selection"
+        *optional,
+        "DCGO DigivolveIntoHandOrTrashCard permits declining the hand result independently"
     );
     assert!(filter
         .all_of
@@ -333,11 +331,17 @@ fn lm_055_main_reveals_green_or_red_card_adds_to_hand_and_bottoms_remainder() {
 
 #[test]
 fn lm_055_delay_body_installs_digimon_selection_when_conditions_met() {
+    let mut evo = red_digimon("RED-EVO", 4);
+    evo.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        card_color: CardColor::Green as u8,
+        level: 3,
+        memory_cost: 3,
+    }];
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-055 YAML parses")
         .add_card(green_digimon("BASE", 3))
-        .add_card(red_digimon("RED-EVO", 4))
+        .add_card(evo)
         .add_card(filler("FILL"))
         .hand(0, &["RED-EVO"])
         .hand(1, &["FILL"])
@@ -347,6 +351,18 @@ fn lm_055_delay_body_installs_digimon_selection_when_conditions_met() {
         .start();
 
     let delay_perm = runner.place_on_field(0, "LM-055", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[delay_perm.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn,
+        };
+
     runner.place_on_field(0, "BASE", Some(0));
 
     runner.game.enqueue_triggered(
@@ -406,10 +422,353 @@ fn lm_055_security_reveals_adds_and_places_self_as_delay_option() {
     ));
 }
 
-// G-IGNORE-COLOR-MASK was resolved 2026-05-02 (see qa/resolved-gaps.md).
-// LM-055 already exercises the conditional IgnoreColorRequirement via the
-// `lm_055_play_from_security_no_copy_on_field_no_payment` path. The
-// behavioral coverage of the `no_permanent` suppression branch is the
-// implicit complement of those two scenarios (LM-055 plays vs LM-055
-// already on field), so dedicated empty-body placeholders are no longer
-// useful — they were retired in Phase 2 Track G (2026-05-17).
+fn audit_delay(two_costs: bool) -> DebugRunner {
+    audit_delay_candidates(two_costs, false, true)
+}
+
+fn audit_delay_candidates(two_costs: bool, decoys: bool, compatible: bool) -> DebugRunner {
+    use digimon_engine::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    };
+    use digimon_engine::card_data::EvoCost;
+    let mut base = green_digimon("AUDIT-BASE", 3);
+    base.colors.push(CardColor::Red);
+    let mut evo = red_digimon("AUDIT-EVO", 4);
+    evo.evo_costs = vec![EvoCost {
+        card_color: CardColor::Green as u8,
+        level: 3,
+        memory_cost: 3,
+    }];
+    if two_costs {
+        evo.evo_costs.push(EvoCost {
+            card_color: CardColor::Red as u8,
+            level: 3,
+            memory_cost: 4,
+        });
+    }
+    if !compatible {
+        evo.evo_costs.clear();
+    }
+    let mut wrong_level = red_digimon("WRONG-LEVEL", 6);
+    wrong_level.evo_costs = vec![EvoCost {
+        card_color: CardColor::Green as u8,
+        level: 5,
+        memory_cost: 3,
+    }];
+    let mut wrong_color = colored_card("WRONG-COLOR", CardColor::Blue, CardKind::Digimon);
+    wrong_color.evo_costs = evo.evo_costs.clone();
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .unwrap()
+        .add_card(base)
+        .add_card(green_digimon("WRONG-BASE", 6))
+        .add_card(wrong_level)
+        .add_card(wrong_color)
+        .add_card(red_option("WRONG-KIND"))
+        .add_card(evo)
+        .add_card(filler("AUDIT-FILL"))
+        .hand(
+            0,
+            if decoys {
+                &[
+                    "LM-055",
+                    "AUDIT-EVO",
+                    "WRONG-LEVEL",
+                    "WRONG-COLOR",
+                    "WRONG-KIND",
+                ]
+            } else {
+                &["LM-055", "AUDIT-EVO"]
+            },
+        )
+        .deck(0, &["AUDIT-FILL"; 12])
+        .deck(1, &["AUDIT-FILL"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    r.game.play_option_from_hand(0, 0);
+    r.auto_resolve().unwrap();
+    r.place_on_field(0, "AUDIT-BASE", Some(0));
+    if decoys {
+        r.place_on_field(0, "WRONG-BASE", Some(0));
+    }
+    let index = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "LM-055")
+        .unwrap();
+    let bit =
+        FIELD_EFFECT_START + index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN;
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[bit as usize],
+        0.0
+    );
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.game.set_memory(5);
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[bit as usize],
+        1.0
+    );
+    r.game.decode_action(bit, 0);
+    assert!(r.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "LM-055"));
+    r
+}
+
+#[test]
+fn lm_055_actual_delay_pays_reduced_cost_and_clone_can_decline() {
+    use digimon_engine::action::space::PASS;
+    let mut r = audit_delay(false);
+    let saved = r.game.clone();
+    let v = r.pending_selection_view().expect("optional base choice");
+    assert!(r.pending_is_optional());
+    r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    let v = r.pending_selection_view().expect("hand evolution choice");
+    r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    assert_eq!(r.memory(), 4);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "AUDIT-EVO"
+    );
+    r.game = saved;
+    r.execute_action(0, PASS).unwrap();
+    assert_eq!(r.memory(), 5);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "AUDIT-BASE"
+    );
+}
+
+#[test]
+fn lm_055_reveal_is_mandatory_and_clone_can_choose_either_color() {
+    use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .unwrap()
+        .add_card(green_option("AUDIT-GREEN"))
+        .add_card(colored_card("AUDIT-RED", CardColor::Red, CardKind::Tamer))
+        .hand(0, &["LM-055"])
+        .deck(0, &["AUDIT-GREEN", "AUDIT-RED"])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    r.game.play_option_from_hand(0, 0);
+    let mask = digimon_engine::action::build_action_mask(&r.game, 0);
+    assert_eq!(mask[PASS as usize], 0.0);
+    assert_eq!(mask[SEL_REVEAL_START as usize], 1.0);
+    assert_eq!(mask[SEL_REVEAL_START as usize + 1], 1.0);
+    let saved = r.game.clone();
+    for (action, expected) in [
+        (SEL_REVEAL_START, "AUDIT-RED"),
+        (SEL_REVEAL_START + 1, "AUDIT-GREEN"),
+    ] {
+        r.game = saved.clone();
+        r.execute_action(0, action).unwrap();
+        r.auto_resolve().unwrap();
+        assert_eq!(
+            r.game.players[0].hand[0].card_id(&r.game.card_data),
+            expected
+        );
+        assert_eq!(r.memory(), 8);
+        assert_eq!(r.game.players[0].battle_area.len(), 1);
+    }
+}
+
+#[test]
+fn lm_055_color_bypass_checks_exact_name_controller_and_battle_area() {
+    use digimon_engine::action::space::PLAY_HAND_START;
+    for (name, owner, allowed) in [
+        ("Sprint Dash Training", 0, false),
+        ("Sprint Dash Training Plus", 0, true),
+        ("Sprint Dash Training", 1, true),
+    ] {
+        let mut other = colored_card("AUDIT-NAME", CardColor::Blue, CardKind::Option);
+        other.card_name = name.into();
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(YAML)
+            .unwrap()
+            .add_card(other)
+            .hand(0, &["LM-055"])
+            .memory(10)
+            .start();
+        r.place_on_field(owner, "AUDIT-NAME", Some(0));
+        r.game.enter_main_phase();
+        assert_eq!(
+            digimon_engine::action::build_action_mask(&r.game, 0)[PLAY_HAND_START as usize],
+            f32::from(allowed),
+            "name={name}, owner={owner}"
+        );
+    }
+}
+
+#[test]
+fn lm_055_delay_masks_exclude_incompatible_bases_and_hand_cards() {
+    use digimon_engine::action::space::PASS;
+    let mut r = audit_delay_candidates(false, true, true);
+    let v = r.pending_selection_view().expect("legal base choice");
+    assert_eq!(
+        v.valid_action_ids.len(),
+        1,
+        "only compatible base is selectable"
+    );
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[PASS as usize],
+        1.0
+    );
+    let action = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+    r.execute_action(0, action).unwrap();
+    let v = r.pending_selection_view().expect("compatible hand choice");
+    assert_eq!(
+        v.valid_action_ids.len(),
+        1,
+        "only compatible hand result; exclude wrong level, color, and kind"
+    );
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[PASS as usize],
+        1.0
+    );
+    let action = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+    r.execute_action(0, action).unwrap();
+    assert_eq!(r.memory(), 4);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "AUDIT-EVO"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[1]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "WRONG-BASE"
+    );
+}
+
+#[test]
+fn lm_055_delay_without_compatible_route_finishes_without_false_choices() {
+    let r = audit_delay_candidates(false, false, false);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "a Digimon without a legal hand evolution is not a target"
+    );
+    assert_eq!(r.memory(), 5);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "AUDIT-BASE"
+    );
+}
+
+#[test]
+fn lm_055_delay_decline_stops_before_hand_prompt() {
+    use digimon_engine::action::space::PASS;
+    let mut r = audit_delay(true);
+    r.execute_action(0, PASS).unwrap();
+    assert!(
+        r.game.pending_selection.is_none(),
+        "declining the base must not install a hand prompt"
+    );
+    assert_eq!(r.memory(), 5);
+}
+
+#[test]
+fn lm_055_delay_cloned_route_choice_pays_both_printed_costs_minus_two() {
+    use digimon_engine::action::space::PASS;
+    let mut r = audit_delay(true);
+    for _ in 0..2 {
+        let v = r.pending_selection_view().expect("base then hand choice");
+        let action = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+        r.execute_action(0, action).unwrap();
+    }
+    let v = r
+        .pending_selection_view()
+        .expect("both evolution routes must remain player choices");
+    assert_eq!(v.valid_action_ids.len(), 2);
+    assert!(!v.valid_action_ids.contains(&PASS));
+    let actions = v.valid_action_ids.clone();
+    let saved = r.game.clone();
+    let mut memories = Vec::new();
+    for action in actions {
+        r.game = saved.clone();
+        assert_eq!(
+            digimon_engine::action::build_action_mask(&r.game, 0)[action as usize],
+            1.0
+        );
+        r.execute_action(0, action).unwrap();
+        assert!(r.game.pending_selection.is_none());
+        memories.push(r.memory());
+        assert_eq!(
+            r.game.players[0].battle_area[0]
+                .top_card()
+                .card_id(&r.game.card_data),
+            "AUDIT-EVO"
+        );
+    }
+    memories.sort();
+    assert_eq!(
+        memories,
+        vec![3, 4],
+        "printed 3/4 routes must pay reduced 1/2"
+    );
+}
+
+// DCGO LM_055.cs calls DigivolveIntoHandOrTrashCard without overriding
+// isOptional=true (CardEffectCommons.cs:834); its hand picker uses
+// canNoSelect: isOptional (:1055), independently of the earlier base choice.
+#[test]
+fn lm_055_delay_cloned_hand_choice_can_decline_after_selecting_base() {
+    use digimon_engine::action::space::PASS;
+    let mut r = audit_delay(false);
+    let v = r.pending_selection_view().expect("optional base choice");
+    let base_action = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+    r.execute_action(0, base_action).unwrap();
+    let v = r.pending_selection_view().expect("optional hand result");
+    assert!(r.pending_is_optional());
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[PASS as usize],
+        1.0
+    );
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[PASS as usize],
+        1.0
+    );
+    let accept = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+    let saved = r.game.clone();
+    r.execute_action(0, PASS).unwrap();
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.memory(), 5);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "AUDIT-BASE"
+    );
+    assert!(r.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "AUDIT-EVO"));
+    assert!(r.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "LM-055"));
+    r.game = saved;
+    r.execute_action(0, accept).unwrap();
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.memory(), 4);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "AUDIT-EVO"
+    );
+}

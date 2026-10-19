@@ -1,0 +1,112 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Red",
+        "Black"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Jesmon GX",
+      "dp": 15000,
+      "effect_description_eng": "[When Digivolving] You may place 1 card with the [Royal Knight] trait and a play cost of 13 or less from your hand or trash under this Digimon as its bottom digivolution card. Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon. Then, ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.).\r\n[All Turns] While a card with the [Royal Knight] trait is in this Digimon's digivolution cards, this Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Blocker＞ (This Digimon can block in the blocker timing.), and gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for each card with the [Royal Knight] trait in this Digimon's digivolution cards.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 5,
+          "from_level": 6
+        }
+      ],
+      "form_eng": [
+        "Mega"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 7,
+      "play_cost": 15,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Holy Warrior",
+        "Royal Knight",
+        "X Antibody"
+      ]
+    },
+    "card_id": "BT10-112",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Red",
+        "cost": 5,
+        "derived": false,
+        "level": 6,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "dp": 15000,
+        "effect_text": "[When Digivolving] You may place 1 card with the [Royal Knight] trait and a play cost of 13 or less from your hand or trash under this Digimon as its bottom digivolution card. Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon. Then, ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.).\r\n[All Turns] While a card with the [Royal Knight] trait is in this Digimon's digivolution cards, this Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Blocker＞ (This Digimon can block in the blocker timing.), and gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for each card with the [Royal Knight] trait in this Digimon's digivolution cards.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 7,
+        "play_cost": 15,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "[Digivolve] Lv.6 w/[Royal Knight] trait: Cost 5",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Red",
+      "color2": "Black",
+      "date_added": "2025-12-08 10:21:31",
+      "digi_type": "Holy Warrior",
+      "digi_type2": "Royal Knight",
+      "digi_type3": "X Antibody",
+      "digi_type4": null,
+      "dp": 15000,
+      "evolution_color": "Red",
+      "evolution_cost": 5,
+      "evolution_level": 6,
+      "form": "Mega",
+      "id": "BT10-112",
+      "level": 7,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[When Digivolving] You may place 1 card with the [Royal Knight] trait and a play cost of 13 or less from your hand or trash under this Digimon as its bottom digivolution card. Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon. Then, ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.).\r\n[All Turns] While a card with the [Royal Knight] trait is in this Digimon's digivolution cards, this Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Blocker＞ (This Digimon can block in the blocker timing.), and gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for each card with the [Royal Knight] trait in this Digimon's digivolution cards.",
+      "name": "Jesmon GX",
+      "play_cost": 15,
+      "pretty_url": "jesmon-gx-bt10-112",
+      "rarity": "SEC",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-10: Booster Xros Encounter"
+      ],
+      "source_effect": "",
+      "stage": "Mega",
+      "tcgplayer_id": 450647,
+      "tcgplayer_name": "Jesmon GX (Alternate Art)",
+      "type": "Digimon",
+      "xros_req": "[Digivolve] Lv.6 w/[Royal Knight] trait: Cost 5"
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "024d03942868a8687f614c783b31eb0f3a838e1df434c161744f4f01ceca40fc",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT10-112#2",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

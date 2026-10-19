@@ -9,7 +9,7 @@ use digimon_engine::enums::{CardColor, GamePhase};
 #[test]
 fn bt20_045_loads_keyword_slice() {
     DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 must load from embedded DSL pack")
         .start();
 }
@@ -17,7 +17,7 @@ fn bt20_045_loads_keyword_slice() {
 #[test]
 fn bt20_045_has_blast_dna_digivolve_path() {
     let runner = DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 must load from embedded DSL pack")
         .start();
     let card = runner.compiled_card("BT20-045").expect("compiled card");
@@ -39,7 +39,7 @@ fn bt20_045_has_blast_dna_digivolve_path() {
 #[test]
 fn bt20_045_has_standard_dna_digivolve_green_blue() {
     let runner = DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 must load from embedded DSL pack")
         .start();
     let card = runner.compiled_card("BT20-045").expect("compiled card");
@@ -75,7 +75,7 @@ fn bt20_045_counter_blast_dna_uses_breakdramon_and_slayerdramon() {
     attacker.dp = Some(17000);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 YAML loads")
         .add_card(breakdramon)
         .add_card(slayerdramon)
@@ -183,7 +183,7 @@ fn counter_blast_dna_into_examon_with_opp_field(
     attacker.dp = Some(17000);
 
     let mut builder = DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 YAML loads")
         .add_card(breakdramon)
         .add_card(slayerdramon)
@@ -297,7 +297,7 @@ fn bt20_045_non_dna_digivolve_does_not_sweep() {
     opp.colors = vec![CardColor::Purple];
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 YAML loads")
         .add_card(base)
         .add_card(opp)
@@ -370,7 +370,7 @@ fn bt20_045_unsuspends_when_own_digimon_suspends() {
     ally.dp = Some(5000);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 YAML loads")
         .add_card(ally)
         .memory(20)
@@ -397,7 +397,7 @@ fn bt20_045_unsuspends_when_opponent_digimon_suspends() {
     opp.dp = Some(5000);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 YAML loads")
         .add_card(opp)
         .memory(20)
@@ -426,7 +426,7 @@ fn bt20_045_suspend_observer_is_once_per_turn() {
     ally2.dp = Some(5000);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT20-045")
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
         .expect("BT20-045 YAML loads")
         .add_card(ally1)
         .add_card(ally2)
@@ -453,4 +453,207 @@ fn bt20_045_suspend_observer_is_once_per_turn() {
         runner.game.players[0].battle_area[examon.index as usize].is_suspended,
         "Once Per Turn: the second suspend in the same turn must NOT re-arm the unsuspend"
     );
+}
+
+// Official primary observation 4bff382afbc92b3df0f0572cee529cb15d967a54f0bf73456be4f543d2049328
+// and inspected BT20-045 image: all three colors in the Lv.6/cost-5 circle.
+#[test]
+fn bt20_045_all_printed_normal_routes_pay_five_and_reject_other_colors_levels() {
+    use digimon_engine::action::space::encode_digivolve;
+    for (color, level, legal) in [
+        (CardColor::Green, 6, true),
+        (CardColor::Red, 6, true),
+        (CardColor::Blue, 6, true),
+        (CardColor::Yellow, 6, false),
+        (CardColor::Green, 5, false),
+    ] {
+        let mut c = make_test_card_with_level("BASE", "Base", level);
+        c.colors = vec![color];
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
+            .unwrap()
+            .add_card(c)
+            .hand(0, &["BT20-045"])
+            .deck(0, &["BASE"; 8])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.game.current_phase = GamePhase::Main;
+        let h = r.place_on_field(0, "BASE", None);
+        let a = encode_digivolve(0, h.index as u16);
+        assert_eq!(
+            build_action_mask(&r.game, 0)[a as usize] > 0.0,
+            legal,
+            "{color:?} Lv{level}"
+        );
+        if legal {
+            r.game.decode_action(a, 0);
+            assert_eq!(r.memory(), 5);
+            assert_eq!(
+                r.game.players[0].battle_area[0]
+                    .top_card()
+                    .card_id(&r.game.card_data),
+                "BT20-045"
+            );
+        }
+    }
+}
+
+fn observer_setup(turn: u8) -> DebugRunner {
+    use digimon_engine::enums::CardKind;
+    let d = make_test_card_with_level("D", "Digimon", 4);
+    let mut t = make_test_card_with_level("T", "Tamer", 4);
+    t.card_kind = CardKind::Tamer;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
+        .unwrap()
+        .add_card(d)
+        .add_card(t)
+        .deck(0, &["D"; 12])
+        .deck(1, &["D"; 12])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.game.turn_player_idx = turn as usize;
+    r.game.current_phase = GamePhase::Main;
+    r
+}
+fn accept_optional(r: &mut DebugRunner) {
+    use digimon_engine::action::space::PASS;
+    let v = r.pending_selection_view().expect("optional unsuspend");
+    assert!(v.is_optional);
+    assert!(build_action_mask(&r.game, v.selecting_player)[PASS as usize] > 0.0);
+    let a = *v.valid_action_ids.iter().find(|a| **a != PASS).unwrap();
+    assert!(build_action_mask(&r.game, v.selecting_player)[a as usize] > 0.0);
+    r.execute_action(v.selecting_player, a).unwrap();
+}
+#[test]
+fn bt20_045_optional_decline_clone_self_suspend_both_turns_and_reset() {
+    use digimon_engine::action::space::PASS;
+    for turn in [0, 1] {
+        let mut r = observer_setup(turn);
+        let h = r.place_on_field(0, "BT20-045", Some(0));
+        r.game.suspend(h);
+        assert!(r.game.players[0].battle_area[0].is_suspended);
+        let saved = r.game.clone();
+        r.game = r.game.clone();
+        accept_optional(&mut r);
+        assert!(!r.game.players[0].battle_area[0].is_suspended);
+        r.game = saved;
+        r.execute_action(0, PASS).unwrap();
+        assert!(r.game.players[0].battle_area[0].is_suspended);
+        // Declining activation preserves its OPT use for the next event.
+        let other = r.place_on_field(1, "D", Some(0));
+        r.game.suspend(other);
+        accept_optional(&mut r);
+        assert!(!r.game.players[0].battle_area[0].is_suspended);
+        r.game.suspend(h);
+        assert!(r.pending_selection().is_none());
+        assert!(r.game.players[0].battle_area[0].is_suspended);
+        r.end_turn();
+        r.auto_resolve().unwrap();
+        r.game.players[0].battle_area[0].is_suspended = false;
+        r.game.suspend(h);
+        accept_optional(&mut r);
+        assert!(!r.game.players[0].battle_area[0].is_suspended);
+    }
+}
+#[test]
+fn bt20_045_tamer_suspension_and_inherited_copy_do_not_trigger() {
+    let mut r = observer_setup(0);
+    let h = placed_suspended_examon(&mut r, 0);
+    let t = r.place_on_field(1, "T", Some(0));
+    r.game.suspend(t);
+    assert!(r.pending_selection().is_none());
+    assert!(r.game.players[0].battle_area[h.index as usize].is_suspended);
+    let mut r = observer_setup(1);
+    let h = r.place_stack(0, &["BT20-045", "D"]);
+    r.game.suspend(h);
+    assert!(r.pending_selection().is_none());
+    assert!(r.game.players[0].battle_area[h.index as usize].is_suspended);
+}
+#[test]
+fn bt20_045_keywords_and_overflow_are_live() {
+    use digimon_engine::enums::Keyword;
+    let mut r = observer_setup(0);
+    let h = r.place_on_field(0, "BT20-045", Some(0));
+    for k in [
+        Keyword::Raid,
+        Keyword::Piercing,
+        Keyword::Blocker,
+        Keyword::Evade,
+    ] {
+        assert!(r.game.has_keyword(h, k));
+    }
+    // Suspend first, so Evade cannot replace the deletion. Decline the observer.
+    r.game.suspend(h);
+    r.execute_action(0, digimon_engine::action::space::PASS)
+        .unwrap();
+    let before = r.memory();
+    r.game.delete_permanent_with_effects(h);
+    r.auto_resolve().unwrap();
+    assert_eq!(r.memory(), before - 5);
+    assert_eq!(r.battle_area_size(0), 0);
+}
+
+#[test]
+fn bt20_045_normal_dna_mask_material_choices_clone_cost_and_sweep() {
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
+        .unwrap();
+    for (id, color, level) in [
+        ("G", CardColor::Green, 6),
+        ("B", CardColor::Blue, 6),
+        ("BAD", CardColor::Blue, 5),
+    ] {
+        let mut c = make_test_card_with_level(id, id, level);
+        c.colors = vec![color];
+        c.dp = Some(6000);
+        b = b.add_card(c);
+    }
+    b = b.add_card(dp_digimon("HIGH", "High", 18000));
+    let mut r = b
+        .hand(0, &["BT20-045"])
+        .deck(0, &["BAD"; 5])
+        .deck(1, &["BAD"; 5])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.game.current_phase = GamePhase::Main;
+    r.place_on_field(0, "G", Some(0));
+    r.place_on_field(0, "B", Some(0));
+    r.place_on_field(0, "BAD", Some(0));
+    r.place_on_field(1, "HIGH", Some(0));
+    assert_eq!(
+        build_action_mask(&r.game, 0)[DNA_DIGIVOLVE_START as usize],
+        1.0
+    );
+    r.game.decode_action(DNA_DIGIVOLVE_START, 0);
+    let v = r.pending_selection_view().unwrap();
+    assert_eq!(v.valid_action_ids, vec![0, 1]);
+    r.game = r.game.clone();
+    r.execute_action(0, 0).unwrap();
+    let v = r.pending_selection_view().unwrap();
+    assert_eq!(v.valid_action_ids, vec![1]);
+    r.execute_action(0, 1).unwrap();
+    assert_eq!(r.memory(), 10);
+    assert_eq!(r.battle_area_size(0), 2);
+    assert_eq!(r.battle_area_size(1), 0);
+    assert_eq!(r.game.players[1].deck[0].card_id(&r.game.card_data), "HIGH");
+    assert!(!r.game.players[0].battle_area[0].is_suspended);
+}
+#[test]
+fn bt20_045_playing_does_not_sweep() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-045.yaml"))
+        .unwrap()
+        .add_card(dp_digimon("HIGH", "High", 18000))
+        .hand(0, &["BT20-045"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.game.current_phase = GamePhase::Main;
+    r.place_on_field(1, "HIGH", Some(0));
+    r.play(0, 0).unwrap();
+    assert_eq!(r.battle_area_size(1), 1);
 }

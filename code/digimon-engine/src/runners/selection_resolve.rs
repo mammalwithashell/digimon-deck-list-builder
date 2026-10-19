@@ -82,6 +82,10 @@ fn yes_no_branches(pending: &crate::selection::PendingSelection) -> Option<(u16,
 ///
 /// Scans whole integer tokens so `"cost 2"` does not match `12` or `20`.
 fn label_mentions_value(label: &str, want: i64) -> bool {
+    if let Some(cost) = label.strip_prefix("Digivolve for cost ") {
+        let number: String = cost.chars().take_while(|c| c.is_ascii_digit()).collect();
+        return number.parse::<i64>().ok() == Some(want);
+    }
     let bytes = label.as_bytes();
     let mut i = 0usize;
     while i < bytes.len() {
@@ -301,11 +305,25 @@ fn count_capped_zone_ids(game: &Game, valid: &[u16]) -> Option<(Vec<String>, u16
     let stack = game.pending_selection_resume.as_ref()?;
     // Frames run inner-to-outer, so the live prompt is the innermost one —
     // same traversal as `permutation_remaining_ids` / `material_source_ids`.
-    let (zone, of_player) = stack.frames.iter().rev().find_map(|f| match f {
-        ResumeFrame::MultiPickStep(s) => Some((s.zone, s.of_player)),
-        ResumeFrame::NonDslCountCappedStep(s) => Some((s.zone, s.of_player)),
-        _ => None,
-    })?;
+    fn active_count_zone(
+        stack: &crate::resume::ResumeStack,
+    ) -> Option<(CountCappedZone, crate::enums::PlayerId)> {
+        stack.frames.iter().rev().find_map(|f| match f {
+            ResumeFrame::MultiPickStep(s) => Some((s.zone, s.of_player)),
+            ResumeFrame::NonDslCountCappedStep(s) => Some((s.zone, s.of_player)),
+            ResumeFrame::ReplacementBody { inner, .. }
+            | ResumeFrame::FieldTopSourceBatch { inner, .. }
+            | ResumeFrame::DelayCancelAfterSelection { inner, .. }
+            | ResumeFrame::DelayHandDigivolveAfterSelection { inner, .. }
+            | ResumeFrame::DelayDnaAfterSelection { inner, .. }
+            | ResumeFrame::DelayFieldDnaAfterPayment { inner, .. }
+            | ResumeFrame::DelayPlayFromHandAfterSelection { inner, .. }
+            | ResumeFrame::DelayPlayFromUnionAfterSelection { inner, .. }
+            | ResumeFrame::DelayBodyAfterCost { inner, .. } => active_count_zone(inner),
+            _ => None,
+        })
+    }
+    let (zone, of_player) = active_count_zone(stack)?;
 
     let to_ids = |cards: &[crate::card_source::CardSource], cap: usize| -> Vec<String> {
         cards
@@ -430,13 +448,28 @@ fn source_multi_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, St
 /// trash, stack and link cards, so each live option is decoded through the
 /// frame itself (`dsl_cards::step::zone_cards`). `None` when the live prompt is
 /// not a zone-card pick.
+fn active_selection_frame(stack: &crate::resume::ResumeStack) -> Option<&crate::resume::ResumeFrame> {
+    use crate::resume::ResumeFrame as F;
+    match stack.frames.last()? {
+        F::ReplacementBody {inner,..} | F::FieldTopSourceBatch {inner,..}
+        | F::DelayCancelAfterSelection {inner,..} | F::DelayHandDigivolveAfterSelection {inner,..}
+        | F::DelayDnaAfterSelection {inner,..} | F::DelayFieldDnaAfterPayment {inner,..}
+        | F::DelayPlayFromHandAfterSelection {inner,..} | F::DelayPlayFromUnionAfterSelection {inner,..}
+        | F::DelayBodyAfterCost {inner,..} => active_selection_frame(inner),
+        frame => Some(frame),
+    }
+}
+fn active_zone_card_pick(stack: &crate::resume::ResumeStack) -> Option<&crate::dsl_cards::step::zone_cards::ZoneCardPickState> {
+    match active_selection_frame(stack)? { crate::resume::ResumeFrame::ZoneCardPickStep(state)=>Some(state), _=>None }
+}
+fn pending_zone_card_pick(game:&Game)->Option<&crate::dsl_cards::step::zone_cards::ZoneCardPickState> {
+    if !matches!(game.pending_selection.as_ref()?.kind,
+        SelectionKind::CountCappedMultiSelect{..}|SelectionKind::PlayCostBudget{..}|SelectionKind::OrderedPermutation{..}) {return None;}
+    active_zone_card_pick(game.pending_selection_resume.as_ref()?)
+}
+
 fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, String)>> {
-    use crate::resume::ResumeFrame;
-    let stack = game.pending_selection_resume.as_ref()?;
-    let state = stack.frames.iter().rev().find_map(|f| match f {
-        ResumeFrame::ZoneCardPickStep(s) => Some(s),
-        _ => None,
-    })?;
+    let state = pending_zone_card_pick(game)?;
     let pairs: Vec<(u16, String)> = state
         .candidates
         .iter()
@@ -578,13 +611,11 @@ pub fn resolve_next(
                 SelectionKind::SourceMulti { .. } | SelectionKind::CountCappedMultiSelect { .. }
             )
             && game.pending_selection_resume.as_ref().is_some_and(|stack| {
-                stack.frames.iter().rev().any(|f| {
-                    match f {
-                        crate::resume::ResumeFrame::MultiPickStep(s) => !s.accum.is_empty(),
-                        crate::resume::ResumeFrame::NonDslCountCappedStep(s) => !s.accum.is_empty(),
-                        crate::resume::ResumeFrame::CountCappedPermanentsStep(s) => !s.accum.is_empty(),
-                        _ => false,
-                    }
+                active_selection_frame(stack).is_some_and(|f| match f {
+                    crate::resume::ResumeFrame::MultiPickStep(s) => !s.accum.is_empty(),
+                    crate::resume::ResumeFrame::NonDslCountCappedStep(s) => !s.accum.is_empty(),
+                    crate::resume::ResumeFrame::CountCappedPermanentsStep(s) => !s.accum.is_empty(),
+                    _ => false,
                 })
             });
         let multiselectish = open_field_multi_pick
@@ -675,6 +706,24 @@ pub fn resolve_next(
         .filter(|_| !union_source_with_carrier)
     {
         let t = targets[picks_done];
+        // A zone-card pick names physical cards, including field TOP cards.
+        // Resolve the requested owner/slot through its live top handle; do not
+        // let an identical hand copy or a same-slot opponent card shadow it.
+        if let Some(state) = pending_zone_card_pick(game)
+        {
+            let card = usize::try_from(t.frame)
+                .ok()
+                .and_then(|slot| game.players.get(t.player as usize)?.battle_area.get(slot))
+                .and_then(|permanent| permanent.card_sources.last())
+                .map(|card| card.handle());
+            let action = card
+                .filter(|card| state.candidates.contains(card) && !state.picked.contains(card))
+                .and_then(|card| crate::dsl_cards::step::zone_cards::encode_zone_card(game, card))
+                .filter(|action| accepts(*action));
+            return action.map(Some).ok_or_else(|| format!(
+                "zone-card field target (player {}, slot {}) has no legal physical top-card candidate",
+                t.player, t.frame));
+        }
         // DCGO's `SelectAttackEffect.SetAttackTarget` (the attack-target
         // prompt's chokepoint) uses `SecurityIndex = -1` as a sentinel for
         // "attack the player" rather than a battle-area permanent — see
@@ -722,10 +771,36 @@ pub fn resolve_next(
             && crate::selection::is_dna_material_prompt(&pending.prompt)
             && t.player == pending.selecting_player)
             .then_some(slot);
-        for cand in [side_implicit, absolute]
-            .into_iter()
-            .chain(dna_material_slot)
-        {
+        // Blast DNA uses raw battle-area indices too, but its distinct field
+        // material prompt is identified by the parked continuation, not by the
+        // generic Material kind or a guessed action range. The defender owns
+        // the material; accepting the other player's same slot changes cards.
+        let blast_dna_material_owner = game.pending_selection_resume.as_ref().and_then(|stack| {
+            stack.frames.iter().rev().find_map(|frame| match frame {
+                crate::resume::ResumeFrame::CounterBlastDnaFieldMaterial(state) => {
+                    Some(state.defender)
+                }
+                _ => None,
+            })
+        });
+        if pending.kind == SelectionKind::Material {
+            if let Some(owner) = blast_dna_material_owner {
+                return if t.player == owner && t.frame >= 0 && accepts(slot) {
+                    Ok(Some(slot))
+                } else {
+                    Err(format!("Blast DNA field target (player {}, slot {}) is not a legal material for player {}", t.player, slot, owner))
+                };
+            }
+        }
+        // AnyField explicitly encodes the absolute owner. Never fall back to
+        // the side-implicit form: that can be another legal card at the same
+        // slot on player 0's field, silently answering the wrong target.
+        let candidates = if pending.kind == SelectionKind::AnyField {
+            vec![absolute]
+        } else {
+            vec![side_implicit, absolute]
+        };
+        for cand in candidates.into_iter().chain(dna_material_slot) {
             if accepts(cand) {
                 return Ok(Some(cand));
             }
@@ -739,6 +814,46 @@ pub fn resolve_next(
     // ── Card-identity picks (hand / trash / reveal / security) ───────────
     if let Some(card_ids) = &payload.card_ids {
         let want = &card_ids[picks_done];
+        // Counter prompts use several phase-specific encodings under the same
+        // Hand kind. The parked candidates, rather than the kind's usual hand
+        // action band, identify which resource each legal action represents.
+        if let Some(state) = game.pending_selection_resume.as_ref().and_then(|stack| {
+            stack.frames.iter().rev().find_map(|frame| match frame {
+                crate::resume::ResumeFrame::CounterSelection(state) => Some(state),
+                _ => None,
+            })
+        }) {
+            use crate::combat::CounterCandidate;
+            let player = game.player(state.defender_player);
+            let matches: Vec<u16> = state
+                .valid_action_ids
+                .iter()
+                .zip(&state.candidates)
+                .filter_map(|(action, candidate)| {
+                    let card = match candidate {
+                        CounterCandidate::Blast { hand_index, .. }
+                        | CounterCandidate::BlastDna { hand_index }
+                        | CounterCandidate::HandOption { hand_index } => {
+                            player.hand.get(*hand_index as usize)
+                        }
+                        CounterCandidate::FieldAbility { perm_index } => player
+                            .battle_area
+                            .get(*perm_index as usize)
+                            .map(|permanent| permanent.top_card()),
+                    };
+                    (accepts(*action)
+                        && card.is_some_and(|card| card.card_id(&game.card_data) == want))
+                    .then_some(*action)
+                })
+                .collect();
+            return match matches.as_slice() {
+                [action] => Ok(Some(*action)),
+                [] => Err(format!("card pick '{want}' has no legal Counter candidate")),
+                _ => Err(format!(
+                    "card pick '{want}' is ambiguous among Counter actions {matches:?}"
+                )),
+            };
+        }
         let zone_owner = pending.zone_owner.unwrap_or(pending.selecting_player);
         let find_id = |ids: &[String], base: u16| -> Option<u16> {
             ids.iter().enumerate().find_map(|(i, cid)| {
@@ -861,6 +976,29 @@ pub fn resolve_next(
                         .find_map(|(id, cid)| (cid == want && accepts(*id)).then_some(*id))
                 })
             }
+            SelectionKind::EffectChoice => {
+                let matching: Vec<u16> = pending
+                    .effect_choices
+                    .as_ref()
+                    .into_iter()
+                    .flatten()
+                    .filter(|entry| accepts(entry.action_id))
+                    .filter(|entry| {
+                        entry
+                            .source_card
+                            .and_then(|card| game.card_data_for_handle(card))
+                            .is_some_and(|data| data.card_id == *want)
+                    })
+                    .map(|entry| entry.action_id)
+                    .collect();
+                if matching.len() > 1 {
+                    return Err(format!(
+                        "card pick '{}' is ambiguous among effect choices {:?}",
+                        want, matching
+                    ));
+                }
+                matching.first().copied()
+            }
             SelectionKind::Security => {
                 let base = if zone_owner == pending.selecting_player {
                     SEL_MY_SECURITY_START
@@ -926,6 +1064,28 @@ pub fn resolve_next(
     // error; the dangerous half was `count: 0` resolving to branch 0 and
     // replaying clean while meaning something entirely different.
     if let Some(c) = payload.count {
+        // Typed count rows carry the declared physical prefix separately from
+        // what can actually be paid. Display text is not a semantic identifier.
+        if let Some(entries) = &pending.effect_choices {
+            if entries.iter().any(|e| e.count_choice.is_some()) {
+                let matches: Vec<_> = entries
+                    .iter()
+                    .filter(|e| {
+                        pending.valid_action_ids.contains(&e.action_id)
+                            && matches!(e.count_choice.map(|m| m.operation),
+                            Some(crate::count_choice::CountChoiceOperation::Commit(v))
+                            if c >= 0 && v.declared == c as u64)
+                    })
+                    .collect();
+                return match matches.as_slice() {
+                    [entry] => Ok(Some(entry.action_id)),
+                    _ => Err(format!(
+                        "count payload {} has {} legal declared-count matches on the current page of '{}'{}",
+                        c, matches.len(), pending.prompt, describe_choices(pending)
+                    )),
+                };
+            }
+        }
         // Preferred path: the engine's own branch labels embed the value
         // ("Digivolve for cost 2"), so a recorded value can be matched directly.
         // This works on recordings made before the recorder emitted
@@ -1035,6 +1195,38 @@ pub fn resolve_next(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn route_cost_matching_ignores_treated_level_and_card_id_numbers() {
+        let label = "Digivolve for cost 2 (treat base as Lv.3 [Red] Digimon; BT4-011)";
+        assert!(label_mentions_value(label, 2));
+        for wrong in [3, 4, 11] {
+            assert!(!label_mentions_value(label, wrong));
+        }
+        assert!(label_mentions_value(
+            "Digivolve for cost 12 (App Fusion)",
+            12
+        ));
+        assert!(!label_mentions_value(
+            "Digivolve for cost 12 (treat base as Lv.2)",
+            2
+        ));
+    }
+    #[test]
+    fn route_cost_matching_distinguishes_two_from_three_with_level_three_suffix() {
+        let labels = [
+            "Digivolve for cost 2 (treat base as Lv.3 [Red] Digimon)",
+            "Digivolve for cost 3",
+        ];
+        for (want, expected) in [(2, 0), (3, 1)] {
+            let matches: Vec<_> = labels
+                .iter()
+                .enumerate()
+                .filter(|(_, s)| label_mentions_value(s, want))
+                .map(|(i, _)| i)
+                .collect();
+            assert_eq!(matches, vec![expected]);
+        }
+    }
 
     #[test]
     fn label_matching_finds_whole_integer_tokens_only() {
@@ -1218,7 +1410,10 @@ mod tests {
         let a = encode_source_select(0, 0).unwrap();
         let b = encode_source_select(0, 1).unwrap();
         park_union_zone_material(&mut runner.game, vec![a, b]);
-        assert_eq!(resolve_next(&runner.game, &one_card_row("SRC-B"), 0), Ok(Some(b)));
+        assert_eq!(
+            resolve_next(&runner.game, &one_card_row("SRC-B"), 0),
+            Ok(Some(b))
+        );
     }
 
     #[test]
@@ -1362,7 +1557,13 @@ mod tests {
         let mut runner = DebugRunner::new();
         park_count_capped(&mut runner.game, 0);
         runner.game.pending_selection_resume = Some(ResumeStack {
-            frames: vec![multipick_frame(0, 0, CountCappedZone::Trash, TRASH_EFFECT_START, vec![0])],
+            frames: vec![multipick_frame(
+                0,
+                0,
+                CountCappedZone::Trash,
+                TRASH_EFFECT_START,
+                vec![0],
+            )],
         });
         assert_eq!(
             resolve_next(&runner.game, &one_card_row("EX8-047"), 1),
@@ -1375,7 +1576,13 @@ mod tests {
         let mut runner = DebugRunner::new();
         park_count_capped(&mut runner.game, 1);
         runner.game.pending_selection_resume = Some(ResumeStack {
-            frames: vec![multipick_frame(0, 0, CountCappedZone::Trash, TRASH_EFFECT_START, vec![0])],
+            frames: vec![multipick_frame(
+                0,
+                0,
+                CountCappedZone::Trash,
+                TRASH_EFFECT_START,
+                vec![0],
+            )],
         });
         assert_eq!(
             resolve_next(&runner.game, &one_card_row("EX8-047"), 1),
@@ -2209,6 +2416,7 @@ mod tests {
         candidate_indices: Vec<usize>,
     ) -> ResumeFrame {
         ResumeFrame::MultiPickStep(MultiPickState {
+            named_groups: None,
             prov: test_provenance(),
             of_player,
             selecting_player,
@@ -2514,11 +2722,8 @@ mod tests {
         // bumped (`accum.len()`); model that post-pick state. (A static
         // `picked: 0` here is the FRESH-prompt shape the trailing-PASS guard
         // deliberately leaves alone.)
-        if let Some(SelectionKind::CountCappedMultiSelect { picked, .. }) = runner
-            .game
-            .pending_selection
-            .as_mut()
-            .map(|p| &mut p.kind)
+        if let Some(SelectionKind::CountCappedMultiSelect { picked, .. }) =
+            runner.game.pending_selection.as_mut().map(|p| &mut p.kind)
         {
             *picked = 1;
         }
@@ -2541,5 +2746,425 @@ mod tests {
         let result = resolve_next(&runner.game, &payload, 0);
 
         assert_eq!(result, Ok(Some(absolute)));
+    }
+    #[test]
+    fn counter_hand_identity_uses_blast_dna_candidates_not_play_hand_encoding() {
+        use crate::action::space::DNA_DIGIVOLVE_START;
+        use crate::combat::CounterCandidate;
+        let mut runner = runner_with_cards(&["RESULT", "OTHER"]);
+        runner.game.players[0].hand.clear();
+        runner.add_to_hand(0, "OTHER");
+        runner.add_to_hand(0, "RESULT");
+        park_attack_target_selection(&mut runner.game, vec![DNA_DIGIVOLVE_START + 1]);
+        let pending = runner.game.pending_selection.as_mut().unwrap();
+        pending.kind = SelectionKind::Hand;
+        pending.prompt = "Counter (blast / option / field ability)".into();
+        runner.game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![ResumeFrame::CounterSelection(
+                crate::resume::CombatCounterState {
+                    defender_player: 0,
+                    valid_action_ids: vec![DNA_DIGIVOLVE_START + 1],
+                    candidates: vec![CounterCandidate::BlastDna { hand_index: 1 }],
+                    outer_conts: vec![],
+                },
+            )],
+        });
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("RESULT"), 0),
+            Ok(Some(DNA_DIGIVOLVE_START + 1))
+        );
+        assert!(resolve_next(&runner.game, &card_row("OTHER"), 0).is_err());
+        let cloned = runner.game.clone();
+        assert_eq!(
+            resolve_next(&cloned, &card_row("RESULT"), 0),
+            Ok(Some(DNA_DIGIVOLVE_START + 1))
+        );
+
+        // Two evolutions from the same card onto different hosts require more
+        // information than card identity; never silently choose one host.
+        let actions = vec![
+            crate::action::space::encode_digivolve(1, 0),
+            crate::action::space::encode_digivolve(1, 1),
+        ];
+        runner
+            .game
+            .pending_selection
+            .as_mut()
+            .unwrap()
+            .valid_action_ids = actions.clone();
+        if let ResumeFrame::CounterSelection(state) = &mut runner
+            .game
+            .pending_selection_resume
+            .as_mut()
+            .unwrap()
+            .frames[0]
+        {
+            state.valid_action_ids = actions;
+            state.candidates = vec![
+                CounterCandidate::Blast {
+                    hand_index: 1,
+                    field_index: 0,
+                },
+                CounterCandidate::Blast {
+                    hand_index: 1,
+                    field_index: 1,
+                },
+            ];
+        }
+        assert!(resolve_next(&runner.game, &card_row("RESULT"), 0)
+            .unwrap_err()
+            .contains("ambiguous"));
+    }
+
+    #[test]
+    fn partition_card_identity_survives_replacement_body_wrapper_and_clone() {
+        let mut r = DebugRunner::builder()
+            .dsl_card("BT23-047")
+            .unwrap()
+            .dsl_card("BT20-042")
+            .unwrap()
+            .dsl_card("BT20-025")
+            .unwrap()
+            .add_card(make_test_card("FILL", "Filler"))
+            .deck(0, &["FILL"; 20])
+            .deck(1, &["FILL"; 20])
+            .memory(3)
+            .start();
+        r.skip_mulligan();
+        let h = r.place_stack(0, &["BT20-042", "BT20-025", "BT23-047"]);
+        r.game.set_effect_source_player_for_test(Some(1));
+        r.game.delete_permanent_with_effects(h);
+        let actor = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Partition gate")
+            .selecting_player;
+        let accept = crate::action::space::REPLACEMENT_ACCEPT;
+        assert_eq!(
+            crate::action::build_action_mask(&r.game, actor)[accept as usize],
+            1.0
+        );
+        r.game.resolve_selection(actor, accept).unwrap();
+        assert!(matches!(
+            r.game.pending_selection.as_ref().unwrap().kind,
+            SelectionKind::CountCappedMultiSelect { .. }
+        ));
+        for game in [r.game.clone(), r.game.clone()] {
+            let action = resolve_next(&game, &card_row("BT20-042"), 0)
+                .expect("nested Partition source identity must resolve")
+                .expect("one real card choice");
+            assert!(game
+                .pending_selection
+                .as_ref()
+                .unwrap()
+                .valid_action_ids
+                .contains(&action));
+            assert_eq!(action, crate::action::space::SOURCE_SELECT_START);
+        }
+    }
+
+    #[test]
+    fn effect_choice_resolves_unique_source_card_identity_and_rejects_ambiguity() {
+        let mut r = runner_with_cards(&["ORDER-A", "ORDER-B"]);
+        let a = r.place_on_field(0, "ORDER-A", None);
+        let b = r.place_on_field(0, "ORDER-B", None);
+        let ca = r.game.player(0).battle_area[a.index as usize]
+            .top_card()
+            .handle();
+        let cb = r.game.player(0).battle_area[b.index as usize]
+            .top_card()
+            .handle();
+        park_attack_target_selection(&mut r.game, vec![30, 31]);
+        let pending = r.game.pending_selection.as_mut().unwrap();
+        pending.kind = SelectionKind::EffectChoice;
+        let entry = |id, card| crate::selection::EffectChoiceEntry {
+            action_id: id,
+            source_card: Some(card),
+            label: "Choose next replacement".into(),
+            source_kind: None,
+            timing: None,
+            is_optional: false,
+            keyword: None,
+            observation_metadata: Default::default(),
+            count_choice: None,
+        };
+        pending.effect_choices = Some(vec![entry(30, ca), entry(31, cb)]);
+        assert_eq!(resolve_next(&r.game, &card_row("ORDER-B"), 0), Ok(Some(31)));
+        assert_eq!(
+            resolve_next(&r.game.clone(), &card_row("ORDER-A"), 0),
+            Ok(Some(30))
+        );
+        r.game.pending_selection.as_mut().unwrap().valid_action_ids = vec![30];
+        assert!(
+            resolve_next(&r.game, &card_row("ORDER-B"), 0).is_err(),
+            "off-page source must not resolve"
+        );
+        let pending = r.game.pending_selection.as_mut().unwrap();
+        pending.valid_action_ids = vec![30, 31];
+        pending.effect_choices = Some(vec![entry(30, ca), entry(31, ca)]);
+        assert!(
+            resolve_next(&r.game, &card_row("ORDER-A"), 0).is_err(),
+            "same source may own distinct effects; never guess first"
+        );
+    }
+}
+
+#[cfg(test)]
+mod zone_card_frame_adapter_tests {
+    use super::*;
+    fn consecutive_field_picks() -> crate::debug_runner::DebugRunner {
+        let yaml = r#"
+card: TEST-CONSECUTIVE-PICKS
+name: Consecutive Picks
+kind: digimon
+color: [red]
+level: 3
+cost: 3
+dp: 2000
+effects:
+  - when: main_on_field
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: battle_area
+          max: 2
+          optional_zero: true
+          bind_as: first
+          prompt: First field selection
+          filter: {}
+      - select_count_capped_multi:
+          of: you
+          zone: battle_area
+          max: 2
+          optional_zero: true
+          bind_as: second
+          prompt: Second field selection
+          filter: {}
+"#;
+        let mut r = DebugRunner::builder().from_dsl_yaml(yaml).unwrap()
+            .add_card(make_test_card("FILL", "Filler"))
+            .deck(0, &["FILL"; 10]).deck(1, &["FILL"; 10]).memory(10).start();
+        r.skip_mulligan();
+        r.place_on_field(0, "TEST-CONSECUTIVE-PICKS", None);
+        r.place_on_field(0, "FILL", None);
+        r.game.enter_main_phase();
+        let action = FIELD_EFFECT_START + FIELD_EFFECT_SLOT_FOR_MAIN;
+        assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+        r.game.decode_action(action, 0);
+        r
+    }
+
+    #[test]
+    fn completed_field_row_does_not_decline_real_next_field_prompt() {
+        let r = consecutive_field_picks();
+        for mut game in [r.game.clone(), r.game.clone()] {
+            let payload = row(0, 1);
+            let pick = resolve_next(&game, &payload, 0).unwrap().unwrap();
+            game.resolve_selection(0, pick).unwrap();
+            assert_eq!(resolve_next(&game, &payload, 1), Ok(Some(PASS)));
+            game.resolve_selection(0, PASS).unwrap();
+            let pending = game.pending_selection.as_ref().expect("next prompt remains live");
+            assert_eq!(pending.prompt, "Second field selection");
+            assert_eq!(build_action_mask(&game, 0)[PASS as usize], 1.0);
+            // Use the exhausted pick count itself, not count+1's early return.
+            assert_eq!(resolve_next(&game, &payload, 1), Ok(None));
+            let next = resolve_next(&game, &row(0, 0), 0).unwrap().unwrap();
+            assert_ne!(next, PASS);
+            game.resolve_selection(0, next).unwrap();
+            assert_eq!(resolve_next(&game, &row(0, 0), 1), Ok(Some(PASS)));
+        }
+    }
+
+    #[test]
+    fn newer_non_zone_frame_hides_older_zone_frame_even_for_zone_kind() {
+        let fresh = consecutive_field_picks();
+        let newer = fresh.game.pending_selection_resume.as_ref().unwrap().frames.last().unwrap().clone();
+        let mut r = setup(false);
+        assert!(pending_zone_card_pick(&r.game).is_some());
+        // Keep the live zone-compatible kind; only stack ordering distinguishes it.
+        r.game.pending_selection_resume.as_mut().unwrap().frames.push(newer);
+        for game in [&r.game, &r.game.clone()] {
+            assert!(pending_zone_card_pick(game).is_none());
+            assert!(zone_card_candidate_ids(game, &game.pending_selection.as_ref().unwrap().valid_action_ids).is_none());
+        }
+    }
+
+    #[test]
+    fn older_accumulated_field_frame_cannot_close_newer_empty_field_frame() {
+        use crate::resume::{ResumeFrame, ResumeStack};
+        let mut r = consecutive_field_picks();
+        let newer = r.game.pending_selection_resume.as_ref().unwrap().frames.last().unwrap().clone();
+        let mut older = newer.clone();
+        match &mut older {
+            ResumeFrame::CountCappedPermanentsStep(state) => {
+                assert!(state.accum.is_empty());
+                state.accum.push(crate::permanent::PermanentHandle { player: 0, index: 1 });
+            }
+            _ => panic!("fixture must supply the real field multi-pick frame"),
+        }
+        r.game.pending_selection_resume = Some(ResumeStack { frames: vec![older, newer] });
+        assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+        assert_eq!(resolve_next(&r.game, &row(0,1), 1), Ok(None));
+        assert_eq!(resolve_next(&r.game.clone(), &row(0,1), 1), Ok(None));
+    }
+    use crate::action::{
+        mask::build_action_mask,
+        space::{encode_source_select, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START},
+    };
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    fn setup(stacked: bool) -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(include_str!("../../cards/ex2/EX2-007.yaml"))
+            .unwrap()
+            .add_card(make_test_card("SEARCHER", "ADR-02 Searcher"))
+            .add_card(make_test_card("UNDER", "Unrelated"))
+            .hand(0, &["SEARCHER"])
+            .deck(0, &["UNDER"; 10])
+            .deck(1, &["UNDER"; 10])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.place_stack(0, &["EX2-007"]);
+        if stacked {
+            r.place_stack(0, &["UNDER", "SEARCHER"]);
+        } else {
+            r.place_stack(0, &["SEARCHER"]);
+        }
+        r.place_stack(1, &["UNDER"]);
+        r.place_stack(1, &["SEARCHER"]);
+        r.game.enter_main_phase();
+        let action = FIELD_EFFECT_START + FIELD_EFFECT_SLOT_FOR_MAIN;
+        assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+        r.game.decode_action(action, 0);
+        r
+    }
+    fn row(player: u8, frame: i32) -> SelectionRow {
+        serde_json::from_value(serde_json::json!({"step":0,"actor":0,"prompt":"SelectPermanentEffect","targets":[{"player":player,"frame":frame}]})).unwrap()
+    }
+    #[test]
+    fn zone_card_frame_prefers_exact_field_copy_over_identical_hand_and_clones() {
+        let mut r = setup(false);
+        let saved = r.game.clone();
+        let a = encode_source_select(1, 0).unwrap();
+        assert_eq!(resolve_next(&r.game, &row(0, 1), 0), Ok(Some(a)));
+        assert_eq!(resolve_next(&saved, &row(0, 1), 0), Ok(Some(a)));
+        r.execute_action(0, a).unwrap();
+        assert_eq!(r.game.players[0].hand.len(), 1);
+        assert_eq!(r.game.players[0].battle_area.len(), 1);
+        assert_eq!(
+            r.game.players[0].battle_area[0].card_sources[0].card_id(&r.game.card_data),
+            "SEARCHER"
+        );
+    }
+    #[test]
+    fn zone_card_frame_targets_top_of_stacked_permanent() {
+        let r = setup(true);
+        assert_eq!(
+            resolve_next(&r.game, &row(0, 1), 0),
+            Ok(Some(encode_source_select(1, 1).unwrap()))
+        );
+    }
+    #[test]
+    fn zone_card_frame_rejects_wrong_owner_unoffered_and_negative_targets() {
+        let r = setup(false);
+        for (player, slot) in [(1, 1), (0, 0), (0, -1), (0, 99)] {
+            assert!(resolve_next(&r.game, &row(player, slot), 0).is_err());
+        }
+    }
+    #[test]
+    fn zone_card_frame_rejects_top_absent_from_live_legal_mask() {
+        let mut r = setup(false);
+        let a = encode_source_select(1, 0).unwrap();
+        r.game
+            .pending_selection
+            .as_mut()
+            .unwrap()
+            .valid_action_ids
+            .retain(|x| *x != a);
+        assert!(resolve_next(&r.game, &row(0, 1), 0).is_err());
+    }
+    fn wrap_zone_card_prompt(r: &mut DebugRunner) {
+        use crate::resume::{ResumeFrame, ResumeStack};
+        let inner = r.game.pending_selection_resume.take().unwrap();
+        let prov = inner
+            .frames
+            .iter()
+            .rev()
+            .find_map(|f| match f {
+                ResumeFrame::ZoneCardPickStep(st) => Some(st.prov.clone()),
+                _ => None,
+            })
+            .unwrap();
+        let batch = ResumeFrame::FieldTopSourceBatch {
+            inner: Box::new(inner),
+            prov,
+            source_anchor: None,
+            target: (0, 0),
+            remaining: vec![],
+            target_binding: None,
+            outer_conts: vec![],
+        };
+        r.game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![ResumeFrame::ReplacementBody {
+                inner: Box::new(ResumeStack {
+                    frames: vec![batch],
+                }),
+                outer_conts: vec![],
+            }],
+        });
+    }
+    #[test]
+    fn zone_card_frame_nested_wrappers_preserve_physical_field_pick_and_clone() {
+        let mut r = setup(true);
+        wrap_zone_card_prompt(&mut r);
+        let saved = r.game.clone();
+        let a = encode_source_select(1, 1).unwrap();
+        assert_eq!(resolve_next(&r.game, &row(0, 1), 0), Ok(Some(a)));
+        assert_eq!(resolve_next(&saved, &row(0, 1), 0), Ok(Some(a)));
+        assert!(resolve_next(&r.game, &row(1, 1), 0).is_err());
+    }
+    #[test]
+    fn zone_card_identity_nested_wrappers_preserve_hand_pick() {
+        let mut r = setup(false);
+        wrap_zone_card_prompt(&mut r);
+        let payload: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step":0,"actor":0,"prompt":"SelectCardEffect","card_ids":["SEARCHER"]
+        }))
+        .unwrap();
+        assert_eq!(
+            resolve_next(&r.game, &payload, 0),
+            Ok(Some(PLAY_HAND_START))
+        );
+    }
+    #[test]
+    fn review17_live_field_prompt_is_not_captured_by_older_zone_frame() {
+        let mut r=setup(false);wrap_zone_card_prompt(&mut r);
+        let a=crate::action::space::ATTACK_START+1;
+        let pending=r.game.pending_selection.as_mut().unwrap();pending.kind=SelectionKind::OwnField;pending.valid_action_ids=vec![a];pending.is_optional=false;
+        assert_eq!(resolve_next(&r.game,&row(0,1),0),Ok(Some(a)));
+        assert_eq!(resolve_next(&r.game.clone(),&row(0,1),0),Ok(Some(a)));
+    }
+    #[test]
+    fn review17_wrapped_accumulated_field_pick_receives_trailing_pass() {
+        use crate::resume::{ResumeFrame,ResumeStack,CountCappedPermanentsState};
+        for wrapped in [false,true] {
+            let mut r=setup(false);
+            let prov=active_zone_card_pick(r.game.pending_selection_resume.as_ref().unwrap()).unwrap().prov.clone();
+            let selected=crate::permanent::PermanentHandle{player:0,index:1};
+            let state=CountCappedPermanentsState {
+                prov:prov.clone(),selecting_player:0,previous_phase:crate::enums::GamePhase::Main,
+                field_kind:SelectionKind::OwnField,min:0,max:2,optional_zero:true,
+                candidates:vec![],accum:vec![selected],prompt:"Choose up to two".into(),bind_as:None,
+                inner_tail:std::sync::Arc::new(vec![]),bindings:Default::default(),runtime:Default::default(),trigger_context:None,outer_conts:vec![],
+            };
+            let mut stack=ResumeStack{frames:vec![ResumeFrame::CountCappedPermanentsStep(state)]};
+            if wrapped {stack=ResumeStack{frames:vec![ResumeFrame::ReplacementBody{inner:Box::new(ResumeStack{frames:vec![ResumeFrame::FieldTopSourceBatch{inner:Box::new(stack),prov,source_anchor:None,target:(0,0),remaining:vec![],target_binding:None,outer_conts:vec![]}]}),outer_conts:vec![]}]};}
+            r.game.pending_selection_resume=Some(stack);
+            let pending=r.game.pending_selection.as_mut().unwrap();pending.kind=SelectionKind::OwnField;pending.valid_action_ids=vec![PASS];pending.is_optional=true;
+            assert_eq!(resolve_next(&r.game,&row(0,1),1),Ok(Some(PASS)),"wrapped={wrapped}");
+            assert_eq!(resolve_next(&r.game.clone(),&row(0,1),1),Ok(Some(PASS)));
+            assert_eq!(resolve_next(&r.game,&row(0,1),2),Ok(None),"never issue closing PASS twice");
+        }
     }
 }

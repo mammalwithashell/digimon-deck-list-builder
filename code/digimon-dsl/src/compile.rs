@@ -11,6 +11,15 @@ use crate::spec::CardSpec;
 /// resolve every shape to a concrete type.
 pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
     let mut errors = Vec::new();
+    if let Some(rule) = &spec.deck_rule {
+        if let Err(message) = rule.validate() {
+            errors.push(ValidationError {
+                card_id: spec.card.clone(),
+                path: "deck_rule".into(),
+                message,
+            });
+        }
+    }
 
     let identity = spec.identity.as_ref().map(compile_identity);
     let dual = spec
@@ -40,6 +49,7 @@ pub fn compile(spec: &CardSpec) -> Result<CompiledCard, Vec<ValidationError>> {
 
     let mut card = CompiledCard {
         card: spec.card.clone(),
+        deck_rule: spec.deck_rule.clone(),
         name: spec.name.clone(),
         kind: compile_card_kind(spec.kind),
         level: spec.level,
@@ -204,7 +214,9 @@ fn compile_modifier_payload(
         return Some(P::Name(name.clone()));
     }
     if let Some(colors) = &p.colors {
-        return Some(P::Colors(colors.iter().copied().map(compile_color).collect()));
+        return Some(P::Colors(
+            colors.iter().copied().map(compile_color).collect(),
+        ));
     }
     if let Some(dp) = p.dp {
         return Some(P::Dp(dp));
@@ -336,6 +348,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::StartOfYourTurn => CompiledTiming::StartOfYourTurn,
         S::StartOfOpponentsTurn => CompiledTiming::StartOfOpponentsTurn,
         S::StartOfYourMainPhase => CompiledTiming::StartOfYourMainPhase,
+        S::StartOfOpponentsMainPhase => CompiledTiming::StartOfOpponentsMainPhase,
         S::EndOfYourTurn => CompiledTiming::EndOfYourTurn,
         S::EndOfOpponentsTurn => CompiledTiming::EndOfOpponentsTurn,
         S::EndOfYourNextTurn => CompiledTiming::EndOfYourNextTurn,
@@ -1013,6 +1026,8 @@ fn compile_predicate(
         affordable_with_cost_reduce: p.affordable_with_cost_reduce,
         can_digivolve_from_source: p.can_digivolve_from_source,
         can_digivolve_onto: p.can_digivolve_onto.clone(),
+        can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
+        can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
         dp_eq,
         dp_lte,
         dp_lte_deletion_cap: false,
@@ -1070,6 +1085,7 @@ fn compile_predicate(
         is_suspended: p.is_suspended,
         is_unsuspended: p.is_unsuspended,
         can_change_orientation: p.can_change_orientation,
+        can_unsuspend: p.can_unsuspend,
         can_attack: p.can_attack.map(|c| crate::compiled::CompiledCanAttack {
             targets: compile_attack_target_spec(c.targets),
             without_suspending: c.without_suspending,
@@ -1314,6 +1330,14 @@ fn compile_predicate(
                 errors,
             ))
         }),
+        event_battle_surviving_deleter: p.event_battle_surviving_deleter.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.event_battle_surviving_deleter"),
+                card_id,
+                errors,
+            ))
+        }),
         event_discard_player: p.event_discard_player.map(compile_player_ref),
         event_caused_by_own_effect: p.event_caused_by_own_effect,
         event_added_card_any: p.event_added_card_any.as_ref().map(|b| {
@@ -1347,6 +1371,8 @@ fn compile_predicate(
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
+        event_card_name_is: p.event_card_name_is.clone(),
+        event_card_kind: p.event_card_kind.map(compile_card_kind),
         event_card_text_contains: p.event_card_text_contains.clone(),
         event_card_in_text_contains: p.event_card_in_text_contains.clone(),
         event_card_level_eq: p.event_card_level_eq,
@@ -1961,13 +1987,35 @@ fn compile_replacement_process(
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> Vec<CompiledStep> {
+    if r.prevent_all_matching && (!r.process.is_empty()
+        || !r.cost.as_ref().is_some_and(|cost| cost.delete_self)
+        || !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent))) {
+        errors.push(ValidationError {
+            card_id: card_id.into(), path: format!("{prefix}.prevent_all_matching"),
+            message: "prevent_all_matching requires declarative cost: { delete_self: true } and outcome: prevent; explicit process is unsupported".into(),
+        });
+    }
     if !r.process.is_empty() {
-        return r
-            .process
-            .iter()
-            .enumerate()
-            .map(|(i, s)| compile_step(s, &format!("{prefix}.process[{i}]"), card_id, errors))
-            .collect();
+        let compiled:Vec<_> = r.process.iter().enumerate()
+            .map(|(i,s)| compile_step(s,&format!("{prefix}.process[{i}]"),card_id,errors)).collect();
+        let value=serde_json::to_value(&compiled).expect("compiled steps serialize");
+        fn filters(value:&serde_json::Value,out:&mut Vec<CompiledPredicate>){
+            match value {
+                serde_json::Value::Object(map)=>{
+                    if let Some(body)=map.get("SuspendAndCancelAllMatchingLeaves") {
+                        out.push(serde_json::from_value(body["filter"].clone()).expect("compiled filter"));
+                    }
+                    for value in map.values(){filters(value,out);}
+                }
+                serde_json::Value::Array(values)=>for value in values {filters(value,out);},
+                _=>{}
+            }
+        }
+        let mut profiles=Vec::new();filters(&value,&mut profiles);
+        if profiles.windows(2).any(|pair|pair[0]!=pair[1]) {
+            errors.push(ValidationError{card_id:card_id.into(),path:format!("{prefix}.process"),message:"one replacement clause must use one plural prevention subject filter".into()});
+        }
+        return compiled;
     }
 
     let mut process = Vec::new();
@@ -2133,7 +2181,8 @@ fn compile_replacement_process(
     // replacement: delete the CARRIER as the cost, then cancel the parked leave
     // (which prevents the SUBJECT's leave — the framework applies the outcome to
     // the replacement subject, not the carrier). Lowers to a single self-contained
-    // `DeleteSelfAndCancelLeave` step — NOT `[DeletePermanent{source},
+    // `DeleteSelfAndCancelLeave` step (or its explicit all-matching counterpart)
+    // — NOT `[DeletePermanent{source},
     // CancelReplacement]`, which the `DelaySelfCancelFlow` recognizer intercepts
     // (that path requires a Delayed-Option source and would no-op for a Digimon
     // carrier). It owns the `outcome: prevent`, so we emit only this step and
@@ -2155,7 +2204,9 @@ fn compile_replacement_process(
                     .into(),
             });
         }
-        process.push(CompiledStep::DeleteSelfAndCancelLeave);
+        process.push(if r.prevent_all_matching {
+            CompiledStep::DeleteSelfAndCancelAllMatchingLeaves
+        } else { CompiledStep::DeleteSelfAndCancelLeave });
         return process;
     }
 
@@ -2327,6 +2378,14 @@ fn compile_declarative(
                 modifier: a.modifier,
                 modifier_value: a.modifier_value,
                 modifier_name: a.modifier_name,
+                source_card_trash_protection: a.source_card_trash_protection.as_ref().map(|p| {
+                    compile_predicate(
+                        p,
+                        &format!("{prefix}.source_card_trash_protection"),
+                        card_id,
+                        errors,
+                    )
+                }),
                 synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
                 while_condition: a.while_condition.as_ref().map(|p| {
                     compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
@@ -2343,6 +2402,11 @@ fn compile_declarative(
                         for_result: d.for_result.clone(),
                         level: d.level,
                         name: d.name.clone(),
+                        result_scope: d.result_scope.map(|scope| match scope {
+                            crate::clause::DnaMaterialResultScope::OwnHand => {
+                                CompiledDnaMaterialResultScope::OwnHand
+                            }
+                        }),
                     }
                 }),
                 summary,
@@ -2350,9 +2414,19 @@ fn compile_declarative(
             }
         }
         B::CostReduction(c) => {
+            if c.set_cost.is_some()
+                && (c.amount.is_some() || c.when_any_ally_digivolves_into.is_some())
+            {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: prefix.into(),
+                    message: "set_cost cannot combine with an amount or digivolve trigger".into(),
+                });
+            }
             let (amount, amount_fn) =
                 split_opt_scalar_formula(&c.amount, &format!("{prefix}.amount"), card_id, errors);
             CompiledDeclarativeClause::CostReduction {
+                set_cost: c.set_cost,
                 scope,
                 active_when,
                 reduction_timing: c.reduction_timing,
@@ -2590,6 +2664,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             permanent,
             binding,
             of_permanent,
+            top_of,
             deck_top,
             security_top,
             own_breeding,
@@ -2601,6 +2676,8 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
                 CompiledBindingRef::Binding(b.clone())
             } else if let Some(o) = of_permanent {
                 CompiledBindingRef::OfPermanent(o.clone())
+            } else if let Some(o) = top_of {
+                CompiledBindingRef::TopOf(o.clone())
             } else if let Some(p) = deck_top {
                 CompiledBindingRef::DeckTop(compile_player_ref(*p))
             } else if let Some(p) = security_top {
@@ -2933,6 +3010,20 @@ fn compile_step(
         S::DeletePermanent(a) => CompiledStep::DeletePermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::PaySourcePrefix(a) => {
+            if a.minimum == 0 || a.minimum > i64::MAX as u64 {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: prefix.into(),
+                    message: "source-prefix minimum must be in 1..=i64::MAX".into(),
+                });
+            }
+            CompiledStep::PaySourcePrefix {
+                host_filter: compile_predicate(&a.host_filter, prefix, card_id, errors),
+                minimum: a.minimum,
+                optional: a.optional,
+            }
+        }
         S::DeleteForCostReduction(a) => CompiledStep::DeleteForCostReduction {
             target: compile_binding_ref(&a.target),
         },
@@ -2960,6 +3051,13 @@ fn compile_step(
         S::TrashBreedingPermanent(a) => CompiledStep::TrashBreedingPermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::ReturnAllToHand(a) => CompiledStep::ReturnAllToHand { over: compile_predicate(&a.over, &format!("{prefix}.over"), card_id, errors), selector: a.selector.map(compile_field_selector) },
+        S::ReturnAllToDeck(a) => {
+            if !matches!(a.position,crate::step::StackPosition::Top|crate::step::StackPosition::Bottom) {
+                errors.push(ValidationError{card_id:card_id.into(),path:format!("{prefix}.position"),message:"simultaneous deck returns require top or bottom".into()});
+            }
+            CompiledStep::ReturnAllToDeck { over: compile_predicate(&a.over, &format!("{prefix}.over"), card_id, errors), selector: a.selector.map(compile_field_selector), position: compile_stack_position(a.position), include_sources: a.include_sources }
+        },
         S::ReturnToHand(a) => CompiledStep::ReturnToHand {
             target: compile_binding_ref(&a.target),
         },
@@ -2970,6 +3068,10 @@ fn compile_step(
         },
         S::Suspend(a) => CompiledStep::Suspend {
             target: compile_binding_ref(&a.target),
+        },
+        S::SuspendAndCancelAllMatchingLeaves(a) => CompiledStep::SuspendAndCancelAllMatchingLeaves {
+            target: compile_binding_ref(&a.target),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
         },
         S::Unsuspend(a) => CompiledStep::Unsuspend {
             target: compile_binding_ref(&a.target),
@@ -3011,7 +3113,9 @@ fn compile_step(
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.place_on_security"),
-                    message: "to_owner / bind_placed_as require source: permanent with no disposition".to_string(),
+                    message:
+                        "to_owner / bind_placed_as require source: permanent with no disposition"
+                            .to_string(),
                 });
             }
             match &a.source {
@@ -3124,6 +3228,10 @@ fn compile_step(
             of: compile_player_ref(a.of),
             optional: a.optional,
         },
+        S::TrashSelectedSourcesAsCost(a) => CompiledStep::TrashSelectedSourcesAsCost {
+            source_refs: a.source_refs.clone(),
+            min_count: a.min_count,
+        },
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
@@ -3214,6 +3322,10 @@ fn compile_step(
                 bind_as: a.bind_as.clone(),
             }
         }
+        S::PlayToBreedingFromHand(a) => CompiledStep::PlayToBreedingFromHand {
+            of: compile_player_ref(a.of),
+            hand_index: compile_binding_ref(&a.hand_index),
+        },
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
@@ -3348,6 +3460,7 @@ fn compile_step(
         },
         S::PlayFromSecurity(_) => CompiledStep::PlayFromSecurity,
         S::PlayFromMaterials(a) => CompiledStep::PlayFromMaterials {
+            suspended: a.suspended,
             target: compile_binding_ref(&a.target),
             source_index: compile_binding_ref(&a.source_index),
             cost_delta: a
@@ -3655,22 +3768,44 @@ fn compile_step(
                 ),
             }
         }
-        S::GrantTriggeredEffect(a) => CompiledStep::GrantTriggeredEffect {
-            target: compile_modifier_target(
-                &a.target,
-                &format!("{prefix}.target"),
-                card_id,
-                errors,
-            ),
-            timing: a.timing.clone(),
-            expiry: a.expiry.clone(),
-            body: a
-                .body
-                .iter()
-                .enumerate()
-                .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
-                .collect(),
-        },
+        S::GrantTriggeredEffect(a) => {
+            if a.dynamic
+                && (!matches!(&a.target, crate::step::ModifierTarget::Filter(_))
+                    || !matches!(
+                        a.expiry.as_str(),
+                        "end_of_turn"
+                            | "end_of_your_turn"
+                            | "end_of_opponents_turn"
+                            | "end_of_your_next_turn"
+                            | "end_of_opponents_next_turn"
+                    ))
+            {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.dynamic"),
+                    message:
+                        "dynamic granted effects require a predicate target and turn-bound expiry"
+                            .to_string(),
+                });
+            }
+            CompiledStep::GrantTriggeredEffect {
+                dynamic: a.dynamic,
+                target: compile_modifier_target(
+                    &a.target,
+                    &format!("{prefix}.target"),
+                    card_id,
+                    errors,
+                ),
+                timing: a.timing.clone(),
+                expiry: a.expiry.clone(),
+                body: a
+                    .body
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
+                    .collect(),
+            }
+        }
         S::GrantEffectImmunity(a) => {
             // Continuous form requires `targets` and no `target`; the
             // per-permanent form requires `target` (Q28 / BT20-059).
@@ -3802,6 +3937,8 @@ fn compile_step(
             optional: a.optional,
         },
         S::SelectMaterials(a) => CompiledStep::SelectMaterials {
+            named_groups: a.named_groups.clone(),
+            require_max: a.require_max,
             of_permanent: compile_binding_ref(&a.of_permanent),
             max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -3886,8 +4023,9 @@ fn compile_step(
                 .clone()
                 .unwrap_or_else(|| "__digi_burst_sources".to_string());
             let mut then = Vec::with_capacity(a.then.len() + 1);
-            then.push(CompiledStep::TrashSelectedSources {
+            then.push(CompiledStep::TrashSelectedSourcesAsCost {
                 source_refs: bind_as.clone(),
+                min_count: None,
             });
             then.extend(
                 a.then
@@ -4426,6 +4564,7 @@ fn compile_step(
                     "when_digivolving".to_string()
                 },
                 optional: a.optional,
+                target_attribution: a.target_attribution,
             }
         }
         S::RefireCardEffect(a) => CompiledStep::RefireCardEffect {

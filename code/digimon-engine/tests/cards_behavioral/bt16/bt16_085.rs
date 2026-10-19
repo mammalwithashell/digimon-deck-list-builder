@@ -1135,10 +1135,9 @@ fn bt16_085_optional_outer_prompt_installs_on_dna_digivolve() {
         let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
         ctx.effect_initiated_dna_digivolve(material_a, material_b, hand_card, 0, true);
     }
-    // `effect_initiated_dna_digivolve` runs the three drains (WhenDigivolving,
-    // OnDnaDigivolve, OnDigivolve) internally; the OnDigivolve drain is where
-    // Davis & Ken's clause queues. After the call returns, the outer optional
-    // prompt should be pending.
+    // WD and the observing Tamer trigger simultaneously. Resolve the whole
+    // mandatory WD before examining the remaining optional Tamer cost.
+    choose_wd_before_observer(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -1608,4 +1607,16 @@ fn bt16_085_played_digimon_deleted_skips_scheduled_return() {
         "battle area must not change across the two end-turn drains — the \
          scheduled return must fizzle silently when its target is already deleted"
     );
+}
+
+/// Choose the complete WD from the simultaneous self/observer event bundle.
+fn choose_wd_before_observer(runner: &mut DebugRunner) {
+    let p=runner.game.pending_selection.as_ref().expect("simultaneous WD/observer ordering");
+    assert_eq!(p.kind,digimon_engine::selection::SelectionKind::TriggerOrder);
+    let choices=p.effect_choices.as_ref().expect("identified trigger choices");
+    assert_eq!(choices.len(),2);
+    let action=choices.iter().find(|c|c.timing==Some(digimon_engine::enums::EffectTiming::WhenDigivolving)).unwrap().action_id;
+    let actor=p.selecting_player;
+    assert!(digimon_engine::action::mask::build_action_mask(&runner.game,actor)[action as usize]>0.5);
+    runner.game.resolve_selection(actor,action).unwrap();
 }

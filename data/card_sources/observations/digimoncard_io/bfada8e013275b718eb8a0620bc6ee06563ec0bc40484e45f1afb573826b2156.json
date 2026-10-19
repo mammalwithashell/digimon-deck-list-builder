@@ -1,0 +1,109 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Purple"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Impmon",
+      "dp": 2000,
+      "effect_description_eng": "[Security] At the end of the battle, you may play 1 purple level 3 Digimon card from your trash without paying its memory cost. Then, add this card to its owner's hand.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Purple"
+          ],
+          "cost": 0,
+          "from_level": 2
+        }
+      ],
+      "form_eng": [
+        "Rookie"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 3,
+      "play_cost": 3,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Evil"
+      ]
+    },
+    "card_id": "P-071",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Purple",
+        "cost": 0,
+        "derived": false,
+        "level": 2,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": 2000,
+        "effect_text": "[Security] At the end of the battle, you may play 1 purple level 3 Digimon card from your trash without paying its memory cost. Then, add this card to its owner's hand.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 3,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Purple",
+      "color2": null,
+      "date_added": "2025-11-25 15:15:54",
+      "digi_type": "Evil",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 2000,
+      "evolution_color": "Purple",
+      "evolution_cost": 0,
+      "evolution_level": 2,
+      "form": "Rookie",
+      "id": "P-071",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Security] At the end of the battle, you may play 1 purple level 3 Digimon card from your trash without paying its memory cost. Then, add this card to its owner's hand.",
+      "name": "Impmon",
+      "play_cost": 3,
+      "pretty_url": "impmon-p-071",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-12: Limited Card Pack",
+        "RB-01: Resurgence Booster"
+      ],
+      "source_effect": "",
+      "stage": "Rookie",
+      "tcgplayer_id": 490714,
+      "tcgplayer_name": "Impmon - P-071 (Limited Card Pack)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "bfada8e013275b718eb8a0620bc6ee06563ec0bc40484e45f1afb573826b2156",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "P-071",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

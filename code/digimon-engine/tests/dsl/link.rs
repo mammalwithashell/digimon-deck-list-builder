@@ -232,3 +232,65 @@ fn linked_scope_replacement_keyword_is_offered_to_the_host_once() {
     );
     assert_eq!(r.battle_area_size(0), 1, "the host is deleted after the decline");
 }
+
+#[test]
+fn linked_scope_evade_accepts_once_in_clones_and_keeps_its_physical_link() {
+    use digimon_engine::{
+        action::{build_action_mask, space::PASS},
+        replacement::ReplacementCause,
+    };
+    let mut r = linked_evade_runner();
+    let host = r.place_on_field(0, "HOST", Some(0));
+    r.place_on_field(0, "ALLY", Some(0));
+    r.push_linked_owned(host, "TEST-LINK-EVADE", 0);
+    r.game.tick_declarative_effects();
+    let linked = r.game.player(0).battle_area[host.index as usize].linked_cards[0].handle();
+    r.game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    let p = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("physical linked Evade offered");
+    assert!(p.is_optional);
+    let accept = *p.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+    let saved = r.game.clone();
+    for _ in 0..2 {
+        r.game = saved.clone();
+        assert_eq!(build_action_mask(&r.game, 0)[accept as usize], 1.0);
+        r.game.resolve_selection(0, accept).unwrap();
+        assert!(
+            r.game.pending_selection.is_none(),
+            "no duplicate synthesized body"
+        );
+        assert_eq!(r.battle_area_size(0), 2);
+        let h = &r.game.player(0).battle_area[host.index as usize];
+        assert!(h.is_suspended);
+        assert_eq!(h.linked_cards[0].handle(), linked);
+        assert!(
+            !r.game.player(0).battle_area[1].is_suspended,
+            "host-only effect"
+        );
+    }
+}
+
+#[test]
+fn linked_scope_evade_cannot_save_an_already_suspended_host() {
+    use digimon_engine::replacement::ReplacementCause;
+    let mut r = linked_evade_runner();
+    let host = r.place_on_field(0, "HOST", Some(0));
+    r.place_on_field(0, "ALLY", Some(0));
+    r.push_linked_owned(host, "TEST-LINK-EVADE", 0);
+    r.game.player_mut(0).battle_area[host.index as usize].is_suspended = true;
+    r.game.tick_declarative_effects();
+    r.game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.battle_area_size(0), 1);
+    assert_eq!(
+        r.game.player(0).battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "ALLY"
+    );
+}

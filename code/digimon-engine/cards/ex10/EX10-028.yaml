@@ -18,7 +18,7 @@
 #
 # Clause 1 — [On Play][When Digivolving] "By trashing" cost + keyword/DP buff:
 #   1a. select_own_sources (filter: trait Mineral or Rock, min/max 1) → chosen_source
-#   1b. trash_selected_sources: chosen_source
+#   1b. trash_selected_sources_as_cost: chosen_source
 #   1c. select_own_permanent (Mineral or Rock Digimon) → target_digi
 #   1d. grant_keyword Reboot (expiry: end_of_opponents_turn)
 #   1e. grant_keyword Blocker (expiry: end_of_opponents_turn)
@@ -116,7 +116,7 @@ effects:
           prompt: "Choose 1 [Mineral] or [Rock] digivolution card to trash"
           then:
             # Step 1b: Trash the selected source card (cost payment).
-            - trash_selected_sources: { source_refs: chosen_source }
+            - trash_selected_sources_as_cost: { source_refs: chosen_source }
 
             # Step 1c: Select 1 of your Digimon with Mineral or Rock trait as
             # the buff target. Separate from the source host — any of your

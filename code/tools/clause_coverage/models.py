@@ -15,6 +15,7 @@ VALID_ZONES: tuple[str, ...] = ("effect", "inherited", "security")
 
 # Where a clause's text came from, in source-priority order (README).
 VALID_SOURCES: tuple[str, ...] = (
+    "card_corrections",
     "bundle",
     "cards_json",
     "card_overrides",

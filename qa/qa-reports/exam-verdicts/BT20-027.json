@@ -1,0 +1,217 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-11T15:36:45.029995700+00:00",
+  "clauses": {
+    "BT20-027#effect#0": {
+      "clause_id": "BT20-027#effect#0",
+      "card_id": "BT20-027",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "7a44450103a75df1604a643b20c516c18723134bfad621bf8c3c9fea905c1183",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T102018Z-e66ed549e7\\BT20-027-effect0-20261011T102018Z-e66ed549e7.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-effect0-20261011T102018Z-e66ed549e7",
+      "recorded_at": "2026-10-11T10:20:41.367196200+00:00"
+    },
+    "BT20-027#effect#1": {
+      "clause_id": "BT20-027#effect#1",
+      "card_id": "BT20-027",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T102018Z-e66ed549e7\\BT20-027-effect1-20261011T102018Z-e66ed549e7.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-effect1-20261011T102018Z-e66ed549e7",
+      "recorded_at": "2026-10-11T10:21:32.483258600+00:00"
+    },
+    "BT20-027#effect#2": {
+      "clause_id": "BT20-027#effect#2",
+      "card_id": "BT20-027",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "2cee57b90d438453470eff326ef153b5a0b892d8d51345d42288ffd7a12eed45",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T102018Z-e66ed549e7\\BT20-027-effect2-20261011T102018Z-e66ed549e7.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-effect2-20261011T102018Z-e66ed549e7",
+      "recorded_at": "2026-10-11T10:22:11.962630+00:00"
+    },
+    "BT20-027#effect#3": {
+      "clause_id": "BT20-027#effect#3",
+      "card_id": "BT20-027",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "eeb1accb29e5d5e35627816a5756798ee41893571641ab80628a0e591b80cc3f",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T102018Z-e66ed549e7\\BT20-027-effect1-20261011T102018Z-e66ed549e7.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-effect1-20261011T102018Z-e66ed549e7",
+      "recorded_at": "2026-10-11T10:21:32.483258600+00:00"
+    },
+    "BT20-027#inherited#0": {
+      "clause_id": "BT20-027#inherited#0",
+      "card_id": "BT20-027",
+      "verdict": "confirmed",
+      "label": "Inherited Effect",
+      "text_sha256": "0d1718f6de606aa7fbc0c2e3765be5cb2f336043ba143d7bdfb73de95e3909fc",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T102018Z-e66ed549e7\\BT20-027-inherited0-20261011T102018Z-e66ed549e7.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-inherited0-20261011T102018Z-e66ed549e7",
+      "recorded_at": "2026-10-11T10:23:16.568924400+00:00"
+    }
+  },
+  "interactions": {
+    "probe:BT20-027#effect#2:scope:neg": {
+      "interaction_id": "probe:BT20-027#effect#2:scope:neg",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "2cee57b90d438453470eff326ef153b5a0b892d8d51345d42288ffd7a12eed45",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T105521Z-280ef52776\\BT20-027-interaction-own-security-removed-support-scope-next8-20261011T105521Z-280ef52776.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-own-security-removed-support-scope-next8-20261011T105521Z-280ef52776",
+      "recorded_at": "2026-10-11T11:02:59.682193800+00:00"
+    },
+    "probe:BT20-027#effect#3:once_per_turn_multi": {
+      "interaction_id": "probe:BT20-027#effect#3:once_per_turn_multi",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "eeb1accb29e5d5e35627816a5756798ee41893571641ab80628a0e591b80cc3f",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T101432Z-89903204ce\\BT20-027-noop-consume-20261011T101432Z-89903204ce.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-noop-consume-20261011T101432Z-89903204ce",
+      "recorded_at": "2026-10-11T10:15:21.004122200+00:00"
+    },
+    "probe:BT20-027#effect#3:optional_decline": {
+      "interaction_id": "probe:BT20-027#effect#3:optional_decline",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "eeb1accb29e5d5e35627816a5756798ee41893571641ab80628a0e591b80cc3f",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T101432Z-89903204ce\\BT20-027-noop-decline-20261011T101432Z-89903204ce.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-noop-decline-20261011T101432Z-89903204ce",
+      "recorded_at": "2026-10-11T10:16:08.311927400+00:00"
+    },
+    "probe:BT20-027#effect#3:scope:neg": {
+      "interaction_id": "probe:BT20-027#effect#3:scope:neg",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "eeb1accb29e5d5e35627816a5756798ee41893571641ab80628a0e591b80cc3f",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T100843Z-85cc3c0eb3\\BT20-027-interaction-effect3-scope-neg-next8-20261011T100843Z-85cc3c0eb3.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-effect3-scope-neg-next8-20261011T100843Z-85cc3c0eb3",
+      "recorded_at": "2026-10-11T10:10:28.170895400+00:00"
+    },
+    "probe:BT20-027#inherited#0:optional_decline": {
+      "interaction_id": "probe:BT20-027#inherited#0:optional_decline",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "0d1718f6de606aa7fbc0c2e3765be5cb2f336043ba143d7bdfb73de95e3909fc",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T101650Z-72bf924981\\BT20-027-interaction-decline-20261011T101650Z-72bf924981.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-decline-20261011T101650Z-72bf924981",
+      "recorded_at": "2026-10-11T10:18:13.181822100+00:00"
+    },
+    "probe:BT20-027#inherited#0:scope:neg": {
+      "interaction_id": "probe:BT20-027#inherited#0:scope:neg",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "0d1718f6de606aa7fbc0c2e3765be5cb2f336043ba143d7bdfb73de95e3909fc",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T105521Z-280ef52776\\BT20-027-interaction-offtext-ally-leaves-support-scope-next8-20261011T105521Z-280ef52776.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-offtext-ally-leaves-support-scope-next8-20261011T105521Z-280ef52776",
+      "recorded_at": "2026-10-11T11:03:57.037597+00:00"
+    },
+    "qa:Q4315": {
+      "interaction_id": "qa:Q4315",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "0eeac785a732e6928985a69a901dd057680f4e4314fc18bf0bdeaff4c932b5d0",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T101650Z-72bf924981\\BT20-027-interaction-Q4315-tamer-security-qa5-20261011T101650Z-72bf924981.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-Q4315-tamer-security-qa5-20261011T101650Z-72bf924981",
+      "recorded_at": "2026-10-11T10:17:23.615069700+00:00"
+    },
+    "qa:Q4316": {
+      "interaction_id": "qa:Q4316",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "184a5ce6823cc1d56340260c63dc69a68bc8f04576a60a3208ffec1515862fa5",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T100843Z-85cc3c0eb3\\BT20-027-interaction-Q4316-qa-scope-next8-20261011T100843Z-85cc3c0eb3.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-Q4316-qa-scope-next8-20261011T100843Z-85cc3c0eb3",
+      "recorded_at": "2026-10-11T10:09:15.605091600+00:00"
+    },
+    "qa:Q4317": {
+      "interaction_id": "qa:Q4317",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "4bd30cc72724b8c5f86de0451f9afd3b8ad3b0d895a41abbd4aaaaf8d694c999",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T100843Z-85cc3c0eb3\\BT20-027-interaction-Q4317-qa-scope-next8-20261011T100843Z-85cc3c0eb3.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-Q4317-qa-scope-next8-20261011T100843Z-85cc3c0eb3",
+      "recorded_at": "2026-10-11T10:09:51.176934800+00:00"
+    },
+    "qa:Q4318": {
+      "interaction_id": "qa:Q4318",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "6874331e58052ef0a799c9b8080cadb0a82c903406e84f601696f4f7d1251570",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T103040Z-a289b1c974\\BT20-027-interaction-Q4318-xantibody-scope-qa7-20261011T103040Z-a289b1c974.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-Q4318-xantibody-scope-qa7-20261011T103040Z-a289b1c974",
+      "recorded_at": "2026-10-11T10:36:25.105372200+00:00"
+    },
+    "qa:Q4319": {
+      "interaction_id": "qa:Q4319",
+      "card_ids": [
+        "BT20-027"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "1054178c2aa71f9421fbcdfbb73b3dbdb61f1157341354bb647049106daefe3f",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T151412Z-13ec7f2ab2\\BT20-027-interaction-Q4319-20261011T151412Z-13ec7f2ab2.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT20-027-interaction-Q4319-20261011T151412Z-13ec7f2ab2",
+      "recorded_at": "2026-10-11T15:36:45.029995700+00:00"
+    }
+  }
+}

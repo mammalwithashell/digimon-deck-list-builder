@@ -113,6 +113,17 @@ post-action verification digest per action, and the final digest. The replay
 runner checks actor and action-mask legality before applying an action, then
 compares the recorded digest stream.
 
+Verification replay format 1 carries an explicit `engine_schema_version`.
+New recordings use engine schema 2 and verification digest v3, which includes
+pending digivolution reducer credit, payment status and hook order. Archived
+schema-1 recordings select legacy digest v2 through
+`Game::verification_digest_with_version`; their recorded digests are preserved.
+The replay adapter rejects unsupported format/schema versions and never retries
+a mismatched recording using another digest version. These versions are
+independent of the action-space schema and observation profile versions.
+The explicit corpus rehash utility preserves a supported recording's schema;
+unsupported versions return an error and cannot become retirement instructions.
+
 Verify the active corpus without mutation:
 
 ```bash
@@ -725,6 +736,14 @@ For `timing: on_play_or_when_digivolving`, `refire_effect.optional: true` is
 rejected by the DSL. Put optionality on the containing trigger or target
 selection so the effect-pick prompt does not get a second hidden decline path.
 
+For activation of the target's own effect, such as EX3-065 Hina Kurihara,
+use `refire_effect: { source: event_target, timing: on_play,
+target_attribution: true }`. This retains the selected effect's card and
+source kind through pending choices, condition/cost evaluation, and execution.
+It therefore remains a Digimon effect for source-kind immunity. The default
+is `false`, preserving grantor attribution for existing Homeros and foreign-card
+activation callers. This flag does not bypass once-per-turn accounting.
+
 This is distinct from Track H granted-triggered abilities: granted-triggered
 effects persist and fire on future matching events, while refire invokes an
 existing effect once immediately.
@@ -889,19 +908,20 @@ Effect::on_deletion(card)
     .build()
 ```
 
-**Scapegoat — eligibility predicate:**
+**Scapegoat and Guard - replacement payment (2026-10-15):**
 
-`Keyword::Scapegoat` cancels deletion when the cause is *not* `OwnEffect` (RULES_CONTEXT 16-31). `was_deleted_by_effect()` is too broad for this — it matches `OwnEffect` too — so use the raw cause:
+Scapegoat applies only when the replacement subject is its carrier and the cause is not `OwnEffect` (Comprehensive Rules 16-31). A cause-only predicate is insufficient: it can offer the carrier's replacement for an unrelated Digimon. Its optional payment picker exposes other own Digimon using `Game::permanent_is_digimon_for_rules`, including tokens, Digi-Eggs in the battle area, and effective Tamer-as-Digimon identities. It does not prefilter a known protected payer out of the optional attempt; unsuccessful deletion pays nothing (15-7-4).
 
-```rust
-.condition(|ctx| !matches!(
-    ctx.deletion_cause(),
-    Some(ReplacementCause::OwnEffect),
-))
-```
+Native Guard uses plural paid-prevention metadata and the own-other-Digimon/opponent-effect filter. One successful carrier deletion protects the captured matching members of that simultaneous departure group, including non-deletion departures. A failed payment protects none. Other replacement effects remain independently available; the entire window is not cancelled.
 
-The slot is populated by `Game::current_deletion_cause`, set by the deletion fire-site for the duration of the OnDeletion drain and cleared once the queue is empty. See `code/code/digimon-engine/tests/combat/deletion_cause_observer.rs` for the canonical regression.
+Both paths use the shared receipt-based deletion-payment continuation in `dsl_cards/step/replacement_outcome.rs`. Completion is tied to the particular payer identity and deletion receipt, not subsequent trash membership. The continuation retains exact payment identity across the tested optional payment choices and clones; the additional nested body boundary below is verified separately. Payment uses the keyword carrier's player/card/permanent attribution while the deletion batch is started, restoring the enclosing attribution afterward. Do not substitute the selected payer for the effect source.
 
+Historical pre-boundary evidence: 122 focused tests passed. Build21 main126, supplemental3 and outside26 retained comparisons subsequently completed on the pre-boundary artifact; they do not validate the new receipt-boundary repair. The current focused boundary gate passed 198 tests; full EX13 and build22 verification/replays remain pending at this checkpoint. Guard's protected-carrier optional attempt follows official 15-7-4/16-45; the inspected DCGO activation prefilter differs, so this is not an oracle-agreement claim.
+
+
+**Nested body receipt boundary (2026-10-15, focused verification complete):** accepting Decode can park a material pick inside Guard or a selected Scapegoat payment. Its receipt finalizer must run after the payer replacement window commits but before the enclosing original departure. The bounded repair attaches a continuation only when its first step finalizes that receipt and the matching parked entry owns a typed window; children still drain in LIFO order. A receipt-specific fallback never drains a mismatched parent. `replacement_body_receipt_boundary` covers accepted/declined Decode, selected Scapegoat payment, failed payment via Evade, a second body prompt, ordinary deletion-result branching, and original/clone endpoints. Root reported the unchanged-source five-test baseline as 3 failed/2 passed; the six-target focused run subsequently passed all 198 tests with source unchanged (delete_batch_actual_result 9, keyword_phase_f 48, paid_prevention_cardinality 1, replacement_body_receipt_boundary 5, replacements 126, scapegoat_payment 9). Full EX13 and broader build verification remain separate.
+
+Source-inspected limitation: the missing-subject early-return path discards attached continuations; no new runtime witness for that path was executed here. Arbitrary non-leading receipt tails and multiple independently owned tails are untested boundaries, not established additional defects. No action, tensor or compiled-pack contract change is claimed.
 ### Deletion lifecycle — batched flow (2026-05-23)
 
 **Mental model:** permanent deletion runs as a DCGO-modeled batched flow. Whether you call `delete_permanent_with_effects(handle)`, `delete_permanent_with_cause(handle, cause)`, or the batched API directly, every deletion goes through `Game::delete_permanents_batch(handles, cause)` and follows the same 10-step sequence:
@@ -1068,10 +1088,27 @@ sets the replacement outcome via one of these methods:
   ```
 
 - **`ctx.substitute_replacement(subject)`** — Substitute a different
-  subject for the parked event (Decoy redirects ally-deletion to self).
+  subject for the parked event.
   ```rust
-  ctx.substitute_replacement(ReplacementSubject::Permanent(decoy_self));
+  ctx.substitute_replacement(ReplacementSubject::Permanent(replacement_target));
   ```
+
+Decoy uses paid prevention: delete its physical carrier by its own effect,
+then prevent the chosen ally's deletion only if that exact payment completed.
+A substituted or prevented payment does not pay this cost. The grouped
+deletion window retains each victim and exposes the post-payment choice;
+other immediate effects such as Partition can still process after prevention.
+Focused coverage does not establish equivalent grouping for simultaneous
+non-deletion departures, which remains a separate engine gap.
+
+DSL paid prevention defaults to protecting one subject, with a post-payment
+choice when several subjects qualify. Printed plural prevention, such as
+BT25-039, must declare `prevent_all_matching: true` alongside
+`cost: { delete_self: true }` and `outcome: prevent`. This flag is rejected
+with an explicit `process` or without that payment/outcome pair. Pack format
+0.19 distinguishes the singular and plural compiled steps. Pack loading checks
+the manifest's exact format version before decoding compiled card payloads;
+older or unknown layouts require rebuilt packs.
 
 All four panic in dev builds when called outside a parked-replacement scope
 (`Game.parked_replacement.is_none()`). Synchronous replacement processes
@@ -2366,7 +2403,9 @@ All 13 new `ModifierType` variants added in Phase 6:
 
 ### Effect Source Kind Helpers
 
-Every resolving effect carries an explicit `EffectSourceKind`: `Digimon`, `Tamer`, `Option`, or `Rule`. This is assigned when the effect is queued and preserved through pending selection callbacks. Security is not a source kind: a Digimon card's security effect is still a Digimon effect. DUAL cards are context-sensitive: Option use is `Option`; effects after Arts Digivolve are `Digimon`.
+Every resolving effect carries an explicit `EffectSourceKind`: `Digimon`, `Tamer`, `Option`, `Rule`, or `DigimonAndTamer`. Native field effects use the exact physical carrier's category at activation; an earlier simultaneous effect can change its category after triggering. The activated origin is then preserved through parked cost/body callbacks. Official BT12-092 Q2229 requires an effect activated by a Tamer also treated as a Digimon to belong to both categories. Use `includes(...)` or the context helpers rather than scalar equality for category membership. Inherited effects are Digimon effects regardless of the source card's printed category (general rule 15-3-2); link effects are gained by the Digimon (4-2-6) and activate as its effects (15-2-1-1). Security is not a source kind: a Digimon card's security effect is still a Digimon effect. DUAL cards remain context-sensitive: explicit Option use is `Option`; effects after Arts Digivolve are `Digimon`.
+
+The existing `standard_lite_v2` source metadata retains its four single-category slots. A compound origin has unknown/all-zero source-category metadata; it is not incorrectly collapsed to one category. This metadata never controls legality. Ordinary category encoding, tensor dimensions, and action contracts are unchanged.
 
 ```rust
 // On EffectContext (mutable):
@@ -3239,7 +3278,7 @@ otherwise no longer legal), the engine can surface a final retarget/decline
 selection instead of silently resolving against a stale handle. Ordinary printed
 `<Raid>` switching happens in `RaidOpen`.
 
-**`AttackState::PostBattle`** — after the Battle state resolves. If the attacker survives, the defender was a Digimon (not a player), the defender was wiped, and the attacker has `<Piercing>`, the engine enters a security check against the defending player (standard `OnSecurityCheck` dispatch; one card). Piercing on direct-player-attack does **not** fire — this is a Piercing-after-Digimon-battle rule only.
+**`AttackState::PostBattle`** — processes owed `<Piercing>` before EndOfAttack, after battle rewards resolve. The active attacking Digimon can earn Piercing by deleting an opponent in either the attack's ordinary battle or an effect-caused battle during that attack. A vanished declared target does not erase this pending check. There is only one transition to security checking per attack: an ordinary player-attack check consumes that transition, and multiple Piercing activations cannot add another. A nonattacking effect battler cannot earn Piercing for the attacker. Ending the attack by an effect skips to EndOfAttack; removing the attacker also prevents its pending check. See official rules 16-6-2/4, 15-15-1-1 and [Bandai's CRM4 clarification](https://en.digimoncard.com/rule/revised/).
 
 ### Keyword consumers wired
 
@@ -4292,10 +4331,21 @@ digivolve, and to `true` for effect play helpers and
 printed text such as "when an effect plays or digivolves"; do not use it as a
 "by this specific effect" identity token.
 DSL predicates can read the DNA/Jogress origin bit with `dna_origin: true` /
-`false`. DNA digivolve drains set the scoped bit for `WhenDigivolving` and
+`false`. Evolution trigger collection captures the bit for `WhenDigivolving` and
 `OnDnaDigivolve`, and the global `OnDigivolve` payload carries
 `TriggerSource::Digivolved { dna_origin: true, ... }`. Standard digivolve
-payloads set it to `false`.
+payloads set it to `false`. Explicit `false` remains false when a non-DNA
+evolution occurs inside a DNA effect, including after an optional or trigger-order
+choice is parked or cloned; prompt installation must not overwrite a captured
+origin with the caller's ambient context.
+
+All evolution commits use `fire_digivolve_event_triggers`: ordinary and
+effect-driven evolution, App Fuse, the three DNA material paths, and Blast DNA.
+It queues self `WhenDigivolving`, DNA-only `OnDnaDigivolve`, and global
+`OnDigivolve` together before draining. These effects share the controller's
+ordering choice under §15-4-3-2. Capture the physical event card at commit time,
+before any effect can remove or move the evolved permanent. Derived triggers
+retain their separate, higher-priority queue batch.
 
 ### Fan-out policy
 

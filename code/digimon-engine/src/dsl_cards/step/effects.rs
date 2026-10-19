@@ -44,13 +44,23 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             source,
             timing,
             optional,
+            target_attribution,
         } => {
             if let Some(source) = resolve_permanent_ref(source, ctx, bindings) {
-                if timing == "on_play_or_when_digivolving" {
-                    let _ =
-                        ctx.refire_target_effect(source, TimingFilter::Either, ctx.player, false);
+                let filter = if timing == "on_play_or_when_digivolving" {
+                    Some(TimingFilter::Either)
                 } else {
-                    let _ = ctx.refire_effect_from_permanent(source, timing, *optional);
+                    TimingFilter::from_timing_key(timing)
+                };
+                if let Some(filter) = filter {
+                    let _ = ctx.refire_target_effect_inner(
+                        source,
+                        filter,
+                        ctx.player,
+                        false,
+                        *optional,
+                        *target_attribution,
+                    );
                 }
             }
             true

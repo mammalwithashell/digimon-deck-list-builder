@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT16-040",
+    "colors": "Green Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "No, this card's effect does not allow ignoring digivolution requirements, so you can only digivolve into a card that meets the digivolution requirements."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Minomon]: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Minomon]: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Insectoid] or [Free] trait in your trash with the digivolution cost reduced by 1."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Larva"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "9797a6d51758fea39c63c3d152a95d5bb086c8fc8f18f283f78126527c02ede2",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "5762fd5df0819749a3b5cc8be2c8056d5161ff3378c0f2c849e6ebe9e545863f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT16-040",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT16-040"
+}

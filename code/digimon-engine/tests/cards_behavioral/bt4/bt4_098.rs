@@ -154,7 +154,7 @@ fn bt4_098_main_requires_selection_among_only_hybrid_digimon() {
     runner.place_on_field(0, "HYBRID-A", Some(0));
     runner.place_on_field(0, "PLAIN", Some(0));
 
-    runner.play(0, 0); // play Atomic Inferno from hand (index 0)
+    use_atomic_inferno(&mut runner); // play Atomic Inferno from hand (index 0)
 
     let pending = runner
         .pending_selection()
@@ -178,7 +178,7 @@ fn bt4_098_main_grants_dp_and_security_attack_to_selected_hybrid() {
 
     let dp_before = runner.effective_dp(target).expect("target has DP");
 
-    runner.play(0, 0);
+    use_atomic_inferno(&mut runner);
     let action = runner
         .pending_selection()
         .expect("selection installed")
@@ -221,7 +221,7 @@ fn bt4_098_main_no_hybrid_target_installs_nothing() {
     // Only a non-Hybrid own Digimon on the field.
     runner.place_on_field(0, "PLAIN", Some(0));
 
-    runner.play(0, 0);
+    use_atomic_inferno(&mut runner);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -255,7 +255,7 @@ fn bt4_098_blocked_selected_hybrid_gains_three_memory() {
     let blocker = runner.place_on_field(1, "HYBRID-B", Some(0));
 
     // Install the [Main] grant on the Hybrid Digimon.
-    runner.play(0, 0);
+    use_atomic_inferno(&mut runner);
     let action = runner
         .pending_selection()
         .expect("selection installed")
@@ -340,5 +340,21 @@ fn bt4_098_security_clause_grants_security_attack_until_your_next_turn() {
     assert_eq!(
         satk.1, "end_of_your_next_turn",
         "[Security] grant lasts until the end of your next turn"
+    );
+}
+
+fn use_atomic_inferno(runner: &mut DebugRunner) {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    runner.skip_mulligan();
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "Atomic Inferno was used through its legal Option action"
     );
 }

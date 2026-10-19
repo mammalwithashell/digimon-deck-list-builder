@@ -1,0 +1,101 @@
+# Repaired fixture: ordinary source above protected bottom X Antibody makes the DCGO host prompt eligible.
+# Prior protected-only host was skipped by DCGO ST2_03 unprinted target filtering. Assertions pending live oracle.
+card: BT9-109
+clause: BT9-109#effect#1
+covers:
+- BT9-109#effect#1
+- BT9-109#effect#0
+- BT9-109#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-03
+    - BT9-109
+    - ST1-07
+    - BT3-093
+    - ST1-04
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-04
+    - ST2-04
+    - ST2-06
+    - ST1-05
+    - ST1-06
+    rest: bt9-109-tail-main-protection-p0
+  p1:
+    stack:
+    - ST2-03
+    - ST2-05
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-04
+    - ST2-04
+    - ST2-06
+    - ST1-05
+    - ST1-06
+    rest: bt9-109-tail-main-protection-p1
+steps:
+- &id002
+  actor: 0
+  do:
+    pass: {}
+- actor: 0
+  do:
+    play:
+      card: ST1-03
+      from: hand
+- &id001
+  actor: 1
+  do:
+    pass: {}
+- actor: 1
+  do:
+    play:
+      card: ST2-03
+      from: hand
+- *id001
+- *id002
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: ST1-07
+- actor: 0
+  do:
+    play:
+      card: BT9-109
+      from: hand
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- *id002
+- *id001
+- actor: 1
+  do:
+    digivolve:
+      from: field.0
+      using: ST2-05
+- actor: 1
+  do:
+    attack:
+      attacker: field.0
+      target: security
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+assert: []

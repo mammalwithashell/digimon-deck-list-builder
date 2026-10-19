@@ -102,67 +102,38 @@ effects:
   - kind: grant_keyword
     keyword: Blocker
 
-  # ─── Clause 3 — [On Play][When Digivolving] DNA-gated bottom-deck-by-level + delete ────
-  # "If DNA digivolving, choose 1 of your opponent's Digimon and return all of
-  #  your opponent's Digimon with the same level as it to the bottom of the deck.
-  #  Then, delete 1 of your opponent's Digimon."
-  #
-  # DCGO BT17_078.cs lines 142-487: shared OnEnterFieldAnyone body covering both
-  # OnPlay (CanTriggerOnPlay) and WhenDigivolving (CanTriggerWhenDigivolving),
-  # gated by CardEffectCommons.IsJogress(hashtable) for the bottom-deck arm.
-  # The "delete 1 opponent Digimon" arm fires unconditionally (i.e., even on a
-  # non-DNA play/digivolve) — it's outside the IsJogress branch in DCGO.
-  #
-  # Wait — re-read printed text: "If DNA digivolving, choose 1 ... and return ...
-  # to the bottom of the deck. Then, delete 1 of your opponent's Digimon."
-  # The "Then, delete 1" sentence is grammatically subordinate to the "If DNA
-  # digivolving" antecedent — both arms are gated by the DNA condition. DCGO's
-  # second SelectPermanentEffect (the delete) sits OUTSIDE the IsJogress block
-  # but INSIDE the same ActivateCoroutine that itself only runs when CanTrigger*
-  # passes — i.e., DCGO ALSO gates the delete on `if (CardEffectCommons.IsJogress(hashtable))`
-  # at line 173 (entry to the body). Re-reading lines 170-313: line 172 wraps
-  # the entire bottom-deck logic in `if (IsJogress(hashtable))`, and line 289
-  # opens a SECOND `if (HasMatchConditionPermanent(IsOpponentsDigimon))` for the
-  # delete that is NOT inside the IsJogress check — meaning the delete fires
-  # unconditionally per DCGO.
-  #
-  # Per source priority (printed text > DCGO), the printed text reads as a
-  # single conditional sentence with two effects gated by "If DNA digivolving".
-  # DCGO firing the delete unconditionally is an implementation-detail
-  # divergence; we follow the printed text which gates BOTH on DNA.
-  #
-  # The selected-level arm uses the reusable DSL property binding shape:
-  # `bind_permanent_property` captures the chosen Digimon's level as a literal
-  # binding, then `level_eq_binding` filters the for-each return sweep.
+  # Official Q2851: the DNA condition gates only the bottom-deck sweep.
+  # The mandatory Then deletion also resolves on normal play/evolution.
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] If DNA, bottom-deck by chosen level then delete 1"
+    summary: "[On Play][When Digivolving] If DNA, bottom-deck by chosen level. Then delete 1"
     active_when:
-      all_of:
-        - dna_origin: true
-        - any_permanent:
-            of: opponent
-            zone: [battle_area]
-            kind: digimon
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
     process:
-      - select_opponent_permanent:
-          bind_as: chosen_dig
-          filter: { kind: digimon }
-          prompt: "Choose 1 opponent Digimon — return all of its level to the bottom of the deck"
-      - bind_permanent_property:
-          from: chosen_dig
-          property: level
-          bind_as: chosen_level
-      - for_each:
-          over:
-            of: opponent
-            zone: [battle_area]
-            kind: digimon
-            level_eq_binding: chosen_level
-          bind_as: returnee
-          body:
-            - return_to_deck:
-                target: returnee
-                position: bottom
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: chosen_dig
+                filter: { kind: digimon }
+                prompt: "Choose 1 opponent Digimon — return all of its level to the bottom of the deck"
+            - bind_permanent_property:
+                from: chosen_dig
+                property: level
+                bind_as: chosen_level
+            - for_each:
+                over:
+                  of: opponent
+                  zone: [battle_area]
+                  kind: digimon
+                  level_eq_binding: chosen_level
+                bind_as: returnee
+                body:
+                  - return_to_deck:
+                      target: returnee
+                      position: bottom
       - if:
           condition:
             any_permanent:

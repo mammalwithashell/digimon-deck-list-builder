@@ -1,0 +1,42 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT12-050",
+    "colors": "Green",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Your Turn] When this Digimon would DNA digivolve into a blue Digimon card, gain 1 memory."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Piercing＞."
+      }
+    ],
+    "type": "Insectoid"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "959b5888a6d31d56921cb1ce139201922765085ed7266a44edcbba6fada9a169",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "79f9bc9e85edb798e4c779068cd1973017783b2513c7078651ff6e2ffc4c3345",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT12-050",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT12-050"
+}

@@ -1,0 +1,58 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "EX10-017",
+    "colors": "Green Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Sup./Appmon",
+    "play_cost": "6",
+    "qa": [
+      "Yes, you can."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Mirrormon] & [Kabemon] & [Copipemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Mirrormon] & [Kabemon] & [Copipemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Jamming＞ ＜Retaliation＞ [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [Leviathan] trait from your hand without paying the cost."
+      },
+      {
+        "label": "Link DP",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, ＜Draw 1＞ and gain 1 memory."
+      }
+    ],
+    "type": "Stealth/Leviathan"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "a653d89a66c2ae5fa5bc98153aeea036bba067d1beb509490f4ae861574932a3",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ee66dbde311f7ef693c9fc665400f0eae2ab15f3d35c879682a66122bdb2651d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-017",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-017"
+}

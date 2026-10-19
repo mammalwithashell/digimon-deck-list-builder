@@ -1,0 +1,102 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Blue"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Mojyamon",
+      "dp": 5000,
+      "effect_description_eng": "[Your Turn] While your opponent has no Digimon with digivolution cards in play, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "[When Attacking] Trash 1 digivolution card from the bottom of 1 of your opponent's Digimon.",
+      "level": 4,
+      "play_cost": 5,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Rare Animal"
+      ]
+    },
+    "card_id": "BT6-024",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Blue",
+          "cost": 2,
+          "level": 3,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": 5000,
+        "effect_text": "[Your Turn] While your opponent has no Digimon with digivolution cards in play, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+        "face_id": "primary",
+        "inherited_text": "[When Attacking] Trash 1 digivolution card from the bottom of 1 of your opponent's Digimon.",
+        "kind": "digimon",
+        "level": 4,
+        "play_cost": 5,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Vaccine",
+      "color": "Blue",
+      "color2": null,
+      "date_added": "2025-11-25 15:16:27",
+      "digi_type": "Rare Animal",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 5000,
+      "evolution_color": "Blue",
+      "evolution_cost": 2,
+      "evolution_level": null,
+      "form": null,
+      "id": "BT6-024",
+      "level": 4,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Your Turn] While your opponent has no Digimon with digivolution cards in play, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+      "name": "Mojyamon",
+      "play_cost": 5,
+      "pretty_url": "mojyamon-bt6-024",
+      "rarity": "u",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-06: Booster Double Diamond"
+      ],
+      "source_effect": "[When Attacking] Trash 1 digivolution card from the bottom of 1 of your opponent's Digimon.",
+      "stage": null,
+      "tcgplayer_id": 256223,
+      "tcgplayer_name": "Mojyamon",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "7431b7f3198c34a6c8ae11f6fc8971d92c25a6f890ca4e139a52685acda1bd44",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT6-024",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

@@ -1,0 +1,89 @@
+{
+  "extracted": {
+    "attribute": "X Antibody",
+    "card_id": "BT9-104",
+    "card_type": "Option",
+    "colors": [
+      "Black"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "option",
+        "level": null,
+        "name": "X Digivolution!",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "While you have a Digimon with [X Antibody] in its traits in play, you may use this card without meeting its color requirements.\n[Main] Reveal the top 3 cards of your deck. You may digivolve 1 of your Digimon into a Digimon card with [X Antibody] in its traits among them without paying its memory cost. Trash the rest. Then, place 1 card with [X Antibody] in its traits from your trash under 1 of your Digimon with [X Antibody] in its traits as its bottom digivolution card."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Security] You may reveal the top 3 cards of your deck. Add 1 card with [X Antibody] in its traits among them to your hand. Trash the rest."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "X Digivolution!",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522010",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT9-104.png?260529",
+      "printing_id": "BT9-104"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "You perform the digivolution bonus draw when this card is placed on top of that Digimon for the digivolution, and you draw from the unrevealed cards in your deck.\nA digivolution includes the bonus draw in accordance with the rules.\nAfter the card to digivolve is stacked and the digivolution bonus draw is performed, you process the remaining effects.",
+        "date": "Mar. 13, 2026",
+        "number": "Q1911",
+        "question": "When a digivolution would occur by this card's [Main] effect, when exactly is the timing for the digivolution bonus draw and where do I draw from?"
+      },
+      {
+        "answer": "No, you can't.",
+        "date": "Mar. 13, 2026",
+        "number": "Q5976",
+        "question": "If I use this card's [Main] effect to digivolve, can I activate the digivolved card's [When Digivolving] effect before trashing the remaining cards?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "While you have a Digimon with [X Antibody] in its traits in play, you may use this card without meeting its color requirements.\n[Main] Reveal the top 3 cards of your deck. You may digivolve 1 of your Digimon into a Digimon card with [X Antibody] in its traits among them without paying its memory cost. Trash the rest. Then, place 1 card with [X Antibody] in its traits from your trash under 1 of your Digimon with [X Antibody] in its traits as its bottom digivolution card."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[Security] You may reveal the top 3 cards of your deck. Add 1 card with [X Antibody] in its traits among them to your hand. Trash the rest."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "2994c77cfa93d2531af24268ca81d2a52f147ab9f09aa2dd35f059c94c4ef0ba",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "b67ad9373be4eff41538e8e353461c86b5b1687476e811643033ff30d5b91058",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522010:BT9-104:BT9-104",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522010"
+}

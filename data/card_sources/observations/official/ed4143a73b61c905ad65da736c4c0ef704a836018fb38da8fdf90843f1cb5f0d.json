@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX4-074",
+    "colors": "Purple Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "14",
+    "qa": [
+      "No, you can't. If a card is played at the same time as deletion by DP becoming 0, the [On Play] effect is triggered, but it can't activate because the card is deleted before it activates."
+    ],
+    "special_digivolution_condition": "[Digivolve] [ShineGreymon]: Cost 4",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [ShineGreymon]: Cost 4"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] [On Deletion] All of your opponent's Digimon get -5000 DP until the end of their turn. [End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and ＜Recovery +1 ≪Deck≫＞. Then, if you have a Tamer, hatch in your breeding area."
+      }
+    ],
+    "type": "Light Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "ed4143a73b61c905ad65da736c4c0ef704a836018fb38da8fdf90843f1cb5f0d",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "81fad91a0c7b4ca4ae528532429ecd907673d002b368abc03af52f56473425c5",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX4-074",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX4-074"
+}

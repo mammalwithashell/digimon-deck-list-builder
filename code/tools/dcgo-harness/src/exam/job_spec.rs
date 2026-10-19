@@ -49,6 +49,8 @@ pub struct ScriptedInput {
     pub actor: u8,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub action_id: Option<u16>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub bind_play_ref:Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expect_prompt: Option<String>,
     /// Expected number of picks. The C# initializer is `-1` = "do not
@@ -63,6 +65,8 @@ pub struct ScriptedInput {
     pub expect_candidates: Vec<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub select_card_ids: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub select_permanent_targets: Vec<crate::exam::permanent_target::PermanentTarget>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub select_value: Option<i32>,
     /// Which of the SAME identity's candidates to take, 0-based — DCGO's
@@ -133,11 +137,36 @@ pub struct ScriptedInput {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attacker_card_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub attacker_permanent_target: Option<crate::exam::permanent_target::PermanentTarget>,
+    /// Explicit presence avoids Unity JsonUtility materializing omitted objects.
+    pub attacker_permanent_target_present: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attack_permanent_target: Option<crate::exam::permanent_target::PermanentTarget>,
+    pub attack_permanent_target_present: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub attack_target_card_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permanent_card_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub digivolve_target_card_id: Option<String>,
+}
+
+fn validate_native_attack_presence(row: &ScriptedInput) -> Result<(), String> {
+    for (label,present,descriptor) in [
+        ("attacker",row.attacker_permanent_target_present,row.attacker_permanent_target.as_ref()),
+        ("attack target",row.attack_permanent_target_present,row.attack_permanent_target.as_ref()),
+    ] {
+        if present != descriptor.is_some() {
+            return Err(format!("native {label} descriptor presence mismatch (NOT MEASURED)"));
+        }
+        if let Some(d)=descriptor {
+            let valid_version=match d.version {2=>d.play_ref.is_none(),3=>d.play_ref.as_ref().is_some_and(|r| !r.trim().is_empty()),_=>false};
+            if !valid_version || d.owner>1 || d.card_id.trim().is_empty() {
+                return Err(format!("malformed native {label} physical descriptor (NOT MEASURED)"));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// One seat's flat job deck in DCGO's top-first convention: full main deck
@@ -187,6 +216,22 @@ pub fn build_exam_job(
     lowered: &[crate::exam::adapter::LoweredStep],
     owners: &[usize],
 ) -> Result<ExamJobSpec, String> {
+    for row in lowered {
+        if let crate::exam::adapter::LoweredStep::FieldAction{refs,..}=row {
+            if let Some(reason)=&refs.unsupported_reason {return Err(format!("unsupported native attack physical endpoint (NOT MEASURED): {reason}"));}
+        }
+        if let crate::exam::adapter::LoweredStep::Select(wire) | crate::exam::adapter::LoweredStep::DcgoOnlySelect(wire) = row {
+            if !wire.permanent_targets.is_empty() {
+                if !wire.card_ids.is_empty() { return Err("mixed physical and identity-only targets (NOT MEASURED)".into()); }
+                if !matches!(wire.permanent_prompt.as_deref(), Some("SelectPermanentEffect" | "SelectAttackEffect")) {
+                    return Err(format!("unsupported physical selector before emission (NOT MEASURED): {:?}", wire.permanent_prompt));
+                }
+            }
+            if let Some(reason) = &wire.unsupported_reason {
+                return Err(format!("unsupported physical target wire (NOT MEASURED): {reason}"));
+            }
+        }
+    }
     // Rows are paired to scenario steps through `owners`, not positionally: a
     // step whose declaration our engine splits into several decisions
     // (`materials:`, `dna:`) contributes several lowered entries, and a
@@ -270,6 +315,10 @@ pub fn build_exam_job(
                 Vec::new()
             };
             match l {
+                LoweredStep::NativePlay {action_id,bind_play_ref} => vec![ScriptedInput {
+                    actor:step.actor,action_id:Some(*action_id),bind_play_ref:Some(bind_play_ref.clone()),
+                    expect_prompt,expect_count,expect_candidates,..ScriptedInput::default()
+                }],
                 LoweredStep::Action(id) => vec![ScriptedInput {
                     actor: step.actor,
                     action_id: Some(*id),
@@ -288,6 +337,10 @@ pub fn build_exam_job(
                     expect_count,
                     expect_candidates,
                     attacker_card_id: refs.attacker.clone(),
+                    attacker_permanent_target: refs.attacker_permanent_target.clone(),
+                    attacker_permanent_target_present: refs.attacker_permanent_target.is_some(),
+                    attack_permanent_target: refs.attack_permanent_target.clone(),
+                    attack_permanent_target_present: refs.attack_permanent_target.is_some(),
                     attack_target_card_id: refs.attack_target.clone(),
                     permanent_card_id: refs.permanent.clone(),
                     digivolve_target_card_id: refs.digivolve_target.clone(),
@@ -351,6 +404,7 @@ pub fn build_exam_job(
                                 expect_count,
                                 expect_candidates,
                                 select_card_ids: w.card_ids.clone(),
+                                select_permanent_targets: w.permanent_targets.clone(),
                                 select_value: w.value,
                                 select_ordinal: w.ordinal,
                                 select_trigger: w.trigger.clone(),
@@ -368,10 +422,12 @@ pub fn build_exam_job(
                 LoweredStep::Select(w) | LoweredStep::DcgoOnlySelect(w) => vec![ScriptedInput {
                     actor: step.actor,
                     action_id: None,
+                    bind_play_ref: None,
                     expect_prompt,
                     expect_count,
                     expect_candidates,
                     select_card_ids: w.card_ids.clone(),
+                    select_permanent_targets: w.permanent_targets.clone(),
                     select_value: w.value,
                     select_ordinal: w.ordinal,
                     select_trigger: w.trigger.clone(),
@@ -381,6 +437,10 @@ pub fn build_exam_job(
                     select_cancel: w.cancel,
                     dna_materials: Vec::new(),
                     attacker_card_id: None,
+                    attacker_permanent_target: None,
+                    attacker_permanent_target_present: false,
+                    attack_permanent_target: None,
+                    attack_permanent_target_present: false,
                     attack_target_card_id: None,
                     permanent_card_id: None,
                     digivolve_target_card_id: None,
@@ -447,6 +507,8 @@ pub fn build_exam_job(
         })
         .collect();
 
+    for row in &inputs { validate_native_attack_presence(row)?; }
+
     Ok(ExamJobSpec {
         job_id: format!("exam-{stem}"),
         policy: "scripted".to_string(),
@@ -465,7 +527,12 @@ pub fn build_exam_job(
         seed: s.seed,
         limits: JobLimits {
             max_turns: 40,
-            timeout_seconds: 180,
+            // The player fails a job at this limit itself (DCGO fork,
+            // 2026-10-09), so it has to clear every healthy exam: of 355
+            // completed since 2026-10-01 the slowest took 209 s, and 240 s is
+            // what the host already tolerated (the old 180 s plus its stall
+            // grace). A line wedged on a prompt fails in ~10 s regardless.
+            timeout_seconds: 240,
         },
     })
 }
@@ -533,6 +600,19 @@ steps:
         assert_eq!(job.decks.p1, vec!["D", "C", "B", "A", "E1"]);
         assert_eq!(job.deck_order.p0, vec!["B", "D"]);
         assert!(job.deck_order.p1.is_empty());
+    }
+
+    #[test]
+    fn native_provenance_reference_uses_exact_job_json_wire_names() {
+        let s=Scenario::from_yaml(LINE).unwrap();
+        let rows=vec![LoweredStep::Action(62),LoweredStep::NativePlay {action_id:digimon_engine::action::space::PLAY_HAND_START,bind_play_ref:"native-play-1".into()},LoweredStep::Action(62)];
+        let job=build_job_1to1("ST1-12",&s,&entry(),&entry(),&rows).unwrap();
+        let encoded=serde_json::to_string(&job).unwrap();
+        let parsed:serde_json::Value=serde_json::from_str(&encoded).unwrap();
+        assert_eq!(parsed["inputs"][1]["bind_play_ref"],"native-play-1");
+        assert_eq!(parsed["inputs"][1]["action_id"],digimon_engine::action::space::PLAY_HAND_START);
+        assert!(parsed["inputs"][0].get("bind_play_ref").is_none());
+        assert!(parsed["inputs"][2].get("bind_play_ref").is_none());
     }
 
     #[test]
@@ -788,6 +868,23 @@ steps:
     /// AND the named battle-area permanents' identities under the C#
     /// `HarnessJobStep` field names, so DCGO resolves them against its own
     /// frame-ordered field instead of trusting the raw slot.
+
+    #[test]
+    fn native_attack_exact_endpoint_wire_preserves_labels_without_selection_shape() {
+        let s=Scenario::from_yaml(LINE).unwrap();let mut rows=actions(&[62,62]);
+        let mut a=wire_v4_descriptor();a.version=3;a.play_ref=Some("attacker-native".into());a.owner=0;a.suspended=false;
+        let mut d=wire_v4_descriptor();d.version=3;d.play_ref=Some("first-native".into());
+        rows.push(LoweredStep::FieldAction{action_id:100,refs:FieldRefs{attacker_permanent_target:Some(a),attack_permanent_target:Some(d),..Default::default()}});
+        let v=job_json(&s,&rows);let row=&v["inputs"][2];
+        assert_eq!(row["attacker_permanent_target"]["play_ref"],"attacker-native");assert_eq!(row["attack_permanent_target"]["play_ref"],"first-native");assert_eq!(row["action_id"],100);assert!(row.get("select_permanent_targets").is_none());assert!(row.get("attack_target_card_id").is_none());
+    }
+    #[test]
+    fn native_attack_unknown_public_endpoint_refuses_live_without_id_fallback() {
+        let s=Scenario::from_yaml(LINE).unwrap();let mut rows=actions(&[62,62]);
+        rows.push(LoweredStep::FieldAction{action_id:100,refs:FieldRefs{attack_target:Some("TWIN".into()),unsupported_reason:Some("opaque public endpoint".into()),..Default::default()}});
+        let error=build_job_1to1("opaque-native",&s,&entry(),&entry(),&rows).unwrap_err();assert!(error.contains("NOT MEASURED"));assert!(error.contains("opaque public endpoint"));
+    }
+
     #[test]
     fn a_field_action_carries_identities_beside_its_action_id() {
         let s = Scenario::from_yaml(LINE).unwrap();
@@ -1088,4 +1185,101 @@ steps:
         assert!(v["inputs"][2].get("select_bool").is_none()); // "no" skip-serializes
         assert!(v["inputs"][2].get("select_cancel").is_none());
     }
+
+    #[test]
+    fn physical_descriptor_survives_plain_and_optional_fold_without_card_id_fallback() {
+        use crate::exam::permanent_target::PermanentTarget;
+        let descriptor=PermanentTarget{version:2,play_ref:None,owner:1,card_id:"TWIN".into(),sources:vec![],linked:vec![],suspended:true,has_dp:true,dp:2000,attacker:false,attack_target:false};
+        for folded in [false,true] {
+            let s=select_line("{ targets: [opp.field.1] }");let mut lowered=actions(&[62,62]);
+            lowered.push(LoweredStep::Select(SelectWire{permanent_targets:vec![descriptor.clone()],permanent_prompt:Some("SelectPermanentEffect".into()),optional_gate_fold:folded,..SelectWire::default()}));
+            let v=job_json(&s,&lowered);let row=v["inputs"].as_array().unwrap().last().unwrap();
+            assert!(row.get("select_card_ids").is_none());assert_eq!(row["select_permanent_targets"][0]["owner"],1);assert_eq!(row["select_permanent_targets"][0]["attack_target"],false);
+        }
+    }
+    #[test]
+    fn physical_unsupported_target_refuses_live_job_without_identity_fallback() {
+        let s=Scenario::from_yaml(LINE).unwrap();
+        let mut lowered=actions(&[62,62,62]);
+        lowered[1]=LoweredStep::Select(SelectWire{unsupported_reason:Some("opaque public identity unavailable".into()),..Default::default()});
+        let error=build_job_1to1("unsupported",&s,&entry(),&entry(),&lowered).unwrap_err();
+        assert!(error.contains("NOT MEASURED"));assert!(error.contains("opaque public identity"));
+    }
+
+    fn wire_v4_descriptor() -> crate::exam::permanent_target::PermanentTarget {
+        crate::exam::permanent_target::PermanentTarget { version:2, play_ref:None, owner:1, card_id:"TWIN".into(), sources:vec![], linked:vec![], suspended:true, has_dp:true, dp:2000, attacker:false, attack_target:false }
+    }
+    #[test]
+    fn wire_v4_attack_descriptor_and_legacy_id_both_emit_without_downgrade() {
+        let s=select_line("{ targets: [opp.field.1] }");
+        for physical in [false,true] {
+            let mut rows=actions(&[62,62]);
+            let wire=if physical {SelectWire {permanent_targets:vec![wire_v4_descriptor()],permanent_prompt:Some("SelectAttackEffect".into()),..Default::default()}} else {SelectWire {card_ids:vec!["TWIN".into()],..Default::default()}};
+            rows.push(LoweredStep::Select(wire));let v=job_json(&s,&rows);let row=&v["inputs"][2];
+            if physical {assert!(row.get("select_card_ids").is_none());assert_eq!(row["select_permanent_targets"][0]["has_dp"],true);} else {assert_eq!(row["select_card_ids"][0],"TWIN");}
+        }
+    }
+    #[test]
+    fn wire_v4_unknown_selector_refuses_before_live_emission() {
+        let s=select_line("{ targets: [opp.field.1] }");
+        for kind in [None,Some("select"),Some("SelectCardEffect"),Some("SelectHandEffect")] {
+            let mut rows=actions(&[62,62]);rows.push(LoweredStep::Select(SelectWire{permanent_targets:vec![wire_v4_descriptor()],permanent_prompt:kind.map(str::to_owned),..Default::default()}));
+            assert!(build_job_1to1("unsupported",&s,&entry(),&entry(),&rows).unwrap_err().contains("NOT MEASURED"));
+        }
+    }
+    #[test]
+    fn wire_v4_mixed_physical_and_identity_payload_refuses_before_emission() {
+        let s=select_line("{ targets: [opp.field.1] }");let mut rows=actions(&[62,62]);
+        rows.push(LoweredStep::Select(SelectWire{permanent_targets:vec![wire_v4_descriptor()],permanent_prompt:Some("SelectPermanentEffect".into()),card_ids:vec!["TWIN".into()],..Default::default()}));
+        assert!(build_job_1to1("mixed",&s,&entry(),&entry(),&rows).unwrap_err().contains("mixed"));
+    }
+    #[test]
+    fn wire_v4_dp_presence_is_explicit_for_digimon_and_tamer() {
+        use digimon_engine::{debug_runner::{DebugRunner,make_test_card},enums::CardKind,permanent::PermanentHandle};
+        let mut tamer=make_test_card("TAMER","Tamer");tamer.card_kind=CardKind::Tamer;tamer.dp=None;tamer.level=None;
+        let mut r=DebugRunner::builder().add_card(tamer).add_card(make_test_card("BODY","Body")).deck(0,&["BODY";12]).deck(1,&["BODY";12]).start();r.skip_mulligan();r.place_on_field(0,"BODY",None);r.place_on_field(0,"TAMER",None);
+        for (index,want) in [(0,true),(1,false)] {let value=serde_json::to_value(crate::exam::permanent_target::snapshot(&r.game,PermanentHandle{player:0,index}).unwrap()).unwrap();assert_eq!(value["has_dp"],want);if !want {assert_eq!(value["dp"],-1);}}
+    }
+
+    #[test]
+    fn native_attack_presence_exact_for_field_security_and_legacy_rows() {
+        let s=Scenario::from_yaml(LINE).unwrap();
+        for (attacker,target) in [(true,true),(true,false),(false,false)] {
+            let mut rows=actions(&[62,62]);
+            rows.push(LoweredStep::FieldAction{action_id:100,refs:FieldRefs{
+                attacker:Some("LEGACY-ATTACKER".into()), attack_target:target.then(||"LEGACY-TARGET".into()),
+                attacker_permanent_target:attacker.then(wire_v4_descriptor),
+                attack_permanent_target:target.then(wire_v4_descriptor),..Default::default()}});
+            let v=job_json(&s,&rows);let row=&v["inputs"][2];
+            assert_eq!(row["attacker_permanent_target_present"],attacker);
+            assert_eq!(row["attack_permanent_target_present"],target);
+            assert_eq!(row.get("attacker_permanent_target").is_some(),attacker);
+            assert_eq!(row.get("attack_permanent_target").is_some(),target);
+            assert!(row.get("select_permanent_targets").is_none());
+        }
+    }
+    #[test]
+    fn native_attack_presence_refuses_declared_missing_and_undeclared_payloads() {
+        for attacker in [false,true] {
+            let mut row=ScriptedInput::default();
+            row.attacker_card_id=Some("LEGACY".into());row.attack_target_card_id=Some("LEGACY".into());
+            if attacker {row.attacker_permanent_target_present=true;} else {row.attack_permanent_target_present=true;}
+            assert!(validate_native_attack_presence(&row).unwrap_err().contains("NOT MEASURED"));
+            if attacker {row.attacker_permanent_target_present=false;row.attacker_permanent_target=Some(wire_v4_descriptor());}
+            else {row.attack_permanent_target_present=false;row.attack_permanent_target=Some(wire_v4_descriptor());}
+            assert!(validate_native_attack_presence(&row).is_err(),"physical claim cannot downgrade to legacy");
+        }
+    }
+    #[test]
+    fn native_attack_presence_malformed_descriptor_refuses_live_emission() {
+        let s=Scenario::from_yaml(LINE).unwrap();
+        for (malformed,reference) in [(0,None),(1,None),(4,None),(2,Some("unexpected")),(3,None),(3,Some(" "))] {
+            let mut descriptor=wire_v4_descriptor();descriptor.version=malformed;descriptor.play_ref=reference.map(str::to_owned);
+            let mut rows=actions(&[62,62]);
+            rows.push(LoweredStep::FieldAction{action_id:100,refs:FieldRefs{
+                attacker:Some("LEGACY".into()),attacker_permanent_target:Some(descriptor),..Default::default()}});
+            assert!(build_job_1to1("malformed-native",&s,&entry(),&entry(),&rows).unwrap_err().contains("NOT MEASURED"));
+        }
+    }
+
 }

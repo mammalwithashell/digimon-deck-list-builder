@@ -1,0 +1,58 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "EX10-019",
+    "colors": "Green Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "8000",
+    "form": "Ult./Appmon",
+    "play_cost": "8",
+    "qa": [
+      "Yes, you can."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Mienumon] & [Sakusimon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Mienumon] & [Sakusimon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Fortitude＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase."
+      },
+      {
+        "label": "Link DP",
+        "text": "+4000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, trash your opponent's top security card."
+      }
+    ],
+    "type": "Strategy/Leviathan"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "921bc54eaf8ef9f757926e9ce853d1ee3037c094fb8ff7c6ef7edfcb04b67c13",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ec2829808dfe521a5f7c1438b9fb090a845a29e1c8c832967c5a6147131cc716",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-019",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-019"
+}

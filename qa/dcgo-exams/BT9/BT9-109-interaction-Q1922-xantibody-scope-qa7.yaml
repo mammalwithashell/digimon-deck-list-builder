@@ -1,0 +1,127 @@
+card: BT9-109
+clause: BT9-109#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-03
+    - BT9-109
+    - ST1-07
+    - BT3-093
+    - ST1-04
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-04
+    - ST2-04
+    - ST2-06
+    - ST1-05
+    - ST1-06
+    rest: Q1922-private-p0
+  p1:
+    stack:
+    - ST2-05
+    - ST2-09
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-04
+    - ST2-04
+    - ST2-06
+    - ST1-05
+    - ST1-06
+    rest: Q1922-private-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+- actor: 0
+  do:
+    play:
+      card: ST1-03
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+- actor: 1
+  do:
+    play:
+      card: ST2-05
+      from: hand
+- actor: 0
+  do:
+    pass: {}
+- actor: 0
+  do:
+    pass: {}
+- actor: 1
+  do:
+    pass: {}
+- actor: 1
+  do:
+    pass: {}
+- actor: 0
+  do:
+    pass: {}
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: ST1-07
+- actor: 0
+  do:
+    play:
+      card: BT9-109
+      from: hand
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 0
+  do:
+    pass: {}
+- actor: 1
+  do:
+    pass: {}
+- actor: 1
+  do:
+    digivolve:
+      from: field.0
+      using: ST2-09
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+interaction:
+  id: qa:Q1922
+  source: qa
+  kind: positive
+expect_ruling:
+  q_id: Q1922
+  assert:
+  - at: 15
+    that:
+      p0.field:
+      - card_id: ST1-07
+        sources:
+        - BT9-109
+        - ST1-03
+      p0.trash: []
+  - at: 16
+    that:
+      p0.field:
+      - card_id: ST1-07
+        sources:
+        - BT9-109
+      p0.trash:
+      - ST1-03

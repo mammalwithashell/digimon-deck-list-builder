@@ -1,0 +1,42 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT19-033",
+    "colors": "Yellow Green",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] This Digimon may digivolve into [JaegerDorulumon] under your Tamers without paying the cost. [On Deletion] ＜Save＞"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Piercing＞."
+      }
+    ],
+    "type": "Beast/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "4e520dd536dad6bf3c72b502344ed15ba04471ff4343f0228db1a34b5453d15f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "e755efdb6896e62656d33fda615c7b7e582ae165f8dd1d4d164555638eef20f1",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT19-033",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT19-033"
+}

@@ -1,0 +1,110 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Green"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Galemon",
+      "dp": 5000,
+      "effect_description_eng": "[When Digivolving] By suspending 1 Digimon, this Digimon gets +2000 DP until the end of your opponent's turn.\r\n[Your Turn] While you have [Shoto Kazama], this Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+      "evo_costs": [
+        {
+          "colors": [
+            "Green"
+          ],
+          "cost": 2,
+          "from_level": 3
+        }
+      ],
+      "form_eng": [
+        "Champion"
+      ],
+      "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+      "level": 4,
+      "play_cost": 5,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Bird Dragon",
+        "LIBERATOR"
+      ]
+    },
+    "card_id": "P-132",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Green",
+        "cost": 2,
+        "derived": false,
+        "level": 3,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 5000,
+        "effect_text": "[When Digivolving] By suspending 1 Digimon, this Digimon gets +2000 DP until the end of your opponent's turn.\r\n[Your Turn] While you have [Shoto Kazama], this Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+        "face_id": "primary",
+        "inherited_text": "[Your Turn] This Digimon gets +2000 DP.",
+        "kind": "digimon",
+        "level": 4,
+        "play_cost": 5,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Green",
+      "color2": null,
+      "date_added": "2025-11-25 15:13:37",
+      "digi_type": "Bird Dragon",
+      "digi_type2": "LIBERATOR",
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 5000,
+      "evolution_color": "Green",
+      "evolution_cost": 2,
+      "evolution_level": 3,
+      "form": "Champion",
+      "id": "P-132",
+      "level": 4,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[When Digivolving] By suspending 1 Digimon, this Digimon gets +2000 DP until the end of your opponent's turn.\r\n[Your Turn] While you have [Shoto Kazama], this Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+      "name": "Galemon",
+      "play_cost": 5,
+      "pretty_url": "galemon-p-132",
+      "rarity": "P",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "Digimon Liberator Promotion Pack",
+        "Judge Pack 2025 Season 1"
+      ],
+      "source_effect": "[Your Turn] This Digimon gets +2000 DP.",
+      "stage": "Champion",
+      "tcgplayer_id": 563788,
+      "tcgplayer_name": "Galemon (August 2024 Evolution Cup Top 4)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "652478dd0fb3909c570fca2a9dcf07e090803edf80a9ee24896ba81f083fc84b",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "P-132#4",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

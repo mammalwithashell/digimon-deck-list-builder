@@ -1,0 +1,111 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Blue",
+        "Purple"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Cthyllamon",
+      "dp": 11000,
+      "effect_description_eng": "[Trash] [Main] By returning 1 of your Tamers to the bottom of the deck, play this card with the play cost reduced by the play cost of the returned Tamer.\r\n[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, until the end of their turn, none of their Digimon with no digivolution cards can attack.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "cost": 3,
+          "from_level": 5
+        }
+      ],
+      "form_eng": [
+        "Mega"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 6,
+      "play_cost": 11,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Fairy"
+      ]
+    },
+    "card_id": "LM-006",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Blue",
+        "cost": 3,
+        "derived": false,
+        "level": 5,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Purple"
+        ],
+        "dp": 11000,
+        "effect_text": "[Trash] [Main] By returning 1 of your Tamers to the bottom of the deck, play this card with the play cost reduced by the play cost of the returned Tamer.\r\n[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, until the end of their turn, none of their Digimon with no digivolution cards can attack.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 6,
+        "play_cost": 11,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Blue",
+      "color2": "Purple",
+      "date_added": "2025-11-25 15:13:56",
+      "digi_type": "Fairy",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 11000,
+      "evolution_color": "Blue",
+      "evolution_cost": 3,
+      "evolution_level": 5,
+      "form": "Mega",
+      "id": "LM-006",
+      "level": 6,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Trash] [Main] By returning 1 of your Tamers to the bottom of the deck, play this card with the play cost reduced by the play cost of the returned Tamer.\r\n[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, until the end of their turn, none of their Digimon with no digivolution cards can attack.",
+      "name": "Cthyllamon",
+      "play_cost": 11,
+      "pretty_url": "cthyllamon-lm-006",
+      "rarity": "C",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-15: Booster Exceed Apocalypse",
+        "LM-01: Limited Card Pack Digimon Ghost Game"
+      ],
+      "source_effect": "",
+      "stage": "Mega",
+      "tcgplayer_id": 538424,
+      "tcgplayer_name": "Cthyllamon (English Exclusive)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "e21f85001706809c73b6e1bb04e329cb920ec83371efc8031117f662de104565",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "LM-006",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

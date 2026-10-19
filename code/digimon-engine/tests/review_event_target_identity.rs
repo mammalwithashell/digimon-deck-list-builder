@@ -137,7 +137,7 @@ fn actual_native_link_attachment_preserves_host_fallback() {
     }
 }
 #[test]
-fn queued_shifted_slot_never_targets_new_occupant_or_silently_relocates() {
+fn queued_shifted_slot_follows_captured_identity_not_new_occupant() {
     for seat in [0, 1] {
         let mut r = runner("on_any_digimon_played");
         r.place_on_field(1 - seat, "REV-OBSERVER", None);
@@ -155,9 +155,16 @@ fn queued_shifted_slot_never_targets_new_occupant_or_silently_relocates() {
             },
         );
         assert!(!r.game.effect_queue.is_empty());
+        let captured = r.game.effect_queue.front().unwrap().trigger_context.clone().unwrap();
+        assert!(captured.event_permanent_identity.is_some());
+        assert_eq!(captured.resolve_event_permanent(&r.game), Some(target));
         remove(&mut r, preceding);
+        assert_eq!(card(&r, PermanentHandle { player: seat, index: 0 }), target_card);
+        assert_eq!(captured.resolve_event_permanent(&r.game), Some(PermanentHandle { player: seat, index: 0 }));
         r.game.drain_effect_queue();
-        assert!(!has(
+        // Main's stable identity follows the surviving stack across slot shifts.
+        // The replacement in the old slot must still receive no effect.
+        assert!(has(
             &r,
             PermanentHandle {
                 player: seat,
@@ -180,10 +187,12 @@ fn deleted_snapshot_precedence_and_absent_event_slot_are_unchanged() {
     let live = r.place_on_field(1, "REV-OLD", None);
     let source = card(&r, observer);
     let deleted = r.game.players[1].hand[0].handle();
-    r.game.current_trigger_context = Some(TriggerContext {
-        event_permanent: Some(live),
-        event_card: Some(card(&r, live)),
-        deleted_object: Some(DeletedObjectSnapshot {
+    r.game.current_trigger_context = Some({
+        let mut context = TriggerContext::default();
+        context.event_permanent = Some(live);
+        context.event_card = Some(card(&r, live));
+        context.deleted_object = Some(DeletedObjectSnapshot {
+            retained_kind: None,
             former_controller: 1,
             top_card: deleted,
             card_kind: CardKind::Digimon,
@@ -199,8 +208,8 @@ fn deleted_snapshot_precedence_and_absent_event_slot_are_unchanged() {
             source_count_just_before: 0,
             digisources_just_before: vec![],
             is_token: false,
-        }),
-        ..Default::default()
+        });
+        context
     });
     {
         let ctx = EffectContext::new(&mut r.game, source, Some(observer), 0);
@@ -209,13 +218,14 @@ fn deleted_snapshot_precedence_and_absent_event_slot_are_unchanged() {
             Some(ResolvedBinding::Card(deleted))
         );
     }
-    r.game.current_trigger_context = Some(TriggerContext {
-        event_permanent: Some(PermanentHandle {
+    r.game.current_trigger_context = Some({
+        let mut context = TriggerContext::default();
+        context.event_permanent = Some(PermanentHandle {
             player: 1,
             index: 254,
-        }),
-        event_card: Some(deleted),
-        ..Default::default()
+        });
+        context.event_card = Some(deleted);
+        context
     });
     let ctx = EffectContext::new(&mut r.game, source, Some(observer), 0);
     assert_eq!(

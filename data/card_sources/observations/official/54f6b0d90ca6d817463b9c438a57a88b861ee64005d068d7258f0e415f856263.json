@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX7-049",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "Yes, they can digivolve it. Digimon that aren't affected by effects aren't affected by this card's [When Digivolving] effect."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Attacking] ＜De-Digivolve 4＞ 1 of your opponent's Digimon. [When Digivolving] None of your opponent's level 4 or lower Digimon can digivolve until the end of their turn. [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 Digimon card with the [Rock Dragon] or [Earth Dragon] trait from your trash without paying the cost."
+      }
+    ],
+    "type": "Sky Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "54f6b0d90ca6d817463b9c438a57a88b861ee64005d068d7258f0e415f856263",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "9c2581537a5b9768478aeb70c08abe30e751b7d201791a72d7d0dc9524e239fc",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX7-049",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX7-049"
+}

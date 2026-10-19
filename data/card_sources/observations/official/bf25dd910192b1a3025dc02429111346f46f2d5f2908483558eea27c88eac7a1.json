@@ -1,0 +1,51 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX8-022",
+    "colors": "Blue Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "5",
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Ice-Snow] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Ice-Snow] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Iceclad＞ (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.) [On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, gain 1 memory."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] Give 1 of your opponent's Digimon ＜Security A. -1＞ until the end of their turn."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[When Attacking] Give 1 of your opponent's Digimon ＜Security A. -1＞ until the end of their turn."
+      }
+    ],
+    "type": "Ice-Snow/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "bf25dd910192b1a3025dc02429111346f46f2d5f2908483558eea27c88eac7a1",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ff7e59960f57c45d4f44fafdae7ec825dfcb1693c612c7c428cde00c92535238",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX8-022",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX8-022"
+}

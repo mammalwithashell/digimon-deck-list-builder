@@ -1,0 +1,131 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX12-015",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Yellow"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "cost": 4,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "Gokuumon",
+        "play_cost": 7,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Raid＞\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -4000 DP until their turn ends. Then, 1 of your other Digimon with the [SW] trait may gain ＜Alliance＞ for the turn and attack."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "DigiXros -2: 1 Lv.5 or lower Digimon card w/[Gokuumon] in text or w/[SW] trait"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] You may delete 1 of your opponent's Digimon with 6000 DP or less."
+          }
+        ]
+      }
+    ],
+    "form": "Ultimate",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 5,
+    "name": "Gokuumon",
+    "play_cost": 7,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-015_P1.png?260529",
+      "printing_id": "EX12-015_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6736",
+        "question": "What kind of card does \"a card with X in its text\" refer to?"
+      },
+      {
+        "answer": "No, you cannot.\nA Digimon that gains from this effect attacks if possible.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6737",
+        "question": "After a Digimon gains from this card's [On Play] [When Digivolving] effect, can I choose not to attack with it?"
+      },
+      {
+        "answer": "Yes, both have to be XX.\nFor example, \"1 level 4 or lower Digimon card with the [CS] trait or that is yellow or black\" means either \"1 level 4 or lower Digimon card with the [CS] trait\" or \"1 level 4 or lower Digimon card that is yellow or black.\" In both cases, the card must be level 4 or lower.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6738",
+        "question": "If a text says \"XX card with AA or BB,\" does that mean AA and BB both have to be XX?"
+      },
+      {
+        "answer": "No, they are not immediately deleted at this point in time.\nAll activated effects are resolved, after which a rule check occurs. At that point in time, all Digimon with 0 DP are deleted simultaneously.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6739",
+        "question": "Due to this card's effect, the DP on my opponent's Digimon become 0.\nAt this point in time, are those Digimon with 0 DP immediately deleted?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Shambala] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -4000 DP until their turn ends. Then, 1 of your other Digimon with the [SW] trait may gain ＜Alliance＞ for the turn and attack."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros -2: 1 Lv.5 or lower Digimon card w/[Gokuumon] in text or w/[SW] trait"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] You may delete 1 of your opponent's Digimon with 6000 DP or less."
+      }
+    ],
+    "type": "Beastkin/Shambala/SW"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "e53e60f4765538b8771118d95a5e2165dcff3f01cedc034448ca1c6904bcb339",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-015:EX12-015_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

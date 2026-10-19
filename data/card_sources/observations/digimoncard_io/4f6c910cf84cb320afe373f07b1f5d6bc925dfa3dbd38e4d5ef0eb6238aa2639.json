@@ -1,0 +1,86 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [],
+      "card_colors": [
+        "Red",
+        "Purple"
+      ],
+      "card_kind": "Option",
+      "card_name_eng": "Endurance Training",
+      "effect_description_eng": "While you have don't have [Endurance Training] in the battle area, you can ignore this card's color requirements.\r\n[Main] Reveal the top 2 cards of your deck. Add 1 Red or Purple card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a Red or Purple Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "[Security] Reveal the top 2 cards of your deck. Add 1 Red or Purple card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.",
+      "level": null,
+      "play_cost": 2,
+      "security_effect_description_eng": "",
+      "type_eng": []
+    },
+    "card_id": "LM-063",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Purple"
+        ],
+        "dp": null,
+        "effect_text": "While you have don't have [Endurance Training] in the battle area, you can ignore this card's color requirements.\r\n[Main] Reveal the top 2 cards of your deck. Add 1 Red or Purple card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a Red or Purple Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+        "face_id": "primary",
+        "inherited_text": "[Security] Reveal the top 2 cards of your deck. Add 1 Red or Purple card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.",
+        "kind": "option",
+        "level": null,
+        "play_cost": 2,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": null,
+      "color": "Red",
+      "color2": "Purple",
+      "date_added": "2026-05-13 01:01:24",
+      "digi_type": null,
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": null,
+      "evolution_color": null,
+      "evolution_cost": null,
+      "evolution_level": null,
+      "form": null,
+      "id": "LM-063",
+      "level": null,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "While you have don't have [Endurance Training] in the battle area, you can ignore this card's color requirements.\r\n[Main] Reveal the top 2 cards of your deck. Add 1 Red or Purple card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a Red or Purple Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+      "name": "Endurance Training",
+      "play_cost": 2,
+      "pretty_url": "LM-063-endurance-training",
+      "rarity": "P",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "LM-09: LIMITED CARD PACK DISTANCIA CERO"
+      ],
+      "source_effect": "[Security] Reveal the top 2 cards of your deck. Add 1 Red or Purple card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.",
+      "stage": null,
+      "tcgplayer_id": null,
+      "tcgplayer_name": null,
+      "type": "Option",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "4f6c910cf84cb320afe373f07b1f5d6bc925dfa3dbd38e4d5ef0eb6238aa2639",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "LM-063",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

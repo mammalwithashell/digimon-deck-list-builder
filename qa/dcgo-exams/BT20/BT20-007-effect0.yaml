@@ -1,0 +1,129 @@
+# Resumed core oracle campaign. Assertions pending measured oracle backfill.
+card: BT20-007
+clause: BT20-007#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-007
+    - EX3-018
+    - BT20-025
+    - BT20-042
+    - BT21-046
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    rest: examon-core-fixture
+  p1:
+    stack:
+    - EX3-018
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    rest: examon-core-fixture
+steps:
+- actor: 0
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: breeding
+      using: BT20-007
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT20-007
+    - BT20-025
+    - BT20-042
+    - BT21-046
+    - EX3-018
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT20-027
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - EX3-018
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT20-007
+    - BT20-025
+    - BT20-042
+    - BT21-046
+    - EX3-018
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT20-027
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - EX3-018
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT13-096
+    - BT20-025
+    - BT20-042
+    - BT21-046
+    - EX3-018
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT20-027
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - EX3-018
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1

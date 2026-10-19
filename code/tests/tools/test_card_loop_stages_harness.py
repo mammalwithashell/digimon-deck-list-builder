@@ -178,6 +178,40 @@ def test_a_candidate_mismatch_is_parsed_from_dcgos_message():
     assert H.candidate_mismatch({"job_outcome": "failed", "reason": "prompt mismatch: step 2 ..."}) is None
 
 
+INCOMPLETE = ("DCGO job failed: prompt mismatch: step 20 selection did not complete 'SelectCardEffect' "
+              "(wanted [BT25-085], prompt needs 2 picks or cancel) -- stopped before the line finished, "
+              "with no divergence before it")
+STALLED = ("DCGO job failed: prompt mismatch: step 20 selection did not complete 'SelectCardEffect' "
+           "(wanted [BT25-085], DCGO held a prompt open for 10s after step 19 with no new prompt and no "
+           "game progress) -- stopped before the line finished, with no divergence before it")
+
+
+def test_an_incomplete_selection_is_parsed_from_dcgos_message():
+    # The EX7-073 scope-neg line: one card for DCGO's "2 cards or cancel".
+    m = H.incomplete_selection({"job_outcome": "failed", "reason": INCOMPLETE})
+    assert (m.row, m.prompt, m.wanted) == (20, "SelectCardEffect", ["BT25-085"])
+    assert m.needs == "2 picks or cancel" and not m.stalled
+    assert H.incomplete_selection({"job_outcome": "completed", "reason": INCOMPLETE}) is None
+    # Not the expected/asked shape, so the plain prompt-mismatch parser stays out of it.
+    assert H.prompt_mismatch({"job_outcome": "failed", "reason": INCOMPLETE}) is None
+
+
+def test_a_stalled_selection_is_parsed_from_dcgos_message():
+    m = H.incomplete_selection({"job_outcome": "failed", "reason": STALLED})
+    assert (m.row, m.prompt, m.wanted) == (20, "SelectCardEffect", ["BT25-085"])
+    assert m.stalled and m.needs is None
+    m = H.incomplete_selection({"job_outcome": "failed", "reason": STALLED.replace(
+        "[BT25-085], DCGO", "[], answer select_bool=true; DCGO")})
+    assert m.wanted == [] and m.stalled
+
+
+def test_a_job_timeout_is_parsed_from_dcgos_message():
+    row = {"job_outcome": "failed", "reason": "DCGO job failed: timeout after 240s -- stopped before the line finished"}
+    assert H.job_timeout(row) == 240
+    assert H.job_timeout({"job_outcome": "partial", "reason": row["reason"]}) is None
+    assert H.job_timeout({"job_outcome": "failed", "reason": "oracle job x timed out after 300s"}) is None
+
+
 def test_a_harness_that_did_not_start_is_a_failure():
     r = H.parse_sim_output(None, "", "dcgo-harness could not be started: [WinError 2]")
     assert not r.passed and "WinError 2" in r.failure_text()

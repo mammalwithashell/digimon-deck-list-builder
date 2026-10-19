@@ -1,0 +1,53 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT12-030",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "special_digivolution_condition": "[Digivolve] 3 from [Paildramon] or [Dinobeemon]",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 3 from [Paildramon] or [Dinobeemon]"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] If this Digimon has a blue digivolution card, unsuspend this Digimon. If it has a green digivolution card, suspend 1 of your opponent's Digimon. [End of Attack] This Digimon may digivolve into a Digimon card with [Imperialdramon] in its name in your hand for the digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2."
+      }
+    ],
+    "type": "Ancient Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "be0cc6f4f5dba1cdccc9a818029fef10b20278b0544d56b9a491d2fcf217b8d4",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "dae65f65cc542a1382eb74983ac1a0b1aaba673f82e728222860eeec9c1bee1e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT12-030",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT12-030"
+}

@@ -872,3 +872,134 @@ fn p_035_inherited_security_placement_preserves_main_phase_activated_trigger() {
         placed.option_state
     );
 }
+
+// Tail audit: official observation 183f4c89f487eb44051d189b1ff8807b7c522f7ab65a0b83f244bc0277bb5ab2,
+// card image P-035.webp, DCGO P/Red/P_035.cs, official rule 16-16-3.
+fn tail_runner(deck: &[&str]) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .unwrap()
+        .add_card(make_red_digimon("RED-A"))
+        .add_card(make_red_digimon("RED-B"))
+        .add_card(make_blue_digimon("BLUE-A"))
+        .add_card(make_blue_digimon("BLUE-B"))
+        .add_card(make_red_option("RED-OPT"))
+        .add_card(make_red_tamer("RED-TAMER"))
+        .hand(0, &["P-035"])
+        .deck(0, deck)
+        .deck(1, &["BLUE-A"; 8])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "RED-A", Some(0));
+    runner.game.enter_main_phase();
+    runner
+}
+
+fn tail_play(runner: &mut DebugRunner) {
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(build_action_mask(&runner.game, 0)[action as usize], 1.0);
+    runner.game.decode_action(action, 0);
+}
+
+fn tail_finish_orders(
+    game: digimon_engine::game::Game,
+    results: &mut std::collections::BTreeSet<Vec<String>>,
+) {
+    if let Some(selection) = game.pending_selection.as_ref() {
+        assert!(matches!(
+            selection.kind,
+            digimon_engine::selection::SelectionKind::OrderedPermutation { .. }
+        ));
+        let ids = selection.valid_action_ids.clone();
+        assert!(!ids.contains(&PASS));
+        let player = selection.selecting_player;
+        for id in ids {
+            let mut branch = game.clone();
+            assert_eq!(build_action_mask(&branch, player)[id as usize], 1.0);
+            branch.resolve_selection(player, id).unwrap();
+            tail_finish_orders(branch, results);
+        }
+    } else {
+        assert!(game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&game.card_data) == "P-035"));
+        results.insert(
+            game.players[0]
+                .deck
+                .iter()
+                .map(|c| c.card_id(&game.card_data).to_string())
+                .collect(),
+        );
+    }
+}
+
+#[test]
+fn p_035_tail_mandatory_pick_exposes_each_red_digimon_and_all_bottom_orders() {
+    let mut runner = tail_runner(&["BLUE-A", "RED-OPT", "RED-B", "RED-A"]);
+    tail_play(&mut runner);
+    let selection = runner.game.pending_selection.as_ref().unwrap();
+    assert!(matches!(
+        selection.kind,
+        digimon_engine::selection::SelectionKind::Reveal
+    ));
+    let ids = selection.valid_action_ids.clone();
+    assert_eq!(ids.len(), 2, "only the two red Digimon qualify");
+    assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize], 0.0);
+    let mut picked = std::collections::BTreeSet::new();
+    for id in ids {
+        let mut branch = runner.game.clone();
+        assert_eq!(build_action_mask(&branch, 0)[id as usize], 1.0);
+        branch.resolve_selection(0, id).unwrap();
+        assert_eq!(branch.players[0].hand.len(), 1);
+        picked.insert(
+            branch.players[0].hand[0]
+                .card_id(&branch.card_data)
+                .to_string(),
+        );
+        let mut orders = std::collections::BTreeSet::new();
+        tail_finish_orders(branch, &mut orders);
+        assert_eq!(
+            orders.len(),
+            6,
+            "every permutation of three leftovers is reachable after cloning"
+        );
+    }
+    assert_eq!(
+        picked,
+        ["RED-A".to_string(), "RED-B".to_string()]
+            .into_iter()
+            .collect()
+    );
+}
+
+#[test]
+fn p_035_tail_no_eligible_card_exposes_all_twenty_four_bottom_orders() {
+    let mut runner = tail_runner(&["BLUE-A", "BLUE-B", "RED-OPT", "RED-TAMER"]);
+    tail_play(&mut runner);
+    let mut orders = std::collections::BTreeSet::new();
+    tail_finish_orders(runner.game.clone(), &mut orders);
+    assert_eq!(orders.len(), 24);
+    assert!(runner.game.players[0].hand.is_empty());
+}
+
+#[test]
+fn p_035_tail_short_and_empty_decks_still_place_option() {
+    for deck in [
+        vec![],
+        vec!["BLUE-A"],
+        vec!["BLUE-A", "RED-A"],
+        vec!["BLUE-A", "BLUE-B", "RED-A"],
+    ] {
+        let mut runner = tail_runner(&deck);
+        tail_play(&mut runner);
+        runner.auto_resolve().unwrap();
+        let eligible = deck.contains(&"RED-A");
+        assert_eq!(runner.game.players[0].hand.len(), usize::from(eligible));
+        assert_eq!(runner.deck_size(0), deck.len() - usize::from(eligible));
+        assert!(runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "P-035"));
+    }
+}

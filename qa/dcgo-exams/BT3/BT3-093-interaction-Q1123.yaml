@@ -1,0 +1,56 @@
+# Q1123 (2024-09-20): "What cards are added by this card's [On Play] effect?" -> 1 blue Digimon card
+# AND 1 green Digimon card. P0 plays Davis from hand on turn 1 (cost 4 at memory 0, legal); the
+# reveal is [ST2-03 Gabumon (blue Lv.3), ST2-04 Bearmon (blue Lv.3), ST4-03 Tentomon (green Lv.3)].
+# Blue bucket has TWO candidates and only one may be taken; the green bucket takes Tentomon; the
+# second blue Digimon is the one remaining card and goes to the deck bottom.
+# Final-row observable: p0.hand = ST1-04 x3, ST1-06, ST2-03, ST4-03 (one blue, one green added).
+#
+# KNOWN DCGO QUIRK (docs/DCGO_EXAM.md, RevealBucket add timing; RevealLibrary.cs:310-328 with
+# Mode.AddHand): DCGO moves the blue pick to hand when its prompt CLOSES, so DCGO's row at step 3
+# already shows ST2-03 in p0.hand while ours (collect all buckets, then add; §15-15-10-1) does not.
+# Expect a one-field p0.hand divergence at step 3 with the end state agreeing. Triage it as the
+# documented DCGO quirk; do NOT hide it with an adapter and do NOT change the engine to add per bucket.
+#
+# Step 4 is sim-only: our engine parks a one-choice OrderedPermutation for the single remaining
+# card (selections.rs select_ordered_permutation: singleton permutations still surface); DCGO's
+# ReturnRevealedCardsToLibraryBottom (RevealLibrary.cs:478-483) bottoms ONE remaining card silently.
+# Sources: data/card_bundles/BT3-093.md; base DCGO BT3/Blue/BT3_093.cs (two SimplifiedSelectCard
+# conditions, maxCount 1 each, mutualConditions: true, RemainingCardsPlace.DeckBottom).
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: BT3-093
+clause: BT3-093#effect#1
+covers: [BT3-093#effect#1]
+interaction: { id: "qa:Q1123", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: BT3-093, ST1-04 x3, ST1-06 | security bottom->top: ST1-02 x4, ST1-03 | deck top (the reveal): ST2-03, ST2-04, ST4-03 | then ST1-05, ST1-05
+    stack: [BT3-093, ST1-04, ST1-04, ST1-04, ST1-06, ST1-02, ST1-02, ST1-02, ST1-02, ST1-03, ST2-03, ST2-04, ST4-03, ST1-05, ST1-05]
+    rest: bt3-093-tail
+  p1:
+    stack: [ST1-03, ST1-06, ST1-04, ST1-04, ST1-04, ST1-02, ST1-02, ST1-02, ST1-02, ST1-04, ST2-04, ST1-08]
+    rest: bt3-093-tail
+steps:
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+# [On Play]: reveal ST2-03, ST2-04, ST4-03.
+- { actor: 0, do: { play: { card: BT3-093, from: hand } }, expect: { prompt: main_phase } }
+# Blue Digimon bucket: candidates ST2-03 and ST2-04; exactly one is added.
+- { actor: 0, do: { select: { cards: [ST2-03] } }, expect: { prompt: SelectCardEffect } }
+# Green Digimon bucket: ST4-03. (DCGO's row here already holds ST2-03 in hand -- the documented quirk.)
+- { actor: 0, do: { select: { cards: [ST4-03] } }, expect: { prompt: SelectCardEffect } }
+# One card remains (ST2-04): ours parks a singleton ordering prompt, DCGO bottoms it without asking.
+- { actor: 0, do: { select: { cards: [ST2-04], sim_only: true } }, expect: { prompt: SelectCardEffect } }
+# Memory -4 handed the turn to P1; this row is the post-resolution observation.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q1123
+  assert:
+  - at: 5
+    that:
+      p0.hand:
+      - ST1-04
+      - ST1-04
+      - ST1-04
+      - ST1-06
+      - ST2-03
+      - ST4-03

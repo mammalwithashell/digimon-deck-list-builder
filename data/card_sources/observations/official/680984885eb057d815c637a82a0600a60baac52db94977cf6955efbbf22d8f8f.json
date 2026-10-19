@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Social",
+    "card_id": "BT21-070",
+    "colors": "Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Sup./Appmon",
+    "play_cost": "4",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand."
+      },
+      {
+        "label": "Special Rule",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand."
+      }
+    ],
+    "type": "Gossip"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "680984885eb057d815c637a82a0600a60baac52db94977cf6955efbbf22d8f8f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ded3109e138f84852936a8ffe1f43b0acebf0b08fbabb0546f7430f747846910",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-070",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-070"
+}

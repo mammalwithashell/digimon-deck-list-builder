@@ -128,6 +128,7 @@ impl<'a> EffectContext<'a> {
             self.player,
             face_down,
             self.source_card,
+            self.source_kind,
         )
     }
 
@@ -163,6 +164,7 @@ impl<'a> EffectContext<'a> {
             self.player,
             face_down,
             self.source_card,
+            self.source_kind,
         )
     }
 
@@ -437,22 +439,28 @@ impl<'a> EffectContext<'a> {
     /// Deterministic — the printed text identifies a singular top card, so no
     /// player choice is surfaced.
     pub fn place_top_source_as_bottom(&mut self, target: PermanentHandle) -> bool {
-        let stack_size = self
+        if self.game.is_token_source_destination(target) { return false; }
+        let Some(permanent) = self
             .game
-            .player(target.player)
+            .player_mut(target.player)
             .battle_area
-            .get(target.index as usize)
-            .map(|p| p.card_sources.len())
-            .unwrap_or(0);
-        if stack_size < 2 {
+            .get_mut(target.index as usize)
+        else {
+            return false;
+        };
+        if permanent.card_sources.len() < 2 {
             return false;
         }
-        let top_card_idx = stack_size - 1;
-        self.place_as_bottom_source(
-            crate::enums::CardSourceRef::Material(target, top_card_idx),
-            target,
-            false,
-        )
+        // Printed top-to-own-bottom is a rotation within this permanent;
+        // generic field-card placement instead removes the donor permanent.
+        let top = permanent.card_sources.pop().unwrap();
+        let card = top.handle();
+        permanent.card_sources.insert(0, top);
+        let cause = self.placing_effect_attribution();
+        self.game.tick_declarative_effects();
+        self.game
+            .note_effect_added_sources(target, vec![card], cause);
+        true
     }
 
     /// Move `card` from whatever zone it currently occupies to the **bottom**
@@ -490,6 +498,7 @@ impl<'a> EffectContext<'a> {
         target: PermanentHandle,
         face_down: bool,
     ) {
+        if self.game.is_token_source_destination(target) { return; }
         let mut taken = self
             .game
             .remove_card_from_any_zone(card)
@@ -607,6 +616,7 @@ impl<'a> EffectContext<'a> {
     ///
     /// Used by: `<Mind Link>` keyword auto-install (Phase F Task 5).
     pub fn attach_tamer_to_digimon(&mut self, tamer: PermanentHandle, digimon: PermanentHandle) {
+        if self.game.is_token_source_destination(digimon) { return; }
         // Validate: shared controller (MindLink targets own permanents).
         // Promoted to `assert_eq!` so the precondition is enforced in
         // release builds too — this is a public primitive, and a release
@@ -813,6 +823,7 @@ impl<'a> EffectContext<'a> {
     ///
     /// Used by: `<Training>` keyword auto-install (Phase F Task 6).
     pub fn training_place_deck_top_under_self_face_down(&mut self, perm: PermanentHandle) {
+        if self.game.is_token_source_destination(perm) { return; }
         // Pop the controller's deck top. Empty-deck case is a silent no-op.
         // Opaque-aware: opaque opponents materialize from RevealSource
         // tagged Effect (Training peeks at top and re-routes — not draw/mill/security).

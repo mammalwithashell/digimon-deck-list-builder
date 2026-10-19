@@ -17,7 +17,7 @@ fn standard_full_v2_layout_matches_spec() {
     // Task S1.4: PERM_MAX_SOURCES 11 -> 12 (inherited from v2_lite) grows
     // permanent_slots 2880 -> 2970, shifting every later section +90 and
     // tensor_size 43392 -> 43482; schema version bumps to .3.
-    assert_eq!(profile.feature_schema_version, "standard_full_v2.3");
+    assert_eq!(profile.feature_schema_version, "standard_full_v2.4");
     assert_eq!(profile.tensor_size, 43482);
     assert_eq!(profile.card_id_slot_count, 572);
     assert_eq!(profile.scalar_slot_count, 42910);

@@ -279,6 +279,7 @@ fn ad1_024_wd_bounces_lowest_dp_opp_to_deck_bottom() {
         "standard digivolve into AD1-024 from a blue Lv.5 must succeed"
     );
     runner.game.drain_effect_queue();
+    choose_wd_before_observer(&mut runner);
 
     let pending = runner
         .game
@@ -348,6 +349,7 @@ fn ad1_024_wd_no_target_installs_no_bounce_selection() {
         "digivolve must succeed"
     );
     runner.game.drain_effect_queue();
+    choose_wd_before_observer(&mut runner);
 
     // No OppField bounce select may install — at most the All Turns outer
     // Yes/No confirm (Replacement kind).
@@ -788,4 +790,16 @@ fn ad1_024_all_turns_declined_pick_still_offers_byeffect_bounce() {
         runner.game.pending_selection.is_none(),
         "the bounce executed, so the OPT is consumed — no second fire this turn"
     );
+}
+
+/// Choose the complete WD from the simultaneous self/observer event bundle.
+fn choose_wd_before_observer(runner: &mut DebugRunner) {
+    let p=runner.game.pending_selection.as_ref().expect("simultaneous WD/observer ordering");
+    assert_eq!(p.kind,digimon_engine::selection::SelectionKind::TriggerOrder);
+    let choices=p.effect_choices.as_ref().expect("identified trigger choices");
+    assert_eq!(choices.len(),2);
+    let action=choices.iter().find(|c|c.timing==Some(digimon_engine::enums::EffectTiming::WhenDigivolving)).unwrap().action_id;
+    let actor=p.selecting_player;
+    assert!(digimon_engine::action::mask::build_action_mask(&runner.game,actor)[action as usize]>0.5);
+    runner.game.resolve_selection(actor,action).unwrap();
 }

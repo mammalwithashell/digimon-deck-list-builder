@@ -1,0 +1,118 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX12-037",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue",
+      "Yellow",
+      "Red"
+    ],
+    "dp": 15000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow",
+          "Red"
+        ],
+        "cost": 5,
+        "from_level": 6,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow",
+          "Red"
+        ],
+        "dp": 15000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 7,
+        "name": "Omnimon",
+        "play_cost": 15,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.6 w/[ME]/[VB] trait: Cost 5\n[DNA Digivolve] Blue/yellow Lv.6 + red/black Lv.6: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Piercing＞ ＜Blocker＞ ＜Barrier＞\n[When Digivolving] [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon. Then, for every 5 of this Digimon's digivolution cards, activate 1 of the effects below:\n・1 of your opponent's Digimon gets -13000 DP until their turn ends.\n・Trash your opponent's top security card. Then, ＜Recovery +1＞."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 7,
+    "name": "Omnimon",
+    "play_cost": 15,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-037_P1.png?260529",
+      "printing_id": "EX12-037_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, you can.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6795",
+        "question": "If an effect that activates another effect for each XX can activate multiple types of effects multiple times, can I activate the same effect multiple times or activate different effects?"
+      },
+      {
+        "answer": "An effect to activate is chosen, then the next effect to activate is chosen after the previous effect has been resolved.\nThis is repeated for each XX.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6796",
+        "question": "If an effect that activates another effect for each XX can activate multiple types of effects multiple times, how is the effect activation order determined?"
+      },
+      {
+        "answer": "No, it doesn't.\nThe number of XX is referenced at the timing of activation for the effect that activates another effect for each XX.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6797",
+        "question": "If the number of XX changes during activation of effects by an effect that activates another effect for each XX, does the number of activations also change?"
+      },
+      {
+        "answer": "No, it isn't deleted yet.\nOnce all of the processing for the activated effect has resolved, a rule check will occur, then all of the Digimon with 0 DP are deleted at the same time.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6798",
+        "question": "This card's effect caused the DP of my opponent's Digimon to become 0.\nAt such times, is the Digimon with a DP of 0 deleted?"
+      }
+    ],
+    "rarity": "UR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.6 w/[ME]/[VB] trait: Cost 5\n[DNA Digivolve] Blue/yellow Lv.6 + red/black Lv.6: Cost 0"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.6 w/[ME]/[VB] trait: Cost 5\n[DNA Digivolve] Blue/yellow Lv.6 + red/black Lv.6: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Piercing＞ ＜Blocker＞ ＜Barrier＞\n[When Digivolving] [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon. Then, for every 5 of this Digimon's digivolution cards, activate 1 of the effects below:\n・1 of your opponent's Digimon gets -13000 DP until their turn ends.\n・Trash your opponent's top security card. Then, ＜Recovery +1＞."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight/ME/VB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "ce5a8991114fe4383538879fc2983e824d4f44902c6a2272b4c34fafecce2faa",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-037:EX12-037_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

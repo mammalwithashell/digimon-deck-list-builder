@@ -201,6 +201,25 @@ fn process_contains_place_self_as_delay_option(process: &[CompiledStep]) -> bool
 // ─── §1 Structural assertions ─────────────────────────────────────────────────
 
 /// The YAML must parse and compile without errors.
+// Body-only fixtures model an Option already placed by its printed Main effect.
+// Keep the real placing turn: this is not permission to activate Delay early.
+fn place_delayed_fixture(
+    runner: &mut DebugRunner,
+    owner: u8,
+    card: &str,
+) -> digimon_engine::permanent::PermanentHandle {
+    let handle = runner.place_on_field(owner, card, Some(owner as u16));
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.player_mut(owner).battle_area[handle.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn,
+        };
+    handle
+}
+
 #[test]
 fn p_103_yaml_parses_and_compiles() {
     let _runner = DebugRunner::builder()
@@ -743,7 +762,7 @@ fn p_103_delay_body_installs_digimon_selection_when_conditions_met() {
 
     // Place P-103 as a Delay permanent in the battle area (simulating it was
     // placed there by the Main clause). place_on_field bypasses play costs.
-    let delay_perm = runner.place_on_field(0, "P-103", Some(0));
+    let delay_perm = place_delayed_fixture(&mut runner, 0, "P-103");
 
     // Place a Digimon for the player to digivolve.
     let _carrier = runner.place_on_field(0, "CARRIER", Some(0));
@@ -782,7 +801,7 @@ fn p_103_delay_body_optional_target_when_no_digimon_on_field() {
         .start();
 
     // Place P-103 in battle area but NO other Digimon on field.
-    let delay_perm = runner.place_on_field(0, "P-103", Some(0));
+    let delay_perm = place_delayed_fixture(&mut runner, 0, "P-103");
 
     runner.game.enqueue_triggered(
         EffectTiming::DelayEffect,
@@ -825,8 +844,8 @@ fn p_103_delay_body_digivolves_with_cost_reduction_2() {
         .memory(10)
         .start();
 
-    let delay_perm = runner.place_on_field(0, "P-103", Some(0));
     let carrier_perm = runner.place_on_field(0, "CARRIER", Some(0));
+    let delay_perm = place_delayed_fixture(&mut runner, 0, "P-103");
 
     runner.game.enqueue_triggered(
         EffectTiming::DelayEffect,

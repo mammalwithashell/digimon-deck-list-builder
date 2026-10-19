@@ -1,63 +1,11 @@
-//! EX1-068 Ice Wall! — Option, Blue, Cost 1, traits: (none).
-//!
-//! # Card text (cards.json)
-//!
-//! **[Main]** All of your opponent's Digimon gain "[When Attacking] lose 2
-//! memory" until the end of their next turn.
-//!
-//! **Inherited (Security):** [Security] Gain 2 memory.
-//!
-//! # DCGO C# reference
-//! `DCGO/Assets/Scripts/CardEffect/EX1/Blue/EX1_068.cs`
-//!
-//! # Implementation status — PARTIAL (BLOCKED on [Main])
-//!
-//! - **[Main] grant "[When Attacking] lose 2 memory" to opponent Digimon
-//!   until end of their next turn** — BLOCKED on the DSL gap
-//!   `G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT`. The DSL today exposes
-//!   grants for STATIC effects only (`grant_keyword`,
-//!   `add_modifier`/`add_dp_modifier`, `grant_effect_immunity`); it has no
-//!   verb to install a TRIGGERED effect (a clause whose `when:` fires
-//!   later, here `when_attacking`) on a permanent the SOURCE does NOT
-//!   control with a turn-scoped expiry. The Python engine handles this
-//!   via `permanent.grant_temp_effect(effect, expiry_turn)`; the Rust
-//!   engine has the modifier-registry + expiry substrate but no typed
-//!   `GrantedTriggeredEffect` slot, no `CompiledStep::GrantTriggeredEffect`,
-//!   and no inline-clause-as-step authoring shape. See the YAML header for
-//!   the full gap analysis and the proposed `grant_triggered_effect:` step
-//!   shape. Per no-approximations, the entire [Main] clause is OMITTED
-//!   from the YAML rather than half-implemented (a "lose 2 memory whenever
-//!   the opponent attacks" approximation would over-fire on opponent
-//!   Digimon played AFTER this Option resolves — DCGO's per-Permanent
-//!   foreach loop runs ONCE at resolution time and snapshots the eligible
-//!   Digimon set).
-//!
-//! - **[Security] Gain 2 memory** — IMPLEMENTED via `gain_memory: 2` under
-//!   `when: on_security`. Identical shape to ST2-13 Hammer Spark Clause 2.
-//!
-//! # Patterns this test covers
-//!
-//! - YAML parses and compiles, registers as Option/Blue/cost-1.
-//! - Single triggered clause exists (the [Security] clause), present in
-//!   the expected shape — `OnSecurity` timing, mandatory (no [Security]
-//!   effect is opt-out per RULES_CONTEXT.md §16), `GainMemory(2)` step.
-//! - Asserts the [Main] clause is OMITTED (only 1 effect on the card)
-//!   and that NO `MainFromHand` clause exists — defending the no-
-//!   approximations decision in code so a future "let's just add a
-//!   placeholder lose_memory: 2 step" change fails the test.
-//! - End-to-end gain_memory: 2 fires when the security effect runs via
-//!   `run_inherited_security_effect`, mirroring the option_flow tests.
-//!
-//! # Faithfulness audit (per clause)
-//!
-//! 1. **[Main] grant clause** — BLOCKED. Test below
-//!    `ex1_068_no_main_from_hand_clause_pending_gap` documents the
-//!    omission and prevents accidental half-implementation.
-//!
-//! 2. **[Security] Gain 2 memory** — `when: on_security` + `process:
-//!    [gain_memory: 2]` mirrors DCGO `card.Owner.AddMemory(2,
-//!    activateClass)` with `SetIsSecurityEffect(true)`. Mandatory
-//!    (`optional: false`); no [OPT].
+//! EX1-068 Ice Wall! — blue Option, cost 1.
+//! [Main] All opponent Digimon gain [When Attacking] Lose 2 memory until
+//! end of their next turn. [Security] Gain 2 memory.
+//! Official observation 472a2180bbbd77ac42801729b5b7f630ae104bdd298e1770d2b02b477bf011c7,
+//! actual EX1-068.webp, and Q3255–3257; base DCGO EX1/Blue/EX1_068.cs.
+//! Q3256 explicitly includes Digimon played or moved from breeding later.
+//! Patterns: native Option mask/cost, mandatory granted trigger, expiry,
+//! dynamic recipient scope, clone isolation, security memory attribution.
 
 #![allow(dead_code, unused_imports)]
 
@@ -121,7 +69,7 @@ fn ex1_068_is_option_blue_cost_1() {
     );
 }
 
-/// Two clauses total — the [Main] grant clause is now IMPLEMENTED
+/// Two clauses total — the [Main] dynamic grant includes later entrants (Q3256)
 /// (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT resolved), alongside the
 /// [Security] clause:
 ///   [0] main_from_hand (grant_triggered_effect → opponent Digimon)
@@ -147,7 +95,7 @@ fn ex1_068_has_two_clauses_after_main_grant_implemented() {
     );
 }
 
-/// The [Main] grant clause IS present and faithfully shaped: a
+/// The [Main] grant clause is a duration-scoped dynamic grant: a
 /// `MainFromHand` triggered clause whose process is a
 /// `GrantTriggeredEffect` with `timing = when_attacking` and a body that
 /// loses 2 memory. Defends against regression to the omitted state AND
@@ -188,6 +136,7 @@ fn ex1_068_main_from_hand_grant_clause_shape() {
                 timing,
                 expiry,
                 body,
+                ..
             } => Some((target, timing, expiry, body)),
             _ => None,
         })
@@ -213,7 +162,7 @@ fn ex1_068_main_from_hand_grant_clause_shape() {
     );
 }
 
-/// Clause 0: the only clause is the [Security] one — `OnSecurity` timing,
+/// Security clause — `OnSecurity` timing,
 /// FaceUp scope (not inherited; this Option's printed text routes through
 /// security as a normal Option-security effect, not as a digivolution-
 /// source inherited effect), mandatory.
@@ -253,7 +202,7 @@ fn ex1_068_security_clause_shape() {
             );
             assert!(
                 !t.optional,
-                "[Security] effects are mandatory per RULES_CONTEXT.md §16; \
+                "Printed [Security] effect is mandatory; \
                  DCGO has no canNoSelect on the SecuritySkill ActivateClass"
             );
             assert!(
@@ -298,5 +247,309 @@ fn ex1_068_security_process_contains_gain_memory_2() {
         "[Security] process must contain GainMemory(2) — printed text 'Gain 2 memory'; \
          got {:?}",
         security_clause.process
+    );
+}
+
+fn audit_runner() -> DebugRunner {
+    use digimon_engine::enums::GamePhase;
+    let mut b = DebugRunner::builder().from_dsl_yaml(YAML).unwrap();
+    for (id, kind) in [
+        ("A-DIG", CardKind::Digimon),
+        ("A-TAM", CardKind::Tamer),
+        ("A-OPT", CardKind::Option),
+    ] {
+        let mut c = make_test_card(id, id);
+        c.card_kind = kind;
+        c.colors = vec![CardColor::Blue];
+        c.dp = Some(5000);
+        c.level = Some(3);
+        c.play_cost = 3;
+        b = b.add_card(c);
+    }
+    let mut r = b
+        .hand(0, &[CARD_ID])
+        .deck(0, &["A-DIG"; 10])
+        .deck(1, &["A-DIG"; 10])
+        .security(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.game.current_phase = GamePhase::Main;
+    r
+}
+
+fn use_ice(r: &mut DebugRunner) {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    assert!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize] > 0.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "mandatory grant has no optional choice"
+    );
+    assert!(r.game.players[0].hand.is_empty());
+}
+
+fn fire_attack(r: &mut DebugRunner, h: digimon_engine::permanent::PermanentHandle) {
+    r.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::WhenAttacking,
+        digimon_engine::selection::TriggerSource::Permanent(h),
+    );
+    r.game.drain_effect_queue();
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn ex1_068_native_use_color_mask_cost_and_current_recipients() {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    let mut r = audit_runner();
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 0.0);
+    let own = r.place_on_field(0, "A-DIG", None);
+    let a = r.place_on_field(1, "A-DIG", None);
+    let b = r.place_on_field(1, "A-DIG", None);
+    let t = r.place_on_field(1, "A-TAM", None);
+    let o = r.place_on_field(1, "A-OPT", None);
+    use_ice(&mut r);
+    assert_eq!(r.memory(), 9);
+    for h in [own, t, o] {
+        fire_attack(&mut r, h);
+        assert_eq!(r.memory(), 9);
+    }
+    fire_attack(&mut r, a);
+    assert_eq!(r.memory(), 10, "P1 loss increases P0 gauge, capped at 10");
+    r.game.set_memory(0);
+    fire_attack(&mut r, a);
+    fire_attack(&mut r, b);
+    assert_eq!(r.memory(), 4, "each carrier loses 2, no OPT");
+}
+
+#[test]
+fn ex1_068_grant_expiry_and_clone_are_independent() {
+    let mut r = audit_runner();
+    r.place_on_field(0, "A-DIG", None);
+    let h = r.place_on_field(1, "A-DIG", None);
+    use_ice(&mut r);
+    let mut fork = audit_runner();
+    fork.game = r.game.clone();
+    r.game.modifiers.expire_end_of_turn(0);
+    r.game.set_memory(0);
+    fire_attack(&mut r, h);
+    assert_eq!(r.memory(), 2);
+    r.game.modifiers.expire_end_of_turn(1);
+    r.game.set_memory(0);
+    fire_attack(&mut r, h);
+    assert_eq!(r.memory(), 0);
+    fork.game.set_memory(0);
+    fire_attack(&mut fork, h);
+    assert_eq!(fork.memory(), 2);
+}
+
+#[test]
+fn ex1_068_security_gain_is_owner_relative() {
+    use digimon_engine::{enums::EffectTiming, selection::TriggerSource};
+    for turn in [0, 1] {
+        let mut r = audit_runner();
+        r.game.turn_player_idx = turn;
+        let card = r.game.players[0]
+            .security
+            .pop()
+            .expect("real Ice Wall security card");
+        let card_handle = card.handle();
+        r.game.pending_security = Some(digimon_engine::selection::PendingSecurity {
+            defender: 0,
+            card,
+            played: false,
+        });
+        r.game.set_memory(0);
+        r.game.enqueue_triggered(
+            EffectTiming::SecuritySkill,
+            TriggerSource::SecurityRevealed {
+                defender: 0,
+                card: card_handle,
+            },
+        );
+        r.game.drain_effect_queue();
+        assert_eq!(r.memory(), if turn == 0 { 2 } else { -2 });
+        assert!(r.game.pending_selection.is_none());
+    }
+}
+
+// Production YAML is loaded unmodified: these tests expose missing Q3256 behavior.
+fn tail_runner() -> DebugRunner {
+    let mut r = audit_runner();
+    r.place_on_field(0, "A-DIG", None);
+    r
+}
+fn tail_attack(r: &mut DebugRunner, h: digimon_engine::permanent::PermanentHandle) {
+    r.game.set_memory(0);
+    fire_attack(r, h);
+}
+#[test]
+fn ex1_068_tail_includes_later_entrants_and_repeated_attacks() {
+    let mut r = tail_runner();
+    use_ice(&mut r);
+    let later = r.place_on_field(1, "A-DIG", None);
+    tail_attack(&mut r, later);
+    assert_eq!(
+        r.memory(),
+        2,
+        "Q3256 includes opponent Digimon entering after resolution"
+    );
+    tail_attack(&mut r, later);
+    assert_eq!(
+        r.memory(),
+        2,
+        "duration grant is reusable, not consumed on firing"
+    );
+}
+#[test]
+fn ex1_068_tail_expiry_and_clone_are_independent() {
+    let mut r = tail_runner();
+    use_ice(&mut r);
+    let mut fork = tail_runner();
+    fork.game = r.game.clone();
+    r.game.modifiers.expire_end_of_turn(0);
+    let later = r.place_on_field(1, "A-DIG", None);
+    tail_attack(&mut r, later);
+    assert_eq!(r.memory(), 2);
+    r.game.modifiers.expire_end_of_turn(1);
+    tail_attack(&mut r, later);
+    assert_eq!(r.memory(), 0);
+    let fork_later = fork.place_on_field(1, "A-DIG", None);
+    tail_attack(&mut fork, fork_later);
+    assert_eq!(fork.memory(), 2);
+}
+#[test]
+fn ex1_068_tail_includes_breeding_entrant_after_option_has_left_play() {
+    let mut r = tail_runner();
+    r.place_in_breeding(1, "A-DIG");
+    use_ice(&mut r);
+    assert!(r.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "EX1-068"));
+    assert!(r.move_from_breeding(1));
+    let h = digimon_engine::permanent::PermanentHandle {
+        player: 1,
+        index: 0,
+    };
+    tail_attack(&mut r, h);
+    assert_eq!(r.memory(), 2);
+}
+#[test]
+fn ex1_068_tail_rechecks_immunity_using_grantor_option_kind() {
+    use digimon_engine::enums::{EffectSourceKind, Expiry, ModifierType};
+    use digimon_engine::modifiers::{EffectControllerFilter, EffectImmunityFilter, ModifierEntry};
+    let mut r = tail_runner();
+    let h = r.place_on_field(1, "A-DIG", None);
+    r.game.modifiers.add(
+        h,
+        ModifierEntry::simple(ModifierType::CannotBeAffected, 0, Expiry::EndOfYourTurn, 1)
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: Some(EffectSourceKind::Option),
+                controller: EffectControllerFilter::OpponentOnly,
+            }),
+    );
+    use_ice(&mut r);
+    tail_attack(&mut r, h);
+    assert_eq!(r.memory(), 0, "immune during install and trigger");
+    // Remove only the immunity; the Ice Wall duration ends on the other player's turn.
+    r.game.modifiers.clear_permanent(h);
+    tail_attack(&mut r, h);
+    assert_eq!(r.memory(), 2, "dynamic grant applies once immunity is gone");
+    r.game.modifiers.add(
+        h,
+        ModifierEntry::simple(ModifierType::CannotBeAffected, 0, Expiry::Permanent, 1)
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: Some(EffectSourceKind::Digimon),
+                controller: EffectControllerFilter::OpponentOnly,
+            }),
+    );
+    tail_attack(&mut r, h);
+    assert_eq!(
+        r.memory(),
+        2,
+        "Digimon-only immunity does not block an Option grant"
+    );
+}
+#[test]
+fn ex1_068_tail_preserves_option_attribution_when_grantor_is_absent() {
+    use digimon_engine::enums::{EffectSourceKind, Expiry, ModifierType};
+    use digimon_engine::modifiers::{EffectControllerFilter, EffectImmunityFilter, ModifierEntry};
+    let mut r = tail_runner();
+    use_ice(&mut r);
+    r.game.players[0].trash.clear();
+    let h = r.place_on_field(1, "A-DIG", None);
+    r.game.modifiers.add(
+        h,
+        ModifierEntry::simple(ModifierType::CannotBeAffected, 0, Expiry::Permanent, 1)
+            .with_effect_immunity_filter(EffectImmunityFilter {
+                source_kind: Some(EffectSourceKind::Option),
+                controller: EffectControllerFilter::OpponentOnly,
+            }),
+    );
+    tail_attack(&mut r, h);
+    assert_eq!(
+        r.memory(),
+        0,
+        "stored Option grantor kind survives source removal"
+    );
+    r.game.modifiers.clear_permanent(h);
+    tail_attack(&mut r, h);
+    assert_eq!(
+        r.memory(),
+        2,
+        "duration survives the grantor card's disappearance"
+    );
+}
+
+#[test]
+fn ex1_068_tail_multiple_uses_stack_on_later_entrant() {
+    use digimon_engine::action::build_action_mask;
+    let mut r = tail_runner();
+    use_ice(&mut r);
+    r.add_to_hand(0, CARD_ID);
+    use_ice(&mut r);
+    let h = r.place_on_field(1, "A-DIG", None);
+    r.game.set_memory(0);
+    r.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::WhenAttacking,
+        digimon_engine::selection::TriggerSource::Permanent(h),
+    );
+    r.game.drain_effect_queue();
+    while let Some(p) = r.game.pending_selection.as_ref() {
+        assert_eq!(
+            p.kind,
+            digimon_engine::selection::SelectionKind::TriggerOrder
+        );
+        let actor = p.selecting_player;
+        let action = p.valid_action_ids[0];
+        assert!(build_action_mask(&r.game, actor)[action as usize] > 0.0);
+        r.game.decode_action(action, actor);
+    }
+    assert_eq!(r.memory(), 4, "two Ice Walls each grant one mandatory loss");
+}
+
+#[test]
+fn ex1_068_tail_native_later_play_then_attack_loses_memory() {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    let mut r = tail_runner();
+    use_ice(&mut r);
+    r.game.turn_player_idx = 1;
+    r.game.set_memory(10);
+    let index = r.add_to_hand(1, "A-DIG");
+    let action = PLAY_HAND_START + index as u16;
+    assert!(build_action_mask(&r.game, 1)[action as usize] > 0.0);
+    r.game.decode_action(action, 1);
+    assert_eq!(r.memory(), 7);
+    assert_eq!(r.game.players[1].battle_area.len(), 1);
+    let h = digimon_engine::permanent::PermanentHandle {
+        player: 1,
+        index: 0,
+    };
+    fire_attack(&mut r, h);
+    assert_eq!(
+        r.memory(),
+        5,
+        "Q3255/Q3256: later-played carrier loses its own memory"
     );
 }

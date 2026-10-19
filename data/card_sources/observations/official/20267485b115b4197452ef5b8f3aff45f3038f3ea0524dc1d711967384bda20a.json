@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT20-021",
+    "colors": "Red Black",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "16000",
+    "form": "Mega",
+    "play_cost": "9",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[DNA Digivolve] Lv.6 w/[Jesmon] in name + Lv.6 w/[Gankoomon] in name: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Lv.6 w/[Jesmon] in name + Lv.6 w/[Gankoomon] in name: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Counter] ＜Blast Digivolve＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By placing 1 [Royal Knight] trait card from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with as much or less DP as this Digimon. [When Attacking] [Once per Turn] This Digimon unsuspends. Then, for every 2 [Royal Knight] trait cards in this Digimon's digivolution cards, trash your opponent's top security card."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-5)＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)"
+      }
+    ],
+    "type": "Holy Warrior/X Antibody/Royal Knight"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "20267485b115b4197452ef5b8f3aff45f3038f3ea0524dc1d711967384bda20a",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "61279baf93ef5a1d004596ee5862aa80ff75cb9368ea270389161d0f76e082b8",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-021",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-021"
+}

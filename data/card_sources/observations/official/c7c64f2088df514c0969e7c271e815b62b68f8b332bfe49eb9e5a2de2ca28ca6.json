@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "P-215",
+    "colors": "Blue Black",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Champion",
+    "play_cost": "5",
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Ice-Snow]/[Mineral]/[Rock] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Ice-Snow]/[Mineral]/[Rock] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Moving] [On Play] [When Digivolving] By placing 1level 4 or lower [Ice-Snow], [Mineral] or [Rock] trait card from your hand or trash as this Digimon's bottom digivolution card, until your opponent's turn ends, their effects can't return 1 of your [Ice-Snow], [Mineral] or [Rock] trait Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects. (Rule) Trait: Has [Mineral] Type."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+      }
+    ],
+    "type": "Ice-Snow"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "c7c64f2088df514c0969e7c271e815b62b68f8b332bfe49eb9e5a2de2ca28ca6",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "36d46ab75c6976cf98f3f1bce12f97feddc1e97ae6fd684cdeb73d0ffa4391f2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:P-215",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/P-215"
+}

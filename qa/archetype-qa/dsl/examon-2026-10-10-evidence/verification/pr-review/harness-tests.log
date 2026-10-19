@@ -1,0 +1,1462 @@
+warning: unused import: `Zone`
+   --> code\digimon-engine\src\cards\keyword_effects.rs:118:65
+    |
+118 | use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
+    |                                                                 ^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `SelectionKind`
+    --> code\digimon-engine\src\dsl_cards\step\selections.rs:2637:46
+     |
+2637 |     use crate::selection::{PendingSelection, SelectionKind};
+     |                                              ^^^^^^^^^^^^^
+
+warning: unused imports: `effect_attack_target_action_ids_with_options` and `effect_attack_target_action_ids`
+  --> code\digimon-engine\src\effect_context\mod.rs:36:5
+   |
+36 |     effect_attack_target_action_ids, effect_attack_target_action_ids_with_options,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `SECURITY_TARGET`, `decode_attack`, and `encode_attack`
+  --> code\digimon-engine\src\effect_context\mod.rs:38:28
+   |
+38 | use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
+   |                            ^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused imports: `AttackError`, `AttackInitiator`, `AttackOpen`, `AttackResult`, and `TargetConstraint`
+  --> code\digimon-engine\src\effect_context\mod.rs:41:21
+   |
+41 | use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
+   |                     ^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `DigiXrosMaterialValidationError`, `DigiXrosMaterialZone`, `DigiXrosTransaction`, and `DigiXrosZoneAllowance`
+  --> code\digimon-engine\src\effect_context\mod.rs:43:29
+   |
+43 |     DigiXrosMaterialOrigin, DigiXrosMaterialValidationError, DigiXrosMaterialZone,
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+44 |     DigiXrosTransaction, DigiXrosZoneAllowance,
+   |     ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::dsl_cards::bindings::Bindings`
+  --> code\digimon-engine\src\effect_context\mod.rs:46:5
+   |
+46 | use crate::dsl_cards::bindings::Bindings;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::dsl_cards::step::StepRuntime`
+  --> code\digimon-engine\src\effect_context\mod.rs:47:5
+   |
+47 | use crate::dsl_cards::step::StepRuntime;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `TimingFilter` and `enumerate_refireable_effects`
+  --> code\digimon-engine\src\effect_context\mod.rs:48:21
+   |
+48 | use crate::effect::{enumerate_refireable_effects, ReFireableEffect, TimingFilter};
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^                    ^^^^^^^^^^^^
+
+warning: unused imports: `DelayTrigger`, `EffectTiming`, `Expiry`, `GamePhase`, `Keyword`, `ModifierType`, `PlaySource`, and `StackPosition`
+  --> code\digimon-engine\src\effect_context\mod.rs:50:15
+   |
+50 |     CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, GamePhase, Keyword,
+   |               ^^^^^^^^^^^^                    ^^^^^^^^^^^^  ^^^^^^  ^^^^^^^^^  ^^^^^^^
+51 |     ModifierType, PlaySource, PlayerId, StackPosition,
+   |     ^^^^^^^^^^^^  ^^^^^^^^^^            ^^^^^^^^^^^^^
+
+warning: unused import: `crate::game::PendingWouldPlayOrigin`
+  --> code\digimon-engine\src\effect_context\mod.rs:54:5
+   |
+54 | use crate::game::PendingWouldPlayOrigin;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `EffectControllerFilter`, `EffectImmunityFilter`, `ModifierEntry`, and `PlayerModifierEntry`
+  --> code\digimon-engine\src\effect_context\mod.rs:57:5
+   |
+57 |     EffectControllerFilter, EffectImmunityFilter, ModifierEntry, PlayerModifierEntry,
+   |     ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ReplacementSubject`
+  --> code\digimon-engine\src\effect_context\mod.rs:61:44
+   |
+61 | use crate::replacement::{ReplacementCause, ReplacementSubject};
+   |                                            ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::scheduled_effects::ScheduledEffect`
+  --> code\digimon-engine\src\effect_context\mod.rs:63:5
+   |
+63 | use crate::scheduled_effects::ScheduledEffect;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `AttackTarget`, `DeclineCallback`, `PendingSelection`, and `SelectionKind`
+  --> code\digimon-engine\src\effect_context\mod.rs:64:24
+   |
+64 | use crate::selection::{AttackTarget, DeclineCallback, PendingSelection, SelectionKind};
+   |                        ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused import: `build_registry`
+  --> code\digimon-engine\src\game\mod.rs:10:20
+   |
+10 | use crate::cards::{build_registry, CardEffectRegistry};
+   |                    ^^^^^^^^^^^^^^
+
+warning: unused import: `OriginalDeckCardCount`
+  --> code\digimon-engine\src\game\mod.rs:16:21
+   |
+16 | use crate::player::{OriginalDeckCardCount, Player};
+   |                     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:2747:13
+     |
+2747 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:2748:13
+     |
+2748 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:2943:13
+     |
+2943 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:2944:13
+     |
+2944 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:3089:13
+     |
+3089 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:3090:13
+     |
+3090 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `PendingWouldDigivolveResume` and `PendingWouldPlayResume`
+  --> code\digimon-engine\src\game_actions\mod.rs:20:5
+   |
+20 |     PendingWouldDigivolveResume, PendingWouldLinkResume, PendingWouldPlayOrigin,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+21 |     PendingWouldPlayResume,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `OptionPlayResult` and `QueuedEffect`
+  --> code\digimon-engine\src\game_actions\mod.rs:25:5
+   |
+25 |     OptionPlayResult, OptionResolutionPhase, OptionSubtype, OptionUseSource, PendingOption,
+   |     ^^^^^^^^^^^^^^^^
+26 |     PendingSelection, QueuedEffect, SelectionKind, TriggerSource,
+   |                       ^^^^^^^^^^^^
+
+warning: unused import: `ReplacementOutcome`
+    --> code\digimon-engine\src\game_actions\mod.rs:3859:34
+     |
+3859 |         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+     |                                  ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `PathBuf`
+  --> code\digimon-engine\src\selfplay\driver.rs:28:23
+   |
+28 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+
+warning: unused import: `rand::seq::SliceRandom`
+  --> code\digimon-engine\src\game_actions\mod.rs:28:5
+   |
+28 | use rand::seq::SliceRandom;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+    --> code\digimon-engine\src\combat\mod.rs:4500:17
+     |
+4500 |             let mut state = self.pending_battle_resolutions.pop().unwrap();
+     |                 ----^^^^^
+     |                 |
+     |                 help: remove this `mut`
+     |
+     = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+  --> code\digimon-engine\src\determinize\invariants.rs:91:9
+   |
+91 |     let mut add_all = |cards: &[crate::card_source::CardSource], ms: &mut CardMultiset| {
+   |         ----^^^^^^^
+   |         |
+   |         help: remove this `mut`
+
+warning: unused variable: `source_card`
+   --> code\digimon-engine\src\effect_context\action\security.rs:511:13
+    |
+511 |         let source_card = {
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_card`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `top_card`
+   --> code\digimon-engine\src\effect_context\action\security.rs:553:13
+    |
+553 |         let top_card = {
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_top_card`
+
+warning: unused variable: `source_permanent`
+    --> code\digimon-engine\src\effect_queue.rs:1582:25
+     |
+1582 |                         source_permanent,
+     |                         ^^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_permanent`
+
+warning: unused variable: `source_kind`
+    --> code\digimon-engine\src\effect_queue.rs:1583:25
+     |
+1583 |                         source_kind,
+     |                         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_kind`
+
+warning: unused variable: `controller`
+    --> code\digimon-engine\src\effect_queue.rs:1584:25
+     |
+1584 |                         controller,
+     |                         ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_controller`
+
+warning: unused variable: `trigger_context`
+    --> code\digimon-engine\src\effect_queue.rs:1586:25
+     |
+1586 |                         trigger_context,
+     |                         ^^^^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_trigger_context`
+
+warning: variable does not need to be mutable
+   --> code\digimon-engine\src\game\snapshot.rs:166:13
+    |
+166 |         let mut push = |cs: &CardSource, ids: &mut Vec<String>| {
+    |             ----^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `source_ref`
+    --> code\digimon-engine\src\game_actions\digivolve.rs:2912:18
+     |
+2912 |         let Some(source_ref) = self.resolve_effect_digivolve_choice_source(&source_check) else {
+     |                  ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_ref`
+
+warning: type `game_actions::TakenCardSource` is more private than the item `game_actions::sources::<impl game::Game>::take_card_source_ref`
+   --> code\digimon-engine\src\game_actions\sources.rs:129:5
+    |
+129 | /     pub(crate) fn take_card_source_ref(
+130 | |         &mut self,
+131 | |         source: crate::enums::CardSourceRef,
+132 | |     ) -> Option<TakenCardSource> {
+    | |________________________________^ method `game_actions::sources::<impl game::Game>::take_card_source_ref` is reachable at visibility `pub(crate)`
+    |
+note: but type `game_actions::TakenCardSource` is only usable at visibility `pub(self)`
+   --> code\digimon-engine\src\game_actions\mod.rs:81:1
+    |
+ 81 | struct TakenCardSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: type `game_actions::TakenCardSource` is more private than the item `game_actions::sources::<impl game::Game>::restore_card_source_ref`
+   --> code\digimon-engine\src\game_actions\sources.rs:229:5
+    |
+229 | /     pub(crate) fn restore_card_source_ref(
+230 | |         &mut self,
+231 | |         source: crate::enums::CardSourceRef,
+232 | |         taken: TakenCardSource,
+233 | |     ) -> bool {
+    | |_____________^ method `game_actions::sources::<impl game::Game>::restore_card_source_ref` is reachable at visibility `pub(crate)`
+    |
+note: but type `game_actions::TakenCardSource` is only usable at visibility `pub(self)`
+   --> code\digimon-engine\src\game_actions\mod.rs:81:1
+    |
+ 81 | struct TakenCardSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `AfterSelectionHook::DigivolveReducerChain::state`
+   --> code\digimon-engine\src\resume.rs:66:9
+    |
+ 66 |         state: crate::game_actions::digivolve::DigivolveReducerState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::DigivolveReducerChain::state` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:143:1
+    |
+143 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::DigiXrosResumeContinuation` is more private than the item `AfterSelectionHook::DigiXrosLeaveContinuation::cont`
+  --> code\digimon-engine\src\resume.rs:87:9
+   |
+87 |         cont: crate::game_actions::DigiXrosResumeContinuation,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::DigiXrosLeaveContinuation::cont` is reachable at visibility `pub`
+   |
+note: but type `game_actions::DigiXrosResumeContinuation` is only usable at visibility `pub(crate)`
+  --> code\digimon-engine\src\game_actions\mod.rs:93:1
+   |
+93 | pub(crate) struct DigiXrosResumeContinuation {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::CostTargetContext` is more private than the item `AfterSelectionHook::PlayCostContinuation::target`
+   --> code\digimon-engine\src\resume.rs:95:9
+    |
+ 95 |         target: crate::game_actions::CostTargetContext,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::target` is reachable at visibility `pub`
+    |
+note: but type `game_actions::CostTargetContext` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:323:1
+    |
+323 | pub(crate) struct CostTargetContext {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game::PendingWouldPlayOrigin` is more private than the item `AfterSelectionHook::PlayCostContinuation::origin`
+   --> code\digimon-engine\src\resume.rs:98:9
+    |
+ 98 |         origin: crate::game::PendingWouldPlayOrigin,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::origin` is reachable at visibility `pub`
+    |
+note: but type `game::PendingWouldPlayOrigin` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game\mod.rs:246:1
+    |
+246 | pub(crate) enum PendingWouldPlayOrigin {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `PlayCostAdjustments` is more private than the item `AfterSelectionHook::PlayCostContinuation::accumulated_reduction`
+   --> code\digimon-engine\src\resume.rs:100:9
+    |
+100 |         accumulated_reduction: crate::game_actions::PlayCostAdjustments,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::accumulated_reduction` is reachable at visibility `pub`
+    |
+note: but type `PlayCostAdjustments` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\play_cost_assignment.rs:4:1
+    |
+  4 | pub(crate) struct PlayCostAdjustments {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::CostReductionKey` is more private than the item `AfterSelectionHook::PlayCostContinuation::processed`
+   --> code\digimon-engine\src\resume.rs:101:9
+    |
+101 |         processed: Vec<crate::game_actions::CostReductionKey>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::processed` is reachable at visibility `pub`
+    |
+note: but type `game_actions::CostReductionKey` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:199:1
+    |
+199 | pub(crate) struct CostReductionKey {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionSource` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::source`
+   --> code\digimon-engine\src\resume.rs:109:9
+    |
+109 |         source: crate::game_actions::OptionSource,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::source` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionSource` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:56:1
+    |
+ 56 | pub(crate) enum OptionSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionPlayMode` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::mode`
+   --> code\digimon-engine\src\resume.rs:110:9
+    |
+110 |         mode: crate::game_actions::OptionPlayMode,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::mode` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionPlayMode` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:157:1
+    |
+157 | pub(crate) enum OptionPlayMode {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionCostPolicy` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::cost_policy`
+   --> code\digimon-engine\src\resume.rs:111:9
+    |
+111 |         cost_policy: crate::game_actions::OptionCostPolicy,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::cost_policy` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionCostPolicy` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:119:1
+    |
+119 | pub(crate) enum OptionCostPolicy {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `LinkPickState` is more private than the item `ResumeFrame::LinkPickStep::0`
+   --> code\digimon-engine\src\resume.rs:517:18
+    |
+517 |     LinkPickStep(crate::dsl_cards::step::link_cards::LinkPickState),
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::LinkPickStep::0` is reachable at visibility `pub`
+    |
+note: but type `LinkPickState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\step\link_cards.rs:225:1
+    |
+225 | pub(crate) struct LinkPickState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `ZoneCardPickState` is more private than the item `ResumeFrame::ZoneCardPickStep::0`
+   --> code\digimon-engine\src\resume.rs:521:22
+    |
+521 |     ZoneCardPickStep(crate::dsl_cards::step::zone_cards::ZoneCardPickState),
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::ZoneCardPickStep::0` is reachable at visibility `pub`
+    |
+note: but type `ZoneCardPickState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\step\zone_cards.rs:65:1
+    |
+ 65 | pub(crate) struct ZoneCardPickState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveCostChoiceState` is more private than the item `ResumeFrame::DigivolveCostChoice::0`
+   --> code\digimon-engine\src\resume.rs:527:25
+    |
+527 |     DigivolveCostChoice(crate::game_actions::digivolve::DigivolveCostChoiceState),
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveCostChoice::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveCostChoiceState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:61:1
+    |
+ 61 | pub(crate) struct DigivolveCostChoiceState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `EffectDigivolveCostChoiceState` is more private than the item `ResumeFrame::EffectDigivolveCostChoice::0`
+   --> code\digimon-engine\src\resume.rs:529:31
+    |
+529 |     EffectDigivolveCostChoice(crate::game_actions::digivolve::EffectDigivolveCostChoiceState),
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::EffectDigivolveCostChoice::0` is reachable at visibility `pub`
+    |
+note: but type `EffectDigivolveCostChoiceState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:73:1
+    |
+ 73 | pub(crate) struct EffectDigivolveCostChoiceState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `ResumeFrame::DigivolveReducerPrompt::0`
+   --> code\digimon-engine\src\resume.rs:535:28
+    |
+535 |     DigivolveReducerPrompt(crate::game_actions::digivolve::DigivolveReducerState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveReducerPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:143:1
+    |
+143 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `ResumeFrame::DigivolveReducerSuspend::0`
+   --> code\digimon-engine\src\resume.rs:539:29
+    |
+539 |     DigivolveReducerSuspend(crate::game_actions::digivolve::DigivolveReducerState),
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveReducerSuspend::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:143:1
+    |
+143 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `OptionModeSelectState` is more private than the item `ResumeFrame::OptionModeSelect::0`
+   --> code\digimon-engine\src\resume.rs:558:22
+    |
+558 |     OptionModeSelect(crate::game_actions::options::OptionModeSelectState),
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::OptionModeSelect::0` is reachable at visibility `pub`
+    |
+note: but type `OptionModeSelectState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\options.rs:29:1
+    |
+ 29 | pub(crate) struct OptionModeSelectState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayCancelContinuation` is more private than the item `ResumeFrame::DelayCancelAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:593:9
+     |
+ 593 |         continuation: crate::dsl_cards::lower_replacement::DelayCancelContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayCancelAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayCancelContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1384:1
+     |
+1384 | pub(crate) struct DelayCancelContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayCostContinuation` is more private than the item `ResumeFrame::DelayHandDigivolveAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:601:9
+     |
+ 601 |         continuation: crate::dsl_cards::lower_replacement::DelayCostContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayHandDigivolveAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayCostContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1390:1
+     |
+1390 | pub(crate) struct DelayCostContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayDnaCostContinuation` is more private than the item `ResumeFrame::DelayDnaAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:609:9
+     |
+ 609 |         continuation: crate::dsl_cards::lower_replacement::DelayDnaCostContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayDnaAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayDnaCostContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1970:1
+     |
+1970 | pub(crate) struct DelayDnaCostContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayHandDigivolveSelectionState` is more private than the item `ResumeFrame::DelayHandDigivolveSelection::0`
+    --> code\digimon-engine\src\resume.rs:615:9
+     |
+ 615 |         crate::dsl_cards::lower_replacement::DelayHandDigivolveSelectionState,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayHandDigivolveSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayHandDigivolveSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1401:1
+     |
+1401 | pub(crate) struct DelayHandDigivolveSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayDnaCardSelectionState` is more private than the item `ResumeFrame::DelayDnaCardSelection::0`
+    --> code\digimon-engine\src\resume.rs:619:27
+     |
+ 619 |     DelayDnaCardSelection(crate::dsl_cards::lower_replacement::DelayDnaCardSelectionState),
+     |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayDnaCardSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayDnaCardSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1996:1
+     |
+1996 | pub(crate) struct DelayDnaCardSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayFieldDnaContinuation` is more private than the item `ResumeFrame::DelayFieldDnaAfterPayment::continuation`
+    --> code\digimon-engine\src\resume.rs:623:9
+     |
+ 623 |         continuation: crate::dsl_cards::lower_replacement::DelayFieldDnaContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayFieldDnaAfterPayment::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayFieldDnaContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1601:1
+     |
+1601 | pub(crate) struct DelayFieldDnaContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayFieldDnaSelectionState` is more private than the item `ResumeFrame::DelayFieldDnaSelection::0`
+    --> code\digimon-engine\src\resume.rs:627:28
+     |
+ 627 |     DelayFieldDnaSelection(crate::dsl_cards::lower_replacement::DelayFieldDnaSelectionState),
+     |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayFieldDnaSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayFieldDnaSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1622:1
+     |
+1622 | pub(crate) struct DelayFieldDnaSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromHandContinuation` is more private than the item `ResumeFrame::DelayPlayFromHandAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:633:9
+     |
+ 633 |         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromHandContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromHandAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromHandContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1261:1
+     |
+1261 | pub(crate) struct DelayPlayFromHandContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromHandSelectionState` is more private than the item `ResumeFrame::DelayPlayFromHandSelection::0`
+    --> code\digimon-engine\src\resume.rs:640:9
+     |
+ 640 |         crate::dsl_cards::lower_replacement::DelayPlayFromHandSelectionState,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromHandSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromHandSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1279:1
+     |
+1279 | pub(crate) struct DelayPlayFromHandSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromUnionContinuation` is more private than the item `ResumeFrame::DelayPlayFromUnionAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:649:9
+     |
+ 649 |         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromUnionAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromUnionContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1369:1
+     |
+1369 | pub(crate) struct DelayPlayFromUnionContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayBodyContinuation` is more private than the item `ResumeFrame::DelayBodyAfterCost::continuation`
+   --> code\digimon-engine\src\resume.rs:657:9
+    |
+657 |         continuation: crate::dsl_cards::lower_delay::DelayBodyContinuation,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayBodyAfterCost::continuation` is reachable at visibility `pub`
+    |
+note: but type `DelayBodyContinuation` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\lower_delay.rs:226:1
+    |
+226 | pub(crate) struct DelayBodyContinuation {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `AppFuseHostSelectionState` is more private than the item `ResumeFrame::AppFuseHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:663:26
+    |
+663 |     AppFuseHostSelection(crate::effect_context::AppFuseHostSelectionState),
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::AppFuseHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `AppFuseHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\effect_context\action\app_fuse.rs:27:1
+    |
+ 27 | pub(crate) struct AppFuseHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `AppFuseResultSelectionState` is more private than the item `ResumeFrame::AppFuseResultSelection::0`
+   --> code\digimon-engine\src\resume.rs:666:28
+    |
+666 |     AppFuseResultSelection(crate::effect_context::AppFuseResultSelectionState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::AppFuseResultSelection::0` is reachable at visibility `pub`
+    |
+note: but type `AppFuseResultSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\effect_context\action\app_fuse.rs:40:1
+    |
+ 40 | pub(crate) struct AppFuseResultSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `ArtsDigivolveSelectionState` is more private than the item `ResumeFrame::ArtsDigivolveSelection::0`
+   --> code\digimon-engine\src\resume.rs:670:28
+    |
+670 |     ArtsDigivolveSelection(crate::game_actions::ArtsDigivolveSelectionState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::ArtsDigivolveSelection::0` is reachable at visibility `pub`
+    |
+note: but type `ArtsDigivolveSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:237:1
+    |
+237 | pub(crate) struct ArtsDigivolveSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `LinkOptionHostSelectionState` is more private than the item `ResumeFrame::LinkOptionHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:673:29
+    |
+673 |     LinkOptionHostSelection(crate::game_actions::LinkOptionHostSelectionState),
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::LinkOptionHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `LinkOptionHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:244:1
+    |
+244 | pub(crate) struct LinkOptionHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionHandLinkHostSelectionState` is more private than the item `ResumeFrame::OptionHandLinkHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:678:33
+    |
+678 |     OptionHandLinkHostSelection(crate::game_actions::OptionHandLinkHostSelectionState),
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::OptionHandLinkHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionHandLinkHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:259:1
+    |
+259 | pub(crate) struct OptionHandLinkHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::DigimonLinkHostSelectionState` is more private than the item `ResumeFrame::DigimonLinkHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:681:30
+    |
+681 |     DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
+    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigimonLinkHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::DigimonLinkHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:270:1
+    |
+270 | pub(crate) struct DigimonLinkHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::PlayFromHandCostReductionPromptState` is more private than the item `ResumeFrame::PlayFromHandCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:685:37
+    |
+685 |     PlayFromHandCostReductionPrompt(crate::game_actions::PlayFromHandCostReductionPromptState),
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::PlayFromHandCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::PlayFromHandCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:284:1
+    |
+284 | pub(crate) struct PlayFromHandCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::InteractiveDigivolveCostReductionPromptState` is more private than the item `ResumeFrame::InteractiveDigivolveCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:689:9
+    |
+689 |         crate::game_actions::InteractiveDigivolveCostReductionPromptState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::InteractiveDigivolveCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::InteractiveDigivolveCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:301:1
+    |
+301 | pub(crate) struct InteractiveDigivolveCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::InteractiveOptionUseCostReductionPromptState` is more private than the item `ResumeFrame::InteractiveOptionUseCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:694:9
+    |
+694 |         crate::game_actions::InteractiveOptionUseCostReductionPromptState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::InteractiveOptionUseCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::InteractiveOptionUseCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:312:1
+    |
+312 | pub(crate) struct InteractiveOptionUseCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `guard_carrier_can_be_deleted_for_cost` is never used
+   --> code\digimon-engine\src\cards\keyword_effects.rs:145:4
+    |
+145 | fn guard_carrier_can_be_deleted_for_cost(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `perm_matches_req` is never used
+    --> code\digimon-engine\src\dna_digivolve.rs:1605:4
+     |
+1605 | fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -> bool {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: fields `subject` and `subject_card` are never read
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1286:5
+     |
+1279 | pub(crate) struct DelayPlayFromHandSelectionState {
+     |                   ------------------------------- fields in this struct
+...
+1286 |     subject: ReplacementSubject,
+     |     ^^^^^^^
+1287 |     subject_card: Option<(PlayerId, CardHandle)>,
+     |     ^^^^^^^^^^^^
+     |
+     = note: `DelayPlayFromHandSelectionState` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: field `donor_card` is never read
+   --> code\digimon-engine\src\game\mod.rs:303:16
+    |
+298 | pub(crate) struct PendingFieldTopSourceMove {
+    |                   ------------------------- field in this struct
+...
+303 |     pub(crate) donor_card: crate::card_source::CardHandle,
+    |                ^^^^^^^^^^
+    |
+    = note: `PendingFieldTopSourceMove` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `0` is never read
+  --> code\digimon-engine\src\game\verification_cost_receipts.rs:11:10
+   |
+11 |     Live(usize),
+   |     ---- ^^^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `ReceiptRef` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+11 -     Live(usize),
+11 +     Live(()),
+   |
+
+warning: field `0` is never read
+  --> code\digimon-engine\src\game\verification_cost_receipts.rs:12:13
+   |
+12 |     Missing(u64),
+   |     ------- ^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `ReceiptRef` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+12 -     Missing(u64),
+12 +     Missing(()),
+   |
+
+warning: method `try_prompt_interactive_digivolve_cost_reducer` is never used
+   --> code\digimon-engine\src\game_actions\cost.rs:660:19
+    |
+ 24 | impl Game {
+    | --------- method in this implementation
+...
+660 |     pub(super) fn try_prompt_interactive_digivolve_cost_reducer(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `insert_source_into_permanent` is never used
+   --> code\digimon-engine\src\game_actions\helpers.rs:212:19
+    |
+ 11 | impl Game {
+    | --------- method in this implementation
+...
+212 |     pub(crate) fn insert_source_into_permanent(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `subject_controller_id` is never used
+   --> code\digimon-engine\src\replacement.rs:231:15
+    |
+231 | pub(crate) fn subject_controller_id(
+    |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `chooser` is never read
+   --> code\digimon-engine\src\resume.rs:894:16
+    |
+893 | pub struct TriggerOrderSelectionState {
+    |            -------------------------- field in this struct
+894 |     pub(crate) chooser: PlayerId,
+    |                ^^^^^^^
+    |
+    = note: `TriggerOrderSelectionState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `owner` is never read
+   --> code\digimon-engine\src\resume.rs:913:16
+    |
+910 | pub struct OptionTrashOrderState {
+    |            --------------------- field in this struct
+...
+913 |     pub(crate) owner: PlayerId,
+    |                ^^^^^
+    |
+    = note: `OptionTrashOrderState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `digimon-engine` (lib) generated 87 warnings (run `cargo fix --lib -p digimon-engine` to apply 37 suggestions)
+   Compiling dcgo-harness v0.1.0 (C:\Users\james\.codex\worktrees\examon-authoring\digimon-deck-list-builder-1\code\tools\dcgo-harness)
+    Finished `test` profile [unoptimized] target(s) in 48.95s
+     Running unittests src\lib.rs (C:/Users/james/.codex/visualizations/2026/10/10/01a1269c-a05f-7f21-978c-93246d80a989/cargo-clean\debug\deps\dcgo_harness-e33cf64557084c59.exe)
+
+running 628 tests
+test build::tests::stamp_fails_when_the_executable_is_missing ... ok
+test build::tests::ensure_fresh_reports_a_missing_artifact_clearly ... ok
+test build::tests::prepare_output_dir_creates_a_missing_directory ... ok
+test build::tests::ensure_fresh_rejects_an_artifact_modified_before_start ... ok
+test build::tests::ensure_fresh_accepts_an_artifact_modified_after_start ... ok
+test build::tests::prepare_output_dir_removes_a_stale_manifest_before_the_build ... ok
+test build::tests::unity_args_are_batchmode_and_quit ... ok
+test build::tests::ensure_fresh_rejects_when_nothing_in_the_output_dir_is_newer_than_start ... ok
+test build::tests::unity_args_log_to_stdout ... ok
+test build::tests::ensure_fresh_accepts_when_only_a_nested_dcgo_data_file_is_newer ... ok
+test build::tests::validate_output_outside_project_rejects_a_relative_output_resolving_inside ... ok
+test build::tests::unity_args_name_the_build_method_and_output ... ok
+test build::tests::validate_output_outside_project_rejects_a_case_only_difference ... ok
+test build::tests::validate_output_outside_project_falls_back_to_prefix_check_when_neither_exists ... ok
+test daemon::tests::a_fresh_heartbeat_is_healthy ... ok
+test build::tests::validate_output_outside_project_rejects_a_dir_inside_the_project ... ok
+test build::tests::validate_output_outside_project_accepts_a_relative_output_resolving_outside ... ok
+test build::tests::validate_output_outside_project_accepts_a_sibling_dir ... ok
+test build::tests::validate_output_outside_project_rejects_dot_dot_traversal_back_inside ... ok
+test daemon::tests::a_heartbeat_exactly_at_the_threshold_is_still_healthy ... ok
+test daemon::tests::an_old_heartbeat_is_stale ... ok
+test daemon::tests::no_heartbeat_file_is_missing_not_stale ... ok
+test daemon::tests::a_genuinely_absent_heartbeat_file_still_classifies_as_missing ... ok
+test daemon::tests::parse_csv_line_does_not_let_an_embedded_pid_digit_match_the_image_column ... ok
+test daemon::tests::parse_csv_line_handles_tasklist_style_quoted_fields ... ok
+test build::tests::validate_output_outside_project_rejects_the_project_dir_itself ... ok
+test daemon::tests::down_on_a_stopped_daemon_is_not_an_error ... ok
+test daemon::tests::a_future_dated_heartbeat_is_healthy_not_missing ... ok
+test daemon::tests::player_command_redirects_the_log_to_a_file_not_stdout ... ok
+test daemon::tests::pid_round_trips ... ok
+test build::tests::stamp_records_commit_hash_and_current_action_space ... ok
+test daemon::tests::a_corrupt_pid_file_reads_as_absent ... ok
+test daemon::tests::up_refuses_a_build_with_a_stale_action_space ... ok
+test daemon::tests::up_reports_a_missing_executable_before_launching ... ok
+test daemon::tests::pid_is_image_is_false_for_a_dead_pid ... ok
+test daemon::tests::down_refuses_to_kill_when_the_image_name_is_missing ... ok
+test daemon::tests::up_relaunches_when_the_recorded_pid_is_a_different_image ... ok
+test daemon::tests::pid_is_image_is_true_for_the_actual_image_and_false_for_another ... ok
+test exam::adapter::forced_main_pass_tests::explicit_pass_codec_roundtrips_and_rejects_unknown_fields ... ok
+test exam::adapter::dna_wire_order_rule_tests::printed_order_is_native_wire_top_to_bottom_order ... ok
+test exam::adapter::forced_main_pass_tests::explicit_forced_main_pass_has_zero_wire_rows ... ok
+test exam::adapter::forced_main_pass_tests::ordinary_pass_stays_shared_even_when_forced ... ok
+test exam::adapter::dna_wire_order_rule_tests::reversed_authored_picks_still_emit_printed_top_to_bottom_order ... ok
+test exam::adapter::forced_main_pass_tests::pass_with_another_legal_action_cannot_be_hidden ... ok
+test exam::adapter::forced_main_pass_tests::wrong_actor_and_nonmain_phases_are_rejected ... ok
+test exam::adapter::forced_main_pass_tests::unsupported_identity_is_not_evidence_of_no_actions ... ok
+test exam::adapter::forced_main_pass_tests::pending_selection_is_not_a_forced_main_pass ... ok
+test exam::adapter::native_play_tracking::tests::failed_declaration_label_cannot_acquire_next_native_play ... ok
+test exam::adapter::native_attack_opaque_tests::native_attack_opaque_endpoint_remains_legal_offline_but_marks_live_unsupported ... ok
+test exam::adapter::native_attack_endpoint_tests::native_attack_endpoints_preserve_each_play_reference_before_declaration ... ok
+test exam::adapter::native_play_tracking::tests::two_identical_plays_bind_actual_distinct_incarnations_and_clones ... ok
+test exam::adapter::native_play_tracking::tests::unassociated_entry_is_not_guessed_from_identity ... ok
+test exam::adapter::native_play_tracking::parked_native_tests::native_reference_survives_would_play_park_and_cancellation_cannot_bind_later_retry ... ok
+test exam::adapter::native_play_tracking::wire_binding_tests::exact_requested_target_gets_its_original_native_reference ... ok
+test exam::adapter::physical_capture_controls::descriptor_actor_one_uses_absolute_seat_not_viewpoint ... ok
+test exam::adapter::physical_capture_controls::precommit_descriptor_has_no_attack_roles ... ok
+test exam::adapter::physical_capture_controls::blocked_descriptor_follows_effective_target_only ... ok
+test exam::adapter::physical_capture_controls::two_link_and_source_orders_are_preserved ... ok
+test exam::adapter::physical_permanent_wire_tests::explicit_second_twin_keeps_attack_target_discriminator_on_wire ... ok
+test exam::adapter::physical_permanent_wire_tests::batch_descriptors_preserve_both_duplicate_objects_and_owner ... ok
+test exam::adapter::physical_permanent_wire_tests::descriptors_snapshot_sources_and_clone_without_exposing_native_handles ... ok
+test exam::adapter::candidate_expectation_regression_tests::candidate_guard_compares_multiplicity_not_just_card_identity_sets ... ok
+test exam::adapter::physical_permanent_wire_tests::facedown_sources_expose_only_public_position_not_hidden_identity ... ok
+test exam::adapter::candidate_expectation_regression_tests::candidate_guard_is_enforced_without_an_expect_prompt_field ... ok
+test exam::adapter::physical_permanent_wire_tests::identity_only_card_selection_remains_legacy ... ok
+test exam::adapter::physical_permanent_wire_tests::tokens_refuse_live_wire_even_when_facedown ... ok
+test exam::adapter::physical_permanent_wire_tests::opaque_faceup_sources_refuse_live_wire_but_preserve_offline_target ... ok
+test exam::adapter::tests::a_dna_step_folds_to_one_row_count_not_one_per_lowered_entry ... ok
+test exam::adapter::tests::a_keyword_less_branch_is_reachable_only_positionally ... ok
+test exam::adapter::tests::a_keyword_that_appears_twice_on_one_card_refuses_rather_than_guessing ... ok
+test exam::adapter::player_target_tests::symbolic_player_target_rejects_non_target_prompt_and_mixed_targets ... ok
+test exam::adapter::player_target_tests::symbolic_player_target_discriminates_player_from_real_defender_and_emits_minus_one ... ok
+test exam::adapter::tests::a_nonzero_ordinal_on_a_single_candidate_is_a_finding_not_a_round_down ... ok
+test exam::adapter::tests::a_play_cost_budget_maps_by_its_candidate_zone ... ok
+test exam::adapter::candidate_expectation_regression_tests::candidate_guard_rejects_an_extra_same_color_illegal_evolution ... ok
+test exam::adapter::tests::a_material_declaration_is_never_mapped_onto_select_card_effect ... ok
+test exam::adapter::tests::a_trigger_names_the_branch_that_no_ordinal_could_name_portably ... ok
+test exam::adapter::tests::a_trigger_no_branch_carries_is_a_finding_not_a_fallthrough ... ok
+test exam::adapter::tests::a_trigger_on_the_wrong_card_refuses_and_names_both_halves ... ok
+test exam::adapter::tests::a_trigger_order_prompt_maps_by_its_candidate_count ... ok
+test exam::adapter::tests::a_material_prompt_with_no_digivolution_source_frame_stays_unasserted ... ok
+test exam::adapter::tests::a_cards_pick_without_an_ordinal_still_lowers_the_old_way ... ok
+test exam::adapter::tests::a_digivolve_carries_the_targets_identity_not_just_its_slot ... ok
+test exam::adapter::tests::a_field_action_writes_one_wire_row_and_keeps_its_action_id ... ok
+test exam::adapter::candidate_expectation_regression_tests::candidate_guard_accepts_the_exact_legal_scramble_hand_in_both_colors ... ok
+test exam::adapter::tests::a_select_step_lowers_through_a_real_selection ... ok
+test exam::adapter::tests::an_absent_identity_refuses_rather_than_taking_any_candidate ... ok
+test exam::adapter::tests::a_select_step_with_no_live_prompt_is_an_allowed_auto_resolve ... ok
+test exam::adapter::tests::a_wrong_seat_hatch_refuses_to_lower ... ok
+test exam::adapter::tests::a_wrong_expect_prompt_on_a_select_step_fails_lowering ... ok
+test exam::adapter::tests::a_wrong_seat_pass_refuses_to_lower ... ok
+test exam::adapter::tests::an_ordinal_is_a_position_among_that_cards_candidates_not_a_list_index ... ok
+test exam::adapter::tests::an_out_of_range_ordinal_refuses_rather_than_wrapping ... ok
+test exam::adapter::tests::adapter_default_policy_is_trust ... ok
+test exam::adapter::tests::adapter_builds_a_game_and_lowers_the_line ... ok
+test exam::adapter::tests::each_lowered_step_reports_how_many_wire_rows_it_writes ... ok
+test exam::adapter::tests::duplicate_candidates_require_an_ordinal_and_name_the_valid_range ... ok
+test exam::adapter::tests::an_illegal_line_fails_to_build_not_at_run_time ... ok
+test exam::adapter::tests::is_driver_trailing_pass_guards_against_scripted_decline ... ok
+test exam::adapter::tests::keyword_display_name_drops_the_payload_but_keeps_the_name ... ok
+test exam::adapter::tests::actions_that_name_no_battle_permanent_stay_plain ... ok
+test exam::adapter::tests::one_candidate_resolves_with_or_without_ordinal_zero ... ok
+test exam::adapter::tests::ours_present_is_false_only_for_a_wholly_dcgo_only_step ... ok
+test exam::adapter::tests::an_ambiguous_hand_play_suggests_pinning_a_hand_slot ... ok
+test exam::adapter::tests::an_attack_carries_the_attackers_identity_not_just_its_slot ... ok
+test exam::adapter::tests::the_optional_gate_fold_still_precedes_the_material_mapping ... ok
+test exam::adapter::tests::trigger_matching_is_case_and_bracket_insensitive ... ok
+test exam::adapter::tests::without_a_trigger_the_positional_path_is_untouched ... ok
+test exam::assertions::legal_option_observation_tests::legal_option_measurement_different_legal_sets_diverge_on_equal_boards ... ok
+test exam::assertions::legal_option_observation_tests::legal_option_measurement_measured_empty_satisfies_empty_request ... ok
+test exam::assertions::legal_option_observation_tests::legal_option_measurement_missing_is_not_an_empty_list ... ok
+test exam::assertions::legal_option_observation_tests::legal_option_measurement_normalizes_order_but_preserves_duplicates ... ok
+test exam::assertions::ruling_tests::a_permanent_named_by_card_id_alone_matches_its_entry ... ok
+test exam::assertions::ruling_tests::a_phase_asserted_while_a_selection_is_open_is_named_unobservable ... ok
+test exam::assertions::ruling_tests::an_authored_permanent_claims_only_the_keys_it_names ... ok
+test exam::assertions::ruling_tests::cross_block_movement_continuity_rejects_missing_reset_and_repeated_anchors ... ok
+test exam::assertions::ruling_tests::cross_block_movement_failures_stay_scoped_to_the_claimed_watch ... ok
+test exam::assertions::ruling_tests::full_entries_still_compare_as_before ... ok
+test exam::assertions::ruling_tests::movement_baseline_can_span_assert_and_ruling_blocks ... ok
+test exam::assertions::ruling_tests::no_ruling_means_no_third_leg ... ok
+test exam::assertions::ruling_tests::projection_equality_excludes_native_movement_audit_only ... ok
+test exam::assertions::ruling_tests::strings_compare_case_insensitively_for_phase_names ... ok
+test exam::assertions::ruling_tests::the_ruling_does_not_leak_into_the_assert_block ... ok
+test exam::assertions::ruling_tests::the_ruling_is_checked_with_the_assert_checker ... ok
+test exam::assertions::selection_candidate_observation_tests::movement_interval_requires_prior_binding_and_rejects_reset ... ok
+test exam::assertions::selection_candidate_observation_tests::movement_missing_is_not_zero_and_exact_lower_order_is_required ... ok
+test exam::assertions::selection_candidate_observation_tests::native_observation_anchor_survives_scenario_step_remapping ... ok
+test exam::assertions::selection_candidate_observation_tests::selection_candidates_compare_as_exact_multisets ... ok
+test exam::assertions::selection_candidate_observation_tests::selection_candidates_equal_board_but_different_legal_choices_diverge ... ok
+test exam::assertions::selection_candidate_observation_tests::selection_candidates_exact_observed_legal_set_satisfies_publisher_ruling ... ok
+test exam::assertions::selection_candidate_observation_tests::selection_candidates_extra_illegal_choice_contradicts_ruling_with_same_memory_and_board ... ok
+test exam::assertions::selection_candidate_observation_tests::selection_candidates_missing_is_not_an_observed_empty_set_or_null ... ok
+test exam::assertions::selection_decline_observation_tests::selection_decline_observation_actual_optional_cannot_satisfy_mandatory ... ok
+test exam::assertions::selection_decline_observation_tests::selection_decline_observation_equal_boards_different_capability_diverge ... ok
+test exam::assertions::selection_decline_observation_tests::selection_decline_observation_measured_false_proves_mandatory_pick ... ok
+test exam::assertions::selection_decline_observation_tests::selection_decline_observation_measured_true_proves_optional_pick ... ok
+test exam::assertions::selection_decline_observation_tests::selection_decline_observation_missing_never_satisfies_false_or_null ... ok
+test exam::backfill::tests::a_trailing_row_beyond_the_compared_steps_is_not_written ... ok
+test exam::backfill::tests::a_value_the_sim_only_replay_cannot_reproduce_is_not_asserted ... ok
+test exam::backfill::tests::backfill_does_not_assert_security_contents ... ok
+test exam::backfill::tests::backfill_is_idempotent ... ok
+test exam::backfill::tests::backfill_keeps_the_scenario_text_and_only_adds_the_assert_block ... ok
+test exam::backfill::tests::backfill_preserves_hand_authored_assertions_it_did_not_generate ... ok
+test exam::backfill::tests::backfill_refuses_an_inline_assert_value_with_a_readable_message ... ok
+test exam::backfill::tests::backfill_refuses_when_the_diff_was_not_clean ... ok
+test exam::backfill::tests::backfill_refuses_when_the_rows_do_not_match_the_compared_count ... ok
+test exam::backfill::tests::backfill_writes_assertions_for_every_compared_step ... ok
+test exam::backfill::tests::legal_option_measurement_backfill_requires_both_observations ... ok
+test exam::backfill::tests::nothing_the_sim_replay_reproduces_is_a_refusal_not_an_empty_block ... ok
+test exam::backfill::tests::only_the_rows_dcgo_observed_are_written_when_some_of_ours_had_no_partner ... ok
+test exam::backfill::tests::phase_is_left_out_wherever_the_differ_did_not_compare_it ... ok
+test exam::backfill::tests::selection_candidates_backfill_preserves_multiset_and_rejects_missing ... ok
+test exam::backfill::tests::selection_decline_observation_backfill_preserves_false_and_rejects_missing ... ok
+test exam::dcgo_pool::tests::a_card_from_a_set_dcgo_does_not_have_is_absent ... ok
+test exam::dcgo_pool::tests::a_card_in_an_existing_set_but_with_no_script_is_absent ... ok
+test exam::dcgo_pool::tests::an_empty_placeholder_checkout_fails_loudly_instead_of_reporting_unavailable - should panic ... ok
+test exam::dcgo_pool::tests::finds_a_card_dcgo_implements ... ok
+test exam::dcgo_pool::tests::the_underscore_naming_convention_is_honored ... ok
+test exam::adapter::tests::every_other_kind_defers_to_the_payload_less_mapping ... ok
+test exam::adapter::tests::an_ordinal_over_a_non_trigger_prompt_fails_lowering ... ok
+test exam::adapter::tests::an_unanswered_selection_fails_lowering_loudly ... ok
+test exam::differ::tests::a_combat_interrupt_phase_on_our_side_is_representation ... ok
+test exam::differ::tests::a_dcgo_trace_longer_than_the_line_predicts_is_never_clean ... ok
+test exam::differ::tests::a_dcgo_trace_shorter_than_the_line_predicts_is_never_clean ... ok
+test exam::differ::tests::a_diff_names_the_field_path_and_both_values ... ok
+test exam::differ::tests::a_dropped_intermediate_row_stays_in_the_denominator ... ok
+test exam::differ::tests::a_field_of_a_different_size_reports_the_shape_once ... ok
+test exam::differ::tests::a_real_phase_mismatch_still_diffs ... ok
+test exam::differ::tests::a_selection_phase_on_our_side_is_representation_not_a_divergence ... ok
+test exam::differ::tests::a_sim_only_row_is_named_in_the_denominator_too ... ok
+test exam::differ::tests::a_truncated_run_never_renders_like_a_clean_one ... ok
+test exam::differ::tests::alignment_is_by_step_index_not_by_position ... ok
+test exam::differ::tests::an_all_one_row_pairing_reproduces_plain_diff_exactly ... ok
+test exam::differ::tests::an_unmeasured_keyword_list_is_never_a_divergence ... ok
+test exam::differ::tests::board_state_diffs_name_their_path ... ok
+test exam::differ::tests::board_state_still_diffs_underneath_the_end_of_turn_pair ... ok
+test exam::differ::tests::diff_paired_compares_our_row_against_the_first_dcgo_row_of_its_step ... ok
+test exam::differ::tests::duplicate_step_ids_can_never_read_as_clean ... ok
+test exam::differ::tests::empty_dcgo_trace_is_not_a_pass ... ok
+test exam::differ::tests::identical_traces_are_clean ... ok
+test exam::differ::tests::our_end_of_turn_park_against_dcgos_main_is_representation ... ok
+test exam::differ::tests::render_verbose_marks_the_lead_and_labels_the_downstream_rows ... ok
+test exam::differ::tests::render_verbose_of_a_clean_report_says_clean ... ok
+test exam::differ::tests::render_verbose_prints_every_divergence_not_just_the_lead ... ok
+test exam::differ::tests::the_end_of_turn_pair_does_not_suppress_the_other_direction ... ok
+test exam::differ::tests::the_end_of_turn_pair_is_a_pair_not_a_blanket_suppression ... ok
+test exam::differ::tests::the_first_divergence_leads_and_the_rest_are_downstream ... ok
+test exam::differ::tests::the_pairing_never_hides_a_real_divergence ... ok
+test exam::differ::tests::turn_still_compares_independently_at_the_end_of_turn_gate ... ok
+test exam::differ::tests::unequal_lengths_report_the_full_denominator ... ok
+test exam::drafter::tests::observed_state_is_rendered_and_its_absence_is_said_out_loud ... ok
+test exam::drafter::tests::output_is_a_compilable_test_shape ... ok
+test exam::drafter::tests::the_draft_is_returned_never_written_to_disk ... ok
+test exam::drafter::tests::the_header_records_provenance_and_does_not_claim_correctness ... ok
+test exam::job_spec::emit_job_tests::a_deck_with_no_resolvable_eggs_is_refused ... ok
+test exam::job_spec::emit_job_tests::a_desynchronized_lowering_is_refused ... ok
+test exam::job_spec::emit_job_tests::a_field_action_carries_identities_beside_its_action_id ... ok
+test exam::job_spec::emit_job_tests::a_folded_pick_carries_the_expectations_on_the_pick_row_not_the_gate ... ok
+test exam::job_spec::emit_job_tests::a_plain_action_wears_no_field_identities ... ok
+test exam::job_spec::emit_job_tests::absent_expectations_omit_their_keys ... ok
+test exam::job_spec::emit_job_tests::an_absent_trigger_is_omitted_from_the_wire ... ok
+test exam::job_spec::emit_job_tests::an_action_step_wears_no_ordinal ... ok
+test exam::job_spec::emit_job_tests::deck_is_reversed_back_to_top_first_with_eggs_appended ... ok
+test exam::job_spec::emit_job_tests::end_of_turn_gate_maps_to_optional_skill_rows ... ok
+test exam::job_spec::emit_job_tests::expect_count_and_expect_candidates_ride_the_wire ... ok
+test exam::job_spec::emit_job_tests::inputs_carry_actor_action_id_and_expect_prompt ... ok
+test exam::job_spec::emit_job_tests::job_identity_fields_come_from_the_scenario ... ok
+test exam::job_spec::emit_job_tests::native_attack_exact_endpoint_wire_preserves_labels_without_selection_shape ... ok
+test exam::job_spec::emit_job_tests::native_attack_presence_exact_for_field_security_and_legacy_rows ... ok
+test exam::job_spec::emit_job_tests::native_attack_presence_malformed_descriptor_refuses_live_emission ... ok
+test exam::job_spec::emit_job_tests::native_attack_presence_refuses_declared_missing_and_undeclared_payloads ... ok
+test exam::job_spec::emit_job_tests::native_attack_unknown_public_endpoint_refuses_live_without_id_fallback ... ok
+test exam::job_spec::emit_job_tests::native_provenance_reference_uses_exact_job_json_wire_names ... ok
+test exam::job_spec::emit_job_tests::optional_gate_fold_splits_the_wire_rows ... ok
+test exam::job_spec::emit_job_tests::ordinal_zero_is_written_and_an_absent_ordinal_is_omitted ... ok
+test exam::job_spec::emit_job_tests::physical_descriptor_survives_plain_and_optional_fold_without_card_id_fallback ... ok
+test exam::job_spec::emit_job_tests::physical_unsupported_target_refuses_live_job_without_identity_fallback ... ok
+test exam::job_spec::emit_job_tests::select_card_ids_ride_the_wire_and_action_id_is_omitted ... ok
+test exam::job_spec::emit_job_tests::select_ordinal_rides_the_wire_under_the_csharp_field_name ... ok
+test exam::job_spec::emit_job_tests::select_trigger_rides_the_wire_under_the_csharp_field_name ... ok
+test exam::job_spec::emit_job_tests::select_value_and_bool_and_cancel_use_the_csharp_field_names ... ok
+test exam::job_spec::emit_job_tests::serialized_job_matches_the_golden_field_names ... ok
+test exam::job_spec::emit_job_tests::wire_row_counts_match_dcgo_wire_rows ... ok
+test exam::job_spec::emit_job_tests::wire_v4_attack_descriptor_and_legacy_id_both_emit_without_downgrade ... ok
+test exam::adapter::tests::each_select_step_records_the_card_that_raised_its_prompt ... ok
+test exam::job_spec::emit_job_tests::wire_v4_mixed_physical_and_identity_payload_refuses_before_emission ... ok
+test exam::job_spec::emit_job_tests::wire_v4_unknown_selector_refuses_before_live_emission ... ok
+test exam::adapter::tests::session_runs_the_line_to_completion ... ok
+test exam::ledger::tests::an_expired_claim_does_not_block ... ok
+test exam::ledger::tests::a_card_held_by_another_live_job_is_not_granted ... ok
+test exam::ledger::tests::append_creates_parent_directories ... ok
+test exam::job_spec::emit_job_tests::wire_v4_dp_presence_is_explicit_for_digimon_and_tamer ... ok
+test exam::ledger::tests::claiming_free_cards_grants_all_of_them ... ok
+test exam::ledger::tests::read_attempts_missing_file_is_empty_not_an_error ... ok
+test exam::ledger::tests::append_then_read_round_trips ... ok
+test exam::ledger::tests::each_attempt_is_exactly_one_line ... ok
+test exam::ledger::tests::reclaiming_your_own_card_is_idempotent ... ok
+test exam::ledger::tests::read_claims_hides_expired_ones ... ok
+test exam::ledger::tests::read_attempts_names_the_line_it_could_not_parse ... ok
+test exam::ledger::tests::release_only_removes_your_own_claims ... ok
+test exam::ledger::tests::reclaiming_your_own_expired_claim_succeeds ... ok
+test exam::adapter::tests::native_hand_plays_carry_distinct_explicit_provenance_labels ... ok
+test exam::adapter::tests::the_adapter_reports_one_wire_row_count_per_scenario_step ... ok
+test exam::lower::tests::a_field_main_lowers_to_a_field_effect_action_in_the_mask ... ok
+test exam::lower::tests::a_field_main_on_the_wrong_slot_does_not_match ... ok
+test exam::lower::tests::a_field_main_does_not_match_a_play_from_hand ... ok
+test exam::lower::tests::a_link_step_from_hand_does_not_match_a_plain_hand_card ... ok
+test exam::lower::tests::a_link_step_from_hand_lowers_to_the_hand_slots_effect_bit ... ok
+test exam::lower::tests::a_link_step_on_a_card_without_a_link_condition_does_not_match ... ok
+test exam::lower::tests::a_link_step_lowers_to_the_link_sub_slot_of_its_permanent ... ok
+test exam::lower::tests::a_main_step_never_lowers_to_the_link_sub_slot ... ok
+test exam::deckbook::book_for_tests::the_book_beside_the_scenario_wins ... ok
+test exam::lower::tests::a_pinned_hand_slot_disambiguates_duplicate_copies ... ok
+test exam::lower::tests::duplicate_copies_in_hand_are_ambiguous_not_arbitrary ... ok
+test exam::lower::tests::every_lowered_id_is_set_in_the_mask ... ok
+test exam::lower::tests::zone_ref_matches_pinned_and_unpinned ... ok
+test exam::oracle::mismatch_tests::an_incomplete_selection_parses_as_that_prompt_on_both_sides ... ok
+test exam::oracle::mismatch_tests::dcgos_mismatch_messages_parse ... ok
+test exam::oracle::mismatch_tests::rows_map_to_the_scenario_step_that_put_them_on_the_wire ... ok
+test exam::lower::tests::move_before_the_digimon_is_level_3_reports_what_was_legal ... ok
+test exam::lower::tests::move_from_a_non_breeding_zone_does_not_match ... ok
+test exam::lower::tests::move_from_breeding_lowers_when_pinned_and_when_bare ... ok
+test exam::lower::tests::pass_lowers_to_a_legal_action ... ok
+test exam::deckbook::book_for_tests::no_book_naming_the_decks_is_none ... ok
+test exam::deckbook::book_for_tests::a_book_elsewhere_in_the_exam_tree_is_found_when_none_sits_beside_it ... ok
+test exam::lower::tests::unmatchable_intent_lists_what_was_legal ... ok
+test exam::oracle::oracle_exam_tests::no_go_refuses_before_submitting ... ok
+test exam::oracle::oracle_exam_tests::no_live_player_refuses_before_submitting ... ok
+test exam::oracle::tests::a_claim_past_its_limit_that_the_heartbeat_still_names_is_a_stall ... ok
+test exam::oracle::tests::a_failed_outcome_is_returned_with_its_message ... ok
+test exam::oracle::oracle_exam_tests::a_quarantined_job_is_unmeasured_with_the_reason ... ok
+test exam::oracle::tests::a_job_quarantined_into_failed_is_an_error_naming_it ... ok
+test exam::oracle::tests::a_previous_submission_still_claimed_with_a_different_spec_is_refused_not_adopted ... ok
+test exam::oracle::oracle_exam_tests::a_failed_job_with_no_divergence_leaves_the_clause_unmeasured_and_unrecorded ... ok
+test exam::oracle::oracle_exam_tests::a_clean_run_confirms_records_provenance_and_backfills ... ok
+test exam::oracle::oracle_exam_tests::a_timeout_is_unmeasured_with_the_reason ... ok
+test exam::oracle::tests::a_previous_submission_still_claimed_with_the_same_spec_is_adopted ... ok
+test exam::oracle::tests::a_stall_is_also_caught_while_waiting_on_a_fresh_submission ... ok
+test exam::oracle::tests::a_result_caught_mid_write_is_retried_not_misread ... ok
+test exam::oracle::tests::an_empty_recording_path_yields_no_sidecar ... ok
+test exam::oracle::tests::a_timed_out_job_no_player_claimed_is_withdrawn ... ok
+test exam::oracle::verdict_event_tests::a_clean_diff_confirms_every_covered_clause ... ok
+test exam::oracle::verdict_event_tests::a_confirmed_run_whose_verdict_was_refused_is_not_a_clean_confirmation ... ok
+test exam::oracle::verdict_event_tests::a_divergence_is_diverged_with_the_reports_lead_line ... ok
+test exam::oracle::verdict_event_tests::an_interaction_is_filed_under_its_id_instead_of_any_clause ... ok
+test exam::oracle::tests::a_timeout_names_the_other_job_the_player_is_stalled_on ... ok
+test exam::oracle::verdict_event_tests::contradicting_the_ruling_is_diverged_even_when_dcgo_agrees ... ok
+test exam::oracle::verdict_event_tests::the_backfill_line_names_what_it_left_out_readably ... ok
+test exam::oracle::verdict_event_tests::an_interaction_without_a_denominator_is_refused_by_name ... ok
+test exam::oracle::verdict_event_tests::the_three_way_legs_serialize_only_when_measured ... ok
+test exam::oracle::verdict_event_tests::the_recorder_files_known_clauses_and_refuses_orphans ... ok
+test exam::oracle_diff::legal_option_measurement_oracle_tests::legal_option_measurement_requested_missing_either_side_fails_closed ... ok
+test exam::oracle_diff::legal_option_measurement_oracle_tests::legal_option_measurement_requested_unpaired_row_is_not_confirmable ... ok
+test exam::oracle_diff::legal_option_measurement_oracle_tests::legal_option_measurement_unrequested_new_and_old_sidecars_stay_compatible ... ok
+test exam::oracle_diff::selection_candidate_oracle_tests::selection_candidates_requests_from_assert_or_ruling_require_both_measurements ... ok
+test exam::oracle_diff::movement_native_anchor_tests::two_mulligans_and_folded_wire_rows_preserve_native_interval ... ok
+test exam::oracle_diff::selection_candidate_oracle_tests::selection_candidates_unrequested_fields_are_stripped_and_unpaired_requests_fail ... ok
+test exam::oracle_diff::selection_decline_observation_oracle_tests::selection_decline_observation_requested_measurements_survive_pairing ... ok
+test exam::oracle_diff::selection_decline_observation_oracle_tests::requested_measurements_reject_malformed_pairings_before_mutating_rows ... ok
+test exam::oracle_diff::selection_decline_observation_oracle_tests::selection_decline_observation_requested_unpaired_row_fails_closed ... ok
+test exam::oracle_diff::selection_decline_observation_oracle_tests::selection_decline_observation_unrequested_old_sidecar_stays_compatible ... ok
+test exam::oracle_diff::selection_decline_observation_oracle_tests::selection_decline_observation_requested_missing_either_side_fails_closed ... ok
+test exam::oracle::tests::a_stale_result_is_removed_before_submitting ... ok
+test exam::oracle::tests::an_orphaned_claim_is_set_aside_and_the_job_resubmitted ... ok
+test exam::oracle_diff::tests::decks_come_from_the_recordings_own_shuffle_reversed_with_eggs_last ... ok
+test exam::oracle::tests::completed_result_yields_the_sidecar_beside_the_recording ... ok
+test exam::oracle_diff::tests::a_sidecar_with_no_recording_beside_it_is_named ... ok
+test exam::oracle_diff::tests::a_clean_recorded_run_diffs_clean ... ok
+test exam::projection::legal_option_measurement_runtime_tests::legal_option_measurement_never_samples_selection_even_when_phase_is_main ... ok
+test exam::projection::legal_option_measurement_runtime_tests::legal_option_measurement_requires_opt_in_and_follows_actual_turn_seat ... ok
+test exam::projection::legal_option_measurement_runtime_tests::legal_option_measurement_uses_mask_for_breeding_color_memory_and_prohibition ... ok
+test exam::projection::selection_candidate_runtime_tests::selection_candidates_runtime_empty_is_measured_but_invalid_or_unsupported_is_unknown ... ok
+test exam::projection::selection_candidate_runtime_tests::selection_candidates_runtime_missing_or_empty_card_identity_is_unknown ... ok
+test exam::projection::selection_candidate_runtime_tests::selection_candidates_runtime_not_requested_or_game_over_is_unknown ... ok
+test exam::oracle::oracle_exam_tests::a_diverged_run_is_recorded_diverged_and_never_backfilled ... ok
+test exam::oracle::oracle_exam_tests::a_failed_job_that_diverged_before_it_stopped_is_diverged_with_dcgos_message ... ok
+test exam::oracle::oracle_exam_tests::a_prompt_mismatch_names_the_scenario_step_not_dcgos_row ... ok
+test exam::projection::selection_candidate_runtime_tests::selection_candidates_runtime_preserves_copies_excludes_unoffered_card_and_pass ... ok
+test exam::oracle_diff::tests::a_diverged_recorded_run_reports_its_first_divergence ... ok
+test exam::projection::selection_candidate_runtime_tests::selection_candidates_runtime_uses_zone_owner_and_selecting_actor ... ok
+test exam::projection::selection_decline_observation_runtime_tests::selection_decline_observation_runtime_follows_selecting_actor_not_turn_player ... ok
+test exam::projection::selection_decline_observation_runtime_tests::selection_decline_observation_runtime_requires_live_choice_and_opt_in ... ok
+test exam::projection::selection_decline_observation_runtime_tests::selection_decline_observation_runtime_uses_actual_pass_mask ... ok
+test exam::projection::source_candidate_runtime_tests::source_candidates_runtime_pass_is_not_a_source ... ok
+test exam::projection::tests::a_malformed_row_fails_loudly_rather_than_being_skipped ... ok
+test exam::projection::tests::a_one_row_per_step_line_pairs_positionally ... ok
+test exam::projection::tests::a_short_dcgo_trace_leaves_our_rows_unpaired_rather_than_inventing_partners ... ok
+test exam::projection::tests::a_sim_only_step_drops_our_row_and_consumes_no_dcgo_row ... ok
+test exam::projection::tests::a_two_row_step_pairs_with_its_first_row_and_drops_the_intermediate ... ok
+test exam::projection::tests::align_drops_leading_mulligan_rows_and_reindexes ... ok
+test exam::projection::tests::align_is_a_no_op_without_mulligan_rows ... ok
+test exam::projection::tests::duplicate_counts_still_matter ... ok
+test exam::projection::tests::from_game_projects_a_real_engine_state ... ok
+test exam::projection::tests::hand_and_trash_compare_as_multisets_not_sequences ... ok
+test exam::projection::tests::intermediate_rows_are_only_counted_when_they_exist ... ok
+test exam::projection::tests::parse_sidecar_reads_every_row ... ok
+test exam::projection::tests::parses_a_sidecar_row ... ok
+test exam::projection::tests::suspended_is_semantics_and_must_differ ... ok
+test exam::projection::tests::unmeasured_keywords_are_a_wildcard_not_an_empty_set ... ok
+test exam::projection::source_candidate_runtime_tests::source_candidates_runtime_clone_preserves_physical_snapshot ... ok
+test exam::projection::source_candidate_runtime_tests::source_candidates_runtime_unknown_identity_is_not_empty ... ok
+test exam::projection::source_candidate_runtime_tests::source_candidates_runtime_stale_physical_source_is_unknown ... ok
+test exam::scenario::dcgo_only_tests::dcgo_only_alone_is_still_no_answer_form ... ok
+test exam::scenario::dcgo_only_tests::dcgo_only_parses_into_its_own_variant ... ok
+test exam::scenario::dcgo_only_tests::dcgo_only_round_trips ... ok
+test exam::scenario::dcgo_only_tests::without_the_flag_the_step_is_a_normal_select ... ok
+test exam::scenario::interaction_tests::a_combo_interaction_is_accepted_without_a_denominator_shape ... ok
+test exam::scenario::interaction_tests::a_legacy_scenario_covers_exactly_its_clause ... ok
+test exam::scenario::interaction_tests::a_legacy_scenario_serializes_without_the_new_keys ... ok
+test exam::scenario::interaction_tests::a_negative_probe_must_be_kind_negative_and_vice_versa ... ok
+test exam::scenario::interaction_tests::a_probe_must_be_on_a_covered_clause ... ok
+test exam::scenario::interaction_tests::a_qa_interaction_parses ... ok
+test exam::scenario::interaction_tests::an_interaction_block_rejects_unknown_keys_and_sources ... ok
+test exam::scenario::interaction_tests::an_interaction_id_must_carry_its_sources_prefix ... ok
+test exam::scenario::interaction_tests::covers_may_name_several_clauses_across_cards ... ok
+test exam::scenario::interaction_tests::covers_must_include_the_primary_clause ... ok
+test exam::scenario::interaction_tests::covers_rejects_malformed_duplicate_and_empty_lists ... ok
+test exam::projection::source_candidate_runtime_tests::source_candidates_runtime_real_burst_excludes_protected_option_and_preserves_copies ... ok
+test exam::scenario::interaction_tests::expect_ruling_must_assert_something_reachable ... ok
+test exam::scenario::interaction_tests::expect_ruling_needs_a_matching_qa_interaction ... ok
+test exam::scenario::interaction_tests::expect_ruling_parses_with_the_assert_row_shape ... ok
+test exam::scenario::interaction_tests::malformed_probe_ids_are_refused ... ok
+test exam::scenario::interaction_tests::parse_probe_id_reads_the_python_grammar ... ok
+test exam::scenario::interaction_tests::the_new_blocks_round_trip_through_yaml ... ok
+test exam::scenario::materials_tests::empty_materials_is_refused ... ok
+test exam::scenario::materials_tests::materials_and_cards_together_are_refused ... ok
+test exam::scenario::materials_tests::materials_parses_in_recipe_element_order ... ok
+test exam::scenario::materials_tests::materials_round_trips ... ok
+test exam::scenario::materials_tests::materials_with_dcgo_only_is_refused ... ok
+test exam::scenario::tests::a_negative_select_ordinal_is_rejected ... ok
+test exam::scenario::tests::actor_must_be_0_or_1 ... ok
+test exam::scenario::tests::an_absent_ordinal_is_omitted_from_the_yaml_not_written_as_null ... ok
+test exam::scenario::tests::an_empty_select_choice_is_rejected ... ok
+test exam::scenario::tests::an_empty_trigger_is_rejected_rather_than_matching_everything ... ok
+test exam::scenario::tests::an_empty_trigger_not_is_rejected_rather_than_excluding_nothing ... ok
+test exam::scenario::tests::assertion_step_index_must_be_within_the_line ... ok
+test exam::scenario::tests::clause_id_must_have_the_three_part_shape ... ok
+test exam::scenario::tests::clause_id_must_start_with_the_card_id ... ok
+test exam::scenario::tests::dna_is_listed_among_the_verbs_an_author_is_offered ... ok
+test exam::scenario::tests::dna_verb_accepts_a_pinned_hand_slot ... ok
+test exam::scenario::tests::dna_verb_parses_with_its_two_materials ... ok
+test exam::scenario::tests::dna_verb_refuses_a_list_that_is_not_a_pair ... ok
+test exam::scenario::tests::dna_verb_refuses_an_opponent_material ... ok
+test exam::scenario::tests::dna_verb_rejects_an_unknown_argument ... ok
+test exam::scenario::tests::dna_verb_requires_materials ... ok
+test exam::scenario::tests::dna_verb_round_trips_through_yaml ... ok
+test exam::scenario::tests::empty_steps_is_rejected ... ok
+test exam::scenario::tests::expect_carries_prompt_and_count ... ok
+test exam::scenario::tests::link_is_listed_among_the_verbs_an_author_is_offered ... ok
+test exam::scenario::tests::link_verb_accepts_the_hand_origin ... ok
+test exam::scenario::tests::link_verb_defaults_from_to_the_bare_field ... ok
+test exam::scenario::tests::link_verb_parses_with_a_pinned_field_slot ... ok
+test exam::scenario::tests::link_verb_refuses_an_inline_host_and_says_what_to_write_instead ... ok
+test exam::scenario::tests::link_verb_rejects_an_unknown_argument ... ok
+test exam::scenario::tests::link_verb_requires_card ... ok
+test exam::scenario::tests::link_verb_round_trips_through_yaml ... ok
+test exam::scenario::tests::main_is_listed_among_the_verbs_an_author_is_offered ... ok
+test exam::scenario::tests::main_verb_accepts_the_bare_breeding_sentinel ... ok
+test exam::scenario::tests::main_verb_parses_with_a_pinned_field_slot ... ok
+test exam::scenario::tests::main_verb_rejects_an_unknown_argument ... ok
+test exam::scenario::tests::main_verb_requires_on ... ok
+test exam::scenario::tests::main_verb_round_trips_through_yaml ... ok
+test exam::scenario::tests::move_verb_defaults_from_to_breeding ... ok
+test exam::scenario::tests::move_verb_parses_with_a_pinned_breeding_slot ... ok
+test exam::scenario::tests::move_verb_round_trips_through_yaml ... ok
+test exam::scenario::tests::normalization_bridges_our_bracketed_name_and_dcgos_spaced_one ... ok
+test exam::scenario::tests::parses_a_well_formed_scenario ... ok
+test exam::scenario::tests::select_cards_form_parses ... ok
+test exam::scenario::tests::select_choice_alongside_value_is_rejected ... ok
+test exam::scenario::tests::select_choice_on_a_dcgo_only_row_is_rejected ... ok
+test exam::scenario::tests::select_choice_parses_on_a_sim_only_row ... ok
+test exam::scenario::tests::select_choice_round_trips_through_yaml ... ok
+test exam::scenario::tests::select_choice_without_sim_only_is_rejected_loudly ... ok
+test exam::scenario::tests::select_empty_lists_are_rejected ... ok
+test exam::scenario::tests::select_forms_round_trip_through_yaml ... ok
+test exam::scenario::tests::select_ordinal_alongside_value_is_rejected ... ok
+test exam::scenario::tests::select_ordinal_parses_alongside_cards ... ok
+test exam::scenario::tests::select_ordinal_round_trips_through_yaml ... ok
+test exam::scenario::tests::select_ordinal_with_a_multi_card_pick_is_rejected ... ok
+test exam::scenario::tests::select_ordinal_without_cards_is_rejected_loudly ... ok
+test exam::projection::source_candidate_runtime_tests::source_candidates_runtime_actor_can_differ_from_source_owner ... ok
+test exam::scenario::tests::select_trigger_and_ordinal_together_are_rejected_preferring_trigger ... ok
+test exam::scenario::tests::select_targets_form_still_parses ... ok
+test exam::scenario::tests::select_trigger_and_trigger_not_together_are_rejected ... ok
+test exam::scenario::tests::select_trigger_not_and_ordinal_together_are_rejected ... ok
+test exam::scenario::tests::select_trigger_not_parses_alongside_cards ... ok
+test exam::scenario::tests::select_trigger_not_without_cards_is_rejected_loudly ... ok
+test exam::scenario::tests::select_trigger_parses_alongside_cards ... ok
+test exam::scenario::tests::select_trigger_with_a_multi_card_pick_is_rejected ... ok
+test exam::scenario::tests::select_trigger_without_cards_is_rejected_loudly ... ok
+test exam::scenario::tests::select_trigger_round_trips_through_yaml_and_is_omitted_when_absent ... ok
+test exam::scenario::tests::select_with_no_form_is_rejected_loudly ... ok
+test exam::scenario::tests::select_with_two_forms_is_rejected_loudly ... ok
+test exam::scenario::tests::select_value_yes_and_decline_forms_parse ... ok
+test exam::scenario::tests::step_without_expect_is_allowed ... ok
+test exam::scenario::tests::select_yes_false_and_decline_false_are_rejected ... ok
+test exam::scenario::tests::trigger_not_spellings_normalize_to_one_answer ... ok
+test exam::scenario::tests::trigger_spellings_normalize_to_one_answer ... ok
+test exam::scenario::tests::unknown_step_verb_is_rejected_loudly ... ok
+test exam::validate::deck_budget_tests::a_card_only_the_egg_deck_holds_cannot_be_stacked ... ok
+test exam::validate::deck_budget_tests::a_stack_the_deck_can_supply_passes_the_budget ... ok
+test exam::validate::deck_budget_tests::an_unknown_rest_deck_is_a_deck_budget_finding ... ok
+test exam::validate::deck_budget_tests::deck_budget_flags_more_stacked_copies_than_the_deck_holds ... ok
+test exam::validate::deck_budget_tests::without_a_book_there_is_no_budget_check ... ok
+test exam::validate::tests::a_combo_interaction_needs_no_denominator ... ok
+test exam::validate::tests::a_known_interaction_is_clean ... ok
+test exam::validate::tests::a_legacy_scenario_is_clean_with_or_without_the_denominator ... ok
+test exam::validate::tests::a_probe_on_an_uncovered_clause_is_a_finding ... ok
+test exam::validate::tests::a_well_formed_scenario_has_no_findings ... ok
+test exam::validate::tests::an_orphan_interaction_is_rejected_naming_the_id ... ok
+test exam::validate::tests::every_finding_points_at_a_guide_topic ... ok
+test exam::validate::tests::expect_ruling_linkage_is_checked ... ok
+test exam::validate::tests::flags_a_card_the_line_names_but_the_stack_does_not ... ok
+test exam::validate::tests::flags_an_assert_over_security_contents ... ok
+test exam::validate::tests::interaction_shape_and_denominator_disagreements_are_findings ... ok
+test exam::validate::tests::malformed_covers_are_rejected ... ok
+test exam::validate::tests::rejects_a_clause_id_that_does_not_belong_to_the_card ... ok
+test exam::validate::tests::rejects_a_clause_id_the_extractor_does_not_produce ... ok
+test exam::validate::tests::rejects_a_prompt_kind_outside_the_thirteen ... ok
+test exam::validate::tests::rejects_a_verb_outside_the_vocabulary ... ok
+test exam::validate::tests::the_python_built_denominator_drives_the_orphan_rule ... ok
+test exam::validate::tests::unknown_covered_clauses_are_rejected ... ok
+test exam::validate::tests::without_a_denominator_an_interaction_scenario_is_refused_but_a_legacy_one_is_not ... ok
+test exam::verdict::interaction_store_tests::a_clause_only_store_still_writes_version_1_without_an_interactions_key ... ok
+test exam::verdict::interaction_store_tests::a_combo_interaction_needs_no_denominator_entry_but_needs_a_card ... ok
+test exam::projection::source_candidate_runtime_tests::source_candidates_runtime_requires_requested_live_supported_frame ... ok
+test exam::verdict::interaction_store_tests::a_missing_denominator_says_it_was_never_generated ... ok
+test exam::verdict::interaction_store_tests::a_store_with_an_interaction_writes_version_2_and_round_trips ... ok
+test exam::verdict::interaction_store_tests::an_orphan_interaction_is_refused_and_the_store_is_untouched ... ok
+test exam::verdict::interaction_store_tests::from_json_refuses_unknown_versions_and_v1_interactions_and_key_mismatches ... ok
+test exam::verdict::interaction_store_tests::interaction_summary_keeps_the_denominator_and_flags_drift ... ok
+test exam::verdict::interaction_store_tests::load_dir_refuses_an_interaction_misfiled_under_a_card_it_does_not_count_for ... ok
+test exam::verdict::interaction_store_tests::an_interaction_verdict_for_a_card_that_already_has_a_file_is_saved ... ok
+test exam::verdict::interaction_store_tests::record_interaction_verdict_takes_cards_and_fingerprint_from_the_denominator ... ok
+test exam::verdict::interaction_store_tests::load_dir_refuses_disagreeing_copies_of_one_interaction ... ok
+test exam::verdict::interaction_store_tests::save_dir_files_a_shared_ruling_under_every_card_and_load_dir_merges_it_once ... ok
+test exam::verdict::interaction_store_tests::set_provenance_also_stamps_an_interaction_row ... ok
+test exam::verdict::interaction_store_tests::the_book_lists_gating_ids_per_card ... ok
+test exam::verdict::interaction_store_tests::the_python_writers_v2_files_round_trip_byte_identically ... ok
+test exam::verdict::interaction_store_tests::unknown_fields_on_an_interaction_survive_a_round_trip ... ok
+test exam::verdict::interaction_store_tests::write_interaction_to_card_files_keeps_each_files_other_verdicts ... ok
+test exam::verdict::tests::a_clause_absent_from_the_store_is_unmeasured_not_missing ... ok
+test exam::verdict::tests::a_diverged_verdict_carries_its_reason ... ok
+test exam::verdict::tests::a_verdict_whose_clause_text_changed_is_invalidated ... ok
+test exam::verdict::tests::an_orphan_clause_id_is_refused_and_the_store_is_untouched ... ok
+test exam::verdict::tests::book_knows_zero_clause_cards ... ok
+test exam::verdict::tests::book_without_a_cards_array_still_knows_the_cards_of_its_clauses ... ok
+test exam::verdict::tests::card_file_name_is_the_card_id_plus_json ... ok
+test exam::verdict::tests::clause_text_book_parses_the_extract_shape ... ok
+test exam::verdict::tests::invalidated_verdicts_count_as_unmeasured_in_the_summary ... ok
+test exam::verdict::tests::load_dir_missing_directory_is_empty_not_an_error ... ok
+test exam::verdict::tests::load_dir_rejects_a_row_filed_under_the_wrong_card ... ok
+test exam::verdict::tests::load_dir_round_trips_every_row ... ok
+test exam::verdict::tests::migration_from_the_blob_preserves_every_row ... ok
+test exam::verdict::tests::old_rows_without_triage_still_parse ... ok
+test exam::verdict::tests::recording_a_confirmed_verdict_hashes_the_book_text ... ok
+test exam::verdict::tests::records_and_reads_back ... ok
+test exam::verdict::tests::round_trips_through_json ... ok
+test exam::verdict::tests::save_dir_never_deletes_a_file_that_doesnt_look_like_a_card_id ... ok
+test exam::verdict::tests::save_dir_removes_a_card_file_that_no_longer_has_verdicts ... ok
+test exam::verdict::tests::save_dir_rewrites_only_touched_cards_and_keeps_crlf ... ok
+test exam::verdict::tests::save_dir_writes_one_file_per_card ... ok
+test exam::verdict::tests::set_provenance_stamps_job_and_build_and_the_row_is_written ... ok
+test exam::verdict::tests::set_triage_records_class_and_citation_on_a_diverged_row ... ok
+test exam::verdict::tests::set_triage_refuses_a_non_diverged_row ... ok
+test exam::verdict::tests::set_triage_refuses_quirk_or_ours_wrong_without_citation ... ok
+test exam::verdict::tests::sha256_hex_is_the_standard_digest ... ok
+test exam::verdict::tests::summary_totals_every_class ... ok
+test exam::verdict::tests::unavailable_carries_a_reason ... ok
+test exam::verdict::verdict_set_tests::a_quirk_triage_without_a_citation_is_refused_for_interactions_too ... ok
+test exam::verdict::verdict_set_tests::a_triage_rides_along_on_a_diverged_clause ... ok
+test exam::verdict::verdict_set_tests::an_interaction_ending_is_recorded_under_every_card_with_its_triage ... ok
+test exam::verdict::verdict_set_tests::an_orphan_clause_is_refused ... ok
+test exam::verdict::verdict_set_tests::an_unreachable_clause_is_recorded_with_its_reason ... ok
+test exam::verdict::verdict_set_tests::unreachable_and_unavailable_need_a_reason ... ok
+test job::tests::job_result_parses_outcomes ... ok
+test job::tests::job_spec_round_trips_through_json ... ok
+test job::tests::job_spec_tolerates_unknown_fields ... ok
+test manifest::build_identity_tests::build_identity_covers_the_launcher_too ... ok
+test manifest::build_identity_tests::build_identity_distinguishes_a_csharp_only_rebuild ... ok
+test exam::test_support::tests::card_pool_loads_and_st1_splits_50_4 ... ok
+test manifest::build_identity_tests::build_identity_errors_when_managed_is_missing ... ok
+test manifest::build_identity_tests::hashing_only_the_exe_cannot_tell_two_builds_apart ... ok
+test manifest::build_identity_tests::build_identity_is_stable_for_identical_content ... ok
+test manifest::tests::digest_changes_when_a_value_changes ... ok
+test manifest::tests::digest_ignores_object_key_order ... ok
+test manifest::tests::action_space_hash_is_nonempty_and_stable ... ok
+test manifest::tests::digest_is_stable_across_calls ... ok
+test manifest::tests::digest_respects_array_order ... ok
+test manifest::tests::gate_accepts_a_matching_hash ... ok
+test manifest::tests::gate_rejects_a_stale_hash_and_says_why ... ok
+test manifest::tests::manifest_round_trips_through_json ... ok
+test manifest::tests::load_reports_a_missing_manifest_clearly ... ok
+test mcp::handlers::tests::a_fresh_checkout_makes_every_book_clause_outstanding ... ok
+test mcp::handlers::tests::claim_reports_who_holds_a_contended_card ... ok
+test mcp::handlers::tests::each_probe_gets_its_own_scratch_file ... ok
+test mcp::handlers::tests::drifted_clause_text_invalidates_a_stored_confirmed_verdict ... ok
+test exam::verdict::interaction_store_tests::the_committed_ledger_loads_and_its_clause_only_files_stay_v1 ... ok
+test mcp::handlers::tests::exam_validate_checks_the_deck_budget_against_the_given_book ... ok
+test mcp::handlers::tests::node_health_reads_the_harness_root_argument_never_the_store_root ... ok
+test mcp::handlers::tests::node_health_reports_go_and_every_check ... ok
+test mcp::handlers::tests::plan_keeps_diverged_and_drops_unavailable ... ok
+test mcp::handlers::tests::exam_probe_in_oracle_mode_refuses_a_no_go_node_and_records_nothing ... ok
+test mcp::handlers::tests::plan_reports_what_it_elided_rather_than_truncating_silently ... ok
+test mcp::handlers::tests::probe_rejects_a_draft_that_fails_the_linter_before_running_it ... ok
+test mcp::handlers::tests::plan_omits_confirmed_clauses_and_surfaces_never_examined_ones ... ok
+test mcp::handlers::tests::release_does_not_take_another_jobs_claim ... ok
+test mcp::handlers::tests::run_scenario_defaults_to_sim_only ... ok
+test exam::run::snapshot_tests::inspect_pairs_the_live_prompt_with_the_board_before_the_step ... ok
+test mcp::handlers::tests::run_scenario_in_oracle_mode_refuses_a_no_go_node_before_anything_else ... ok
+test mcp::handlers::tests::status_falls_back_to_stored_rows_when_no_book_is_available_and_says_so ... ok
+test mcp::handlers::tests::status_needs_a_card_or_an_archetype ... ok
+test mcp::handlers::tests::status_rejects_archetype_resolution_with_a_named_error ... ok
+test mcp::handlers::tests::status_reports_the_printed_denominator_not_just_stored_rows ... ok
+test mcp::handlers::tests::the_clause_extractor_runs_with_an_absolute_code_path ... ok
+test mcp::protocol::tests::a_notification_has_no_id ... ok
+test mcp::protocol::tests::parses_a_tools_call_request ... ok
+test mcp::protocol::tests::result_and_error_both_carry_the_request_id ... ok
+test mcp::tools::tests::bool_arg_falls_back_to_its_default ... ok
+test mcp::tools::tests::every_tool_is_listed_once_with_a_schema ... ok
+test exam::projection::source_candidate_runtime_tests::source_candidates_runtime_unmapped_or_duplicate_action_is_unknown ... ok
+test mcp::tools::tests::exam_status_and_exam_plan_do_not_advertise_archetype ... ok
+test mcp::tools::tests::str_arg_reads_from_the_arguments_object ... ok
+test mcp::tools::tests::str_arg_reports_the_missing_key_by_name ... ok
+test node::tests::a_missing_build_is_a_named_failure_not_a_panic ... ok
+test node::tests::default_harness_root_honours_the_env_override ... ok
+test node::tests::go_is_false_when_any_check_fails ... ok
+test node::tests::a_failing_check_carries_a_remedy ... ok
+test node::tests::health_without_a_build_path_still_reports_the_other_checks ... ok
+test pool::tests::build_jobs_alternates_first_player ... ok
+test pool::tests::build_jobs_emits_requested_count_with_unique_ids ... ok
+test pool::tests::build_jobs_is_deterministic_for_a_given_base_seed ... ok
+test pool::tests::build_jobs_never_mirrors_a_deck_against_itself ... ok
+test pool::tests::build_jobs_rejects_a_pool_too_small_to_pair ... ok
+test node::tests::health_reports_every_check_even_when_one_fails ... ok
+test queue::tests::a_fresh_claim_is_still_running ... ok
+test queue::tests::a_failed_counter_write_propagates_as_an_error ... ok
+test queue::tests::a_job_that_has_already_failed_twice_is_quarantined ... ok
+test queue::tests::a_run_with_no_completions_is_never_clean ... ok
+test queue::tests::an_overdue_claim_is_requeued_once ... ok
+test queue::tests::an_unreadable_result_file_counts_as_failed ... ok
+test queue::tests::a_garbage_result_file_counts_as_failed ... ok
+test queue::tests::max_age_is_always_overdue ... ok
+test queue::tests::failures_counter_survives_while_its_job_is_still_live ... ok
+test queue::tests::orphaned_failures_counter_is_reaped ... ok
+test queue::tests::scan_on_a_fresh_root_with_no_directories_returns_all_zeros ... ok
+test queue::tests::status_totals_are_reported_even_when_everything_failed ... ok
+test triage::tests::clusters_are_ranked_most_frequent_first ... ok
+test triage::tests::conclusive_verdict_with_findings_is_not_clean ... ok
+test triage::tests::conclusive_verdict_with_no_failures_is_clean ... ok
+test triage::tests::each_cluster_names_a_concrete_recording_to_reproduce_from ... ok
+test triage::tests::inconclusive_report_still_surfaces_a_nonempty_clusters_inconsistency ... ok
+test triage::tests::is_clean_is_false_for_a_default_corpus_stats_on_its_own ... ok
+test triage::tests::kind_breaks_ties_when_count_card_and_range_are_equal ... ok
+test triage::tests::one_bug_across_many_games_collapses_to_one_cluster ... ok
+test triage::tests::partial_only_corpus_is_not_clean_and_discloses_partial_in_the_verdict_line ... ok
+test triage::tests::report_reads_inconclusive_when_corpus_replayed_nothing ... ok
+test queue::tests::overdue_claim_requeues_twice_then_quarantines_and_never_retries_again ... ok
+test triage::tests::skipped_files_prevent_a_false_clean_verdict_and_are_disclosed_in_the_verdict_line ... ok
+test triage::tests::two_different_bugs_on_one_card_stay_apart ... ok
+test triage::tests::unclustered_failures_prevent_a_false_clean_verdict ... ok
+test watch::tests::a_claim_exactly_at_its_timeout_is_not_yet_hung ... ok
+test watch::tests::a_claim_within_its_timeout_with_stale_progress_is_not_yet_hung ... ok
+test watch::tests::an_overdue_claim_with_no_progress_evidence_at_all_is_still_hung ... ok
+test watch::tests::an_overdue_claim_with_recent_progress_is_healthy_not_hung ... ok
+test watch::tests::drained_wins_even_over_a_stale_heartbeat ... ok
+test watch::tests::healthy_heartbeat_with_a_claim_past_its_own_timeout_and_stale_progress_is_hung_stuck_job ... ok
+test watch::tests::healthy_heartbeat_with_a_claim_well_within_its_timeout_is_healthy ... ok
+test watch::tests::missing_heartbeat_with_a_recorded_pid_is_hung_not_healthy ... ok
+test watch::tests::mode_1_is_checked_before_mode_2_when_both_signals_fire ... ok
+test watch::tests::nothing_pending_and_nothing_claimed_is_drained ... ok
+test watch::tests::progress_age_falls_back_to_the_player_log_when_corpus_dir_is_empty ... ok
+test watch::tests::progress_age_falls_back_to_the_player_log_when_no_corpus_dir_given ... ok
+test exam::run::snapshot_tests::lowered_run_snapshots_every_step ... ok
+test watch::tests::progress_age_is_none_when_nothing_is_readable ... ok
+test watch::tests::progress_age_prefers_the_newest_file_in_the_corpus_dir ... ok
+test triage::tests::scan_corpus_counts_read_parse_and_replay_outcomes_over_a_fixture_corpus ... ok
+test watch::tests::read_claimed_ages_falls_back_to_default_on_unparseable_job ... ok
+test watch::tests::read_claimed_ages_on_a_fresh_root_is_empty ... ok
+test watch::tests::stale_heartbeat_is_hung_no_heartbeat_regardless_of_progress ... ok
+test watch::tests::the_first_overdue_and_stalled_claim_found_is_named_when_several_are_claimed ... ok
+test watch::tests::read_claimed_ages_ignores_non_json_siblings ... ok
+test watch::tests::read_claimed_ages_uses_each_jobs_own_timeout ... ok
+test exam::run::snapshot_tests::a_live_prompts_candidates_name_the_cards_they_pick ... ok
+test mcp::handlers::tests::run_scenario_finds_the_deck_book_the_scenario_needs ... ok
+test mcp::handlers::tests::probe_says_which_question_it_answered ... ok
+test mcp::handlers::tests::exam_probe_inspect_step_returns_the_live_prompt_and_board ... ok
+test exam::scenario::interaction_tests::every_committed_scenario_still_parses ... ok
+
+test result: ok. 628 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 29.59s
+

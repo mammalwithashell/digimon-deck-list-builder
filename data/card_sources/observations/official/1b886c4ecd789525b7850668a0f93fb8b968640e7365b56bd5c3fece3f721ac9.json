@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "ST20-11",
+    "colors": "Black Red",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "7",
+    "qa": [
+      "You choose 1 of your Digimon for every 2 colors your Tamers have. The target Digimon aren't affected by your opponent's Digimon's effects until their turn ends."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[ADVENTURE]/[Hero] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[ADVENTURE]/[Hero] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.) [On Play] [When Digivolving] Until your opponent's turn ends, for every 2 colors your Tamers have, their Digimon's effects don't affect 1 of your Digimon. [When Digivolving] [When Attacking] Delete 1 of your opponent's lowest DP Digimon."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-4)＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)"
+      }
+    ],
+    "type": "Dragonkin/ADVENTURE/Hero"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "1b886c4ecd789525b7850668a0f93fb8b968640e7365b56bd5c3fece3f721ac9",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "539218c275a1c64d51192a48e62120cf395c48e1d82be596e0d4154da35ddf88",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:ST20-11",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/ST20-11"
+}

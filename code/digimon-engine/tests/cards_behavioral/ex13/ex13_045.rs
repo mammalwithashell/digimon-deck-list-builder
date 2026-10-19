@@ -209,13 +209,15 @@ fn ex13_045_dna_digivolve_buffs_all_own_digimon_and_forces_an_attack() {
         player: 0,
         index: field_ids(&runner, 0).iter().position(|c| c == "ALLY").unwrap() as u8,
     };
-    assert_eq!(runner.effective_dp(me), Some(25000), "+10000 on Examon");
-    assert_eq!(runner.effective_dp(ally), Some(15000), "+10000 on every own Digimon");
+    assert_eq!(runner.effective_dp(me), Some(15000), "attack declaration precedes the next DP processing");
+    assert_eq!(runner.effective_dp(ally), Some(5000), "overall DP is not installed before the attack choice");
     let view = runner.pending_selection_view().expect("forced attack target prompt");
     assert!(!view.is_optional, "'this Digimon attacks' is mandatory");
     let sec_before = runner.security_count(1);
     let a = non_pass(&runner)[0];
     runner.execute_action(view.selecting_player, a).expect("attack");
+    assert_eq!(runner.effective_dp(me), Some(25000), "+10000 before the attack battle");
+    assert_eq!(runner.effective_dp(ally), Some(15000), "+10000 on every own Digimon after declaration");
     let _ = runner.auto_resolve();
     assert!(runner.security_count(1) < sec_before, "the attack checked security");
 }

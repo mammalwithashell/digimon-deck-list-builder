@@ -302,7 +302,7 @@ effects:
           bind_as: trashed_sources
           prompt: "Trash up to 3 level 6 or higher cards in this Digimon's digivolution cards"
           then:
-            - trash_selected_sources: { source_refs: trashed_sources }
+            - trash_selected_sources_as_cost: { source_refs: trashed_sources, min_count: 0 }
             # For each card trashed, delete 1 opp Digimon/Tamer with the
             # lowest play cost. `selector: lowest_play_cost` recomputes the
             # cheapest candidate per pick.

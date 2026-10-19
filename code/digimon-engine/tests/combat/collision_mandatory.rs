@@ -35,6 +35,7 @@ fn strong_digimon(card_id: &str, dp: i32) -> digimon_engine::card_data::CardData
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: card_id.replace('-', "_"),
@@ -83,13 +84,13 @@ fn collision_with_legal_blockers_mandates_selection() {
     );
     assert_eq!(
         sel.valid_action_ids,
-        vec![encode_attack(0, 0), encode_attack(0, 1)],
-        "both defender Digimon are Blocker candidates"
+        vec![encode_attack(0, 1)],
+        "only the distinct defender is a Blocker candidate"
     );
 
     // Defender's mask: blocker bits set, PASS bit dropped.
     let mask = build_action_mask(&r.game, 1);
-    assert_eq!(mask[encode_attack(0, 0) as usize], 1.0);
+    assert_eq!(mask[encode_attack(0, 0) as usize], 0.0, "current target cannot block");
     assert_eq!(mask[encode_attack(0, 1) as usize], 1.0);
     assert_eq!(
         mask[PASS as usize], 0.0,
@@ -159,12 +160,12 @@ fn collision_combined_with_cannot_block_excludes_restricted_blockers() {
     assert!(!sel.is_optional, "non-empty pool + Collision = MUST-block");
     assert_eq!(
         sel.valid_action_ids,
-        vec![encode_attack(0, 0), encode_attack(0, 1)],
-        "only the two unrestricted defenders are candidates"
+        vec![encode_attack(0, 1)],
+        "only the unrestricted non-target defender is a candidate"
     );
 
     let mask = build_action_mask(&r.game, 1);
-    assert_eq!(mask[encode_attack(0, 0) as usize], 1.0);
+    assert_eq!(mask[encode_attack(0, 0) as usize], 0.0, "current target cannot block");
     assert_eq!(mask[encode_attack(0, 1) as usize], 1.0);
     assert_eq!(mask[encode_attack(0, 2) as usize], 0.0, "CannotBlock gated");
     assert_eq!(mask[PASS as usize], 0.0, "MUST-block drops PASS");

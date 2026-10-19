@@ -18,6 +18,7 @@ use std::sync::Arc;
 
 fn fixture_partition(scope: CompiledScope) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-PART".into(),
         name: "Fixture Partition".into(),
         kind: CompiledCardKind::Digimon,
@@ -51,6 +52,7 @@ fn fixture_partition(scope: CompiledScope) -> CompiledCard {
 
 fn fixture_partition_with_sources(scope: CompiledScope) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-PART-SRC".into(),
         name: "Fixture Partition Sources".into(),
         kind: CompiledCardKind::Digimon,

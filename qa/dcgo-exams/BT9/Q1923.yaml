@@ -1,0 +1,286 @@
+card: BT9-109
+clause: BT9-109#effect#1
+interaction:
+  id: qa:Q1923
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX2-055
+    - BT9-109
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    - EX2-046
+    rest: Q1923-blind-v2-p0
+  p1:
+    stack:
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST1-07
+    - ST1-07
+    - ST1-07
+    - ST1-08
+    - ST2-06
+    - ST2-06
+    - ST2-06
+    - ST2-06
+    - ST2-05
+    - ST2-05
+    - ST2-05
+    - ST2-05
+    rest: Q1923-blind-v2-p1
+steps:
+- actor: 0
+  do:
+    hatch: &id001 {}
+- actor: 0
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    move:
+      from: breeding
+- actor: 0
+  do:
+    main:
+      'on': field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX2-046
+- actor: 0
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    main:
+      'on': field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX2-046
+- actor: 0
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    main:
+      'on': field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX2-046
+- actor: 0
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    main:
+      'on': field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX2-046
+- actor: 0
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    main:
+      'on': field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX2-046
+- actor: 0
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    main:
+      'on': field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX2-046
+- actor: 0
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 1
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    pass: *id001
+- actor: 0
+  do:
+    play:
+      card: EX2-046
+      from: hand
+- actor: 0
+  do:
+    select:
+      'yes': true
+- actor: 0
+  do:
+    main:
+      'on': field.0
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.1
+- actor: 0
+  do:
+    play:
+      card: BT9-109
+      from: hand
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 0
+  do:
+    play:
+      card: EX2-055
+      from: hand
+- actor: 0
+  do:
+    select:
+      'yes': true
+      dcgo_only: true
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 0
+  do:
+    select:
+      value: 8
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      value: 7
+      dcgo_only: true
+- actor: 0
+  do:
+    pass: *id001
+expect_ruling:
+  q_id: Q1923
+  assert:
+  - at: 47
+    that:
+      p0.field:
+      - card_id: EX2-007
+        sources:
+        - BT9-109
+        - EX2-046
+        - EX2-046
+        - EX2-046
+        - EX2-046
+        - EX2-046
+        - EX2-046
+        - EX2-046
+      p0.trash: []
+  - at: 52
+    that:
+      p0.field:
+      - card_id: EX2-007
+        sources:
+        - BT9-109
+      - card_id: EX2-055
+        sources: []
+      p0.trash:
+      - EX2-046
+      - EX2-046
+      - EX2-046
+      - EX2-046
+      - EX2-046
+      - EX2-046
+      - EX2-046

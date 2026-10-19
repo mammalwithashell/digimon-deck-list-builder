@@ -1,0 +1,69 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-11T05:12:24.951834300+00:00",
+  "clauses": {
+    "BT3-093#effect#0": {
+      "clause_id": "BT3-093#effect#0",
+      "card_id": "BT3-093",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "2cb5ec7a7895ece697d09de230a7c26708b1b76bee1ba802b19b74f09a941e4c",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T031125Z-cca526ea80\\BT3-093-tail-single-hit-20261011T031125Z-cca526ea80.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT3-093-tail-single-hit-20261011T031125Z-cca526ea80",
+      "recorded_at": "2026-10-11T03:12:19.424423400+00:00"
+    },
+    "BT3-093#effect#1": {
+      "clause_id": "BT3-093#effect#1",
+      "card_id": "BT3-093",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "3ed8c7696af973df7d7f0da3d4e65359bfadc8f2ab9a1c20b624221f029a1485",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T031125Z-cca526ea80\\BT3-093-tail-single-hit-20261011T031125Z-cca526ea80.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT3-093-tail-single-hit-20261011T031125Z-cca526ea80",
+      "recorded_at": "2026-10-11T03:12:19.424423400+00:00"
+    },
+    "BT3-093#security#0": {
+      "clause_id": "BT3-093#security#0",
+      "card_id": "BT3-093",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "321051d9d40d4dc4b6c89186837ddc5f03489dd105085bce198cd347da35809d",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\tail-20261011T031125Z-cca526ea80\\BT3-093-tail-single-hit-20261011T031125Z-cca526ea80.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT3-093-tail-single-hit-20261011T031125Z-cca526ea80",
+      "recorded_at": "2026-10-11T03:12:19.424423400+00:00"
+    }
+  },
+  "interactions": {
+    "qa:Q1123": {
+      "interaction_id": "qa:Q1123",
+      "card_ids": [
+        "BT3-093"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "diverged",
+      "text_sha256": "abb169c97c4693ce804007f84e3173f3308c81d9658ec4b59eaad80e7e4b8fea",
+      "reason": "Both model families independently adjudicated an intermediate reveal-bucket hand timing quirk. Complete measured trace has only step3 p0.hand difference; final hand and Q1123 outcome agree. Evidence oracle/interaction-20261011T045846Z-6fc2c575c1; raw divergence retained, not a confirmed or unreachable verdict.",
+      "recorded_at": "2026-10-11T05:12:24.951834300+00:00",
+      "citation": "qa:Q1123; general_rule.pdf 15-15-10-1, 15-1-2; DCGO RevealLibrary.cs:291-328 and SelectCardEffect.cs:873-875; independent reviews qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\interaction-review\\triage-Q1123",
+      "triage": "dcgo_quirk"
+    },
+    "qa:Q4704": {
+      "interaction_id": "qa:Q4704",
+      "card_ids": [
+        "BT3-093"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "5332993d4628921a08666f0b57822c1cfde879839cd887020e393f70685466d7",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T045846Z-6fc2c575c1\\BT3-093-interaction-Q4704-20261011T045846Z-6fc2c575c1.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT3-093-interaction-Q4704-20261011T045846Z-6fc2c575c1",
+      "recorded_at": "2026-10-11T05:06:37.926779800+00:00"
+    }
+  }
+}

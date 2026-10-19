@@ -372,6 +372,113 @@ fn ex6_011_counter_blast_dna_uses_durandamon_and_bryweludramon() {
         .collect();
     assert_eq!(
         stack_ids,
-        vec!["EX6-DURANDAMON", "EX6-BRYWELUDRAMON", "EX6-011"]
+        vec!["EX6-BRYWELUDRAMON", "EX6-DURANDAMON", "EX6-011"]
+    );
+}
+#[test]
+fn ex6_011_counter_blast_dna_resets_old_material_state() {
+    let mut durandamon = colored_lv6("EX6-DURANDAMON", CardColor::Red);
+    durandamon.card_name = "Durandamon".to_string();
+    durandamon.dp = Some(12000);
+    let mut bryweludramon = colored_lv6("EX6-BRYWELUDRAMON", CardColor::Black);
+    bryweludramon.card_name = "BryweLudramon".to_string();
+    bryweludramon.dp = Some(12000);
+    let mut attacker = colored_lv6("EX6-ATTACKER", CardColor::Red);
+    attacker.card_name = "Attacker".to_string();
+    attacker.dp = Some(17000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX6-011 YAML loads")
+        .add_card(durandamon)
+        .add_card(bryweludramon)
+        .add_card(attacker)
+        .add_card(make_test_card("P0-SEC", "P0 Security"))
+        .hand(1, &["EX6-011", "EX6-BRYWELUDRAMON"])
+        .security(0, &["P0-SEC"])
+        .start();
+
+    let attacking = runner.place_on_field(0, "EX6-ATTACKER", Some(0));
+    let durandamon = runner.place_on_field(1, "EX6-DURANDAMON", Some(0));
+
+    let result = runner.attack_digimon(attacking, durandamon, false);
+    assert_eq!(result, digimon_engine::combat::AttackResult::InProgress);
+    assert_eq!(runner.current_phase(), GamePhase::CounterTiming);
+    assert!(
+        runner
+            .pending_selection()
+            .expect("Counter prompt")
+            .valid_action_ids
+            .contains(&DNA_DIGIVOLVE_START),
+        "EX6-011 should be offered as Counter Blast DNA"
+    );
+
+    runner
+        .execute_action(1, DNA_DIGIVOLVE_START)
+        .expect("choose EX6-011 for Counter Blast DNA");
+    assert_eq!(runner.current_phase(), GamePhase::SelectMaterial);
+    assert_eq!(
+        runner
+            .pending_selection()
+            .expect("field material prompt")
+            .valid_action_ids,
+        vec![0]
+    );
+
+    runner
+        .execute_action(1, 0)
+        .expect("choose Durandamon field material");
+    assert_eq!(
+        runner
+            .pending_selection()
+            .expect("hand material prompt")
+            .valid_action_ids,
+        vec![PLAY_HAND_START + 1]
+    );
+    // Seed old-object state after legal material prompts are installed.
+    let linked = runner.game.players[0].security.pop().unwrap();
+    let turn = runner.game.turn_count;
+    let old = &mut runner.game.players[1].battle_area[0];
+    old.is_suspended = true;
+    old.turn_played = turn;
+    old.attacks_this_turn = 2;
+    old.is_attacking = true;
+    let old_source = old.top_card().handle();
+    old.record_activation(old_source, 0);
+    old.linked_cards.push(linked);
+    runner.game.modifiers.add(durandamon,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::ChangeDp, 5000,
+            digimon_engine::enums::Expiry::EndOfTurn, 1));
+    runner
+        .execute_action(1, PLAY_HAND_START + 1)
+        .expect("choose BryweLudramon hand material");
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "Blast DNA must count as DNA-origin and surface EX6-011's delete target choice"
+    );
+    let result = &runner.game.players[1].battle_area[0];
+    assert!(!result.is_suspended);
+    assert_ne!(result.turn_played, runner.game.turn_count);
+    assert_eq!(result.attacks_this_turn, 0);
+    assert!(!result.is_attacking);
+    assert_eq!(result.activation_count(old_source, 0), 0);
+    assert!(result.linked_cards.is_empty());
+    assert!(runner.game.players[0].trash.iter()
+        .any(|c|c.card_id(&runner.game.card_data)=="P0-SEC"));
+    assert_eq!(runner.game.modifiers.sum(durandamon,
+        digimon_engine::enums::ModifierType::ChangeDp), 0);
+    assert_eq!(runner.game.player(1).hand.len(), 0);
+    assert_eq!(runner.game.player(1).battle_area.len(), 1);
+    let stack_ids: Vec<_> = runner.game.player(1).battle_area[0]
+        .card_sources
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        stack_ids,
+        vec!["EX6-BRYWELUDRAMON", "EX6-DURANDAMON", "EX6-011"]
     );
 }

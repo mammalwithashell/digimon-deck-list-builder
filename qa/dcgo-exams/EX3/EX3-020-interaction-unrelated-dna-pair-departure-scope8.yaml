@@ -1,0 +1,115 @@
+card: EX3-020
+clause: EX3-020#effect#2
+interaction:
+  id: probe:EX3-020#effect#2:scope:neg
+  source: probe
+  kind: negative
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX3-020
+    - EX3-018
+    - BT20-040
+    - ST9-05
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX3-020-interaction-unrelated-dna-pair-departure-scope8-p0
+  p1:
+    stack:
+    - ST1-11
+    - BT1-090
+    - BT1-090
+    - ST1-06
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX3-020-interaction-unrelated-dna-pair-departure-scope8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-020
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      'yes': true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-018
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    play:
+      card: BT20-040
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      'yes': true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 9
+  that:
+    memory: -5
+    p0.field:
+    - card_id: EX3-020
+      sources: []
+    - card_id: EX3-018
+      sources: []
+    - card_id: BT20-040
+      sources: []
+    p0.trash: []

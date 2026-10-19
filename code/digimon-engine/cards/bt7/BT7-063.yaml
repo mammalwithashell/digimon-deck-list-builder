@@ -1,0 +1,155 @@
+# Full candidate only: root-controlled behavioral RED/GREEN required before canonical installation.
+# Official observations and image: interaction-review/BT7-063-source-dossier/source-dossier.json.
+# Q1621/Q1622 allow either OnPlay name alone and mixed hand/trash. Q1623 requires both-or-none on deletion.
+# Historical official BT07 FAQ page6 resolves old is-deleted text as immediate would-delete timing.
+# OnPlay chooses order first, collects distinct physical cards, then places both before source-added observers.
+# V3 preserves DCGO inner zero-decline after outer acceptance, with an explicit playable-source activation gate.
+card: BT7-063
+name: DarkKnightmon
+kind: digimon
+level: 5
+color:
+- black
+cost: 7
+dp: 7000
+traits:
+- Dark Knight
+attribute: Virus
+form: Ultimate
+alt_paths:
+- kind: digivolve
+  from:
+    level_eq: 4
+    color_is: black
+  cost: 3
+effects:
+- when: on_play
+  summary: May place one SkullKnightmon and/or one DeadlyAxemon from hand/trash, in either order
+  process:
+  - select_effect_choice:
+      labels:
+      - Place SkullKnightmon first
+      - Place DeadlyAxemon first
+      - Do not place cards
+      bind_as: placement_order
+      prompt: Choose placement order, or decline
+  - if:
+      condition:
+        equals:
+        - placement_order
+        - 0
+      then:
+      - select_union_zone:
+          of: you
+          zones:
+          - hand
+          - trash
+          filter:
+            name_is: SkullKnightmon
+          bind_as: skull_pick
+          optional: true
+          prompt: Place 1 SkullKnightmon from hand or trash under this Digimon
+      - select_union_zone:
+          of: you
+          zones:
+          - hand
+          - trash
+          filter:
+            all_of:
+            - name_is: DeadlyAxemon
+            - any_of:
+              - not: {binding_present: skull_pick}
+              - not_in_binding: skull_pick
+          bind_as: axe_pick
+          optional: true
+          prompt: Place 1 DeadlyAxemon from hand or trash under this Digimon
+      - place_as_top_source:
+          source: skull_pick
+          target: source
+      - place_as_top_source:
+          source: axe_pick
+          target: source
+  - if:
+      condition:
+        equals:
+        - placement_order
+        - 1
+      then:
+      - select_union_zone:
+          of: you
+          zones:
+          - hand
+          - trash
+          filter:
+            name_is: DeadlyAxemon
+          bind_as: axe_pick
+          optional: true
+          prompt: Place 1 DeadlyAxemon from hand or trash under this Digimon
+      - select_union_zone:
+          of: you
+          zones:
+          - hand
+          - trash
+          filter:
+            all_of:
+            - name_is: SkullKnightmon
+            - any_of:
+              - not: {binding_present: axe_pick}
+              - not_in_binding: axe_pick
+          bind_as: skull_pick
+          optional: true
+          prompt: Place 1 SkullKnightmon from hand or trash under this Digimon
+      - place_as_top_source:
+          source: axe_pick
+          target: source
+      - place_as_top_source:
+          source: skull_pick
+          target: source
+  condition:
+    count_gte:
+      filter:
+        of: you
+        zone:
+        - hand
+        - trash
+        name_in:
+        - SkullKnightmon
+        - DeadlyAxemon
+      n: 1
+- kind: replacement
+  trigger: when_would_be_deleted
+  optional: true
+  active_when:
+    all_of:
+    - all_turns: true
+    - self_source_count:
+        filter:
+          all_of:
+          - kind: digimon
+          - name_in:
+            - SkullKnightmon
+            - DeadlyAxemon
+          - can_play_from_effect_without_cost: true
+        op: gte
+        value: 1
+  summary: Immediately before deletion, may play one of each available named source suspended for free
+  process:
+  - select_materials:
+      of_permanent: source
+      max: 2
+      named_groups:
+      - SkullKnightmon
+      - DeadlyAxemon
+      require_max: true
+      filter:
+        all_of:
+        - kind: digimon
+        - can_play_from_effect_without_cost: true
+      bind_as: source_pair
+      prompt: Choose one of each available SkullKnightmon and DeadlyAxemon
+      optional_zero: true
+  - play_from_materials:
+      target: source
+      source_index: source_pair
+      cost_delta: free
+      suspended: true

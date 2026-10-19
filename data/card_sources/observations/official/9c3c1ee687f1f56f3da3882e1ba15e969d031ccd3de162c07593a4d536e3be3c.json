@@ -1,0 +1,112 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT10-111",
+    "card_type": "Digimon",
+    "colors": [
+      "Red"
+    ],
+    "dp": 4000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "cost": 2,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 4000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Shoutmon (King Version)",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "The name of this card/Digimon is also treated as [Shoutmon].\n[On Play] You may return 1 card with a DigiXros requirement from your trash to your hand. When you would DigiXros this turn, this Digimon may replace 1 of the DigiXros requirements.\n＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)"
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "DigiXros -2: 1 Digimon card w/[Xros Heart] in traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[Your Turn] While this Digimon has [Shoutmon] in its name, it gets +2000 DP."
+          }
+        ]
+      }
+    ],
+    "form": "Champion",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Shoutmon (King Version)",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522011",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT10-111.png?260529",
+      "printing_id": "BT10-111"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "When you would DigiXros, this effect allows you to replace 1 of the cards in that Digimon's DigiXros requirements.\nFor example, when you would play a card with [Shoutmon X4] × [Beelzemon] in its DigiXros requirements, you may place this Digimon for the DigiXros instead of [Shoutmon X4] or [Beelzemon].",
+        "date": "Mar. 28, 2024",
+        "number": "Q2040",
+        "question": "What does \"When you would DigiXros this turn, this Digimon may replace 1 of the DigiXros requirements\" mean?"
+      },
+      {
+        "answer": "No, you can't. This card can only replace 1 card in the DigiXros requirements when DigiXrosing, not add to the DigiXros requirements.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2041",
+        "question": "When DigiXrosing, can I place all of the cards listed in the DigiXros requirements in the digivolution cards, then additionally DigiXros this card?"
+      },
+      {
+        "answer": "This card's special rule makes it so that it is always treated as if its name was [Shoutmon] as well.",
+        "date": "Aug. 1, 2024",
+        "number": "Q2042",
+        "question": "What does this card's (Rule) mean, exactly?\n(*This card's \"The name of this card/Digimon is also treated as [Shoutmon]\" has been changed to \"(Rule) Name: Also treated as [Shoutmon].\")"
+      }
+    ],
+    "rarity": "SEC",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "The name of this card/Digimon is also treated as [Shoutmon].\n[On Play] You may return 1 card with a DigiXros requirement from your trash to your hand. When you would DigiXros this turn, this Digimon may replace 1 of the DigiXros requirements.\n＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)"
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros -2: 1 Digimon card w/[Xros Heart] in traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] While this Digimon has [Shoutmon] in its name, it gets +2000 DP."
+      }
+    ],
+    "type": "Mini Dragon/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "9c3c1ee687f1f56f3da3882e1ba15e969d031ccd3de162c07593a4d536e3be3c",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "e66bdb43d60572f62872dfdc44a41074d6abccfa7e3f191898730e71b7a70295",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522011:BT10-111:BT10-111",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522011"
+}

@@ -222,3 +222,21 @@ def test_assertion_keys_match_the_rust_checker():
     enum = _schema("encode_ruling.json")["properties"]["expect_ruling"]["anyOf"][1][
         "properties"]["assert"]["items"]["properties"]["that"]["items"]["properties"]["key"]["enum"]
     assert sorted(enum) == sorted(pk.ASSERTION_KEYS)
+
+
+@pytest.mark.parametrize("seat", (0, 1))
+def test_selection_candidates_observation_is_available_to_both_authoring_seats(seat):
+    key = f"p{seat}.selection_candidates"
+    assert key in pk.ASSERTION_KEYS
+    assert "selection_candidates" in pk.ENCODE_AUTHOR_TASK
+    assert "selection_candidates" in pk.ENCODE_VERIFY_TASK
+
+
+@pytest.mark.parametrize("seat", (0, 1))
+def test_ruling_schema_accepts_exact_candidate_multisets(seat):
+    jsonschema = pytest.importorskip("jsonschema")
+    result = json.loads(json.dumps(AUTHOR))
+    result["expect_ruling"]["assert"][0]["that"] = [
+        {"key": f"p{seat}.selection_candidates", "value_json": '["ST1-05", "ST1-05"]'}
+    ]
+    jsonschema.validate(result, _schema("encode_ruling.json"))

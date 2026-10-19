@@ -1,0 +1,113 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX12-063",
+    "card_type": "Digimon",
+    "colors": [
+      "Purple",
+      "Green"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "cost": 4,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "Karakurumon",
+        "play_cost": 7,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+          }
+        ]
+      }
+    ],
+    "form": "Ultimate",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 5,
+    "name": "Karakurumon",
+    "play_cost": 7,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-063_P1.png?260529",
+      "printing_id": "EX12-063_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, it can.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6861",
+        "question": "Can this card's [On Play] [When Digivolving] effect suspend a different card from the one that's given \"can't unsuspend until their turn ends\"?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+      }
+    ],
+    "type": "Puppet/Shambala/TB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "16768580164e23fd58c3f6a8e61562c93abd5b4912e92d58f304e4198bc45d22",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-063:EX12-063_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

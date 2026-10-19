@@ -191,6 +191,65 @@ impl Game {
         self.stamp_unstamped_trigger_batch();
     }
 
+    /// Merge snapshot grants with source-independent duration grants. The latter
+    /// are evaluated in the original grantor's context, against the current board.
+    fn granted_entries_for_carrier(
+        &self,
+        handle: PermanentHandle,
+        timing: EffectTiming,
+    ) -> Vec<(u64, CardHandle, PlayerId, crate::enums::EffectSourceKind)> {
+        let mut entries: Vec<_> = self
+            .modifiers
+            .granted_triggered_for_timing_with_ids(handle, timing)
+            .into_iter()
+            .map(|(id, card, player)| {
+                let kind = self
+                    .card_data_for_handle(card)
+                    .map(|d| source_kind_for_card_kind(d.card_kind))
+                    .unwrap_or(crate::enums::EffectSourceKind::Digimon);
+                (id, card, player, kind)
+            })
+            .collect();
+        for entry in &self.modifiers.dynamic_triggered {
+            let grant = &entry.grant;
+            if grant.timing != timing {
+                continue;
+            }
+            // Resolve the original card by identity, never retain a mutable
+            // battle-area index which could later refer to another permanent.
+            let source_permanent = self.players.iter().enumerate().find_map(|(player, p)| {
+                p.battle_area
+                    .iter()
+                    .position(|perm| {
+                        perm.card_sources
+                            .iter()
+                            .chain(perm.linked_cards.iter())
+                            .any(|c| c.handle() == grant.source_card)
+                    })
+                    .map(|index| PermanentHandle {
+                        player: player as PlayerId,
+                        index: index as u8,
+                    })
+            });
+            let rctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                self,
+                grant.source_card,
+                source_permanent,
+                entry.source_kind,
+                grant.source_player,
+            );
+            if (entry.predicate)(&rctx, handle) {
+                entries.push((
+                    grant.body_id,
+                    grant.source_card,
+                    grant.source_player,
+                    entry.source_kind,
+                ));
+            }
+        }
+        entries
+    }
+
     // ─── Public API ─────────────────────────────────────────────────
 
     /// Resolve the effect list a `QueuedEffect` indexes with its
@@ -265,6 +324,7 @@ impl Game {
                 .unwrap_or_default();
             valid_action_ids.push(action_id);
             choices.push(EffectChoiceEntry {
+                count_choice: None,
                 label: format!("{} {}", effect.card_id, effect.timing_key),
                 action_id,
                 source_card: Some(effect.source_card),
@@ -1125,6 +1185,12 @@ impl Game {
     pub(crate) fn run_after_selection_hook(&mut self, hook: crate::resume::AfterSelectionHook) {
         use crate::resume::AfterSelectionHook as Hook;
         match hook {
+            Hook::DeletionWindowContinue { window } => crate::replacement::resume_deletion_window(self, *window),
+            Hook::DigivolveReducerChain {
+                state,
+                amount,
+                paid,
+            } => self.resume_digivolve_reducer_chain_after_payment(state, amount, paid),
             Hook::InteractiveDigivolveReducer {
                 amount,
                 acting_player,
@@ -1142,6 +1208,7 @@ impl Game {
                 self.continue_digixros_after_parked_leave(cont)
             }
             Hook::PlayCostContinuation {
+                effect_controller,
                 player_id,
                 hand_index,
                 target,
@@ -1152,6 +1219,7 @@ impl Game {
                 accumulated_reduction,
                 processed,
             } => self.resume_play_cost_continuation_after_pending(
+                effect_controller,
                 player_id,
                 hand_index,
                 target,
@@ -1327,18 +1395,14 @@ impl Game {
         if effect.activation_cost_fn.is_none() {
             return false;
         }
-        let Some(condition) = &effect.condition else {
-            return true;
-        };
-        let guard = TriggerContextGuard::install(self, qe.trigger_context.clone());
-        let ctx = EffectContext::new_with_source_kind(
-            &mut *guard.game,
-            qe.source_card,
-            qe.source_permanent,
-            qe.source_kind,
-            qe.controller,
-        );
-        condition(&ctx.as_read())
+        // Preserve main's grouped play and DNA-origin condition contexts in
+        // the shared Security/non-Security activation-cost gate.
+        if qe.trigger_context.as_ref().is_some_and(|context| {
+            !context.simultaneous_play_members.is_empty()
+        }) {
+            return !self.matching_simultaneous_play_contexts(qe).is_empty();
+        }
+        self.queued_single_effect_condition_passes(qe)
     }
 
     /// State-based ≤0-DP rules-check run BETWEEN top-level queued effects (after
@@ -1471,6 +1535,12 @@ impl Game {
                         .effect_queue
                         .remove(idx)
                         .expect("index from queued_option_main_index is in-bounds");
+                    // The paid Option body remains first, but optional processing
+                    // conditions inside it must retain their legal decline gate.
+                    if qe.is_optional && self.queued_effect_wants_outer_optional_prompt(&qe) {
+                        self.install_outer_optional_trigger_selection(qe);
+                        return;
+                    }
                     // Same deferred-drain scope the ordinary single-entry path
                     // uses, so triggers the body causes stay queued until it
                     // has resolved.
@@ -1728,19 +1798,52 @@ impl Game {
         }
     }
 
-    /// Drain triggered effects while exposing the DNA-origin bit to condition
-    /// and process contexts. The previous value is restored after the drain.
-    pub(crate) fn drain_effect_queue_with_dna_origin(&mut self, dna_origin: bool) {
-        let prev = self.current_dna_origin;
+    /// Collect every trigger from one completed evolution before resolving any
+    /// of them (§15-4-3-2). The controller chooses among self timings and global
+    /// observers together; derived events still receive their own queue batch.
+    /// `card` is captured at commit time so an earlier trigger removing the
+    /// evolved permanent cannot change the global observer's event identity.
+    pub(crate) fn fire_digivolve_event_triggers(
+        &mut self,
+        permanent: PermanentHandle,
+        card: CardHandle,
+        effect_initiated: bool,
+        dna_origin: bool,
+    ) {
+        let previous_dna_origin = self.current_dna_origin;
+        // A non-DNA evolution caused by a DNA effect still has non-DNA
+        // self triggers; do not inherit its caller's origin while collecting.
         self.current_dna_origin = Some(dna_origin);
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            TriggerSource::Permanent(permanent),
+        );
+        if dna_origin {
+            self.enqueue_triggered(
+                EffectTiming::OnDnaDigivolve,
+                TriggerSource::Permanent(permanent),
+            );
+        }
+        self.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: permanent.player,
+                permanent,
+                card,
+                effect_initiated,
+                dna_origin,
+            },
+        );
+        // Every queued effect captured its origin. Restore the caller before
+        // draining so nested events do not inherit a temporary DNA scope.
+        self.current_dna_origin = previous_dna_origin;
         self.drain_effect_queue();
-        self.current_dna_origin = prev;
     }
 
     // ─── Internal helpers ───────────────────────────────────────────
 
     fn trigger_context_for_source(
-        &self,
+        &mut self,
         source: &TriggerSource,
         source_permanent: Option<PermanentHandle>,
         timing: EffectTiming,
@@ -2169,14 +2272,17 @@ impl Game {
                 }],
                 ..TriggerContext::default()
             },
-            TriggerSource::BattleResolved { winner, deleter } => TriggerContext {
+            TriggerSource::BattleResolved {
+                winner,
+                ref deleters,
+            } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 // The battle winner (owner + trait read by the observer's
                 // `event_winner_*` predicates). `None` on a tie — no winner.
                 battle_winner: winner,
                 // G-DSL-BATTLE-DELETER — read by `event_battle_deleter`.
-                battle_deleter: deleter,
+                battle_deleters: deleters.clone(),
                 event_permanent: winner,
                 cause: Some(crate::trigger_context::EventCause::BattleDeletion),
                 ..TriggerContext::default()
@@ -2260,6 +2366,31 @@ impl Game {
         };
         if context.source_effect.is_none() {
             context.source_effect = self.current_effect_attribution();
+        }
+        // Capture before any observer resolves. The existing stack identity is
+        // shared with battle/replacement tracking: it survives ordinary stack
+        // edits, is invalidated by every DNA path, and is absent on a new play.
+        if context.deleted_object.is_none() {
+            if let Some(handle) = context.event_permanent {
+                if let Some(permanent) = self
+                    .player(handle.player)
+                    .battle_area
+                    .get(handle.index as usize)
+                {
+                    let identity = match permanent.battle_identity {
+                        Some(identity) => identity,
+                        None => {
+                            let identity = self.next_battle_identity;
+                            self.next_battle_identity =
+                                identity.checked_add(1).expect("stack identity exhausted");
+                            self.player_mut(handle.player).battle_area[handle.index as usize]
+                                .battle_identity = Some(identity);
+                            identity
+                        }
+                    };
+                    context.event_permanent_identity = Some((handle.player, identity));
+                }
+            }
         }
         context
     }
@@ -2624,7 +2755,7 @@ impl Game {
         let top = perm.top_card();
         let card_id = top.card_id(&self.card_data).to_string();
         let source_card = top.handle();
-        let top_source_kind = source_kind_for_card_kind(top.card_kind(&self.card_data));
+        let top_source_kind = self.effect_source_kind_for_handle(source_card);
 
         let tp = self.turn_player();
         let is_turn_player = handle.player == tp;
@@ -2639,11 +2770,9 @@ impl Game {
         // bodies park on `pending_selection` like printed effects;
         // inline-fire (Phase 4b) is now redundant for queue-routed
         // entries but kept as a fallback via `pending_granted_fires`.
-        let granted_entries = self
-            .modifiers
-            .granted_triggered_for_timing_with_ids(handle, timing);
+        let granted_entries = self.granted_entries_for_carrier(handle, timing);
         let tp_for_granted = self.turn_player();
-        for (body_id, source_card, source_player) in granted_entries {
+        for (body_id, source_card, source_player, grantor_kind) in granted_entries {
             // Cause attribution: a granted triggered effect is the GRANTOR's
             // effect from the carrier's perspective. If the carrier is
             // unaffected by that player's effects, the granted clause does NOT
@@ -2658,10 +2787,6 @@ impl Game {
             //     immunity against `source_player`, keyed to the grantor's
             //     effect-source kind.
             // No-op for same-controller grants.
-            let grantor_kind = self
-                .card_data_for_handle(source_card)
-                .map(|d| source_kind_for_card_kind(d.card_kind))
-                .unwrap_or(crate::enums::EffectSourceKind::Digimon);
             if self.progress_excludes(handle, Some(source_player))
                 || self.permanent_is_unaffected_by_effect(handle, source_player, grantor_kind)
             {
@@ -2678,13 +2803,7 @@ impl Game {
             self.effect_queue.push_back(QueuedEffect {
                 source_card,
                 source_permanent: Some(handle),
-                source_kind: source_kind_for_card_kind(
-                    self.player(handle.player)
-                        .battle_area
-                        .get(handle.index as usize)
-                        .map(|p| p.top_card().card_kind(&self.card_data))
-                        .unwrap_or(crate::enums::CardKind::Digimon),
-                ),
+                source_kind: top_source_kind,
                 controller: carrier_controller,
                 timing,
                 trigger_context: trigger_context.clone(),
@@ -2855,7 +2974,7 @@ impl Game {
                         (
                             c.card_id(&self.card_data).to_string(),
                             c.handle(),
-                            source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                            EffectSourceKind::Digimon,
                         )
                     })
                     .collect(),
@@ -3029,7 +3148,7 @@ impl Game {
                     (
                         c.card_id(&self.card_data).to_string(),
                         c.handle(),
-                        source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                        EffectSourceKind::Digimon,
                         adopted.contains(&i),
                     )
                 })
@@ -3098,19 +3217,13 @@ impl Game {
         // Track H §3 Phase 4i — same queue-based granted dispatch as
         // `enqueue_from_permanent`; breeding-area carriers are valid
         // grant targets via the breeding permanent's handle.
-        let granted_entries = self
-            .modifiers
-            .granted_triggered_for_timing_with_ids(handle, timing);
+        let granted_entries = self.granted_entries_for_carrier(handle, timing);
         let tp_for_granted = self.turn_player();
-        for (body_id, source_card, source_player) in granted_entries {
+        for (body_id, source_card, source_player, grantor_kind) in granted_entries {
             // D4 / DCGO: granted body runs as the carrier's own effect (see the
             // battle-area dispatch above). `source_player` (grantor) gates only
             // the opponent-effect immunity check (Q17) — a breeding carrier
             // can't be the current attacker, so the Progress branch is moot.
-            let grantor_kind = self
-                .card_data_for_handle(source_card)
-                .map(|d| source_kind_for_card_kind(d.card_kind))
-                .unwrap_or(crate::enums::EffectSourceKind::Digimon);
             if self.permanent_is_unaffected_by_effect(handle, source_player, grantor_kind) {
                 continue;
             }
@@ -3183,7 +3296,7 @@ impl Game {
                     (
                         c.card_id(&self.card_data).to_string(),
                         c.handle(),
-                        source_kind_for_card_kind(c.card_kind(&self.card_data)),
+                        EffectSourceKind::Digimon,
                     )
                 })
                 .collect()
@@ -3377,9 +3490,23 @@ impl Game {
     /// installed). Granted bodies and entries whose effect can no longer be
     /// looked up report `true` (the run-time path decides those).
     pub(crate) fn queued_effect_condition_passes(&mut self, i: usize) -> bool {
-        let Some(qe) = self.effect_queue.get(i) else {
-            return false;
-        };
+        let Some(qe) = self.effect_queue.get(i).cloned() else { return false; };
+        if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
+            return !self.matching_simultaneous_play_contexts(&qe).is_empty();
+        }
+        self.queued_single_effect_condition_passes(&qe)
+    }
+
+    fn matching_simultaneous_play_contexts(&mut self, qe: &QueuedEffect) -> Vec<TriggerContext> {
+        let Some(group) = qe.trigger_context.as_ref() else { return Vec::new(); };
+        group.simultaneous_play_members.iter().filter(|member| {
+            let mut probe = qe.clone();
+            probe.trigger_context = Some((*member).clone());
+            self.queued_single_effect_condition_passes(&probe)
+        }).cloned().collect()
+    }
+
+    fn queued_single_effect_condition_passes(&mut self, qe: &QueuedEffect) -> bool {
         if qe.granted_effect_id.is_some() {
             // Granted effects have no clause condition — keep them.
             return true;
@@ -3390,7 +3517,7 @@ impl Game {
         let keyword_effect = qe.keyword_effect;
         let source_card = qe.source_card;
         let source_permanent = qe.source_permanent;
-        let source_kind = qe.source_kind;
+        let source_kind = self.queued_effect_activation_kind(qe);
         let controller = qe.controller;
         let effect_slot = qe.effect_slot as usize;
         let trigger_context = qe.trigger_context.clone();
@@ -3467,10 +3594,19 @@ impl Game {
     /// ("When THIS Digimon unsuspends") are unaffected: only the entry whose
     /// event permanent is the source passes.
     pub(crate) fn collapse_simultaneous_event_batch(&mut self, first_index: usize) {
+        self.collapse_event_batch(first_index, false);
+    }
+
+    pub(crate) fn collapse_simultaneous_play_event_batch(&mut self, first_index: usize) {
+        self.collapse_event_batch(first_index, true);
+    }
+
+    fn collapse_event_batch(&mut self, first_index: usize, retain_play_subjects: bool) {
         type Key = (
             CardHandle,
             u8,
             Option<u64>,
+            Option<PermanentHandle>,
             Option<crate::enums::Keyword>,
             EffectTiming,
         );
@@ -3480,6 +3616,10 @@ impl Game {
                 qe.source_card,
                 qe.effect_slot,
                 qe.granted_effect_id,
+                // A dynamic grant shares its body across carriers, but each
+                // carrier owns a distinct effect. Collapse repeated observer
+                // scans for that carrier only, never another recipient's copy.
+                qe.granted_effect_id.and(qe.source_permanent),
                 qe.keyword_effect,
                 qe.timing,
             )
@@ -3506,6 +3646,12 @@ impl Game {
                 .copied()
                 .find(|&i| self.queued_effect_condition_passes(i))
                 .unwrap_or(members[0]);
+            if retain_play_subjects {
+                let contexts: Vec<_> = members.iter().filter_map(|&i| self.effect_queue[i].trigger_context.clone()).collect();
+                if let Some(context) = self.effect_queue[keep].trigger_context.as_mut() {
+                    context.simultaneous_play_members = contexts;
+                }
+            }
             drop.extend(members.into_iter().filter(|&i| i != keep));
         }
         drop.sort_unstable();
@@ -3514,11 +3660,48 @@ impl Game {
         }
     }
 
+    fn queued_effect_activation_kind(&self, qe: &QueuedEffect) -> EffectSourceKind {
+        // Q2229 classifies native field effects on activation, after earlier
+        // simultaneous effects. Cost/body continuations retain this capture.
+        // Inherited effects use 15-3-2; link effects are gained by the Digimon
+        // (4-2-6), whose activation is a Digimon effect (15-2-1-1). Explicit
+        // Option or cross-card refire attribution is not promoted.
+        // A granted body belongs to its carrier. The queued source_card is
+        // retained as grant provenance and can be a different physical card.
+        if qe.granted_effect_id.is_some() && qe.source_kind != EffectSourceKind::Option
+            && qe.attribution_source_card.is_none() {
+            if let Some(card) = qe.source_permanent
+                .and_then(|h| self.player(h.player).battle_area.get(h.index as usize))
+                .and_then(|p| p.card_sources.last()).map(|c| c.handle()) {
+                return self.effect_source_kind_for_handle(card);
+            }
+        }
+        let native = self.effects_for_queued(&qe)
+                .is_some_and(|effects| effects.get(qe.effect_slot as usize)
+                    .is_some_and(|effect| !effect.inherited && !effect.linked));
+        let current_top = qe.source_permanent
+            .and_then(|h| self.player(h.player).battle_area.get(h.index as usize))
+            .and_then(|p| p.card_sources.last())
+            .is_some_and(|c| c.handle() == qe.source_card);
+        if native && current_top && qe.source_kind != EffectSourceKind::Option
+            && qe.attribution_source_card.is_none() {
+            return self.effect_source_kind_for_handle(qe.source_card);
+        }
+        qe.source_kind
+    }
+
     /// Execute a single queued effect: re-look-up, condition check,
     /// process. Exits silently on any validity gap (permanent deleted,
     /// effect removed from the registry, etc.) — same tolerance the legacy
     /// `fire_*` loops had.
-    fn run_queued_effect(&mut self, qe: QueuedEffect) {
+    fn run_queued_effect(&mut self, mut qe: QueuedEffect) {
+        qe.source_kind = self.queued_effect_activation_kind(&qe);
+        if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
+            let members = self.matching_simultaneous_play_contexts(&qe);
+            let Some(mut selected) = members.first().cloned() else { return; };
+            if members.len() > 1 { selected.simultaneous_play_members = members; }
+            qe.trigger_context = Some(selected);
+        }
         // A queued entry is resolving, so the Option user's "my trigger first"
         // pick (G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER) is spent: 15-4-3-5-1
         // re-chooses before each remaining item.
@@ -3945,6 +4128,23 @@ impl Game {
         None
     }
 
+    /// Leaving the battle area or becoming a DNA material makes the carrier
+    /// a new card (15-4-4-3). Do not revive its pending field effects merely
+    /// because the same physical source later reappears in a live stack.
+    /// OnDeletion snapshots intentionally activate from the deleted object;
+    /// zone-scoped entries without a field carrier retain their own liveness.
+    pub(crate) fn invalidate_pending_field_effects(&mut self, carriers: &[PermanentHandle]) {
+        self.effect_queue.retain(|qe| {
+            let source_changed = qe.source_permanent.is_some_and(|h| carriers.contains(&h));
+            !source_changed
+                || (qe.timing == EffectTiming::OnDeletion
+                    && qe
+                        .trigger_context
+                        .as_ref()
+                        .is_some_and(|ctx| ctx.deleted_object.is_some()))
+        });
+    }
+
     fn queued_effect_source_is_live(
         &self,
         qe: &QueuedEffect,
@@ -4308,6 +4508,9 @@ impl Game {
                     }
                     SecurityRemovalDestination::Hand(owner) => {
                         self.player_mut(owner).hand.push(security.card);
+                        // An effect moved the removed security card to hand;
+                        // hand-gain observers run after this removal resolves.
+                        self.fire_on_add_to_hand_by_effect(owner);
                     }
                     SecurityRemovalDestination::Deck { owner, to_bottom } => {
                         // Route to the owner's deck. Digi-Eggs go to the
@@ -4338,7 +4541,10 @@ impl Game {
                         let placed = security.card.handle();
                         let cause_card = self.pending_security_source_cause_card.take();
                         let mut seated = false;
-                        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                        if self.is_token_source_destination(target) {
+                            let owner = security.card.owner;
+                            self.player_mut(owner).trash.push(security.card);
+                        } else if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
                                 self.player_mut(target.player).breeding_area.as_mut()
                             {
@@ -4379,7 +4585,10 @@ impl Game {
                         let placed = security.card.handle();
                         let cause_card = self.pending_security_source_cause_card.take();
                         let mut seated = false;
-                        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                        if self.is_token_source_destination(target) {
+                            let owner = security.card.owner;
+                            self.player_mut(owner).trash.push(security.card);
+                        } else if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
                                 self.player_mut(target.player).breeding_area.as_mut()
                             {
@@ -4602,6 +4811,15 @@ impl Game {
     /// live, its OPT counter is not exhausted, and its `condition` passes.
     /// An optional effect whose preconditions already fail must not prompt.
     fn queued_effect_wants_outer_optional_prompt(&mut self, qe: &QueuedEffect) -> bool {
+        if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
+            // Each simultaneous subject can make the shared optional effect
+            // actionable. Keep its outer decline choice if ANY subject does.
+            return self.matching_simultaneous_play_contexts(qe).into_iter().any(|member| {
+                let mut single = qe.clone();
+                single.trigger_context = Some(member);
+                self.queued_effect_wants_outer_optional_prompt(&single)
+            });
+        }
         // Granted inline bodies have no Effect metadata and never carry the
         // outer-prompt flag — never prompt for them.
         if qe.granted_effect_id.is_some() {
@@ -4633,7 +4851,7 @@ impl Game {
         // `run_queued_effect_inner`). For every other timing, an unsatisfied
         // condition means the body would no-op — do not prompt.
         let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
-        let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
+        let attribution_source_kind = qe.attribution_source_kind.unwrap_or_else(|| self.queued_effect_activation_kind(qe));
         // Install the queued effect's trigger context BEFORE evaluating the
         // condition / outer_optional_guard closures. DSL predicates like
         // `event_target_owner`, `event_target_kind`, `event_card_color_has`,
@@ -4683,7 +4901,7 @@ impl Game {
         // The prompt outlives a DNA digivolve's drain scope; carry its DNA
         // bit onto the parked effect, as `install_trigger_order_selection`
         // does, so "if DNA digivolving" still holds after ACCEPT (BT16-077).
-        if self.current_dna_origin.is_some() {
+        if qe.dna_origin_context.is_none() {
             qe.dna_origin_context = self.current_dna_origin;
         }
         let chooser = qe.controller;
@@ -4821,7 +5039,9 @@ impl Game {
         if self.current_dna_origin.is_some() {
             for &qe_idx in bundle {
                 if let Some(qe) = self.effect_queue.get_mut(qe_idx) {
-                    qe.dna_origin_context = self.current_dna_origin;
+                    if qe.dna_origin_context.is_none() {
+                        qe.dna_origin_context = self.current_dna_origin;
+                    }
                 }
             }
         }
@@ -4872,6 +5092,7 @@ impl Game {
             debug_assert!(action_id < HAND_EFFECT_END);
             valid_action_ids.push(action_id);
             choices.push(EffectChoiceEntry {
+                count_choice: None,
                 label: format!(
                     "{} slot {} ({})",
                     qe.card_id,
@@ -5011,6 +5232,26 @@ impl Game {
         player: PlayerId,
         action_id: u16,
     ) -> Result<(), crate::selection::SelectionError> {
+        self.resolve_selection_with_lifecycle(player, action_id, true)
+    }
+
+    /// Resolve only an isolated payment probe's selected callback and payment
+    /// continuations. Waiting sibling effects and the enclosing action's
+    /// lifecycle must not run before the proposed evolution has paid its cost.
+    pub(crate) fn resolve_payment_probe_selection(
+        &mut self,
+        player: PlayerId,
+        action_id: u16,
+    ) -> Result<(), crate::selection::SelectionError> {
+        self.resolve_selection_with_lifecycle(player, action_id, false)
+    }
+
+    fn resolve_selection_with_lifecycle(
+        &mut self,
+        player: PlayerId,
+        action_id: u16,
+        resume_lifecycle: bool,
+    ) -> Result<(), crate::selection::SelectionError> {
         use crate::selection::SelectionError;
 
         let sel = self
@@ -5026,6 +5267,16 @@ impl Game {
         }
         if !is_pass && !sel.valid_action_ids.contains(&action_id) {
             return Err(SelectionError::InvalidAction);
+        }
+        // Page navigation is presentation state only. Do not run payment hooks,
+        // triggers, turn checks, or any other post-selection lifecycle.
+        if self.navigate_play_cost_order(action_id) {
+            return Ok(());
+        }
+        if crate::replacement::navigate_replacement_order(self, action_id)
+            || crate::count_choice::navigate_count_choice(self, action_id)
+        {
+            return Ok(());
         }
         let was_attack_pending = self.pending_attack.is_some();
 
@@ -5050,8 +5301,18 @@ impl Game {
             // to the resumable VM carries its continuation as data — run it
             // instead of the legacy `sel.callback`. The abort-flag scoping
             // mirrors the on_decline path below.
+            // Only hooks armed for THIS selection inherit its payment
+            // outcome. A declined outer gate may install another payment's
+            // hook while run_resume advances the chain.
+            let payment_hooks_before = self.after_selection_resume_hooks.0.len();
+            let payment_owner = self.digivolve_selection_owner(&stack);
+            // A failed inner declaration may remove its live scope while this
+            // selection runs; retain its ownership rank for the waiting hooks.
+            let mut digivolve_scope_order: Vec<_> = self.effect_digivolve_scopes.iter()
+                .map(|scope| scope.declaration.result_card).collect();
             let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
             crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
+            let payment_aborted = self.dsl_clause_aborted;
             self.dsl_clause_aborted = prev_aborted;
             // Run continuations that wrappers (play-cost / reducer /
             // digixros-leave / partition-second-play) deferred because this
@@ -5059,8 +5320,52 @@ impl Game {
             // run_resume. Each hook is plain data (`AfterSelectionHook`);
             // a hook that installs another resume-driven selection re-arms by
             // pushing onto the (now-drained) channel for the next resolution.
+            for scope in &self.effect_digivolve_scopes {
+                if !digivolve_scope_order.contains(&scope.declaration.result_card) {
+                    digivolve_scope_order.push(scope.declaration.result_card);
+                }
+            }
             let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
-            for hook in hooks {
+            let mut indexed: Vec<_> = hooks.into_iter().enumerate().collect();
+            // Nested evolution payments finish before their enclosing payment.
+            // Preserve other continuation kinds and the original index used to
+            // attribute this selection's payment outcome. Scope depth is live
+            // typed ownership, not prompt text or a permanent's shifting index.
+            let chain_positions: Vec<_> = indexed.iter().enumerate().filter_map(|(slot, (_, hook))| {
+                matches!(hook, crate::resume::AfterSelectionHook::DigivolveReducerChain { .. }).then_some(slot)
+            }).collect();
+            let depth = |hook: &crate::resume::AfterSelectionHook| match hook {
+                crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => state.effect.as_ref()
+                    .and_then(|effect| digivolve_scope_order.iter().rposition(|card| *card == effect.result_card))
+                    .map_or(0, |index| index + 1),
+                _ => 0,
+            };
+            // Stable insertion swaps only reducer slots; repeated parking
+            // therefore cannot invert nested ownership on the next decision.
+            for right in 1..chain_positions.len() {
+                let mut at = right;
+                while at > 0 && depth(&indexed[chain_positions[at]].1) > depth(&indexed[chain_positions[at - 1]].1) {
+                    indexed.swap(chain_positions[at], chain_positions[at - 1]);
+                    at -= 1;
+                }
+            }
+            for (index, mut hook) in indexed {
+                // Passing an immediate replacement declines that replacement,
+                // not the enclosing evolution used to pay this cost. Its
+                // declaration still commits after the remaining window closes.
+                if index < payment_hooks_before
+                    && ((is_pass && sel.kind != crate::selection::SelectionKind::Replacement)
+                        || payment_aborted)
+                {
+                    if let crate::resume::AfterSelectionHook::DigivolveReducerChain {
+                        state, paid, ..
+                    } = &mut hook
+                    {
+                        if payment_owner == Some(state.result_card()) {
+                            *paid = false;
+                        }
+                    }
+                }
                 self.run_after_selection_hook(hook);
             }
         } else if is_pass {
@@ -5079,6 +5384,14 @@ impl Game {
             }
         } else {
             (sel.callback)(self, action_id);
+        }
+        if !resume_lifecycle {
+            // The caller is searching payment branches on a clone. Preserve
+            // queued siblings and enclosing attack/security/Option/turn state;
+            // normal commit resolution will resume those after evolution.
+            self.draining_deferred = self.draining_deferred.saturating_sub(1);
+            self.selection_resolution_depth = self.selection_resolution_depth.saturating_sub(1);
+            return Ok(());
         }
         // G-ENGINE-DECODE-ON-PLAY-BEFORE-CARRIER-LEAVES: when this selection
         // was the last nested pick of a replacement process (e.g. <Decode>'s
@@ -5504,6 +5817,7 @@ impl Game {
         let trigger_action = HAND_EFFECT_START + 1;
         let choices = vec![
             EffectChoiceEntry {
+                count_choice: None,
                 label: format!("Trash the used Option ({option_id})"),
                 action_id: trash_action,
                 source_card: Some(source_card),
@@ -5514,6 +5828,7 @@ impl Game {
                 observation_metadata: Default::default(),
             },
             EffectChoiceEntry {
+                count_choice: None,
                 label: trigger_label,
                 action_id: trigger_action,
                 source_card: Some(trigger_source_card),

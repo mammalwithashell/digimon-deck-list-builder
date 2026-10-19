@@ -48,23 +48,23 @@ The project is migrating to the Rust engine as the source of truth:
 - Card scripting DSL: `code/digimon-dsl/` plus YAML card specs under `code/digimon-engine/cards/`.
 - Python bindings: `code/digimon-engine-py/`, exposed as `digimon_engine`.
 - RL environment: `code/digimon_gym/digimon_gym.py`.
-- Legacy Python engine: `code/engine_py_legacy/engine/`, retained as transitional reference/fallback only.
+The legacy Python engine was removed. There is no Python engine fallback.
 
-`DigimonEnv` chooses the runner with `DIGIMON_BACKEND`:
+`DigimonEnv` always uses `RustHeadlessGame` from the PyO3 wheel:
 
-- `DIGIMON_BACKEND=rust`: use `RustHeadlessGame` from the PyO3 wheel.
-- unset with `standard_lite_v2`: use Rust when PyO3 bindings are available, because v2 has no legacy Python fallback.
-- unset or other value with `standard_compact_v1`: legacy Python `HeadlessGame` fallback where still explicitly wired.
+- `DIGIMON_BACKEND` unset or `rust`: use Rust.
+- Any other explicit backend raises `RuntimeError`.
+- A missing Rust wheel raises `RuntimeError` with build instructions.
 
-New production behavior should target Rust first. Before editing engine behavior, check `docs/RUST_PYTHON_PARITY.md` for known divergences, and keep Rust/Python parity notes accurate while the migration is in progress.
+`docs/RUST_PYTHON_PARITY.md` is historical. Current engine/DSL gaps live in `docs/RUST_ENGINE_GAPS.md`, `qa/archetype-qa/engine-gaps.md`, and `qa/dsl-vocab-gaps.md`.
 
 `DigimonEnv` also selects an observation profile:
 
 - Default pilot profile: `standard_lite_v2`.
-- Compact compatibility profile: `standard_compact_v1`.
+- Compact profile `standard_compact_v1` is engine-only compatibility; the training adapter rejects it.
 - Env override: `DIGIMON_TENSOR_PROFILE`.
 
-`standard_lite_v2` requires the Rust/PyO3 runner and is the serious-training default. `standard_compact_v1` is a 1375-float compatibility profile; `digimon_engine.TENSOR_SIZE` still describes that compact layout for legacy imports and compact-profile checks. New training, inference, export, model metadata, and feature-extractor code must use exported observation layout metadata instead of assuming `TENSOR_SIZE` is the active observation size.
+`DigimonEnv` defaults to `standard_lite_v2` (8410 floats). The Rust engine default and `digimon_engine.TENSOR_SIZE` use `standard_lite_deck_v2` (8850 floats). The 1375-float `standard_compact_v1` remains available only through explicit engine compatibility APIs. Training, inference, export, model metadata, and feature extractors must resolve the selected profile from exported layout metadata rather than treating `TENSOR_SIZE` as the training observation size.
 
 ---
 
@@ -203,8 +203,8 @@ Goal: play Digimon matches inside the headless engine to generate win/loss and p
 - Uses `ActionMasker` so illegal actions are never sampled.
 - Training entrypoint: `code/digimon_gym/agents/pilot_training.py`.
 - Observation shape comes from the selected observation layout, not from `digimon_engine.TENSOR_SIZE`.
-- The default pilot observation layout is `standard_lite_v2`, currently `8320` floats.
-- `digimon_engine.TENSOR_SIZE` remains the `standard_compact_v1` compatibility constant, currently `1375` floats.
+- The default pilot observation layout is `standard_lite_v2`, currently `8410` floats.
+- `digimon_engine.TENSOR_SIZE` reports the engine default `standard_lite_deck_v2` (8850 floats), not the training default.
 - Action space comes from `digimon_engine.ACTION_SPACE_SIZE` and is currently `2192`.
 
 ### MaskableRecurrentPPO (Custom LSTM)
@@ -276,8 +276,8 @@ API:
 Observation/action spaces:
 
 - Observation: `Box(shape=(selected_layout.tensor_size,), low=-10.0, high=20001.0, dtype=float32)`.
-- Default selected layout: `standard_lite_v2`, currently `8320`.
-- Compact compatibility layout: `standard_compact_v1`, currently `1375`.
+- Default selected layout: `standard_lite_v2`, currently `8410`.
+- `standard_compact_v1` is rejected by `DigimonEnv`; explicit engine compatibility APIs retain its 1375-float layout.
 - Action: `Discrete(ACTION_SPACE_SIZE)`.
 - Current `ACTION_SPACE_SIZE`: `2192`.
 
@@ -537,7 +537,7 @@ DB-dependent agent modules belong to hosted API infrastructure:
 
 Engine-only routers and desktop/Tauri paths must not depend on `digimon_gym` training internals. Desktop gameplay, inference, and deck tools run through Tauri `invoke()` into `digimon-engine`, and the Tauri build must not link a Python runtime.
 
-Legacy Python engine imports are transitional. Do not add new production imports from `engine_py_legacy.*` unless a parity/fallback path is already explicitly documented.
+The legacy Python engine was removed. Do not import `engine_py_legacy.*` or introduce a Python engine fallback.
 
 ---
 
@@ -605,13 +605,13 @@ python -m digimon_gym.agents.architect_training --archetype "Medusamon" --episod
 
 # Env smoke check
 DIGIMON_BACKEND=rust python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs,info=env.reset(seed=1); print(obs.shape, info['tensor_profile'], info['action_mask'].shape)"
-DIGIMON_BACKEND=rust python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(tensor_profile='standard_compact_v1'); obs,info=env.reset(seed=1); print(obs.shape, info['tensor_profile'])"
+python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(tensor_profile='standard_lite_deck_v2'); obs,info=env.reset(seed=1); print(obs.shape, info['tensor_profile'])"
 
 # Rust backend PyO3 bindings
 cd code/digimon-engine-py && maturin develop
 
-# Rust-backend parity test
-DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v
+# Rust binding surface tests
+python -m pytest code/tests/test_rust_bindings_surface.py -v
 
 # RL tests
 python -m pytest code/tests/rl -v
@@ -638,7 +638,7 @@ Do not run Uvicorn with `--reload` for long-running training workers; reload cre
 12. Training CLI modules must not import DB/auth/FastAPI modules.
 13. Desktop builds use `VITE_BUILD_TARGET=desktop` to tree-shake admin/training UI.
 14. Observation code must use profile/layout metadata. Do not assume `digimon_engine.TENSOR_SIZE` is the active pilot observation size.
-15. Default serious pilot training uses `standard_lite_v2`; compact checks must opt into `standard_compact_v1`.
+15. Default serious pilot training uses `standard_lite_v2`; compact compatibility checks must use explicit engine APIs, not `DigimonEnv`.
 16. New Rust card effects are TDD: write a failing behavioral test under `code/digimon-engine/tests/` before implementing the `CardEffect` or DSL lowering.
 17. Do not author new Python card scripts for cards already implemented in Rust.
 18. Do not add no-op/raw-Rust placeholders to claim archetype readiness. Mark blocked gaps explicitly until behavior and tests are real.
@@ -705,3 +705,21 @@ Key docs:
 - `qa/archetype-qa/engine-gaps.md`: known rule/card gaps that block no-approximations compliance.
 - `.codex/skills/assess-rust-engine-archetype/`: Codex read-only DSL readiness assessment workflow for archetypes, decks, card groups, or card lists.
 - `.codex/skills/plan-rust-engine-gap-group/`: Codex workflow for planning numbered Rust engine/DSL gap roadmap groups.
+
+
+## Dedicated count-choice contract
+
+Count prompts use existing actions 30–57 for commits and 58/59 for previous/next
+page, with optional decline 62. They retain every count and bind the selected
+declared value. Page navigation is not a gameplay decision that pays costs or
+resolves effects. Read the live ACTION_SPEC and TENSOR_SPEC for the exact
+reserved-field assignment and current schema/hash tuple; model compatibility
+requires all six metadata fields even when dimensions did not change. JSON
+count and physical-identity values are decimal strings. Do not infer them from
+labels, encode them as imprecise JavaScript numbers, or accept old model
+contracts solely because tensor/action shapes match.
+
+
+### Model action semantic compatibility
+
+Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. This preparatory gate does not bump SCHEMA_VERSION (still 1), resize actions/tensors, or complete the capacity migration.

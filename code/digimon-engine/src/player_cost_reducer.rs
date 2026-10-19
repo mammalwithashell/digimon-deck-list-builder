@@ -27,8 +27,8 @@
 //!   passes the target-color filter), the digivolve path installs the
 //!   accept/decline prompt.
 //! * **single-fire** — a reducer with `single_fire == true` is removed on
-//!   the first *successful* application (accept + cost paid). A declined
-//!   prompt leaves it armed.
+//!   the next qualifying digivolution, even when declined, unpayable, or
+//!   prohibited. Every reducer for that event resolves before cost payment.
 //! * **expiry** — `Expiry::EndOfTurn` reducers are dropped in
 //!   `rotate_turn_player`.
 
@@ -72,8 +72,8 @@ pub struct PlayerDigivolveCostReducer {
     /// Reduction applied to the digivolution cost when the player accepts
     /// (and pays the suspend cost, if any).
     pub amount: i32,
-    /// When `true`, the reducer is consumed on the first successful
-    /// application ("next digivolve" — a one-shot).
+    /// When `true`, consumed by the next qualifying digivolution, whether
+    /// or not its optional cost is paid ("next digivolve" — a one-shot).
     pub single_fire: bool,
     /// When `Some(color)`, the digivolving permanent's top card must
     /// include `color`. `None` = applies to any color.

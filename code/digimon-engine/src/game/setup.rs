@@ -234,13 +234,26 @@ impl Game {
             replacement_depth: 0,
             replacement_pending_outcome: None,
             last_play_order_choice: None,
+            source_play_receipts: Vec::new(),
+            prepared_source_plays: Vec::new(),
+            next_source_play_receipt: 0,
+            field_source_receipts: Vec::new(),
+            movement_observer: std::cell::RefCell::new(None),
+            deletion_receipts: Vec::new(),
+            next_deletion_receipt: 0,
+            return_receipts: Vec::new(),
+            next_return_receipt: 0,
+            current_deletion_receipt: None,
             pending_would_play_resume: None,
             pending_assembly_materials: None,
             pending_would_link_resume: None,
+            pending_field_top_source_moves: Vec::new(),
+            pending_security_moves: Vec::new(),
             pending_option_link_host: None,
             pending_digimon_link: None,
             pending_link_host: None,
             pending_would_digivolve_resume: None,
+            effect_digivolve_scopes: Vec::new(),
             player_digivolve_cost_reducers: Vec::new(),
             pending_player_digivolve_reduction: 0,
             pending_interactive_digivolve_reduction: 0,
@@ -250,6 +263,10 @@ impl Game {
             option_body_pending: false,
             option_trash_order_deferred: false,
             pending_cost_reduction_amount_override: None,
+            cost_payment_receipts: Vec::new(),
+            next_cost_payment_receipt: 1,
+            active_cost_payment_receipt: None,
+            preferred_play_cost_effect: None,
             pending_digivolve_route_choice: None,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
@@ -270,6 +287,10 @@ impl Game {
             in_counter_window: false,
             effect_driven_option_use: false,
             active_deletion_batch: None,
+            pending_battle_resolutions: Vec::new(),
+            pending_attack_battle_result: None,
+            next_battle_identity: 1,
+            native_play_observation: None,
             pending_deletion_batch_rest: Vec::new(),
             pending_deletion_batch_parked: None,
             dsl_outer_tail: None,
@@ -391,12 +412,25 @@ impl Game {
         self.replacement_depth = 0;
         self.replacement_pending_outcome = None;
         self.last_play_order_choice = None;
+        self.prepared_source_plays.clear();
+        self.source_play_receipts.clear();
+        self.next_source_play_receipt = 0;
+        *self.movement_observer.borrow_mut() = None;
+        self.deletion_receipts.clear();
+        self.return_receipts.clear();
+        self.next_return_receipt = 0;
+        self.next_deletion_receipt = 0;
+        self.current_deletion_receipt = None;
         self.pending_would_play_resume = None;
         self.pending_would_link_resume = None;
+        self.pending_field_top_source_moves.clear();
+        self.field_source_receipts.clear();
+        self.pending_security_moves.clear();
         self.pending_option_link_host = None;
         self.pending_digimon_link = None;
         self.pending_link_host = None;
         self.pending_would_digivolve_resume = None;
+        self.effect_digivolve_scopes.clear();
         self.player_digivolve_cost_reducers = Vec::new();
         self.pending_player_digivolve_reduction = 0;
         self.pending_interactive_digivolve_reduction = 0;
@@ -406,6 +440,10 @@ impl Game {
         self.option_body_pending = false;
         self.option_trash_order_deferred = false;
         self.pending_cost_reduction_amount_override = None;
+        self.cost_payment_receipts.clear();
+        self.next_cost_payment_receipt = 1;
+        self.active_cost_payment_receipt = None;
+        self.preferred_play_cost_effect = None;
         self.replacement_fired = std::collections::HashSet::new();
         self.in_replacement_commit = false;
         self.replacement_commit_fired = false;
@@ -423,6 +461,10 @@ impl Game {
         self.dsl_replacement_outcome = None;
         self.in_counter_window = false;
         self.active_deletion_batch = None;
+        self.pending_battle_resolutions.clear();
+        self.pending_attack_battle_result = None;
+        self.next_battle_identity = 1;
+        self.native_play_observation = None;
         self.pending_deletion_batch_rest.clear();
         self.pending_deletion_batch_parked = None;
         self.dsl_outer_tail = None;

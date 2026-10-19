@@ -1,0 +1,245 @@
+# Q2070 (2024-03-28): the card BT11-033's fallback adds to the opponent's hand from the top of
+# their security stack was NOT revealed by a security check, so its [Security] effect can't be
+# activated. Line = the confirmed tail-fallback line with P1's TOP security card (stack[9]) swapped
+# to BT3-093 Davis Motomiya ("[Security] Play this card without paying its memory cost") and the
+# two Davis copies removed from P1's opening hand so the hand add is unambiguous.
+# Observable at the final row: BT3-093 is in p1.hand, p1.field is still only ST1-11, p1.security 4,
+# and P0 gained 1 memory from effect#1 (6 cards in P1's hand / 4).
+# Sources: data/card_bundles/BT11-033.md; base DCGO BT11/Blue/BT11_033.cs (fallback =
+# CardObjectController.AddHandCards + IReduceSecurity, never IBreakSecurity.SecurityCheck);
+# BT3_093.cs plays itself only from EffectTiming.SecuritySkill.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: BT11-033
+clause: BT11-033#effect#0
+covers: [BT11-033#effect#0, BT11-033#effect#1]
+interaction: { id: "qa:Q2070", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    stack: [ST2-09, BT11-033, BT1-090, BT3-093, ST1-02, ST1-03, ST1-03, ST1-03, ST1-03, ST2-03, BT3-093, ST1-02, ST2-04, ST2-04]
+    rest: bt11-033-tail-fallback-p0
+  p1:
+    # hand: ST1-11, BT1-090 x2, ST1-02 x2 | security bottom->top: ST1-03 x4, BT3-093 (TOP) | draws: ST2-04, ST2-04, ST2-03, ST2-03
+    stack: [ST1-11, BT1-090, BT1-090, ST1-02, ST1-02, ST1-03, ST1-03, ST1-03, ST1-03, BT3-093, ST2-04, ST2-04, ST2-03, ST2-03]
+    rest: bt11-033-tail-fallback-p1
+steps:
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST2-09, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+# WarGreymon is Lv.6: no level-5-or-lower bounce target exists, so the fallback must fire.
+- { actor: 1, do: { play: { card: ST1-11, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+# [When Digivolving]: no bounce -> P1 adds the top security card (BT3-093) to hand; its [Security]
+# must NOT activate (no security check revealed it). effect#1: P1 hand 6 -> +1 memory.
+- { actor: 0, do: { digivolve: { from: field.0, using: BT11-033 } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+expect_ruling:
+  q_id: Q2070
+  assert:
+  - at: 6
+    that:
+      p1.field:
+      - ST1-11
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT11-033
+    - BT3-093
+    - ST1-02
+    - ST2-09
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - ST1-02
+    - ST1-02
+    - ST1-11
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT11-033
+    - BT3-093
+    - ST1-02
+    - ST2-09
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - ST1-02
+    - ST1-02
+    - ST1-11
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -6
+    p0.field:
+    - card_id: ST2-09
+      dp: 7000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT11-033
+    - BT3-093
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - ST1-02
+    - ST1-02
+    - ST1-11
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -6
+    p0.field:
+    - card_id: ST2-09
+      dp: 7000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT11-033
+    - BT3-093
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - ST1-02
+    - ST1-02
+    - ST1-11
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 6
+    p0.field:
+    - card_id: ST2-09
+      dp: 7000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT11-033
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-11
+      dp: 12000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 5
+  that:
+    _backfilled: true
+    memory: 6
+    p0.field:
+    - card_id: ST2-09
+      dp: 7000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT11-033
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-11
+      dp: 12000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT11-033
+      dp: 12000
+      suspended: false
+      sources:
+      - ST2-09
+    p0.hand:
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST1-11
+      dp: 12000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    p1.security: 4
+    p1.trash: []
+    phase: Main
+    turn: 3

@@ -1,0 +1,107 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Gammamon",
+      "dp": 3000,
+      "effect_description_eng": "",
+      "evo_costs": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 0,
+          "from_level": 2
+        }
+      ],
+      "form_eng": [],
+      "inherited_effect_description_eng": "[Your Turn] While you have a [Hiro Amanokawa] in play, this Digimon gets +2000 DP.",
+      "level": 3,
+      "play_cost": 3,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Ceratopsian"
+      ]
+    },
+    "card_id": "P-059",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Red",
+        "cost": 0,
+        "derived": false,
+        "level": 2,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 3000,
+        "effect_text": "",
+        "face_id": "primary",
+        "inherited_text": "[Your Turn] While you have a [Hiro Amanokawa] in play, this Digimon gets +2000 DP.",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 3,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Red",
+      "color2": null,
+      "date_added": "2025-11-25 15:16:05",
+      "digi_type": "Ceratopsian",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 3000,
+      "evolution_color": "Red",
+      "evolution_cost": 0,
+      "evolution_level": 2,
+      "form": null,
+      "id": "P-059",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "Inherited Effect [Your Turn] While you have a [Hiro Amanokawa] in play, this Digimon gets +2000 DP.",
+      "name": "Gammamon",
+      "play_cost": 3,
+      "pretty_url": "gammamon-p-059",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "Ghost Game Promo Pack",
+        "Tamer Battle Pack 16"
+      ],
+      "source_effect": "",
+      "stage": null,
+      "tcgplayer_id": 503003,
+      "tcgplayer_name": "Gammamon (Winner Pack Royal Knights)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "1d4ca99a812d7b36a62b5d5919bb1376c1095c875f983e676136142e4b092400",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "P-059#2",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

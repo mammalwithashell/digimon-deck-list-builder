@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT20-036",
+    "colors": "Yellow Black",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "qa": [
+      "The effects trigger simultaneously, so the player can choose the activation order."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[ACCEL] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[ACCEL] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "When this card would be played, if you have a Digimon with the [ACCEL] trait, reduce the play cost by 5. [On Play] [When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, 1 of their Digimon gets -5000 DP until the end of their turn. [End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card with [Chaosmon] in its name in the hand. Then, the DNA digivolved Digimon may attack."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon."
+      }
+    ],
+    "type": "Beastkin/Boss/ACCEL"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "da5000cc560606ae5a20e72272d0d22208d39a3a978532d291832ecae6e22d5a",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "835bfa2ab67ac4452a1263d69aaae3b3b6278fc142bd2ea8d7e1b25941d4a571",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-036",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-036"
+}

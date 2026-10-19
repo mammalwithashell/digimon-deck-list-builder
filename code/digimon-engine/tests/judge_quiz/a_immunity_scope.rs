@@ -102,20 +102,10 @@ fn cluster_a_self_immunity_blocks_own_controller_effect() {
 // Progress consumption at the opponent-effect mutation points (combat.rs:2667,
 // docs/DCGO_KEYWORD_PARITY.md "Progress").
 //
-// ── DISCOVERY-WAVE FINDING (2026-05-28) ──────────────────────────────────────
-// One half is implemented, the other is BLOCKED:
-//   • `<Progress>` immunity IS implemented — `Game::progress_excludes(...)`,
-//     consumed at the opponent-effect mutation sites (combat.rs:2667).
-//   • Ice Wall! (EX1-068)'s `[Main]` grant is OMITTED from its YAML, BLOCKED on
-//     `G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT` (qa/dsl-vocab-gaps.md). The DSL
-//     has no verb to install a triggered effect on an opponent's permanent with
-//     a turn-scoped expiry. Only EX1-068's `[Security] gain 2 memory` clause is
-//     implemented.
-// Because the grant is a no-op today, a test that "played Ice Wall then
-// attacked and asserted no memory loss" would PASS FOR THE WRONG REASON (the
-// effect was never granted — not because Progress blocked it). Per the suite's
-// discover-then-pin rule we do NOT write that false-passing test; the scenario
-// is `#[ignore]`-blocked on the named primitive instead.
+// EX1-068 now installs a duration-scoped dynamic grant (official Q3256 includes
+// later entrants). Per-carrier snapshot storage is not a valid grant-presence
+// check. The vanilla attack below proves the grant is active before the same
+// duration is checked against an attacking Progress carrier.
 
 /// Q2 — RESOLVED 2026-05-29 (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT closed by
 /// change `add-grant-triggered-effect-dsl`): EX1-068's `[Main]` grant is now
@@ -123,7 +113,7 @@ fn cluster_a_self_immunity_blocks_own_controller_effect() {
 /// a `<Progress>` opponent Digimon does not fire the granted "[When Attacking]
 /// lose 2 memory" while it attacks. Player 0 (grantor) plays Ice Wall on its
 /// turn → Player 1's Medusamon (`<Progress>`) and a vanilla control Digimon
-/// both receive the grant → the turn passes to Player 1, and each carrier
+/// are covered by the duration → the turn passes to Player 1, and each carrier
 /// attacks on its controller's own turn (faithful staging — [When Attacking]
 /// fires on the attacker's turn): the vanilla's controller P1 loses 2 memory
 /// (controller-relative, general_rule.pdf p.7), Medusamon (Progress) loses
@@ -163,20 +153,12 @@ fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
         "Ice Wall must leave Player 0's hand (the [Main] play resolved)"
     );
 
-    // Both opponent (Player 1) Digimon received the grant snapshot.
+    // Verify the immunity precondition without assuming a storage format for
+    // Ice Wall. The following vanilla control verifies the grant behavior.
+    r.game.tick_declarative_effects();
     assert!(
-        !r.game
-            .modifiers
-            .granted_triggered_for_timing(medusamon, EffectTiming::WhenAttacking)
-            .is_empty(),
-        "Medusamon must carry the Ice-Wall-granted [When Attacking] effect"
-    );
-    assert!(
-        !r.game
-            .modifiers
-            .granted_triggered_for_timing(vanilla, EffectTiming::WhenAttacking)
-            .is_empty(),
-        "the vanilla control Digimon must also carry the grant"
+        r.game.has_keyword(medusamon, digimon_engine::enums::Keyword::Progress),
+        "Medusamon must have its printed Progress keyword"
     );
 
     // Pass the turn to Player 1 — the judge scenario has the carriers attack
@@ -231,6 +213,7 @@ fn set_active_attacker(r: &mut DebugRunner, attacker: PermanentHandle) {
         attacker,
         original_target: target,
         effective_target: target,
+        effective_target_removed_by_dna: false,
         is_blocked: false,
         blocker: None,
         is_vortex: false,
@@ -239,6 +222,8 @@ fn set_active_attacker(r: &mut DebugRunner, attacker: PermanentHandle) {
         cancelled: false,
         battle_occurred: false,
         battle_defender_deleted: false,
+        effect_battle_piercing_pending: false,
+        security_check_started: false,
         return_phase: GamePhase::Main,
         state: AttackState::Declared,
         counter_depth: 0,

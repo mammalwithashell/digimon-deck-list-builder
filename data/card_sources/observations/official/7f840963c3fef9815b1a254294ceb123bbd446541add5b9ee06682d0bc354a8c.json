@@ -1,0 +1,85 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "LM-006",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue"
+    ],
+    "dp": 11000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue",
+          "Purple"
+        ],
+        "cost": 3,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": 11000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "Cthyllamon",
+        "play_cost": 11,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Trash] [Main] By returning 1 of your Tamers to the bottom of the deck, play this card with the play cost reduced by the play cost of the returned Tamer.\n[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, until the end of their turn, none of their Digimon with no digivolution cards can attack."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "Cthyllamon",
+    "play_cost": 11,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522020",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/LM-006.png?260529",
+      "printing_id": "LM-006"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, it can now attack.\nThis card's [On Play] [When Digivolving] effect targets \"none of their Digimon with no digivolution cards,\" therefore Digimon that no longer meet the conditions can no longer be effect targets.",
+        "date": "Mar. 28, 2024",
+        "number": "Q3996",
+        "question": "My opponent activated this card's [On Play] [When Digivolving] effect. If my Digimon without digivolution cards then gains digivolution cards by digivolving or other method, can it now attack?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Trash] [Main] By returning 1 of your Tamers to the bottom of the deck, play this card with the play cost reduced by the play cost of the returned Tamer.\n[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, until the end of their turn, none of their Digimon with no digivolution cards can attack."
+      }
+    ],
+    "type": "Fairy"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "7f840963c3fef9815b1a254294ceb123bbd446541add5b9ee06682d0bc354a8c",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "40244ec1fd1d34cb5b6139df0a675efe80762af416805a8b2909ce5a80576563",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522020:LM-006:LM-006",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522020"
+}

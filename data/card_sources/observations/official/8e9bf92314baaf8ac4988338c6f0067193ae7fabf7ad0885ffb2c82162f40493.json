@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT25-011",
+    "colors": "Red Green",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "special_digivolution_condition": "[Digivolve] [Hawkmon]/Lv.3 w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Hawkmon]/Lv.3 w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞ [On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, if it's your turn, 2 of your Digimon may DNA digivolve into [Silphymon] in the hand."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Giant Bird/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "8e9bf92314baaf8ac4988338c6f0067193ae7fabf7ad0885ffb2c82162f40493",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "245043ad956426a5206e0c8f9d98b7fa8fb6b27a1f3c08139cfa06be8f0206a9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-011",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-011"
+}

@@ -139,6 +139,14 @@ fn bt25_093_main_did_not_delete_falls_back_to_trashing_opponent_option() {
         .start();
     runner.place_on_field(0, "TS-TAMER", Some(0));
     let opt = runner.place_on_field(1, "OPP-OPT", Some(1));
+    // This field Option has already been placed as Delay; a raw Standard Option cannot persist.
+    runner.game.players[1].battle_area[opt.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 1,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn: runner.game.turn_count,
+        };
     runner.game.enter_main_phase();
 
     assert_eq!(play_flare_standard(&mut runner), OptionPlayResult::Pending);
@@ -173,6 +181,14 @@ fn bt25_093_no_fallback_when_deletion_happened() {
     runner.place_on_field(0, "TS-TAMER", Some(0));
     runner.place_on_field(1, "OPP-LV3", Some(1));
     let opt = runner.place_on_field(1, "OPP-OPT", Some(1));
+    // This field Option has already been placed as Delay; a raw Standard Option cannot persist.
+    runner.game.players[1].battle_area[opt.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 1,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn: runner.game.turn_count,
+        };
     runner.game.enter_main_phase();
 
     let opt_before = runner.game.player(1).battle_area[opt.index as usize]

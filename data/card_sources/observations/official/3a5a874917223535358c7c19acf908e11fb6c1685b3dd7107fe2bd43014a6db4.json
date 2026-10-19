@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "P-186",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "qa": [
+      "No, you can't. If your opponent has a Digimon with 13000 DP or less, you must choose that card and delete it."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[WarGrowlmon] in name: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[WarGrowlmon] in name: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "When this card would be played, if there is a Digimon with 13000 DP or more, reduce the play cost by 2 for every 5 total cards in both players' trashes. ＜Rush＞ ＜Blocker＞ [On Play] [When Digivolving] Delete 1 Digimon with 13000 DP or more. If this effect didn't delete, ＜Recovery +1 ≪Deck≫＞."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3a5a874917223535358c7c19acf908e11fb6c1685b3dd7107fe2bd43014a6db4",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "225bc97301171c7787c51e1db62c77d31b3001921c6e5dcb926e4730a0245886",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:P-186",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/P-186"
+}

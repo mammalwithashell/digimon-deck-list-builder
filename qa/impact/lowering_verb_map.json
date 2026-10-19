@@ -134,6 +134,7 @@
       "redirect_replacement",
       "reduce_link_cost",
       "substitute_replacement",
+      "suspend_and_cancel_all_matching_leaves",
       "trash_top_security_and_cancel_replacement"
     ],
     "code/digimon-engine/src/dsl_cards/step/schedule_delayed.rs": [
@@ -144,6 +145,7 @@
       "delete_one_per_opponent_color",
       "digi_burst",
       "order_remainder",
+      "pay_source_prefix",
       "place_on_security",
       "place_remainder_on_deck",
       "reveal_search",
@@ -219,7 +221,13 @@
       "trash_top_stacked_sources",
       "trash_union_bound",
       "security_place_top_card",
-      "trash_selected_materials"
+      "trash_selected_materials",
+      "play_to_breeding_from_hand",
+      "trash_selected_sources_as_cost"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/return_results.rs": [
+      "return_all_to_hand",
+      "return_all_to_deck"
     ]
   }
 }

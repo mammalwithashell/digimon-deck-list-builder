@@ -22,6 +22,110 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
+    fn is_source_preparation(&self,origin:PendingWouldPlayOrigin)->bool {
+        origin.source_play_receipt().is_some_and(|id|self.prepared_source_plays.iter().any(|(r,_)|*r==id))
+    }
+    fn source_preparation_card(&self,origin:PendingWouldPlayOrigin,card:CardHandle)->Option<CardSource> {
+        let PendingWouldPlayOrigin::Source{permanent,host_identity,..}=origin else{return None;};
+        let host=self.resolve_source_play_host_identity(permanent,host_identity)?;
+        let carrier=crate::effect_context::material_carrier_permanent(self,host)?;
+        carrier.card_sources.iter().take(carrier.card_sources.len().saturating_sub(1))
+            .find(|c|c.handle()==card).cloned()
+    }
+    pub(crate) fn prepare_source_play_from_origin(&mut self,player:PlayerId,card:CardHandle,
+        origin:PendingWouldPlayOrigin,cost:CostDelta,suppress:bool) {
+        let Some(physical)=self.source_preparation_card(origin,card) else{return;};
+        let controller=self.effect_source_player.unwrap_or(player);
+        if self.effect_play_is_prohibited(player,physical.card_kind(&self.card_data))
+            || self.card_play_is_prohibited(controller,&physical) {return;}
+        self.pending_digixros_transaction=None;
+        let target=CostTargetContext{card,from_hand:false,is_digivolve:false,target_permanents:[None,None]};
+        let _=self.continue_play_from_hand_cost_reduction_chain(player,usize::MAX,target,cost,
+            PlaySource::ByEffect,origin,suppress,crate::game_actions::PlayCostAdjustments::new(cost),Vec::new());
+    }
+
+    /// Complete individual pre-play processing without placing a simultaneous
+    /// entrant. Returning None leaves every ordinary play caller unchanged.
+    pub(crate) fn prepare_source_play_if_registered(&mut self, declaration: PendingWouldPlayResume) -> Option<bool> {
+        let receipt = declaration.origin.source_play_receipt()?;
+        let slot = self.prepared_source_plays.iter().position(|(id,_)| *id == receipt)?;
+        let card = self.source_preparation_card(declaration.origin,declaration.card);
+        let legal = card.is_some_and(|c| !self.card_play_is_prohibited(declaration.play_controller,&c))
+            && self.player(declaration.player).battle_area.len() < self.rules.field_slots as usize;
+        if !legal || !self.pay_memory_for(declaration.player,declaration.effective_cost) {
+            return Some(false);
+        }
+        let assembly = if self.pending_assembly_materials.as_ref().is_some_and(|(card,_)| *card==declaration.card) {
+            self.pending_assembly_materials.take()
+        } else { None };
+        self.prepared_source_plays[slot].1=Some(PreparedSourcePlay{declaration,assembly,on_play_suppressor:self.on_play_suppressor.take()});
+        Some(true)
+    }
+
+    pub(crate) fn commit_prepared_source_play(&mut self, receipt: u64) {
+        self.commit_prepared_source_plays(&[receipt]);
+    }
+
+    pub(crate) fn commit_prepared_source_plays(&mut self, receipts: &[u64]) {
+        // Revalidate every member against the same pre-entry board. A new
+        // entrant's continuous effects cannot undo its simultaneous sibling.
+        let mut prepared = Vec::new();
+        for receipt in receipts {
+            let Some(slot) = self.prepared_source_plays.iter().position(|(id,_)| id == receipt) else { continue; };
+            let (_, Some(play)) = self.prepared_source_plays.remove(slot) else { continue; };
+            let declaration = &play.declaration;
+            let legal = self.source_preparation_card(declaration.origin, declaration.card)
+                .is_some_and(|card| !self.card_play_is_prohibited(declaration.play_controller, &card)
+                    && !self.effect_play_is_prohibited(declaration.player, card.card_kind(&self.card_data)));
+            if legal { prepared.push((*receipt, play)); }
+        }
+        let mut entries = Vec::new();
+        self.enter_deferred_drain();
+        for (receipt, prepared) in prepared {
+            let declaration = prepared.declaration;
+            let PendingWouldPlayOrigin::Source { permanent, host_identity, .. } = declaration.origin else { continue; };
+            let Some(host) = self.resolve_source_play_host_identity(permanent, host_identity) else { continue; };
+            let Some(index) = crate::effect_context::material_carrier_permanent(self, host)
+                .and_then(|p| p.card_sources.iter().take(p.card_sources.len().saturating_sub(1))
+                    .position(|c| c.handle() == declaration.card)) else { continue; };
+            let source = if host.index == crate::action::space::BREEDING_TARGET as u8 {
+                self.player_mut(host.player).breeding_area.as_mut().expect("resolved carrier").card_sources.remove(index)
+            } else { self.remove_source_from_permanent(host, index) };
+            self.player_mut(declaration.player).hand.push(source);
+            let previous_controller = self.effect_source_player;
+            self.effect_source_player = Some(declaration.play_controller);
+            let previous_assembly = self.pending_assembly_materials.take();
+            self.pending_assembly_materials = prepared.assembly;
+            let played = self.commit_play_from_hand_card_inner(declaration.player, declaration.card,
+                declaration.effective_cost, declaration.effect_initiated, declaration.suppress_on_play,
+                declaration.origin.enters_suspended(), Some(receipt), true, true);
+            self.pending_assembly_materials = previous_assembly;
+            self.effect_source_player = previous_controller;
+            if let Some(index) = played {
+                let entered = PermanentHandle { player: declaration.player, index: index as u8 };
+                let identity = self.capture_digivolve_host_identity(entered);
+                entries.push((declaration.player, identity, declaration.effect_initiated, declaration.suppress_on_play, prepared.on_play_suppressor));
+            } else {
+                self.restore_pending_would_play_origin(declaration);
+            }
+        }
+        self.fire_simultaneous_play_event_triggers(&entries);
+        self.exit_deferred_drain_and_flush();
+    }
+
+    pub(crate) fn cancel_prepared_source_play(&mut self, receipt:u64) {
+        let Some(slot)=self.prepared_source_plays.iter().position(|(id,_)| *id==receipt) else{return;};
+        if let (_,Some(prepared))=self.prepared_source_plays.remove(slot) {
+            self.restore_pending_would_play_origin(prepared.declaration);
+        }
+    }
+
+    pub(crate) fn cancel_all_prepared_source_plays(&mut self) {
+        while let Some((receipt,_))=self.prepared_source_plays.last() {
+            self.cancel_prepared_source_play(*receipt);
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn finish_play_from_hand_after_reductions(
         &mut self,
@@ -32,7 +136,7 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        total_reduction: i32,
+        total_reduction: crate::game_actions::PlayCostAdjustments,
     ) -> PlayFromHandCostResult {
         if self.install_pending_digixros_material_selection_or_finish(
             player_id,
@@ -69,10 +173,14 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        total_reduction: i32,
+        total_reduction: crate::game_actions::PlayCostAdjustments,
     ) -> PlayFromHandCostResult {
         let field_slots = self.rules.field_slots;
-        let printed_cost = {
+        let source_preparation=self.is_source_preparation(origin);
+        let printed_cost = if source_preparation {
+            let Some(card)=self.source_preparation_card(origin,target_card) else{return PlayFromHandCostResult::Failed;};
+            card.play_cost(&self.card_data)
+        } else {
             let player = self.player(player_id);
             if player.battle_area.len() >= field_slots as usize {
                 return PlayFromHandCostResult::Failed;
@@ -92,7 +200,7 @@ impl Game {
         // replacement and final memory deduction.
         let cost_target_ctx = CostTargetContext {
             card: target_card,
-            from_hand: true,
+            from_hand: !source_preparation,
             is_digivolve: false,
             target_permanents: [None, None],
         };
@@ -102,7 +210,13 @@ impl Game {
             .as_ref()
             .map(|transaction| transaction.final_cost() as i32)
             .unwrap_or(base_cost);
-        let effective_cost = (transaction_cost - total_reduction).max(0) as u16;
+        let effective_cost = total_reduction.final_cost(
+            transaction_cost,
+            self.pending_digixros_transaction
+                .as_ref()
+                .map(|t| t.selected_cost_delta() as i32)
+                .unwrap_or(0),
+        );
 
         self.pending_would_play_resume = Some(PendingWouldPlayResume {
             player: player_id,
@@ -110,6 +224,11 @@ impl Game {
             effective_cost,
             origin,
             effect_initiated: source == PlaySource::ByEffect,
+            play_controller: if source == PlaySource::ByEffect {
+                self.effect_source_player.unwrap_or(player_id)
+            } else {
+                player_id
+            },
             suppress_on_play,
         });
         let cause = match source {
@@ -120,7 +239,12 @@ impl Game {
         };
         let outcome = self.try_replace(
             EffectTiming::WhenPermanentWouldPlay,
-            crate::replacement::ReplacementSubject::Card(target_card, Zone::Hand),
+            crate::replacement::ReplacementSubject::Card(target_card,
+                if source_preparation {
+                    match origin { PendingWouldPlayOrigin::Source{permanent,..}
+                        if permanent.index==crate::action::space::BREEDING_TARGET as u8 => Zone::BreedingArea,
+                        _=>Zone::BattleArea }
+                } else {Zone::Hand}),
             cause,
             Some(Zone::BattleArea),
         );
@@ -161,16 +285,29 @@ impl Game {
                 total_reduction,
                 source,
                 suppress_on_play,
+                origin.enters_suspended(),
+                origin.source_play_receipt(),
                 0,
             );
         }
 
+        let declaration = PendingWouldPlayResume {
+            player: player_id, card: target_card, effective_cost, origin,
+            effect_initiated: source == PlaySource::ByEffect,
+            play_controller: self.effect_source_player.unwrap_or(player_id),
+            suppress_on_play,
+        };
+        if let Some(prepared) = self.prepare_source_play_if_registered(declaration) {
+            return if prepared { PlayFromHandCostResult::Pending } else { PlayFromHandCostResult::Failed };
+        }
         let committed = self.commit_play_from_hand_card_no_replace(
             player_id,
             target_card,
             effective_cost,
             source == PlaySource::ByEffect,
             suppress_on_play,
+            origin.enters_suspended(),
+            origin.source_play_receipt(),
         );
         self.pending_digixros_transaction = None;
         committed
@@ -193,9 +330,11 @@ impl Game {
         &mut self,
         player_id: PlayerId,
         target_card: crate::card_source::CardHandle,
-        total_reduction: i32,
+        total_reduction: crate::game_actions::PlayCostAdjustments,
         source: PlaySource,
         suppress_on_play: bool,
+        suspended: bool,
+        source_play_receipt: Option<u64>,
         start_material: usize,
     ) -> PlayFromHandCostResult {
         use crate::replacement::{ReplacementCause, ReplacementSubject};
@@ -266,11 +405,14 @@ impl Game {
                 // judge-quiz Q26/Q27).
                 self.move_battle_permanent_to_limbo(player_id, material_card);
                 self.arm_digixros_resume_after_parked_leave(DigiXrosResumeContinuation {
+                    effect_controller: self.effect_source_player,
                     player: player_id,
                     target_card,
                     total_reduction,
                     source,
                     suppress_on_play,
+                    suspended,
+                    source_play_receipt,
                     next_material: i,
                 });
                 return PlayFromHandCostResult::Pending;
@@ -287,6 +429,8 @@ impl Game {
             total_reduction,
             source,
             suppress_on_play,
+            suspended,
+            source_play_receipt,
         )
     }
 
@@ -342,6 +486,12 @@ impl Game {
         &mut self,
         cont: DigiXrosResumeContinuation,
     ) {
+        self.with_play_declaration_controller(cont.effect_controller, |game| {
+            game.continue_digixros_after_parked_leave_scoped(cont)
+        });
+    }
+
+    fn continue_digixros_after_parked_leave_scoped(&mut self, cont: DigiXrosResumeContinuation) {
         if self.pending_selection.is_some() {
             self.arm_digixros_resume_after_parked_leave(cont);
             return;
@@ -357,6 +507,8 @@ impl Game {
             cont.total_reduction,
             cont.source,
             cont.suppress_on_play,
+            cont.suspended,
+            cont.source_play_receipt,
             cont.next_material,
         );
     }
@@ -365,9 +517,11 @@ impl Game {
         &mut self,
         player_id: PlayerId,
         target_card: crate::card_source::CardHandle,
-        total_reduction: i32,
+        total_reduction: crate::game_actions::PlayCostAdjustments,
         source: PlaySource,
         suppress_on_play: bool,
+        suspended: bool,
+        source_play_receipt: Option<u64>,
     ) -> PlayFromHandCostResult {
         // Restore any leaving material STILL parked in limbo (the leave observer
         // declined / was ineligible to extract it) back to the battle area so it
@@ -412,7 +566,13 @@ impl Game {
             .as_ref()
             .map(|tx| tx.final_cost() as i32)
             .unwrap_or(0);
-        let effective_cost = (transaction_cost - total_reduction).max(0) as u16;
+        let effective_cost = total_reduction.final_cost(
+            transaction_cost,
+            self.pending_digixros_transaction
+                .as_ref()
+                .map(|t| t.selected_cost_delta() as i32)
+                .unwrap_or(0),
+        );
 
         // Declare-then-pay re-check (judge Q26/Q27): the play is unpayable — and
         // returns to hand for 0 memory — if EITHER the recomputed memory cost
@@ -429,8 +589,7 @@ impl Game {
                 .pending_digixros_transaction
                 .as_ref()
                 .is_some_and(|tx| !tx.recipe_is_satisfied());
-        let memory_affordable =
-            (self.memory as i32 - effective_cost as i32) >= self.rules.memory_range.0 as i32;
+        let memory_affordable = self.can_pay_memory_for(player_id, effective_cost);
         let payable = !recipe_now_unsatisfied && memory_affordable;
         if !payable {
             self.pending_digixros_transaction = None;
@@ -446,6 +605,8 @@ impl Game {
             effective_cost,
             source == PlaySource::ByEffect,
             suppress_on_play,
+            suspended,
+            source_play_receipt,
         );
         self.pending_digixros_transaction = None;
         committed
@@ -463,9 +624,10 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        accumulated_reduction: i32,
+        accumulated_reduction: crate::game_actions::PlayCostAdjustments,
         processed: Vec<CostReductionKey>,
     ) {
+        let effect_controller = self.effect_source_player;
         let Some(mut pending) = self.pending_selection.take() else {
             return;
         };
@@ -478,6 +640,7 @@ impl Game {
             self.pending_selection = Some(pending);
             self.after_selection_resume_hooks.0.push(
                 crate::resume::AfterSelectionHook::PlayCostContinuation {
+                    effect_controller,
                     player_id,
                     hand_index,
                     target,
@@ -497,6 +660,7 @@ impl Game {
         pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
             original_callback(game, action_id);
             game.resume_play_cost_continuation_after_pending(
+                effect_controller,
                 player_id,
                 hand_index,
                 target,
@@ -516,6 +680,7 @@ impl Game {
                 original_decline(game);
             }
             game.resume_play_cost_continuation_after_pending(
+                effect_controller,
                 player_id,
                 hand_index,
                 target,
@@ -534,6 +699,35 @@ impl Game {
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn resume_play_cost_continuation_after_pending(
         &mut self,
+        effect_controller: Option<PlayerId>,
+        player_id: PlayerId,
+        hand_index: usize,
+        target: CostTargetContext,
+        cost_delta: CostDelta,
+        source: PlaySource,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        accumulated_reduction: crate::game_actions::PlayCostAdjustments,
+        processed: Vec<CostReductionKey>,
+    ) {
+        self.with_play_declaration_controller(effect_controller, |game| {
+            game.resume_play_cost_continuation_after_pending_scoped(
+                player_id,
+                hand_index,
+                target,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                accumulated_reduction,
+                processed,
+            )
+        });
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn resume_play_cost_continuation_after_pending_scoped(
+        &mut self,
         player_id: PlayerId,
         hand_index: usize,
         target: CostTargetContext,
@@ -541,7 +735,7 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        mut accumulated_reduction: i32,
+        mut accumulated_reduction: crate::game_actions::PlayCostAdjustments,
         processed: Vec<CostReductionKey>,
     ) {
         if self.pending_selection.is_some() {
@@ -558,6 +752,7 @@ impl Game {
             );
             return;
         }
+        self.finish_play_cost_payment(target, &mut accumulated_reduction);
         // VARIABLE-amount interactive delete cost
         // (`G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`, BT13-103): a
         // `delete_for_cost_reduction` step inside the just-resolved parked
@@ -568,7 +763,7 @@ impl Game {
         if let Some(extra) = self.pending_cost_reduction_amount_override.take() {
             accumulated_reduction += extra;
         }
-        let _ = self.continue_play_from_hand_cost_reduction_chain(
+        let _ = self.continue_resumed_play_cost_chain(
             player_id,
             hand_index,
             target,
@@ -582,6 +777,17 @@ impl Game {
     }
 
     pub(crate) fn run_digixros_material_selection_step(
+        &mut self,
+        state: crate::resume::DigiXrosMaterialSelectionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        self.with_play_declaration_controller(state.effect_controller, |game| {
+            game.run_digixros_material_selection_step_scoped(state, action_id, is_pass)
+        });
+    }
+
+    fn run_digixros_material_selection_step_scoped(
         &mut self,
         state: crate::resume::DigiXrosMaterialSelectionState,
         action_id: u16,
@@ -637,7 +843,7 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        total_reduction: i32,
+        total_reduction: crate::game_actions::PlayCostAdjustments,
     ) -> bool {
         let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
             return false;
@@ -661,7 +867,10 @@ impl Game {
         // the stop must stay legal regardless (the selection would otherwise
         // have no legal action); an unpayable commit then routes through the
         // declare-then-pay return-to-hand flow.
-        let stop_cost = (transaction.final_cost() as i32 - total_reduction).max(0);
+        let stop_cost = total_reduction.final_cost(
+            transaction.final_cost() as i32,
+            transaction.selected_cost_delta() as i32,
+        ) as i32;
         let can_stop = candidates.is_empty()
             || (self.memory as i32 - stop_cost) >= self.rules.memory_range.0 as i32;
 
@@ -670,6 +879,7 @@ impl Game {
             .map(|(action_id, _)| *action_id)
             .collect::<Vec<_>>();
         let resume_candidates = candidates.clone();
+        let effect_controller = self.effect_source_player;
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectMaterial;
         self.pending_selection = Some(PendingSelection {
@@ -685,47 +895,53 @@ impl Game {
             source_permanent: None,
             source_kind: EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let Some((_, origin_ref)) = candidates
-                    .iter()
-                    .find(|(candidate_action, _)| *candidate_action == action_id)
-                else {
-                    return;
-                };
-                let material_origin = *origin_ref;
-                let Some(card_data) = game.card_data_for_handle(material_origin.card()).cloned()
-                else {
-                    return;
-                };
-                if let Some(transaction) = game.pending_digixros_transaction.as_mut() {
-                    let _ = transaction.try_select_material(material_origin, &card_data);
-                }
-                let _ = game.finish_play_from_hand_after_reductions(
-                    player_id,
-                    hand_index,
-                    target_card,
-                    cost_delta,
-                    source,
-                    origin,
-                    suppress_on_play,
-                    total_reduction,
-                );
+                game.with_play_declaration_controller(effect_controller, |game| {
+                    let Some((_, origin_ref)) = candidates
+                        .iter()
+                        .find(|(candidate_action, _)| *candidate_action == action_id)
+                    else {
+                        return;
+                    };
+                    let material_origin = *origin_ref;
+                    let Some(card_data) =
+                        game.card_data_for_handle(material_origin.card()).cloned()
+                    else {
+                        return;
+                    };
+                    if let Some(transaction) = game.pending_digixros_transaction.as_mut() {
+                        let _ = transaction.try_select_material(material_origin, &card_data);
+                    }
+                    let _ = game.finish_play_from_hand_after_reductions(
+                        player_id,
+                        hand_index,
+                        target_card,
+                        cost_delta,
+                        source,
+                        origin,
+                        suppress_on_play,
+                        total_reduction,
+                    );
+                });
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
-                let _ = game.commit_play_from_hand_after_reductions(
-                    player_id,
-                    hand_index,
-                    target_card,
-                    cost_delta,
-                    source,
-                    origin,
-                    suppress_on_play,
-                    total_reduction,
-                );
+                game.with_play_declaration_controller(effect_controller, |game| {
+                    let _ = game.commit_play_from_hand_after_reductions(
+                        player_id,
+                        hand_index,
+                        target_card,
+                        cost_delta,
+                        source,
+                        origin,
+                        suppress_on_play,
+                        total_reduction,
+                    );
+                });
             })),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::DigiXrosMaterialSelection(
                 crate::resume::DigiXrosMaterialSelectionState {
+                    effect_controller,
                     player_id,
                     hand_index,
                     target_card,
@@ -755,7 +971,7 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        total_reduction: i32,
+        total_reduction: crate::game_actions::PlayCostAdjustments,
     ) -> PlayFromHandCostResult {
         #[cfg(feature = "dsl-yaml-loader")]
         {
@@ -798,7 +1014,7 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        total_reduction: i32,
+        total_reduction: crate::game_actions::PlayCostAdjustments,
     ) -> Option<PlayFromHandCostResult> {
         // Assembly is a hand-play mechanic; only attempt for genuine hand plays.
         if !matches!(origin, PendingWouldPlayOrigin::Hand) {
@@ -809,6 +1025,7 @@ impl Game {
             self.resolve_eligible_assembly(player_id, hand_index, target_card)?;
 
         let params = AssemblyPlayParams {
+            effect_controller: self.effect_source_player,
             cost_delta,
             source,
             origin,
@@ -828,7 +1045,94 @@ impl Game {
         Some(PlayFromHandCostResult::Pending)
     }
 
+    pub(crate) fn capture_source_play_host_identity(
+        &mut self,
+        host: PermanentHandle,
+    ) -> Option<u64> {
+        if host.index != crate::action::space::BREEDING_TARGET as u8 {
+            self.player(host.player)
+                .battle_area
+                .get(host.index as usize)?;
+            return Some(self.capture_digivolve_host_identity(host));
+        }
+        if let Some(identity) = self
+            .player(host.player)
+            .breeding_area
+            .as_ref()?
+            .battle_identity
+        {
+            return Some(identity);
+        }
+        let identity = self.next_battle_identity;
+        self.next_battle_identity = identity.checked_add(1).expect("stack identity exhausted");
+        self.player_mut(host.player)
+            .breeding_area
+            .as_mut()?
+            .battle_identity = Some(identity);
+        Some(identity)
+    }
+
+    pub(crate) fn resolve_source_play_host_identity(
+        &self,
+        host: PermanentHandle,
+        identity: u64,
+    ) -> Option<PermanentHandle> {
+        if host.index == crate::action::space::BREEDING_TARGET as u8 {
+            self.player(host.player)
+                .breeding_area
+                .as_ref()
+                .filter(|p| p.battle_identity == Some(identity))
+                .map(|_| host)
+        } else {
+            self.resolve_digivolve_host_identity(host.player, identity)
+        }
+    }
+
+    pub(crate) fn restore_source_play_card(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+        host: PermanentHandle,
+        identity: u64,
+        source_index: usize,
+    ) {
+        if host.player != player {
+            return;
+        }
+        let Some(index) = self
+            .player(player)
+            .hand
+            .iter()
+            .position(|c| c.handle() == card)
+        else {
+            return;
+        };
+        let resolved = self.resolve_source_play_host_identity(host, identity);
+        let source = self.player_mut(player).hand.remove(index);
+        let Some(resolved) = resolved else {
+            self.player_mut(player).trash.push(source);
+            return;
+        };
+        let owner = self.player_mut(player);
+        let carrier = if resolved.index == crate::action::space::BREEDING_TARGET as u8 {
+            owner
+                .breeding_area
+                .as_mut()
+                .expect("resolved breeding host")
+        } else {
+            &mut owner.battle_area[resolved.index as usize]
+        };
+        carrier
+            .card_sources
+            .insert(source_index.min(carrier.card_sources.len()), source);
+    }
+
     pub(crate) fn restore_pending_would_play_origin(&mut self, resume: PendingWouldPlayResume) {
+        // Refusal has no commit result, even when optional payment aborts its tail.
+        if let Some(receipt) = resume.origin.source_play_receipt() {
+            self.source_play_receipts
+                .retain(|(id, _, _)| *id != receipt);
+        }
         let Some(hand_index) = self
             .player(resume.player)
             .hand
@@ -861,22 +1165,17 @@ impl Game {
             }
             PendingWouldPlayOrigin::Source {
                 permanent,
+                host_identity,
                 source_index,
+                ..
             } => {
-                if permanent.player != resume.player {
-                    return;
-                }
-                let card = self.player_mut(resume.player).hand.remove(hand_index);
-                let Some(perm) = self
-                    .player_mut(resume.player)
-                    .battle_area
-                    .get_mut(permanent.index as usize)
-                else {
-                    self.player_mut(resume.player).trash.push(card);
-                    return;
-                };
-                let insert_at = source_index.min(perm.card_sources.len());
-                perm.card_sources.insert(insert_at, card);
+                self.restore_source_play_card(
+                    resume.player,
+                    resume.card,
+                    permanent,
+                    host_identity,
+                    source_index,
+                );
             }
         }
     }
@@ -888,6 +1187,18 @@ impl Game {
         effective_cost: u16,
         effect_initiated: bool,
         suppress_on_play: bool,
+        suspended: bool,
+        source_play_receipt: Option<u64>,
+    ) -> Option<usize> {
+        self.commit_play_from_hand_card_inner(player_id, target_card, effective_cost,
+            effect_initiated, suppress_on_play, suspended, source_play_receipt, false, false)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn commit_play_from_hand_card_inner(
+        &mut self, player_id: PlayerId, target_card: crate::card_source::CardHandle,
+        effective_cost: u16, effect_initiated: bool, suppress_on_play: bool,
+        suspended: bool, source_play_receipt: Option<u64>, prepaid: bool, simultaneous_prechecked: bool,
     ) -> Option<usize> {
         if self.player(player_id).battle_area.len() >= self.rules.field_slots as usize {
             return None;
@@ -897,7 +1208,15 @@ impl Game {
             .hand
             .iter()
             .position(|card| card.handle() == target_card)?;
-        if !self.pay_memory(effective_cost) {
+        let controller = if effect_initiated {
+            self.effect_source_player.unwrap_or(player_id)
+        } else {
+            player_id
+        };
+        if !simultaneous_prechecked && self.card_play_is_prohibited(controller, &self.player(player_id).hand[hand_index]) {
+            return None;
+        }
+        if !prepaid && !self.pay_memory_for(player_id, effective_cost) {
             return None;
         }
 
@@ -907,8 +1226,7 @@ impl Game {
         // G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060 "plays ... suspended"):
         // a flagged play enters the battle area suspended, BEFORE the
         // play-event triggers fire (observers see the suspended state).
-        if self.play_enters_suspended {
-            self.play_enters_suspended = false;
+        if std::mem::take(&mut self.play_enters_suspended) || suspended {
             perm.is_suspended = true;
         }
         self.player_mut(player_id).battle_area.push(perm);
@@ -921,6 +1239,21 @@ impl Game {
             entered = self.commit_digixros_material_sources(entered);
         }
         let entered_index = entered.index as usize;
+        // Capture the committed physical body before OnPlay can move it.
+        // Harness observations never allocate a gameplay battle identity.
+        if !effect_initiated {
+            self.observe_native_play_commit(entered, target_card);
+        }
+        if let Some(receipt) = source_play_receipt {
+            let identity = self.capture_digivolve_host_identity(entered);
+            if let Some((_, _, committed)) = self
+                .source_play_receipts
+                .iter_mut()
+                .find(|(id, card, _)| *id == receipt && *card == target_card)
+            {
+                *committed = Some((entered, identity));
+            }
+        }
 
         // G-ASSEMBLY-PLAY-EXECUTION: place assembled materials at the BOTTOM of
         // the new permanent's digivolution stack BEFORE its [On Play] /
@@ -988,7 +1321,9 @@ impl Game {
         // `enter_deferred_drain` / `exit_deferred_drain_and_flush` so
         // simultaneous triggers share a TriggerOrder bundle — see
         // `Game::fire_play_event_triggers` for the contract.
-        self.fire_play_event_triggers(player_id, entered_index, effect_initiated, suppress_on_play);
+        if !simultaneous_prechecked {
+            self.fire_play_event_triggers(player_id, entered_index, effect_initiated, suppress_on_play);
+        }
 
         Some(entered_index)
     }
@@ -1199,12 +1534,37 @@ impl Game {
         self.fire_on_link_after_option_placed(host, linked_card);
     }
 
+    fn insert_cards_into_egg_deck(
+        &mut self,
+        owner: PlayerId,
+        cards: Vec<CardSource>,
+        position: crate::enums::StackPosition,
+    ) {
+        let index = match position {
+            crate::enums::StackPosition::Top => self.player(owner).digitama_deck.len(),
+            crate::enums::StackPosition::Bottom => 0,
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                let len = self.player(owner).digitama_deck.len();
+                self.rng.gen_range(0..=len)
+            }
+        };
+        self.player_mut(owner)
+            .digitama_deck
+            .splice(index..index, cards);
+    }
+
     pub(crate) fn insert_card_into_deck(
         &mut self,
         player_id: PlayerId,
         card: CardSource,
         position: crate::enums::StackPosition,
     ) {
+        if card.card_kind(&self.card_data) == CardKind::DigiEgg {
+            let owner = card.owner;
+            self.insert_cards_into_egg_deck(owner, vec![card], position);
+            return;
+        }
         // G-ENGINE-ON-ADD-TO-DECK: an effect-driven deck add opens the batch.
         self.note_effect_deck_add_if_resolving();
         match position {
@@ -1233,6 +1593,21 @@ impl Game {
         stack: Vec<CardSource>,
         position: crate::enums::StackPosition,
     ) {
+        // Partition without reordering either destination. Egg cards return to
+        // their physical owner's Digi-Egg deck at the specified position (3-1-3-9-1).
+        let (eggs, stack): (Vec<_>, Vec<_>) = stack
+            .into_iter()
+            .partition(|card| card.card_kind(&self.card_data) == CardKind::DigiEgg);
+        for owner in 0..self.players.len() {
+            let owned = eggs
+                .iter()
+                .filter(|c| c.owner == owner as PlayerId)
+                .cloned()
+                .collect::<Vec<_>>();
+            if !owned.is_empty() {
+                self.insert_cards_into_egg_deck(owner as PlayerId, owned, position);
+            }
+        }
         // G-ENGINE-ON-ADD-TO-DECK: an effect-driven deck add opens the batch.
         if !stack.is_empty() {
             self.note_effect_deck_add_if_resolving();

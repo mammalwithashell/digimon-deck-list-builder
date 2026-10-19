@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT25-026",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "6",
+    "qa": [
+      "Yes, it triggers. However, this effect can only be activated when that Digimon is red."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[TS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[TS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards can't suspend until their turn ends. [Your Turn] When your Digimon are played or digivolve, if any of them are red, this Digimon may digivolve into [Dianamon] in the trash with the cost reduced by 2."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon's attack target can't change."
+      }
+    ],
+    "type": "Wizard/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "0cbad77f015a1543ef9fa5475d646214f21c9572ff21932e71b60b39e088a0a0",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "10888f71777d7942f5752e0c31164c9d073ad0a5bebb7fba7f29d8388f897d4c",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-026",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-026"
+}

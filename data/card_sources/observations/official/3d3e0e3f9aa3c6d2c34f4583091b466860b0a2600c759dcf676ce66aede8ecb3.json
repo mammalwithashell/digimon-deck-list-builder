@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT25-024",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "Yes, it triggers. However, this effect can only be activated when that Digimon is red."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] ＜Draw 1＞ [Your Turn] When your Digimon are played or digivolve, if any of them are red, this Digimon may digivolve into [Crescemon] in the trash with the cost reduced by 1."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+      }
+    ],
+    "type": "Beastkin/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3d3e0e3f9aa3c6d2c34f4583091b466860b0a2600c759dcf676ce66aede8ecb3",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "50a300930456d82f41a91407938102e5876964718a14bafd7f0b3f4fe3a5c19a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-024",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-024"
+}

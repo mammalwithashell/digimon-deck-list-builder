@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT19-008",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "4",
+    "qa": [
+      "No, you can't digivolve it. You can’t ignore the digivolution requirements. Related Cards"
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Xros Heart] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Xros Heart] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] This Digimon may digivolve into [OmniShoutmon] under your Tamers without paying the cost. [On Deletion] Reveal the top 3 cards of your deck. Play 1 Tamer card with the [Xros Heart] trait among them without paying the cost. Return the rest to the bottom of the deck. Then, ＜Save＞."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞."
+      }
+    ],
+    "type": "Mini Dragon/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f7fe862edb3e39e750adb5ca37fc988a43cf2b907811cd2dcb472203c2cee547",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "02d4143f2a9114f82054f92ce40604f26e9bdaeaf952c7f740df42e9b50413c0",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT19-008",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT19-008"
+}

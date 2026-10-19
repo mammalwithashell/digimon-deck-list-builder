@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT16-028",
+    "colors": "Blue Green",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "qa": [
+      "They trigger simultaneously, so the turn player activates their effect first."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Paildramon]/[Dinobeemon]: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Paildramon]/[Dinobeemon]: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] 1 of your opponent's Digimon or Tamers can't unsuspend until the end of their turn. Then, by suspending 1 of their Digimon or Tamers, 1 of your Digimon unsuspends. [All Turns] When effects play or digivolve your opponent's Digimon, if you have a Tamer, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand without paying the cost."
+      }
+    ],
+    "type": "Ancient Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "1574cacda312e9d52a223eeaa76fef0b18998562e5bc1026b1e2b425e6d3bd2b",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "e4da2daf271170b0c4ae21b484d5156a7114c919e272b8c11c3c619519bc3cc2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT16-028",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT16-028"
+}

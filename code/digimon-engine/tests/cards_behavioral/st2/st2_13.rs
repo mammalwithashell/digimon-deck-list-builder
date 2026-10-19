@@ -19,12 +19,13 @@
 //!      §16).
 //!
 //! # Source priority audit
-//! Per CLAUDE.md the priority is printed text > RULES_CONTEXT.md > fandom >
-//! DCGO. Printed text is two unconditional memory gains — there is no "you
-//! may", no [Once Per Turn], no condition. RULES_CONTEXT.md §16 confirms
-//! [Security] effects are mandatory. DCGO matches: both clauses use a plain
-//! `AddMemory` with a `CanTrigger*` precondition that gates ON THE TIMING
-//! (not on opt-in), and neither passes a `canNoSelect` flag.
+//!
+//! Official observation `2564fc768b8996403af0c54bbb94aaa201b900a1f357357a74932cf0b06be446`
+//! and the inspected ST2-13 card image agree: blue Option, cost 0,
+//! [Main] gain 1 memory; [Security] gain 2 memory. Base-repo DCGO
+//! `ST2/Blue/ST2_13.cs` uses mandatory AddMemory(1)/AddMemory(2).
+//! Official Q623 confirms a security memory crossover ends the turn only
+//! after the ongoing attack finishes; the security test below exercises it.
 //!
 //! # Patterns this audit exercises
 //!
@@ -716,4 +717,49 @@ fn st2_13_main_gain_blocked_by_cannot_gain_memory_by_effect_player_modifier() {
         memory_before,
         "CannotGainMemoryByEffect must suppress effect-driven gain_memory"
     );
+}
+
+/// Exercise the legal Option action and final disposition, not just its body.
+#[test]
+fn st2_13_actual_option_use_requires_blue_and_trashes_after_gain() {
+    use digimon_engine::action::mask::build_action_mask;
+    use digimon_engine::selection::OptionPlayResult;
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID).unwrap()
+        .dsl_card("ST2-03").unwrap()
+        .hand(0, &[CARD_ID]).memory(3).start();
+    r.game.enter_main_phase();
+    assert_eq!(build_action_mask(&r.game, 0)[0], 0.0);
+    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Invalid);
+    assert_eq!(r.memory(), 3);
+    assert_eq!(r.hand_size(0), 1);
+    r.place_on_field(0, "ST2-03", Some(0));
+    assert_eq!(build_action_mask(&r.game, 0)[0], 1.0);
+    r.game.play_option_from_hand(0, 0);
+    assert_eq!(r.memory(), 4);
+    assert_eq!(r.hand_size(0), 0);
+    assert_eq!(r.trash_size(0), 1);
+    assert!(r.game.pending_selection.is_none());
+}
+
+/// A defender's memory-gain restriction also applies to Security effects.
+#[test]
+fn st2_13_security_memory_gain_obeys_defender_floodgate() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID).unwrap()
+        .dsl_card("ST2-03").unwrap()
+        .deck(0, &["ST2-03"; 4])
+        .deck(1, &["ST2-03"; 4])
+        .security(1, &[CARD_ID]).memory(3).start();
+    let attacker = r.place_on_field(0, "ST2-03", Some(0));
+    r.game.modifiers.add_player_modifier(1, PlayerModifierEntry::simple(
+        ModifierType::CannotGainMemoryByEffect, 0, Expiry::EndOfTurn, None, 1));
+    r.attack_player(attacker, 1, false);
+    let _ = r.auto_resolve();
+    assert_eq!(r.security_count(1), 0);
+    assert_eq!(r.trash_size(1), 1);
+    assert_eq!(r.memory(), 3);
+    assert_eq!(r.turn_player(), 0);
 }

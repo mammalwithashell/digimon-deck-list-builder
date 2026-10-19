@@ -308,6 +308,21 @@ pub enum AttackResult {
     InProgress,
 }
 
+/// One comparison and its actual deletion outcomes. Entries remain while
+/// replacement or deletion-effect choices are parked; no outcome is inferred
+/// from whether a former battlefield slot is occupied.
+#[derive(Debug, Clone)]
+pub(crate) struct PendingBattleResolution {
+    attacker: crate::trigger_context::BattleCombatantSnapshot,
+    defender: crate::trigger_context::BattleCombatantSnapshot,
+    outcome: AttackResult,
+    attacker_deleted: bool,
+    defender_deleted: bool,
+    winner_identity: Option<(PlayerId, u64)>,
+    is_attack: bool,
+    in_call: bool,
+}
+
 // Deletion lifecycle + DP split out of the attack state machine (rule 25).
 mod deletion;
 mod dp;
@@ -350,7 +365,7 @@ impl Game {
         // Summoning sickness: can't attack on the turn it was played unless
         // Rush is present (native printed OR modifier-granted) or this is a
         // Vortex end-of-turn attack (§2.1b parity fix).
-        let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
+        let is_fresh = perm.turn_played == self.turn_count;
         if is_fresh && !vortex && !self.has_keyword(handle, Keyword::Rush) {
             return false;
         }
@@ -402,7 +417,7 @@ impl Game {
         }
         // CannotAttack is a `WhenWouldAttack` cancel replacement, not a
         // can_attack rejection — see `can_attack`.
-        let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
+        let is_fresh = perm.turn_played == self.turn_count;
         if is_fresh
             && !ignore_summoning_sickness
             && !vortex
@@ -443,7 +458,7 @@ impl Game {
         // can_attack rejection — see `can_attack`.
         // "Without suspending" bypasses only the suspend cost/unsuspended
         // requirement. Summoning sickness still requires Rush or Vortex.
-        let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
+        let is_fresh = perm.turn_played == self.turn_count;
         if is_fresh
             && !ignore_summoning_sickness
             && !vortex
@@ -494,7 +509,8 @@ impl Game {
     ///
     /// This is not an attack declaration: it does not suspend the source,
     /// install `PendingAttack`, fire attack timings, open interrupt windows,
-    /// or continue into Piercing security checks.
+    /// or immediately perform security checks. If the active attacking Digimon
+    /// deletes its opponent here, Piercing may become pending for that attack.
     pub fn battle_digimon(
         &mut self,
         attacker: PermanentHandle,
@@ -671,6 +687,7 @@ impl Game {
             attacker,
             original_target: target,
             effective_target: target,
+            effective_target_removed_by_dna: false,
             is_blocked: false,
             blocker: None,
             is_vortex: vortex,
@@ -679,6 +696,8 @@ impl Game {
             cancelled: false,
             battle_occurred: false,
             battle_defender_deleted: false,
+            effect_battle_piercing_pending: false,
+            security_check_started: false,
             return_phase,
             state: AttackState::Declared,
             counter_depth: 0,
@@ -785,6 +804,11 @@ impl Game {
     /// `pending_attack.state` (e.g. to `Battle` after a block declaration)
     /// and re-invokes this method to continue.
     pub fn advance_pending_attack(&mut self) -> AttackResult {
+        // A declaration made while resolving an effect is only declared here.
+        // Finish that effect's remaining steps before attack interrupts/battle.
+        if self.draining_deferred > 0 {
+            return AttackResult::InProgress;
+        }
         loop {
             // If a selection or effect batch is still pending, yield —
             // advance_pending_attack will be re-entered when it clears.
@@ -810,7 +834,9 @@ impl Game {
                 return self.cleanup_attack(AttackResult::Cancelled);
             }
 
-            if state != AttackState::Cleanup {
+            if state != AttackState::Cleanup
+                && !(state == AttackState::Battle && self.pending_attack_battle_result.is_some())
+            {
                 if declaration_committed {
                     // Attacker liveness check: OnAttack / interrupt effects
                     // may have deleted or moved it. Handles are slot-based, so
@@ -931,6 +957,7 @@ impl Game {
                             let attacker_h = pa.attacker;
                             let defender_deleted = pa.battle_defender_deleted;
                             if defender_deleted
+                                && !pa.security_check_started
                                 && self.handle_still_attacking(attacker_h)
                                 && self.has_keyword(attacker_h, Keyword::Piercing)
                             {
@@ -1222,7 +1249,7 @@ impl Game {
         let old_target = pa.effective_target;
         // Firing-guard: a redirect to the current effective target is a
         // no-op — don't re-fire OnAttackTargetChange.
-        if old_target == new_target {
+        if old_target == new_target && !pa.effective_target_removed_by_dna {
             return;
         }
         let attacker = pa.attacker;
@@ -1251,6 +1278,7 @@ impl Game {
         }
 
         pa.effective_target = new_target;
+        pa.effective_target_removed_by_dna = false;
 
         self.fire_attack_target_change_observers(attacker, old_target, new_target, reason);
     }
@@ -2174,17 +2202,14 @@ impl Game {
         field_idx: usize,
         material_hand_index: usize,
     ) {
-        if self
-            .blast_dna_route_for_hand_card(
-                defender,
-                result_hand_index,
-                field_idx,
-                material_hand_index,
-            )
-            .is_none()
-        {
+        let Some(route) = self.blast_dna_route_for_hand_card(
+            defender,
+            result_hand_index,
+            field_idx,
+            material_hand_index,
+        ) else {
             return;
-        }
+        };
         if field_idx >= self.player(defender).battle_area.len()
             || result_hand_index >= self.player(defender).hand.len()
             || material_hand_index >= self.player(defender).hand.len()
@@ -2192,6 +2217,11 @@ impl Game {
         {
             return;
         }
+
+        self.reset_dna_material_objects(&[PermanentHandle {
+            player: defender,
+            index: field_idx as u8,
+        }]);
 
         let (first_idx, second_idx, first_is_result) = if result_hand_index > material_hand_index {
             (result_hand_index, material_hand_index, true)
@@ -2209,34 +2239,39 @@ impl Game {
         let turn = self.turn_count;
         {
             let perm = &mut self.player_mut(defender).battle_area[field_idx];
-            perm.card_sources.push(material_card);
+            // DNA rule 8-2-2-2: the first requirement is the upper material.
+            // Sources are stored bottom-to-top; keep the entire field block
+            // intact and use the already validated Blast route orientation.
+            if route.first_is_top {
+                perm.card_sources.insert(0, material_card);
+            } else {
+                perm.card_sources.push(material_card);
+            }
             perm.digivolve(result_card, turn);
             perm.turn_digivolved = turn;
+        }
+
+        self.clear_dna_card_overlays(PermanentHandle {
+            player: defender, index: field_idx as u8,
+        });
+
+        // Official 8-2-3-3: Blast DNA still performs the DNA procedure's
+        // bonus draw after stacking and before digivolution effects activate.
+        if let Err(e) = self.draw_one_for_player(defender) {
+            eprintln!(
+                "[opaque-deck] Blast DNA digivolve draw error for player {}: {}",
+                defender, e
+            );
         }
 
         let handle = PermanentHandle {
             player: defender,
             index: field_idx as u8,
         };
-        self.enqueue_triggered(
-            EffectTiming::WhenDigivolving,
-            TriggerSource::Permanent(handle),
-        );
-        self.drain_effect_queue_with_dna_origin(true);
-
-        self.enqueue_triggered(
-            EffectTiming::OnDnaDigivolve,
-            TriggerSource::Permanent(handle),
-        );
-        self.drain_effect_queue_with_dna_origin(true);
-
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnDigivolve,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
-        self.drain_effect_queue();
+        let event_card = self.player(defender).battle_area[field_idx]
+            .top_card()
+            .handle();
+        self.fire_digivolve_event_triggers(handle, event_card, true, true);
     }
 
     /// Scan the defender's battle area for unsuspended Digimon with the
@@ -2296,6 +2331,12 @@ impl Game {
                 player: defender_player,
                 index: i as u8,
             };
+            // Official rule 12-1-5: the current attack target cannot block.
+            // Use the effective target after Raid/Counter redirects, not the
+            // originally declared target. Other unsuspended blockers remain legal.
+            if !pa.effective_target_removed_by_dna && pa.effective_target == AttackTarget::Digimon(h) {
+                continue;
+            }
             let perm = &self.player(defender_player).battle_area[i];
             if perm.is_suspended {
                 continue;
@@ -2554,7 +2595,9 @@ impl Game {
             return false;
         }
 
-        let candidates = self.raid_switch_candidates(attacker, pa.effective_target);
+        let candidates = self.raid_switch_candidates(
+            attacker, pa.effective_target, pa.effective_target_removed_by_dna,
+        );
         if candidates.is_empty() {
             return false;
         }
@@ -2570,6 +2613,7 @@ impl Game {
         &self,
         attacker: PermanentHandle,
         current_target: AttackTarget,
+        current_target_removed: bool,
     ) -> Vec<u8> {
         let opp_id = 1 - attacker.player;
         if (opp_id as usize) >= self.players.len() {
@@ -2583,7 +2627,8 @@ impl Game {
                 player: opp_id,
                 index: index as u8,
             };
-            if matches!(current_target, AttackTarget::Digimon(current) if current == handle) {
+            if !current_target_removed
+                && matches!(current_target, AttackTarget::Digimon(current) if current == handle) {
                 continue;
             }
             if !matches!(target.option_state, crate::permanent::OptionState::Standard) {
@@ -2768,7 +2813,7 @@ impl Game {
         };
         // If the target is still valid, fall through to Battle — no
         // retarget needed.
-        if self.handle_valid(target_handle) {
+        if !pa.effective_target_removed_by_dna && self.handle_valid(target_handle) {
             return RaidRetargetOutcome::Proceed;
         }
         let attacker = pa.attacker;
@@ -2966,6 +3011,9 @@ impl Game {
     /// rewritten) and dispatches to the Digimon-vs-Digimon or
     /// security-loop path accordingly.
     fn resolve_pending_battle(&mut self) -> AttackResult {
+        if let Some(outcome) = self.pending_attack_battle_result.take() {
+            return outcome;
+        }
         let Some(pa) = self.pending_attack.as_ref() else {
             return AttackResult::Invalid;
         };
@@ -2978,7 +3026,7 @@ impl Game {
 
         match target {
             AttackTarget::Digimon(defender) => {
-                if !self.handle_valid(defender) {
+                if pa.effective_target_removed_by_dna || !self.handle_valid(defender) {
                     // Defender was deleted between declaration and battle —
                     // attack connects trivially. Matches Python behavior.
                     return AttackResult::AttackerWins;
@@ -3015,9 +3063,15 @@ impl Game {
         // resolved — refresh the materialized aura grants before the gate
         // (same rationale as `current_security_strike`).
         self.tick_declarative_effects();
+        let earned_by_effect_battle = self.pending_attack.as_mut().is_some_and(|pa| {
+            let pending = pa.effect_battle_piercing_pending;
+            pa.effect_battle_piercing_pending = false;
+            pending
+        });
         let defender_player: PlayerId = 1 - attacker.player;
         if self.handle_still_attacking(attacker)
-            && self.has_keyword(attacker, Keyword::Piercing)
+            && (earned_by_effect_battle || self.has_keyword(attacker, Keyword::Piercing))
+            && self.pending_attack.as_ref().is_some_and(|pa| !pa.security_check_started)
             && !self.player(defender_player).security.is_empty()
         {
             match self.enter_piercing_security_check(attacker) {
@@ -3081,6 +3135,9 @@ impl Game {
         defender_player: PlayerId,
         count_as_digivolve_driven_attack: bool,
     ) -> AttackResult {
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.security_check_started = true;
+        }
         // Start with `checks_performed = 0`. The first iteration's
         // pre-pop guard below re-reads the live strike; if it is 0 we
         // skip the loop entirely (handles `<Jamming>` and `0 base_checks`
@@ -3414,6 +3471,8 @@ impl Game {
     ///
     /// Rule 13-1-7: immediate Security, captured simultaneous observers,
     /// security battle, then disposal. Security choices pause the barrier.
+    /// A security battle's triggered and scheduled effects finish before
+    /// disposal or another check (general_rule.pdf 13-1-7 / 14-2).
     fn drive_security_resolution(&mut self) -> Option<AttackResult> {
         loop {
             // Safety rail: if `declare_winner` fired mid-drain, unwind.
@@ -3512,6 +3571,15 @@ impl Game {
                                     .saturating_add(
                                         self.defender_security_dp_adjustment(state.defender),
                                     );
+                                // Rules 13-1-7-3 / 14-2: this is a battle even
+                                // though the security Digimon cannot be deleted.
+                                // Save the comparison before deletion can park on
+                                // a replacement or an On Deletion choice.
+                                self.set_security_phase(SecurityPhase::EndOfSecurityBattleDrain {
+                                    attacker,
+                                    attacker_top: attacker_top_before,
+                                    winner: (attacker_dp > sec_dp).then_some(attacker),
+                                });
                                 // RULES_CONTEXT 14-2-1-3: "Same DP = both lose."
                                 // The attacker is deleted when it has STRICTLY LESS
                                 // OR EQUAL DP to the security Digimon. Per 14-2-3 the
@@ -3546,6 +3614,10 @@ impl Game {
                                         crate::replacement::ReplacementCause::Battle,
                                     );
                                 }
+                                if self.pending_selection.is_some() {
+                                    return None;
+                                }
+                                continue;
                             }
                         }
                     }
@@ -3562,6 +3634,57 @@ impl Game {
                                 st.outcome_so_far = AttackResult::AttackerDeletedBySecurity;
                             }
                         }
+                    }
+                    self.set_security_phase(SecurityPhase::WhenWouldLoseSecurity);
+                }
+                SecurityPhase::EndOfSecurityBattleDrain {
+                    attacker,
+                    attacker_top,
+                    winner,
+                } => {
+                    // Deletion replacements and On Deletion effects finish
+                    // before this phase is resumed. A Jamming/Barrier survivor
+                    // is not a winner unless its DP was strictly higher.
+                    let enqueue_done = state.phase_enqueue_done;
+                    if !enqueue_done {
+                        if !self.attacker_still_on_field(attacker, attacker_top) {
+                            if let Some(st) = self.security_resolution.as_mut() {
+                                st.outcome_so_far = AttackResult::AttackerDeletedBySecurity;
+                            }
+                        }
+                        if let Some(st) = self.security_resolution.as_mut() {
+                            st.phase_enqueue_done = true;
+                        }
+                        self.enqueue_triggered(
+                            EffectTiming::EndOfBattle,
+                            TriggerSource::BattleResolved {
+                                winner,
+                                // Rule 14-2-3: beating a Security Digimon does
+                                // not delete it, so no permanent is a deleter.
+                                deleters: Vec::new(),
+                            },
+                        );
+                    }
+                    self.drain_effect_queue();
+                    if self.pending_selection.is_some() {
+                        return None;
+                    }
+                    self.set_security_phase(SecurityPhase::EndOfSecurityBattleScheduledDrain);
+                }
+                SecurityPhase::EndOfSecurityBattleScheduledDrain => {
+                    let enqueue_done = state.phase_enqueue_done;
+                    if !enqueue_done {
+                        if let Some(st) = self.security_resolution.as_mut() {
+                            st.phase_enqueue_done = true;
+                        }
+                        crate::scheduled_effects::fire_scheduled_for_timing(
+                            self,
+                            EffectTiming::EndOfBattle,
+                        );
+                    }
+                    self.drain_effect_queue();
+                    if self.pending_selection.is_some() {
+                        return None;
                     }
                     self.set_security_phase(SecurityPhase::WhenWouldLoseSecurity);
                 }
@@ -3839,18 +3962,33 @@ impl Game {
     /// caller. Called from both `begin_attack` (early-exit paths) and
     /// `advance_pending_attack` (normal terminal paths).
     fn cleanup_attack(&mut self, outcome: AttackResult) -> AttackResult {
-        // Invariant: a cancelled attack never reached battle resolution.
-        // `battle_occurred` is set only by `resolve_battle`, which is
-        // unreachable once a WhenWouldAttack / WhenWouldBeAttackTarget
-        // replacement commits `pa.cancelled = true`.
+        // Effect battles can remove the declared target before the attack's
+        // normal battle. Their earned Piercing still resolves before EndOfAttack,
+        // after battle rewards, but never after an ordinary security transition.
+        if let Some(pa) = self.pending_attack.as_ref() {
+            if pa.effect_battle_piercing_pending && !pa.security_check_started && !pa.cancelled
+                && self.handle_still_attacking(pa.attacker)
+            {
+                let attacker = pa.attacker;
+                self.transition_attack_state(AttackState::PostBattle);
+                if self.pending_selection.is_some() || !self.effect_queue.is_empty() {
+                    return AttackResult::InProgress;
+                }
+                return self.fire_piercing_or_finish(attacker);
+            }
+        }
+        self.pending_attack_battle_result = None;
+        // Pre-declaration prevention cannot have reached battle resolution.
+        // A later end-attack effect can follow an effect battle (15-15-1-1),
+        // and jumps directly to EndOfAttack without pending Piercing.
         debug_assert!(
             !(outcome == AttackResult::Cancelled
                 && self
                     .pending_attack
                     .as_ref()
-                    .map(|pa| pa.battle_occurred)
+                    .map(|pa| !pa.declaration_committed && pa.battle_occurred)
                     .unwrap_or(false)),
-            "cancelled attack should not have battle_occurred=true"
+            "pre-declaration cancellation cannot have reached battle"
         );
         if let Some(pa) = self.pending_attack.as_ref() {
             let h = pa.attacker;
@@ -3980,12 +4118,13 @@ impl Game {
     /// the resulting mismatch as "source gone", silently dropping a MANDATORY
     /// trigger belonging to a permanent that never moved.
     ///
-    /// An entry whose carrier IS the removed permanent is left alone rather
-    /// than dropped: the OnDeletion path depends on those entries surviving the
-    /// removal (they carry the `deleted_object` snapshot and are filtered by
-    /// the 15-4-4-3 trash test in `queued_effect_source_is_live` instead), and
-    /// silently discarding them here would resurrect the bug this is fixing in
-    /// mirror image.
+    /// Ordinary pending effects from the removed carrier lose activation
+    /// (15-4-4-3), even if that same physical card is played again before the
+    /// queue drains. Preserve snapshot-backed OnDeletion entries: those activate
+    /// from the deleted object and use the separate trash/token liveness gate.
+    /// Zone-scoped entries with no source permanent are unaffected. OnLeaveField
+    /// observers on surviving carriers shift normally; their event snapshot is
+    /// not their own source identity.
     ///
     /// DCGO has no equivalent hazard: `FieldPermanents` is a sparse frame array
     /// and `GetFieldPermanents()` compacts a COPY, so a permanent's identity
@@ -4018,6 +4157,7 @@ impl Game {
                 shift(&mut ctx.event_host_permanent);
             }
         }
+        self.invalidate_pending_field_effects(&[PermanentHandle { player, index: removed_index }]);
         for qe in self.effect_queue.iter_mut() {
             if let Some(ctx) = qe.trigger_context.as_mut() {
                 if ctx.captured_security_check {
@@ -4222,7 +4362,7 @@ impl Game {
                 i += 1;
             }
         }
-        self.drain_effect_queue();
+        self.maybe_drain_effect_queue();
         if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
             return;
         }
@@ -4242,16 +4382,16 @@ impl Game {
                     },
                 ),
             );
-            self.drain_effect_queue();
+            self.maybe_drain_effect_queue();
         }
     }
 
     /// Resolve battle between two permanents by DP comparison.
     ///
     /// Fires `EndOfBattle` for all players' battle areas after the DP
-    /// comparison completes (before `EndOfAttack`). This timing only fires
-    /// for Digimon-vs-Digimon battles — direct player attacks go through
-    /// `resolve_player_security_loop` instead.
+    /// comparison completes (before `EndOfAttack`). This resolver handles
+    /// battle-area Digimon; security battles emit the same timing from
+    /// their separate security-resolution phase machine.
     fn resolve_battle(
         &mut self,
         attacker: PermanentHandle,
@@ -4313,102 +4453,197 @@ impl Game {
             (a_dp, d_dp)
         };
 
-        // Determine the battle WINNER handle for the board-wide observer
-        // (G-DSL-BATTLE-WINNER-BOARDWIDE). A tie has NO winner (mutual
-        // destruction), mirroring DCGO `CanTriggerWhenWinBattle`'s `!WasTie`
-        // gate. The winner survives (its opponent was deleted), so its
-        // battle-area handle is still valid after the loser's deletion — the
-        // combatants are on opposite sides, so the loser leaving does not
-        // shift the winner's index.
-        // G-DSL-BATTLE-DELETER: the combatant that SURVIVED while its battle
-        // opponent was actually deleted ("when your Digimon delete your
-        // opponent's Digimon in battle"). DCGO fixes `LoserPermanents` to the
-        // actually-destroyed ones before `OnEndBattle`, and reads the winner's
-        // REAL (still-on-field) top card.
-        let mut deleter: Option<PermanentHandle> = None;
-        let (outcome, winner) = if a_value > d_value {
-            // Attacker wins — defender is deleted. Record on the in-flight
-            // attack (when this battle IS the attack's battle) whether the
-            // deletion actually committed: the `<Piercing>` gate in the
-            // `Battle` arm must not re-probe the defender's slot-based
-            // handle after removal — a higher-indexed bystander shifts
-            // down into the freed slot and reads as a "surviving"
-            // defender, silently suppressing Piercing.
-            // Capture the "this battle IS the attack's battle" match BEFORE
-            // the deletion — the removal re-keys `pending_attack`'s handles
-            // (a same-side removal below either combatant shifts its index),
-            // so a post-deletion comparison could fail to match.
-            let is_attacks_own_battle = self.pending_attack.as_ref().is_some_and(|pa| {
-                pa.attacker == attacker && pa.effective_target == AttackTarget::Digimon(defender)
+        self.capture_digivolve_host_identity(attacker);
+        self.capture_digivolve_host_identity(defender);
+        let snapshot = |handle: PermanentHandle| {
+            let perm = &self.player(handle.player).battle_area[handle.index as usize];
+            crate::trigger_context::BattleCombatantSnapshot {
+                battle_identity: perm.battle_identity.expect("battle identity captured"),
+                survived: false,
+                controller: handle.player,
+                top_card: perm.top_card().handle(),
+                data_index: perm.top_card().data_index,
+                identity: perm.synth_identity(&self.card_data, &self.modifiers, handle),
+                is_suspended: perm.is_suspended,
+            }
+        };
+        let outcome = if a_value > d_value {
+            AttackResult::AttackerWins
+        } else if a_value < d_value {
+            AttackResult::DefenderWins
+        } else {
+            AttackResult::MutualDestruction
+        };
+        let is_attack = self.pending_attack.as_ref().is_some_and(|pa| {
+            pa.state == AttackState::Battle
+                && !pa.effective_target_removed_by_dna
+                && pa.attacker == attacker
+                && pa.effective_target == AttackTarget::Digimon(defender)
+        });
+        let attacker_snapshot = snapshot(attacker);
+        let defender_snapshot = snapshot(defender);
+        let winner_identity = match outcome {
+            AttackResult::AttackerWins => Some(attacker),
+            AttackResult::DefenderWins => Some(defender),
+            _ => None,
+        }
+        .map(|winner| {
+            let identity = match self.player(winner.player).battle_area[winner.index as usize]
+                .battle_identity
+            {
+                Some(identity) => identity,
+                None => {
+                    let identity = self.next_battle_identity;
+                    self.next_battle_identity =
+                        identity.checked_add(1).expect("battle identity exhausted");
+                    self.player_mut(winner.player).battle_area[winner.index as usize]
+                        .battle_identity = Some(identity);
+                    identity
+                }
+            };
+            (winner.player, identity)
+        });
+        let state = PendingBattleResolution {
+            attacker: attacker_snapshot,
+            defender: defender_snapshot,
+            outcome,
+            attacker_deleted: false,
+            defender_deleted: false,
+            winner_identity,
+            is_attack,
+            in_call: true,
+        };
+        let index = self.pending_battle_resolutions.len();
+        self.pending_battle_resolutions.push(state);
+        let victims = match outcome {
+            AttackResult::AttackerWins => vec![defender],
+            AttackResult::DefenderWins => vec![attacker],
+            // Both bodies leave as one batch before observer eligibility.
+            _ => vec![defender, attacker],
+        };
+        self.delete_permanents_batch(victims, crate::replacement::ReplacementCause::Battle);
+        self.pending_battle_resolutions[index].in_call = false;
+        self.resume_pending_battle_resolutions();
+        if self.pending_selection.is_some() {
+            return AttackResult::InProgress;
+        }
+        if is_attack {
+            self.pending_attack_battle_result.take().unwrap_or(outcome)
+        } else {
+            outcome
+        }
+    }
+
+    /// Record only a committed battle-cause deletion of an original combatant.
+    /// Substitutes, redirects, and deletions by triggered effects do not count.
+    pub(crate) fn record_battle_deletion(&mut self, player: PlayerId, top: CardHandle) {
+        let Some(state) = self.pending_battle_resolutions.last_mut() else {
+            return;
+        };
+        if state.attacker.controller == player && state.attacker.top_card == top {
+            state.attacker_deleted = true;
+        }
+        if state.defender.controller == player && state.defender.top_card == top {
+            state.defender_deleted = true;
+        }
+    }
+
+    /// Freeze battle survival after the battle's physical deletions, before
+    /// OnDeletion bodies can independently remove a combatant. Strict winner
+    /// queries still resolve live identity separately when the event is emitted.
+    pub(crate) fn capture_pending_battle_survival(&mut self) {
+        if !self.active_deletion_batch.as_ref().is_some_and(|b|
+            b.cause == crate::replacement::ReplacementCause::Battle) { return; }
+        let Some(state) = self.pending_battle_resolutions.last() else { return; };
+        let attacker = (state.attacker.controller, state.attacker.battle_identity);
+        let defender = (state.defender.controller, state.defender.battle_identity);
+        let attacker_survived = self.resolve_digivolve_host_identity(attacker.0, attacker.1).is_some();
+        let defender_survived = self.resolve_digivolve_host_identity(defender.0, defender.1).is_some();
+        let state = self.pending_battle_resolutions.last_mut().unwrap();
+        state.attacker.survived = attacker_survived;
+        state.defender.survived = defender_survived;
+    }
+
+    /// DNA creates a new Digimon; its materials cannot retain a pending battle win.
+    /// Ordinary evolution keeps the original card in the same surviving Digimon.
+    pub(crate) fn invalidate_battle_winners_for_dna(&mut self, materials: &[PermanentHandle]) {
+        for material in materials {
+            if let Some(perm) = self
+                .player_mut(material.player)
+                .battle_area
+                .get_mut(material.index as usize)
+            {
+                perm.battle_identity = None;
+                perm.native_play_incarnation = None;
+            }
+        }
+    }
+
+    /// Finish the event after every replacement/rest-of-batch choice has settled.
+    /// Pop before fanout: nested battles get their own payload and one fanout.
+    pub(crate) fn resume_pending_battle_resolutions(&mut self) {
+        while self.pending_selection.is_none() && self.pending_deletion_batch_rest.is_empty() {
+            if !self
+                .pending_battle_resolutions
+                .last()
+                .is_some_and(|state| !state.in_call)
+            {
+                return;
+            }
+            let mut state = self.pending_battle_resolutions.pop().unwrap();
+            let winner = state.winner_identity.and_then(|(controller, identity)| {
+                self.player(controller)
+                    .battle_area
+                    .iter()
+                    .position(|perm| perm.battle_identity == Some(identity))
+                    .map(|index| PermanentHandle {
+                        player: controller,
+                        index: index as u8,
+                    })
             });
-            let batch_outcome = self.delete_permanents_batch(
-                vec![defender],
-                crate::replacement::ReplacementCause::Battle,
-            );
-            let defender_deleted = batch_outcome.completed.contains(&defender);
-            if is_attacks_own_battle {
+            let mut deleters = Vec::new();
+            if state.defender_deleted {
+                deleters.push(state.attacker);
+            }
+            if state.attacker_deleted {
+                deleters.push(state.defender);
+            }
+            if state.is_attack && self.pending_attack.is_some() {
+                self.pending_attack_battle_result = Some(state.outcome);
                 if let Some(pa) = self.pending_attack.as_mut() {
-                    pa.battle_defender_deleted = defender_deleted;
+                    pa.battle_defender_deleted = state.defender_deleted;
                 }
             }
-            if defender_deleted {
-                deleter = Some(attacker);
+            // §16-6-2/4, clarified by Bandai's CRM4 "May battle" notes:
+            // an effect battle during an attack also earns Piercing, but only
+            // for the surviving attacking Digimon that actually deleted its
+            // opponent. Stable winner identity excludes removed/replayed bodies.
+            if !state.is_attack {
+                if let Some(winner) = winner {
+                    let deleted_opponent = match state.outcome {
+                        AttackResult::AttackerWins => state.defender_deleted,
+                        AttackResult::DefenderWins => state.attacker_deleted,
+                        _ => false,
+                    };
+                    self.tick_declarative_effects();
+                    if deleted_opponent && self.handle_still_attacking(winner)
+                        && self.has_keyword(winner, Keyword::Piercing)
+                    {
+                        if let Some(pa) = self.pending_attack.as_mut() {
+                            if pa.attacker == winner && !pa.security_check_started {
+                                pa.effect_battle_piercing_pending = true;
+                            }
+                        }
+                    }
+                }
             }
-            (AttackResult::AttackerWins, Some(attacker))
-        } else if a_value < d_value {
-            // Defender wins — attacker is deleted.
-            let batch_outcome = self.delete_permanents_batch(
-                vec![attacker],
-                crate::replacement::ReplacementCause::Battle,
+            self.enqueue_triggered(
+                EffectTiming::EndOfBattle,
+                TriggerSource::BattleResolved { winner, deleters },
             );
-            if batch_outcome.completed.contains(&attacker) {
-                deleter = Some(defender);
-            }
-            (AttackResult::DefenderWins, Some(defender))
-        } else {
-            // Tie — both are deleted. Delete in order: defender first to match
-            // DCGO convention, with both bodies leaving as one batch before
-            // global OnAnyDeletion observers check survivor state.
-            let batch_outcome = self.delete_permanents_batch(
-                vec![defender, attacker],
-                crate::replacement::ReplacementCause::Battle,
-            );
-            // A tie still "deletes in battle": a combatant whose own deletion
-            // was prevented deleted its opponent. Opposite sides, so neither
-            // removal shifts the survivor's index.
-            let defender_gone = batch_outcome.completed.contains(&defender);
-            let attacker_gone = batch_outcome.completed.contains(&attacker);
-            if defender_gone && !attacker_gone {
-                deleter = Some(attacker);
-            } else if attacker_gone && !defender_gone {
-                deleter = Some(defender);
-            }
-            (AttackResult::MutualDestruction, None)
-        };
-
-        // EndOfBattle: fires only when a Digimon-vs-Digimon battle resolves.
-        // Direct player attacks with security loops skip this timing.
-        // `BattleResolved` fans out to every player's battle area, carrying the
-        // winner (owner + trait) so a board-wide observer can react to "any of
-        // your [X] Digimon win a battle" (BT25-020). `winner` is `None` on a
-        // tie. The carrier-scoped `source_deleted_battle_opponent` idiom is
-        // unaffected (it fires on the separate OnAnyDeletion path).
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::EndOfBattle,
-            crate::selection::TriggerSource::BattleResolved { winner, deleter },
-        );
-        self.drain_effect_queue();
-
-        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
-        // EndOfBattle after the printed-observer fan-out. EndOfAttack
-        // (which always fires next, in `cleanup_attack`) gets its own
-        // drain at that site.
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            crate::enums::EffectTiming::EndOfBattle,
-        );
-
-        outcome
+            self.drain_effect_queue();
+            crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfBattle);
+        }
     }
 
     /// Post-replacement batched commit — skip stages 1+2 (the replacement

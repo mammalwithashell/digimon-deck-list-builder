@@ -102,6 +102,7 @@ fn base_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX7-070 YAML loads from the embedded pack")
+        .add_card(black_provider())
 }
 
 /// Push a registered `card_id` onto `host`'s digivolution stack as its
@@ -555,7 +556,7 @@ fn ex7_070_main_deletes_lowest_cost_and_places_self_under_tm_digimon() {
     runner.place_on_field(1, "OPP-CHEAP", Some(0));
     runner.place_on_field(1, "OPP-EXP", Some(0));
 
-    runner.play(0, 0).expect("EX7-070 plays from hand");
+    use_der_blitz(&mut runner);
 
     // 3a: mandatory delete-target select over the lowest-play-cost opponent
     // Digimon (only OPP-CHEAP at cost 2 should be a candidate). Resolve ONLY
@@ -629,7 +630,7 @@ fn ex7_070_main_delete_target_is_only_lowest_cost() {
     runner.place_on_field(1, "OPP-LC-CHEAP", Some(0));
     runner.place_on_field(1, "OPP-LC-EXP", Some(0));
 
-    runner.play(0, 0).expect("EX7-070 plays from hand");
+    use_der_blitz(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -658,7 +659,7 @@ fn ex7_070_main_delete_only_when_no_tm_digimon() {
 
     runner.place_on_field(1, "OPP-DO-CHEAP", Some(0));
 
-    runner.play(0, 0).expect("EX7-070 plays from hand");
+    use_der_blitz(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -693,7 +694,7 @@ fn ex7_070_main_place_only_when_no_opp_digimon() {
 
     let tm_handle = runner.place_on_field(0, "TM-PO", None);
 
-    runner.play(0, 0).expect("EX7-070 plays from hand");
+    use_der_blitz(&mut runner);
 
     // No opponent Digimon exists, so the delete half's `if any_permanent`
     // guard must skip straight to the placement half.
@@ -719,7 +720,7 @@ fn ex7_070_main_place_only_when_no_opp_digimon() {
 fn ex7_070_main_no_selection_when_neither_condition_met() {
     let mut runner = base_builder().hand(0, &[CARD_ID]).memory(10).start();
 
-    runner.play(0, 0).expect("EX7-070 plays from hand");
+    use_der_blitz(&mut runner);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -798,4 +799,26 @@ fn ex7_070_security_no_op_when_no_opp_digimon() {
         "no opponent Digimon → the security clause must be a silent no-op"
     );
     assert_eq!(runner.battle_area_size(1), 0);
+}
+
+fn black_provider() -> CardData {
+    let mut card = make_test_card("BLITZ-PROVIDER", "Black provider");
+    card.colors = vec![CardColor::Black];
+    card
+}
+fn use_der_blitz(runner: &mut DebugRunner) {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    runner.skip_mulligan();
+    runner.place_in_breeding(0, "BLITZ-PROVIDER");
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "Der Blitz was used through its legal Option action"
+    );
 }

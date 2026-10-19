@@ -1,0 +1,59 @@
+# Official observation 0863b68bc9967b13c387a92753420d2eaf41c58b9072c4d829c3a123c841abb3,
+# printed image, and Q3436: the hand tuck and DNA-only free play are independent.
+card: EX3-074
+name: Examon
+kind: digimon
+level: 7
+color: [green, blue]
+cost: 15
+dp: 15000
+form: Mega
+attribute: Data
+traits: [Holy Warrior, Royal Knight]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: green }
+      - { level_eq: 6, color_is: blue }
+    cost: 0
+    stacks_unsuspended: true
+effects:
+  - when: when_digivolving
+    summary: "May tuck a blue/green Dramon; then if DNA digivolving may play a blue/green Dramon with 12000 DP or less"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tucked
+          filter: { kind: digimon, name_contains: Dramon, any_of: [{ color_is: blue }, { color_is: green }] }
+          optional: true
+          prompt: "Place a blue or green Dramon as the bottom digivolution card"
+      - place_as_bottom_source: { source: tucked, target: source }
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_hand:
+                of: you
+                bind_as: played
+                filter: { kind: digimon, name_contains: Dramon, any_of: [{ color_is: blue }, { color_is: green }], dp_lte: 12000 }
+                optional: true
+                prompt: "Play a blue or green Dramon with 12000 DP or less without paying the cost"
+            - play_from_hand_free: { of: you, hand_index: played }
+  - when: on_suspend
+    once_per_turn: true
+    condition: { event_target_is_source: true }
+    summary: "[All Turns][Once Per Turn] When this Digimon suspends, unsuspend it and suspend 1 opposing Digimon"
+    process:
+      - unsuspend: { target: source }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Suspend 1 opposing Digimon"
+      - suspend: { target: victim }
+
+

@@ -1,0 +1,35 @@
+{
+  "owner": "root",
+  "exit_code": 0,
+  "count": 10,
+  "corpus_pins": {
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_000_digilab_00b5ea09afd9_vs_digilab_0286bd08d2eb_seed_40521416.replay.json": "e018859a08548c0aa01ed3fd59dcb652d86c7064250530c9202ca7ba6f2c1750",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_001_digilab_0286bd08d2eb_vs_digilab_03052bcf3884_seed_40521419.replay.json": "9d6a6fbf7c718f58e1e03953f9866384aaba419d150312a7ad23f912de01c227",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_002_digilab_03052bcf3884_vs_digilab_087db0caf1c2_seed_40521420.replay.json": "9784ab2799a4b49c21d3c666322968e6d4bc8008811f612f460876c987d11506",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_003_digilab_087db0caf1c2_vs_digilab_091f6feab9dd_seed_40521423.replay.json": "96fa152e0f54684baccb01d9d0e5666b4ead3489d966ab8362a7ef3bf503364b",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_004_digilab_091f6feab9dd_vs_digilab_0f8f67c14f13_seed_40521424.replay.json": "e0aafd6b5fc04840bdc65d28c2b4b12c3afe49b7c6c8af756c69153c42d832af",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_005_digilab_0f8f67c14f13_vs_digilab_10c793e6c4b4_seed_40521427.replay.json": "a1a8952ba58e885fe446c9e9ccea9dfb6e8f2c0b3693049e1943c2a65d089c6f",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_006_digilab_10c793e6c4b4_vs_digilab_14f6262f4fc0_seed_40521428.replay.json": "e471c175f04459f01a64acd5ef4481749e57d74ec81fa6d527e6306c5040b9fd",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_007_digilab_14f6262f4fc0_vs_digilab_1509ed7da6be_seed_40521431.replay.json": "711a8f2758898de07288d96b3c1f35396484e827c06e6fe223a21b1bb4380c28",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_008_digilab_1509ed7da6be_vs_digilab_155d30601167_seed_40521432.replay.json": "fb07ef30dbb0c4cf539d5f02b6d67388ccea58051fd5c4c3a5c140eb9a6fb3df",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-refreshed-all10-goldens-root-v1\\goldens\\refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json": "771c498fbe7fb05506be4225aeb908c28143d0e77caf5fde3933fe6ea45a31e7",
+    "C:\\Users\\james\\.codex\\visualizations\\2026\\10\\10\\01a1269c-a05f-7f21-978c-93246d80a989\\build22-pinned\\replay_corpus.exe": "a56da31e1ac8395face2c897c063e1d86c47eb01b068d79daa1aba16623c4bb6",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\data\\cards.json": "febd820dfa5e83a61bbe58fef0d10be18b617c723a62302e142afdee8d634eb9"
+  },
+  "original_pins": {
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_000_digilab_00b5ea09afd9_vs_digilab_0286bd08d2eb_seed_40521416.replay.json": "e018859a08548c0aa01ed3fd59dcb652d86c7064250530c9202ca7ba6f2c1750",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_001_digilab_0286bd08d2eb_vs_digilab_03052bcf3884_seed_40521419.replay.json": "9d6a6fbf7c718f58e1e03953f9866384aaba419d150312a7ad23f912de01c227",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_002_digilab_03052bcf3884_vs_digilab_087db0caf1c2_seed_40521420.replay.json": "9784ab2799a4b49c21d3c666322968e6d4bc8008811f612f460876c987d11506",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_003_digilab_087db0caf1c2_vs_digilab_091f6feab9dd_seed_40521423.replay.json": "96fa152e0f54684baccb01d9d0e5666b4ead3489d966ab8362a7ef3bf503364b",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_004_digilab_091f6feab9dd_vs_digilab_0f8f67c14f13_seed_40521424.replay.json": "e0aafd6b5fc04840bdc65d28c2b4b12c3afe49b7c6c8af756c69153c42d832af",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_005_digilab_0f8f67c14f13_vs_digilab_10c793e6c4b4_seed_40521427.replay.json": "a1a8952ba58e885fe446c9e9ccea9dfb6e8f2c0b3693049e1943c2a65d089c6f",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_006_digilab_10c793e6c4b4_vs_digilab_14f6262f4fc0_seed_40521428.replay.json": "e471c175f04459f01a64acd5ef4481749e57d74ec81fa6d527e6306c5040b9fd",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_007_digilab_14f6262f4fc0_vs_digilab_1509ed7da6be_seed_40521431.replay.json": "711a8f2758898de07288d96b3c1f35396484e827c06e6fe223a21b1bb4380c28",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_008_digilab_1509ed7da6be_vs_digilab_155d30601167_seed_40521432.replay.json": "a4fc509c5ad5c4f8796efe6b93f0d0ec2e8a29501dcc5181d85b0177632173e6",
+    "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\replay-goldens\\refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json": "cb93ed96e14a9b778be39810357be57d7c6a2466ce596155437b7bb76ad26770"
+  },
+  "stage_completion_sha256": "db921b5f197ce582256dd89fc92d4bbe2d803ef464a5a7126c4e5eb98111b00a",
+  "log_sha256": "2266cbd98959609ab2d401c5c8568df69228a05d2c45faaf60188a9ffe624b8e",
+  "source_unchanged": true,
+  "canonical_writes": false
+}

@@ -1,0 +1,94 @@
+card: BT8-097
+clause: BT8-097#effect#1
+interaction:
+  id: qa:Q1774
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-06
+    - BT8-097
+    - ST2-03
+    - ST1-04
+    - ST1-05
+    - ST1-07
+    - ST1-07
+    - ST1-07
+    - ST1-07
+    - ST1-08
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    rest: gating8-Q1774-p0
+  p1:
+    stack:
+    - ST1-11
+    - ST2-03
+    - ST2-04
+    - ST2-05
+    - ST2-06
+    - ST1-07
+    - ST1-07
+    - ST1-07
+    - ST1-07
+    - BT21-015
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    rest: gating8-Q1774-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-06
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-11
+      from: hand
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT8-097
+      from: hand
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+expect_ruling:
+  q_id: Q1774
+  assert:
+  - at: 7
+    that:
+      p0.field:
+      - card_id: ST1-06
+        suspended: true
+      p1.field:
+      - card_id: ST1-11
+      p1.trash:
+      - BT21-015
+      p1.security: 4

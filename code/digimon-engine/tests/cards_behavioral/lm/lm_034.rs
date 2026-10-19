@@ -1,92 +1,6 @@
-//! LM-034 Wisteria Memory Boost! — Option, Blue, Cost 3.
-//!
-//! # Card text (cards.json)
-//!
-//! Red also meets this card's color requirements.
-//!
-//! **[Main]** Reveal the top 3 cards of your deck. Add 1 blue or red Digimon
-//! card among them to the hand. Return the rest to the bottom of deck. Then,
-//! place this card in the battle area.
-//!
-//! **[Main] ＜Delay＞** (By trashing this card after the placing turn,
-//! activate the effect below.)
-//! ・Gain 2 memory.
-//!
-//! **Inherited (Security):** [Security] Place this card in the battle area.
-//!
-//! # DCGO C# reference
-//! `DCGO/Assets/Scripts/CardEffect/LM/Blue/LM_034.cs`
-//!
-//! # Patterns this test covers
-//!
-//! - **Color bypass via `kind: flood_gate` + `IgnoreColorRequirement`**
-//!   gated by an `any_permanent` predicate over (Red Digimon | Red Tamer).
-//!   Mirror of P-151 / BT22-099 Clause 0 with the trait predicate replaced
-//!   by `color_is: red`. G-IGNORE-COLOR-MASK was resolved 2026-05-02 so
-//!   runtime-enforcement assertions are no longer ignored. (We assert the
-//!   structural shape; full action-mask enforcement is exercised by the
-//!   engine-side `flood_gates::group6_option_color` regression suite.)
-//!
-//! - **[Main] reveal-3 + single-bucket Blue/Red-Digimon selection +
-//!   bottom remainder** — identical shape to BT22-099 / BT22-094 Clause 1
-//!   (single-bucket pattern, max 1, min 1). The bucket filter swaps the
-//!   trait predicate for an `all_of [kind: digimon, any_of [color_is: blue,
-//!   color_is: red]]` colour disjunction. Mirrors DCGO
-//!   `RevealDeckTopCardsAndSelect(revealCount: 3,
-//!     [SelectCardCondition(IsDigimon && (HasColor Blue || HasColor Red),
-//!     canNoSelect: false, max 1, AddHand)],
-//!     remainingCardsPlace: DeckBottom)`.
-//!
-//! - **Standard ＜Delay＞ + gain_memory: 2** — `kind: delay` declarative
-//!   with `trigger: end_of_your_next_turn`. Identical to BT22-099 Clause 2 /
-//!   P-035 Clause 1 (DCGO uses the same gain-2-memory body inline rather
-//!   than the `Gain2MemoryOptionDelayEffect` factory, but the shape is the
-//!   same).
-//!
-//! - **Inherited [Security] place-self-as-Delay** — `place_self_as_delay_option`
-//!   step under `scope: inherited` + `when: on_security`. RESOLVED gap
-//!   G-PLACE-SELF-AS-OPTION-PERMANENT (2026-05-02). Behavioural coverage of
-//!   the substrate lives in `option_flow::inherited_security_option`; this
-//!   test asserts that the clause is structurally present and lowers to the
-//!   placement step.
-//!
-//! # Faithfulness audit (per clause)
-//!
-//! 0. **Color bypass** — `flood_gate` + `IgnoreColorRequirement` +
-//!    `target: { card_number_is: "LM-034" }` mirrors DCGO
-//!    `IgnoreColorConditionClass.SetUpIgnoreColorConditionClass(cardCondition:
-//!    cardSource == card)`. The `any_permanent` gate matches DCGO's
-//!    `HasMatchConditionPermanent((permanent) => permanent.TopCard.Owner ==
-//!    card.Owner && permanent.TopCard.CardColors.Contains(Red) &&
-//!    (permanent.IsDigimon || permanent.IsTamer))`. BOTH gate branches
-//!    require `color_is: red` per the printed text "Red also meets this
-//!    card's color requirements" (DCGO models this as a full color bypass
-//!    when a Red Digimon/Tamer is on field — for a single-coloured Blue
-//!    Option this is equivalent to the printed "Red satisfies" reading per
-//!    the source-priority tiebreaker rule).
-//!
-//! 1. **[Main] reveal-3 mandatory blue/red-Digimon bucket + bottom
-//!    remainder** — `select_reveal_buckets` with one bucket
-//!    `{ filter: { all_of: [kind: digimon, any_of: [color_is: blue, color_is:
-//!    red]] }, min: 1, max: 1 }` matches DCGO single-bucket-mandatory-when-
-//!    eligible semantics. The trailing `place_remainder_on_deck { position:
-//!    bottom }` matches DCGO `remainingCardsPlace: DeckBottom`. The "Then,
-//!    place this card in the battle area" sub-step is implicit — the
-//!    engine's `classify_option_subtype` detects Clause 2 (`kind: delay`)
-//!    and auto-seats this Option as `OptionState::Delayed` at MainEffectDrain.
-//!
-//! 2. **[Main] ＜Delay＞ gain 2 memory** — `kind: delay` +
-//!    `trigger: end_of_your_next_turn` + `process: [gain_memory: 2]`.
-//!    Identical to BT22-099 / P-035 / EX9-021 standard-Delay precedents.
-//!    No [OPT] — single-fire is enforced by the trash-cost self-limit.
-//!
-//! 3. **[Security] (inherited) place this card in battle area** —
-//!    `scope: inherited` + `when: on_security` + `process:
-//!    [place_self_as_delay_option: {}]`. Matches DCGO
-//!    `PlaceSelfDelayOptionSecurityEffect`. Mandatory (no canNoSelect on
-//!    the DCGO factory; `optional: false` here).
-
-#![allow(dead_code, unused_imports)]
+//! LM-034 Wisteria Memory Boost!: official observation 3bbaa1e5...7275f3,
+//! actual card image, base DCGO LM_034.cs, and general rules 4-19/16-16.
+//! Exercises printed alternate color access, reveal choices/order, Delay and security.
 
 use digimon_dsl::compiled::{
     CompiledCard, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
@@ -204,13 +118,9 @@ fn lm_034_is_option_cost_3() {
     assert_eq!(card.cost, Some(3), "LM-034 prints Cost 3");
 }
 
-/// Four clauses total:
-///   [0] flood_gate (declarative, IgnoreColorRequirement)
-///   [1] main_from_hand (triggered)
-///   [2] delay (declarative, end_of_your_next_turn)
-///   [3] inherited on_security (triggered, scope: Inherited)
+/// Color access is top-level metadata; Main, Delay and Security are effect bodies.
 #[test]
-fn lm_034_has_four_clauses_in_expected_order() {
+fn lm_034_has_main_delay_and_security_with_use_requirement() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -223,37 +133,23 @@ fn lm_034_has_four_clauses_in_expected_order() {
     let card = runner.compiled_card(CARD_ID).expect("LM-034 compiled");
     assert_eq!(
         card.effects.len(),
-        4,
-        "expected 4 clauses (flood_gate, main_from_hand, delay, inherited on_security); got {}",
+        3,
+        "expected Main, Delay and Security effect bodies; got {}",
         card.effects.len()
     );
 }
 
-/// Clause 0: flood_gate declarative carrying the IgnoreColorRequirement modifier.
 #[test]
-fn lm_034_clause_0_is_flood_gate_with_ignore_color_modifier() {
+fn lm_034_has_printed_alternate_color_use_requirement() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
-        .add_card(filler("FILL"))
-        .hand(0, &[CARD_ID])
-        .deck(0, &["FILL"])
-        .memory(0)
         .start();
-
-    let card = runner.compiled_card(CARD_ID).expect("LM-034 compiled");
-
-    let is_flood_gate_with_modifier = match &card.effects[0] {
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. }) => {
-            modifier.eq_ignore_ascii_case("IgnoreColorRequirement")
-        }
-        _ => false,
-    };
-    assert!(
-        is_flood_gate_with_modifier,
-        "clause 0 must be a flood_gate carrying IgnoreColorRequirement; got {:?}",
-        card.effects[0]
-    );
+    assert!(runner
+        .compiled_card(CARD_ID)
+        .unwrap()
+        .use_requirement
+        .is_some());
 }
 
 /// Clause 1: main_from_hand triggered, FaceUp scope, NOT optional (DCGO
@@ -271,7 +167,7 @@ fn lm_034_clause_1_main_from_hand_face_up_mandatory() {
 
     let card = runner.compiled_card(CARD_ID).expect("LM-034 compiled");
 
-    match &card.effects[1] {
+    match &card.effects[0] {
         CompiledClause::Triggered(t) => {
             assert!(
                 t.when.contains(&CompiledTiming::MainFromHand),
@@ -300,9 +196,9 @@ fn lm_034_clause_1_main_from_hand_face_up_mandatory() {
     }
 }
 
-/// Clause 2: declarative Delay with trigger end_of_your_next_turn.
+/// Clause 2: declarative Delay with player-activated Main timing.
 #[test]
-fn lm_034_clause_2_is_delay_end_of_your_next_turn() {
+fn lm_034_clause_2_is_player_activated_delay() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -314,7 +210,7 @@ fn lm_034_clause_2_is_delay_end_of_your_next_turn() {
 
     let card = runner.compiled_card(CARD_ID).expect("LM-034 compiled");
 
-    match &card.effects[2] {
+    match &card.effects[1] {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay { trigger, .. }) => {
             // TRIGGER CORRECTION (2026-08-24): this assertion used to demand
             // `EndOfYourNextTurn` and call that "standard <Delay>" -- backwards.
@@ -349,7 +245,7 @@ fn lm_034_delay_process_has_gain_memory_2() {
 
     let card = runner.compiled_card(CARD_ID).expect("LM-034 compiled");
 
-    match &card.effects[2] {
+    match &card.effects[1] {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay { process, .. }) => {
             assert!(!process.is_empty(), "Delay process must be non-empty");
             let has_gain_2 = process
@@ -380,7 +276,7 @@ fn lm_034_clause_3_inherited_security_places_self_as_delay() {
 
     let card = runner.compiled_card(CARD_ID).expect("LM-034 compiled");
 
-    match &card.effects[3] {
+    match &card.effects[2] {
         CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
@@ -642,4 +538,316 @@ fn lm_034_main_deck_size_shrinks_by_one_when_eligible_digi_added() {
 fn _unused_silencer() {
     let _ = make_red_tamer("X", "X");
     let _ = make_black_digimon("Y", "Y");
+}
+
+// Tail audit: official 3bbaa1e5..., LM-034 image, rules 4-19 / 16-16, DCGO LM_034.cs.
+
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, PLAY_HAND_START,
+};
+use digimon_engine::combat::AttackResult;
+use digimon_engine::enums::DelayTrigger;
+use digimon_engine::permanent::OptionState;
+use digimon_engine::selection::OptionPlayResult;
+
+fn digimon(id: &str, color: CardColor) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![color];
+    c
+}
+fn tamer(id: &str, color: CardColor) -> CardData {
+    let mut c = digimon(id, color);
+    c.card_kind = CardKind::Tamer;
+    c
+}
+fn option(id: &str, color: CardColor) -> CardData {
+    let mut c = digimon(id, color);
+    c.card_kind = CardKind::Option;
+    c
+}
+#[test]
+fn lm_034_delay_activation_gains_2_memory_via_main_phase_action() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-034 YAML parses")
+        .add_card(tamer("BLUE-TAMER", CardColor::Blue))
+        .add_card(filler("FILL"))
+        .hand(0, &["LM-034"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BLUE-TAMER", Some(0));
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    runner
+        .auto_resolve()
+        .expect("resolve LM-034 reveal selection and delay placement");
+
+    let delay_idx = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|permanent| {
+            matches!(
+                permanent.option_state,
+                OptionState::Delayed {
+                    trigger: DelayTrigger::MainPhaseActivated,
+                    ..
+                }
+            )
+        })
+        .expect("playing LM-034 should park it as a MainPhaseActivated delayed option");
+
+    let bit = (FIELD_EFFECT_START
+        + delay_idx as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[bit],
+        0.0,
+        "LM-034 <Delay> must not be activatable on the placing turn"
+    );
+
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+    runner.game.set_memory(0);
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[bit], 1.0,
+        "LM-034 <Delay> activation is a legal action"
+    );
+    assert_eq!(mask[PASS as usize], 1.0, "declining stays legal");
+
+    let saved = runner.game.clone();
+    runner.game.decode_action(PASS, 0);
+    assert!(runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID));
+    assert!(!runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == CARD_ID));
+    runner.game = saved.clone();
+    runner.game.decode_action(bit as u16, 0);
+    assert!(runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "LM-034"));
+    runner.game = saved;
+    assert_eq!(runner.memory(), 0, "cloning preserves unactivated Delay");
+    runner.game.decode_action(bit as u16, 0);
+
+    assert_eq!(
+        runner.memory(),
+        2,
+        "LM-034 <Delay> body gains 2 memory when the player activates it"
+    );
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|permanent| matches!(permanent.option_state, OptionState::Delayed { .. })),
+        "LM-034 is trashed as the <Delay> activation cost"
+    );
+}
+
+#[test]
+fn lm_034_inherited_security_places_self_in_battle_area() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-034 YAML parses")
+        .add_card(digimon("ATTACKER", CardColor::Black))
+        .add_card(filler("FILL"))
+        .security(1, &["LM-034"])
+        .deck(0, &["FILL"])
+        .memory(0)
+        .start();
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+
+    let result = runner.attack_player(attacker, 1, false);
+
+    assert_eq!(result, AttackResult::SecurityCheckSurvived);
+    assert_eq!(runner.security_count(1), 0, "LM-034 should leave security");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "LM-034 should be placed in battle area instead of trashed"
+    );
+    let placed = runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "LM-034")
+        .expect("LM-034 should be placed as a battle-area Option permanent");
+    assert!(matches!(
+        placed.option_state,
+        OptionState::Delayed {
+            trigger: DelayTrigger::MainPhaseActivated,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn lm_034_color_access_owner_kind_and_breeding_matrix() {
+    for (kind, color, owner, breeding, allowed) in [
+        (CardKind::Digimon, CardColor::Blue, 0, true, true),
+        (CardKind::Digimon, CardColor::Red, 0, true, true),
+        (CardKind::DigiEgg, CardColor::Blue, 0, true, true),
+        (CardKind::DigiEgg, CardColor::Red, 0, true, true),
+        (CardKind::Tamer, CardColor::Red, 0, false, true),
+        (CardKind::Digimon, CardColor::Blue, 0, false, true),
+        (CardKind::Tamer, CardColor::Red, 0, false, true),
+        (CardKind::Digimon, CardColor::Red, 0, true, true),
+        (CardKind::Option, CardColor::Blue, 0, false, false),
+        (CardKind::Option, CardColor::Red, 0, false, false),
+        (CardKind::Digimon, CardColor::Red, 1, false, false),
+        (CardKind::Digimon, CardColor::Blue, 1, false, false),
+        (CardKind::Tamer, CardColor::Black, 0, false, false),
+    ] {
+        let mut c = digimon("ACCESS", color);
+        c.card_kind = kind;
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(YAML)
+            .unwrap()
+            .add_card(c)
+            .hand(0, &["LM-034"])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.place_on_field(owner, "ACCESS", None);
+        if breeding {
+            let p = r.game.players[owner as usize].battle_area.remove(0);
+            r.game.players[owner as usize].breeding_area = Some(p);
+        }
+        assert_eq!(
+            build_action_mask(&r.game, 0)[PLAY_HAND_START as usize] > 0.0,
+            allowed,
+            "{kind:?} {color:?} owner={owner} breeding={breeding}"
+        );
+    }
+}
+
+fn audit_reveal(top: &[&str]) -> DebugRunner {
+    use digimon_engine::card_source::CardSource;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .unwrap()
+        .add_card(digimon("B", CardColor::Blue))
+        .add_card(digimon("G", CardColor::Red))
+        .add_card(digimon("R", CardColor::Black))
+        .add_card(tamer("T", CardColor::Red))
+        .add_card(option("O", CardColor::Blue))
+        .hand(0, &["LM-034"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.place_on_field(0, "B", None);
+    for id in top.iter().rev() {
+        let index = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == *id)
+            .unwrap();
+        let serial = r.game.next_card_index();
+        r.game.players[0]
+            .deck
+            .push(CardSource::new(index, 0, serial));
+    }
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    r
+}
+
+fn audit_order(r: &mut DebugRunner, reverse: bool) {
+    use digimon_engine::selection::SelectionKind;
+    for _ in 0..4 {
+        let Some(v) = r.pending_selection_view() else {
+            return;
+        };
+        assert!(matches!(v.kind, SelectionKind::OrderedPermutation { .. }));
+        assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 0.0);
+        let a = if reverse {
+            *v.valid_action_ids.last().unwrap()
+        } else {
+            v.valid_action_ids[0]
+        };
+        r.execute_action(0, a).unwrap();
+    }
+    panic!("remainder did not resolve");
+}
+
+#[test]
+fn lm_034_mandatory_search_offers_both_colors_and_clone_preserves_order_choices() {
+    use digimon_engine::action::space::SEL_REVEAL_START;
+    let mut r = audit_reveal(&["B", "G", "T", "R"]);
+    let m = build_action_mask(&r.game, 0);
+    assert_eq!(m[PASS as usize], 0.0);
+    assert_eq!(m[SEL_REVEAL_START as usize], 1.0);
+    assert_eq!(m[SEL_REVEAL_START as usize + 1], 1.0);
+    assert_eq!(m[SEL_REVEAL_START as usize + 2], 0.0);
+    let saved = r.game.clone();
+    r.execute_action(0, SEL_REVEAL_START).unwrap();
+    let order = r.pending_selection_view().unwrap();
+    assert_eq!(order.valid_action_ids.len(), 2);
+    audit_order(&mut r, false);
+    let first: Vec<_> = r.game.players[0]
+        .deck
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_owned())
+        .collect();
+    assert_eq!(r.hand_size(0), 1);
+    assert_eq!(r.game.players[0].hand[0].card_id(&r.game.card_data), "B");
+    assert_eq!(r.memory(), 7);
+    assert_eq!(r.game.players[0].battle_area.len(), 2);
+    r.game = saved;
+    r.execute_action(0, SEL_REVEAL_START).unwrap();
+    audit_order(&mut r, true);
+    let second: Vec<_> = r.game.players[0]
+        .deck
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_owned())
+        .collect();
+    assert_ne!(
+        first, second,
+        "both legal bottom orders must be player choices"
+    );
+    assert_eq!(first.last().map(String::as_str), Some("R"));
+    assert_eq!(second.last().map(String::as_str), Some("R"));
+}
+
+#[test]
+fn lm_034_no_eligible_and_short_deck_still_place_delay() {
+    for top in [&["O", "T", "R"][..], &["G"][..], &[][..]] {
+        let mut r = audit_reveal(top);
+        if top == ["G"] {
+            let v = r.pending_selection_view().unwrap();
+            assert_eq!(v.valid_action_ids.len(), 1);
+            r.execute_action(0, v.valid_action_ids[0]).unwrap();
+        }
+        audit_order(&mut r, false);
+        assert_eq!(r.hand_size(0), usize::from(top == ["G"]));
+        assert!(r.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "LM-034"));
+        assert_eq!(r.memory(), 7);
+    }
 }

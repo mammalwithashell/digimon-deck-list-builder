@@ -685,6 +685,12 @@ pub struct StepSpec {
 /// single [`ReplaySession`] core serves both batch and interactive callers
 /// and both recording families.
 pub trait RecordingSource: Send {
+    /// Select digest semantics from explicit recording metadata. All current
+    /// non-verification adapters use the current protocol.
+    fn verification_digest_version(&self) -> crate::recorder::VerificationDigestVersion {
+        crate::recorder::VerificationDigestVersion::CURRENT
+    }
+
     /// Build the immutable shared state and lay the initial post-mulligan
     /// zones, returning a ready-to-step `Game`.
     fn build_initial_game(
@@ -1444,6 +1450,12 @@ impl VerificationReplayAdapter {
         recording: VerificationReplayRecording,
         card_data: &HashMap<String, CardData>,
     ) -> Result<Self, ReplayError> {
+        if recording.format_version != crate::recorder::VERIFICATION_REPLAY_FORMAT_VERSION {
+            return Err(ReplayError::MalformedRecording(format!("unsupported verification replay format {}", recording.format_version)));
+        }
+        if crate::recorder::VerificationDigestVersion::from_engine_schema(recording.engine_schema_version).is_none() {
+            return Err(ReplayError::MalformedRecording(format!("unsupported verification engine schema {}", recording.engine_schema_version)));
+        }
         if recording.actions.len() != recording.digests.len() {
             return Err(ReplayError::MalformedRecording(format!(
                 "verification replay has {} actions but {} digests",
@@ -1488,6 +1500,11 @@ impl VerificationReplayAdapter {
 }
 
 impl RecordingSource for VerificationReplayAdapter {
+    fn verification_digest_version(&self) -> crate::recorder::VerificationDigestVersion {
+        crate::recorder::VerificationDigestVersion::from_engine_schema(self.recording.engine_schema_version)
+            .expect("recording schema validated at construction")
+    }
+
     fn build_initial_game(
         &self,
         _card_data: &HashMap<String, CardData>,
@@ -2038,7 +2055,7 @@ impl ReplayDriver {
                 }
             }
             if let Some(recorded) = expected_digest {
-                let replayed = game.verification_digest();
+                let replayed = game.verification_digest_with_version(self.source.verification_digest_version());
                 if recorded != replayed {
                     result.divergences.push(DivergenceReport {
                         step: result.step_number,

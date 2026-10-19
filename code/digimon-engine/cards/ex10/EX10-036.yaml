@@ -85,7 +85,7 @@ effects:
           bind_as: cost_sources
           prompt: "Trash 3 [Mineral] or [Rock] cards from your Digimon's digivolution cards"
           then:
-            - trash_selected_sources: { source_refs: cost_sources }
+            - trash_selected_sources_as_cost: { source_refs: cost_sources }
             - select_opponent_permanent:
                 bind_as: victim
                 filter: { kind: digimon }

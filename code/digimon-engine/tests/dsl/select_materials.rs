@@ -164,6 +164,8 @@ fn select_materials_name_uniqueness_caps_mask_to_one_per_name() {
     bindings.insert_permanent("carrier", perm_handle);
 
     let steps = vec![CompiledStep::SelectMaterials {
+            named_groups: Vec::new(),
+            require_max: false,
         of_permanent: CompiledBindingRef::Named("carrier".to_string()),
         max: CompiledCountBound::Literal(4),
         filter: CompiledPredicate {
@@ -268,6 +270,8 @@ fn select_materials_batch_play_from_materials_plays_every_picked_source() {
     // select_materials → play_from_materials(source: picked).
     let steps = vec![
         CompiledStep::SelectMaterials {
+            named_groups: Vec::new(),
+            require_max: false,
             of_permanent: CompiledBindingRef::Named("carrier".to_string()),
             max: CompiledCountBound::Literal(4),
             filter: CompiledPredicate {
@@ -283,6 +287,7 @@ fn select_materials_batch_play_from_materials_plays_every_picked_source() {
             same_by: None,
         },
         CompiledStep::PlayFromMaterials {
+            suspended: false,
             target: CompiledBindingRef::Named("carrier".to_string()),
             source_index: CompiledBindingRef::Named("picked".to_string()),
             cost_delta: Some(CompiledCostDelta::Free),
@@ -361,6 +366,8 @@ fn play_from_materials_can_suppress_on_play_for_picked_breeding_sources() {
 
     let steps = vec![
         CompiledStep::SelectMaterials {
+            named_groups: Vec::new(),
+            require_max: false,
             of_permanent: CompiledBindingRef::Named("king_drasil".to_string()),
             max: CompiledCountBound::Literal(2),
             filter: CompiledPredicate {
@@ -376,6 +383,7 @@ fn play_from_materials_can_suppress_on_play_for_picked_breeding_sources() {
             same_by: None,
         },
         CompiledStep::PlayFromMaterials {
+            suspended: false,
             target: CompiledBindingRef::Named("king_drasil".to_string()),
             source_index: CompiledBindingRef::Named("picked".to_string()),
             cost_delta: Some(CompiledCostDelta::Free),
@@ -490,6 +498,7 @@ effects:
     // The follow-on play_from_materials consumes the bound batch.
     match &triggered.process[1] {
         CompiledStep::PlayFromMaterials {
+            suspended: false,
             target,
             source_index,
             ..
@@ -525,6 +534,8 @@ fn select_materials_empty_carrier_runs_tail_synchronously() {
 
     let steps = vec![
         CompiledStep::SelectMaterials {
+            named_groups: Vec::new(),
+            require_max: false,
             of_permanent: CompiledBindingRef::Named("carrier".to_string()),
             max: CompiledCountBound::Literal(4),
             filter: CompiledPredicate::default(),
@@ -603,6 +614,8 @@ fn select_materials_breeding_carrier_installs_real_pending_selection() {
     // breeding-source pick really lands in the bound CardList.
     let steps = vec![
         CompiledStep::SelectMaterials {
+            named_groups: Vec::new(),
+            require_max: false,
             of_permanent: CompiledBindingRef::Named("king_drasil".to_string()),
             max: CompiledCountBound::Literal(2),
             filter: CompiledPredicate {
@@ -728,6 +741,8 @@ fn select_materials_breeding_carrier_distinct_by_exercises_recursive_path() {
 
     let steps = vec![
         CompiledStep::SelectMaterials {
+            named_groups: Vec::new(),
+            require_max: false,
             of_permanent: CompiledBindingRef::Named("king_drasil".to_string()),
             max: CompiledCountBound::Literal(4),
             filter: CompiledPredicate {

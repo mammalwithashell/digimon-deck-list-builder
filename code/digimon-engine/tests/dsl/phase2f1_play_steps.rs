@@ -566,6 +566,7 @@ fn play_from_materials_step_extracts_source_and_plays_it_free() {
     bindings.insert_literal("src_idx", 0);
 
     let step = CompiledStep::PlayFromMaterials {
+        suspended: false,
         target: CompiledBindingRef::Named("tgt".into()),
         source_index: CompiledBindingRef::Named("src_idx".into()),
         cost_delta: Some(CompiledCostDelta::Free),

@@ -300,7 +300,9 @@ fn write_pending_choice_features(
                     t[base + 22 + timing_bucket(timing)] = 1.0;
                 }
                 if let Some(source_kind) = choice.source_kind {
-                    t[base + 34 + source_kind_bucket(source_kind)] = 1.0;
+                    if let Some(bucket) = source_kind_bucket(source_kind) {
+                        t[base + 34 + bucket] = 1.0;
+                    }
                 }
                 if let Some(source_card) = choice.source_card {
                     t[base + layout::PENDING_SOURCE_CARD_ID_OFFSET] = game
@@ -309,6 +311,9 @@ fn write_pending_choice_features(
                         .unwrap_or(source_index);
                 }
                 write_effect_category_flags(t, base + 45, choice.observation_metadata.categories);
+                if let Some(count) = choice.count_choice {
+                    write_count_choice(t, base, count, observer);
+                }
             }
         }
     }
@@ -322,7 +327,10 @@ fn timing_bucket(timing: EffectTiming) -> usize {
         OnAttack | WhenAttacking => 2,
         SecuritySkill | OnSecurityCheck | OnLoseSecurity | OnDiscardSecurity => 3,
         EndOfYourTurn | EndOfOpponentsTurn => 4,
-        StartOfYourTurn | StartOfOpponentsTurn | StartOfYourMainPhase => 5,
+        StartOfYourTurn
+        | StartOfOpponentsTurn
+        | StartOfYourMainPhase
+        | StartOfOpponentsMainPhase => 5,
         OnDeletion | OnAnyDeletion => 6,
         CounterEffect => 7,
         OptionMain | DelayEffect => 8,
@@ -330,12 +338,15 @@ fn timing_bucket(timing: EffectTiming) -> usize {
     }
 }
 
-fn source_kind_bucket(source_kind: EffectSourceKind) -> usize {
+fn source_kind_bucket(source_kind: EffectSourceKind) -> Option<usize> {
     match source_kind {
-        EffectSourceKind::Digimon => 0,
-        EffectSourceKind::Tamer => 1,
-        EffectSourceKind::Option => 2,
-        EffectSourceKind::Rule => 3,
+        EffectSourceKind::Digimon => Some(0),
+        EffectSourceKind::Tamer => Some(1),
+        EffectSourceKind::Option => Some(2),
+        EffectSourceKind::Rule => Some(3),
+        // Existing single-bucket metadata cannot encode compound membership.
+        // Unknown/zero metadata preserves the profile; legality uses the typed origin.
+        EffectSourceKind::DigimonAndTamer => None,
     }
 }
 
@@ -477,5 +488,52 @@ fn write_phase_one_hot(t: &mut [f32], start: usize, phase: GamePhase) {
     let idx = phase.tensor_value() as usize;
     if idx < 20 {
         t[start + idx] = 1.0;
+    }
+}
+
+fn write_count_choice(
+    t: &mut [f32],
+    base: usize,
+    count: crate::count_choice::CountChoiceMetadata,
+    observer: PlayerId,
+) {
+    use crate::count_choice::{encode_count_u64, CountChoiceOperation as Op};
+    let flag = match count.operation {
+        Op::Commit(_) => layout::PENDING_COUNT_COMMIT_OFFSET,
+        Op::PreviousPage => layout::PENDING_COUNT_PREVIOUS_OFFSET,
+        Op::NextPage => layout::PENDING_COUNT_NEXT_OFFSET,
+    };
+    t[base + flag] = 1.0;
+    let mut write = |offset: usize, value: u64| {
+        t[base + offset..base + offset + layout::PENDING_COUNT_LIMBS]
+            .copy_from_slice(&encode_count_u64(value));
+    };
+    if let Op::Commit(value) = count.operation {
+        write(layout::PENDING_COUNT_DECLARED_OFFSET, value.declared);
+        write(layout::PENDING_COUNT_PAYABLE_OFFSET, value.payable);
+    }
+    write(layout::PENDING_COUNT_PAGE_INDEX_OFFSET, count.page_index);
+    write(layout::PENDING_COUNT_PAGE_COUNT_OFFSET, count.page_count);
+    if let Some(host) = count.host {
+        write(layout::PENDING_COUNT_HOST_ID_OFFSET, host.battle_identity);
+    }
+    if let Some(host) = count.host {
+        t[base + layout::PENDING_COUNT_HOST_PLAYER_OFFSET] = relative_player(host.player, observer);
+        t[base + layout::PENDING_COUNT_HOST_SLOT_OFFSET] = host.field_index as f32;
+        t[base + layout::PENDING_COUNT_HOST_PRESENT_OFFSET] = 1.0;
+    }
+}
+
+#[cfg(test)]
+mod dual_effect_source_metadata_tests {
+    use super::*;
+    #[test]
+    fn ordinary_source_buckets_stay_stable_and_compound_is_unknown() {
+        for (kind, bucket) in [(EffectSourceKind::Digimon, 0),
+            (EffectSourceKind::Tamer, 1), (EffectSourceKind::Option, 2),
+            (EffectSourceKind::Rule, 3)] {
+            assert_eq!(source_kind_bucket(kind), Some(bucket));
+        }
+        assert_eq!(source_kind_bucket(EffectSourceKind::DigimonAndTamer), None);
     }
 }

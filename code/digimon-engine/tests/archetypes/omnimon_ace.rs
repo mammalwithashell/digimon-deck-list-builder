@@ -826,53 +826,54 @@ fn combo4_omnimon_dna_digivolve_bottom_decks_chosen_level_then_deletes() {
     );
 }
 
-/// Combo 4 unhappy path: BT17-078 played NORMALLY (not via DNA) does NOT get the
-/// "If DNA digivolving" body — no bottom-deck, no delete. The system-level fact
-/// that the entire payoff is gated on the DNA origin of the digivolve.
+/// Combo 4 non-DNA control: official Q2851 still requires the Then deletion.
+/// Normal play skips the chosen-level bottom-deck sweep, but offers either
+/// opponent Digimon as the mandatory single deletion target.
 #[test]
 fn combo4_omnimon_non_dna_play_does_not_fire_level_wipe() {
-    let mut runner = DebugRunner::builder()
-        .dsl_card("BT17-078")
-        .expect("BT17-078 (Omnimon) in embedded DSL pack")
-        .dsl_card("ST5-10") // MetalTyrannomon — Lv.5 opp Digimon
-        .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
-        .dsl_card("ST2-10") // Plesiomon — Lv.6 opp Digimon
-        .expect("ST2-10 (Plesiomon) in embedded DSL pack")
-        .dsl_card("ST1-02") // Biyomon — vanilla deck filler
-        .expect("ST1-02 (Biyomon) in embedded DSL pack")
-        .memory(20)
-        .deck(0, &["ST1-02"; 4])
-        .deck(1, &["ST1-02"; 4])
-        .start();
-    runner.game.turn_count = 1;
+    for (target, deleted, survivor) in [(0, "ST5-10", "ST2-10"), (1, "ST2-10", "ST5-10")] {
+        let mut runner = DebugRunner::builder()
+            .dsl_card("BT17-078")
+            .expect("BT17-078 (Omnimon) in embedded DSL pack")
+            .dsl_card("ST5-10") // MetalTyrannomon — Lv.5 opp Digimon
+            .expect("ST5-10 (MetalTyrannomon) in embedded DSL pack")
+            .dsl_card("ST2-10") // Plesiomon — Lv.6 opp Digimon
+            .expect("ST2-10 (Plesiomon) in embedded DSL pack")
+            .dsl_card("ST1-02") // Biyomon — vanilla deck filler
+            .expect("ST1-02 (Biyomon) in embedded DSL pack")
+            .memory(20)
+            .deck(0, &["ST1-02"; 4])
+            .deck(1, &["ST1-02"; 4])
+            .start();
+        runner.game.turn_count = 1;
 
-    let opp_l5 = runner.place_on_field(1, "ST5-10", Some(0));
-    let _opp_l6 = runner.place_on_field(1, "ST2-10", Some(0));
-    let _ = opp_l5;
-    // Play Omnimon onto the field directly (no DNA digivolve), then fire On Play.
-    let omni = runner.place_on_field(0, "BT17-078", None);
-    let before = snapshot(&runner);
-    runner.fire_on_play(0, omni.index as usize);
+        let opp_l5 = runner.place_on_field(1, "ST5-10", Some(0));
+        let _opp_l6 = runner.place_on_field(1, "ST2-10", Some(0));
+        let _ = opp_l5;
+        // Play Omnimon onto the field directly (no DNA digivolve), then fire On Play.
+        let omni = runner.place_on_field(0, "BT17-078", None);
+        let before = snapshot(&runner);
+        runner.fire_on_play(0, omni.index as usize);
 
-    // The DNA gate (`dna_origin: true`) fails for a normal play → no prompt, no
-    // board change.
-    assert!(
-        runner.pending_selection().is_none(),
-        "non-DNA BT17-078 must NOT install the level-wipe selection (DNA-origin gate)"
-    );
-    let after = snapshot(&runner);
-    assert_eq!(
-        after.field[1], before.field[1],
-        "no opponent Digimon may be bottom-decked or deleted on a non-DNA play"
-    );
-    assert_eq!(
-        after.deck[1], before.deck[1],
-        "opponent deck must be unchanged on a non-DNA play"
-    );
-    assert_eq!(
-        after.trash[1], before.trash[1],
-        "opponent trash must be unchanged on a non-DNA play"
-    );
+        // Q2851: no DNA sweep; the first and only choice is mandatory deletion.
+        let view = runner.pending_selection_view().expect("non-DNA Then deletion");
+        assert_eq!(view.kind, SelectionKind::OppField);
+        assert_eq!(view.selecting_player, 0);
+        assert!(!view.is_optional);
+        assert_eq!(view.valid_action_ids, vec![encode_attack(0, 0), encode_attack(0, 1)]);
+        let mask = digimon_engine::action::build_action_mask(&runner.game, 0);
+        assert_eq!(mask[encode_attack(0, 0) as usize], 1.0);
+        assert_eq!(mask[encode_attack(0, 1) as usize], 1.0);
+        assert_eq!(mask[digimon_engine::action::space::PASS as usize], 0.0);
+        runner.execute_action(0, encode_attack(0, target)).expect("legal deletion choice");
+        assert!(runner.pending_selection().is_none(), "no DNA sweep or second deletion");
+        let after = snapshot(&runner);
+        assert_eq!(after.field[1], before.field[1] - 1, "exactly one opponent Digimon is deleted");
+        assert_eq!(after.deck[1], before.deck[1], "non-DNA play must not bottom-deck any Digimon");
+        assert_eq!(after.trash[1], before.trash[1] + 1, "the mandatory deletion trashes one Digimon");
+        assert_eq!(runner.game.players[1].battle_area[0].top_card().card_id(&runner.game.card_data), survivor);
+        assert_eq!(runner.game.players[1].trash.last().unwrap().card_id(&runner.game.card_data), deleted);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

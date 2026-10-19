@@ -1,0 +1,110 @@
+# Interaction draft: actual eligible choice or deletion replacement; no oracle verdict.
+# Adapted from LM-028-tail-delay.yaml; changed outcome assertions await live observation.
+card: LM-028
+clause: LM-028#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST2-03
+    - ST2-04
+    - LM-028
+    - ST1-03
+    - ST1-04
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-05
+    - BT1-009
+    - BT3-007
+    - BT1-014
+    rest: LM-028-interaction-start-delay-decline-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST2-04
+    - BT1-009
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-05
+    - BT1-014
+    - BT3-007
+    rest: LM-028-interaction-start-delay-decline-p1
+steps:
+- actor: 0
+  do:
+    hatch: {}
+- actor: 0
+  do:
+    play:
+      card: ST2-03
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+- actor: 1
+  do:
+    play:
+      card: ST1-03
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+- actor: 0
+  do:
+    play:
+      card: ST2-04
+      from: hand
+- actor: 0
+  do:
+    pass: {}
+- actor: 1
+  do:
+    pass: {}
+- actor: 1
+  do:
+    pass: {}
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+- actor: 0
+  do:
+    play:
+      card: LM-028
+      from: hand
+- actor: 0
+  do:
+    pass: {}
+- actor: 1
+  do:
+    pass: {}
+- actor: 1
+  do:
+    pass: {}
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+covers:
+- LM-028#effect#1
+interaction:
+  id: probe:LM-028#effect#1:optional_decline
+  source: probe
+  kind: positive

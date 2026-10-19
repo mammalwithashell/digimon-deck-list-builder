@@ -1,6 +1,9 @@
 """Regenerate tiny deterministic ONNX fixtures + expected outputs for Rust inference parity tests.
 
-Shapes are intentionally small (obs=8, action=16, hidden=4) so the fixtures stay <5 KB.
+The numerical core stays small (8 inputs, 16 logits, hidden=4). Public input/output
+shapes and embedded metadata use the real current default Rust contract. Exact
+zero input padding and masked output padding preserve the existing small-core
+parity checks without bypassing production compatibility gates.
 Weights are seeded for reproducibility; expected outputs come from onnxruntime so the
 Rust tests assert against the same numerics Python sees.
 
@@ -10,12 +13,17 @@ Run from repo root:
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
 import torch
 import torch.nn as nn
+import onnx
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from model_contract import current_contract, embed_onnx_contract
+CONTRACT = current_contract("standard_lite_deck_v2")
 
 
 OBS_SIZE = 8
@@ -69,6 +77,32 @@ def _masked_argmax(logits: np.ndarray, mask: np.ndarray) -> int:
     masked[mask < 0.5] = -1e9
     return int(np.argmax(masked))
 
+
+
+def extend_to_current_contract(path: Path) -> None:
+    model = onnx.load(str(path))
+    for node in model.graph.node:
+        for index, name in enumerate(node.input):
+            if name == "obs": node.input[index] = "core_obs"
+        for index, name in enumerate(node.output):
+            if name == "logits": node.output[index] = "core_logits"
+    for value in model.graph.input:
+        if value.name == "obs": value.type.tensor_type.shape.dim[1].dim_value = CONTRACT["tensor_size"]
+    for value in model.graph.output:
+        if value.name == "logits": value.type.tensor_type.shape.dim[1].dim_value = CONTRACT["action_space_size"]
+    constants = [
+        ("slice_start", np.array([0], dtype=np.int64)),
+        ("slice_end", np.array([OBS_SIZE], dtype=np.int64)),
+        ("slice_axis", np.array([1], dtype=np.int64)),
+        ("pad_axes", np.array([0, 0, 0, CONTRACT["action_space_size"] - ACTION_SIZE], dtype=np.int64)),
+        ("pad_logit", np.array(-1e9, dtype=np.float32)),
+    ]
+    for name, data in constants: model.graph.initializer.append(onnx.numpy_helper.from_array(data, name))
+    model.graph.node.insert(0, onnx.helper.make_node("Slice", ["obs", "slice_start", "slice_end", "slice_axis"], ["core_obs"]))
+    model.graph.node.append(onnx.helper.make_node("Pad", ["core_logits", "pad_axes", "pad_logit"], ["logits"], mode="constant"))
+    onnx.checker.check_model(model)
+    onnx.save(model, str(path))
+    embed_onnx_contract(path, CONTRACT)
 
 def main() -> None:
     torch.manual_seed(SEED)
@@ -124,6 +158,11 @@ def main() -> None:
         dynamo=False,
     )
 
+    for path in [mlp_path, mlp_value_path, lstm_path]:
+        extend_to_current_contract(path)
+    obs = np.pad(obs, (0, CONTRACT["tensor_size"] - OBS_SIZE))
+    mask = np.pad(mask, (0, CONTRACT["action_space_size"] - ACTION_SIZE))
+
     mlp_sess = ort.InferenceSession(str(mlp_path), providers=["CPUExecutionProvider"])
     (mlp_logits,) = mlp_sess.run(["logits"], {"obs": obs.reshape(1, -1)})
     mlp_action = _masked_argmax(mlp_logits[0], mask)
@@ -133,6 +172,7 @@ def main() -> None:
     batch_obs = np.stack([obs, obs * 0.5]).astype(np.float32)
     mask2 = np.ones(ACTION_SIZE, dtype=np.float32)
     mask2[[1, 2, 4, 5, 6, 8, 9, 10, 11, 13, 14, 15]] = 0.0  # only 0,3,7,12 legal
+    mask2 = np.pad(mask2, (0, CONTRACT["action_space_size"] - ACTION_SIZE))
     mv_sess = ort.InferenceSession(str(mlp_value_path), providers=["CPUExecutionProvider"])
     mv_logits, mv_values = mv_sess.run(["logits", "value"], {"obs": batch_obs})
 
@@ -153,8 +193,8 @@ def main() -> None:
 
     expected = {
         "shapes": {
-            "obs_size": OBS_SIZE,
-            "action_size": ACTION_SIZE,
+            "obs_size": CONTRACT["tensor_size"],
+            "action_size": CONTRACT["action_space_size"],
             "hidden_size": HIDDEN_SIZE,
         },
         "obs": obs.tolist(),

@@ -1,0 +1,117 @@
+card: BT8-097
+clause: BT8-097#effect#1
+interaction:
+  id: qa:Q4661
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT8-097
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST1-07
+    - ST1-08
+    - ST1-08
+    - ST1-09
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    rest: Q4661-private-p0
+  p1:
+    stack:
+    - ST1-02
+    - BT20-053
+    - BT7-056
+    - ST2-05
+    - ST2-06
+    - ST1-03
+    - ST1-03
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    rest: Q4661-private-p1
+steps:
+- actor: 0
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-02
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    play:
+      card: BT8-097
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-053
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+expect_ruling:
+  q_id: Q4661
+  assert:
+  - at: 8
+    that:
+      p1.field:
+      - card_id: BT20-053
+      p1.trash:
+      - ST1-02
+      p1.hand:
+      - BT7-056
+      - ST2-05
+      - ST2-06
+      - ST2-02
+      - ST2-03

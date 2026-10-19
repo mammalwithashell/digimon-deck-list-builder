@@ -757,18 +757,21 @@ fn dracomon_inherited_eot_dna_turns_breakdramon_and_blue_six_into_examon() {
     assert_eq!(stack, want, "both stacks merged under Examon");
     assert_eq!(field_ids(&runner, 0), vec![EXAMON], "two Digimon became one");
     assert_eq!(runner.memory(), mem0, "Green Lv.6 + Blue Lv.6 DNA: Cost 0");
-    // 15000 base + 10000 (DNA [When Digivolving]) + 2000 (EX13-018 Coredramon's
-    // inherited [Your Turn] +2000 — still your turn during End of Turn).
-    assert_eq!(
-        runner.effective_dp(ex),
-        Some(15_000 + 10_000 + 2_000),
-        "DNA buff stacks with the inherited Coredramon bonus"
-    );
+    // Printed processing declares the attack before granting the overall DP.
+    // Coredramon's inherited +2000 already applies during End of Your Turn.
+    assert_eq!(runner.effective_dp(ex), Some(15_000 + 2_000),
+        "the DNA buff has not been processed before attack declaration");
 
     // DNA [When Digivolving]: "this Digimon attacks" (mandatory) — at security.
     let view = runner.pending_selection_view().expect("forced-attack target prompt");
     assert!(!view.is_optional, "the attack is mandatory");
-    act(&mut runner, encode_attack(ex.index as u16, SECURITY_TARGET));
+    assert!(view.prompt.contains("attacks"), "expected attack target, got {view:?}");
+    let attack = encode_attack(ex.index as u16, SECURITY_TARGET);
+    assert_eq!(digimon_engine::action::build_action_mask(&runner.game, view.selecting_player)[attack as usize], 1.0);
+    act(&mut runner, attack);
+    assert_eq!(runner.security_count(1), 5, "declaration is not security battle completion");
+    assert_eq!(runner.effective_dp(ex), Some(15_000 + 10_000 + 2_000),
+        "after declaration the DNA buff stacks with the inherited Coredramon bonus");
     // Examon suspending re-arms Breakdramon's INHERITED battle clause (Combo 5
     // covers accepting it); decline here so the attack reaches security.
     for _ in 0..8 {
@@ -848,8 +851,10 @@ fn wingdramon_as_lv6_slayerdramon_dna_digivolves_with_breakdramon_into_examon() 
     let mem0 = runner.memory();
 
     assert!(runner.game.initiate_dna_digivolve(0, 0), "Examon's DNA is legal");
-    runner.game.resolve_selection(0, 0).expect("first material");
-    runner.game.resolve_selection(0, 1).expect("second material");
+    assert_eq!(digimon_engine::action::build_action_mask(&runner.game, 0)[0], 1.0);
+    act(&mut runner, 0);
+    assert_eq!(digimon_engine::action::build_action_mask(&runner.game, 0)[1], 1.0);
+    act(&mut runner, 1);
 
     assert_eq!(field_ids(&runner, 0), vec![EXAMON], "two Digimon became one");
     let ex = find_perm(&runner, 0, EXAMON);
@@ -858,7 +863,27 @@ fn wingdramon_as_lv6_slayerdramon_dna_digivolves_with_breakdramon_into_examon() 
         sorted(vec![WINGDRAMON.into(), BREAKDRAMON.into(), EXAMON.into()])
     );
     assert_eq!(runner.memory(), mem0, "DNA cost 0");
+    assert_eq!(runner.effective_dp(ex), Some(15_000),
+        "attack target declaration precedes DNA [When Digivolving] +10000");
+    let view = runner.pending_selection_view().expect("mandatory DNA attack target");
+    assert!(!view.is_optional);
+    assert!(view.prompt.contains("attacks"), "expected attack target, got {view:?}");
+    let attack = encode_attack(ex.index as u16, SECURITY_TARGET);
+    assert_eq!(digimon_engine::action::build_action_mask(&runner.game, view.selecting_player)[attack as usize], 1.0);
+    act(&mut runner, attack);
     assert_eq!(runner.effective_dp(ex), Some(25_000), "DNA [When Digivolving] +10000");
+    // Decline actual inherited optional effects, then finish Counter/security.
+    for _ in 0..8 {
+        let Some(view) = runner.pending_selection_view() else { break; };
+        assert!(view.is_optional, "only optional prompts remain; view={view:?}");
+        assert_eq!(digimon_engine::action::build_action_mask(&runner.game, view.selecting_player)[PASS as usize], 1.0);
+        pass(&mut runner);
+    }
+    runner.auto_resolve().expect("complete declared security attack");
+    assert_eq!(runner.security_count(1), 3, "DNA attack completes two security checks");
+    assert_eq!(field_ids(&runner, 0), vec![EXAMON]);
+    assert_eq!(runner.effective_dp(find_perm(&runner, 0, EXAMON)), Some(25_000),
+        "DNA buff persists after the attack");
 }
 
 /// Cards: EX13-021 Wingdramon + EX13-041 Groundramon → EX13-045 Examon.

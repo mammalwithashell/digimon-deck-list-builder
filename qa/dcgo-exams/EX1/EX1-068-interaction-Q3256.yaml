@@ -1,0 +1,69 @@
+# qa:Q3256 (2024-03-28) -- "I use this card. During my opponent's next turn, if they play a new Digimon or move
+# a Digimon from their breeding area to their battle area, will those Digimon have '[When Attacking] Lose 2
+# memory' from this card's effect?" -> "Yes. The effect reads 'All of your opponent's Digimon,' so any Digimon
+# that enter the battle area after you use this card are still affected."
+# Sources: data/card_bundles/EX1-068 + official observation 472a2180... + card image; DCGO EX1/Blue/EX1_068.cs
+# (the grant is an AddSkillClass on the user's UntilOpponentTurnEndEffects whose CardSourceCondition is
+# evaluated live for whichever opponent Digimon attacks -- the foreach debuff loop over the battle area at
+# resolution is cosmetic); ours EX1-068.yaml grant_triggered_effect `dynamic: true` (later entrants included).
+# general_rule.pdf 6-4-1-2 (moving from the breeding area to the battle area), 7-1-2-1 (a PLAYED card can't
+# unsuspend/attack the turn it was played -- moving is not playing), 6-1-4-1 (turn end).
+# Line: P1 hatches Tsunomon ST2-01 (T2) and digivolves it IN THE BREEDING AREA into Gabumon ST2-03 (cost 0), so
+# P1 has NO battle-area Digimon when P0 uses Ice Wall! on T3. T4: P1 moves Gabumon to the battle area and
+# attacks P0's security. Discriminator: memory moves from -3 to -1 (P0's view) at that declaration -- the
+# entrant carried the granted [When Attacking] although it was nowhere near the battle area when the Option
+# resolved. Gabumon (2000; at most 3000 with Tsunomon's inherited) then loses to the top security card
+# Dracomon ST1-04 (4000) and is deleted; P1 passes; the final row is P0's breeding_action (turn 5).
+# The "play a new Digimon" half of the question is NOT exercised here: a Digimon played on T4 cannot attack
+# that turn (7-1-2-1) and this pool has no <Rush> Digimon, so only the breeding entrant can produce the attack
+# observation; a second battle-area Digimon would also make `attack: field.N` index-ambiguous (README "Slot
+# safety"). P0 has no <Blocker>; no selection prompt is expected.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: EX1-068
+clause: EX1-068#effect#0
+covers: [EX1-068#effect#0, EX1-068#effect#1]
+interaction: { id: "qa:Q3256", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: ST2-03, EX1-068, ST2-04, ST2-05, ST2-06 | security bottom->top: ST1-02 x3, ST1-03, ST1-04 (top = Dracomon 4000) | draws (T3, T5): ST1-05, ST1-05
+    stack: [ST2-03, EX1-068, ST2-04, ST2-05, ST2-06, ST1-02, ST1-02, ST1-02, ST1-03, ST1-04, ST1-05, ST1-05]
+    rest: EX1-068-interaction-Q3256-p0
+  p1:
+    # hand: ST2-03, ST2-04, ST2-05, ST2-06, ST1-05 | security bottom->top: ST1-03 x4, ST1-04 | draws (T2 draw, T2 breeding digivolve-draw, T4 draw): ST1-02, ST1-02, ST2-13
+    stack: [ST2-03, ST2-04, ST2-05, ST2-06, ST1-05, ST1-03, ST1-03, ST1-03, ST1-03, ST1-04, ST1-02, ST1-02, ST2-13]
+    rest: EX1-068-interaction-Q3256-p1
+steps:
+# T1 P0 (0): Gabumon ST2-03 (3) -> -3 (the blue permanent that makes the blue Option playable).
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST2-03, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (3): hatch Tsunomon; digivolve it in the breeding area into Gabumon ST2-03 (cost 0); pass.
+- { actor: 1, do: { hatch: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { digivolve: { from: breeding, using: ST2-03 } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T3 P0 (3): Ice Wall! EX1-068 (1) -> 2 while P1 has NO battle-area Digimon; pass.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: EX1-068, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T4 P1 (3): move Gabumon from the breeding area (6-4-1-2) and attack with it: the entrant loses 2 memory
+# (memory -3 -> -1 from P0's view); Gabumon is deleted by Dracomon in the security battle; pass.
+- { actor: 1, do: { move: { from: breeding } }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { attack: { attacker: field.0, target: security } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T5 P0: post-turn observation.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q3256
+  assert:
+  - at: 9
+    that:
+      memory: -3
+      p1.field:
+      - card_id: ST2-03
+        suspended: false
+        sources:
+        - ST2-01
+  - at: 10
+    that:
+      memory: -1
+      p0.security: 4

@@ -1,0 +1,58 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "BT24-077",
+    "colors": "Purple Red",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "9000",
+    "form": "Ult./Appmon",
+    "play_cost": "9",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Raidramon] & [Dezipmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Raidramon] & [Dezipmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ [When Digivolving] [On Deletion] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to 1 of your Digimon without paying the cost. [On Deletion] You may play 1 level 4 or lower [Appmon] trait Digimon card from your trash without paying the cost."
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+4000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] Delete 1 of your opponent's Digimon with the lowest DP."
+      }
+    ],
+    "type": "Restoration"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "1c183abcf77c7d431e6ed7ea8ef32a9541c27fccceff89573edcdb0797939944",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "2857ce774ead3723948ff4711f2033072fed73bd9a183cf85a5b71453759c3fe",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-077",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-077"
+}

@@ -54,10 +54,11 @@ fn resolve(r: &mut DebugRunner, source: CardHandle) -> Option<ResolvedBinding> {
 fn stale_event_card_cannot_grant_keyword_to_reused_slot() {
     for seat in [0, 1] {
         let (mut r, replacement, source, old) = fixture(seat);
-        r.game.current_trigger_context = Some(TriggerContext {
-            event_permanent: Some(replacement),
-            event_card: Some(old),
-            ..TriggerContext::default()
+        r.game.current_trigger_context = Some({
+            let mut context = TriggerContext::default();
+            context.event_permanent = Some(replacement);
+            context.event_card = Some(old);
+            context
         });
         let outcome = {
             let mut ctx = EffectContext::new(&mut r.game, source, None, 1 - seat);
@@ -85,10 +86,11 @@ fn stale_event_card_cannot_grant_keyword_to_reused_slot() {
 fn stale_host_only_identity_cannot_resolve_to_reused_slot() {
     for seat in [0, 1] {
         let (mut r, replacement, source, old) = fixture(seat);
-        r.game.current_trigger_context = Some(TriggerContext {
-            event_permanent: Some(replacement),
-            event_host_card: Some(old),
-            ..TriggerContext::default()
+        r.game.current_trigger_context = Some({
+            let mut context = TriggerContext::default();
+            context.event_permanent = Some(replacement);
+            context.event_host_card = Some(old);
+            context
         });
         assert_eq!(resolve(&mut r, source), None);
     }
@@ -107,11 +109,12 @@ fn known_primary_or_link_host_identity_still_resolves_live_permanent() {
             (Some(old), Some(live)),
             (None, Some(live)),
         ] {
-            r.game.current_trigger_context = Some(TriggerContext {
-                event_permanent: Some(replacement),
-                event_card: primary,
-                event_host_card: host,
-                ..TriggerContext::default()
+            r.game.current_trigger_context = Some({
+                let mut context = TriggerContext::default();
+                context.event_permanent = Some(replacement);
+                context.event_card = primary;
+                context.event_host_card = host;
+                context
             });
             assert_eq!(
                 resolve(&mut r, source),
@@ -125,11 +128,12 @@ fn known_primary_or_link_host_identity_still_resolves_live_permanent() {
 fn two_stale_identities_do_not_resolve_a_replacement() {
     for seat in [0, 1] {
         let (mut r, replacement, source, old) = fixture(seat);
-        r.game.current_trigger_context = Some(TriggerContext {
-            event_permanent: Some(replacement),
-            event_card: Some(old),
-            event_host_card: Some(source),
-            ..TriggerContext::default()
+        r.game.current_trigger_context = Some({
+            let mut context = TriggerContext::default();
+            context.event_permanent = Some(replacement);
+            context.event_card = Some(old);
+            context.event_host_card = Some(source);
+            context
         });
         assert_eq!(resolve(&mut r, source), Some(ResolvedBinding::Card(old)));
     }
@@ -138,17 +142,19 @@ fn two_stale_identities_do_not_resolve_a_replacement() {
 #[test]
 fn unidentified_legacy_and_card_only_contexts_keep_existing_contract() {
     let (mut r, replacement, source, old) = fixture(0);
-    r.game.current_trigger_context = Some(TriggerContext {
-        event_permanent: Some(replacement),
-        ..TriggerContext::default()
+    r.game.current_trigger_context = Some({
+        let mut context = TriggerContext::default();
+        context.event_permanent = Some(replacement);
+        context
     });
     assert_eq!(
         resolve(&mut r, source),
         Some(ResolvedBinding::Permanent(replacement))
     );
-    r.game.current_trigger_context = Some(TriggerContext {
-        event_card: Some(old),
-        ..TriggerContext::default()
+    r.game.current_trigger_context = Some({
+        let mut context = TriggerContext::default();
+        context.event_card = Some(old);
+        context
     });
     assert_eq!(resolve(&mut r, source), Some(ResolvedBinding::Card(old)));
     r.game.current_trigger_context = None;

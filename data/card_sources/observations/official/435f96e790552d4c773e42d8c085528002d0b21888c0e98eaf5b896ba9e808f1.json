@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT20-037",
+    "colors": "Yellow Green",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "15",
+    "qa": [
+      "Yes, for each of this Digimon's level 6 digivolution cards, you suspend 1 of your opponent's Digimon or Tamers and gain 1 memory."
+    ],
+    "special_digivolution_condition": "[DNA Digivolve] Yellow Lv.6 + green/black Lv.6: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Yellow Lv.6 + green/black Lv.6: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Security A.+1＞ ＜Partition (Yellow Lv.6 & Green/Black Lv.6)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your effects or a battle, you may play 1 each of the specified cards without paying the costs.) [When Digivolving] For each of this Digimon's level 6 digivolution cards, suspend 1 of your opponent's Digimon or Tamers and gain 1 memory. Then, none of their Digimon or Tamers can activate [On Play] effects or unsuspend until the end of their turn."
+      }
+    ],
+    "type": "Unique"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "435f96e790552d4c773e42d8c085528002d0b21888c0e98eaf5b896ba9e808f1",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "3732ef909459a5ee953d127fb218175768a82cd5fbe292541f9231c6a62c2d6b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-037",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-037"
+}

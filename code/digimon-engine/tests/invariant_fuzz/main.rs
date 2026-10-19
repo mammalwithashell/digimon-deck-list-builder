@@ -181,26 +181,13 @@ fn assert_pending_resolvable(game: &Game, seed: u64, step: u32) {
     let Some(selection) = game.pending_selection.as_ref() else {
         return;
     };
-    assert!(
-        !selection.valid_action_ids.is_empty(),
-        "seed {seed} step {step}: pending selection has no valid_action_ids\n{}",
-        repro_hint(seed, step)
-    );
     let mask = action_mask_with_context(game, selection.selecting_player, seed, step);
-    let masked_actions: Vec<u16> = selection
-        .valid_action_ids
-        .iter()
-        .copied()
-        .filter(|action| {
-            let idx = *action as usize;
-            idx < mask.len() && mask[idx] > 0.5
-        })
-        .collect();
     assert!(
-        !masked_actions.is_empty(),
-        "seed {seed} step {step}: pending selection {:?} is stranded; valid_action_ids={:?}\n{}",
+        pending_has_masked_resolution(&selection.valid_action_ids, selection.is_optional, &mask),
+        "seed {seed} step {step}: pending selection {:?} is stranded; valid_action_ids={:?}, optional={}\n{}",
         selection.kind,
         selection.valid_action_ids,
+        selection.is_optional,
         repro_hint(seed, step)
     );
 }
@@ -276,6 +263,15 @@ fn apply_action_with_context(game: &mut Game, action: u16, player: PlayerId, see
 }
 
 fn debug_step(game: &Game, seed: u64, step: u32, player: PlayerId, action: u16) {
+    for (pid, seat) in game.players.iter().enumerate() {
+        let hand: Vec<_> = seat.hand.iter().map(|card| card.card_id(&game.card_data)).collect();
+        eprintln!("invariant_fuzz p{pid} hand={hand:?}");
+        for (index, permanent) in seat.battle_area.iter().enumerate() {
+            let stack: Vec<_> = permanent.card_sources.iter().map(|card| card.card_id(&game.card_data)).collect();
+            let linked: Vec<_> = permanent.linked_cards.iter().map(|card| card.card_id(&game.card_data)).collect();
+            eprintln!("invariant_fuzz p{pid} field{index} stack={stack:?} links={linked:?} suspended={}", permanent.is_suspended);
+        }
+    }
     let pending = game
         .pending_selection
         .as_ref()
@@ -366,6 +362,18 @@ fn fuzz_one_game(
         apply_action_with_context(&mut game, action, player, seed, steps);
         apply_action_with_context(&mut clone, action, player, seed, steps);
 
+        if config.stop_after_step == Some(steps) {
+            if let Some(selection) = game.pending_selection.as_ref() {
+                eprintln!(
+                    "invariant_fuzz after-action pending={:?} optional={} valid={:?} pass_mask={}",
+                    selection.kind,
+                    selection.is_optional,
+                    selection.valid_action_ids,
+                    build_action_mask(&game, selection.selecting_player)[digimon_engine::action::space::PASS as usize]
+                );
+            }
+        }
+
         let original_digest = game.verification_digest();
         let clone_digest = clone.verification_digest();
         assert_eq!(
@@ -431,4 +439,41 @@ fn seeded_random_games_preserve_engine_invariants() {
         .expect("spawn invariant fuzz thread")
         .join()
         .expect("invariant fuzz thread panicked");
+}
+
+// Test the same contract against explicit masks, including a masked-out PASS.
+fn pending_has_masked_resolution(valid_actions: &[u16], is_optional: bool, mask: &[f32]) -> bool {
+    valid_actions.iter().any(|action| {
+        mask.get(*action as usize).is_some_and(|value| *value > 0.5)
+    }) || (is_optional
+        && mask.get(digimon_engine::action::space::PASS as usize)
+            .is_some_and(|value| *value > 0.5))
+}
+
+#[test]
+fn optional_empty_material_prompt_accepts_explicit_masked_pass() {
+    let mut mask = vec![0.0; digimon_engine::action::space::ACTION_SPACE_SIZE];
+    mask[digimon_engine::action::space::PASS as usize] = 1.0;
+    assert!(pending_has_masked_resolution(&[], true, &mask));
+}
+
+#[test]
+fn mandatory_empty_prompt_stays_stranded_even_if_pass_bit_is_set() {
+    let mut mask = vec![0.0; digimon_engine::action::space::ACTION_SPACE_SIZE];
+    mask[digimon_engine::action::space::PASS as usize] = 1.0;
+    assert!(!pending_has_masked_resolution(&[], false, &mask));
+}
+
+#[test]
+fn optional_empty_prompt_with_masked_out_pass_stays_stranded() {
+    let mask = vec![0.0; digimon_engine::action::space::ACTION_SPACE_SIZE];
+    assert!(!pending_has_masked_resolution(&[], true, &mask));
+}
+
+#[test]
+fn listed_selection_requires_an_in_range_enabled_action() {
+    let mut mask = vec![0.0; digimon_engine::action::space::ACTION_SPACE_SIZE];
+    assert!(!pending_has_masked_resolution(&[7, u16::MAX], false, &mask));
+    mask[7] = 1.0;
+    assert!(pending_has_masked_resolution(&[7], false, &mask));
 }

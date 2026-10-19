@@ -1,0 +1,43 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX3-063",
+    "colors": "Purple Red",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "special_digivolution_condition": "[DNA Digivolve]0 from purple Lv.5 + red Lv.5",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve]0 from purple Lv.5 + red Lv.5"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] When DNA digivolving, your opponent chooses 1 of their Digimon. Delete all of their other Digimon. Then, ＜Blitz＞. [When Attacking][Once Per Turn] This Digimon gets +2000 DP for the turn. Then, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in your hand for the digivolution cost."
+      }
+    ],
+    "type": "Ancient Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "19037041ea7759d26331bd4843753872f3a6ee99affd25c7e093ddf9194c8855",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "d8ed03dea9ce50e228a8c4a8ff075a9bb2a63d29259a4ee66194f61ac8a3b98d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX3-063",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX3-063"
+}

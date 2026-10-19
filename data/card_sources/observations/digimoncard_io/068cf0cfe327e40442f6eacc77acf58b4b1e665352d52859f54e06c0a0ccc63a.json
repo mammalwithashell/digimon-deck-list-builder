@@ -1,0 +1,87 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [],
+      "card_colors": [
+        "Blue",
+        "Green"
+      ],
+      "card_kind": "Option",
+      "card_name_eng": "Giga Death",
+      "effect_description_eng": "[Main] Suspend 1 of your opponent's Digimon. Then, place up to 10 of your opponent's suspended Digimon at the bottom of their owners' decks in any order.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "Security Effect [Security] Suspend 1 of your opponent's Digimon. Then, return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.",
+      "level": null,
+      "play_cost": 9,
+      "security_effect_description_eng": "",
+      "type_eng": []
+    },
+    "card_id": "BT8-099",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Green"
+        ],
+        "dp": null,
+        "effect_text": "[Main] Suspend 1 of your opponent's Digimon. Then, place up to 10 of your opponent's suspended Digimon at the bottom of their owners' decks in any order.",
+        "face_id": "primary",
+        "inherited_text": "Security Effect [Security] Suspend 1 of your opponent's Digimon. Then, return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.",
+        "kind": "option",
+        "level": null,
+        "play_cost": 9,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": null,
+      "color": "Blue",
+      "color2": "Green",
+      "date_added": "2025-11-25 15:16:01",
+      "digi_type": null,
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": null,
+      "evolution_color": null,
+      "evolution_cost": null,
+      "evolution_level": null,
+      "form": null,
+      "id": "BT8-099",
+      "level": null,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Main] Suspend 1 of your opponent's Digimon. Then, place up to 10 of your opponent's suspended Digimon at the bottom of their owners' decks in any order.",
+      "name": "Giga Death",
+      "play_cost": 9,
+      "pretty_url": "giga-death-bt8-099",
+      "rarity": "r",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "AD-01: ADVANCED BOOSTER DIGIMON GENERATION",
+        "BT-08: Booster New Awakening"
+      ],
+      "source_effect": "Security Effect [Security] Suspend 1 of your opponent's Digimon. Then, return 1 of your opponent's suspended Digimon to the bottom of its owner's deck.",
+      "stage": null,
+      "tcgplayer_id": 681882,
+      "tcgplayer_name": "Giga Death (Reprint)",
+      "type": "Option",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "068cf0cfe327e40442f6eacc77acf58b4b1e665352d52859f54e06c0a0ccc63a",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT8-099",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

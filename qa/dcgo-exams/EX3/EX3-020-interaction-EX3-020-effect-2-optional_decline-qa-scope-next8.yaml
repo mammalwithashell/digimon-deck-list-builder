@@ -1,0 +1,163 @@
+# Source-derived draft. No outcome/assertion taken from execution.
+# Both Wingdramon and Groundramon are present and Examon is in hand, making free end-turn DNA legal. Decline Wingdramon, then decline the separately pending Groundramon effect so both bodies remain.
+card: EX3-020
+clause: EX3-020#effect#2
+interaction:
+  id: probe:EX3-020#effect#2:optional_decline
+  source: probe
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-023
+    - EX3-020
+    - EX3-041
+    - EX3-074
+    - BT1-090
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: EX3-020-interaction-EX3-020-effect-2-optional_decline-qa-scope-next8-p0
+  p1:
+    stack:
+    - ST2-09
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: EX3-020-interaction-EX3-020-effect-2-optional_decline-qa-scope-next8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-023
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX3-020
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 3
+  expect:
+    prompt: SelectCountEffect
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-041
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-020
+- actor: 0
+  do:
+    select:
+      decline: true
+      dcgo_only: true
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert:
+- at: 17
+  that:
+    memory: -4
+    p0.field:
+    - card_id: EX3-020
+      suspended: false
+      sources:
+      - BT20-023
+    - card_id: EX3-041
+      suspended: false
+      sources: []
+    p0.hand:
+    - EX3-074
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-02

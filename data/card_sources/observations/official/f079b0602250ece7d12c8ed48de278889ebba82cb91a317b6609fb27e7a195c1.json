@@ -1,0 +1,53 @@
+{
+  "extracted": {
+    "attribute": "Tool",
+    "card_id": "BT25-036",
+    "colors": "Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "5000",
+    "form": "Sup./Appmon",
+    "play_cost": "5",
+    "qa": [
+      "Yes, you can. In such cases, you can't add a card from your security stack to your hand because you don't have any security cards, therefore you just perform ."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Kabemon] & [Gomimon] & [Ecomon] & [Puzzlemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Kabemon] & [Gomimon] & [Ecomon] & [Puzzlemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] Add your top security card to the hand. Then, ＜Recovery +1＞."
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+3000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] By trashing 1 [Appmon] trait card from your hand, ＜Draw 2＞."
+      }
+    ],
+    "type": "Design"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f079b0602250ece7d12c8ed48de278889ebba82cb91a317b6609fb27e7a195c1",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "7561b1b96ec6add50d0348caf489d638c5676872204d0690afac708f5e4cc89e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-036",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-036"
+}

@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT20-102",
+    "colors": "Blue White Red",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "16000",
+    "form": "Mega",
+    "play_cost": "16",
+    "qa": [
+      "No, you can't. You must use the Digimon that was given to attack without suspending if possible."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Omnimon]: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Omnimon]: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞ ＜Piercing＞ ＜Blocker＞ [On Play] [When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, choose 1 of each player's Digimon and delete all other Digimon. Then, return 1 of your opponent's Digimon to the bottom of the deck. [End of Your Turn] [Once Per Turn] 1 of your Digimon may gain ＜Rush＞ for the turn and attack without suspending."
+      }
+    ],
+    "type": "Holy Warrior/X Antibody/Royal Knight/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3f8994ed06b4e175c217b18d8cdf5a99f628a03cab67e78afff0fc3781b5651f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "a3f14028f7414b7da99f2289ba163d6ba6666fc8944b8a77211cb59e037640f8",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-102",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-102"
+}

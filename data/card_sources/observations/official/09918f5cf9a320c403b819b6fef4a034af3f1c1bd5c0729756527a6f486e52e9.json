@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT25-016",
+    "colors": "Red Green",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "qa": [
+      "Yes, it triggers. The suspending and the timing for getting +1000 DP are the same, therefore the [All Turns] effect triggers."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[TS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[TS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] 1 of your Digimon gets +3000 DP for the turn. Then, 1 of your Digimon may attack. [All Turns] When a Digimon with 13000 DP or more attacks, this Digimon may digivolve into [Marsmon] or [Callismon] in the hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+      }
+    ],
+    "type": "Beastkin/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "09918f5cf9a320c403b819b6fef4a034af3f1c1bd5c0729756527a6f486e52e9",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c95b60d243881fc4dc87254cfad5de2e4ceb686fdde247922956ff7037ac2427",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-016",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-016"
+}

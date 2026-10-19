@@ -57,6 +57,7 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::StartOfYourTurn => EffectTiming::StartOfYourTurn,
         CompiledTiming::StartOfOpponentsTurn => EffectTiming::StartOfOpponentsTurn,
         CompiledTiming::StartOfYourMainPhase => EffectTiming::StartOfYourMainPhase,
+        CompiledTiming::StartOfOpponentsMainPhase => EffectTiming::StartOfOpponentsMainPhase,
         CompiledTiming::EndOfYourTurn => EffectTiming::EndOfYourTurn,
         CompiledTiming::EndOfOpponentsTurn => EffectTiming::EndOfOpponentsTurn,
         CompiledTiming::EndOfYourNextTurn => EffectTiming::EndOfYourNextTurn,

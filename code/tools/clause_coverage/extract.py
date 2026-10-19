@@ -44,6 +44,7 @@ from tools.clause_coverage.models import Clause  # noqa: E402
 from tools.clause_coverage.semantic_fingerprint import bind_clause_semantics, semantic_digest  # noqa: E402
 
 DEFAULT_OFFICIAL_JSON = DATA_DIR / "card_official.json"
+DEFAULT_IMAGE_CACHE = _PROJECT_ROOT / "qa" / "clause-image-cache.json"
 
 
 def _load_decklist(path: Path, deck_name: str | None = None) -> tuple[list[str], str]:
@@ -140,7 +141,9 @@ def run(
     cards_index = load_cards_index(cards_json_path)
     overrides_index = load_overrides_index(overrides_path)
     official_index = load_official_index(official_json_path)
-    image_cache = load_image_cache(image_cache_path)
+    image_cache = load_image_cache(
+        DEFAULT_IMAGE_CACHE if image_cache_path is None else image_cache_path
+    )
 
     all_clauses: list[Clause] = []
     for cid in card_ids:

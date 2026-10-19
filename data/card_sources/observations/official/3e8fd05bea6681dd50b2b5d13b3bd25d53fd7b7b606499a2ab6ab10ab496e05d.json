@@ -1,0 +1,129 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX12-017",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Black"
+    ],
+    "dp": 12000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "cost": 4,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "dp": 12000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "WarGreymon",
+        "play_cost": 12,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[Greymon] in name or w/[ME]/[VB] trait: Cost 3\n[DNA Digivolve] Red/yellow Lv.5 + black/purple Lv.5: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Security A. +1＞ ＜Decode (Lv.5 or lower w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait)＞\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, delete 1 of your opponent's lowest DP Digimon.\n[Counter] [Once Per Turn] 2 of your Digimon may DNA digivolve into [Omnimon] or an [ME] or [VB] trait Digimon card in the hand. Then, you may change the attack target to 1 of your Digimon."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -6: Lv.5 × Lv.4 × Lv.3, all w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait"
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "WarGreymon",
+    "play_cost": 12,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-017_P1.png?260529",
+      "printing_id": "EX12-017_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, both have to be XX.\nFor example, \"1 level 4 or lower Digimon card with the [CS] trait or that is yellow or black\" means either \"1 level 4 or lower Digimon card with the [CS] trait\" or \"1 level 4 or lower Digimon card that is yellow or black.\" In both cases, the card must be level 4 or lower.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6742",
+        "question": "If a text says \"XX card with AA or BB,\" does that mean AA and BB both have to be XX?"
+      },
+      {
+        "answer": "Yes, they must each satisfy the requirements.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6743",
+        "question": "For this card's Assembly requirements, are each of the level 5, level 4, and level 3 cards required to have [Agumon] or [Greymon] in their name or the [ME] or [VB] trait?"
+      },
+      {
+        "answer": "The Digimon being attacked leaves play and the attack target disappears.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6744",
+        "question": "While an opponent's Digimon is attacking, if I activate this card's effect and DNA digivolve two Digimon including my Digimon being attacked, what happens to the attack target?"
+      },
+      {
+        "answer": "No. Only one [Counter] effect can be triggered per an attack.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6745",
+        "question": "After triggering this card's [Counter] effect, can I trigger another [Counter] effect?"
+      },
+      {
+        "answer": "Yes, it can.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6746",
+        "question": "Can this card's [Counter] effect change the attack target of one of my opponent's Digimon without DNA digivolving?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.5 w/[Greymon] in name or w/[ME]/[VB] trait: Cost 3\n[DNA Digivolve] Red/yellow Lv.5 + black/purple Lv.5: Cost 0"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[Greymon] in name or w/[ME]/[VB] trait: Cost 3\n[DNA Digivolve] Red/yellow Lv.5 + black/purple Lv.5: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Security A. +1＞ ＜Decode (Lv.5 or lower w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait)＞\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, delete 1 of your opponent's lowest DP Digimon.\n[Counter] [Once Per Turn] 2 of your Digimon may DNA digivolve into [Omnimon] or an [ME] or [VB] trait Digimon card in the hand. Then, you may change the attack target to 1 of your Digimon."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "Assembly -6: Lv.5 × Lv.4 × Lv.3, all w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait"
+      }
+    ],
+    "type": "Dragonkin/ME/VB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "3e8fd05bea6681dd50b2b5d13b3bd25d53fd7b7b606499a2ab6ab10ab496e05d",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-017:EX12-017_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

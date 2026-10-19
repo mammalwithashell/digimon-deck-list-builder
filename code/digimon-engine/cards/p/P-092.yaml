@@ -1,0 +1,54 @@
+# Official observation 6656f69699ddb9932dc35d343ed5ac034b1859e01a314483d9b37e4ed5242428; image; Q4182.
+card: P-092
+name: Dracomon
+kind: digimon
+level: 3
+color: [blue, green]
+cost: 3
+dp: 2000
+traits: [Dragon]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: {level_eq: 2, color_is: blue}
+    cost: 1
+  - kind: digivolve
+    from: {level_eq: 2, color_is: green}
+    cost: 1
+  - kind: digivolve
+    from: {name_is: Bebydomon}
+    cost: 0
+effects:
+  - when: on_ally_played
+    active_when: {your_turn: true}
+    condition: {event_card_name_is: Groundramon}
+    process:
+      - select_hand:
+          of: you
+          bind_as: wing
+          optional: true
+          prompt: You may digivolve into Wingdramon for 3
+          filter: {kind: digimon, name_is: Wingdramon}
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: wing
+          cost: 3
+          ignore_requirements: true
+  - when: on_ally_played
+    scope: inherited
+    active_when: {your_turn: true}
+    condition: {event_card_name_is: Groundramon}
+    process:
+      - select_hand:
+          of: you
+          bind_as: wing
+          optional: true
+          prompt: You may digivolve into Wingdramon without paying the cost
+          filter: {kind: digimon, name_is: Wingdramon, can_digivolve_from_source: true}
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: wing
+          cost: 0
+          ignore_requirements: false
+

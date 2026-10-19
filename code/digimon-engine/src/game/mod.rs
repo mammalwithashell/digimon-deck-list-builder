@@ -1,3 +1,5 @@
+mod native_play_observation;
+pub use native_play_observation::NativePlayEntry;
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
@@ -7,7 +9,7 @@ use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
-use crate::enums::{Expiry, GamePhase, ModifierType, PlayerId};
+use crate::enums::{CardKind, Expiry, GamePhase, ModifierType, PlayerId};
 use crate::logger::{GameLogger, SilentLogger};
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
@@ -124,6 +126,8 @@ fn link_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
 /// (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PendingDeletionBatchRest {
+    pub(crate) receipt: Option<u64>,
+    pub(crate) parked_member: Option<(PlayerId, crate::card_source::CardHandle)>,
     pub(crate) player: PlayerId,
     pub(crate) card: crate::card_source::CardHandle,
     pub(crate) cause: crate::replacement::ReplacementCause,
@@ -175,6 +179,8 @@ pub(crate) struct PendingWouldPlayResume {
     pub(crate) effective_cost: u16,
     pub(crate) origin: PendingWouldPlayOrigin,
     pub(crate) effect_initiated: bool,
+    /// Controller of the effect that declared this play, retained across replacement parking.
+    pub(crate) play_controller: PlayerId,
     /// PUPPETS-G030 — when `true`, the just-played permanent's own `[On Play]`
     /// effects are NOT enqueued for this play event. Used by BT5-106's
     /// [Security] clause ("Any [On Play] effects on Digimon played with this
@@ -182,6 +188,15 @@ pub(crate) struct PendingWouldPlayResume {
     /// this single play event: other permanents' On Play, and every other
     /// timing (OnEnterFieldAnyone / OnAllyPlayed), are unaffected.
     pub(crate) suppress_on_play: bool,
+}
+
+/// A simultaneous source play whose individual preparation completed. The card
+/// remains under its captured physical carrier until actual entry.
+#[derive(Debug, Clone)]
+pub(crate) struct PreparedSourcePlay {
+    pub(crate) on_play_suppressor: Option<(PlayerId, crate::enums::EffectSourceKind)>,
+    pub(crate) declaration: PendingWouldPlayResume,
+    pub(crate) assembly: Option<(crate::card_source::CardHandle, Vec<crate::card_source::CardHandle>)>,
 }
 
 /// Open `OnDiscardHand` batch window (G-ENGINE-ON-DISCARD-HAND). Accumulates
@@ -241,8 +256,57 @@ pub(crate) enum PendingWouldPlayOrigin {
     },
     Source {
         permanent: PermanentHandle,
+        host_identity: u64,
         source_index: usize,
+        suspended: bool,
+        receipt: Option<u64>,
     },
+}
+
+impl PendingWouldPlayOrigin {
+    pub(crate) fn source_play_receipt(&self) -> Option<u64> {
+        match self {
+            Self::Source { receipt, .. } => *receipt,
+            _ => None,
+        }
+    }
+    pub(crate) fn enters_suspended(&self) -> bool {
+        matches!(
+            self,
+            Self::Source {
+                suspended: true,
+                ..
+            }
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PendingSecurityMove {
+    /// Explicit printed top-stacked-card extraction, not permanent departure.
+    pub(crate) top_only: bool,
+    pub(crate) donor: (PlayerId, u64),
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) player: PlayerId,
+    pub(crate) position: crate::enums::StackPosition,
+    pub(crate) face_up: bool,
+    pub(crate) observer: PlayerId,
+    pub(crate) leave_complete: bool,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PendingFieldTopSourceMove {
+    pub(crate) result_receipt: Option<u64>,
+    pub(crate) donor: (PlayerId, u64),
+    pub(crate) target: (PlayerId, u64),
+    pub(crate) target_breeding: bool,
+    pub(crate) donor_card: crate::card_source::CardHandle,
+    pub(crate) observer: PlayerId,
+    pub(crate) face_down: bool,
+    pub(crate) top: bool,
+    pub(crate) effect_source_card: Option<crate::card_source::CardHandle>,
+    pub(crate) source_kind: crate::enums::EffectSourceKind,
+    pub(crate) cause: crate::replacement::ReplacementCause,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -283,6 +347,12 @@ pub(crate) struct PendingDigimonLink {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PendingWouldDigivolveResume {
+    /// Cost effects share the temporary identity, but only the owned would-
+    /// digivolve window may commit this declaration after costs are complete.
+    pub(crate) window_started: bool,
+    pub(crate) host_identity: u64,
+    /// Exact modifier entries owned by this window; never remove other effects.
+    pub(crate) treated_identity_orders: Option<(u64, Option<u64>)>,
     pub(crate) player: PlayerId,
     pub(crate) permanent: PermanentHandle,
     pub(crate) card: crate::card_source::CardHandle,
@@ -357,6 +427,9 @@ impl EffectsCache {
 
 #[derive(Debug, Clone)]
 pub struct Game {
+    /// Exam-only recorder state; cloned but excluded from gameplay/digests.
+    pub(crate) movement_observer:
+        std::cell::RefCell<Option<crate::movement_observation::MovementObserver>>,
     pub rules: Rules,
     /// Per-game memo for `effects_for_card` (see `EffectsCache`). Not part of
     /// the observable game state — pure derived data, never snapshotted.
@@ -625,6 +698,21 @@ pub struct Game {
     /// selection has been resolved; the wrapper takes the value and resets
     /// the slot. The engine itself is BO3-agnostic.
     pub last_play_order_choice: Option<crate::selection::PlayOrder>,
+    /// Private cloneable receipts, filled at commit before entry observers.
+    pub(crate) source_play_receipts: Vec<(
+        u64,
+        crate::card_source::CardHandle,
+        Option<(PermanentHandle, u64)>,
+    )>,
+    pub(crate) next_source_play_receipt: u64,
+    /// Receipt-owned preparation slots; no ambient batch flag can capture nested plays.
+    pub(crate) prepared_source_plays: Vec<(u64, Option<PreparedSourcePlay>)>,
+    pub(crate) deletion_receipts: Vec<(u64, Vec<(PermanentHandle, Option<i32>, bool, (u16, u64))>)>,
+    pub(crate) next_deletion_receipt: u64,
+    pub(crate) return_receipts: Vec<(u64, Vec<(CardHandle, bool)>)>,
+    pub(crate) next_return_receipt: u64,
+    pub(crate) field_source_receipts: Vec<(u64, Option<crate::card_source::CardHandle>)>,
+    pub(crate) current_deletion_receipt: Option<u64>,
     /// Fire-site continuation for optional `WhenPermanentWouldPlay`
     /// replacements whose subject is a card in hand.
     #[doc(hidden)]
@@ -648,6 +736,8 @@ pub struct Game {
     /// subject is the pending Link Option card.
     #[doc(hidden)]
     pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
+    pub(crate) pending_field_top_source_moves: Vec<PendingFieldTopSourceMove>,
+    pub(crate) pending_security_moves: Vec<PendingSecurityMove>,
     /// The host chosen for a from-hand Plug-In Option's §6-5-1-4 link
     /// declaration, pinned between the host pick (§10-1-3-1) and the plug-in
     /// (§10-1-3-3) so `dispose_option`'s `Link` arm attaches to it instead of
@@ -672,6 +762,7 @@ pub struct Game {
     /// replacements whose subject is the permanent about to digivolve.
     #[doc(hidden)]
     pub(crate) pending_would_digivolve_resume: Option<PendingWouldDigivolveResume>,
+    pub(crate) effect_digivolve_scopes: Vec<crate::game_actions::digivolve::EffectDigivolveScope>,
 
     /// Player-scoped one-shot future-digivolve cost reducers
     /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`). Installed by a `[Main]` effect with
@@ -775,6 +866,10 @@ pub struct Game {
     /// 0) yield break`). `None` means "no deferred variable reduction". Consumed
     /// (`take`) by `resume_play_cost_continuation_after_pending`.
     pub(crate) pending_cost_reduction_amount_override: Option<i32>,
+    pub(crate) cost_payment_receipts: Vec<crate::game_actions::CostPaymentReceipt>,
+    pub(crate) next_cost_payment_receipt: u64,
+    pub(crate) active_cost_payment_receipt: Option<u64>,
+    pub(crate) preferred_play_cost_effect: Option<crate::game_actions::CostReductionKey>,
     /// The digivolution route (cost + app-fusion-ness) the player CHOSE when a
     /// hand card offered more than one distinct-cost route over the target base
     /// (rule 17 — no auto-selection of the cheapest). Set by the cost-choice
@@ -978,6 +1073,16 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) active_deletion_batch: Option<crate::deletion_batch::DeletionBatch>,
 
+    /// Battle events waiting for replacement/deletion choices to settle.
+    /// A stack preserves nested effect-driven battles and clones by value.
+    pub(crate) pending_battle_resolutions: Vec<crate::combat::PendingBattleResolution>,
+    /// Completed declared-attack battle, consumed when its state machine
+    /// resumes after the battle's triggered choices have finished.
+    pub(crate) pending_attack_battle_result: Option<crate::combat::AttackResult>,
+    pub(crate) next_battle_identity: u64,
+    /// Optional harness ledger, excluded from gameplay and verification state.
+    pub(crate) native_play_observation: Option<native_play_observation::NativePlayObservation>,
+
     /// The REST of a multi-permanent deletion batch whose replacement stage
     /// parked on one member's optional replacement prompt (e.g. the attacker's
     /// `<Evade>` in a tie — kill list `[defender, attacker]`). The parked
@@ -995,10 +1100,8 @@ pub struct Game {
     /// either (one activation covers the whole simultaneous batch, as in
     /// DCGO's list-based `WhenRemoveField`).
     #[doc(hidden)]
-    pub(crate) pending_deletion_batch_parked: Option<(
-        crate::enums::PlayerId,
-        crate::card_source::CardHandle,
-    )>,
+    pub(crate) pending_deletion_batch_parked:
+        Option<(crate::enums::PlayerId, crate::card_source::CardHandle)>,
 
     /// Phase 2d Task 7: when a control-flow or iteration step's body parks
     /// a selection, the steps that follow the control-flow step in the
@@ -1849,32 +1952,47 @@ impl Game {
         card: crate::card_source::CardHandle,
         required_slots: usize,
     ) -> bool {
-        let Some(player) = self.players.get(player_id as usize) else {
+        self.can_play_card_from_effect_without_cost_for_controller(
+            player_id,
+            card,
+            required_slots,
+            self.effect_source_player.unwrap_or(player_id),
+        )
+    }
+
+    /// Read-only target eligibility with an explicit destination and causing
+    /// effect controller. Selection masks must not depend on ambient resolution
+    /// provenance, which can be absent or belong to an outer effect.
+    pub fn can_play_card_from_effect_without_cost_for_controller(
+        &self,
+        destination: PlayerId,
+        card: crate::card_source::CardHandle,
+        required_slots: usize,
+        controller: PlayerId,
+    ) -> bool {
+        let Some(player) = self.players.get(destination as usize) else {
             return false;
         };
-        if player.battle_area.len() + required_slots > self.rules.field_slots as usize {
-            return false;
-        }
-        let Some(card_kind) = self.card_kind_for_handle(card) else {
-            return false;
-        };
-        if card_kind == crate::enums::CardKind::Digimon
-            && self.modifiers.player_has(
-                player_id,
-                crate::enums::ModifierType::CannotPlayDigimonByEffect,
-            )
+        if self.players.get(controller as usize).is_none()
+            || player.battle_area.len() + required_slots > self.rules.field_slots as usize
         {
             return false;
         }
-        if card_kind == crate::enums::CardKind::Tamer
-            && self.modifiers.player_has(
-                player_id,
-                crate::enums::ModifierType::CannotPlayTamerByEffect,
-            )
-        {
+        let Some(data) = self.card_data_for_handle(card) else {
+            return false;
+        };
+        if self.card_data_play_is_prohibited(controller, data) {
             return false;
         }
-        true
+        let card_kind = data.card_kind;
+        let restriction = match card_kind {
+            CardKind::Digimon | CardKind::Dual | CardKind::Token => {
+                ModifierType::CannotPlayDigimonByEffect
+            }
+            CardKind::Tamer => ModifierType::CannotPlayTamerByEffect,
+            _ => return true,
+        };
+        !self.modifiers.player_has(controller, restriction)
     }
 
     pub fn card(&self, card: crate::card_source::CardHandle) -> &CardData {
@@ -2461,6 +2579,18 @@ impl Game {
         if self.rules.player_count == 2 {
             // Standard: deck-out = loss
             self.game_over = true;
+            self.cancel_all_prepared_source_plays();
+        self.source_play_receipts.clear();
+            self.cost_payment_receipts.clear();
+            self.active_cost_payment_receipt = None;
+            self.deletion_receipts.clear();
+            self.return_receipts.clear();
+            self.pending_field_top_source_moves.clear();
+            self.field_source_receipts.clear();
+            self.abort_would_digivolve_declaration();
+            self.abort_effect_digivolve_scopes();
+            self.pending_security_moves.clear();
+            self.current_deletion_receipt = None;
             let opponents = self.opponents(player_id);
             self.winner = opponents.first().copied();
             self.terminal_outcome_reason = Some(TerminalOutcomeReason::DeckOut);
@@ -2504,16 +2634,15 @@ impl Game {
     /// consumption, stack merging, memory payment (if `cost > 0` and not under
     /// `ignore_requirements`), and trigger firing.
     ///
-    /// **Material-stack ordering (canonical):** `target_a.card_sources` are
-    /// concatenated, then `target_b.card_sources`, then `from_hand` is pushed
-    /// on top. `target_a` should correspond to `DnaCost::requirement1` and
-    /// `target_b` to `requirement2`; callers that select materials by user
-    /// input must pre-orient via `get_dna_stacking_order`.
+    /// **Material-stack ordering:** the printed left DNA requirement goes
+    /// above the right (8-2-2-2), preserving each material's internal order
+    /// (8-2-2-3). Determine that order independently of which carrier survives
+    /// compaction. A recipe-free/requirements-ignoring caller retains its
+    /// explicit bottom-to-top A-then-B order when no printed recipe matches.
     ///
-    /// **Trigger surface (in order):**
-    /// 1. `WhenDigivolving` on the merged permanent → drain
-    /// 2. `OnDnaDigivolve` on the merged permanent → drain
-    /// 3. `OnDigivolve` on every player's battle area → drain
+    /// **Simultaneous trigger surface:** `WhenDigivolving` and
+    /// `OnDnaDigivolve` on the merged permanent plus global `OnDigivolve`
+    /// observers are queued together before the controller chooses their order.
     ///
     /// **Index-shift:** if `target_a.player == target_b.player` and
     /// `target_b.index < target_a.index`, the merged permanent ends up at
@@ -2548,6 +2677,68 @@ impl Game {
     ///
     /// `effect_initiated`: marks the global `OnDigivolve` payload so observers
     /// can distinguish effect-created DNA digivolutions from player-action DNA.
+    /// Reset the old field objects only after the DNA route and payment succeed.
+    /// Rules 8-2-2-1: the result inherits neither old state nor gained effects.
+    /// This is not deletion, unsuspension, or effect-caused link trashing.
+    pub(crate) fn reset_dna_material_objects(&mut self, materials: &[PermanentHandle]) {
+        if let Some(attack) = self.pending_attack.as_mut() {
+            if matches!(attack.effective_target,
+                crate::selection::AttackTarget::Digimon(h) if materials.contains(&h)) {
+                attack.effective_target_removed_by_dna = true;
+            }
+        }
+        self.invalidate_battle_winners_for_dna(materials);
+        self.invalidate_pending_field_effects(materials);
+        let mut all_links = Vec::new();
+        for &handle in materials {
+            self.clear_permanent_full(handle);
+            let turn = self.turn_count;
+            let links = {
+                let perm = &mut self.player_mut(handle.player).battle_area[handle.index as usize];
+                perm.is_suspended = false;
+                // Every attack gate tests equality with current turn, including turn zero.
+                perm.turn_played = turn.wrapping_sub(1);
+                perm.turn_digivolved = 0;
+                perm.attacks_this_turn = 0;
+                perm.is_attacking = false;
+                perm.effect_activations.clear();
+                perm.option_state = crate::permanent::OptionState::Standard;
+                for source in &mut perm.card_sources {
+                    source.also_treated_as.clear();
+                    source.clear_reveal_overlay();
+                }
+                std::mem::take(&mut perm.linked_cards)
+            };
+            all_links.extend(links);
+        }
+        let overflow_sources = all_links.clone();
+        for mut card in all_links {
+            let owner = card.owner;
+            let card_id = card.card_id(&self.card_data).to_string();
+            let card_name = card.card_name(&self.card_data).to_string();
+            card.also_treated_as.clear();
+            card.clear_reveal_overlay();
+            card.face_down = false; // Trash is face-up (3-6-3).
+            self.player_mut(owner).trash.push(card);
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Trash {
+                seq, player: owner, card_id, card_name,
+            });
+        }
+        // Apply all simultaneous link Overflow owner-relatively, turn player first.
+        self.apply_ace_overflow_for_sources(&overflow_sources);
+    }
+
+    /// Field materials are new cards under8-2-2-1-2; hand/trash inputs
+    /// change areas under3-1-3-1. Drop only effect-granted instance overlays.
+    /// Physical identity, printed/static aliases and face-down source state stay.
+    pub(crate) fn clear_dna_card_overlays(&mut self, result: PermanentHandle) {
+        for card in &mut self.player_mut(result.player).battle_area[result.index as usize].card_sources {
+            card.also_treated_as.clear();
+            card.clear_reveal_overlay();
+        }
+    }
+
     pub(crate) fn dna_digivolve_inner(
         &mut self,
         target_a: PermanentHandle,
@@ -2573,9 +2764,41 @@ impl Game {
             return None;
         }
 
-        if cost > 0 && !self.pay_memory(cost) {
-            return None;
+        // Our source vectors are bottom-to-top. Recipe requirement1 is the
+        // upper material, not the first block to append. Effect callers may
+        // supply the same legal pair in either order, so keep the carrier and
+        // its physical identity separate from the stack orientation.
+        let a_is_upper = {
+            let result = &self.player(hand_owner).hand[hand_index];
+            let extras_a = self.dna_material_extras(target_a, result);
+            let extras_b = self.dna_material_extras(target_b, result);
+            crate::dna_digivolve::get_dna_stacking_order_ext(
+                &self.card_data[result.data_index],
+                (&self.player(target_a.player).battle_area[target_a.index as usize], &extras_a),
+                (&self.player(target_b.player).battle_area[target_b.index as usize], &extras_b),
+                &self.card_data,
+            )
+            .map(|(a_is_upper, _)| a_is_upper)
+            .unwrap_or(false)
+        };
+
+        // Effect DNA can resolve on either player's turn. Memory is stored
+        // from the turn player's perspective, so the hand owner pays toward
+        // their opponent even when the hand owner is the non-turn player.
+        if cost > 0 {
+            if hand_owner == self.turn_player() {
+                if !self.pay_memory(cost) {
+                    return None;
+                }
+            } else {
+                if i32::from(self.memory) + i32::from(cost) > i32::from(self.rules.memory_range.1) {
+                    return None;
+                }
+                self.lose_memory_for_player(hand_owner, cost as i16);
+            }
         }
+
+        self.reset_dna_material_objects(&[target_a, target_b]);
 
         let target_a_index_after = if target_a.player == target_b.player
             && (target_b.index as usize) < (target_a.index as usize)
@@ -2599,19 +2822,29 @@ impl Game {
             .player_mut(target_b.player)
             .battle_area
             .remove(target_b.index as usize);
-        if self.security_resolution.is_some() {
-            self.shift_effect_queue_after_battle_area_remove(target_b.player, target_b.index);
-        }
+        // Field compaction changes surviving observers' positional handles,
+        // but does not turn them into new cards (15-4-4-3).
+        self.shift_effect_queue_after_battle_area_remove(target_b.player, target_b.index);
         let new_top = self.player_mut(hand_owner).hand.remove(hand_index);
         // Capture top_card_id from the removed-hand source before it moves
         // into the merged permanent's stack.
         let top_card_id = new_top.card_id(&self.card_data).to_string();
         let top_card_name = new_top.card_name(&self.card_data).to_string();
 
+        // The committed result identity must survive effects that move or
+        // delete the merged permanent before OnDigivolve observers dispatch.
+        let event_card = new_top.handle();
+
         let turn = self.turn_count;
         {
             let perm_a = &mut self.player_mut(target_a.player).battle_area[target_a_index_after];
-            perm_a.card_sources.extend(perm_b.card_sources);
+            if a_is_upper {
+                let mut sources = perm_b.card_sources;
+                sources.append(&mut perm_a.card_sources);
+                perm_a.card_sources = sources;
+            } else {
+                perm_a.card_sources.extend(perm_b.card_sources);
+            }
             perm_a.digivolve(new_top, turn);
             perm_a.turn_digivolved = turn;
         }
@@ -2620,6 +2853,7 @@ impl Game {
             player: target_a.player,
             index: target_a_index_after as u8,
         };
+        self.clear_dna_card_overlays(merged_handle);
 
         // `GameEvent::Digivolve` for the DNA path — emit BEFORE trigger
         // dispatch so reward components observe the digivolve before any
@@ -2655,34 +2889,7 @@ impl Game {
             );
         }
 
-        self.enqueue_triggered(
-            EffectTiming::WhenDigivolving,
-            TriggerSource::Permanent(merged_handle),
-        );
-        self.drain_effect_queue_with_dna_origin(true);
-
-        self.enqueue_triggered(
-            EffectTiming::OnDnaDigivolve,
-            TriggerSource::Permanent(merged_handle),
-        );
-        self.drain_effect_queue_with_dna_origin(true);
-
-        let event_card = self
-            .player(merged_handle.player)
-            .battle_area
-            .get(merged_handle.index as usize)
-            .map(|perm| perm.top_card().handle())?;
-        self.enqueue_triggered(
-            EffectTiming::OnDigivolve,
-            TriggerSource::Digivolved {
-                player: merged_handle.player,
-                permanent: merged_handle,
-                card: event_card,
-                effect_initiated,
-                dna_origin: true,
-            },
-        );
-        self.drain_effect_queue();
+        self.fire_digivolve_event_triggers(merged_handle, event_card, effect_initiated, true);
 
         // Reward-shaping counters — DNA digivolves stack on the regular
         // counter per spec decision 5: a single `digivolve_reward` line in
@@ -2720,9 +2927,8 @@ impl Game {
     ///
     /// ## Triggers
     ///
-    /// Identical to `dna_digivolve_inner`: `WhenDigivolving` → `OnDnaDigivolve`
-    /// → `OnDigivolve` (global), each followed by a queue drain, all carrying
-    /// the `dna_origin` marker.
+    /// Identical to `dna_digivolve_inner`: self and global evolution triggers
+    /// are queued together before draining, all carrying the DNA origin marker.
     ///
     /// ## Returns
     ///
@@ -2755,6 +2961,8 @@ impl Game {
         if cost > 0 && !self.pay_memory(cost) {
             return None;
         }
+
+        self.reset_dna_material_objects(&[target]);
 
         // Capture from_stack_top before the merge (for Digivolve event).
         let from_stack_top = self
@@ -2791,6 +2999,7 @@ impl Game {
         }
 
         let merged_handle = target;
+        self.clear_dna_card_overlays(merged_handle);
 
         // `GameEvent::Digivolve` for the BT17-095-shape DNA path (one
         // material on field, one in hand, result also in hand). Same
@@ -2818,34 +3027,12 @@ impl Game {
             );
         }
 
-        self.enqueue_triggered(
-            EffectTiming::WhenDigivolving,
-            TriggerSource::Permanent(merged_handle),
-        );
-        self.drain_effect_queue_with_dna_origin(true);
-
-        self.enqueue_triggered(
-            EffectTiming::OnDnaDigivolve,
-            TriggerSource::Permanent(merged_handle),
-        );
-        self.drain_effect_queue_with_dna_origin(true);
-
         let event_card = self
             .player(merged_handle.player)
             .battle_area
             .get(merged_handle.index as usize)
             .map(|perm| perm.top_card().handle())?;
-        self.enqueue_triggered(
-            EffectTiming::OnDigivolve,
-            TriggerSource::Digivolved {
-                player: merged_handle.player,
-                permanent: merged_handle,
-                card: event_card,
-                effect_initiated,
-                dna_origin: true,
-            },
-        );
-        self.drain_effect_queue();
+        self.fire_digivolve_event_triggers(merged_handle, event_card, effect_initiated, true);
 
         // Reward-shaping counters — see `dna_digivolve_inner` for rationale.
         // Only user-action DNAs (effect_initiated == false) credit.
@@ -2885,9 +3072,8 @@ impl Game {
     ///
     /// ## Triggers
     ///
-    /// Identical to `dna_digivolve_hand_partner_inner`: `WhenDigivolving` →
-    /// `OnDnaDigivolve` → `OnDigivolve` (global), each followed by a queue
-    /// drain, all carrying the `dna_origin` marker.
+    /// Identical to `dna_digivolve_hand_partner_inner`: self and global evolution
+    /// triggers are queued together before draining with the DNA origin marker.
     ///
     /// ## Returns
     ///
@@ -2921,6 +3107,8 @@ impl Game {
             return None;
         }
 
+        self.reset_dna_material_objects(&[target]);
+
         // Capture from_stack_top before the merge (for Digivolve event).
         let from_stack_top = self
             .player(target.player)
@@ -2946,6 +3134,7 @@ impl Game {
         }
 
         let merged_handle = target;
+        self.clear_dna_card_overlays(merged_handle);
 
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Digivolve {
@@ -2970,34 +3159,12 @@ impl Game {
             );
         }
 
-        self.enqueue_triggered(
-            EffectTiming::WhenDigivolving,
-            TriggerSource::Permanent(merged_handle),
-        );
-        self.drain_effect_queue_with_dna_origin(true);
-
-        self.enqueue_triggered(
-            EffectTiming::OnDnaDigivolve,
-            TriggerSource::Permanent(merged_handle),
-        );
-        self.drain_effect_queue_with_dna_origin(true);
-
         let event_card = self
             .player(merged_handle.player)
             .battle_area
             .get(merged_handle.index as usize)
             .map(|perm| perm.top_card().handle())?;
-        self.enqueue_triggered(
-            EffectTiming::OnDigivolve,
-            TriggerSource::Digivolved {
-                player: merged_handle.player,
-                permanent: merged_handle,
-                card: event_card,
-                effect_initiated,
-                dna_origin: true,
-            },
-        );
-        self.drain_effect_queue();
+        self.fire_digivolve_event_triggers(merged_handle, event_card, effect_initiated, true);
 
         // Reward-shaping counters — see `dna_digivolve_inner` for rationale.
         if !effect_initiated {
@@ -3922,6 +4089,7 @@ mod reset_for_replay_tests {
             inherited_text: String::new(),
             security_text: String::new(),
             link_text: String::new(),
+            requirement_text: String::new(),
             keywords: Vec::new(),
             effect_class_name: id.replace('-', "_"),
             index: 0,
@@ -4054,6 +4222,7 @@ mod current_attacker_tests {
             inherited_text: String::new(),
             security_text: String::new(),
             link_text: String::new(),
+            requirement_text: String::new(),
             keywords: Vec::new(),
             effect_class_name: id.replace('-', "_"),
             index: 0,
@@ -4098,6 +4267,7 @@ mod current_attacker_tests {
             attacker: progress,
             original_target: AttackTarget::Player(1),
             effective_target: AttackTarget::Player(1),
+            effective_target_removed_by_dna: false,
             is_blocked: false,
             blocker: None,
             is_vortex: false,
@@ -4106,6 +4276,8 @@ mod current_attacker_tests {
             cancelled: false,
             battle_occurred: false,
             battle_defender_deleted: false,
+            effect_battle_piercing_pending: false,
+            security_check_started: false,
             return_phase: crate::enums::GamePhase::Main,
             state: crate::selection::AttackState::Declared,
             counter_depth: 0,
@@ -4138,6 +4310,7 @@ mod current_attacker_tests {
             attacker: plain,
             original_target: AttackTarget::Player(1),
             effective_target: AttackTarget::Player(1),
+            effective_target_removed_by_dna: false,
             is_blocked: false,
             blocker: None,
             is_vortex: false,
@@ -4146,6 +4319,8 @@ mod current_attacker_tests {
             cancelled: false,
             battle_occurred: false,
             battle_defender_deleted: false,
+            effect_battle_piercing_pending: false,
+            security_check_started: false,
             return_phase: crate::enums::GamePhase::Main,
             state: crate::selection::AttackState::Declared,
             counter_depth: 0,
@@ -4207,6 +4382,7 @@ mod resolve_token_as_battle_area_top_tests {
             inherited_text: String::new(),
             security_text: String::new(),
             link_text: String::new(),
+            requirement_text: String::new(),
             keywords: Vec::new(),
             effect_class_name: id.replace('-', "_"),
             index: 0,

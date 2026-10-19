@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT17-019",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "At the end of your turn, this effect allows you to DNA digivolve a Digimon with this card in its digivolution cards, along with one of your other Digimon, into a Digimon in your hand that has [DNA Digivolution]. Note that this happens before it becomes your opponent’s turn."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Tsunomon]: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Tsunomon]: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Start of Your Main Phase] If you have a Tamer with [Matt Ishida] in its name, ＜Draw 1＞."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in the hand."
+      }
+    ],
+    "type": "Reptile"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "d3bbc4862db38d9d8efb6851e2162c917b0913d2aabbe816fa1f8eacbdced312",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "0c790caa3157e402e477dd1243b2ea1ca51b79ff5a759f6c1a873ab446248405",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT17-019",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT17-019"
+}

@@ -1,0 +1,84 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX2-044",
+    "card_type": "Digimon",
+    "colors": [
+      "Purple"
+    ],
+    "dp": 11000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "cost": 3,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": 11000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "Beelzemon",
+        "play_cost": 12,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "When this card is trashed from your deck, you may play 1 [Impmon] from your trash without paying its memory cost.\n[When Digivolving][When Attacking] You may trash the top 2 cards of your deck. Then, delete 1 of your opponent's level 3 or lower Digimon. For every 10 cards in your trash, add 1 to the maximum level of the Digimon you can choose with this effect."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "Beelzemon",
+    "play_cost": 12,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522903",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX2-044_P2.png?260529",
+      "printing_id": "EX2-044_P2"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "No, you can't. You can only activate the \"when this card is trashed from the deck\" when this card is directly trashed from the deck.",
+        "date": "May. 8, 2026",
+        "number": "Q3340",
+        "question": "Can I activate the \"when this card is trashed from the deck\" effect when this card is revealed from the deck or when searching/looking at this card in the deck?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "When this card is trashed from your deck, you may play 1 [Impmon] from your trash without paying its memory cost.\n[When Digivolving][When Attacking] You may trash the top 2 cards of your deck. Then, delete 1 of your opponent's level 3 or lower Digimon. For every 10 cards in your trash, add 1 to the maximum level of the Digimon you can choose with this effect."
+      }
+    ],
+    "type": "Demon Lord/Seven Great Demon Lords"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "d31a70108a038ac165874662eae12bde89a33eef15d57ce607931f95107e4d36",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "14e72bad86becadc2682c601e9cf12576a19648e5ffc438e48c14cf51a2c7e6a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522903:EX2-044:EX2-044_P2",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522903"
+}

@@ -7,6 +7,8 @@ use this module; engine-only callers (e.g. `games.py`) stick with
 `engine.model_utils`'s filename-only resolver.
 """
 from __future__ import annotations
+from model_contract import validate_contract, contract_from_row, validate_onnx_file
+import hashlib
 
 import asyncio
 import os
@@ -46,10 +48,14 @@ async def resolve_manifest_model_path(
             f"manifest model not found or not published: {manifest_id}"
         )
 
+    contract = validate_contract(contract_from_row(row))
     cache_dir = _manifest_cache_dir()
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / f"{row.file_sha256}.onnx"
     if cache_path.exists():
+        if hashlib.sha256(cache_path.read_bytes()).hexdigest() != row.file_sha256:
+            raise ValueError("Cached model hash differs from confirmed artifact")
+        await asyncio.to_thread(validate_onnx_file, cache_path, contract)
         return (str(cache_path), False)
 
     # Download to a tempfile alongside the final path, verify sha, then
@@ -70,5 +76,10 @@ async def resolve_manifest_model_path(
             f"sha mismatch for manifest model {manifest_id}: "
             f"expected {row.file_sha256}, got {actual_sha}"
         )
+    try:
+        await asyncio.to_thread(validate_onnx_file, tmp_path, contract)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
     os.replace(tmp_path, cache_path)
     return (str(cache_path), True)

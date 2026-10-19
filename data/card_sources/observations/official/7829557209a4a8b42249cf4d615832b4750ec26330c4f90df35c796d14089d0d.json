@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT25-048",
+    "colors": "Green",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "No, it doesn't trigger."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[TS] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Your Turn] When this Digimon would digivolve into a green [TS] trait Digimon card, reduce the cost by 1."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon wins a battle, ＜Draw 1＞."
+      }
+    ],
+    "type": "Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "7829557209a4a8b42249cf4d615832b4750ec26330c4f90df35c796d14089d0d",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "1727de2eb8b6ea55cb79c71af066e7bfe11d05d90b7ca089c4ae9671c4ddf5d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-048",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-048"
+}

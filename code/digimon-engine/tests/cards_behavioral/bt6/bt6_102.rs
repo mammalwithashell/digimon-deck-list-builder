@@ -197,6 +197,7 @@ fn bt6_102_main_from_hand_grant_clause_shape() {
                 timing,
                 expiry,
                 body,
+                ..
             } => Some((target, timing, expiry, body)),
             _ => None,
         })

@@ -5,6 +5,7 @@ These wrap exported .onnx models from tools/export_onnx.py.
 """
 
 from __future__ import annotations
+from model_contract import validate_session
 
 from pathlib import Path
 
@@ -21,10 +22,14 @@ def _get_session(onnx_path: str):
             "Install it with: pip install onnxruntime"
         )
     try:
-        return ort.InferenceSession(
+        session = ort.InferenceSession(
             onnx_path,
             providers=["CPUExecutionProvider"],
         )
+        validate_session(session)
+        return session
+    except ValueError:
+        raise
     except Exception as e:
         raise RuntimeError(
             f"Failed to load ONNX model '{onnx_path}': {e}. "
@@ -64,6 +69,7 @@ class OnnxMlpPolicy:
         if not Path(onnx_path).exists():
             raise FileNotFoundError(f"ONNX model not found: {onnx_path}")
         self.session = session or _get_session(onnx_path)
+        self.contract = validate_session(self.session)
 
     def predict(
         self,
@@ -77,6 +83,8 @@ class OnnxMlpPolicy:
             obs: shape (981,) float32 game state tensor
             action_mask: shape (2120,) int8/float32 mask (1=valid)
         """
+        if obs.size != self.contract["tensor_size"] or action_mask.size != self.contract["action_space_size"]:
+            raise ValueError("Inference observation/action shape differs from model contract")
         obs_batch = obs.reshape(1, -1).astype(np.float32)
         (logits,) = self.session.run(["logits"], {"obs": obs_batch})
         return _masked_argmax(logits[0], action_mask)
@@ -102,6 +110,7 @@ class OnnxLstmPolicy:
         if not Path(onnx_path).exists():
             raise FileNotFoundError(f"ONNX model not found: {onnx_path}")
         self.session = session or _get_session(onnx_path)
+        self.contract = validate_session(self.session)
         self.hidden_size = hidden_size
         self.reset()
 
@@ -117,6 +126,8 @@ class OnnxLstmPolicy:
             obs: shape (981,) float32 game state tensor
             action_mask: shape (2120,) int8/float32 mask (1=valid)
         """
+        if obs.size != self.contract["tensor_size"] or action_mask.size != self.contract["action_space_size"]:
+            raise ValueError("Inference observation/action shape differs from model contract")
         obs_batch = obs.reshape(1, -1).astype(np.float32)
         logits, h_out, c_out = self.session.run(
             ["logits", "h_out", "c_out"],

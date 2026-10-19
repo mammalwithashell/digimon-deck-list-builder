@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT20-076",
+    "colors": "Purple Red",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "7",
+    "special_digivolution_condition": "[DNA Digivolve] Purple Lv.5 + red Lv.5: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Purple Lv.5 + red Lv.5: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Counter] ＜Blast DNA Digivolve ([Dinobeemon] + [Paildramon])＞ (1 of your specified Digimon and 1 specified card in the hand may DNA digivolve into this card.) [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 11000 DP or less. Then, if DNA digivolving, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand or trash without paying the cost."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-4)＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)"
+      }
+    ],
+    "type": "Ancient Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "61495eb92886fe00e0c14cd1dfd2d36f5a3701b3570369c3bdd55348994be4ff",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "451236ab7b0e6c6158c26d41681eafec33d3936472d0b425a51d4878523bd0f2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-076",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-076"
+}

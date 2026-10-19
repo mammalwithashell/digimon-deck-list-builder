@@ -1,0 +1,41 @@
+# Official observation 7e9b7b400c952ebddd1fcd82464ce4afbea79c3b49076d9987196f688ad7f595.
+# The printed 50-copy deck rule is a deck-data concern; tracked separately.
+card: EX2-046
+deck_rule:
+  max_copies: 50
+  evidence_observation_id: 7e9b7b400c952ebddd1fcd82464ce4afbea79c3b49076d9987196f688ad7f595
+name: ADR-02 Searcher
+kind: digimon
+color: [white]
+cost: 3
+dp: 1000
+form: D-Reaper
+traits: [Intel Acquisition Agent]
+effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    reduction_timing: before_pay_cost
+    condition:
+      all_of:
+        - cost_target_from_hand: true
+        - none_of:
+            - count_gte:
+                filter: {of: you, zone: [battle_area], kind: digimon, name_is: ADR-02 Searcher}
+                n: 1
+    amount: 2
+    summary: "From hand, reduce play cost by 2 if no other ADR-02 Searcher is in play"
+  - kind: aura
+    active_when: {your_turn: true}
+    target: {}
+    modifier: CannotAttackPlayer
+    summary: "[Your Turn] This Digimon cannot attack players"
+  - when: on_play
+    process:
+      - draw: {of: you, count: 1}
+    summary: "[On Play] Draw 1"
+  - kind: aura
+    scope: inherited
+    active_when: {your_turn: true}
+    target: {owner: you, zone: [battle_area], kind: digimon, trait_has: D-Reaper}
+    dp_modifier: 1000
+    summary: "[Your Turn] All of your D-Reaper Digimon get +1000 DP"

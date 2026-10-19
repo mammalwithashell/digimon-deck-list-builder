@@ -296,6 +296,12 @@ pub struct Effect {
     /// modifier/keyword state during `Game::tick_declarative_effects`.
     pub materializes_declarative_state: bool,
     pub optional: bool,
+    /// This replacement pays its carrier deletion before selecting a protected event member.
+    pub paid_self_prevention: bool,
+    /// Native Decoy chooses one; declarative paid event protection covers its matching group.
+    pub paid_prevention_all: bool,
+    /// Post-payment subject qualification, separate from source activation/liveness.
+    pub paid_prevention_filter: Option<CompiledPredicate>,
     /// Heuristic metadata for policies: this effect produces or preserves
     /// hand/resource flow, such as drawing, searching/add-to-hand, filtering
     /// hand, or Save-like deletion value. This is deliberately advisory; it
@@ -381,6 +387,8 @@ pub struct Effect {
     pub dp_modifier_fn: Option<DynamicModifierFn>,
     pub security_attack_fn: Option<DynamicModifierFn>,
     pub cost_reduction: i32,
+    /// Assignment of the payable base, distinct from an arithmetic reduction.
+    pub cost_assignment: Option<u16>,
     pub granted_keyword: Option<Keyword>,
     /// The keyword whose printed BEHAVIOUR this effect *is* — set only on the
     /// bodies synthesized by
@@ -453,6 +461,8 @@ pub struct Effect {
     /// True for a Training card — placed into the Breeding Area with the
     /// Training state. Set by `.training()`.
     pub training: bool,
+    /// Structural persistence marker; not an activatable printed Delay.
+    pub ordinary_field_option: bool,
     /// True for an effect that sideways-inherits from a linked card onto its
     /// host. When a host Digimon's timing `T` fires, the host's own
     /// `timing == T` effects fire; if `linked == true`, effects on any card
@@ -630,6 +640,11 @@ impl Effect {
     /// Fires at the start of the controller's Main phase (after Draw).
     pub fn start_of_your_main_phase(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::StartOfYourMainPhase)
+    }
+
+    /// Fires at the start of the opposing player's Main phase (after breeding).
+    pub fn start_of_opponents_main_phase(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::StartOfOpponentsMainPhase)
     }
 
     /// Fires at the end of the opponent's turn.
@@ -885,6 +900,9 @@ impl EffectBuilder {
                 declarative: false,
                 materializes_declarative_state: false,
                 optional: false,
+                paid_self_prevention: false,
+                paid_prevention_all: false,
+                paid_prevention_filter: None,
                 resource_flow: false,
                 blast_digivolve: false,
                 max_per_turn: 0,
@@ -903,6 +921,7 @@ impl EffectBuilder {
                 dp_modifier_fn: None,
                 security_attack_fn: None,
                 cost_reduction: 0,
+                cost_assignment: None,
                 granted_keyword: None,
                 keyword_source: None,
                 overclock_cost_filter: None,
@@ -919,6 +938,7 @@ impl EffectBuilder {
                 use_cost_increase_fn: None,
                 alt_path_registration: None,
                 training: false,
+                ordinary_field_option: false,
                 linked: false,
                 when_playing_this: false,
                 needs_outer_optional_prompt: false,
@@ -1212,6 +1232,11 @@ impl EffectBuilder {
         self
     }
 
+    pub fn cost_assignment(mut self, value: u16) -> Self {
+        self.inner.cost_assignment = Some(value);
+        self
+    }
+
     pub fn cost_reduction(mut self, n: i32) -> Self {
         self.inner.cost_reduction = n;
         self
@@ -1363,6 +1388,21 @@ impl EffectBuilder {
     /// The closure receives a `ReplacementContext` and sets the outcome
     /// (cancel / redirect / substitute / handled) via its helper methods.
     /// Dispatch through `Game::try_replace` lands in Task 2.
+    pub fn paid_prevention_filter(mut self, filter: CompiledPredicate) -> Self {
+        self.inner.paid_prevention_filter = Some(filter); self
+    }
+    pub fn prevention_all_matching(mut self) -> Self {
+        self.inner.paid_prevention_all = true; self
+    }
+    pub fn paid_self_prevention_all(mut self) -> Self {
+        self.inner.paid_self_prevention = true;
+        self.inner.paid_prevention_all = true; self
+    }
+    pub fn paid_self_prevention(mut self) -> Self {
+        self.inner.paid_self_prevention = true;
+        self
+    }
+
     pub fn replacement_process<F>(mut self, f: F) -> Self
     where
         F: Fn(&mut crate::replacement::ReplacementContext<'_>) + Send + Sync + 'static,
@@ -1459,6 +1499,12 @@ impl EffectBuilder {
 
     /// Mark this effect as a Training Option body. Sets timing to
     /// `OptionMain` and raises `training`. Dispatch lands in Task 5.
+    pub fn ordinary_field_option(mut self) -> Self {
+        self.inner.delay_trigger = None;
+        self.inner.ordinary_field_option = true;
+        self
+    }
+
     pub fn training(mut self) -> Self {
         self.inner.timing = EffectTiming::OptionMain;
         self.inner.training = true;
@@ -1560,14 +1606,7 @@ pub fn enumerate_refireable_effects_for_card(
     };
     let top = perm.top_card();
     let carrier_card = top.handle();
-    let source_kind = match top.card_kind(&game.card_data) {
-        crate::enums::CardKind::Digimon
-        | crate::enums::CardKind::DigiEgg
-        | crate::enums::CardKind::Dual => crate::enums::EffectSourceKind::Digimon,
-        crate::enums::CardKind::Tamer => crate::enums::EffectSourceKind::Tamer,
-        crate::enums::CardKind::Option => crate::enums::EffectSourceKind::Option,
-        crate::enums::CardKind::Token => crate::enums::EffectSourceKind::Rule,
-    };
+    let source_kind = game.effect_source_kind_for_handle(carrier_card);
 
     let Some(effects) = game.effects_for_card(card_id, carrier_card) else {
         return Vec::new();
@@ -1609,14 +1648,7 @@ pub fn enumerate_refireable_effects(
     let top = perm.top_card();
     let source_card = top.handle();
     let card_id = top.card_id(&game.card_data).to_string();
-    let source_kind = match top.card_kind(&game.card_data) {
-        crate::enums::CardKind::Digimon
-        | crate::enums::CardKind::DigiEgg
-        | crate::enums::CardKind::Dual => crate::enums::EffectSourceKind::Digimon,
-        crate::enums::CardKind::Tamer => crate::enums::EffectSourceKind::Tamer,
-        crate::enums::CardKind::Option => crate::enums::EffectSourceKind::Option,
-        crate::enums::CardKind::Token => crate::enums::EffectSourceKind::Rule,
-    };
+    let source_kind = game.effect_source_kind_for_handle(source_card);
 
     let Some(effects) = game.effects_for_card(&card_id, source_card) else {
         return Vec::new();

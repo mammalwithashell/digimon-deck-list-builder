@@ -1,0 +1,54 @@
+{
+  "extracted": {
+    "attribute": "Social",
+    "card_id": "BT21-018",
+    "colors": "Red Green",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Sup./Appmon",
+    "play_cost": "6",
+    "qa": [
+      "App Fusion is possible with the following combinations. ●[Gatchmon] with [Navimon] link card ●[Gatchmon] with [Tweetmon] link card ●[Navimon] with [Gatchmon] link card ●[Navimon] with [Tweetmon] link card ●[Tweetmon] with [Gatchmon] link card ●[Tweetmon] with [Navimon] link card"
+    ],
+    "special_digivolution_condition": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Rush＞ ＜Raid＞ [Your Turn] [Once Per Turn] When this Digimon gets linked, it may attack."
+      },
+      {
+        "label": "Special Rule",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] This Digimon may attack."
+      }
+    ],
+    "type": "Super Search/Hero"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "e11a7999b9b64f1ce18299914602c48808dcb2e083041233798337d28b1fe339",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "7ae7fc9346c7ae0c38aa6e70536a9eaa8056cf444c1ff27f19de6c11bb895ae6",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-018",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-018"
+}

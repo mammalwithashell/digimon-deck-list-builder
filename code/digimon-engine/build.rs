@@ -84,6 +84,18 @@ fn real_main() {
         panic!("dsl parse errors in cards/ — see warnings above");
     }
 
+    // Authored runtime rules cite portable official observation bytes.
+    let evidence_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../data/card_sources/observations/official");
+    for spec in &all_specs {
+        if let Some(rule) = &spec.deck_rule {
+            let path = evidence_root.join(format!("{}.json", rule.evidence_observation_id));
+            println!("cargo:rerun-if-changed={}", path.display());
+            let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("deck rule evidence {}: {e}", path.display()));
+            rule.validate_observation(&spec.card, &bytes)
+                .unwrap_or_else(|e| panic!("{} deck rule evidence: {e}", spec.card));
+        }
+    }
     let registry = match digimon_dsl::CardRegistry::from_specs("core", &all_specs) {
         Ok(r) => r,
         Err(errs) => {

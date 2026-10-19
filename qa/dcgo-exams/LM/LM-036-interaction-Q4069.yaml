@@ -1,0 +1,101 @@
+# Draft legal line; no oracle verdict or independently encoded ruling yet.
+card: LM-036
+clause: LM-036#effect#0
+covers:
+- LM-036#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - LM-036
+    - ST2-03
+    - ST1-03
+    - ST1-04
+    - BT1-009
+    - ST1-05
+    - ST1-05
+    - ST1-05
+    - ST1-05
+    - BT1-014
+    - BT1-014
+    - ST4-03
+    - ST1-02
+    - ST2-03
+    rest: lm-036-tail-p0
+  p1:
+    stack:
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    - BT1-009
+    - ST4-03
+    - ST1-05
+    - ST1-05
+    - ST1-05
+    - ST1-05
+    - BT1-014
+    - BT1-014
+    rest: lm-036-tail-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: LM-036
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST4-03
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST1-02
+      - ST2-03
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+interaction:
+  id: qa:Q4069
+  source: qa
+  kind: positive
+expect_ruling:
+  q_id: Q4069
+  assert:
+  - at: 8
+    that:
+      p0.field:
+      - ST2-03
+      - LM-036

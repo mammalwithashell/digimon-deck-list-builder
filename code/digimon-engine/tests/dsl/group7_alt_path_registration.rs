@@ -30,6 +30,7 @@ fn colored_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         effect_class_name: id.replace('-', "_"),
         index: 0,

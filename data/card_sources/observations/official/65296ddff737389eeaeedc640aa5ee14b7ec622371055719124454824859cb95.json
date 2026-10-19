@@ -1,0 +1,115 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX12-031",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue",
+      "Yellow"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow"
+        ],
+        "cost": 4,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "MarineBullmon",
+        "play_cost": 7,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.4 w/[Aquatic]/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞\n[On Play] [When Digivolving] By placing 1 level 6 or lower card with [Aqua] or [Sea Animal] in any of its traits or the [TB] trait from your hand as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the hand.\n(Rule) Trait: Has [Aquatic] Type."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -2: Lv.4 or lower card w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card without paying the cost.)"
+          }
+        ]
+      }
+    ],
+    "form": "Ultimate",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 5,
+    "name": "MarineBullmon",
+    "play_cost": 7,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-031.png?260529",
+      "printing_id": "EX12-031"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, both have to be XX.\nFor example, \"1 level 4 or lower Digimon card with the [CS] trait or that is yellow or black\" means either \"1 level 4 or lower Digimon card with the [CS] trait\" or \"1 level 4 or lower Digimon card that is yellow or black.\" In both cases, the card must be level 4 or lower.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6767",
+        "question": "If a text says \"XX card with AA or BB,\" does that mean AA and BB both have to be XX?"
+      }
+    ],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": [
+        "Aquatic"
+      ]
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.4 w/[Aquatic]/[Shambala] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Aquatic]/[Shambala] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞\n[On Play] [When Digivolving] By placing 1 level 6 or lower card with [Aqua] or [Sea Animal] in any of its traits or the [TB] trait from your hand as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the hand.\n(Rule) Trait: Has [Aquatic] Type."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "Assembly -2: Lv.4 or lower card w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card without paying the cost.)"
+      }
+    ],
+    "type": "Mollusk/Shambala/TB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "65296ddff737389eeaeedc640aa5ee14b7ec622371055719124454824859cb95",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-031:EX12-031",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

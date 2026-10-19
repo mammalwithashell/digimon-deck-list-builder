@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX7-030",
+    "colors": "Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "qa": [
+      "Yes, they trigger simultaneously."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.) [Start of Your Main Phase] [When Digivolving] You may play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/\"[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.\") [When Attacking] 1 of your opponent's Digimon gets -6000 DP for the turn."
+      }
+    ],
+    "type": "Puppet/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "beac74e2fae8da7e167f30bc10c0872016221c10291b126debe1eb365326be99",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "35d842958b1aa573751a1fef3a585f7b45c1d35ff4f1fe0fe40cb059b4838ac8",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX7-030",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX7-030"
+}

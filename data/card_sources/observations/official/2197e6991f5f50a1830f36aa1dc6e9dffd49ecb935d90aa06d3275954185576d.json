@@ -1,0 +1,84 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX3-054",
+    "card_type": "Digimon",
+    "colors": [
+      "Black"
+    ],
+    "dp": 13000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "cost": 5,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "dp": 13000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "Darkdramon",
+        "play_cost": 13,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "When you would digivolve into this card, by returning up to 5 cards with [D-Brigade] in their traits from your trash to the top of your deck, reduce the digivolution cost by 1 for each returned card.\n[Your Turn][Once Per Turn] When you play another Digimon with [D-Brigade] in its traits, delete 1 of your opponent's Digimon with a play cost less than or equal to the Digimon you played, and unsuspend this Digimon."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "Darkdramon",
+    "play_cost": 13,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522012",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX3-054_P1.png?260529",
+      "printing_id": "EX3-054_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "No, you can't. The \"When you would digivolve into this card\" effect is an effect where you return cards with [D-Brigade] to the top of your deck and reduce the digivolution cost after you reveal this card from your hand and declare a digivolution. Once you return cards, you can't cancel the effect.",
+        "date": "Mar. 28, 2024",
+        "number": "Q3423",
+        "question": "Can I choose not to digivolve after returning cards with [D-Brigade] in their traits from my trash to the top of my deck for this card's \"When you would digivolve into this card\" effect?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "When you would digivolve into this card, by returning up to 5 cards with [D-Brigade] in their traits from your trash to the top of your deck, reduce the digivolution cost by 1 for each returned card.\n[Your Turn][Once Per Turn] When you play another Digimon with [D-Brigade] in its traits, delete 1 of your opponent's Digimon with a play cost less than or equal to the Digimon you played, and unsuspend this Digimon."
+      }
+    ],
+    "type": "Cyborg/D-Brigade"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "2197e6991f5f50a1830f36aa1dc6e9dffd49ecb935d90aa06d3275954185576d",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "de7126ba449fa54b50832bfbb560a028ebcf86d092956f0a2f3f8dabe85947f7",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522012:EX3-054:EX3-054_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522012"
+}

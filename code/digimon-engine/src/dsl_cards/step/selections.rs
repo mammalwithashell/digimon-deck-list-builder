@@ -12,6 +12,9 @@
 
 use std::sync::Arc;
 
+#[path = "named_materials.rs"]
+mod named_materials;
+
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCountBound, CompiledFieldSelector, CompiledPlayerRef,
     CompiledPredicate, CompiledRemainderDestination, CompiledRevealBucket,
@@ -198,8 +201,43 @@ pub(crate) fn run_tail_preserving_trigger_context(
     runtime: &StepRuntime,
 ) {
     let previous = cb_ctx.game.current_trigger_context.clone();
+    let previous_source = (
+        cb_ctx.game.effect_source_player,
+        cb_ctx.game.effect_source_card,
+        cb_ctx.game.effect_source_permanent,
+    );
+    let previous_permanent = cb_ctx.source_permanent;
+    // A typed selection resumes outside run_queued_effect's attribution scope.
+    // Restore its captured controller and physical source for movement causes.
+    cb_ctx.source_permanent = previous_permanent.and_then(|_| {
+        match cb_ctx.game.resolve_provenance_token(cb_ctx.source_card.into()) {
+            Some(crate::trigger_context::EventSubject::Permanent(handle)) => Some(handle),
+            Some(crate::trigger_context::EventSubject::Card {
+                zone: crate::enums::Zone::BattleArea,
+                ..
+            }) => cb_ctx.game.players.iter().enumerate().find_map(|(player, state)| {
+                state.battle_area.iter().enumerate().find_map(|(index, permanent)| {
+                    permanent.linked_cards.iter()
+                        .any(|card| card.handle() == cb_ctx.source_card)
+                        .then_some(PermanentHandle { player: player as u8, index: index as u8 })
+                })
+            }),
+            _ => None,
+        }
+    });
+    cb_ctx.game.effect_source_player = Some(cb_ctx.player);
+    cb_ctx.game.effect_source_card = Some(cb_ctx.source_card);
+    cb_ctx.game.effect_source_permanent = cb_ctx.source_permanent;
     cb_ctx.game.current_trigger_context = trigger_context;
     run_steps_with_runtime(tail, cb_ctx, bindings, runtime);
+    if cb_ctx.cost_unpayable {
+        cb_ctx.game.effect_source_player = previous_source.0;
+        cb_ctx.game.effect_source_card = previous_source.1;
+        cb_ctx.game.effect_source_permanent = previous_source.2;
+        cb_ctx.source_permanent = previous_permanent;
+        cb_ctx.game.current_trigger_context = previous;
+        return;
+    }
     // Overlay this resolution's bindings onto the parked outer tail so
     // binding-gated siblings after a nested select see the pick.
     crate::dsl_cards::step::drain_dsl_outer_tail_with_bindings(cb_ctx, Some(bindings));
@@ -209,6 +247,10 @@ pub(crate) fn run_tail_preserving_trigger_context(
     // The wrapper clears the channel before invoking us and takes it right
     // after, so the value never leaks across resolutions.
     cb_ctx.game.dsl_resolved_tail_bindings = Some(bindings.clone());
+    cb_ctx.game.effect_source_player = previous_source.0;
+    cb_ctx.game.effect_source_card = previous_source.1;
+    cb_ctx.game.effect_source_permanent = previous_source.2;
+    cb_ctx.source_permanent = previous_permanent;
     cb_ctx.game.current_trigger_context = previous;
 }
 
@@ -306,7 +348,13 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_hand_index(name, of_player, hand_index as u16);
+                        let pin = ctx
+                            .game
+                            .player(of_player)
+                            .hand
+                            .get(hand_index)
+                            .map(|card| card.handle());
+                        b.insert_hand_index_pinned(name, of_player, hand_index as u16, pin);
                     }
                     run_tail_preserving_trigger_context(
                         &mut ctx,
@@ -736,6 +784,103 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::SourcePrefixHost(state) => {
+                    let previous = std::mem::replace(
+                        &mut game.current_trigger_context,
+                        trigger_context.clone(),
+                    );
+                    {
+                        let mut ctx = EffectContext::new_with_source_kind_and_override(
+                            game,
+                            prov.source_card,
+                            prov.source_permanent,
+                            prov.source_kind,
+                            prov.controller,
+                            prov.override_pin,
+                        );
+                        super::source_prefix_payment::select_host(
+                            &mut ctx,
+                            state,
+                            action_id,
+                            inner_tail.to_vec(),
+                            bindings,
+                            runtime,
+                        );
+                    }
+                    game.current_trigger_context = previous;
+                }
+                ResumeSelectKind::SourcePrefixCount { mut page, state } => {
+                    let Some(crate::count_choice::CountChoiceOperation::Commit(value)) =
+                        page.resolve(action_id)
+                    else {
+                        game.dsl_clause_aborted = true;
+                        return;
+                    };
+                    let previous = std::mem::replace(
+                        &mut game.current_trigger_context,
+                        trigger_context.clone(),
+                    );
+                    let success = {
+                        let mut ctx = EffectContext::new_with_source_kind_and_override(
+                            game,
+                            prov.source_card,
+                            prov.source_permanent,
+                            prov.source_kind,
+                            prov.controller,
+                            prov.override_pin,
+                        );
+                        let success = super::source_prefix_payment::commit(&mut ctx, &state, value);
+                        if !success {
+                            ctx.cost_unpayable = true;
+                            ctx.game.dsl_clause_aborted = true;
+                        } else {
+                            let mut b = bindings;
+                            run_tail_preserving_trigger_context(
+                                &mut ctx,
+                                trigger_context,
+                                &inner_tail,
+                                &mut b,
+                                &runtime,
+                            );
+                        }
+                        success
+                    };
+                    game.current_trigger_context = previous;
+                    if !success {
+                        return;
+                    }
+                }
+                ResumeSelectKind::CountChoice(mut page) => {
+                    let Some(crate::count_choice::CountChoiceOperation::Commit(value)) =
+                        page.resolve(action_id)
+                    else {
+                        game.dsl_clause_aborted = true;
+                        return;
+                    };
+                    let Ok(count) = i64::try_from(value.declared) else {
+                        game.dsl_clause_aborted = true;
+                        return;
+                    };
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_literal(name, count);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
                 ResumeSelectKind::EffectChoice { post } => {
                     // "choose one": action_id - HAND_EFFECT_START → label index.
                     let choice_index =
@@ -1039,8 +1184,11 @@ pub(crate) fn run_resume(
         ResumeFrame::DigivolveCostChoice(state) => {
             game.run_digivolve_cost_choice_step(state, action_id);
         }
+        ResumeFrame::EffectDigivolveCostChoice(state) => {
+            game.run_effect_digivolve_cost_choice_step(state, action_id);
+        }
         ResumeFrame::DigivolveReducerPrompt(state) => {
-            game.run_digivolve_reducer_prompt_step(state, is_pass);
+            game.run_digivolve_reducer_prompt_step(state, action_id, is_pass);
         }
         ResumeFrame::DigivolveReducerSuspend(state) => {
             game.run_digivolve_reducer_suspend_step(state, action_id);
@@ -1077,9 +1225,81 @@ pub(crate) fn run_resume(
             game.run_option_trash_order_step(state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
         }
+        ResumeFrame::FieldTopSourceBatch {
+            inner,
+            prov,
+            source_anchor,
+            target,
+            remaining,
+            target_binding,
+            mut outer_conts,
+        } => {
+            run_resume(game, *inner, action_id, is_pass);
+            super::zone_cards::continue_source_placement_batch(
+                game,
+                prov,
+                source_anchor,
+                target,
+                remaining,
+                target_binding.clone(),
+            );
+            for cont in &mut outer_conts {
+                if cont.source_card == prov.source_card {
+                    cont.source_permanent =
+                        source_anchor.and_then(|a| game.resolve_source_move_anchor(a, false));
+                }
+            }
+            if let (Some(name), Some(host)) = (
+                target_binding,
+                game.resolve_source_move_anchor(target, false),
+            ) {
+                for cont in &mut outer_conts {
+                    cont.bindings.insert_permanent(&name, host);
+                }
+            }
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::ReplacementBody { inner, outer_conts } => {
+            run_resume(game, *inner, action_id, is_pass);
+            if game.pending_selection.is_some() {
+                if let Some(inner) = game.pending_selection_resume.take() {
+                    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                        frames: vec![ResumeFrame::ReplacementBody {
+                            inner: Box::new(inner),
+                            outer_conts,
+                        }],
+                    });
+                    return;
+                }
+            }
+            // Receipt finalizers belong between their nested deletion and its
+            // enclosing replacement. Draining every parked event here would
+            // commit the parent before the paid-prevention outcome is applied.
+            // Ordinary deletion-result continuations require the same boundary.
+            let receipt = outer_conts.first().and_then(|c| c.tail.first()).and_then(|step| {
+                match step {
+                    CompiledStep::DeleteReceiptFinalize { receipt }
+                    | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. }
+                    | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } => Some(*receipt),
+                    _ => None,
+                }
+            });
+            if let Some(receipt) = receipt {
+                if let Some(owner) = game.parked_replacement.iter_mut().rev()
+                    .find(|p| p.deletion_receipt == Some(receipt) && p.window.is_some()) {
+                    // Attach to the owning event without bypassing children.
+                    // Its commit runs these tails before the enclosing event.
+                    owner.outer_conts.extend(outer_conts);
+                    crate::replacement::try_drain_parked_replacement_with_guard(game);
+                    return;
+                }
+            }
+            crate::replacement::drain_parked_replacement_for_receipt(game, receipt);
+            run_outer_conts(game, outer_conts);
+        }
         ResumeFrame::OptionalReplacement(mut state) => {
             let outer_conts = std::mem::take(&mut state.outer_conts);
-            crate::replacement::run_optional_replacement_step(game, state, is_pass);
+            crate::replacement::run_optional_replacement_step(game, state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::DelayCancelAfterSelection {
@@ -1125,6 +1345,23 @@ pub(crate) fn run_resume(
         }
         ResumeFrame::DelayDnaCardSelection(state) => {
             crate::dsl_cards::lower_replacement::run_delay_dna_card_selection_step(
+                game, state, action_id, is_pass,
+            );
+        }
+        ResumeFrame::DelayFieldDnaAfterPayment {
+            inner,
+            continuation,
+            outer_conts,
+        } => {
+            run_resume(game, *inner, action_id, is_pass);
+            crate::dsl_cards::lower_replacement::continue_delay_field_dna_payment(
+                game,
+                continuation,
+            );
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::DelayFieldDnaSelection(state) => {
+            crate::dsl_cards::lower_replacement::run_delay_field_dna_selection(
                 game, state, action_id, is_pass,
             );
         }
@@ -1200,7 +1437,7 @@ pub(crate) fn run_resume(
         }
         ResumeFrame::PlayFromHandCostReductionPrompt(mut state) => {
             let outer_conts = std::mem::take(&mut state.outer_conts);
-            game.run_play_from_hand_cost_reduction_prompt_step(state, is_pass);
+            game.run_play_from_hand_cost_reduction_prompt_step(state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::InteractiveDigivolveCostReductionPrompt(mut state) => {
@@ -1428,8 +1665,10 @@ fn count_capped_rejects_distinct(
     candidate_data_index: usize,
 ) -> bool {
     let candidate = &game.card_data[candidate_data_index];
-    let picked: Vec<&crate::card_data::CardData> =
-        picked_data_indices.iter().map(|&i| &game.card_data[i]).collect();
+    let picked: Vec<&crate::card_data::CardData> = picked_data_indices
+        .iter()
+        .map(|&i| &game.card_data[i])
+        .collect();
     !mode.admits(&picked, candidate)
 }
 
@@ -1509,7 +1748,10 @@ fn run_non_dsl_count_capped_step(
                     crate::effect_context::selections::material_zone_slice(game, ph)?
                 }
             };
-            slice.iter().find(|c| c.handle() == picked).map(|c| c.data_index)
+            slice
+                .iter()
+                .find(|c| c.handle() == picked)
+                .map(|c| c.data_index)
         })
         .collect();
 
@@ -1569,10 +1811,14 @@ fn finish_non_dsl_count_capped(
     );
     match state.terminal {
         crate::resume::NonDslCountCappedTerminal::KeywordFragment { subject } => {
-            for handle in &state.accum {
-                let _ = ctx.trash_card_source(subject, *handle);
+            let paid = state
+                .accum
+                .iter()
+                .filter(|handle| ctx.trash_card_source(subject, **handle))
+                .count();
+            if paid == state.max as usize {
+                ctx.cancel_leave();
             }
-            ctx.cancel_leave();
         }
         crate::resume::NonDslCountCappedTerminal::KeywordPartition { subject } => {
             crate::cards::keyword_effects::partition_extract_and_play(
@@ -1754,7 +2000,7 @@ fn run_keyword_scapegoat_selection_step(
         state.prov.override_pin,
     );
     if picked != state.self_perm {
-        ctx.substitute_replacement(crate::replacement::ReplacementSubject::Permanent(picked));
+        super::replacement_outcome::delete_selected_and_cancel_after_payment(&mut ctx, picked);
     }
     run_outer_conts(ctx.game, state.outer_conts);
 }
@@ -1869,7 +2115,8 @@ fn run_link_card_leave_selection_step(
                 .place_specific_link_card_as_bottom_source(state.host, card, cause)
         }
         crate::resume::LinkCardLeaveMode::TrashDigivolutionOptionAndCancel => {
-            ctx.game.trash_specific_source_card(state.host, card)
+            !ctx.source_card_trash_blocked(state.host, card)
+                && ctx.game.trash_specific_source_card(state.host, card)
         }
     };
     if paid {
@@ -2709,6 +2956,15 @@ fn run_per_color_delete_step(
     }
 }
 
+/// A source picker only pays a trash cost when its immediate terminal explicitly
+/// says so. Ordinary source transfers and partial trash effects keep their semantics.
+pub(crate) fn source_selection_pays_trash_cost(
+    tail: &[CompiledStep],
+    binding: Option<&str>,
+) -> bool {
+    matches!(tail.first(), Some(CompiledStep::TrashSelectedSourcesAsCost { source_refs, .. }) if Some(source_refs.as_str()) == binding)
+}
+
 /// Re-derive the source-multi candidates `(action_id, source_ref)` for a
 /// `SourceMultiState`, mirroring `source_multi_candidates` + the DSL installers'
 /// filter (target restriction + `target_resolution_failed` + the
@@ -2768,6 +3024,11 @@ pub(crate) fn source_multi_candidates_data(
         {
             continue;
         }
+        if source_selection_pays_trash_cost(&state.inner_tail, state.bind_as.as_deref())
+            && game.source_card_trash_blocked(permanent, card, state.prov.controller)
+        {
+            continue;
+        }
         // Always evaluate on the Source subject: it degrades to the card for
         // every card-identity leaf, and additionally makes the host-aware
         // leaves (`host_kind_is`, `is_face_down`, `is_bottom_source`) work
@@ -2815,7 +3076,9 @@ fn run_source_multi_terminal(game: &mut crate::game::Game, state: crate::resume:
     // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
     // that the accumulated list is bound + the inner tail ran (the multi-pick has
     // terminated). Empty for a top-level (un-nested) multi-pick.
-    run_outer_conts(game, state.outer_conts);
+    if !ctx.cost_unpayable {
+        run_outer_conts(ctx.game, state.outer_conts);
+    }
 }
 
 /// Install (or re-park) a source-multi step over the carried candidate snapshot.
@@ -3184,10 +3447,20 @@ pub(crate) fn run_outer_conts(
     game: &mut crate::game::Game,
     conts: Vec<crate::resume::OuterContinuation>,
 ) {
+    // Every enclosing continuation was captured before this selection resolved.
+    // Retain its new bindings for the whole chain, not just its first sibling.
+    let mut fresh: Option<Bindings> = None;
     for cont in conts {
+        if let Some(published) = game.dsl_resolved_tail_bindings.take() {
+            if let Some(latest) = fresh.as_mut() {
+                latest.merge_slots_from(&published);
+            } else {
+                fresh = Some(published);
+            }
+        }
         let mut merged = cont.bindings;
-        if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {
-            merged.merge_slots_from(&fresh);
+        if let Some(latest) = fresh.as_ref() {
+            merged.merge_slots_from(latest);
         }
         drain_or_rewrap_pending_tail(
             game,
@@ -3371,8 +3644,10 @@ fn run_multipick_step(
                     },
                 };
                 let cand_data = &game.card_data[cand_data_idx];
-                let picked: Vec<&crate::card_data::CardData> =
-                    accum_data_indices.iter().map(|&i| &game.card_data[i]).collect();
+                let picked: Vec<&crate::card_data::CardData> = accum_data_indices
+                    .iter()
+                    .map(|&i| &game.card_data[i])
+                    .collect();
                 mode.admits(&picked, cand_data)
             })
             .collect()
@@ -3381,6 +3656,25 @@ fn run_multipick_step(
             .into_iter()
             .filter(|&i| i != pick_zone_idx)
             .collect()
+    };
+    let new_candidates = if let Some(groups) = &state.named_groups {
+        new_candidates
+            .into_iter()
+            .filter(|&i| {
+                let CountCappedZone::Material(ph) = state.zone else {
+                    return false;
+                };
+                let Some(card) = material_zone_slice(game, ph).and_then(|s| s.get(i)) else {
+                    return false;
+                };
+                let mut required = state.accum.clone();
+                required.push(card.handle());
+                named_materials::maximum_matching(groups, &required)
+                    .is_some_and(|n| n >= (state.min as usize).max(required.len()))
+            })
+            .collect()
+    } else {
+        new_candidates
     };
     // No candidates left → commit with what we have.
     if new_candidates.is_empty() {
@@ -3436,6 +3730,26 @@ pub fn try_install(
     runtime: &StepRuntime,
 ) -> InstallResult {
     match step {
+        CompiledStep::PaySourcePrefix {
+            host_filter,
+            minimum,
+            optional,
+        } => {
+            super::source_prefix_payment::install(
+                ctx,
+                host_filter.clone(),
+                *minimum,
+                *optional,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else {
+                InstallResult::TailAlreadyRan
+            }
+        }
         CompiledStep::SelectHand {
             of,
             filter,
@@ -4271,6 +4585,8 @@ pub fn try_install(
             selection_result(ctx)
         }
         CompiledStep::SelectMaterials {
+            named_groups,
+            require_max,
             of_permanent,
             max,
             filter,
@@ -4288,6 +4604,23 @@ pub fn try_install(
                 _ => return InstallResult::Continue,
             };
             let max_value = resolve_count_bound(ctx, max, &bindings);
+            if !named_groups.is_empty() {
+                return named_materials::install(
+                    ctx,
+                    perm,
+                    *min,
+                    max_value,
+                    filter,
+                    named_groups,
+                    *require_max,
+                    bind_as.clone(),
+                    prompt.clone(),
+                    *optional_zero,
+                    tail.to_vec(),
+                    bindings,
+                    runtime.clone(),
+                );
+            }
             // Whether the carrier yields any source matching the filter at
             // install time — drives the synchronous-completion accounting
             // (mirrors `SelectCountCappedMulti`). Battle-area AND breeding-area
@@ -4462,9 +4795,8 @@ pub fn try_install(
             if *deletion_cap {
                 // G-ENGINE-DP-DELETION-MAX-MODIFIER — the total-DP budget of a
                 // deletion is a "DP deletion effect's maximum".
-                dp_budget += crate::dsl_cards::predicate::deletion_max_bonus_for_source(
-                    &ctx.as_read(),
-                );
+                dp_budget +=
+                    crate::dsl_cards::predicate::deletion_max_bonus_for_source(&ctx.as_read());
             }
             if !has_opponent_dp_budget_candidates(ctx, dp_budget, filter, &bindings) {
                 return InstallResult::Continue;
@@ -5018,7 +5350,13 @@ fn install_select_hand(
         move |cb_ctx, idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_hand_index(name, target_player, idx as u16);
+                let pin = cb_ctx
+                    .game
+                    .player(target_player)
+                    .hand
+                    .get(idx)
+                    .map(|card| card.handle());
+                b.insert_hand_index_pinned(name, target_player, idx as u16, pin);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
@@ -5937,17 +6275,28 @@ fn own_digimon_with_link_cards(ctx: &EffectContext<'_>, player: PlayerId) -> Vec
 /// (tagged `Link`). Mirrors DCGO `permanent.DigivolutionOrLinkCards.Where(IsOption)`
 /// (`DigivolutionCards` excludes the top card, so only below-top sources qualify).
 fn stack_option_candidates(
-    perm: &crate::permanent::Permanent,
-    data: &[crate::card_data::CardData],
+    game: &crate::game::Game,
+    host: PermanentHandle,
+    controller: PlayerId,
 ) -> Vec<(
     crate::card_source::CardHandle,
     crate::resume::StackOptionZone,
 )> {
     let mut out = Vec::new();
+    let Some(perm) = game
+        .player(host.player)
+        .battle_area
+        .get(host.index as usize)
+    else {
+        return out;
+    };
+    let data = &game.card_data;
     let n = perm.card_sources.len();
     if n > 1 {
         for source in perm.card_sources.iter().take(n - 1) {
-            if source.is_option(data) {
+            if source.is_option(data)
+                && !game.source_card_trash_blocked(host, source.handle(), controller)
+            {
                 out.push((
                     source.handle(),
                     crate::resume::StackOptionZone::Digivolution,
@@ -5977,9 +6326,17 @@ fn own_digimon_with_stack_options(
         .battle_area
         .iter()
         .enumerate()
-        .filter(|(_, perm)| {
+        .filter(|(index, perm)| {
             perm.is_digimon(&ctx.game.card_data)
-                && !stack_option_candidates(perm, &ctx.game.card_data).is_empty()
+                && !stack_option_candidates(
+                    ctx.game,
+                    PermanentHandle {
+                        player,
+                        index: *index as u8,
+                    },
+                    ctx.player,
+                )
+                .is_empty()
         })
         .map(|(index, _)| PermanentHandle {
             player,
@@ -6032,7 +6389,7 @@ fn install_trash_option_from_own_stacks(
                 .get(handle.index as usize)
                 .is_some_and(|perm| {
                     perm.is_digimon(&game.card_data)
-                        && !stack_option_candidates(perm, &game.card_data).is_empty()
+                        && !stack_option_candidates(game, handle, player).is_empty()
                 })
         },
         move |cb_ctx, host: PermanentHandle| {
@@ -6100,15 +6457,7 @@ fn install_stack_option_trash_second_selection(
     trigger_context: Option<crate::trigger_context::TriggerContext>,
     outer_conts: Vec<crate::resume::OuterContinuation>,
 ) {
-    let Some(perm) = ctx
-        .game
-        .player(host.player)
-        .battle_area
-        .get(host.index as usize)
-    else {
-        return;
-    };
-    let cards = stack_option_candidates(perm, &ctx.game.card_data);
+    let cards = stack_option_candidates(ctx.game, host, ctx.player);
     if cards.is_empty() {
         return;
     }
@@ -6147,7 +6496,8 @@ fn install_stack_option_trash_second_selection(
             // correct observer fires.
             let trashed = match zone {
                 crate::resume::StackOptionZone::Digivolution => {
-                    cb_ctx.game.trash_specific_source_card(host, card)
+                    !cb_ctx.source_card_trash_blocked(host, card)
+                        && cb_ctx.game.trash_specific_source_card(host, card)
                 }
                 crate::resume::StackOptionZone::Link => {
                     cb_ctx.game.trash_specific_link_card(host, card)
@@ -6231,7 +6581,8 @@ fn run_trash_option_from_stack_selection_step(
     );
     let trashed = match zone {
         crate::resume::StackOptionZone::Digivolution => {
-            ctx.game.trash_specific_source_card(state.host, card)
+            !ctx.source_card_trash_blocked(state.host, card)
+                && ctx.game.trash_specific_source_card(state.host, card)
         }
         crate::resume::StackOptionZone::Link => ctx.game.trash_specific_link_card(state.host, card),
     };
@@ -7260,7 +7611,6 @@ fn install_select_count_capped_multi(
         source_permanent,
         source_kind,
         player,
-
         distinct_by,
         min.max(if optional_zero { 0 } else { 1 }) as usize,
     );
@@ -7280,6 +7630,7 @@ fn install_select_count_capped_multi(
             ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
                 frames: vec![crate::resume::ResumeFrame::MultiPickStep(
                     crate::resume::MultiPickState {
+                        named_groups: None,
                         prov: crate::resume::ResumeProvenance {
                             source_card,
                             source_permanent,
@@ -8226,7 +8577,6 @@ fn install_select_materials(
         source_permanent,
         source_kind,
         player,
-
         uniqueness,
         min.max(if optional_zero { 0 } else { 1 }) as usize,
     );
@@ -8241,6 +8591,7 @@ fn install_select_materials(
             ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
                 frames: vec![crate::resume::ResumeFrame::MultiPickStep(
                     crate::resume::MultiPickState {
+                        named_groups: None,
                         prov: crate::resume::ResumeProvenance {
                             source_card,
                             source_permanent,
@@ -8288,6 +8639,7 @@ fn install_select_own_sources(
         return;
     }
 
+    let trash_cost = source_selection_pays_trash_cost(&tail, bind_as.as_deref());
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
     let target_permanent =
@@ -8323,6 +8675,9 @@ fn install_select_own_sources(
                 return false;
             }
             if target_permanent.is_some_and(|handle| source.permanent != handle) {
+                return false;
+            }
+            if trash_cost && game.source_card_trash_blocked(source.permanent, source.card, player) {
                 return false;
             }
             let read = EffectReadContext::new_with_source_kind(
@@ -9764,4 +10119,28 @@ fn place_remainder_in_order(
             }
         }
     }
+}
+
+pub(crate) fn named_material_candidate_count(
+    ctx: &EffectReadContext<'_>,
+    perm: PermanentHandle,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+    names: &[String],
+) -> usize {
+    let candidates = count_capped_card_candidate_indices(
+        ctx.game,
+        perm.player,
+        CountCappedZone::Material(perm),
+        filter,
+        bindings,
+        ctx.source_card,
+        ctx.source_permanent,
+        ctx.source_kind,
+        ctx.player,
+        None,
+        0,
+    );
+    let groups = named_materials::groups_for_candidates(ctx.game, perm, &candidates, names);
+    named_materials::maximum_matching(&groups, &[]).unwrap_or(0)
 }

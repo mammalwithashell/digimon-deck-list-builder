@@ -1,0 +1,72 @@
+# Authority: official observation 074c2baf4836745b2e1d2faa6dc538674d4e5e5ae5c8686eb63f4c82231a3934,
+# card image, Q4433-Q4436; general_rule.pdf 16-16. Base DCGO BT20_093.cs agrees.
+card: BT20-093
+name: Unleash the Dragon Gene
+kind: option
+color: [red]
+cost: 2
+effects:
+  - when: main_from_hand
+    process:
+      - select_hand:
+          of: you
+          bind_as: played
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - in_text_contains: Dracomon
+                  - in_text_contains: Examon
+          prompt: "Play 1 Dracomon/Examon-text Digimon with cost reduced by 3"
+      - play_from_hand:
+          of: you
+          hand_index: played
+          cost_delta: {reduce: 3}
+      - place_self_as_delay_option: {}
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - any_of:
+            - in_text_contains: Dracomon
+            - in_text_contains: Examon
+        - none_of: [{replacement_cause: battle}]
+    process:
+      # Delay pays by trashing this option before the optional DNA reward.
+      - delete_permanent: {target: source}
+      - select_hand:
+          of: you
+          bind_as: result
+          optional: true
+          filter: {kind: digimon, name_is: Examon}
+          prompt: "DNA digivolve into Examon from hand"
+      - select_dna_pair:
+          left_filter: {kind: digimon, of: you}
+          right_filter: {kind: digimon, of: you}
+          bind_left_as: first
+          bind_right_as: second
+          optional: true
+          prompt: "Choose 2 of your Digimon for DNA digivolution"
+      - effect_initiated_dna_digivolve:
+          target_a: first
+          target_b: second
+          from_hand: result
+          cost: printed
+          ignore_requirements: false
+  - scope: inherited
+    when: on_security
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: played
+          optional: true
+          filter: {kind: digimon, name_contains: Dracomon}
+          prompt: "Play 1 Dracomon-name Digimon from hand or trash without paying the cost"
+      - play_union_bound_free: {binding: played}
+      - place_self_as_delay_option: {}
+

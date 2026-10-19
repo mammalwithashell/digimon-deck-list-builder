@@ -1,0 +1,109 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT10-112",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Black"
+    ],
+    "dp": 15000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "cost": 5,
+        "from_level": 6,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "dp": 15000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "Jesmon GX",
+        "play_cost": 15,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] 5 from Lv.6 w/[Royal Knight] in traits"
+          },
+          {
+            "label": "Effect",
+            "text": "[When Digivolving] You may place 1 card with [Royal Knight] in its traits and a play cost of 13 or less from your hand or trash under this Digimon as its bottom digivolution card. Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon. Then, ＜Blitz＞.\n[All Turns] While a card with [Royal Knight] in its traits is in this Digimon's digivolution cards, this Digimon gains ＜Piercing＞ and ＜Blocker＞, and gains ＜Security Attack +1＞ for each such card."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "Jesmon GX",
+    "play_cost": 15,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522011",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT10-112.png?260529",
+      "printing_id": "BT10-112"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "The effect is activated directly after placing the play cost 13 or lower [Royal Knight] trait card in its digivolution cards.\nThe placed card's [When Digivolving] effect is resolved as a part of this effect, and once that is done, you may declare an attack with the from this effect.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2043",
+        "question": "This card's [When Digivolving] effect reads \"You may place 1 card with [Royal Knight] in its traits and a play cost of 13 or less from your hand or trash under this Digimon as its bottom digivolution card. Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon.\" At what timing does that [When Digivolving] effect activate?"
+      },
+      {
+        "answer": "Since both the [BT6-082 Sistermon Blanc] having been played and this Digimon attacking with happened during this Digimon's [When Digivolving] effect, the Digimon being played and the attack are treated as having happened at the same time for the purpose of triggering effects.\nThe turn player can choose the order in which to activate the [On Play] effect and any potential [When Attacking] and such effects.\nRelated Cards",
+        "date": "Mar. 28, 2024",
+        "number": "Q2044",
+        "question": "This card's [When Digivolving] effect placed a [BT10-016 Jesmon (X Antibody)] as a digivolution card, then that card's [When Digivolving] effect played a [BT6-082 Sistermon Blanc], then I activated in this card's [When Digivolving] effect to attack. When does [BT6-082 Sistermon Blanc]'s [On Play] effect activate?"
+      },
+      {
+        "answer": "No, it doesn't activate.\nThe [On Play] effect from [BT6-082 Sistermon Blanc] was triggered, but it cannot activate because the [Sistermon Blanc] is deleted before it is able to activate.\nRelated Cards",
+        "date": "Mar. 28, 2024",
+        "number": "Q2045",
+        "question": "This card's [When Digivolving] effect placed a [BT10-016 Jesmon (X Antibody)] as a digivolution card, then that card's [When Digivolving] effect played a [BT6-082 Sistermon Blanc], then I activated in this card's [When Digivolving] effect to attack, and when the [When Attacking] effect deleted one of my opponent's Digimon, my [BT6-082 Sistermon Blanc] was deleted by the [On Deletion] effect of the opponent's Digimon.\n[BT6-082 Sistermon Blanc]'s [On Play] effect hasn't activated yet, so does it activate?"
+      }
+    ],
+    "rarity": "SEC",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] 5 from Lv.6 w/[Royal Knight] in traits"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 5 from Lv.6 w/[Royal Knight] in traits"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] You may place 1 card with [Royal Knight] in its traits and a play cost of 13 or less from your hand or trash under this Digimon as its bottom digivolution card. Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon. Then, ＜Blitz＞.\n[All Turns] While a card with [Royal Knight] in its traits is in this Digimon's digivolution cards, this Digimon gains ＜Piercing＞ and ＜Blocker＞, and gains ＜Security Attack +1＞ for each such card."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight/X Antibody"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "724a98e119e327efd681f7130b691bce0efcab4a63505ccf7c2f559ac61d3391",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "e66bdb43d60572f62872dfdc44a41074d6abccfa7e3f191898730e71b7a70295",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522011:BT10-112:BT10-112",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522011"
+}

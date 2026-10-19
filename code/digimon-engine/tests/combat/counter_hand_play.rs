@@ -45,6 +45,7 @@ fn dgmn(id: &str, level: u8, dp: i32) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),
@@ -69,18 +70,20 @@ fn blast_card(id: &str, level: u8, base_level: u8, base_color: u8) -> CardData {
 }
 
 fn blast_dna_card(id: &str, level: u8, req1_level: u8, req2_level: u8) -> CardData {
+    // Unique printed roles: hand material is left/upper, field material right/lower.
+    // Keep this Counter plumbing fixture separate from ambiguous-route choice tests.
     let mut c = dgmn(id, level, 9000);
     c.dna_costs.push(DnaCost {
         requirement1: DnaRequirement {
             level: req1_level,
             card_colors: Vec::new(),
-            name_contains: String::new(),
+            name_contains: "HAND-MAT".to_string(),
             text_contains: String::new(),
         },
         requirement2: DnaRequirement {
             level: req2_level,
             card_colors: Vec::new(),
-            name_contains: String::new(),
+            name_contains: "FIELD-MAT".to_string(),
             text_contains: String::new(),
         },
         memory_cost: 0,

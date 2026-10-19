@@ -586,3 +586,36 @@ fn bt3_093_security_plays_itself_without_paying_cost() {
         "BT3-093 must be played onto P1's battle area from security without paying cost"
     );
 }
+
+/// Official Q4704: a blue/green card may fill the blue bucket, leaving the
+/// blue-only card unchosen. The same physical card cannot fill both buckets.
+#[test]
+fn bt3_093_q4704_dual_color_blue_pick_excludes_duplicate_and_blue_only_remainder() {
+    let mut dual = make_blue_digimon("DUAL", "Lighdramon");
+    dual.colors.push(digimon_engine::enums::CardColor::Green);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT3-093").expect("Davis")
+        .add_card(dual)
+        .add_card(make_blue_digimon("BLUE", "Veemon"))
+        .add_card(make_red_digimon("RED", "Agumon"))
+        .deck(0, &["DUAL", "BLUE", "RED"])
+        .hand(0, &["BT3-093"])
+        .memory(10).start();
+    runner.play(0, 0).expect("play Davis");
+    let view = runner.pending_selection_view().expect("blue bucket decision");
+    let dual_action = revealed_action_for_id(&runner, "DUAL").unwrap();
+    let blue_action = revealed_action_for_id(&runner, "BLUE").unwrap();
+    let red_action = revealed_action_for_id(&runner, "RED").unwrap();
+    assert!(view.valid_action_ids.contains(&dual_action));
+    assert!(view.valid_action_ids.contains(&blue_action));
+    assert!(!view.valid_action_ids.contains(&red_action));
+    assert!(!runner.pending_is_optional(), "printed add is mandatory");
+    runner.execute_action(0, dual_action).expect("choose dual as blue");
+    runner.auto_resolve().expect("bottom nonchosen cards");
+    assert_eq!(hand_ids(&runner), vec!["DUAL".to_string()]);
+    let deck = deck_ids(&runner);
+    assert_eq!(deck.len(), 2);
+    assert!(deck.contains(&"BLUE".to_string()));
+    assert!(deck.contains(&"RED".to_string()));
+    assert_eq!(runner.memory(), 6, "normal play pays four memory");
+}

@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "God",
+    "card_id": "BT24-079",
+    "colors": "Purple White",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "God/Appmon",
+    "play_cost": "12",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Revivemon] & [Biomon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Revivemon] & [Biomon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      {
+        "label": "Effect",
+        "text": "＜Overclock ([Appmon] Trait)＞ ＜Link +1＞ [When Digivolving] You may play 1 level 4 or lower [System] or [Life] trait Digimon card from your trash without paying the cost. Then, you may link 1 [Appmon] trait Digimon card from your hand or this Digimon's digivolution cards to 1 of your Digimon without paying the cost. [All Turns] [Once Per Turn] When other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects."
+      }
+    ],
+    "type": "Transmutation"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "134d798b11f2e827907bf8713213293acf04f4965ab415e81fa2cea4cb8b3545",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "506bcb5b0328bc904737aa43fb0aa1e6bbdaf31ae41e8ef1b3711b6b01eb1e1f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-079",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-079"
+}

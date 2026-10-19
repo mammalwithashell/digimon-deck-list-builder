@@ -8,6 +8,7 @@ use std::sync::Arc;
 #[test]
 fn dsl_card_effect_with_no_clauses_emits_no_effects() {
     let compiled = CompiledCard {
+        deck_rule: None,
         card: "TEST-EMPTY".into(),
         name: "Empty".into(),
         kind: CompiledCardKind::Digimon,

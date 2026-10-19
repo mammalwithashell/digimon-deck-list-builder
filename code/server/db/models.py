@@ -1020,8 +1020,13 @@ class AIModel(Base):
     id = Column(String, primary_key=True, default=_new_uuid)
     name = Column(String, nullable=False)
     model_type = Column(String, nullable=False)        # 'mlp' | 'lstm'
-    tensor_size = Column(Integer, nullable=True)       # set on confirm
+    observation_profile = Column(String, nullable=True)
+    tensor_version = Column(Integer, nullable=True)
+    feature_schema_version = Column(String, nullable=True)
+    tensor_layout_hash = Column(String, nullable=True)
+    tensor_size = Column(Integer, nullable=True)       # confirmed from artifact
     action_space_size = Column(Integer, nullable=True)
+    action_schema_version = Column(Integer, nullable=True)
     engine_commit = Column(String, nullable=True)      # admin-entered at create
     trained_at = Column(DateTime(timezone=True), nullable=True)
     file_sha256 = Column(String, nullable=True)        # set on confirm

@@ -1,0 +1,97 @@
+{
+  "version": 2,
+  "last_updated": "2026-10-11T14:48:01.283029200+00:00",
+  "clauses": {
+    "EX3-074#effect#0": {
+      "clause_id": "EX3-074#effect#0",
+      "card_id": "EX3-074",
+      "verdict": "confirmed",
+      "label": "Special Digivolution Condition",
+      "text_sha256": "cc9d6656bc4cc4b35384ebe2a48604dd7d3a6caec478ea3a227152fb09e9fef9",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\dcgo-exams\\EX3\\EX3-074-effect0.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-074-effect0",
+      "recorded_at": "2026-10-10T21:58:42.494173800+00:00"
+    },
+    "EX3-074#effect#1": {
+      "clause_id": "EX3-074#effect#1",
+      "card_id": "EX3-074",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "33cc91cf31eea6b03e9b31ed0db3082ff6d8b91ece79c84bf9aa19368ef16ede",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\dcgo-exams\\EX3\\EX3-074-effect0.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-074-effect0",
+      "recorded_at": "2026-10-10T21:58:42.494173800+00:00"
+    },
+    "EX3-074#effect#2": {
+      "clause_id": "EX3-074#effect#2",
+      "card_id": "EX3-074",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "025195891e66980d202645aec5dc97d3bf3cfe5bc06c951b8bdb3d5b996bf1e6",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\dcgo-exams\\EX3\\EX3-074-effect0.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-074-effect0",
+      "recorded_at": "2026-10-10T21:58:42.494173800+00:00"
+    }
+  },
+  "interactions": {
+    "probe:EX3-074#effect#1:optional_decline": {
+      "interaction_id": "probe:EX3-074#effect#1:optional_decline",
+      "card_ids": [
+        "EX3-074"
+      ],
+      "source": "probe",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "33cc91cf31eea6b03e9b31ed0db3082ff6d8b91ece79c84bf9aa19368ef16ede",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T091925Z-8b2f64bcc1\\EX3-074-interaction-effect1-optional_decline-boundary-next8-20261011T091925Z-8b2f64bcc1.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-074-interaction-effect1-optional_decline-boundary-next8-20261011T091925Z-8b2f64bcc1",
+      "recorded_at": "2026-10-11T09:41:43.859524+00:00"
+    },
+    "probe:EX3-074#effect#1:scope:neg": {
+      "interaction_id": "probe:EX3-074#effect#1:scope:neg",
+      "card_ids": [
+        "EX3-074"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "33cc91cf31eea6b03e9b31ed0db3082ff6d8b91ece79c84bf9aa19368ef16ede",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T094338Z-bca8b1940f\\EX3-074-interaction-effect1-scope-neg-qa-battle-next8-20261011T094338Z-bca8b1940f.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-074-interaction-effect1-scope-neg-qa-battle-next8-20261011T094338Z-bca8b1940f",
+      "recorded_at": "2026-10-11T09:49:14.450449100+00:00"
+    },
+    "probe:EX3-074#effect#2:scope:neg": {
+      "interaction_id": "probe:EX3-074#effect#2:scope:neg",
+      "card_ids": [
+        "EX3-074"
+      ],
+      "source": "probe",
+      "kind": "negative",
+      "verdict": "confirmed",
+      "text_sha256": "025195891e66980d202645aec5dc97d3bf3cfe5bc06c951b8bdb3d5b996bf1e6",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T144605Z-1920217854\\EX3-074-interaction-other-ally-suspends-identity-self-scope7-20261011T144605Z-1920217854.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-074-interaction-other-ally-suspends-identity-self-scope7-20261011T144605Z-1920217854",
+      "recorded_at": "2026-10-11T14:48:01.283029200+00:00"
+    },
+    "qa:Q3436": {
+      "interaction_id": "qa:Q3436",
+      "card_ids": [
+        "EX3-074"
+      ],
+      "source": "qa",
+      "kind": "positive",
+      "verdict": "confirmed",
+      "text_sha256": "739c18e6e773ea5fd5262875a1d49478d224f1f240c2f7df72c3b9f7880695bc",
+      "scenario_path": "C:\\Users\\james\\.codex\\worktrees\\examon-authoring\\digimon-deck-list-builder-1\\qa\\archetype-qa\\dsl\\examon-2026-10-10-evidence\\oracle\\interaction-20261011T094338Z-bca8b1940f\\EX3-074-interaction-Q3436-normal-qa-battle-next8-20261011T094338Z-bca8b1940f.yaml",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-EX3-074-interaction-Q3436-normal-qa-battle-next8-20261011T094338Z-bca8b1940f",
+      "recorded_at": "2026-10-11T09:47:34.372212800+00:00"
+    }
+  }
+}

@@ -132,6 +132,7 @@ use std::sync::Arc;
 
 fn fixture_on_play_gain_memory(n: i32) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-T1".into(),
         name: "Fixture".into(),
         kind: CompiledCardKind::Digimon,

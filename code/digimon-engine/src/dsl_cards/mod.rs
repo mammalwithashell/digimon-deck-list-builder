@@ -230,6 +230,7 @@ impl CardEffect for DslCardEffect {
                         effect_immunity,
                         modifier_from,
                         dna_material_identity,
+                        source_card_trash_protection,
                         ..
                     } => {
                         for e in lower_aura::lower_all(
@@ -254,12 +255,14 @@ impl CardEffect for DslCardEffect {
                             *effect_immunity,
                             *modifier_from,
                             dna_material_identity.clone(),
+                            source_card_trash_protection.clone(),
                             self.raw.clone(),
                         ) {
                             out.push(e);
                         }
                     }
                     CompiledDeclarativeClause::CostReduction {
+                        set_cost,
                         scope,
                         active_when,
                         reduction_timing,
@@ -309,7 +312,7 @@ impl CardEffect for DslCardEffect {
                         // (previously a missing amount silently dropped the whole
                         // clause). `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
                         let amount_formula = amount_formula.or_else(|| {
-                            (!pay_cost.is_empty())
+                            (!pay_cost.is_empty() || set_cost.is_some())
                                 .then_some(digimon_dsl::compiled::CompiledFormula::Literal(0))
                         });
                         if let Some(amount_formula) = amount_formula {
@@ -341,7 +344,7 @@ impl CardEffect for DslCardEffect {
                                 None
                             };
                             for sc in scopes {
-                                out.push(lower_cost_reduction::lower_with_formula(
+                                let mut effect = lower_cost_reduction::lower_with_formula(
                                     card,
                                     *sc,
                                     active_when.clone(),
@@ -355,7 +358,12 @@ impl CardEffect for DslCardEffect {
                                     when_any_ally_played.clone(),
                                     when_any_ally_digivolves_into.clone(),
                                     shared_opt_group,
-                                ));
+                                );
+                                effect.cost_assignment = *set_cost;
+                                if let Some(value) = set_cost {
+                                    effect.name = format!("Set play cost to {value}");
+                                }
+                                out.push(effect);
                             }
                         }
                     }
@@ -403,7 +411,7 @@ impl CardEffect for DslCardEffect {
                         process,
                         ..
                     } => {
-                        if let Some(e) = lower_replacement::lower_with_raw(
+                        if let Some(e) = lower_replacement::lower_with_raw_and_slot(
                             card,
                             *scope,
                             active_when.as_ref(),
@@ -412,6 +420,7 @@ impl CardEffect for DslCardEffect {
                             *once_per_turn,
                             process,
                             self.raw.clone(),
+                            Some(out.len() as u8),
                         ) {
                             out.push(e);
                         }

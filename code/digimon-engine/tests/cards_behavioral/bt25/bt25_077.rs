@@ -282,17 +282,29 @@ fn bt25_077_when_digivolving_plays_ts_low_from_hand_free() {
         "Lv.5 Black → Bacchusmon (standard circle, cost 4)"
     );
     assert_eq!(runner.memory(), 6, "standard black circle costs 4");
-    let mut saw_hand_prompt = false;
-    for _ in 0..32 {
-        let Some(v) = runner.pending_selection_view() else {
-            break;
-        };
-        if v.kind == SelectionKind::Hand {
-            saw_hand_prompt = true;
-        }
-        drive_default(&mut runner);
+    // WD and the card's own All Turns observer trigger together. Select WD
+    // explicitly so the actual hand choice is inspected before resolving it.
+    let pending = runner.game.pending_selection.as_ref().expect("WD/observer order");
+    assert_eq!(pending.kind, SelectionKind::TriggerOrder);
+    let choices = pending.effect_choices.as_ref().expect("identified effects");
+    assert_eq!(choices.len(), 2);
+    let action = choices.iter().find(|choice| {
+        choice.timing == Some(digimon_engine::enums::EffectTiming::WhenDigivolving)
+    }).expect("complete WD choice").action_id;
+    let actor = pending.selecting_player;
+    assert!(digimon_engine::action::mask::build_action_mask(&runner.game, actor)[action as usize] > 0.5);
+    runner.execute_action(actor, action).expect("choose WD first");
+    if runner.pending_kind() == Some(SelectionKind::Replacement) {
+        runner.accept_optional_trigger().expect("accept WD");
     }
-    assert!(saw_hand_prompt, "[WD] offers the [TS] hand play");
+    let pending = runner.pending_selection_view().expect("WD hand selection");
+    assert_eq!(pending.kind, SelectionKind::Hand);
+    let candidates: Vec<_> = pending.valid_action_ids.iter().copied()
+        .filter(|&action| action != PASS).collect();
+    assert_eq!(candidates.len(), 1, "only TS-LOW is eligible; bonus-draw PAD is not");
+    let actor = pending.selecting_player;
+    runner.execute_action(actor, candidates[0]).expect("play eligible TS-LOW");
+    drive_default(&mut runner);
     assert!(
         field_ids(&runner, 0).contains(&"TS-LOW".to_string()),
         "WD plays TS-LOW from hand for free"

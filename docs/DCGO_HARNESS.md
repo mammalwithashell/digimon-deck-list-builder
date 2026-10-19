@@ -115,9 +115,15 @@ coroutines that yield per frame; re-measure if you change it.
 
 ## Rules that matter
 
-- A job overdue past `timeout_seconds` is requeued, and quarantined after two
-  failures. Never retried indefinitely — one poisonous job would otherwise stall
-  the whole batch silently.
+- The player enforces `timeout_seconds` itself, from the claim: a job that
+  outlives it is filed `failed` with `timeout after Ns` (plus its partial
+  recording), and the player moves on. A scripted line whose prompt sits open
+  for 10 s with no new prompt and no game progress fails sooner, as
+  `prompt mismatch: step N selection did not complete '<Prompt>' (…)`
+  (`StallWatch`, `HarnessConfig.StallGraceSeconds`).
+- A claim overdue past `timeout_seconds` anyway (a player too hung to file) is
+  requeued, and quarantined after two failures. Never retried indefinitely —
+  one poisonous job would otherwise stall the whole batch silently.
 - `status` and `triage` always print the full denominator
   (pending/claimed/completed/partial/failed, and files
   seen/read-failed/parse-failed/replayed). A batch where most jobs died must

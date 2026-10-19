@@ -239,13 +239,13 @@ effects:
           bind_as: trashed_sources_wd
           prompt: "Trash 2 cards with the [Three Musketeers] trait in this Digimon's digivolution cards"
           then:
+            - trash_selected_sources_as_cost: { source_refs: trashed_sources_wd, min_count: 2 }
             - if:
                 condition:
                   binding_count_eq:
                     binding: trashed_sources_wd
                     n: 2
                 then:
-                  - trash_selected_sources: { source_refs: trashed_sources_wd }
                   - if:
                       condition:
                         any_permanent:
@@ -284,13 +284,13 @@ effects:
           bind_as: trashed_sources_wa
           prompt: "Trash 2 cards with the [Three Musketeers] trait in this Digimon's digivolution cards"
           then:
+            - trash_selected_sources_as_cost: { source_refs: trashed_sources_wa, min_count: 2 }
             - if:
                 condition:
                   binding_count_eq:
                     binding: trashed_sources_wa
                     n: 2
                 then:
-                  - trash_selected_sources: { source_refs: trashed_sources_wa }
                   - if:
                       condition:
                         any_permanent:

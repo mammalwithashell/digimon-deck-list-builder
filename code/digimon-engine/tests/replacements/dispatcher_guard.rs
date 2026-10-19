@@ -36,6 +36,26 @@ fn reset_sentinels() {
     GUARD_SENTINEL_WWBD.store(0, Ordering::SeqCst);
 }
 
+// The sentinel authors both immediate timing families. A deletion therefore
+// parks an order decision even though both effects are mandatory. Complete
+// that event before starting another synthetic try_replace call chain.
+fn finish_sentinel_deletion_order(r: &mut DebugRunner) {
+    let order = r.game.pending_selection.as_ref().expect("two mandatory immediate effects");
+    assert_eq!(order.kind, digimon_engine::selection::SelectionKind::EffectChoice);
+    assert_eq!(order.selecting_player, 0);
+    assert!(!order.is_optional);
+    let rows = order.effect_choices.as_ref().expect("sentinel order labels");
+    assert_eq!(rows.len(), 2);
+    let matches: Vec<_> = rows.iter().filter(|row| row.label.contains("count (WWBD)")).collect();
+    assert_eq!(matches.len(), 1);
+    let action = matches[0].action_id;
+    assert!(order.valid_action_ids.contains(&action));
+    assert!(digimon_engine::action::build_action_mask(&r.game, 0)[action as usize] > 0.0);
+    r.game.resolve_selection(0, action).expect("choose WWBD before WWLBA");
+    assert!(r.game.pending_selection.is_none(), "remaining mandatory WWLBA completes");
+    assert_eq!(r.game.replacement_depth, 0);
+}
+
 /// Runs all §7.5 guard scenarios sequentially in one process, since they
 /// share global atomic counters. See module docs.
 #[test]
@@ -88,15 +108,17 @@ fn once_per_event_guard_scenarios() {
             ReplacementCause::OwnEffect,
             None,
         );
+        finish_sentinel_deletion_order(&mut r);
         let outcome2 = r.game.try_replace(
             EffectTiming::WhenWouldBeDeleted,
             ReplacementSubject::Permanent(handle),
             ReplacementCause::OwnEffect,
             None,
         );
+        finish_sentinel_deletion_order(&mut r);
 
-        // WWBD process sets no outcome (just increments the counter) so both
-        // calls return None — but they DO run.
+        // Initial calls return None while parked; the legal order decision
+        // runs WWBD once, then WWLBA cancels the synthetic deletion.
         assert_eq!(outcome1, ReplacementOutcome::None);
         assert_eq!(outcome2, ReplacementOutcome::None);
         assert_eq!(
@@ -113,36 +135,21 @@ fn once_per_event_guard_scenarios() {
         reset_sentinels();
         let mut r = DebugRunner::builder()
             .add_card(make_test_card("TEST-P7-GUARD-SENTINEL", "Guard Sentinel"))
+            .add_card(make_test_card("ORDINARY-SUBJECT", "Ordinary subject"))
             .start();
         let h1 = r.place_on_field(0, "TEST-P7-GUARD-SENTINEL", Some(0));
-        let h2 = r.place_on_field(0, "TEST-P7-GUARD-SENTINEL", Some(0));
+        let h2 = r.place_on_field(0, "ORDINARY-SUBJECT", Some(0));
         assert_ne!(h1, h2);
 
-        // Fire WWBD for h1 then h2 in sequence. Neither subject was fired in
-        // the other's call chain, so both process closures should run. Each
-        // call is its own chain (clears the set on entry), but the counter is
-        // global, so the total is 2.
-        //
-        // h1's permanent carries a WWBD replacement; so does h2's. Per the
-        // dispatcher's collect phase, the subject's own effects come first;
-        // in this test each subject's card has exactly one WWBD effect that
-        // matches its own handle, and the cross-permanent one runs too (Phase
-        // 7 v1 has no `source_permanent` filter on non-keyword effects). So a
-        // single try_replace call on h1 fires WWBD TWICE — once from h1's own
-        // installed effect and once from h2's (they're distinct effect
-        // instances pointing at different source_permanents, but the
-        // dispatcher does not filter by source_permanent).
-        //
-        // The assertion that matters for this guard test: within a single
-        // `try_replace` call, different subjects in the fired-set do not
-        // collide. We verify that by making TWO calls with different subjects
-        // and checking the counter doubled (not singled).
+        // One global sentinel observes two subjects. Complete each mandatory
+        // ordering decision before opening the next independent event.
         let _ = r.game.try_replace(
             EffectTiming::WhenWouldBeDeleted,
             ReplacementSubject::Permanent(h1),
             ReplacementCause::OwnEffect,
             None,
         );
+        finish_sentinel_deletion_order(&mut r);
         let count_after_first = GUARD_SENTINEL_WWBD.load(Ordering::SeqCst);
 
         let _ = r.game.try_replace(
@@ -151,6 +158,7 @@ fn once_per_event_guard_scenarios() {
             ReplacementCause::OwnEffect,
             None,
         );
+        finish_sentinel_deletion_order(&mut r);
         let count_after_second = GUARD_SENTINEL_WWBD.load(Ordering::SeqCst);
 
         // Each call ran at least once; the second call produced additional
@@ -193,6 +201,7 @@ fn once_per_event_guard_scenarios() {
             ReplacementCause::OwnEffect,
             None,
         );
+        finish_sentinel_deletion_order(&mut r);
         assert!(
             GUARD_SENTINEL_WWBD.load(Ordering::SeqCst) >= 1,
             "subsequent fresh call chain fires normally after prior unwind"

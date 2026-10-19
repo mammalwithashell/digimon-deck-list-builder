@@ -1,0 +1,173 @@
+card: BT23-047
+clause: BT23-047#effect#4
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-025
+    - BT20-042
+    - BT23-047
+    - EX3-018
+    - BT21-046
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    rest: BT23-047-effect4-decline-p0
+  p1:
+    stack:
+    - ST2-09
+    - BT20-025
+    - ST1-16
+    - BT20-027
+    - BT20-027
+    - BT20-025
+    - BT20-025
+    - BT20-025
+    - BT20-042
+    - BT20-042
+    - BT13-096
+    - BT13-096
+    rest: BT23-047-effect4-decline-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-025
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST2-09
+      from: hand.0
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-025
+      from: hand.0
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    dna:
+      card: BT23-047
+      materials:
+      - field.1
+      - field.0
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+      - opp.field.1
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-16
+      from: hand.0
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+interaction:
+  id: probe:BT23-047#effect#4:optional_decline
+  source: probe
+  kind: positive
+assert:
+- at: 19
+  that:
+    p0.field:
+    - card_id: BT23-047
+      suspended: false
+      sources:
+      - BT20-025
+      - BT20-042
+- at: 20
+  that:
+    p0.field: []
+    p0.trash:
+    - BT23-047
+    - BT20-025
+    - BT20-042

@@ -1,0 +1,25 @@
+{
+  "extracted": {
+    "attribute": "Entertainment",
+    "card_id": "BT22-003",
+    "colors": "Yellow",
+    "digivolve_costs": [],
+    "form": "Appmon",
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon gets -2000 DP for the turn."
+      }
+    ],
+    "type": "Tap"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "884649fbc82f16e453b200876a1a5d07297ffda05b37821a4c76b61bb6626257",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "05d75c49edba5b389622bd05e265b6edce98747c13b333238c3236cbaa3e5ee7",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-003",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-003"
+}

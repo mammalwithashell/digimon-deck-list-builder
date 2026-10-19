@@ -1,0 +1,125 @@
+card: BT23-047
+clause: BT23-047#effect#5
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT23-058
+    - BT23-047
+    - BT20-027
+    - BT20-027
+    - EX3-018
+    - BT20-044
+    - BT20-044
+    - BT20-044
+    - BT20-042
+    - BT20-042
+    - BT13-096
+    - BT13-096
+    rest: BT23-047-effect5-decline-p0
+  p1:
+    stack:
+    - EX3-018
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    rest: BT23-047-effect5-decline-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-018
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT23-058
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.1
+      using: BT23-047
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+interaction:
+  id: probe:BT23-047#effect#5:optional_decline
+  source: probe
+  kind: positive
+assert:
+- at: 10
+  that:
+    p0.field:
+    - card_id: EX3-018
+      suspended: false
+    - card_id: BT23-047
+      suspended: false
+      sources:
+      - BT23-058
+    p1.security: 5
+- at: 11
+  that:
+    p0.field:
+    - card_id: EX3-018
+      suspended: false
+    - card_id: BT23-047
+      suspended: false
+      sources:
+      - BT23-058
+    p1.security: 5

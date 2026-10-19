@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX4-060",
+    "colors": "White",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "15",
+    "qa": [
+      "Yes, you can. If an effect activates, it is to be fully resolved even if the card that activated the effect is removed from that area during the processing."
+    ],
+    "special_digivolution_condition": "[DNA Digivolution] 0 from blue Lv.6 + red Lv.6 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolution] 0 from blue Lv.6 + red Lv.6 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less, and return 1 of your opponent's level 6 or higher Digimon to the bottom of its owner's deck. [All Turns] When this Digimon would leave the battle area other than by one of your effects, play 1 [BlitzGreymon] and 1 [CresGarurumon] from this Digimon's digivolution cards without paying the costs. Then, place this Digimon at the bottom of your security stack face down."
+      }
+    ],
+    "type": "Holy Warrior"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "67dd92954d66e1c31b60aa2f679aa269a88a1b659b78c73c1a4cfa0708eb70be",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "db076e197a42864d4375d7f66925aa729489549fd471d696a481da7676769c7b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX4-060",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX4-060"
+}

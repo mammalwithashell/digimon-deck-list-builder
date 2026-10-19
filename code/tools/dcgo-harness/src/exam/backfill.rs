@@ -98,6 +98,10 @@ pub fn backfill_from_diff(
             report.denominator()
         ));
     }
+    let scenario = Scenario::from_yaml(scenario_yaml)?;
+    crate::exam::oracle_diff::prepare_requested_measurements(
+        &scenario, &mut ours.to_vec(), &mut dcgo.to_vec(), pairing,
+    )?;
     // Honesty rule: an `_backfilled` assertion may encode only state DCGO
     // actually observed -- exactly the paired rows, nothing else.
     let mut observed = Vec::with_capacity(pairing.pairs.len());
@@ -111,6 +115,17 @@ pub fn backfill_from_diff(
                 dcgo.len()
             ));
         };
+        for (seat, a, b) in [("p0", &o.p0, &d.p0), ("p1", &o.p1, &d.p1)] {
+            if a.selection_candidates.is_some() && a.selection_candidates != b.selection_candidates {
+                return Err(format!("refusing to backfill: {seat}.selection_candidates at our row {oi} was not equally measured by DCGO"));
+            }
+            if a.selection_can_decline.is_some() && a.selection_can_decline != b.selection_can_decline {
+                return Err(format!("refusing to backfill: {seat}.selection_can_decline at our row {oi} was not equally measured by DCGO"));
+            }
+            if a.legal_option_plays.is_some() && a.legal_option_plays != b.legal_option_plays {
+                return Err(format!("refusing to backfill: {seat}.legal_option_plays at our row {oi} was not equally measured by DCGO"));
+            }
+        }
         observed.push(Observed {
             row: o,
             with_phase: phase_is_compared(&o.phase, &d.phase),
@@ -438,6 +453,15 @@ fn seat_entries(
     that.insert(format!("{seat}.hand"), to_value(&s.hand)?);
     that.insert(format!("{seat}.trash"), to_value(&s.trash)?);
     that.insert(format!("{seat}.field"), to_value(&s.field)?);
+    if let Some(ids) = &s.selection_candidates {
+        that.insert(format!("{seat}.selection_candidates"), to_value(ids)?);
+    }
+    if let Some(can_decline) = s.selection_can_decline {
+        that.insert(format!("{seat}.selection_can_decline"), to_value(can_decline)?);
+    }
+    if let Some(ids) = &s.legal_option_plays {
+        that.insert(format!("{seat}.legal_option_plays"), to_value(ids)?);
+    }
     Ok(())
 }
 
@@ -505,6 +529,61 @@ steps:
             .collect()
     }
 
+    #[test]
+    fn legal_option_measurement_backfill_requires_both_observations() {
+        let mut ours = compared_rows();
+        let mut dcgo = compared_rows();
+        ours[0].p0.legal_option_plays = Some(vec![]);
+        let report = diff(&ours, &dcgo);
+        assert!(report.is_clean()); // request validation belongs to oracle_diff
+        let error = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report, &ours).unwrap_err();
+        assert!(error.contains("not equally measured"));
+        dcgo[0].p0.legal_option_plays = Some(vec![]);
+        let report = diff(&ours, &dcgo);
+        let out = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report, &ours).unwrap();
+        let scenario = Scenario::from_yaml(&out.text).unwrap();
+        assert_eq!(scenario.legal_option_plays_requested(0), [true, false]);
+    }
+    #[test]
+    fn selection_decline_observation_backfill_preserves_false_and_rejects_missing() {
+        let mut ours = compared_rows();
+        let mut dcgo = compared_rows();
+        ours[0].p0.selection_can_decline = Some(false);
+        let report = diff(&ours, &dcgo);
+        let error = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report, &ours).unwrap_err();
+        assert!(error.contains("not equally measured"));
+        dcgo[0].p0.selection_can_decline = Some(false);
+        let out = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &diff(&ours, &dcgo), &ours).unwrap();
+        let scenario = Scenario::from_yaml(&out.text).unwrap();
+        assert_eq!(scenario.selection_can_decline_requested(0), [true, false]);
+        let assertion = scenario.assertions.iter().find(|a| a.at == 0).unwrap();
+        assert_eq!(assertion.that["p0.selection_can_decline"], Value::Bool(false));
+        let missing = compared_rows();
+        assert!(backfill_from_diff(&out.text, &missing, &missing, &one_to_one(2), &diff(&missing, &missing), &missing).is_err());
+        let unpaired = pair_by_wire_rows(&[0, 1], 1);
+        let report = crate::exam::differ::diff_paired(&ours, &dcgo[1..], &unpaired);
+        assert!(backfill_from_diff(&out.text, &ours, &dcgo[1..], &unpaired, &report, &ours).is_err());
+    }
+    #[test]
+    fn selection_candidates_backfill_preserves_multiset_and_rejects_missing() {
+        let mut ours = compared_rows();
+        let mut dcgo = compared_rows();
+        ours[0].p0.selection_candidates = Some(vec!["ST1-05".into(), "ST1-05".into()]);
+        let report = diff(&ours, &dcgo);
+        let error = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &report, &ours).unwrap_err();
+        assert!(error.contains("not equally measured"));
+        dcgo[0].p0.selection_candidates = Some(vec!["ST1-05".into(), "ST1-05".into()]);
+        let out = backfill_from_diff(LINE, &ours, &dcgo, &one_to_one(2), &diff(&ours, &dcgo), &ours).unwrap();
+        let scenario = Scenario::from_yaml(&out.text).unwrap();
+        assert_eq!(scenario.selection_candidates_requested(0), [true, false]);
+        let assertion = scenario.assertions.iter().find(|a| a.at == 0).unwrap();
+        assert_eq!(assertion.that["p0.selection_candidates"], serde_yml::to_value(vec!["ST1-05", "ST1-05"]).unwrap());
+        let missing = compared_rows();
+        assert!(backfill_from_diff(&out.text, &missing, &missing, &one_to_one(2), &diff(&missing, &missing), &missing).is_err());
+        let unpaired = pair_by_wire_rows(&[0, 1], 1);
+        let report = crate::exam::differ::diff_paired(&ours, &dcgo[1..], &unpaired);
+        assert!(backfill_from_diff(&out.text, &ours, &dcgo[1..], &unpaired, &report, &ours).is_err());
+    }
     #[test]
     fn backfill_writes_assertions_for_every_compared_step() {
         let out = backfill(LINE, &compared_rows()).expect("a complete clean run should backfill");

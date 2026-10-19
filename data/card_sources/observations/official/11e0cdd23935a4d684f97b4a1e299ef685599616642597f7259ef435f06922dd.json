@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "AD1-025",
+    "colors": "Red White Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "15000",
+    "form": "Mega",
+    "play_cost": "15",
+    "qa": [
+      "Yes, you can. If an effect activates, it is to be fully resolved even if the card that activated the effect is removed from that area during the processing."
+    ],
+    "special_digivolution_condition": "[DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞＜Blocker＞＜Partition ([WarGreymon] & [MetalGarurumon])＞ [On Play] [When Digivolving] Return all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck. Then, delete 1 of your opponent's Digimon. [All Turns] [Once Per Turn] When any of your opponent's Digimon leave the battle area, trash 1 of their Option cards in the battle area and trash their top security card."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "Assembly -6: [WarGreymon]×[MetalGarurumon]"
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight/ADVENTURE/Hero"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "11e0cdd23935a4d684f97b4a1e299ef685599616642597f7259ef435f06922dd",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "caafaafabb71a628ee8d8cc7eeb1d713821d95b4c66a60702cc1fd59c6db0f38",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:AD1-025",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/AD1-025"
+}

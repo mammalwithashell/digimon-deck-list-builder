@@ -1,0 +1,97 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Purple",
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "HeavyMetaldramon",
+      "dp": 13000,
+      "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[When Digivolving] [End of Attack] If your hand has 4 or fewer cards, you may play 1 level 4 or lower Digimon card with the [Evil], [Dark Dragon] or [Evil Dragon] trait from your trash to the field without paying the cost.\r\n[When Digivolving] [On Deletion] Trash 2 cards in your hand. Then, you may activate 1 [Main] effect on this card's Option side.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "When one of your [Evil|Dark Dragon|Evil Dragon] trait Digimon attacks, if your hand has 4 or fewer cards, you may use this card with the cost reduced by 3.\r\n[Main] Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher.",
+      "level": 6,
+      "play_cost": 6,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Evil Dragon",
+        "LIBERATOR"
+      ]
+    },
+    "card_id": "LM-068",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Purple",
+          "cost": 5,
+          "level": 5,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [],
+    "source_record": {
+      "alt_effect": "[Digivolve] Lv.5 w/[Dark Dragon]/[Evil Dragon] trait: Cost 4",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Purple",
+      "color2": "Red",
+      "date_added": "2026-05-13 01:00:34",
+      "digi_type": "Evil Dragon",
+      "digi_type2": "LIBERATOR",
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 13000,
+      "evolution_color": null,
+      "evolution_cost": 5,
+      "evolution_level": null,
+      "form": null,
+      "id": "LM-068",
+      "level": 6,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[When Digivolving] [End of Attack] If your hand has 4 or fewer cards, you may play 1 level 4 or lower Digimon card with the [Evil], [Dark Dragon] or [Evil Dragon] trait from your trash to the field without paying the cost.\r\n[When Digivolving] [On Deletion] Trash 2 cards in your hand. Then, you may activate 1 [Main] effect on this card's Option side.",
+      "name": "HeavyMetaldramon",
+      "play_cost": 6,
+      "pretty_url": "LM-068-heavymetaldramon",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "LM-09: LIMITED CARD PACK DISTANCIA CERO"
+      ],
+      "source_effect": "When one of your [Evil|Dark Dragon|Evil Dragon] trait Digimon attacks, if your hand has 4 or fewer cards, you may use this card with the cost reduced by 3.\r\n[Main] Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher.",
+      "stage": null,
+      "tcgplayer_id": null,
+      "tcgplayer_name": null,
+      "type": "Dual",
+      "xros_req": "[Digivolve] Lv.5 w/[Dark Dragon]/[Evil Dragon] trait: Cost 4"
+    },
+    "structural_diagnostics": [
+      {
+        "authoritative": false,
+        "derived": false,
+        "field_path": "faces.1.colors",
+        "reason": "digimoncard.io omitted the explicit Option-face color"
+      }
+    ]
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "b39ddaf4abf1473a713828ac27dbe86ba8f31fac37a76122f08bf1c4c4316d80",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "LM-068",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

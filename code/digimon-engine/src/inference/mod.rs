@@ -2,6 +2,7 @@ use std::path::Path;
 
 use ort::session::Session;
 
+pub mod contract;
 pub mod evaluator;
 pub mod lstm;
 pub mod mlp;
@@ -44,6 +45,7 @@ pub fn load_policy(path: &Path) -> Result<Box<dyn OnnxPolicy>, InferenceError> {
         .map_err(|e| InferenceError::LoadFailed(e.to_string()))?
         .commit_from_file(path)
         .map_err(|e| InferenceError::LoadFailed(e.to_string()))?;
+    contract::validate_session_contract(&session, &crate::tensor_profiles::default_profile())?;
     let output_names: Vec<String> = session
         .outputs()
         .iter()

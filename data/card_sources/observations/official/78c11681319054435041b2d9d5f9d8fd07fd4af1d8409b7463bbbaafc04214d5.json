@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX11-014",
+    "colors": "Blue Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] [Hiyarimon]: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Hiyarimon]: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Suzune Kazuki] and 1 [Ice-Snow] trait Digimon card among them to the hand. Return the rest to the bottom of the deck. (Rule) Trait: Has [Ice-Snow] Type."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+      }
+    ],
+    "type": "Avian/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "78c11681319054435041b2d9d5f9d8fd07fd4af1d8409b7463bbbaafc04214d5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "96314bdaeabb1a83b3938c57703f89950038724348b151589e8652260930c91e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX11-014",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX11-014"
+}

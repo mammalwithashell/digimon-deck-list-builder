@@ -3,6 +3,7 @@ use digimon_engine::dsl::spec::{CardKind, CardSpec, ColorSpec};
 
 fn spec_with_overrides(card: &str, name: &str, kind: CardKind, cost: Option<i32>) -> CardSpec {
     CardSpec {
+        deck_rule: None,
         card: card.into(),
         name: name.into(),
         kind,

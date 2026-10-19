@@ -1,0 +1,85 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "P-060",
+    "card_type": "Digimon",
+    "colors": [
+      "Green"
+    ],
+    "dp": 11000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 11000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Angoramon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[When Digivolving] If you have a Tamer in play, this Digimon gains ＜Security Attack +1＞ for the turn. (This Digimon checks 1 additional security card.)\n[Your Turn][Once Per Turn] When this Digimon is blocked, trash the top card of your opponent's security stack."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking][Once Per Turn] If you have a [Ruri Tsukiyono] in play, gain 1 memory."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Angoramon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-060.png?260529",
+      "printing_id": "P-060"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] If you have a Tamer in play, this Digimon gains ＜Security Attack +1＞ for the turn. (This Digimon checks 1 additional security card.)\n[Your Turn][Once Per Turn] When this Digimon is blocked, trash the top card of your opponent's security stack."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking][Once Per Turn] If you have a [Ruri Tsukiyono] in play, gain 1 memory."
+      }
+    ],
+    "type": "Beast"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "e223c88c27c1c350175f94909f906b96ad32deb98122959483401ad6c54ce9c0",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-060:P-060",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

@@ -50,6 +50,12 @@ const STEP_CONTROL_FLOW: &str = include_str!("../src/dsl_cards/step/control_flow
 const STEP_DIGIXROS_TRANSACTION: &str =
     include_str!("../src/dsl_cards/step/digixros_transaction.rs");
 const STEP_DNA_DIGIVOLVE: &str = include_str!("../src/dsl_cards/step/dna_digivolve.rs");
+const STEP_RETURN_RESULTS: &str = include_str!("../src/dsl_cards/step/return_results.rs");
+const STEP_DELETION_RESULTS: &str = include_str!("../src/dsl_cards/step/deletion_results.rs");
+const STEP_SIMULTANEOUS_PLAY: &str = include_str!("../src/dsl_cards/step/simultaneous_play.rs");
+const STEP_SOURCE_PLAY_BATCH: &str = include_str!("../src/dsl_cards/step/source_play_batch.rs");
+const STEP_FIELD_SOURCE_RESULTS: &str =
+    include_str!("../src/dsl_cards/step/field_source_results.rs");
 const STEP_DRAW: &str = include_str!("../src/dsl_cards/step/draw.rs");
 const STEP_EFFECTS: &str = include_str!("../src/dsl_cards/step/effects.rs");
 const STEP_GRANT_TRIGGERED: &str = include_str!("../src/dsl_cards/step/grant_triggered.rs");
@@ -64,6 +70,7 @@ const STEP_REPLACEMENT_OUTCOME: &str = include_str!("../src/dsl_cards/step/repla
 const STEP_SCHEDULE_DELAYED: &str = include_str!("../src/dsl_cards/step/schedule_delayed.rs");
 const STEP_SELECTIONS: &str = include_str!("../src/dsl_cards/step/selections.rs");
 const STEP_ZONE_MOVES: &str = include_str!("../src/dsl_cards/step/zone_moves.rs");
+const STEP_ZONE_CARDS: &str = include_str!("../src/dsl_cards/step/zone_cards.rs");
 
 fn step_corpus() -> String {
     let mut s = String::new();
@@ -74,6 +81,11 @@ fn step_corpus() -> String {
         STEP_CONTROL_FLOW,
         STEP_DIGIXROS_TRANSACTION,
         STEP_DNA_DIGIVOLVE,
+        STEP_DELETION_RESULTS,
+        STEP_RETURN_RESULTS,
+        STEP_SOURCE_PLAY_BATCH,
+        STEP_SIMULTANEOUS_PLAY,
+        STEP_FIELD_SOURCE_RESULTS,
         STEP_DRAW,
         STEP_EFFECTS,
         STEP_GRANT_TRIGGERED,
@@ -88,6 +100,7 @@ fn step_corpus() -> String {
         STEP_SCHEDULE_DELAYED,
         STEP_SELECTIONS,
         STEP_ZONE_MOVES,
+        STEP_ZONE_CARDS,
     ] {
         s.push_str(chunk);
         s.push('\n');
@@ -183,6 +196,74 @@ fn assert_no_wildcards(body: &str, fn_name: &str, file_name: &str) {
         fn_name,
         hits
     );
+}
+
+/// Keep only direct arms of each `match step` in the dispatcher. Defaults in
+/// nested matches over bindings are not defaults over CompiledStep. Preserve
+/// the existing forbidden-return policy; do not exempt a named step variant.
+fn step_dispatch_arm_surface(body: &str) -> String {
+    let mut surface = String::new();
+    let mut remaining = body;
+    while let Some(start) = remaining.find("match step {") {
+        let tail = &remaining[start + "match step {".len()..];
+        let mut depth = 0usize;
+        let mut end = None;
+        for (i, ch) in tail.char_indices() {
+            match ch {
+                '{' => depth += 1,
+                '}' if depth == 0 => {
+                    end = Some(i);
+                    break;
+                }
+                '}' => depth -= 1,
+                _ if depth == 0 => surface.push(ch),
+                _ => {}
+            }
+        }
+        let end = end.expect("match step must have a closing brace");
+        surface.push('\n');
+        remaining = &tail[end + 1..];
+    }
+    assert!(
+        !surface.is_empty(),
+        "dispatcher must contain an explicit match step"
+    );
+    surface
+}
+
+#[test]
+fn step_wildcard_lint_ignores_nested_binding_defaults_but_rejects_dispatch_defaults() {
+    let nested = r#"match step {
+        CompiledStep::PlaceCardsAsBottomSources { target, .. } => {
+            match resolve(target) { Some(value) => Some(value), _ => None }
+        }
+        _ => {}
+    }"#;
+    assert_no_wildcards(&step_dispatch_arm_surface(nested), "fixture", "fixture");
+    for forbidden in FORBIDDEN_WILDCARDS {
+        let dispatcher =
+            format!("match step {{ CompiledStep::Draw {{ .. }} => {{}}, {forbidden}, }}");
+        assert!(
+            std::panic::catch_unwind(|| {
+                assert_no_wildcards(
+                    &step_dispatch_arm_surface(&dispatcher),
+                    "fixture",
+                    "fixture",
+                );
+            })
+            .is_err(),
+            "must reject direct dispatcher default: {forbidden}"
+        );
+    }
+}
+
+#[test]
+fn zone_card_dispatch_arms_are_in_the_scanned_corpus() {
+    for variant in ["SelectZoneCards", "ReturnTopStackedToDeck"] {
+        let marker = format!("CompiledStep::{variant}");
+        assert!(STEP_ZONE_CARDS.contains(&marker));
+        assert!(step_corpus().contains(&marker));
+    }
 }
 
 #[test]
@@ -292,18 +373,16 @@ fn step_variants_have_exec_arms() {
 
 #[test]
 fn no_wildcard_catchalls_in_step_dispatcher() {
-    // The step dispatcher uses a `try_run` chain rather than a match,
-    // so this test scopes to the per-family `try_run` functions. Each
-    // module's `try_run` must not contain a wildcard arm — silent
-    // returns of `false` are how the chain decides "not my variant",
-    // but the actual variant matches must be explicit.
-    //
-    // Note: `try_run` returning `false` for a step it doesn't handle is
-    // intentional (chain dispatch), so we exempt it here. The lint
-    // applies to matches *inside* `try_run` over `CompiledStep`.
+    // The top-level dispatcher combines a try_run chain with explicit step
+    // matches. Inspect those direct arms, not nested matches over bindings.
+    // The empty default continues the chain; forbidden silent returns do not.
     let body = extract_fn_body(STEP_MOD_SRC, "run_step_with_runtime")
         .expect("step/mod.rs must contain `run_step_with_runtime`");
-    assert_no_wildcards(body, "run_step_with_runtime", "step/mod.rs");
+    assert_no_wildcards(
+        &step_dispatch_arm_surface(body),
+        "run_step_with_runtime",
+        "step/mod.rs",
+    );
 }
 
 #[test]

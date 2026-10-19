@@ -1,0 +1,43 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX11-017",
+    "colors": "Blue Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "12000",
+    "form": "Mega",
+    "play_cost": "12",
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[Ice-Snow] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[Ice-Snow] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Iceclad＞ ＜Barrier＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 [Suzune Kazuki] or level 4 or lower [Ice-Snow] trait Digimon card from your hand without paying the cost. [All Turns] [Once Per Turn] When other Digimon are played or digivolve, trash any 3 digivolution cards from your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards can't suspend until their turn ends."
+      }
+    ],
+    "type": "Ice-Snow/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "2f7d137446cab9b4f5f3101d286c4f3c122ed25f1213492eee6d7730535f901d",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "65734f753e5769ef420ad36951cfac2b6fc15377902af26c4bb6d9afd25ec354",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX11-017",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX11-017"
+}

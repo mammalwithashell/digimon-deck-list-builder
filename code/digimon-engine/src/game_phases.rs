@@ -137,7 +137,18 @@ impl Game {
                 };
                 // `CannotUnsuspendInUnsuspendPhase` ("can't unsuspend in their
                 // next unsuspend phase" — EX13-041) gates ONLY this bulk step.
+                // Player-scoped locks also cover Digimon entering after the
+                // effect resolved, including tokens, but never Tamers.
+                let player_phase_lock = self.modifiers.player_has(
+                    tp,
+                    ModifierType::CannotUnsuspendInUnsuspendPhase,
+                ) && self.player(tp).battle_area[i].is_digimon_for_rules(
+                    &self.card_data,
+                    &self.modifiers,
+                    h,
+                );
                 if !self.cannot_unsuspend(h)
+                    && !player_phase_lock
                     && !self
                         .modifiers
                         .has(h, ModifierType::CannotUnsuspendInUnsuspendPhase)
@@ -303,7 +314,7 @@ impl Game {
         let Some(perm) = player.breeding_area.as_ref() else {
             return false;
         };
-        if perm.level(&self.card_data).unwrap_or(0) >= 3
+        if perm.top_card().digimon_dp(&self.card_data).is_some()
             && player.battle_area.len() < self.rules.field_slots as usize
         {
             return true;
@@ -345,6 +356,19 @@ impl Game {
             EffectTiming::StartOfYourMainPhase,
             crate::selection::TriggerSource::PlayerBreedingArea(tp),
         );
+        // Both sides observe the same phase entry. Enqueue before the single
+        // drain so turn-player priority and simultaneous trigger ordering apply.
+        // Ordinary effects cannot activate in breeding; opponent-main has no
+        // breeding-specific dispatch.
+        for player in 0..self.players.len() {
+            let player = player as PlayerId;
+            if player != tp {
+                self.enqueue_triggered(
+                    EffectTiming::StartOfOpponentsMainPhase,
+                    crate::selection::TriggerSource::PlayerBattleArea(player),
+                );
+            }
+        }
         self.drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();

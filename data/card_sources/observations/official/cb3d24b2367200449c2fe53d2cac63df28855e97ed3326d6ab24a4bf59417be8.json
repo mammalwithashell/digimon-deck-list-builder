@@ -1,0 +1,60 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT17-102",
+    "colors": "White",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "5",
+    "qa": [
+      "Yes, a Digimon with the names gained from the [All Turns] effect is considered to be moved. For example, if this card with a level 3 [Agumon] in digivolution cards moves from the breeding area to the battle area, a Digimon with the names [Greymon] and [Agumon] is considered to be moved."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Agumon] in name: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Agumon] in name: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] If this Digimon's name is [Koromon], this Digimon gets +3000 DP for the turn. Then, delete 1 of your opponent's Digimon with as much or less DP as this Digimon. [All Turns] This Digimon gains all the names of level 3 or lower cards in its digivolution cards. [On Deletion] You may play 1 Tamer card with [Tai Kamiya] or [Kari Kamiya] in its name from your hand without paying the cost, or hatch in your breeding area."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[On Deletion] You may play 1 Tamer card with [Tai Kamiya] or [Kari Kamiya] in its name from your hand without paying the cost, or hatch in your breeding area."
+      }
+    ],
+    "type": "Dinosaur"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "cb3d24b2367200449c2fe53d2cac63df28855e97ed3326d6ab24a4bf59417be8",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "87c2f5188bdc7161ea0f73ac1b38f23139fe5cb68bc96c6f377721bf59cb428a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT17-102",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT17-102"
+}

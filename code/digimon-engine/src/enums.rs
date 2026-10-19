@@ -27,6 +27,15 @@ pub enum EffectSourceKind {
     Tamer,
     Option,
     Rule,
+    /// Q2229: native effect of a Tamer also treated as a Digimon.
+    DigimonAndTamer,
+}
+impl EffectSourceKind {
+    /// Whether this activated origin belongs to a requested effect category.
+    pub fn includes(self, expected: Self) -> bool {
+        self == expected || (self == Self::DigimonAndTamer
+            && matches!(expected, Self::Digimon | Self::Tamer))
+    }
 }
 
 /// Card rarity.
@@ -219,6 +228,8 @@ pub enum EffectTiming {
     /// Fires at the start of the controller's Main phase (after Draw).
     /// Card scripts can use this for "at the start of your main phase" effects.
     StartOfYourMainPhase,
+    /// Fires at the start of the opposing player's Main phase (after breeding).
+    StartOfOpponentsMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
     EndOfYourNextTurn,
@@ -695,6 +706,8 @@ pub enum ModifierType {
     /// so it survives to the target's NEXT unsuspend phase whichever turn it
     /// lands on. DCGO `GainCanNotUnsuspendPlayerEffect(isOnlyActivePhase:
     /// true, EffectDuration.UntilOwnerActivePhase)`.
+    /// Player-scoped form applies to that player's battle-area Digimon,
+    /// including Digimon entering after installation.
     CannotUnsuspendInUnsuspendPhase,
 
     // Selection/targeting
@@ -965,6 +978,9 @@ pub enum ModifierType {
     /// payload-less `modifier: DnaMaterialIdentity` aura string (it would be a
     /// silent no-op). G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
     DnaMaterialIdentity,
+    /// Player restriction: cannot play Digimon with printed DP at most value.
+    /// Includes effect plays and Digimon tokens; appended to preserve existing IDs.
+    CannotPlayDigimonWithDPAtMost,
 }
 
 /// When a modifier expires.
@@ -1006,9 +1022,9 @@ pub enum Expiry {
     EndOfYourTurn,
     /// Track H §3 — printed text "until the end of their next turn"
     /// (EX1-068 Ice Wall!, AD1-014 MetalGarurumon). The entry persists
-    /// through the upcoming end-of-source's-turn AND end-of-opponent's-turn,
-    /// then expires at the SECOND end-of-opponent's-turn after install.
-    /// Tracked via a `pending_skips` counter on `ModifierEntry`.
+    /// until the opponent's next turn ends. If installed during their current
+    /// turn, skip that turn's end first. Tracked via `pending_skips` on
+    /// `ModifierEntry` and `PlayerModifierEntry`.
     EndOfOpponentsNextTurn,
     /// Symmetric mirror — "until the end of your next turn." Used for
     /// effects on the source's own side that span across the upcoming

@@ -1255,10 +1255,9 @@ mod tests {
         assert!(err.contains("does/not/exist.yaml"), "error names the path: {err}");
     }
 
-    // Mirrors the committed smoke scenario `qa/dcgo-exams/ST1/ST1-08.yaml`
-    // (same card, same deck, same single `pass` step) rather than inventing a
-    // new line: that file is part of the 145-scenario corpus the CLI already
-    // lowers cleanly, so this is known-legal, not a guess. The original
+    // Uses ST1-08 and one breeding pass with a deck in the default EX12
+    // pool. The st1-akiho deck contains ST1-08; keep this name synchronized
+    // with that pool so these tests actually reach the probe. The original
     // version of this fixture named EX12-004 with a `play: {from: hand}`
     // step -- but EX12-004 is a Digi-Egg (it starts in the egg deck, not
     // hand), so that line was never legal. Nothing caught it because the old
@@ -1268,8 +1267,8 @@ card: ST1-08
 clause: ST1-08#effect#0
 seed: 424242
 decks:
-  p0: { stack: [], rest: starter_st1_gaia_red }
-  p1: { stack: [], rest: starter_st1_gaia_red }
+  p0: { stack: [], rest: st1-akiho }
+  p1: { stack: [], rest: st1-akiho }
 steps:
   - actor: 0
     do: { pass: {} }

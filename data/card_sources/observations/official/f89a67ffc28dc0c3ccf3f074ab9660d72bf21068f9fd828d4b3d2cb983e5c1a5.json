@@ -1,0 +1,48 @@
+{
+  "extracted": {
+    "attribute": "Navi",
+    "card_id": "EX10-014",
+    "colors": "Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Sup./Appmon",
+    "play_cost": "4",
+    "qa": [
+      "Yes, you can."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] Give 2 of your opponent's Digimon ＜Security A. -1＞ until their turn ends."
+      },
+      {
+        "label": "Link DP",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
+      }
+    ],
+    "type": "Weather"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f89a67ffc28dc0c3ccf3f074ab9660d72bf21068f9fd828d4b3d2cb983e5c1a5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "86a8ec589257765649a6e41fa7e40b8a09b898ecb0241ea09ad365beebb8384f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-014",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-014"
+}

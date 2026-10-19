@@ -18,6 +18,15 @@ pub struct ValidationContext<'a> {
 
 pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<ValidationError>> {
     let mut errors = Vec::new();
+    if let Some(rule) = &spec.deck_rule {
+        if let Err(message) = rule.validate() {
+            errors.push(ValidationError {
+                card_id: spec.card.clone(),
+                path: "deck_rule".into(),
+                message,
+            });
+        }
+    }
 
     // Validate the card's top-level clauses plus the per-face clauses of a
     // DUAL card (`dual.digimon.effects` / `dual.option.effects`,
@@ -85,6 +94,12 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                         }
                         DeclarativeKind::CostReduction => {
                             if let crate::clause::TypedDeclarativeBody::CostReduction(b) = body {
+                                if b.set_cost.is_some()
+                                    && (b.amount.is_some()
+                                        || b.when_any_ally_digivolves_into.is_some())
+                                {
+                                    errors.push(ValidationError{card_id:spec.card.clone(),path:prefix.clone(),message:"set_cost cannot combine with an amount or digivolve trigger".into()});
+                                }
                                 if let Some(pred) = &b.when_any_ally_played {
                                     validate_predicate(
                                         pred,
@@ -266,6 +281,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     && b.modifier.is_none()
                                     && b.effect_immunity.is_none()
                                     && b.dna_material_identity.is_none()
+                                    && b.source_card_trash_protection.is_none()
                                 {
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
@@ -273,6 +289,21 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, grant_traits, modifier, effect_immunity, or dna_material_identity"
                                             .to_string(),
                                     });
+                                }
+                                if let Some(filter) = &b.source_card_trash_protection {
+                                    validate_predicate(
+                                        filter,
+                                        &format!("{prefix}.source_card_trash_protection"),
+                                        &spec.card,
+                                        ctx,
+                                        &mut errors,
+                                    );
+                                    if b.while_condition.is_some()
+                                        || b.applies_to_opponent_security_dp == Some(true)
+                                        || b.applies_to_own_security_dp == Some(true)
+                                    {
+                                        errors.push(ValidationError { card_id: spec.card.clone(), path: prefix.clone(), message: "source_card_trash_protection requires an ordinary declarative aura".to_string() });
+                                    }
                                 }
                                 // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET: a
                                 // self-aura payload ("This Digimon is also
@@ -309,14 +340,18 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                                 .to_string(),
                                         });
                                     }
-                                    let name_empty =
-                                        d.name.as_ref().map(|n| n.trim().is_empty()).unwrap_or(true);
+                                    let name_empty = d
+                                        .name
+                                        .as_ref()
+                                        .map(|n| n.trim().is_empty())
+                                        .unwrap_or(true);
                                     if d.level.is_none() && name_empty {
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),
                                             path,
-                                            message: "dna_material_identity needs a level and/or a name"
-                                                .to_string(),
+                                            message:
+                                                "dna_material_identity needs a level and/or a name"
+                                                    .to_string(),
                                         });
                                     }
                                 }
@@ -870,6 +905,28 @@ fn validate_step(
     errors: &mut Vec<ValidationError>,
 ) {
     match step {
+        StepSpec::PlaceAsBottomSource(args) => {
+            validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
+            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+        }
+        StepSpec::PaySourcePrefix(args) => {
+            validate_predicate(&args.host_filter, prefix, card_id, ctx, errors);
+            if args.minimum == 0 || args.minimum > i64::MAX as u64 {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: prefix.into(),
+                    message: "source-prefix minimum must be in 1..=i64::MAX".into(),
+                });
+            }
+        }
+        StepSpec::PlayToBreedingFromHand(args) => {
+            validate_binding_ref(
+                &args.hand_index,
+                &format!("{prefix}.hand_index"),
+                card_id,
+                errors,
+            );
+        }
         StepSpec::Battle(args) => {
             validate_binding_ref(
                 &args.attacker,
@@ -1216,6 +1273,23 @@ fn validate_step(
             );
         }
         StepSpec::SelectMaterials(args) => {
+            let names: std::collections::HashSet<String> = args
+                .named_groups
+                .iter()
+                .map(|s| s.to_ascii_lowercase())
+                .collect();
+            if args.require_max && args.named_groups.is_empty()
+                || !args.named_groups.is_empty()
+                    && (args.uniqueness.is_some() || args.same_by.is_some())
+                || args.named_groups.iter().any(|s| s.trim().is_empty())
+                || names.len() != args.named_groups.len()
+            {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.named_groups"),
+                    message: "named_groups must contain distinct nonempty names, cannot combine with uniqueness/same_by, and is required by require_max".to_string(),
+                });
+            }
             if let crate::step::CountBound::Formula { formula } = &args.max {
                 validate_formula(
                     formula,
@@ -1426,7 +1500,17 @@ fn validate_step(
                 validate_step(s, &format!("{prefix}.body[{k}]"), card_id, ctx, errors);
             }
         }
-        StepSpec::DeleteAllPermanents(a) => {
+        StepSpec::ReturnAllToDeck(a) => {
+            validate_predicate(&a.over, &format!("{prefix}.over"), card_id, ctx, errors);
+            if !matches!(a.position, crate::step::StackPosition::Top | crate::step::StackPosition::Bottom) {
+                errors.push(ValidationError{card_id:card_id.to_string(),path:format!("{prefix}.position"),message:"simultaneous deck returns require top or bottom".into()});
+            }
+        }
+        StepSpec::SuspendAndCancelAllMatchingLeaves(a) => {
+            validate_binding_ref(&a.target,&format!("{prefix}.target"),card_id,errors);
+            validate_predicate(&a.filter,&format!("{prefix}.filter"),card_id,ctx,errors);
+        }
+        StepSpec::DeleteAllPermanents(a) | StepSpec::ReturnAllToHand(a) => {
             validate_predicate(&a.over, &format!("{prefix}.over"), card_id, ctx, errors);
         }
         StepSpec::PerSelected(ps) => {
@@ -1451,7 +1535,13 @@ fn validate_step(
         }
         StepSpec::SelectEffectChoice(args) => {
             for (k, cond) in args.legal_when.iter().flatten().enumerate() {
-                validate_predicate(cond, &format!("{prefix}.legal_when[{k}]"), card_id, ctx, errors);
+                validate_predicate(
+                    cond,
+                    &format!("{prefix}.legal_when[{k}]"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
             }
         }
         _ => {}
@@ -1922,6 +2012,17 @@ fn validate_step_binding_scope(
         // placement — it is a legitimate optional binding for a downstream
         // `if { binding_present }` "If this effect placed" gate (EX7-044).
         StepSpec::PlaceAsBottomSource(args) => {
+            for (side, reference) in [("source", &args.source), ("target", &args.target)] {
+                if let BindingRef::Structured(StructuredBindingRef { top_of: Some(name), .. }) = reference {
+                    report_if_undeclared_binding(
+                        name,
+                        &format!("{prefix}.{side}.top_of"),
+                        card_id,
+                        scope,
+                        errors,
+                    );
+                }
+            }
             declare_optional_binding(scope, &args.bind_placed_as);
         }
         // Same success-only optional binding for a permanent placed into
@@ -2061,7 +2162,13 @@ fn validate_step_binding_scope(
             // already grant via their post-step `declare_optional_binding`.
             scope.extend(then_scope);
         }
-        StepSpec::DeleteAllPermanents(args) => {
+        StepSpec::ReturnAllToDeck(args) => {
+            validate_predicate_binding_scope(&args.over,&format!("{prefix}.over"),card_id,scope,errors);
+        }
+        StepSpec::SuspendAndCancelAllMatchingLeaves(args) => {
+            validate_predicate_binding_scope(&args.filter,&format!("{prefix}.filter"),card_id,scope,errors);
+        }
+        StepSpec::DeleteAllPermanents(args) | StepSpec::ReturnAllToHand(args) => {
             validate_predicate_binding_scope(
                 &args.over,
                 &format!("{prefix}.over"),
@@ -2562,6 +2669,7 @@ fn validate_binding_ref(
         permanent,
         source_permanent,
         of_permanent,
+        top_of,
         deck_top,
         security_top,
         own_breeding,
@@ -2583,6 +2691,7 @@ fn validate_binding_ref(
         binding.is_some(),
         permanent.is_some(),
         of_permanent.is_some(),
+        top_of.is_some(),
         deck_top.is_some(),
         security_top.is_some(),
         matches!(own_breeding, Some(true)),
@@ -2870,6 +2979,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotUseOptionCards",
     // Phase 6 player-scoped flood gates
     "CannotPlayDigimonByEffect",
+    "CannotPlayDigimonWithDPAtMost",
     "CannotPlayTamerByEffect",
     "CannotGainMemoryByEffect",
     "CannotGainMemoryExceptFromTamers",
@@ -3028,7 +3138,10 @@ fn validate_modifier_payload(
     };
     let m = args.modifier.as_str();
     let Some(p) = &args.payload else {
-        if matches!(m, "ChangeBaseCardName" | "ChangeBaseCardColor" | "ChangeTraits") {
+        if matches!(
+            m,
+            "ChangeBaseCardName" | "ChangeBaseCardColor" | "ChangeTraits"
+        ) {
             push(
                 errors,
                 format!(
@@ -3058,7 +3171,10 @@ fn validate_modifier_payload(
         return;
     }
     if p.replace_traits && p.traits.is_none() {
-        push(errors, "payload.replace_traits is only valid with payload.traits".into());
+        push(
+            errors,
+            "payload.replace_traits is only valid with payload.traits".into(),
+        );
     }
     let allowed: &[&str] = match keys[0] {
         "name" => &["ChangeBaseCardName", "CanOnlyDigivolveInto"],
@@ -3382,9 +3498,9 @@ effects:
         );
         let reg = StubRegistry::empty();
         let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
-        assert!(errs
-            .iter()
-            .any(|e| e.message.contains("payload.name is only valid for modifier")));
+        assert!(errs.iter().any(|e| e
+            .message
+            .contains("payload.name is only valid for modifier")));
     }
 
     #[test]

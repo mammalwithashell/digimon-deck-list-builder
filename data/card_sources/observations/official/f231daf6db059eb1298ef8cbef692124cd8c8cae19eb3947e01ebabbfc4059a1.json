@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX9-027",
+    "colors": "Yellow Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "No, you can't end that attack. If the \"by doing X\" condition isn't met, the rest of the effect isn't processed. In this case, if you can't delete 1 of your other Digimon, then you can't end the attack."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Puppet] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Puppet] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] [On Deletion] By trashing 1 card in your hand, 1 of your opponent's Digimon gets -4000 DP for the turn."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack."
+      }
+    ],
+    "type": "Puppet/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "f231daf6db059eb1298ef8cbef692124cd8c8cae19eb3947e01ebabbfc4059a1",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "42e19c0ade600747f224b2dd1b1b1b274ad3401a78ed5e6be11acaf54d806985",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX9-027",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX9-027"
+}

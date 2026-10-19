@@ -1,0 +1,97 @@
+{
+  "card_id": "EX13-008",
+  "printing": {
+    "printing_id": "EX13-008",
+    "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-008.png?260529",
+    "alternate_art": false,
+    "category_id": ""
+  },
+  "name": "Dracomon",
+  "rarity": "R",
+  "card_type": "Digimon",
+  "level": 3,
+  "colors": [
+    "Red"
+  ],
+  "play_cost": 3,
+  "dp": 1000,
+  "form": "Rookie",
+  "attribute": "Data",
+  "type": "Dragon",
+  "evolution_routes": [
+    {
+      "slot": 1,
+      "colors": [
+        "Red"
+      ],
+      "cost": 0,
+      "from_level": 2
+    }
+  ],
+  "grade_evolution_routes": [],
+  "tamer_evolution_routes": [],
+  "special_evolution_routes": [
+    "[Digivolve] [Bebydomon]: Cost 0"
+  ],
+  "text_sections": [
+    {
+      "label": "Special Digivolution Condition",
+      "text": "[Digivolve] [Bebydomon]: Cost 0"
+    },
+    {
+      "label": "Effect",
+      "text": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Dracomon] or [Examon] in its text among them to the hand. Return the rest to the bottom of the deck."
+    },
+    {
+      "label": "Inherited Effect",
+      "text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+    }
+  ],
+  "rule_grants": {
+    "traits": [],
+    "attributes": []
+  },
+  "qa": [
+    {
+      "number": "Q7226",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+    },
+    {
+      "number": "Q7227",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does the text \"[AA] or [BB] in its text\" refer to?",
+      "answer": "It checks if that card has [AA] or [BB] in its text."
+    }
+  ],
+  "layout": "single",
+  "faces": [
+    {
+      "face_id": "primary",
+      "kind": "digimon",
+      "name": "Dracomon",
+      "colors": [
+        "Red"
+      ],
+      "play_cost": 3,
+      "level": 3,
+      "dp": 1000,
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Bebydomon]: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Dracomon] or [Examon] in its text among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+        }
+      ]
+    }
+  ],
+  "printing_field_gaps": []
+}

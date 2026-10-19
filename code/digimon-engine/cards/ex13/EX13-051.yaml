@@ -55,8 +55,14 @@ effects:
         - source_is_unsuspended: true
     summary: "[All Turns] When any of your other <Blocker> Digimon would leave other than by your effects, by suspending this Digimon, they don't leave"
     process:
-      - suspend: { target: source }
-      - cancel_replacement: {}
+      - suspend_and_cancel_all_matching_leaves:
+          target: source
+          filter:
+            all_of:
+              - replacement_subject_is_mine: true
+              - kind: digimon
+              - other: true
+              - has_keyword: Blocker
 
   - scope: inherited
     when: on_suspend

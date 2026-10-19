@@ -1,0 +1,73 @@
+# Official observation 0fda01304054252d93647b62fbdb85c00250f149b537ccf5776584fdd1f7503c;
+# printed BT21-052 image verified. DCGO BT21_052.cs is a behavioral cross-check.
+card: BT21-052
+name: "Examon (X Antibody)"
+kind: digimon
+level: 7
+color: [green, red, blue]
+cost: 16
+dp: 16000
+form: Mega
+attribute: Data
+traits: [Holy Warrior, X Antibody, Royal Knight]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 6
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 6
+  - kind: digivolve
+    from: { name_is: Examon }
+    cost: 2
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+  - kind: grant_keyword
+    keyword: Blocker
+  - kind: grant_keyword
+    keyword: Evade
+  - when: when_digivolving
+    summary: "Suspend all opponent Digimon and Tamers; then delete 1 suspended Digimon or Tamer"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: suspended
+          body:
+            - suspend: { target: suspended }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - is_suspended: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "Delete 1 suspended Digimon or Tamer"
+      - delete_permanent: { target: victim }
+  - when: on_suspend
+    once_per_turn: true
+    condition: { event_target_is_source: true }
+    summary: "[All Turns][Once Per Turn] When this Digimon suspends, unsuspend it; with Examon or X Antibody in sources, trash opponent top security"
+    process:
+      - unsuspend: { target: source }
+      - if:
+          condition:
+            self_source_count:
+              filter:
+                any_of:
+                  - name_is: Examon
+                  - name_is: X Antibody
+              op: gte
+              value: 1
+          then:
+            - trash_top_security: { of: opponent }
+

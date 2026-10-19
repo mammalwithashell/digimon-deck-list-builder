@@ -1,0 +1,112 @@
+# Source-derived draft; independent verification pending.
+card: EX13-045
+clause: EX13-045#effect#4
+interaction:
+  id: probe:EX13-045#effect#4:optional_decline
+  source: probe
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-045
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX13-045-interaction-blocker-decline-ex13-battle-boundary8-p0
+  p1:
+    stack:
+    - ST1-10
+    - ST1-16
+    - ST1-03
+    - BT1-090
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX13-045-interaction-blocker-decline-ex13-battle-boundary8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-10
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-045
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 9
+  that:
+    memory: -8
+    p0.field:
+    - card_id: EX13-045
+      suspended: false
+    p0.security: 4
+    p1.field:
+    - card_id: ST1-10
+      suspended: true

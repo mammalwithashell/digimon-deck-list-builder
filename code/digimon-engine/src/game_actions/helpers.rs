@@ -9,6 +9,60 @@ use crate::replacement::*;
 use crate::trigger_context::*;
 
 impl Game {
+    /// One source-payment event: remove the selected physical cards first,
+    /// apply owner-relative Overflow, and enqueue observers without interleaving.
+    pub(crate) fn trash_source_prefix_payment_batch(
+        &mut self,
+        host: PermanentHandle,
+        cards: &[CardHandle],
+    ) -> usize {
+        let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(host.player));
+        let Some(perm) = self
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+        else {
+            return 0;
+        };
+        if cards.iter().any(|c| {
+            !perm
+                .card_sources
+                .iter()
+                .take(perm.card_sources.len().saturating_sub(1))
+                .any(|s| s.handle() == *c)
+        }) {
+            return 0;
+        }
+        let host_card = perm.top_card().handle();
+        let mut removed = Vec::new();
+        for card in cards {
+            let i = perm
+                .card_sources
+                .iter()
+                .position(|s| s.handle() == *card)
+                .expect("validated physical source");
+            removed.push(perm.card_sources.remove(i));
+        }
+        let count = removed.len();
+        for source in &removed {
+            self.player_mut(source.owner).trash.push(source.clone());
+        }
+        self.tick_declarative_effects();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
+        self.apply_ace_overflow_for_sources(&removed);
+        for source in removed {
+            self.enqueue_digivolution_card_trashed(
+                host.player,
+                host,
+                host_card,
+                source.handle(),
+                cause,
+            );
+        }
+        count
+    }
+
     /// Trash one already-removed digivolution source to `trash_owner`'s trash
     /// and fire `OnDigivolutionCardTrashed` for it on `fire_target`.
     ///

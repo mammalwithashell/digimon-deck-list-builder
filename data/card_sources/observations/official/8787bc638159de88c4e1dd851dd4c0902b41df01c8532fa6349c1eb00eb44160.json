@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Entertainment",
+    "card_id": "BT22-030",
+    "colors": "Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "2000",
+    "form": "Stnd./Appmon",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Torajiro Asuka] from your hand without paying the cost."
+      },
+      {
+        "label": "Link DP",
+        "text": "+2000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
+      }
+    ],
+    "type": "Music"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "8787bc638159de88c4e1dd851dd4c0902b41df01c8532fa6349c1eb00eb44160",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "8e5f5e493a287f06026ef21f0ffc95f16fa42244dc520d9d58817bf4350c1a48",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT22-030",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT22-030"
+}

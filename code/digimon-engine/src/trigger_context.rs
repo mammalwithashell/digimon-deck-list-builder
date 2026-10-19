@@ -108,11 +108,13 @@ pub struct MovedCardSet {
 /// step 7 of `DestroyPermanentsClass.Destroy()`. They let OnDeletion handlers
 /// answer "what was this Digimon's DP / level / cost / names / traits / source
 /// list immediately before deletion?" after the permanent has been trashed.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct DeletedObjectSnapshot {
     pub former_controller: PlayerId,
     pub top_card: CardHandle,
+    /// Last-known effective field kind; card-only queries use top_card metadata.
     pub card_kind: CardKind,
+    pub retained_kind: Option<CardKind>,
     pub traits: Vec<String>,
     pub level: Option<u8>,
     pub dp: Option<i32>,
@@ -143,17 +145,42 @@ pub struct DeletedObjectSnapshot {
     pub is_token: bool,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+/// Immutable field identity at battle comparison time. Unlike a permanent
+/// handle, this remains meaningful after mutual deletion and slot compaction.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BattleCombatantSnapshot {
+    /// Stable identity of the compared Digimon; ordinary evolution retains it.
+    pub battle_identity: u64,
+    /// Captured after all battle-deletion replacements finish, before fanout.
+    pub survived: bool,
+    pub controller: PlayerId,
+    pub top_card: CardHandle,
+    pub data_index: usize,
+    pub identity: crate::permanent::SynthIdentity,
+    pub is_suspended: bool,
+}
+
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct TriggerContext {
     /// This entry was captured at an actual security check, before Security
     /// processing. Leaving its source area permanently cancels activation.
     pub captured_security_check: bool,
     pub security_check_source_invalidated: bool,
     pub security_check_face_generation: Option<u64>,
+    /// Physical members of one simultaneous play event. Each member has no nested group.
+    pub simultaneous_play_members: Vec<TriggerContext>,
+    /// Captured physical eligible subjects for one paid deletion-prevention effect.
+    pub replacement_deletion_members: Vec<(PlayerId, u16, u64)>,
+    /// Immutable effect lookup retained while its physical payer leaves.
+    pub(crate) replacement_paid_prevention: Option<(CardHandle, String, u8, Option<crate::enums::Keyword>)>,
+    pub(crate) replacement_deletion_cause: Option<(crate::replacement::ReplacementCause, Option<PlayerId>)>,
     pub subject: Option<EventSubject>,
     pub target_permanent: Option<PermanentHandle>,
     pub target_card: Option<CardHandle>,
     pub event_permanent: Option<PermanentHandle>,
+    /// Identity of the event Digimon, retained across ordinary evolution and
+    /// compaction; DNA and leaving/replaying create a different permanent.
+    pub event_permanent_identity: Option<(PlayerId, u64)>,
     pub event_card: Option<CardHandle>,
     pub event_source_card: Option<CardHandle>,
     pub event_host_card: Option<CardHandle>,
@@ -173,24 +200,23 @@ pub struct TriggerContext {
     pub provenance_token: Option<ProvenanceToken>,
     pub was_security_skill: bool,
     pub option_last_field_state: Option<crate::option_lifecycle::OptionFieldState>,
-    /// The permanent that WON a Digimon-vs-Digimon battle (its opponent was
-    /// deleted in battle and it was NOT a tie). Set on the `EndOfBattle`
+    /// The surviving permanent that won a battle by a strict comparison,
+    /// including against a Security Digimon. Opponent deletion is not required.
+    /// Set on the `EndOfBattle`
     /// firing so a BOARD-WIDE observer can react to "any of your [X] Digimon
     /// win a battle" (BT25-020 Marsmon; G-DSL-BATTLE-WINNER-BOARDWIDE). `None`
-    /// on a tie (mutual destruction) — a tie has no winner — and on a direct
-    /// player attack (which does not fire `EndOfBattle`). Distinct from the
+    /// on a tie — a tie has no winner — or when the winning Security Digimon
+    /// has no battle-area permanent. A check without a security battle does
+    /// not fire `EndOfBattle`. Distinct from the
     /// carrier-scoped `source_deleted_battle_opponent` idiom, which fires on
     /// the OnAnyDeletion path when the observer *is* the winner. Mirrors DCGO
     /// `CardEffectCommons.CanTriggerWhenWinBattle` reading the battle
     /// hashtable's `WinnerPermanents` while `WasTie == false`.
     pub battle_winner: Option<PermanentHandle>,
-    /// EndOfBattle (`BattleResolved`) only: the combatant that survived while
-    /// its battle opponent was actually deleted — including a tie whose
-    /// survivor was protected. `None` when the loser's deletion was prevented
-    /// or no combatant survived. Read by the `event_battle_deleter`
-    /// predicate ("when your Digimon delete your opponent's Digimon in
-    /// battle" — EX13-041). G-DSL-BATTLE-DELETER.
-    pub battle_deleter: Option<PermanentHandle>,
+    /// Combatants whose opposing combatant was actually deleted by this
+    /// battle. Both entries can exist on a tie. Observers themselves still
+    /// require a live eligible source; these snapshots never grant liveness.
+    pub battle_deleters: Vec<BattleCombatantSnapshot>,
     /// TOP CARD of the Digimon the deleted carrier was battling, captured when
     /// its `[On Deletion]` entries are ENQUEUED on a `Battle`-cause deletion
     /// (`Game::enqueue_batch_on_deletion`, while `pending_attack` is still
@@ -228,6 +254,17 @@ pub struct TriggerContext {
 }
 
 impl TriggerContext {
+    /// Resolve the captured event object, never a later occupant of its old slot.
+    /// Legacy contexts without a captured token retain their compatibility handle.
+    pub fn resolve_event_permanent(&self, game: &crate::game::Game) -> Option<PermanentHandle> {
+        if let Some((player, identity)) = self.event_permanent_identity {
+            return game.player(player).battle_area.iter()
+                .position(|permanent| permanent.battle_identity == Some(identity))
+                .map(|index| PermanentHandle { player, index: index as u8 });
+        }
+        self.event_permanent
+    }
+
     /// The cards an effect just trashed from the event player's hand
     /// (`OnDiscardHand` board-wide observer fan-out only; the trashed card's
     /// own `scope: trash` firing names itself via `event_card`). Empty on
@@ -271,4 +308,81 @@ impl From<crate::option_lifecycle::OptionTrashCause> for EventCause {
             crate::option_lifecycle::OptionTrashCause::Resolution => EventCause::Cost,
         }
     }
+}
+
+impl std::fmt::Debug for DeletedObjectSnapshot {
+ fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+ let mut d=f.debug_struct("DeletedObjectSnapshot");
+ d.field("former_controller", &self.former_controller);
+ d.field("top_card", &self.top_card);
+ d.field("card_kind", &self.card_kind);
+ d.field("traits", &self.traits);
+ d.field("level", &self.level);
+ d.field("dp", &self.dp);
+ d.field("cause", &self.cause);
+ d.field("dp_just_before", &self.dp_just_before);
+ d.field("level_just_before", &self.level_just_before);
+ d.field("cost_just_before", &self.cost_just_before);
+ d.field("names_just_before", &self.names_just_before);
+ d.field("traits_just_before", &self.traits_just_before);
+ d.field("source_count_just_before", &self.source_count_just_before);
+ d.field("digisources_just_before", &self.digisources_just_before);
+ d.field("is_token", &self.is_token);
+ if self.retained_kind.is_some() { d.field("retained_kind", &self.retained_kind); }
+ d.finish()
+ }
+}
+
+impl std::fmt::Debug for TriggerContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("TriggerContext");
+        d.field("subject", &self.subject);
+        d.field("target_permanent", &self.target_permanent);
+        d.field("target_card", &self.target_card);
+        d.field("event_permanent", &self.event_permanent);
+        d.field("event_permanent_identity", &self.event_permanent_identity);
+        d.field("event_card", &self.event_card);
+        d.field("event_source_card", &self.event_source_card);
+        d.field("event_host_card", &self.event_host_card);
+        d.field("event_host_permanent", &self.event_host_permanent);
+        d.field("affected_player", &self.affected_player);
+        d.field("attack_target_change", &self.attack_target_change);
+        d.field("source_player", &self.source_player);
+        d.field("cause", &self.cause);
+        d.field("source_effect", &self.source_effect);
+        d.field("selected_results", &self.selected_results);
+        d.field("moved_card_sets", &self.moved_card_sets);
+        d.field("effect_initiated", &self.effect_initiated);
+        d.field("dna_origin", &self.dna_origin);
+        d.field("deleted_object", &self.deleted_object);
+        d.field("old_attack_target", &self.old_attack_target);
+        d.field("new_attack_target", &self.new_attack_target);
+        d.field("provenance_token", &self.provenance_token);
+        d.field("was_security_skill", &self.was_security_skill);
+        d.field("option_last_field_state", &self.option_last_field_state);
+        d.field("battle_winner", &self.battle_winner);
+        d.field("battle_deleters", &self.battle_deleters);
+        d.field("battle_opponent_card", &self.battle_opponent_card);
+        d.field("discard_hand_player", &self.discard_hand_player);
+        d.field("discard_cause_controller", &self.discard_cause_controller);
+        d.field("event_cause_effect", &self.event_cause_effect);
+        if !self.replacement_deletion_members.is_empty() { d.field("replacement_deletion_members", &self.replacement_deletion_members); }
+        if let Some(value)=&self.replacement_paid_prevention { d.field("replacement_paid_prevention", value); }
+        if let Some(value)=&self.replacement_deletion_cause { d.field("replacement_deletion_cause", value); }
+        if !self.simultaneous_play_members.is_empty() { d.field("simultaneous_play_members", &self.simultaneous_play_members); }
+        d.finish()
+    }
+}
+
+#[cfg(test)] mod simultaneous_play_debug_tests {
+ use super::*;
+ #[test] fn ordinary_event_debug_retains_legacy_shape() {
+  assert_eq!(format!("{:?}",TriggerContext::default()),"TriggerContext { subject: None, target_permanent: None, target_card: None, event_permanent: None, event_permanent_identity: None, event_card: None, event_source_card: None, event_host_card: None, event_host_permanent: None, affected_player: None, attack_target_change: None, source_player: None, cause: None, source_effect: None, selected_results: [], moved_card_sets: [], effect_initiated: false, dna_origin: false, deleted_object: None, old_attack_target: None, new_attack_target: None, provenance_token: None, was_security_skill: false, option_last_field_state: None, battle_winner: None, battle_deleters: [], battle_opponent_card: None, discard_hand_player: None, discard_cause_controller: None, event_cause_effect: None }");
+ }
+ #[test] fn grouped_event_debug_retains_all_physical_members() {
+  let mut group=TriggerContext::default();
+  group.simultaneous_play_members=vec![TriggerContext{event_card:Some(CardHandle(11)),..Default::default()},TriggerContext{event_card:Some(CardHandle(12)),..Default::default()}];
+  let before=format!("{group:?}");assert_eq!(before,format!("{:?}",group.clone()));
+  group.simultaneous_play_members[1].event_card=Some(CardHandle(13));assert_ne!(before,format!("{group:?}"));
+ }
 }

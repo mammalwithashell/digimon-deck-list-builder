@@ -649,11 +649,11 @@
     },
     "LM-027": {
       "card_name": "Red Scramble",
-      "validated_date": "2026-05-21",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Medusamon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-027.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_027.rs",
       "test_count": 22,
@@ -662,15 +662,16 @@
         "E1",
         "G1-adjacent"
       ],
-      "notes": "G-ZONE-SELECTED-TRASH-TO-DECK-TOP resolved 2026-05-21 â€” clause B re-authored as a real kind:delay clause using return_trash_list_to_deck_bottom destination:top; raw_rust no-op removed; 4 delay tests implemented. 22/22 tests pass, 0 ignored."
+      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "LM-055": {
       "card_name": "Sprint Dash Training",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-g-medusamon-pilot-completion",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Medusamon Batch 16",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-055.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_055.rs",
       "test_count": 12,
@@ -680,7 +681,8 @@
         "Option-as-permanent Delay",
         "C-digivolve"
       ],
-      "notes": "Sprint Dash Training Delay-Option color-bypass ships natively; conditional IgnoreColorRequirement is honored by Option masks (G-IGNORE-COLOR-MASK closed 2026-05-02). All 8 tests pass after Phase 2 Track G empty-placeholder retirement."
+      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "BT20-016": {
       "card_name": "Paildramon",
@@ -1389,11 +1391,11 @@
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "DNA Omnimon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/bt8/BT8-097.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_097.rs",
       "test_count": 21,
@@ -1401,8 +1403,9 @@
         "D2",
         "D6"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust.",
-      "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale."
+      "notes": "Blocked by G-EFFECT-PLAY-CONTROLLER-PROVENANCE; G-EFFECT-PLAY-BREEDING-FLOODGATE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "P-151": {
       "card_name": "Digimon Liberator",
@@ -2168,18 +2171,19 @@
     },
     "EX1-068": {
       "card_name": "Ice Wall!",
-      "validated_date": "2026-05-20",
-      "report": "complete-dna-omnimon-archetype",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "DNA Omnimon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/ex1/EX1-068.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex1/ex1_068.rs",
       "test_count": 6,
       "patterns": [
         "F1"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "Blocked by G-ENGINE-DURATION-SCOPED-DYNAMIC-TRIGGER-GRANT. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "EX4-003": {
       "card_name": "Tsunomon",
@@ -4952,22 +4956,23 @@
     },
     "BT20-045": {
       "card_name": "Examon",
-      "validated_date": "2026-06-15",
-      "report": "royal-knights-author-remaining-2026-06-15",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Royal Knights",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-045.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_045.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
+      "test_count": 16,
+      "tests_passing": 16,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "ROYAL-KNIGHTS-POOL-SLICE"
       ],
-      "notes": "DNA-gated highest-DP sweep + any-suspend self-unsuspend authored; integration QA fix: added MISSING standard DNA digivolve path (Green Lv6 + Blue Lv6).",
-      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
+      "notes": "16/16 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "prior_authoring_status": "IMPLEMENTED",
+      "integration_verification": "limited"
     },
     "BT20-056": {
       "card_name": "Alphamon",
@@ -5085,22 +5090,23 @@
     },
     "BT23-047": {
       "card_name": "Examon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-impl-2026-06-14",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Royal Knights",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-047.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_047.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
+      "test_count": 18,
+      "tests_passing": 18,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "ROYAL-KNIGHTS-POOL-SLICE"
       ],
-      "notes": "Added On Play/WD suspend-5 opp + opp-Digimon next-unsuspend lock + may-attack; Your-Turn opp-security-removed Option-trash + delete-suspended. Piercing/Security A.+1/Partition retained.",
-      "audit_note": "Re-audited + implemented 2026-06-14 RK pass; prior gap markers were stale."
+      "notes": "18/18 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "prior_authoring_status": "IMPLEMENTED",
+      "integration_verification": "limited"
     },
     "BT23-057": {
       "card_name": "Gankoomon",
@@ -8457,20 +8463,25 @@
     },
     "BT11-033": {
       "card_name": "MirageGaogamon",
-      "validated_date": "2026-06-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
-      "archetype": "judge-quiz (Q10/Q11)",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/bt11/BT11-033.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_033.rs",
-      "test_count": 5,
+      "test_count": 16,
       "patterns": [
         "when-digivolving",
         "return-to-hand",
         "memory-observer"
       ],
-      "notes": "Clause 1 (return Lv5- / else security-to-hand) done; Clause 2 (gain memory per 4 cards in opp hand) BLOCKED G-ON-ADD-TO-HAND-OBSERVER"
+      "notes": "16/16 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "prior_authoring_status": "PARTIAL",
+      "tests_passing": 16,
+      "tests_ignored": 0,
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
     },
     "BT4-098": {
       "card_name": "Atomic Inferno",
@@ -10656,9 +10667,22 @@
       "notes": "store-champs June-2026 resume wave A; review fix applied at merge: [Main] placement tail swapped to place_self_under_permanent (in-flight pending_option claim; EX7-071 sibling); suite green."
     },
     "EX1-066": {
-      "status": "IMPLEMENTED",
+      "status": "AUDITED-OK",
       "date": "2026-07-04",
-      "notes": "store-champs June-2026 resume wave A; review fix applied at merge: reveal add-to-hand pick made mandatory (optional:false, DCGO canNoSelect=false) + forced-pick assertion; suite green."
+      "notes": "19/19 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "prior_authoring_status": "IMPLEMENTED",
+      "card_name": "Analog Youth",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/ex1/EX1-066.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex1/ex1_066.rs",
+      "test_count": 19,
+      "tests_passing": 19,
+      "tests_ignored": 0,
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
     },
     "BT19-099": {
       "card_name": "The Wicked God Descends!",
@@ -12065,11 +12089,11 @@
     },
     "EX13-018": {
       "card_name": "Coredramon",
-      "validated_date": "2026-10-01",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Slice — Dracomon / dragon (EX13)",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-018.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_018.rs",
       "test_count": 15,
@@ -12078,24 +12102,26 @@
         "F",
         "D1"
       ],
-      "notes": "[OP][WD] optional trash-1 text card → Draw 2 (BT24-008 idiom); [Your Turn] on own other text-Digimon played → may digivolve into [Examon]-text hand card cost −2 (EX12-002 idiom, no OPT); inherited [Your Turn] +2000; Lv.3 [Dracomon]-name alt digivolve cost 2."
+      "notes": "Prior IMPLEMENTED authoring status restored after G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE repair. Current 15/15 focused tests pass (ex13-cost-restoration-focused-green.log); shared cost-choice suite passes 8/8 (cost-choice-green.log), including distinct routes, reduction, clone and source identity. Stored route and effect#2 oracle verdicts are confirmed. No training-readiness promotion.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "EX13-039": {
       "card_name": "Coredramon",
-      "validated_date": "2026-10-01",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Slice — Dracomon / dragon (EX13)",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-039.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_039.rs",
-      "test_count": 16,
+      "test_count": 15,
       "patterns": [
         "B",
         "F",
         "D1"
       ],
-      "notes": "[OP][WD] may return 1 non-Digi-Egg [Dracomon]/[Examon]-text card from trash (BT21-056 idiom); [Your Turn] digivolve observer identical to EX13-018; inherited +2000; Lv.3 [Dracomon]-name alt cost 2."
+      "notes": "Prior IMPLEMENTED authoring status restored after G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE repair. Current 15/15 focused tests pass (ex13-cost-restoration-focused-green.log); corrected stale tracker count of 16 to the 15 tests present. Shared cost-choice suite passes 8/8 (cost-choice-green.log), including distinct routes, reduction, clone and source identity. Stored route and effect#2 oracle verdicts are confirmed. No training-readiness promotion.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "EX13-044": {
       "card_name": "Breakdramon",
@@ -13286,21 +13312,21 @@
     },
     "EX13-024": {
       "card_name": "Slayerdramon",
-      "validated_date": "2026-10-01",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "EX13 slice — orphan staples",
       "yaml_path": "code/digimon-engine/cards/ex13/EX13-024.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex13/ex13_024.rs",
-      "test_count": 13,
+      "test_count": 14,
       "patterns": [
         "H",
         "C",
         "F3",
         "F4"
       ],
-      "notes": "Raid, Blocker, Assembly -5, [Wingdramon]/[Groundramon] digivolve; OP/WD trash N opp sources (N = own sources, clamped) then optional fewest-source deck-bottom (0-source counts, printed text over DCGO); face-up + inherited OPT replacements."
+      "notes": "Raid, Blocker, Assembly -5, [Wingdramon]/[Groundramon] digivolve; OP/WD trash N opp sources (N = own sources, clamped) then optional fewest-source deck-bottom (0-source counts, printed text over DCGO); face-up + inherited OPT replacements. Corrected return_to_deck to move only the top Digimon and trash remaining digivolution cards, including Digi-Eggs, per official image and rule 4-2-8. RED source-destination regression followed by 14/14 GREEN, including clone and decline; independent review passed. Evidence: ex13-024-source-destination-red.log and ex13-024-source-destination-green-2.log. Affected oracle rerun pending; no training-readiness promotion."
     },
     "EX13-070": {
       "card_name": "Davis Motomiya & Ken Ichijoji",
@@ -13804,11 +13830,11 @@
     },
     "LM-057": {
       "card_name": "Wall Training",
-      "validated_date": "2026-10-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "BT26 meta blockers (2026-10-03)",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-057.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_057.rs",
       "test_count": 20,
@@ -13818,15 +13844,16 @@
         "delay-main",
         "effect-digivolve-reduce"
       ],
-      "notes": "Shared Training-option shape (red/blue). Delay target gating fixed via G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER."
+      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "LM-058": {
       "card_name": "Parkour Training",
-      "validated_date": "2026-10-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "BT26 meta blockers (2026-10-03)",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-058.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_058.rs",
       "test_count": 10,
@@ -13836,7 +13863,8 @@
         "delay-main",
         "effect-digivolve-reduce"
       ],
-      "notes": "Shared Training-option shape (blue/green). Delay target gating fixed via G-HAS-DIGIVOLVE-CANDIDATE-COMPOSITE-FILTER."
+      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "LM-059": {
       "card_name": "Heat Training",
@@ -13932,47 +13960,57 @@
     },
     "LM-036": {
       "card_name": "Jade Memory Boost!",
-      "validated_date": "2026-10-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Pet-deck blockers (BG Imperial / Virus Busters / Styracomon / Medusamon, 2026-10-04)",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-036.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_036.rs",
-      "test_count": 10,
+      "test_count": 13,
       "patterns": [
         "option-use-requirement",
         "reveal-3",
         "delay-main",
         "security-place-delay"
       ],
-      "notes": "Memory Boost shape (LM-035 template), green with blue access."
+      "notes": "13/13 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "prior_authoring_status": "IMPLEMENTED",
+      "tests_passing": 13,
+      "tests_ignored": 0,
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
     },
     "LM-051": {
       "card_name": "Alexandrite Memory Boost!",
-      "validated_date": "2026-10-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Pet-deck blockers (BG Imperial / Virus Busters / Styracomon / Medusamon, 2026-10-04)",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-051.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_051.rs",
-      "test_count": 10,
+      "test_count": 13,
       "patterns": [
         "option-use-requirement",
         "reveal-3",
         "delay-main",
         "security-place-delay"
       ],
-      "notes": "Memory Boost shape (LM-035 template), red with green access."
+      "notes": "13/13 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "prior_authoring_status": "IMPLEMENTED",
+      "tests_passing": 13,
+      "tests_ignored": 0,
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
     },
     "LM-028": {
       "card_name": "Blue Scramble",
-      "validated_date": "2026-10-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "Pet-deck blockers (BG Imperial / Virus Busters / Styracomon / Medusamon, 2026-10-04)",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-028.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_028.rs",
       "test_count": 19,
@@ -13982,7 +14020,8 @@
         "trash-to-deck-top",
         "security-play-from-trash"
       ],
-      "notes": "Scramble shape (LM-029 template) plus digivolve-requirement gating per official Q&A."
+      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "prior_authoring_status": "IMPLEMENTED"
     },
     "P-118": {
       "card_name": "Wormmon",
@@ -14177,6 +14216,318 @@
         "alt-digivolve-name"
       ],
       "notes": "Digivolve circle is green/purple Lv.2 cost 1 (confirmed on enlarged card face); [Your Turn][OPT] other green/[Free] Digimon played or digivolves → gain 1 memory."
+    },
+    "BT20-023": {
+      "card_name": "Coredramon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Examon",
+      "notes": "Restored after shared primitive repair; focused behavioral tests and independent spec then quality reviews pass. Affected oracle clauses are pending remeasurement; no training-readiness promotion.",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_023.rs",
+      "test_count": 7
+    },
+    "BT20-040": {
+      "card_name": "Coredramon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Examon",
+      "notes": "Restored after shared primitive repair; focused behavioral tests and independent spec then quality reviews pass. Affected oracle clauses are pending remeasurement; no training-readiness promotion.",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_040.rs",
+      "test_count": 7
+    },
+    "EX3-020": {
+      "card_name": "Wingdramon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Examon",
+      "notes": "Restored after shared primitive repair; 8 focused behavioral tests and independent spec then quality reviews pass. Affected oracle clauses are pending remeasurement; no training-readiness promotion.",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_020.rs",
+      "test_count": 8
+    },
+    "EX3-024": {
+      "card_name": "Slayerdramon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Examon",
+      "notes": "Restored after shared primitive repair; focused behavioral tests and independent spec then quality reviews pass. Affected oracle clauses are pending remeasurement; no training-readiness promotion.",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_024.rs",
+      "test_count": 13
+    },
+    "EX3-041": {
+      "card_name": "Groundramon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Examon",
+      "notes": "Restored after shared primitive repair; 7 focused behavioral tests and independent spec then quality reviews pass. Affected oracle clauses are pending remeasurement; no training-readiness promotion.",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-041.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_041.rs",
+      "test_count": 7
+    },
+    "BT20-044": {
+      "card_name": "Breakdramon",
+      "validated_date": "2026-10-10",
+      "report": "examon-2026-10-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Examon",
+      "notes": "Restored after shared primitive repair; focused behavioral tests and independent spec then quality reviews pass. Affected oracle clauses are pending remeasurement; no training-readiness promotion.",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_044.rs",
+      "test_count": 10
+    },
+    "BT13-096": {
+      "card_name": "Homer Yushima",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "notes": "Blocked by G-EVENT-PERMANENT-IDENTITY. No readiness or training promotion; unsupported new candidate withdrawn."
+    },
+    "EX3-065": {
+      "card_name": "Hina Kurihara",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "notes": "Blocked by G-EVENT-PERMANENT-IDENTITY. No readiness or training promotion; unsupported new candidate withdrawn."
+    },
+    "P-092": {
+      "card_name": "Dracomon",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "notes": "Blocked by G-DSL-EXACT-EVENT-CARD-NAME. No readiness or training promotion; unsupported new candidate withdrawn."
+    },
+    "BT20-093": {
+      "card_name": "Unleash the Dragon Gene",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "notes": "Restored after shared primitive repair; 9 focused behavioral tests and independent spec then quality reviews pass. Delay payment observer sequencing and clone regression passed (delay-observer-ordering-2.log); the suspected payment receipt defect was not reproduced under legal trigger ordering. Affected oracle clauses are pending remeasurement; no training-readiness promotion.",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-093.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_093.rs",
+      "test_count": 9
+    },
+    "BT9-109": {
+      "card_name": "X Antibody",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "notes": "Blocked by G-DSL-SOURCE-CARD-TRASH-PROTECTION. No readiness or training promotion; unsupported new candidate withdrawn."
+    },
+    "BT11-022": {
+      "card_name": "Dracomon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_022.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "7/7 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "BT20-002": {
+      "card_name": "Bebydomon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_002.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "notes": "6/6 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "BT20-007": {
+      "card_name": "Dracomon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_007.rs",
+      "test_count": 5,
+      "tests_passing": 5,
+      "tests_ignored": 0,
+      "notes": "5/5 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "BT20-025": {
+      "card_name": "Wingdramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_025.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "notes": "6/6 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "BT20-027": {
+      "card_name": "Slayerdramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-027.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_027.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "notes": "9/9 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "BT20-042": {
+      "card_name": "Groundramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-042.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_042.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "7/7 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "BT21-046": {
+      "card_name": "Dracomon (X Antibody)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_046.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "7/7 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "BT21-052": {
+      "card_name": "Examon (X Antibody)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-052.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_052.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "notes": "6/6 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "EX3-018": {
+      "card_name": "Coredramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_018.rs",
+      "test_count": 5,
+      "tests_passing": 5,
+      "tests_ignored": 0,
+      "notes": "5/5 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "EX3-037": {
+      "card_name": "Dracomon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_037.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "notes": "6/6 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "EX3-074": {
+      "card_name": "Examon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/ex3/EX3-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex3/ex3_074.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "7/7 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
+    },
+    "EX8-002": {
+      "card_name": "Bukamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-10-10",
+      "archetype": "Examon",
+      "report": "examon-2026-10-10",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_002.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "notes": "6/6 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
+      "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
+      "integration_verification": "limited"
     },
     "BT1-009": {
       "card_name": "Monodramon",

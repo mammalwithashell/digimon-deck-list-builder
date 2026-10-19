@@ -1,0 +1,533 @@
+# Oracle-confirmed; measured assertions copied from isolated repair evidence.
+# No verdict is established by drafting. Named Dracomon route pays2 then named ultimate route pays3; final own-turn ultimate displays9000DP from inherited Coredramon. Existing effect2 draft is owned by root and remains untouched.
+card: BT20-023
+clause: BT20-023#effect#0
+covers:
+- BT20-023#effect#0
+- BT20-023#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-007
+    - BT20-023
+    - BT20-025
+    - BT1-090
+    - BT1-090
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: BT20-023-routes-repair-p0
+  p1:
+    stack:
+    - ST2-09
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: BT20-023-routes-repair-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-007
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-023
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 2
+  expect:
+    prompt: SelectCountEffect
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-025
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 3
+  expect:
+    prompt: SelectCountEffect
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-007
+    - BT20-023
+    - BT20-025
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-007
+    - BT20-023
+    - BT20-025
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT20-007
+      dp: 1000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-023
+    - BT20-025
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: BT20-007
+      dp: 1000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-023
+    - BT20-025
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT20-007
+      dp: 1000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-023
+    - BT20-025
+    - BT3-093
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 5
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT20-007
+      dp: 1000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-023
+    - BT20-025
+    - BT3-093
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT20-007
+      dp: 1000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-023
+    - BT20-025
+    - BT3-093
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 7
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT20-007
+      dp: 1000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-023
+    - BT20-025
+    - BT3-093
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 8
+  that:
+    _backfilled: true
+    memory: 1
+    p0.field:
+    - card_id: BT20-023
+      dp: 7000
+      suspended: false
+      sources:
+      - BT20-007
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-025
+    - BT3-093
+    - BT3-093
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 9
+  that:
+    _backfilled: true
+    memory: 1
+    p0.field:
+    - card_id: BT20-023
+      dp: 7000
+      suspended: false
+      sources:
+      - BT20-007
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT20-025
+    - BT3-093
+    - BT3-093
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    turn: 3
+- at: 10
+  that:
+    _backfilled: true
+    memory: -2
+    p0.field:
+    - card_id: BT20-025
+      dp: 7000
+      suspended: false
+      sources:
+      - BT20-007
+      - BT20-023
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 4
+- at: 11
+  that:
+    _backfilled: true
+    memory: -2
+    p0.field:
+    - card_id: BT20-025
+      dp: 7000
+      suspended: false
+      sources:
+      - BT20-007
+      - BT20-023
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 4
+- at: 12
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT20-025
+      dp: 11000
+      suspended: false
+      sources:
+      - BT20-007
+      - BT20-023
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 5
+- at: 13
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: BT20-025
+      dp: 11000
+      suspended: false
+      sources:
+      - BT20-007
+      - BT20-023
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - ST2-09
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 5

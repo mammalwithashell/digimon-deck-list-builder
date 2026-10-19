@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT12-047",
+    "colors": "Green",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "Yes, as long as either a card with [Imperialdramon] in its name or the [Free] trait or a card with [Ken Ichijoji] in its name is among the cards revealed, you can add it to your hand."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Imperialdramon] in its name or the [Free] trait and 1 Tamer card with [Ken Ichijoji] in its name among them to the hand. Return the rest to the bottom of the deck."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+      }
+    ],
+    "type": "Larva"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "ede5f6e90dc4c5bfcd6c4f38a95cfbfcb6889d3c54c667d71f93bfb7392dae88",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "7afe92b6ef02c26418ff089740bb94e163ba5845eb0bdfd95c1ccfe0684dbb03",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT12-047",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT12-047"
+}

@@ -1,0 +1,68 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "P-148",
+    "card_type": "Digi-Egg",
+    "colors": [
+      "Blue"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "digi_egg",
+        "level": 2,
+        "name": "Wanyamon",
+        "play_cost": null,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] If this Digimon has the [NSp] trait, ＜Draw 1＞."
+          }
+        ]
+      }
+    ],
+    "form": "In-Training",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 2,
+    "name": "Wanyamon",
+    "play_cost": null,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522201",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-148_P2.png?260529",
+      "printing_id": "P-148_P2"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] If this Digimon has the [NSp] trait, ＜Draw 1＞."
+      }
+    ],
+    "type": "Lesser/NSp"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "3ba99f967c8cb4ef8325e51c3e5a27d0328e7f88f25267e11c297315dab79b94",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "2c3d9d4def5e8c31c9775c4a027e0062881234aca9f2ef23ff33e34bee979f6f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522201:P-148:P-148_P2",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522201"
+}

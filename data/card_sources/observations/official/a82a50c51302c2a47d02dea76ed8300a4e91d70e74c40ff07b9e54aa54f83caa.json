@@ -1,0 +1,42 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT12-022",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Your Turn] When this Digimon would DNA digivolve into a green Digimon card, gain 1 memory."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Jamming＞."
+      }
+    ],
+    "type": "Mythical Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "a82a50c51302c2a47d02dea76ed8300a4e91d70e74c40ff07b9e54aa54f83caa",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "de7f6f5ecaab421603ac2c18740f998d352122b5ad2fda2ce5893ca07bf1ed62",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT12-022",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT12-022"
+}

@@ -281,6 +281,20 @@ fn ex13_021_is_the_blue_lv6_half_of_examons_dna() {
     let examon = find(&runner, 0, EXAMON);
     let stack = ids(&runner, examon);
     assert!(stack.contains(&CARD_ID.to_string()) && stack.contains(&"GREEN6".to_string()));
+    assert_eq!(runner.effective_dp(examon), Some(15000),
+        "the DNA DP effect follows the mandatory attack declaration");
+    let view = runner.pending_selection_view().expect("mandatory attack target prompt");
+    assert_eq!(view.selecting_player, 0);
+    assert!(!view.is_optional);
+    assert!(view.prompt.contains("attacks"), "expected attack target, got {view:?}");
+    let attack = digimon_engine::action::space::encode_attack(
+        examon.index as u16, digimon_engine::action::space::SECURITY_TARGET);
+    assert!(view.valid_action_ids.contains(&attack));
+    assert_eq!(digimon_engine::action::mask::build_action_mask(&runner.game, 0)[attack as usize], 1.0);
+    let security_before = runner.security_count(1);
+    runner.execute_action(0, attack).expect("declare the legal mandatory attack");
+    assert_eq!(runner.security_count(1), security_before,
+        "attack declaration does not prematurely resolve security checks");
     assert_eq!(runner.effective_dp(examon), Some(25000), "Examon's DNA [When Digivolving] fired");
 }
 

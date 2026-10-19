@@ -26,7 +26,9 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use digimon_engine::action::space::ACTION_SPACE_SIZE;
+use digimon_engine::inference::contract::ModelContract;
 use digimon_engine::tensor::TENSOR_SIZE;
+use digimon_engine::tensor_profiles::default_profile;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -44,6 +46,16 @@ pub struct ManifestModel {
     pub model_type: String,
     pub tensor_size: usize,
     pub action_space_size: usize,
+    #[serde(default)]
+    pub action_schema_version: Option<u32>,
+    #[serde(default)]
+    pub observation_profile: Option<String>,
+    #[serde(default)]
+    pub tensor_version: Option<u16>,
+    #[serde(default)]
+    pub feature_schema_version: Option<String>,
+    #[serde(default)]
+    pub tensor_layout_hash: Option<String>,
     pub engine_commit: Option<String>,
     pub trained_at: Option<String>,
     pub file_sha256: String,
@@ -86,6 +98,11 @@ pub struct LocalModelMeta {
 pub struct EngineContract {
     pub tensor_size: usize,
     pub action_space_size: usize,
+    pub action_schema_version: u32,
+    pub observation_profile: String,
+    pub tensor_version: u16,
+    pub feature_schema_version: String,
+    pub tensor_layout_hash: String,
     /// Git commit of the engine crate if baked in at build time. `None`
     /// today — future builds can populate this via a `build.rs` env var.
     pub engine_commit: Option<String>,
@@ -96,6 +113,11 @@ impl EngineContract {
         Self {
             tensor_size: TENSOR_SIZE,
             action_space_size: ACTION_SPACE_SIZE,
+            action_schema_version: digimon_engine::action::space::SCHEMA_VERSION,
+            observation_profile: default_profile().id.into(),
+            tensor_version: default_profile().tensor_version,
+            feature_schema_version: default_profile().feature_schema_version.into(),
+            tensor_layout_hash: default_profile().layout_hash.into(),
             engine_commit: option_env!("DIGIMON_ENGINE_COMMIT").map(|s| s.to_string()),
         }
     }
@@ -328,19 +350,24 @@ impl ModelsManager {
     }
 
     fn assert_compatible(&self, model: &ManifestModel) -> Result<(), ModelManagerError> {
-        if model.tensor_size != TENSOR_SIZE {
-            return Err(ModelManagerError::Incompatible(format!(
-                "model '{}' tensor_size {} != engine TENSOR_SIZE {}",
-                model.id, model.tensor_size, TENSOR_SIZE
-            )));
-        }
-        if model.action_space_size != ACTION_SPACE_SIZE {
-            return Err(ModelManagerError::Incompatible(format!(
-                "model '{}' action_space_size {} != engine ACTION_SPACE_SIZE {}",
-                model.id, model.action_space_size, ACTION_SPACE_SIZE
-            )));
-        }
-        Ok(())
+        let missing = || {
+            ModelManagerError::Incompatible(format!(
+                "model '{}' lacks its training contract",
+                model.id
+            ))
+        };
+        let actual = ModelContract {
+            observation_profile: model.observation_profile.clone().ok_or_else(missing)?,
+            tensor_version: model.tensor_version.ok_or_else(missing)?,
+            feature_schema_version: model.feature_schema_version.clone().ok_or_else(missing)?,
+            tensor_layout_hash: model.tensor_layout_hash.clone().ok_or_else(missing)?,
+            tensor_size: model.tensor_size,
+            action_space_size: model.action_space_size,
+            action_schema_version: model.action_schema_version.ok_or_else(missing)?,
+        };
+        actual
+            .validate_for_profile(&default_profile())
+            .map_err(ModelManagerError::Incompatible)
     }
 }
 
@@ -461,7 +488,7 @@ pub async fn models_resolve_starter(
         return Ok(None);
     };
     // Shape gate: skip incompatible models rather than erroring the game start.
-    if model.tensor_size != TENSOR_SIZE || model.action_space_size != ACTION_SPACE_SIZE {
+    if manager.assert_compatible(&model).is_err() {
         return Ok(None);
     }
     // Download if not already cached.
@@ -510,9 +537,7 @@ pub async fn models_resolve_for_deck(
         Err(_) => return Ok(None),
     };
     let Some(model) = models.into_iter().find(|m| {
-        m.starter_deck.as_deref() == Some(deck_id.as_str())
-            && m.tensor_size == TENSOR_SIZE
-            && m.action_space_size == ACTION_SPACE_SIZE
+        m.starter_deck.as_deref() == Some(deck_id.as_str()) && manager.assert_compatible(m).is_ok()
     }) else {
         return Ok(None);
     };
@@ -554,6 +579,11 @@ mod tests {
             model_type: "mlp".into(),
             tensor_size: TENSOR_SIZE,
             action_space_size: ACTION_SPACE_SIZE,
+            action_schema_version: Some(digimon_engine::action::space::SCHEMA_VERSION),
+            observation_profile: Some(default_profile().id.into()),
+            tensor_version: Some(default_profile().tensor_version),
+            feature_schema_version: Some(default_profile().feature_schema_version.into()),
+            tensor_layout_hash: Some(default_profile().layout_hash.into()),
             engine_commit: None,
             trained_at: None,
             file_sha256: sha.into(),
@@ -582,9 +612,39 @@ mod tests {
     ) -> Option<&'a ManifestModel> {
         models.iter().find(|m| {
             m.starter_deck.as_deref() == Some(deck_id)
-                && m.tensor_size == TENSOR_SIZE
-                && m.action_space_size == ACTION_SPACE_SIZE
+                && ModelsManager::new(std::env::temp_dir())
+                    .assert_compatible(m)
+                    .is_ok()
         })
+    }
+
+    #[test]
+    fn malformed_model_action_version_refuses_manifest_or_compatibility() {
+        let dir = tempfile::tempdir().unwrap();
+        let manager = ModelsManager::new(dir.path().to_path_buf());
+        for bad in [serde_json::Value::Null, serde_json::json!(true), serde_json::json!("1"), serde_json::json!(1.0), serde_json::json!(-1), serde_json::json!(0)] {
+            let mut row = serde_json::to_value(dummy_manifest_entry("malformed", "abc", 1)).unwrap();
+            row["action_schema_version"] = bad.clone();
+            if let Ok(parsed) = serde_json::from_value::<ManifestModel>(row.clone()) {
+                assert!(manager.assert_compatible(&parsed).is_err(), "accepted {bad}");
+            }
+            // serde must reject a malformed member for the complete response;
+            // nullable/missing metadata is parsed and then rejected by the gate.
+            if !bad.is_null() && bad != serde_json::json!(0) {
+                assert!(serde_json::from_value::<ManifestResponse>(serde_json::json!({"models": [row]})).is_err());
+            }
+        }
+    }
+
+    #[test]
+    fn same_shape_action_semantics_require_an_authentic_version() {
+        let dir = tempfile::tempdir().unwrap();
+        let manager = ModelsManager::new(dir.path().to_path_buf());
+        let mut model = dummy_manifest_entry("semantics", "abc", 1);
+        model.action_schema_version = None;
+        assert!(manager.assert_compatible(&model).is_err());
+        model.action_schema_version = Some(digimon_engine::action::space::SCHEMA_VERSION + 1);
+        assert!(manager.assert_compatible(&model).is_err());
     }
 
     #[test]
@@ -664,6 +724,21 @@ mod tests {
             mgr.assert_compatible(&bad_actions),
             Err(ModelManagerError::Incompatible(_))
         ));
+    }
+
+    #[test]
+    fn same_shape_old_or_missing_semantic_contract_is_rejected() {
+        let tmp = tempfile::tempdir().unwrap();
+        let mgr = ModelsManager::new(tmp.path().to_path_buf());
+        let mut old = dummy_manifest_entry("old", "deadbeef", 10);
+        old.feature_schema_version = Some("old-same-shape".into());
+        assert!(mgr.assert_compatible(&old).is_err());
+        let mut old = dummy_manifest_entry("old", "deadbeef", 10);
+        old.tensor_layout_hash = Some("sha256:old".into());
+        assert!(mgr.assert_compatible(&old).is_err());
+        let mut missing = dummy_manifest_entry("missing", "deadbeef", 10);
+        missing.observation_profile = None;
+        assert!(mgr.assert_compatible(&missing).is_err());
     }
 
     #[test]

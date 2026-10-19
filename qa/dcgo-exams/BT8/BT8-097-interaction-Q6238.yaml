@@ -1,0 +1,147 @@
+# Q6238 draft: official BT8-097 Q&A says Crimson Blaze prohibits effect-play into breeding.
+# T1 P0 hatches red Koromon, passes. T2 P1 passes breeding, plays Biyomon (3-2=1), passes.
+# T3 P0 Crimson Blaze costs 6-1=5 from 3 memory: Biyomon deleted; P1 starts with 2.
+# T4 P1 passes breeding and plays Grademon (2-7=-5); holding exact-name Dorumon.
+# Its optional breeding-play must be unavailable under the still-active prohibition.
+# T5 P0 passes from 5; T6 P1 legally hatches, proving its breeding area stayed empty.
+# Grademon remains in battle and Dorumon remains in hand. No unseen breeding count asserted.
+# Empty assertions deliberately await live oracle evidence; no verdict claimed.
+card: BT8-097
+clause: BT8-097#effect#1
+covers:
+- BT8-097#effect#1
+- BT8-097#effect#0
+interaction:
+  id: qa:Q6238
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT8-097
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST1-07
+    - ST1-08
+    - ST1-08
+    - ST1-09
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    rest: BT8-097-interaction-Q6238-p0
+  p1:
+    stack:
+    - ST1-02
+    - BT20-053
+    - BT7-056
+    - ST2-05
+    - ST2-06
+    - ST1-03
+    - ST1-03
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    rest: BT8-097-interaction-Q6238-p1
+steps:
+- actor: 0
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-02
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    play:
+      card: BT8-097
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-053
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert: []
+expect_ruling:
+  q_id: Q6238
+  assert:
+  - at: 8
+    that:
+      memory: 5
+      p1.field:
+      - card_id: BT20-053
+        sources: []
+      p1.hand:
+      - BT7-056
+      - ST2-05
+      - ST2-06
+      - ST2-02
+      - ST2-03
+      p1.trash:
+      - ST1-02
+  - at: 10
+    that:
+      memory: -3
+      phase: Main
+      p1.field:
+      - card_id: BT20-053
+        sources: []
+      p1.hand:
+      - BT7-056
+      - ST2-05
+      - ST2-06
+      - ST2-02
+      - ST2-03
+      - ST2-04
+      p1.trash:
+      - ST1-02

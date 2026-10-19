@@ -32,8 +32,9 @@
 #     "Then, may battle" leg runs on every [When Digivolving], as DCGO does
 #     (the printed "Then" sentence sits outside the "If DNA" sentence).
 #   - "this Digimon attacks" = mandatory `force_attack { attacker: source }`;
-#     "all of your Digimon get +10000" = `for_each` over own battle-area Digimon
-#     present at resolution.
+#     "all of your Digimon get +10000" is continuous overall processing
+#     (official rule 15-11-2-2), including later entrants until expiry.
+#     A floating modifier also survives this Examon leaving the battle area.
 #   - "may battle" = optional opponent pick (continue_on_decline) + `battle`.
 #   - "wins a battle" = `on_ally_won_battle` (fires for attack AND effect
 #     battles, from `resolve_battle`) scoped to this Digimon via the new
@@ -100,21 +101,19 @@ effects:
       - if:
           condition: { dna_origin: true }
           then:
-            - for_each:
-                over:
-                  of: you
-                  zone: [battle_area]
-                  kind: digimon
-                bind_as: buffed
-                body:
-                  - add_dp_modifier:
-                      target: buffed
-                      value: 10000
-                      expiry: end_of_opponents_turn
             - force_attack:
                 attacker: source
                 targets: any
                 prompt: "This Digimon attacks"
+            - add_modifier:
+                continuous: true
+                target:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+                modifier: ChangeDp
+                value: 10000
+                expiry: end_of_opponents_turn
       - select_opponent_permanent:
           bind_as: battle_target
           filter: { kind: digimon }

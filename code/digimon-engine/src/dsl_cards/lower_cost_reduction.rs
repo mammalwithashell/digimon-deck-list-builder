@@ -139,7 +139,20 @@ pub fn lower_with_formula(
             !crate::dsl_cards::lower_triggered::body_first_step_is_declinable(pay_cost.as_ref())
         })
         .and_then(crate::dsl_cards::lower_triggered::first_step_candidate_guard);
+    let prefix_guard = pay_cost.first().and_then(|s| match s {
+        CompiledStep::PaySourcePrefix {
+            host_filter,
+            minimum,
+            ..
+        } => Some((host_filter.clone(), *minimum)),
+        _ => None,
+    });
     builder = builder.condition(move |rctx| {
+        if let Some((filter, minimum)) = &prefix_guard {
+            if !crate::dsl_cards::step::source_prefix_payment::is_payable(rctx, filter, *minimum) {
+                return false;
+            }
+        }
         if let Some(aw) = &condition_active_when {
             let subject = rctx
                 .source_permanent
@@ -259,8 +272,11 @@ pub fn lower_with_formula(
             builder = builder.pay_cost_fn(move |ctx| {
                 ctx.cost_unpayable = false;
                 let mut bindings = crate::dsl_cards::bindings::Bindings::new();
-                let outcome =
-                    run_steps_with_runtime(pay_cost.as_ref(), ctx, &mut bindings, &runtime);
+                let mut body = pay_cost.as_ref().to_vec();
+                if let Some(receipt) = ctx.game.active_cost_payment_receipt {
+                    body.push(CompiledStep::CompleteCostPayment { receipt });
+                }
+                let outcome = run_steps_with_runtime(&body, ctx, &mut bindings, &runtime);
                 // A PARKED pay_cost (an interactive step like
                 // `trash_bottom_face_down_source_under_tamer`'s Tamer pick) will
                 // be paid when its selection resolves; it returns `false` here

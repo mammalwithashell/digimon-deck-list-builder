@@ -1,0 +1,55 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "AD1-006",
+    "colors": "Red Black Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "Yes. Only a [Xros Heart] or [Blue Flare] trait card can be played."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.6 w/[Xros Heart]/[Blue Flare] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.6 w/[Xros Heart]/[Blue Flare] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may return 1 of your opponent's Digimon with as much or less DP as this Digimon to the bottom of the deck. Then, this Digimon may unsuspend. [All Turns] When this Digimon would leave the battle area other than by DigiXros, from this Digimon's digivolution cards, you may place up to 4 [Xros Heart] or [Blue Flare] trait Digimon cards under 1 of your Tamers and play 1 such card without paying the cost."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros -2: [OmniShoutmon]×[ZeigGreymon]×[Ballistamon]×[Dorulumon]×[Starmons]×[Sparrowmon]"
+      }
+    ],
+    "type": "Composite/Xros Heart/Blue Flare"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "c35cf947c4f196aa27bf58606a9140b5f7bb5dce8786a58c7fc96cf9c48e67cc",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "8908a701d4b58c4e020fdaf48559aab66e073bf6f8933cc08eedafe3c9490d20",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:AD1-006",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/AD1-006"
+}

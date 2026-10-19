@@ -1,0 +1,126 @@
+{
+  "card_id": "EX13-024",
+  "printing": {
+    "printing_id": "EX13-024",
+    "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-024.png?260529",
+    "alternate_art": false,
+    "category_id": ""
+  },
+  "name": "Slayerdramon",
+  "rarity": "R",
+  "card_type": "Digimon",
+  "level": 6,
+  "colors": [
+    "Blue",
+    "Red"
+  ],
+  "play_cost": 12,
+  "dp": 12000,
+  "form": "Mega",
+  "attribute": "Vaccine",
+  "type": "Dragonkin",
+  "evolution_routes": [
+    {
+      "slot": 1,
+      "colors": [
+        "Blue",
+        "Red"
+      ],
+      "cost": 4,
+      "from_level": 5
+    }
+  ],
+  "grade_evolution_routes": [],
+  "tamer_evolution_routes": [],
+  "special_evolution_routes": [
+    "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3"
+  ],
+  "text_sections": [
+    {
+      "label": "Special Digivolution Condition",
+      "text": "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3"
+    },
+    {
+      "label": "Effect",
+      "text": "＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] For each of this Digimon's digivolution cards, trash any 1 digivolution card from your opponent's Digimon. Then, you may return all of their Digimon with the fewest digivolution cards to the bottom of the deck.\n[All Turns] [Once Per Turn] When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave."
+    },
+    {
+      "label": "Special Play Condition",
+      "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text"
+    },
+    {
+      "label": "Inherited Effect",
+      "text": "[All Turns] [Once Per Turn] When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave."
+    }
+  ],
+  "rule_grants": {
+    "traits": [],
+    "attributes": []
+  },
+  "qa": [
+    {
+      "number": "Q7270",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+    },
+    {
+      "number": "Q7271",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does the text \"[AA] or [BB] in its text\" refer to?",
+      "answer": "It checks if that card has [AA] or [BB] in its text."
+    },
+    {
+      "number": "Q7272",
+      "date": "Sep. 18, 2026",
+      "question": "What do this card's [All Turns] effect and inherited effect do, exactly?",
+      "answer": "This effect triggers and can be activated when a Digimon specified by it leaves the battle area under the specified conditions.\nWhen activated, all Digimon matching its trigger conditions are prevented from leaving."
+    },
+    {
+      "number": "Q7273",
+      "date": "Sep. 18, 2026",
+      "question": "Do this card's Assembly requirements mean that each Lv.5/Lv.4/Lv.3 card must have [Dracomon] or [Examon] in its text?",
+      "answer": "Yes, they must each satisfy the requirements."
+    },
+    {
+      "number": "Q7274",
+      "date": "Sep. 18, 2026",
+      "question": "When this card's [All Turns] effect and [BT23-047 Examon]'s effect trigger simultaneously, can I activate this card's [All Turns] effect to prevent it from leaving and then activate [BT23-047 Examon]'s effect to play a digivolution card?",
+      "answer": "Yes.\nRelated Cards"
+    }
+  ],
+  "layout": "single",
+  "faces": [
+    {
+      "face_id": "primary",
+      "kind": "digimon",
+      "name": "Slayerdramon",
+      "colors": [
+        "Blue",
+        "Red"
+      ],
+      "play_cost": 12,
+      "level": 6,
+      "dp": 12000,
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Wingdramon]/[Groundramon]: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] For each of this Digimon's digivolution cards, trash any 1 digivolution card from your opponent's Digimon. Then, you may return all of their Digimon with the fewest digivolution cards to the bottom of the deck.\n[All Turns] [Once Per Turn] When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[All Turns] [Once Per Turn] When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave."
+        }
+      ]
+    }
+  ],
+  "printing_field_gaps": []
+}

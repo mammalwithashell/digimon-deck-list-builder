@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "BT24-053",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "2000",
+    "form": "Stnd./Appmon",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+      },
+      {
+        "label": "Link DP",
+        "text": "DP+2000"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+      }
+    ],
+    "type": "Security"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "358f155028cc873d73d56c15d65d237c2f1cb53e0f93e4837e7f76f7da5a3837",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "9323a320ff8d00e312e6e3376c08a5cf69cbe9f770c27be88cf8482de5fd1be4",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT24-053",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT24-053"
+}

@@ -3,15 +3,12 @@
 //! When an ally would be deleted, the decoy carrier may redirect deletion
 //! to itself. Tests `EffectContext::substitute_replacement` end-to-end.
 //!
-//! Implementation note: a real Decoy keyword's process would just call
-//! `substitute_replacement` directly without any inner select (the
-//! "confirm" is the OUTER optional-accept). To exercise Phase C's
-//! parked-replacement substrate end-to-end (rather than the synchronous
-//! `rctx.substitute(...)` path), this test installs a one-option "confirm
-//! decoy" select_own_permanent that filters to just the decoy itself.
-//! The callback runs `substitute_replacement(decoy_self)`. Behavior is
-//! semantically equivalent — the test proves the parked-substitute flow
-//! commits via commit_deferred_outcome's Substituted arm.
+//! This synthetic fixture tests deferred `Substituted` commits, not the native
+//! Decoy keyword. Native Decoy pays deletion and then prevents the original
+//! deletion (rule 16-17); substitution is a distinct engine primitive.
+//! A single-candidate inner selection parks this synthetic replacement before
+//! committing substitution. Candidate eligibility excludes its own carrier,
+//! including when the substituted deletion starts a fresh replacement window.
 
 use std::sync::Arc;
 
@@ -39,6 +36,7 @@ fn decoy_card(id: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: "DECOY_LIKE".to_string(),
@@ -66,6 +64,7 @@ fn ally_card(id: &str) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),
@@ -86,6 +85,11 @@ impl CardEffect for DecoyLike {
         vec![Effect::when_would_be_deleted(card)
             .name("<Decoy>")
             .optional()
+            .replacement_condition(|ctx, subject| {
+                matches!((ctx.source_permanent, subject),
+                    (Some(me), ReplacementSubject::Permanent(ally))
+                        if me != *ally && me.player == ally.player)
+            })
             .replacement_process(|rctx| {
                 // Only fire when the subject is a DIFFERENT permanent
                 // (the decoy redirects deletion of its allies, not
@@ -123,7 +127,8 @@ fn decoy_substitutes_self_for_ally_deletion() {
         .add_card(ally_card("ALLY"))
         .start();
     r.register_effect("DECOY", Arc::new(DecoyLike));
-    let _decoy = r.place_on_field(0, "DECOY", None);
+    let decoy = r.place_on_field(0, "DECOY", None);
+    let decoy_card = r.game.players[0].battle_area[decoy.index as usize].top_card().clone();
     let ally = r.place_on_field(0, "ALLY", None);
 
     // Delete the ally — decoy's WhenWouldBeDeleted fires (subject = ally).
@@ -131,17 +136,26 @@ fn decoy_substitutes_self_for_ally_deletion() {
 
     // Outer accept dialog up.
     assert!(r.game.pending_selection.is_some());
+    assert_eq!(digimon_engine::action::build_action_mask(&r.game, 0)[REPLACEMENT_ACCEPT as usize], 1.0);
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("outer accept");
 
     // Inner confirm prompt — pick the only valid action.
     let pending = r.game.pending_selection.as_ref().expect("confirm");
+    assert_eq!(pending.valid_action_ids.len(), 1, "only the synthetic carrier is selectable");
     let action = pending.valid_action_ids[0];
     let player = pending.selecting_player;
+    assert_eq!(player, 0);
+    assert_eq!(digimon_engine::action::build_action_mask(&r.game, player)[action as usize], 1.0);
     r.game
         .resolve_selection(player, action)
         .expect("confirm pick");
+
+    assert!(r.game.pending_selection.is_none(), "substituted deletion has fully settled");
+    assert_eq!(r.game.players[0].trash.len(), 1);
+    assert_eq!(r.game.players[0].trash[0].card_id(&r.game.card_data), "DECOY");
+    assert_eq!(r.game.players[0].trash[0].card_index, decoy_card.card_index);
 
     // Substitute outcome: ally survives, decoy is deleted in its place.
     assert_eq!(
@@ -156,4 +170,21 @@ fn decoy_substitutes_self_for_ally_deletion() {
         "ALLY",
         "the ally is the survivor; decoy was deleted in its place"
     );
+}
+
+#[test]
+fn synthetic_substitute_does_not_offer_for_its_own_carrier() {
+    let mut r = DebugRunner::builder()
+        .add_card(decoy_card("DECOY"))
+        .add_card(ally_card("ALLY"))
+        .start();
+    r.register_effect("DECOY", Arc::new(DecoyLike));
+    let decoy = r.place_on_field(0, "DECOY", None);
+    r.place_on_field(0, "ALLY", None);
+    r.game.delete_permanent_with_effects(decoy);
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.game.players[0].battle_area.len(), 1);
+    assert_eq!(r.game.players[0].battle_area[0].top_card().card_id(&r.game.card_data), "ALLY");
+    assert_eq!(r.game.players[0].trash.len(), 1);
+    assert_eq!(r.game.players[0].trash[0].card_id(&r.game.card_data), "DECOY");
 }

@@ -70,7 +70,41 @@ impl Game {
     /// See `openspec/changes/align-deletion-with-dcgo-model/design.md` D2
     /// for the rationale; `specs/permanent-deletion-semantics/spec.md` for
     /// the requirement contracts this implements.
+    pub(crate) fn with_deletion_receipt<T>(
+        &mut self,
+        receipt: Option<u64>,
+        body: impl FnOnce(&mut Self) -> T,
+    ) -> T {
+        let previous = self.current_deletion_receipt;
+        self.current_deletion_receipt = receipt;
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| body(self)));
+        self.current_deletion_receipt = previous;
+        match result {
+            Ok(value) => value,
+            Err(panic) => std::panic::resume_unwind(panic),
+        }
+    }
+
     pub fn delete_permanents_batch(
+        &mut self,
+        handles: Vec<PermanentHandle>,
+        cause: crate::replacement::ReplacementCause,
+    ) -> crate::deletion_batch::DeletionBatchOutcome {
+        self.delete_permanents_batch_with_receipt(handles, cause, None)
+    }
+
+    pub(crate) fn delete_permanents_batch_with_receipt(
+        &mut self,
+        handles: Vec<PermanentHandle>,
+        cause: crate::replacement::ReplacementCause,
+        receipt: Option<u64>,
+    ) -> crate::deletion_batch::DeletionBatchOutcome {
+        self.with_deletion_receipt(receipt, |game| {
+            game.delete_permanents_batch_scoped(handles, cause)
+        })
+    }
+
+    fn delete_permanents_batch_scoped(
         &mut self,
         handles: Vec<PermanentHandle>,
         cause: crate::replacement::ReplacementCause,
@@ -138,18 +172,10 @@ impl Game {
         use crate::deletion_batch::BatchStage;
         use crate::enums::{EffectTiming, Zone};
 
-        // Stage 1: WhenWouldLeaveBattleArea (per-handle for Phase 2).
-        {
-            let batch = self
-                .active_deletion_batch
-                .as_mut()
-                .expect("run_deletion_batch_stages called without active batch");
-            batch.stage = BatchStage::Stage1ReplacementDrain;
-        }
-        if self.run_replacement_stage(EffectTiming::WhenWouldLeaveBattleArea, Zone::Trash) {
-            return;
-        }
-
+        if crate::replacement::start_deletion_replacement_batch(self) { return; }
+        // The impending deletion offers leave and delete immediate effects
+        // in one owned ordering window. Other movement destinations still use
+        // their existing independent leave event.
         // Stage 2: WhenWouldBeDeleted.
         {
             let batch = self
@@ -162,6 +188,11 @@ impl Game {
             return;
         }
 
+        self.complete_deletion_batch_after_replacements();
+    }
+
+    pub(crate) fn complete_deletion_batch_after_replacements(&mut self) {
+        use crate::deletion_batch::BatchStage;
         // Stage 3: Snapshotting. Capture each survivor's pre-removal state
         // while the carrier is still on field.
         {
@@ -284,6 +315,7 @@ impl Game {
             }
 
             let subject = ReplacementSubject::Permanent(handle);
+            let cause = crate::replacement::deletion_cause_for_controller(cause, self.effect_source_player, handle.player);
             let outcome = self.try_replace(timing, subject, cause, Some(destination));
             if self.pending_selection.is_some() {
                 // Parked — caller unwinds and resumes via parked_replacement.
@@ -309,12 +341,14 @@ impl Game {
                 // `OptionalReplacement` resume frame.)
                 let parked_id = self.pending_selection_resume.as_ref().and_then(|stack| {
                     stack.frames.iter().find_map(|f| match f {
-                        crate::resume::ResumeFrame::OptionalReplacement(st) => Some(
-                            crate::replacement::candidate_identity(
+                        crate::resume::ResumeFrame::OptionalReplacement(st)
+                            if st.order.is_none() =>
+                        {
+                            Some(crate::replacement::candidate_identity(
                                 st.source_card,
                                 &st.candidate_kind,
-                            ),
-                        ),
+                            ))
+                        }
                         _ => None,
                     })
                 });
@@ -345,6 +379,8 @@ impl Game {
                     });
                     self.pending_deletion_batch_rest
                         .push(crate::game::PendingDeletionBatchRest {
+                            receipt: self.current_deletion_receipt,
+                            parked_member: self.pending_deletion_batch_parked,
                             player: h.player,
                             card,
                             cause,
@@ -452,11 +488,12 @@ impl Game {
                     former_controller: handle.player,
                     top_card: crate::card_source::CardHandle(0),
                     card_kind: crate::enums::CardKind::Digimon,
+                    retained_kind: None,
                     traits: Vec::new(),
                     level: None,
                     dp: None,
                     cause: self
-                        .observed_deletion_event_cause()
+                        .observed_deletion_event_cause_for_controller(handle.player)
                         .unwrap_or(crate::trigger_context::EventCause::Rule),
                     dp_just_before: None,
                     level_just_before: None,
@@ -479,6 +516,17 @@ impl Game {
 
     /// Build a `DeletedObjectSnapshot` for a live battle-area handle.
     /// Returns `None` if the slot is empty.
+    /// Snapshots retain controller-relative effect causes across a deferred
+    /// trigger drain. A mixed batch cannot copy the first victim's relation.
+    fn observed_deletion_event_cause_for_controller(&self, controller: PlayerId) -> Option<crate::trigger_context::EventCause> {
+        use crate::trigger_context::EventCause;
+        self.observed_deletion_event_cause().map(|cause| match (cause, self.effect_source_player) {
+            (EventCause::OwnEffect | EventCause::OpponentEffect, Some(actor)) =>
+                if actor == controller { EventCause::OwnEffect } else { EventCause::OpponentEffect },
+            _ => cause,
+        })
+    }
+
     pub(crate) fn build_snapshot_for_handle(
         &self,
         handle: PermanentHandle,
@@ -504,24 +552,23 @@ impl Game {
         // turning it into [Sukamon] until their turn ends) is deleted AS that
         // name, so "when a Digimon with [Sukamon] in its name is deleted"
         // observers see it. Without modifiers this is the top card's own names.
-        let names_just_before = perm
-            .synth_identity(&self.card_data, &self.modifiers, handle)
-            .card_names;
+        let identity = perm.synth_identity(&self.card_data, &self.modifiers, handle);
         Some(crate::trigger_context::DeletedObjectSnapshot {
             former_controller: handle.player,
             top_card: top_handle,
-            card_kind: data.card_kind,
-            traits: data.traits.clone(),
-            level: data.level,
+            card_kind: identity.kind,
+            retained_kind: identity.retained_kind,
+            traits: identity.traits.clone(),
+            level: identity.level,
             dp: dp_now,
             cause: self
-                .observed_deletion_event_cause()
+                .observed_deletion_event_cause_for_controller(handle.player)
                 .unwrap_or(crate::trigger_context::EventCause::Rule),
             dp_just_before: dp_now,
-            level_just_before: data.level,
+            level_just_before: identity.level,
             cost_just_before: Some(data.play_cost),
-            names_just_before,
-            traits_just_before: data.traits.clone(),
+            names_just_before: identity.card_names.clone(),
+            traits_just_before: identity.traits.clone(),
             source_count_just_before: source_count,
             digisources_just_before: digisources,
             is_token,
@@ -573,6 +620,7 @@ impl Game {
             completed.push(*h);
         }
         batch.completed = completed;
+        self.capture_pending_battle_survival();
     }
 
     /// Trash one permanent: linked-card cascade, ACE overflow, delete,
@@ -626,6 +674,14 @@ impl Game {
             .get(handle.index as usize)
             .is_some()
         {
+            // Allocate provenance only for an actual payment receipt. Ordinary
+            // deletion must retain its existing identity allocation history.
+            let deleted_identity = self.current_deletion_receipt.map(|_| (
+                self.player(handle.player).battle_area[handle.index as usize].top_card().handle().0,
+                self.capture_digivolve_host_identity(handle),
+            ));
+            let deleted_dp = self.effective_dp(handle);
+            let deleted_digimon = self.permanent_is_digimon_for_rules(handle);
             let sources = self.player(handle.player).battle_area[handle.index as usize]
                 .card_sources
                 .clone();
@@ -639,6 +695,24 @@ impl Game {
             // `engine-event-emission`). Token-skip + empty-stack
             // semantics match `Player::delete_permanent`.
             self.trash_permanent_stack(handle.player, handle.index as usize);
+            if let Some(receipt) = self.current_deletion_receipt {
+                if let Some((_, completed)) = self
+                    .deletion_receipts
+                    .iter_mut()
+                    .find(|(id, _)| *id == receipt)
+                {
+                    completed.push((handle, deleted_dp, deleted_digimon, deleted_identity.expect("receipt identity captured before removal")));
+                }
+            }
+            if self
+                .active_deletion_batch
+                .as_ref()
+                .is_some_and(|batch| batch.cause == crate::replacement::ReplacementCause::Battle)
+            {
+                if let Some(top) = sources.last() {
+                    self.record_battle_deletion(handle.player, top.handle());
+                }
+            }
             self.modifiers
                 .shift_after_battle_area_remove(handle.player, handle.index);
             self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
@@ -667,6 +741,7 @@ impl Game {
                 .expect("active batch in OnDeletion-enqueue stage");
             (batch.kill_list.clone(), batch.snapshots.clone())
         };
+        self.observe_deletion_dispatch_batch(&kill_list);
         for (handle, snapshot) in kill_list.iter().zip(snapshots.iter()) {
             let queue_start = self.effect_queue.len();
             // 16-12: capture WHO this carrier battled now, while the attack is
@@ -713,6 +788,7 @@ impl Game {
         handle: PermanentHandle,
     ) -> Option<PermanentHandle> {
         let pa = self.pending_attack.as_ref()?;
+        if pa.effective_target_removed_by_dna { return None; }
         let defender = match pa.effective_target {
             crate::AttackTarget::Digimon(h) => h,
             crate::AttackTarget::Player(_) => return None,
@@ -910,39 +986,102 @@ impl Game {
         // G-ENGINE-BATCH-DELETION-PARK-DROPS-REST: a multi-member batch that
         // parked on one member's optional replacement now deletes its other
         // members (re-found by top card; same cause).
-        if self.pending_selection.is_none() && !self.pending_deletion_batch_rest.is_empty() {
-            let rest = std::mem::take(&mut self.pending_deletion_batch_rest);
-            let parked = self.pending_deletion_batch_parked.take();
-            // Parked member still on the field ⇒ its replacement cancelled
-            // the leave; one activation covers every member it was active
-            // for (DCGO list-based WhenRemoveField — EX13-051).
-            let parked_survived = parked.is_some_and(|(player, card)| {
+        if self.pending_selection.is_none() {
+            self.resume_deletion_batch_rest_for_receipt(None);
+        }
+        if self.pending_selection.is_none() {
+            self.resume_pending_battle_resolutions();
+        }
+    }
+    /// Resume only the deletion operation whose DSL result is about to be read.
+    /// `None` is the ordinary global post-selection drain. A receipt-specific
+    /// call leaves other operations queued and never advances battle resolution.
+    pub(crate) fn resume_deletion_batch_rest_for_receipt(&mut self, only_receipt: Option<u64>) {
+        if self.pending_selection.is_some() {
+            return;
+        }
+        let pending = std::mem::take(&mut self.pending_deletion_batch_rest);
+        let (mut rest, unrelated): (Vec<_>, Vec<_>) = pending
+            .into_iter()
+            .partition(|r| only_receipt.is_none() || r.receipt == only_receipt);
+        self.pending_deletion_batch_rest = unrelated;
+        if only_receipt.is_none() {
+            self.pending_deletion_batch_parked.take();
+        }
+        while !rest.is_empty() {
+            let receipt = rest[0].receipt;
+            let cause = rest[0].cause;
+            let parked_member = rest[0].parked_member;
+            let (group, remaining): (Vec<_>, Vec<_>) = rest.into_iter().partition(|r| {
+                r.receipt == receipt && r.cause == cause && r.parked_member == parked_member
+            });
+            rest = remaining;
+            let parked_survived = parked_member.is_some_and(|(player, card)| {
                 self.player(player)
                     .battle_area
                     .iter()
                     .any(|p| !p.card_sources.is_empty() && p.top_card().handle() == card)
             });
-            let cause = rest[0].cause;
-            let handles: Vec<PermanentHandle> = rest
+            let handles: Vec<_> = group
                 .iter()
                 .filter(|r| !(parked_survived && r.covered_by_parked))
                 .filter_map(|r| {
-                    let (player, card) = (r.player, r.card);
-                    self.player(player)
+                    self.player(r.player)
                         .battle_area
                         .iter()
-                        .position(|p| {
-                            !p.card_sources.is_empty() && p.top_card().handle() == card
-                        })
+                        .position(|p| !p.card_sources.is_empty() && p.top_card().handle() == r.card)
                         .map(|i| PermanentHandle {
-                            player,
+                            player: r.player,
                             index: i as u8,
                         })
                 })
                 .collect();
             if !handles.is_empty() {
-                self.delete_permanents_batch(handles, cause);
+                self.delete_permanents_batch_with_receipt(handles, cause, receipt);
+            }
+            if self.pending_selection.is_some() {
+                self.pending_deletion_batch_rest.extend(rest);
+                break;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod deletion_receipt_capture_scope_tests {
+    use crate::{debug_runner::{DebugRunner, make_test_card}, replacement::ReplacementCause};
+    fn fixture() -> DebugRunner {
+        let mut r = DebugRunner::builder().add_card(make_test_card("RECEIPT-BODY", "Body"))
+            .deck(0, &["RECEIPT-BODY"; 20]).deck(1, &["RECEIPT-BODY"; 20]).memory(3).start();
+        r.skip_mulligan(); r.game.enter_main_phase(); r
+    }
+    #[test]
+    fn ordinary_deletion_does_not_allocate_unused_receipt_identity() {
+        let mut r = fixture(); let h = r.place_on_field(0, "RECEIPT-BODY", None);
+        assert!(r.game.players[0].battle_area[0].battle_identity.is_none());
+        let next = r.game.next_battle_identity;
+        let mut cloned = r.game.clone();
+        r.game.delete_permanents_batch(vec![h], ReplacementCause::OwnEffect);
+        cloned.delete_permanents_batch(vec![h], ReplacementCause::OwnEffect);
+        assert_eq!(r.game.next_battle_identity, next, "ordinary deletion must not allocate unused payment provenance");
+        assert!(r.game.deletion_receipts.is_empty());
+        assert_eq!(r.game.verification_digest(), cloned.verification_digest());
+        let survivor = r.place_on_field(0, "RECEIPT-BODY", None);
+        assert_eq!(r.game.capture_digivolve_host_identity(survivor), next);
+    }
+    #[test]
+    fn receipt_deletion_keeps_exact_identity_and_digest_discrimination() {
+        let mut r = fixture(); let h = r.place_on_field(0, "RECEIPT-BODY", None);
+        let card = r.game.players[0].battle_area[0].top_card().handle().0;
+        let next = r.game.next_battle_identity;
+        r.game.deletion_receipts.push((17, Vec::new()));
+        r.game.delete_permanents_batch_with_receipt(vec![h], ReplacementCause::OwnEffect, Some(17));
+        assert_eq!(r.game.deletion_receipts[0].1.len(), 1);
+        assert_eq!(r.game.deletion_receipts[0].1[0].3, (card, next));
+        assert_eq!(r.game.next_battle_identity, next + 1);
+        let mut different = r.game.clone();
+        assert_eq!(r.game.verification_digest(), different.verification_digest());
+        different.deletion_receipts[0].1[0].3.1 += 1;
+        assert_ne!(r.game.verification_digest(), different.verification_digest());
     }
 }

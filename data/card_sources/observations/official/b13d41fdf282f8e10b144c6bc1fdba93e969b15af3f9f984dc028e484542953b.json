@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "God",
+    "card_id": "BT21-101",
+    "colors": "White Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "God/Appmon",
+    "play_cost": "13",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[App Fusion] [Globemon] & [Charismon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[App Fusion] [Globemon] & [Charismon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ ＜Link +1＞ (Add 1 to this Digimon's maximum links.) [When Digivolving] [When Attacking] You may link 1 Digimon card with the [Appmon] trait from your hand or this Digimon's digivolution cards to 1 of your Digimon without paying the cost. [Your Turn] [Once Per Turn] When your Digimon get linked, by unsuspending this Digimon, trash your opponent's top security card."
+      }
+    ],
+    "type": "Creation"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "b13d41fdf282f8e10b144c6bc1fdba93e969b15af3f9f984dc028e484542953b",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "a90878dbbaebc2c98b1d20c0e607861515260cf4df8474d68fb20baa8fbcd201",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-101",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-101"
+}

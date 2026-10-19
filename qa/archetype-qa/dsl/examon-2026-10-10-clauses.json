@@ -1,0 +1,2770 @@
+{
+  "generated_at": "2026-10-11T11:13:45.273529+00:00",
+  "source": "Original 52-card Examon campaign; empty official scrape repair and reviewed security images",
+  "cards": [
+    "BT1-090",
+    "BT11-022",
+    "BT11-033",
+    "BT13-096",
+    "BT14-009",
+    "BT20-002",
+    "BT20-007",
+    "BT20-023",
+    "BT20-025",
+    "BT20-027",
+    "BT20-040",
+    "BT20-042",
+    "BT20-044",
+    "BT20-045",
+    "BT20-093",
+    "BT21-046",
+    "BT21-052",
+    "BT23-047",
+    "BT3-093",
+    "BT3-103",
+    "BT8-097",
+    "BT9-109",
+    "EX1-066",
+    "EX1-068",
+    "EX13-005",
+    "EX13-008",
+    "EX13-018",
+    "EX13-021",
+    "EX13-024",
+    "EX13-039",
+    "EX13-041",
+    "EX13-044",
+    "EX13-045",
+    "EX3-018",
+    "EX3-020",
+    "EX3-024",
+    "EX3-037",
+    "EX3-041",
+    "EX3-065",
+    "EX3-074",
+    "EX8-002",
+    "LM-027",
+    "LM-028",
+    "LM-034",
+    "LM-036",
+    "LM-051",
+    "LM-055",
+    "LM-057",
+    "LM-058",
+    "P-035",
+    "P-092",
+    "ST2-13"
+  ],
+  "clauses": [
+    {
+      "id": "BT1-090#effect#0",
+      "card_id": "BT1-090",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Gain 2 memory. At end of turn, lose 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT11-022#effect#0",
+      "card_id": "BT11-022",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "0 from [Bebydomon]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT11-022#effect#1",
+      "card_id": "BT11-022",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When you play another Digimon with [Dramon] in its name or [Blue Flare] in its traits, ＜Draw 1＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT11-022#inherited#0",
+      "card_id": "BT11-022",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When you play another Digimon with [Dramon] in its name or [Blue Flare] in its traits, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT11-033#effect#0",
+      "card_id": "BT11-033",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Return 1 of your opponent's level 5 or lower Digimon to its owner's hand. If no Digimon was returned by this effect, your opponent adds the top card of their security stack to their hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT11-033#effect#1",
+      "card_id": "BT11-033",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When an effect adds cards to your opponent's hand, gain 1 memory for every 4 cards in your opponent's hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT13-096#effect#0",
+      "card_id": "BT13-096",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "You may play 1 blue level 3 Digimon card from 1 of your Digimon's digivolution cards without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT13-096#effect#1",
+      "card_id": "BT13-096",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When you play a blue Digimon, by suspending this Tamer, you may place 1 blue level 4 or lower Digimon card as that Digimon's bottom digivolution card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT13-096#security#0",
+      "card_id": "BT13-096",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT14-009#effect#0",
+      "card_id": "BT14-009",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "Players can’t play Digimon by effects.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-002#inherited#0",
+      "card_id": "BT20-002",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "If this Digimon has [Dracomon] or [Examon] in its text, ＜Draw 1＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-007#effect#0",
+      "card_id": "BT20-007",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Bebydomon]: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-007#effect#1",
+      "card_id": "BT20-007",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with [Dracomon] or [Examon] in its text in your hand, ＜Draw 1＞ and gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-007#inherited#0",
+      "card_id": "BT20-007",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-023#effect#0",
+      "card_id": "BT20-023",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Dracomon] in name: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-023#effect#1",
+      "card_id": "BT20-023",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Jamming",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-023#effect#2",
+      "card_id": "BT20-023",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your green Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into [Wingdramon] in the hand with the digivolution cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-023#inherited#0",
+      "card_id": "BT20-023",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-025#effect#0",
+      "card_id": "BT20-025",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Coredramon]: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-025#effect#1",
+      "card_id": "BT20-025",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Delete 1 of your opponent's Digimon with 6000 DP or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-025#effect#2",
+      "card_id": "BT20-025",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "This Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-025#inherited#0",
+      "card_id": "BT20-025",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Security A. +1",
+      "text": "(This Digimon checks 1 additional security card.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-027#effect#0",
+      "card_id": "BT20-027",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Wingdramon]/[Groundramon]: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-027#effect#1",
+      "card_id": "BT20-027",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-027#effect#2",
+      "card_id": "BT20-027",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Trash any 3 digivolution cards of 1 of your opponent's Digimon. Then, delete 1 of their Digimon with no digivolution cards.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-027#effect#3",
+      "card_id": "BT20-027",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When your opponent's security stack is removed from, 1 of your Digimon with [Dracomon] or [Examon] in its text may unsuspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-027#inherited#0",
+      "card_id": "BT20-027",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon with [Dracomon] or [Examon] in their texts would leave the battle area other than in battle, by suspending this Digimon, they don't leave.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-040#effect#0",
+      "card_id": "BT20-040",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Dracomon] in name: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-040#effect#1",
+      "card_id": "BT20-040",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-040#effect#2",
+      "card_id": "BT20-040",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your blue Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into [Groundramon] in the hand with the digivolution cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-040#inherited#0",
+      "card_id": "BT20-040",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-042#effect#0",
+      "card_id": "BT20-042",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Coredramon]: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-042#effect#1",
+      "card_id": "BT20-042",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until the end of their turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-042#effect#2",
+      "card_id": "BT20-042",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "This Digimon is also treated as Lv.6 [Breakdramon] for [Examon]'s DNA digivolution.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-042#inherited#0",
+      "card_id": "BT20-042",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon deletes your opponent's Digimon in battle, trash their top security card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-044#effect#0",
+      "card_id": "BT20-044",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Groundramon]/[Wingdramon]: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-044#effect#1",
+      "card_id": "BT20-044",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-044#effect#2",
+      "card_id": "BT20-044",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your Digimon may attack.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-044#effect#3",
+      "card_id": "BT20-044",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-044#inherited#0",
+      "card_id": "BT20-044",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#0",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "DNA Digivolve"
+      ],
+      "keyword": null,
+      "text": "Green Lv.6 + blue Lv.6: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#1",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "{Hand}",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#2",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Counter"
+      ],
+      "keyword": null,
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#3",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blast DNA Digivolve",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#4",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#5",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#6",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#7",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Evade",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#8",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#9",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any Digimon suspend, this Digimon may unsuspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-045#effect#10",
+      "card_id": "BT20-045",
+      "zone": "effect",
+      "label": "Special Rule",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Overflow",
+      "text": "(As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-093#effect#0",
+      "card_id": "BT20-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "You may play 1 Digimon card with [Dracomon] or [Examon] in its text from your hand with the play cost reduced by 3. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-093#effect#1",
+      "card_id": "BT20-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon with [Dracomon] or [Examon] in their texts would leave the battle area other than in battle, ＜Delay＞. ・2 of your Digimon may DNA digivolve into [Examon] in the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT20-093#security#0",
+      "card_id": "BT20-093",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "You may play 1 Digimon card with [Dracomon] in its name from your hand or trash without paying the cost. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-046#effect#0",
+      "card_id": "BT21-046",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Dracomon]: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-046#effect#1",
+      "card_id": "BT21-046",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Main Phase",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "This Digimon may digivolve into [Coredramon] in the hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-046#inherited#0",
+      "card_id": "BT21-046",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-052#effect#0",
+      "card_id": "BT21-052",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Examon]: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-052#effect#1",
+      "card_id": "BT21-052",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-052#effect#2",
+      "card_id": "BT21-052",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-052#effect#3",
+      "card_id": "BT21-052",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Evade",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-052#effect#4",
+      "card_id": "BT21-052",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Suspend all of your opponent's Digimon and Tamers. Then, delete 1 of their suspended Digimon or Tamers.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT21-052#effect#5",
+      "card_id": "BT21-052",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon suspends, it unsuspends. Then, if [Examon] or [X Antibody] is in this Digimon's digivolution cards, trash your opponent's top security card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT23-047#effect#0",
+      "card_id": "BT23-047",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.6 w/[CS] trait: Cost 5",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT23-047#effect#1",
+      "card_id": "BT23-047",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "DNA Digivolve"
+      ],
+      "keyword": null,
+      "text": "Green Lv.6 + blue Lv.6: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT23-047#effect#2",
+      "card_id": "BT23-047",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT23-047#effect#3",
+      "card_id": "BT23-047",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Security A. +1",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT23-047#effect#4",
+      "card_id": "BT23-047",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Partition",
+      "text": "(green Lv.5 &amp; blue Lv.5)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT23-047#effect#5",
+      "card_id": "BT23-047",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Suspend 5 of your opponent's Digimon or Tamers. None of your opponent's Digimon can unsuspend in their next unsuspend phase. Then, this Digimon may attack.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT23-047#effect#6",
+      "card_id": "BT23-047",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When your opponent's security stack is removed from, trash 1 of their Option cards in the battle area. Then, delete 1 of their suspended Digimon or Tamers.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-093#effect#0",
+      "card_id": "BT3-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 2 memory or less, set your memory to 3.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-093#effect#1",
+      "card_id": "BT3-093",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 blue and 1 green Digimon card among them to your hand. Place the rest at the bottom of your deck in any order.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-093#security#0",
+      "card_id": "BT3-093",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying its memory cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-103#effect#0",
+      "card_id": "BT3-103",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "The next time one of your green Digimon digivolves this turn, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 5.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT3-103#security#0",
+      "card_id": "BT3-103",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Add this card to your hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-097#effect#0",
+      "card_id": "BT8-097",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "For each of your opponent's Digimon, reduce this card's use cost in the hand by 1.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-097#effect#1",
+      "card_id": "BT8-097",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Your opponent's effects can't play Digimon until their turn ends. Then, delete all of your opponent's Digimon with 6000 DP or less.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT8-097#security#0",
+      "card_id": "BT8-097",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Activate this card's [Main] effects.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT9-109#effect#0",
+      "card_id": "BT9-109",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "While you have a Digimon in play, you may use this card without meeting its color requirements.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "BT9-109#effect#1",
+      "card_id": "BT9-109",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Place this card as the bottom digivolution card of 1 of your Digimon without [X Antibody] in its digivolution cards.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "BT9-109#inherited#0",
+      "card_id": "BT9-109",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "Effects can't trash [X Antibody] in this Digimon's digivolution cards.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT9-109#inherited#1",
+      "card_id": "BT9-109",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking"
+      ],
+      "keyword": null,
+      "text": "This Digimon can digivolve into a Digimon card with the [X Antibody] trait in your hand for the digivolution cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "BT9-109#security#0",
+      "card_id": "BT9-109",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Gain 1 memory, and add this card to its owner's hand.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "EX1-066#effect#0",
+      "card_id": "EX1-066",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 Digimon card among them to your hand. Trash the remaining cards.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX1-066#effect#1",
+      "card_id": "EX1-066",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "When one of your level 5 or higher Digimon with a digivolution card is deleted, you may suspend this Tamer. If you do, gain 1 memory, then hatch 1 Digi-Egg card to your Breeding Area if it's empty.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX1-066#security#0",
+      "card_id": "EX1-066",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying its memory cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX1-068#effect#0",
+      "card_id": "EX1-068",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "All of your opponent's Digimon gain \"",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX1-068#effect#1",
+      "card_id": "EX1-068",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking"
+      ],
+      "keyword": null,
+      "text": "Lose 2 memory\" until the end of their next turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX1-068#security#0",
+      "card_id": "EX1-068",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Gain 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-005#inherited#0",
+      "card_id": "EX13-005",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "You may play or use 1 card with [Dracomon] or [Examon] in its text from your hand with the cost reduced by 1.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-008#effect#0",
+      "card_id": "EX13-008",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Bebydomon]: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-008#effect#1",
+      "card_id": "EX13-008",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "[When Moving]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-008#effect#2",
+      "card_id": "EX13-008",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 card with [Dracomon] or [Examon] in its text among them to the hand. Return the rest to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-008#inherited#0",
+      "card_id": "EX13-008",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-018#effect#0",
+      "card_id": "EX13-018",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Dracomon] in name: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-018#effect#1",
+      "card_id": "EX13-018",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "By trashing 1 card with [Dracomon] or [Examon] in its text from your hand, ＜Draw 2＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-018#effect#2",
+      "card_id": "EX13-018",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-018#inherited#0",
+      "card_id": "EX13-018",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-021#effect#0",
+      "card_id": "EX13-021",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Coredramon]: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-021#effect#1",
+      "card_id": "EX13-021",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Jamming",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-021#effect#2",
+      "card_id": "EX13-021",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon or Tamers can't suspend until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-021#effect#3",
+      "card_id": "EX13-021",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "This Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-021#inherited#0",
+      "card_id": "EX13-021",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon with [Dracomon] or [Examon] in its text suspends, it may unsuspend.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-024#effect#0",
+      "card_id": "EX13-024",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Wingdramon]/[Groundramon]: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-024#effect#1",
+      "card_id": "EX13-024",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-024#effect#2",
+      "card_id": "EX13-024",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-024#effect#3",
+      "card_id": "EX13-024",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "For each of this Digimon's digivolution cards, trash any 1 digivolution card from your opponent's Digimon. Then, you may return all of their Digimon with the fewest digivolution cards to the bottom of the deck.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-024#effect#4",
+      "card_id": "EX13-024",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-024#effect#5",
+      "card_id": "EX13-024",
+      "zone": "effect",
+      "label": "Special Play Condition",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-024#inherited#0",
+      "card_id": "EX13-024",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your [Dracomon] or [Examon] text Digimon would leave the battle area, by suspending 1 of your such Digimon, they don't leave.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-039#effect#0",
+      "card_id": "EX13-039",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "Lv.3 w/[Dracomon] in name: Cost 2",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-039#effect#1",
+      "card_id": "EX13-039",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "You may return 1 non-Digi-Egg card with [Dracomon] or [Examon] in its text from your trash to the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-039#effect#2",
+      "card_id": "EX13-039",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-039#inherited#0",
+      "card_id": "EX13-039",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "This Digimon gets +2000 DP.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-041#effect#0",
+      "card_id": "EX13-041",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Coredramon]: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-041#effect#1",
+      "card_id": "EX13-041",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Fortitude",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-041#effect#2",
+      "card_id": "EX13-041",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend in their next unsuspend phase.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-041#effect#3",
+      "card_id": "EX13-041",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "This Digimon is also treated as Lv.6 [Breakdramon] for [Examon]'s DNA digivolution.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-041#inherited#0",
+      "card_id": "EX13-041",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, trash their top security card.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-044#effect#0",
+      "card_id": "EX13-044",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Groundramon]/[Wingdramon]: Cost 3",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-044#effect#1",
+      "card_id": "EX13-044",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-044#effect#2",
+      "card_id": "EX13-044",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-044#effect#3",
+      "card_id": "EX13-044",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play",
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "You may suspend up to 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-044#effect#4",
+      "card_id": "EX13-044",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-044#effect#5",
+      "card_id": "EX13-044",
+      "zone": "effect",
+      "label": "Special Play Condition",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Dracomon]/[Examon] in text",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-044#inherited#0",
+      "card_id": "EX13-044",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your Digimon suspend, 1 of your Digimon with [Dracomon] or [Examon] in its text may battle 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-045#effect#0",
+      "card_id": "EX13-045",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "DNA Digivolve"
+      ],
+      "keyword": null,
+      "text": "Green Lv.6 + blue Lv.6: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-045#effect#1",
+      "card_id": "EX13-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Raid",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-045#effect#2",
+      "card_id": "EX13-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Piercing",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-045#effect#3",
+      "card_id": "EX13-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Security A. +1",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-045#effect#4",
+      "card_id": "EX13-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-045#effect#5",
+      "card_id": "EX13-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Evade",
+      "text": "",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-045#effect#6",
+      "card_id": "EX13-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "If DNA digivolving, this Digimon attacks and all of your Digimon get +10000 DP until your opponent's turn ends. Then, this Digimon may battle 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX13-045#effect#7",
+      "card_id": "EX13-045",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon wins a battle, you may play or use 1 play or use cost 12 or lower [Dracomon] or [Examon] text card from your hand or its digivolution cards without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-018#effect#0",
+      "card_id": "EX3-018",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "2 if name contains [Dracomon]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-018#effect#1",
+      "card_id": "EX3-018",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Evade",
+      "text": "(When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-018#inherited#0",
+      "card_id": "EX3-018",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "While this Digimon has [Dramon] or [Examon] in its name, it gains ＜Evade＞. (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-020#effect#0",
+      "card_id": "EX3-020",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "3 from [Coredramon]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-020#effect#1",
+      "card_id": "EX3-020",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Evade",
+      "text": "(When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-020#effect#2",
+      "card_id": "EX3-020",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "[Examon] in your hand can treat this Digimon as level 6 for DNA Digivolution. [End of Your Turn] This Digimon and 1 of your other Digimon with [Dramon] in its name may DNA digivolve into a Digimon card in your hand by paying its DNA digivolve cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-020#inherited#0",
+      "card_id": "EX3-020",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "While this Digimon has [Dramon] or [Examon] in its name, it gains ＜Evade＞. (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-024#effect#0",
+      "card_id": "EX3-024",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "3 from [Wingdramon] or [Groundramon]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-024#effect#1",
+      "card_id": "EX3-024",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon becomes suspended, unsuspend it. [Start of Opponent's Main Phase] By suspending 1 of your Digimon with [Dramon] or [Examon] in its name, 1 of your opponent's Digimon must attack.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-024#inherited#0",
+      "card_id": "EX3-024",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "[Start of Opponent's Main Phase] By suspending 1 of your Digimon with [Dramon] or [Examon] in its name,1 of your opponent's Digimon must attack.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-037#effect#0",
+      "card_id": "EX3-037",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "0 from [Bebydomon]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-037#effect#1",
+      "card_id": "EX3-037",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "On Play"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 4 cards of your deck. Add 1 green or blue card with [Dramon] in its name and 1 card with [Examon] in its name among them to your hand. Place the rest at the bottom of your deck in any order.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-037#inherited#0",
+      "card_id": "EX3-037",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When one of your Digimon with [Dramon] or [Examon] in its name becomes suspended, this Digimon gets +1000 DP for the turn.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-041#effect#0",
+      "card_id": "EX3-041",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "3 from [Coredramon]",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-041#effect#1",
+      "card_id": "EX3-041",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "keyword",
+      "timings": [],
+      "keyword": "Blocker",
+      "text": "(When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead.)",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-041#effect#2",
+      "card_id": "EX3-041",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "[Examon] in your hand can treat this Digimon as level 6 for DNA digivolution. [End of Your Turn] This Digimon and 1 of your other Digimon with [Dramon] in its name may DNA digivolve into a Digimon card in your hand by paying its DNA digivolve cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-041#inherited#0",
+      "card_id": "EX3-041",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns"
+      ],
+      "keyword": null,
+      "text": "While this Digimon has [Dramon] or [Examon] in its name, it gains ＜Blocker＞.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-065#effect#0",
+      "card_id": "EX3-065",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If your opponent has a Digimon in play, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-065#effect#1",
+      "card_id": "EX3-065",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When one of your Digimon digivolves into a Digimon with [Rock Dragon], [Earth Dragon], [Machine Dragon], or [Sky Dragon] in its traits, by suspending this Digimon, activate 1 of that Digimon's [On Play] effects.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-065#security#0",
+      "card_id": "EX3-065",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Play this card without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-074#effect#0",
+      "card_id": "EX3-074",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "DNA Digivolve"
+      ],
+      "keyword": null,
+      "text": "0 from green Lv.6 + blue Lv.6",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-074#effect#1",
+      "card_id": "EX3-074",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "When Digivolving"
+      ],
+      "keyword": null,
+      "text": "You may place 1 green or blue Digimon card with [Dramon] in its name from your hand under this Digimon as its bottom digivolution card. When DNA digivolving, you may play 1 green or blue Digimon card with [Dramon] in its name and 12000 DP or less from your hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX3-074#effect#2",
+      "card_id": "EX3-074",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "All Turns",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "When this Digimon becomes suspended, unsuspend it, and suspend 1 of your opponent's Digimon.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "EX8-002#inherited#0",
+      "card_id": "EX8-002",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "When Attacking",
+        "Once Per Turn"
+      ],
+      "keyword": null,
+      "text": "If you have 0 memory, gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-027#effect#0",
+      "card_id": "LM-027",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "1 of your red Digimon may digivolve into a red Digimon card in the hand with the digivolution cost reduced by 3. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-027#effect#1",
+      "card_id": "LM-027",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If your opponent has a Digimon, ＜Delay＞. ・Return 1 red Digimon card from your trash to the top of the deck. Then, if you don't have a Digimon, you may play 1 red Digimon card with 2000 DP or less from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-027#security#0",
+      "card_id": "LM-027",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "You may play 1 red Digimon card with 2000 DP or less from your trash without paying the cost. Then, add this card to the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-028#effect#0",
+      "card_id": "LM-028",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "1 of your blue Digimon may digivolve into a blue Digimon card in the hand with the digivolution cost reduced by 3. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-028#effect#1",
+      "card_id": "LM-028",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Start of Your Turn"
+      ],
+      "keyword": null,
+      "text": "If your opponent has a Digimon, ＜Delay＞. ・Return 1 blue Digimon card from your trash to the top of the deck. Then, if you don't have a Digimon, you may play 1 blue Digimon card with 2000 DP or less from your trash without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-028#security#0",
+      "card_id": "LM-028",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "You may play 1 blue Digimon card with 2000 DP or less from your trash without paying the cost. Then, add this card to the hand.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-034#effect#0",
+      "card_id": "LM-034",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Red also meets this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-034#effect#1",
+      "card_id": "LM-034",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 blue or red Digimon card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-034#effect#2",
+      "card_id": "LM-034",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "Gain 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-034#security#0",
+      "card_id": "LM-034",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-036#effect#0",
+      "card_id": "LM-036",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Blue also meets this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-036#effect#1",
+      "card_id": "LM-036",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 green or blue Digimon card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-036#effect#2",
+      "card_id": "LM-036",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "Gain 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-036#security#0",
+      "card_id": "LM-036",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-051#effect#0",
+      "card_id": "LM-051",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "Green also meets this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-051#effect#1",
+      "card_id": "LM-051",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 3 cards of your deck. Add 1 red or green Digimon card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-051#effect#2",
+      "card_id": "LM-051",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "Gain 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-051#security#0",
+      "card_id": "LM-051",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-055#effect#0",
+      "card_id": "LM-055",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "While you don't have [Sprint Dash Training] in the battle area, you can ignore this card's color requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-055#effect#1",
+      "card_id": "LM-055",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 green or red card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-055#effect#2",
+      "card_id": "LM-055",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "1 of your Digimon may digivolve into a green or red Digimon card in the hand with the digivolution cost reduced by 2.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-055#security#0",
+      "card_id": "LM-055",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 green or red card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "LM-057#effect#0",
+      "card_id": "LM-057",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "While you don't have [Wall Training] in the battle area, you can ignore this card's color requirements.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "LM-057#effect#1",
+      "card_id": "LM-057",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 red or blue card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "LM-057#effect#2",
+      "card_id": "LM-057",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "(By trashing this card after the placing turn, activate the effect below.)\n・1 of your Digimon may digivolve into a red or blue Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "LM-057#security#0",
+      "card_id": "LM-057",
+      "zone": "security",
+      "label": "security_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 red or blue card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "LM-058#effect#0",
+      "card_id": "LM-058",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "untimed",
+      "timings": [],
+      "keyword": null,
+      "text": "While you don't have [Parkour Training] in the battle area, you can ignore this card's color requirements.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "LM-058#effect#1",
+      "card_id": "LM-058",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 blue or green card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "LM-058#effect#2",
+      "card_id": "LM-058",
+      "zone": "effect",
+      "label": "effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "(By trashing this card after the placing turn, activate the effect below.)\n・1 of your Digimon may digivolve into a blue or green Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "LM-058#security#0",
+      "card_id": "LM-058",
+      "zone": "security",
+      "label": "security_effect_description_eng",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 2 cards of your deck. Add 1 blue or green card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+      "source": "card_corrections",
+      "image_path": null
+    },
+    {
+      "id": "P-035#effect#0",
+      "card_id": "P-035",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Reveal the top 4 cards of your deck. Add 1 red Digimon card among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-035#effect#1",
+      "card_id": "P-035",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main",
+        "Delay"
+      ],
+      "keyword": null,
+      "text": "(Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) ・Gain 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-035#security#0",
+      "card_id": "P-035",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Place this card in its owner's battle area.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-092#effect#0",
+      "card_id": "P-092",
+      "zone": "effect",
+      "label": "Special Digivolution Condition",
+      "kind": "timing",
+      "timings": [
+        "Digivolve"
+      ],
+      "keyword": null,
+      "text": "[Bebydomon]: Cost 0",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-092#effect#1",
+      "card_id": "P-092",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your [Groundramon] are played, this Digimon may digivolve into [Wingdramon] in the hand for a digivolution cost of 3, ignoring digivolution requirements.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "P-092#inherited#0",
+      "card_id": "P-092",
+      "zone": "inherited",
+      "label": "Inherited Effect",
+      "kind": "timing",
+      "timings": [
+        "Your Turn"
+      ],
+      "keyword": null,
+      "text": "When any of your [Groundramon] are played, this Digimon may digivolve into [Wingdramon] in the hand without paying the cost.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST2-13#effect#0",
+      "card_id": "ST2-13",
+      "zone": "effect",
+      "label": "Effect",
+      "kind": "timing",
+      "timings": [
+        "Main"
+      ],
+      "keyword": null,
+      "text": "Gain 1 memory.",
+      "source": "bundle",
+      "image_path": null
+    },
+    {
+      "id": "ST2-13#security#0",
+      "card_id": "ST2-13",
+      "zone": "security",
+      "label": "Security Effect",
+      "kind": "timing",
+      "timings": [
+        "Security"
+      ],
+      "keyword": null,
+      "text": "Gain 2 memory.",
+      "source": "bundle",
+      "image_path": null
+    }
+  ],
+  "denominator": {
+    "total_clauses": 196,
+    "total_cards": 52,
+    "by_zone": {
+      "effect": 150,
+      "inherited": 27,
+      "security": 19
+    },
+    "by_source": {
+      "bundle": 185,
+      "card_corrections": 11
+    },
+    "image_required_count": 0,
+    "image_required_clause_ids": []
+  }
+}

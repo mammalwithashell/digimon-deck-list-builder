@@ -28,24 +28,10 @@
 //!     `!bounced()` then `SecurityCards[0]` → AddHandCards on the enemy + reduce
 //!     their security. Modeled with `effect_returned_any_card: false`.
 //!
-//! Clause 2 — [All Turns][Once Per Turn] memory observer (BLOCKED):
-//!   "When an EFFECT adds cards to your opponent's hand, gain 1 memory for every
-//!    4 cards in your opponent's hand." DCGO: `EffectTiming.OnAddHand`, gated by
-//!    `CanTriggerWhenAddHand(player => player == Owner.Enemy, cardEffect =>
-//!    cardEffect != null)` — i.e. effect-initiated adds to the OPPONENT's hand
-//!    only, not normal draws. Reward = `Owner.Enemy.HandCards.Count / 4` (integer
-//!    floor, counted at trigger time). OPT-locked via SetHashString.
-//!
-//!    GAP (gap_kind: engine-primitive + dsl-vocab): the engine defines
-//!    `EffectTiming::OnAddToHand` but NEVER dispatches it, and the DSL
-//!    `TriggerWhen` enum has no `on_add_to_hand` token. There is no way to
-//!    observe "an effect added cards to the opponent's hand". The memory
-//!    ARITHMETIC is fully composable today (`gain_memory_fn` + a `floor_div`
-//!    of `card_count_in_zone { zone: hand, of: opponent }` by 4), so only the
-//!    TRIGGER is missing. Clause 2 is OMITTED from the YAML per the
-//!    no-approximations policy; the math/OPT tests below are `#[ignore]`'d with
-//!    this gap ID until the observer timing is wired. See
-//!    `docs/RUST_ENGINE_GAPS.md` (G-ON-ADD-TO-HAND-OBSERVER).
+//! Clause 2 — [All Turns][Once Per Turn]: effect-driven opponent hand gains.
+//! Counts floor(opponent hand / 4) when resolving; normal draws do not trigger.
+//! Official observation 24cf2e733bc0593ecf0a4bbc02c0d4f511f9e0017f729c7a39afc6b4d9d751a3,
+//! card image BT11-033.webp; official Q2070 excludes Security activation.
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledPlayerRef, CompiledStep,
@@ -56,10 +42,6 @@ use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlayerId};
 use digimon_engine::selection::TriggerSource;
 
 const CARD_ID: &str = "BT11-033";
-const GAP_ON_ADD_TO_HAND: &str =
-    "G-ON-ADD-TO-HAND-OBSERVER: EffectTiming::OnAddToHand is never dispatched and the DSL \
-     has no on_add_to_hand trigger token; clause 2 (memory-per-4-cards observer) is blocked.";
-
 // ─── Card fixtures ──────────────────────────────────────────────────────────
 
 fn opp_digimon(card_id: &str, level: u8) -> digimon_engine::CardData {
@@ -73,7 +55,7 @@ fn opp_digimon(card_id: &str, level: u8) -> digimon_engine::CardData {
 
 fn bt11_033_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
-        .dsl_card(CARD_ID)
+        .from_dsl_yaml(include_str!("../../../cards/bt11/BT11-033.yaml"))
         .expect("BT11-033 YAML loads")
         .add_card(opp_digimon("OPP-LV3", 3))
         .add_card(opp_digimon("OPP-LV5", 5))
@@ -217,6 +199,25 @@ fn bt11_033_structural_identity_and_when_digivolving_clause() {
 }
 
 #[test]
+fn bt11_033_printed_form_and_attribute_are_available_to_trait_filters() {
+    let r = bt11_033_runner().start();
+    let data = r
+        .game
+        .card_data
+        .iter()
+        .find(|c| c.card_id == CARD_ID)
+        .unwrap();
+    assert!(
+        data.traits.iter().any(|t| t == "Mega"),
+        "printed form must participate in trait searches"
+    );
+    assert!(
+        data.traits.iter().any(|t| t == "Data"),
+        "printed attribute must participate in trait searches"
+    );
+}
+
+#[test]
 fn bt11_033_authors_the_on_add_to_hand_memory_observer() {
     // G-ON-ADD-TO-HAND-OBSERVER resolved (2026-06-04): clause 2 is now an
     // `on_add_to_hand` observer carrying a `gain_memory` step. (This replaces the
@@ -245,7 +246,6 @@ fn bt11_033_authors_the_on_add_to_hand_memory_observer() {
             .any(|step| matches!(step, CompiledStep::GainMemoryFn { .. })),
         "the observer must gain memory via a formula step"
     );
-    let _ = GAP_ON_ADD_TO_HAND;
 }
 
 // ─── Behavioral — Clause 1 POSITIVE (return-to-hand) ────────────────────────
@@ -379,19 +379,12 @@ fn bt11_033_when_digivolving_with_empty_opp_board_adds_opp_top_security_to_hand(
     );
 }
 
-// ─── Behavioral — Clause 2 memory arithmetic (BLOCKED; gap-gated) ───────────
-//
-// These encode the printed/DCGO contract for the [All Turns][Once Per Turn]
-// memory observer: floor(opp_hand_size / 4) memory each time an EFFECT adds
-// cards to the opponent's hand, once per turn, cleared at end of turn.
-// They are `#[ignore]`'d because the OnAddToHand observer timing is not wired
-// (see GAP_ON_ADD_TO_HAND). The arithmetic boundaries (3→0, 4→1, 8→2) and the
-// OPT lockout are the load-bearing assertions to honor when the gap closes.
+// Clause 2: arithmetic, owner filter, and turn-scoped OPT.
 
 #[test]
 fn bt11_033_memory_gain_is_floor_of_opp_hand_over_four() {
     // 3 cards → 0 memory; 4 → 1; 8 → 2. The observer reads the OPPONENT's hand
-    // size AT TRIGGER TIME and gains floor(size / 4).
+    // size AT RESOLUTION and gains floor(size / 4).
     for (hand_size, expected_gain) in [(3usize, 0i16), (4, 1), (8, 2)] {
         let mut r = bt11_033_runner().memory(0).start();
         r.set_first_player(0);
@@ -471,5 +464,206 @@ fn bt11_033_memory_observer_is_once_per_turn_and_clears_after_end_turn() {
         (r.memory() - m_reset).abs(),
         1,
         "once the per-turn OPT counter resets (new turn), the observer gains again"
+    );
+}
+
+#[test]
+fn bt11_033_protected_target_fallback_and_pending_clone() {
+    use digimon_engine::action::{build_action_mask, space::PASS};
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+    let mut r = bt11_033_runner()
+        .security(1, &["OPP-SEC-1"])
+        .memory(0)
+        .start();
+    r.set_first_player(0);
+    let victim = r.place_on_field(1, "OPP-LV5", Some(0));
+    let source = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.modifiers.add(
+        victim,
+        ModifierEntry::passive_replacement(
+            ModifierType::CannotBeReturnedToHand,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+    set_hand_size(&mut r, 1, 3);
+    fire_when_digivolving(&mut r, source);
+    let view = r
+        .pending_selection_view()
+        .expect("protected target remains selectable");
+    assert_eq!(view.valid_action_ids.len(), 1);
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 0.0);
+    let snapshot = r.game.clone();
+    for iteration in 0..2 {
+        if iteration == 1 {
+            r.game = snapshot.clone();
+        }
+        let game = &mut r;
+        let before = game.memory();
+        game.execute_action(view.selecting_player, view.valid_action_ids[0])
+            .unwrap();
+        game.auto_resolve().unwrap();
+        assert!(field_contains(game, 1, "OPP-LV5"));
+        assert!(hand_contains(game, 1, "OPP-SEC-1"));
+        assert_eq!(game.security_count(1), 0);
+        assert_eq!(
+            game.memory(),
+            before + 1,
+            "actual fallback dispatches hand-gain observer, clone={iteration}; activations={:?}",
+            game.game.players[0].battle_area[0].effect_activations
+        );
+    }
+}
+
+#[test]
+fn bt11_033_real_bounce_crosses_hand_threshold_and_trashes_sources() {
+    let mut r = bt11_033_runner()
+        .security(1, &["OPP-SEC-1"])
+        .memory(0)
+        .start();
+    r.place_stack(1, &["OPP-LV3", "OPP-LV5"]);
+    let source = r.place_on_field(0, CARD_ID, Some(0));
+    set_hand_size(&mut r, 1, 7);
+    fire_when_digivolving(&mut r, source);
+    let view = r.pending_selection_view().unwrap();
+    r.execute_action(view.selecting_player, view.valid_action_ids[0])
+        .unwrap();
+    r.auto_resolve().unwrap();
+    assert_eq!(r.memory(), 2);
+    assert_eq!(r.hand_size(1), 8);
+    assert_eq!(r.security_count(1), 1);
+    assert!(r.game.players[1]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "OPP-LV3"));
+}
+
+#[test]
+fn bt11_033_normal_draw_does_not_consume_opt_and_opponent_turn_works() {
+    let mut r = bt11_033_runner()
+        .deck(1, &["HAND-FILLER", "HAND-FILLER"])
+        .memory(0)
+        .start();
+    r.game.turn_player_idx = 1;
+    r.place_on_field(0, CARD_ID, Some(0));
+    set_hand_size(&mut r, 1, 3);
+    r.game.players[1].draw();
+    r.game.drain_effect_queue();
+    assert_eq!(r.memory(), 0);
+    fire_effect_add_to_hand(&mut r, 1);
+    assert_eq!(r.memory(), -1);
+    fire_effect_add_to_hand(&mut r, 1);
+    assert_eq!(r.memory(), -1);
+}
+
+#[test]
+fn bt11_033_counts_hand_at_resolution_and_zero_gain_consumes_opt() {
+    let mut r = bt11_033_runner().memory(0).start();
+    r.place_on_field(0, CARD_ID, Some(0));
+    set_hand_size(&mut r, 1, 3);
+    r.game.enqueue_triggered(
+        EffectTiming::OnAddToHand,
+        TriggerSource::HandGained {
+            player: 1,
+            effect_initiated: true,
+        },
+    );
+    set_hand_size(&mut r, 1, 8);
+    r.game.drain_effect_queue();
+    assert_eq!(r.memory(), 2, "count when resolving, not when triggered");
+    for p in &mut r.game.players[0].battle_area {
+        p.new_turn();
+    }
+    r.game.memory = 0;
+    set_hand_size(&mut r, 1, 3);
+    fire_effect_add_to_hand(&mut r, 1);
+    assert_eq!(r.memory(), 0);
+    set_hand_size(&mut r, 1, 8);
+    fire_effect_add_to_hand(&mut r, 1);
+    assert_eq!(r.memory(), 0, "mandatory zero-gain activation consumed OPT");
+}
+
+#[test]
+fn bt11_033_native_evolution_blue_five_cost_four_and_kind_filters() {
+    use digimon_engine::action::{build_action_mask, space::encode_digivolve};
+    for (color, level, legal) in [
+        (CardColor::Blue, 5, true),
+        (CardColor::Red, 5, false),
+        (CardColor::Blue, 4, false),
+    ] {
+        let mut base = opp_digimon("BASE", level);
+        base.colors = vec![color];
+        let mut r = bt11_033_runner()
+            .add_card(base)
+            .hand(0, &[CARD_ID])
+            .deck(0, &["HAND-FILLER"])
+            .memory(10)
+            .start();
+        r.set_first_player(0);
+        let h = r.place_on_field(0, "BASE", Some(0));
+        let action = encode_digivolve(0, h.index as u16);
+        assert_eq!(build_action_mask(&r.game, 0)[action as usize] > 0.0, legal);
+        if legal {
+            r.game.decode_action(action, 0);
+            r.auto_resolve().unwrap();
+            assert_eq!(r.memory(), 6);
+            assert_eq!(r.hand_size(0), 1);
+            assert!(field_contains(&r, 0, CARD_ID));
+        }
+    }
+}
+
+#[test]
+fn bt11_033_q2070_security_is_added_without_activating_and_non_digimon_excluded() {
+    let mut tamer = opp_digimon("TAMER", 3);
+    tamer.card_kind = CardKind::Tamer;
+    let mut option = opp_digimon("OPTION", 3);
+    option.card_kind = CardKind::Option;
+    let mut r = bt11_033_runner().add_card(tamer).add_card(option)
+        .from_dsl_yaml("card: SEC-PROBE\nname: Security probe\nkind: option\ncolor: [blue]\ncost: 0\neffects:\n  - when: on_security\n    scope: security\n    process:\n      - gain_memory: 6\n").unwrap()
+        .security(1, &["SEC-PROBE"]).memory(0).start();
+    r.set_first_player(0);
+    r.place_on_field(1, "TAMER", Some(0));
+    r.place_on_field(1, "OPTION", Some(0));
+    r.place_on_field(0, "OPP-LV3", Some(0));
+    r.place_in_breeding(1, "OPP-LV3");
+    let source = r.place_on_field(0, CARD_ID, Some(0));
+    fire_when_digivolving(&mut r, source);
+    r.auto_resolve().unwrap();
+    assert!(r.pending_selection_view().is_none());
+    assert!(hand_contains(&r, 1, "SEC-PROBE"));
+    assert_eq!(
+        r.memory(),
+        0,
+        "Q2070: adding security to hand is not a check"
+    );
+    assert_eq!(r.battle_area_size(1), 2);
+}
+
+#[test]
+fn bt11_033_effect_draw_batch_counts_final_hand_and_resets_on_real_turn() {
+    let mut r = bt11_033_runner()
+        .from_dsl_yaml("card: DRAW-PROBE\nname: Draw probe\nkind: digimon\nlevel: 3\ncolor: [blue]\ncost: 0\ndp: 1000\neffects:\n  - when: on_play\n    process:\n      - draw: { of: you, count: 5 }\n").unwrap()
+        .deck(0, &["HAND-FILLER"; 10]).deck(1, &["HAND-FILLER"; 20]).memory(0).start();
+    r.set_first_player(0);
+    r.place_on_field(0, CARD_ID, Some(0));
+    let draw = r.place_on_field(1, "DRAW-PROBE", Some(0));
+    set_hand_size(&mut r, 1, 3);
+    r.game.fire_on_play(1, draw.index as usize);
+    r.auto_resolve().unwrap();
+    assert_eq!(r.hand_size(1), 8);
+    assert_eq!(r.memory(), 2, "one draw batch resolves before its observer");
+    r.end_turn();
+    r.auto_resolve().unwrap();
+    assert_eq!(r.game.turn_player_idx, 1);
+    let before = r.memory();
+    set_hand_size(&mut r, 1, 3);
+    r.game.fire_on_play(1, draw.index as usize);
+    r.auto_resolve().unwrap();
+    assert_eq!(
+        r.memory(),
+        before - 2,
+        "All Turns OPT resets at opponent turn"
     );
 }

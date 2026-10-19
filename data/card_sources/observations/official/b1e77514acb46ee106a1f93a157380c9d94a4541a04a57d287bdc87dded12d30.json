@@ -1,0 +1,48 @@
+{
+  "extracted": {
+    "attribute": "Game",
+    "card_id": "EX10-043",
+    "colors": "Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "5000",
+    "form": "Sup./Appmon",
+    "play_cost": "5",
+    "qa": [
+      "Yes, you can."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] Delete 1 of your opponent's level 3 Digimon. [All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory."
+      },
+      {
+        "label": "Link DP",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Attacking] By trashing 1 of this Digimon's link cards, delete 1 of your opponent's level 4 or lower Digimon."
+      }
+    ],
+    "type": "Simulation/Leviathan"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "b1e77514acb46ee106a1f93a157380c9d94a4541a04a57d287bdc87dded12d30",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c373d485250aaacd748f5d1c69196cf8913b7efae489b7e32544c7f8c49ff014",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-043",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-043"
+}

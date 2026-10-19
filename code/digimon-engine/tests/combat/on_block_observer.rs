@@ -170,6 +170,7 @@ fn on_block_fires_on_collision_forced_block() {
 
     let atk = r.place_on_field(0, "ATK", Some(0));
     let def = r.place_on_field(1, "DEF", Some(0));
+    let blocker = r.place_on_field(1, "DEF", Some(0));
     let _w = r.place_on_field(0, "W", Some(0));
 
     // No Blocker keyword anywhere. Collision grants virtual Blocker to
@@ -179,8 +180,8 @@ fn on_block_fires_on_collision_forced_block() {
         .grant_keyword(atk, Keyword::Collision, Expiry::Permanent, 0);
 
     r.attack_digimon(atk, def, false);
-    // Forced block — pick DEF (slot 0).
-    let block_action = encode_attack(0, 0);
+    // Rule12-1-5 excludes target0; choose the distinct Collision blocker1.
+    let block_action = encode_attack(0, blocker.index as u16);
     r.game
         .resolve_selection(1, block_action)
         .expect("Collision block selection resolves");

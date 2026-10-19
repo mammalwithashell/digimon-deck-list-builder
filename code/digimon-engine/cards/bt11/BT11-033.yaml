@@ -46,6 +46,8 @@ color: [blue]
 cost: 12
 dp: 12000
 traits: ["Beast Knight"]
+form: Mega
+attribute: Data
 
 # Standard Lv.5 Blue / cost 4 digivolve (printed default).
 alt_paths:
@@ -95,7 +97,7 @@ effects:
   #   - `once_per_turn: true` + `active_when: { all_turns: true }` — the printed
   #     [Once Per Turn] / [All Turns] tags.
   #   - `gain_memory_fn` over `floor_div(card_count_in_zone{ of: opponent, zone:
-  #     hand }, 4)` — read the opponent's hand size AT TRIGGER TIME and gain
+  #     hand }, 4)` — read the opponent's hand size AT RESOLUTION and gain
   #     floor(size / 4).
   - when: on_add_to_hand
     once_per_turn: true

@@ -1,0 +1,108 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Green"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Angoramon",
+      "dp": 3000,
+      "effect_description_eng": "",
+      "evo_costs": [
+        {
+          "colors": [
+            "Green"
+          ],
+          "cost": 0,
+          "from_level": 2
+        }
+      ],
+      "form_eng": [],
+      "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If you have a [Ruli Tsukiyono] in play, gain 1 memory.",
+      "level": 3,
+      "play_cost": 3,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Beast"
+      ]
+    },
+    "card_id": "P-060",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Green",
+        "cost": 0,
+        "derived": false,
+        "level": 2,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 3000,
+        "effect_text": "",
+        "face_id": "primary",
+        "inherited_text": "[When Attacking] [Once Per Turn] If you have a [Ruli Tsukiyono] in play, gain 1 memory.",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 3,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Vaccine",
+      "color": "Green",
+      "color2": null,
+      "date_added": "2025-11-25 15:16:04",
+      "digi_type": "Beast",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 3000,
+      "evolution_color": "Green",
+      "evolution_cost": 0,
+      "evolution_level": 2,
+      "form": null,
+      "id": "P-060",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "Inherited Effect [When Attacking] [Once Per Turn] If you have a [Ruli Tsukiyono] in play, gain 1 memory.",
+      "name": "Angoramon",
+      "play_cost": 3,
+      "pretty_url": "angoramon-p-060",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "Ghost Game Promo Pack",
+        "Revision Pack 2023",
+        "Tamer Battle Pack 16"
+      ],
+      "source_effect": "",
+      "stage": null,
+      "tcgplayer_id": 493694,
+      "tcgplayer_name": "Angoramon",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "13c71ef80730f05a1eb657c871d6bd7c85ae77bca3be68111080bb04ed0a6108",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "P-060#3",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

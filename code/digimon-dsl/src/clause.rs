@@ -231,6 +231,8 @@ pub enum Timing {
     StartOfYourTurn,
     StartOfOpponentsTurn,
     StartOfYourMainPhase,
+    /// Start of the opposing player's Main phase (after breeding).
+    StartOfOpponentsMainPhase,
     EndOfYourTurn,
     EndOfOpponentsTurn,
     EndOfYourNextTurn,
@@ -351,6 +353,7 @@ pub struct DeclarativeClause {
 #[serde(rename_all = "snake_case")]
 pub enum DeclarativeKind {
     Aura,
+    #[serde(alias = "cost_assignment")]
     CostReduction,
     Replacement,
     Partition,
@@ -589,6 +592,9 @@ pub struct AuraBody {
     /// `Names_ForDNA`. G-DNA-MATERIAL-TREATED-AS-FOR-TARGET.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dna_material_identity: Option<DnaMaterialIdentitySpec>,
+    /// Protect matching individual digivolution cards from effect trash, including costs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_card_trash_protection: Option<PredicateSpec>,
 }
 
 /// Inline result-scoped DNA-material identity used inside [`AuraBody`].
@@ -599,12 +605,22 @@ pub struct DnaMaterialIdentitySpec {
     /// Exact name of the DNA result card the treatment applies to
     /// ("for [Examon]'s DNA digivolution" ⇒ `Examon`).
     pub for_result: String,
+    /// Restrict the actual DNA result instance's current location. Omitted
+    /// means unrestricted; `own_hand` means the material controller's hand.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result_scope: Option<DnaMaterialResultScope>,
     /// Extra level the carrier is treated as ("Lv.6" ⇒ `6`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub level: Option<u8>,
     /// Extra name the carrier is treated as ("[Slayerdramon]").
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DnaMaterialResultScope {
+    OwnHand,
 }
 
 /// Inline continuous effect-immunity grant used inside [`AuraBody`].
@@ -634,6 +650,8 @@ pub struct GrantKeywordValue {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CostReductionBody {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub set_cost: Option<u16>,
     /// Cost-timing discriminator (e.g., `before_pay_cost`). NOT the
     /// clause's zone scope — that lives on `DeclarativeClause.scope`.
     /// Optional because most cards don't need it.
@@ -678,6 +696,11 @@ pub struct CostReductionBody {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReplacementBody {
+    /// Printed plural prevention: one paid carrier deletion protects all matching
+    /// subjects of the same simultaneous event. Requires delete_self + prevent.
+    /// Omit for singular text, which offers a post-payment subject choice.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub prevent_all_matching: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trigger: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

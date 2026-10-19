@@ -322,6 +322,7 @@ fn q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves() {
         .dsl_card("BT9-033")
         .expect("BT9-033 Pillomon loads")
         .add_card(purple_l3)
+        .add_card(option_color_provider())
         .hand(0, &["BT8-109"])
         .memory(10)
         .start();
@@ -353,7 +354,14 @@ fn q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves() {
     );
 
     // Play Flame Hellscythe; sub-effect 1 prompts for the -6000 target.
-    r.play(0, 0).expect("play BT8-109 from hand");
+    r.place_in_breeding(0, "OPTION-COLOR-PROVIDER");
+    r.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[action as usize],
+        1.0
+    );
+    r.game.decode_action(action, 0);
     let view = r
         .pending_selection_view()
         .expect("[Main] sub-effect 1: -6000 target prompt installs");
@@ -461,6 +469,7 @@ fn q7_eye_of_the_gorgon_sequential_delete_then_play() {
         .dsl_card("BT9-033")
         .expect("BT9-033 Pillomon loads")
         .add_card(purple_l3)
+        .add_card(option_color_provider())
         .hand(0, &["BT9-108"])
         .memory(10)
         .start();
@@ -523,7 +532,14 @@ fn q7_eye_of_the_gorgon_sequential_delete_then_play() {
 
     // ── Now run the REAL Eye of the Gorgon [Main] effect ──────────────────────
     // Play BT9-108 from hand; this installs the mandatory delete prompt.
-    r.play(0, 0).expect("play BT9-108 from hand");
+    r.place_in_breeding(0, "OPTION-COLOR-PROVIDER");
+    r.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[action as usize],
+        1.0
+    );
+    r.game.decode_action(action, 0);
     let view = r
         .pending_selection_view()
         .expect("[Main] sub-effect 1: delete-target prompt installs");
@@ -589,8 +605,17 @@ fn q7_eye_of_the_gorgon_sequential_delete_then_play() {
     );
     assert_eq!(
         r.trash_size(0),
-        trash_before - 1,
-        "the played purple Lv.3 left the trash"
+        trash_before,
+        "the purple Lv.3 leaves trash and the resolved Option enters it"
+    );
+    assert_eq!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .map(|c| c.card_id(&r.game.card_data))
+            .collect::<Vec<_>>(),
+        vec!["BT9-108"],
+        "only the resolved Eye of the Gorgon remains in trash"
     );
 }
 
@@ -1091,4 +1116,16 @@ fn q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger() {
         1,
         "two security checks performed (Sec.A. base 1 + Alliance +1) → 3 − 2 = 1"
     );
+}
+
+fn option_color_provider() -> CardData {
+    let mut card = make_test_card("OPTION-COLOR-PROVIDER", "Option color provider");
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(2000);
+    card.colors = vec![
+        digimon_engine::enums::CardColor::Yellow,
+        digimon_engine::enums::CardColor::Purple,
+    ];
+    card
 }

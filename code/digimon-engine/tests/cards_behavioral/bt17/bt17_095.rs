@@ -388,8 +388,7 @@ fn bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible() {
 // Section 3 — Clause B: [All Turns] cross-permanent leave watcher
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Smoke test: with BT17-095 placed on field as an Option (not yet seated
-/// through the full Main flow), and a non-matching opponent Digimon being
+/// With BT17-095 seated as a ready Delay Option and a non-matching opponent Digimon being
 /// deleted, the replacement clause must NOT fire (subject filter rejects
 /// non-mine subjects).
 #[test]
@@ -401,12 +400,17 @@ fn bt17_095_replacement_does_not_fire_for_opponent_digimon_leaving() {
         .expect("BT17-095 YAML parses")
         .add_card(opp_l6.clone())
         .add_card(make_filler("FILL"))
+        .add_card(make_l7_omnimon("BT17095-NEG-OMNI"))
+        .add_card(make_l6_hand_partner("BT17095-NEG-PARTNER"))
+        .hand(0, &["BT17095-NEG-OMNI", "BT17095-NEG-PARTNER"])
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
         .start();
 
-    let _bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    seat_as_delay_option(&mut runner, bt17_095);
+    runner.game.turn_count += 1; // Ready Delay; isolate the subject filter.
     let opp_grey = runner.place_on_field(1, "BT17095-OPP-GREY", None);
 
     // Snapshot field counts.
@@ -421,6 +425,10 @@ fn bt17_095_replacement_does_not_fire_for_opponent_digimon_leaving() {
         digimon_engine::replacement::ReplacementCause::OwnEffect,
     );
     runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "nonmatching subject must not offer replacement"
+    );
 
     // BT17-095 should still be on P0's field (no Delay cost was triggered).
     let bt17_095_still_present = runner.game.players[0]
@@ -430,6 +438,13 @@ fn bt17_095_replacement_does_not_fire_for_opponent_digimon_leaving() {
     assert!(
         bt17_095_still_present,
         "BT17-095 must remain on field; replacement should not fire for opponent's leaving Digimon"
+    );
+    assert!(
+        runner.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT17095-OPP-GREY"),
+        "nonmatching subject must leave normally"
     );
 }
 
@@ -444,12 +459,17 @@ fn bt17_095_replacement_does_not_fire_for_own_low_level_greymon() {
         .expect("BT17-095 YAML parses")
         .add_card(l3_grey.clone())
         .add_card(make_filler("FILL"))
+        .add_card(make_l7_omnimon("BT17095-NEG-OMNI"))
+        .add_card(make_l6_hand_partner("BT17095-NEG-PARTNER"))
+        .hand(0, &["BT17095-NEG-OMNI", "BT17095-NEG-PARTNER"])
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
         .start();
 
-    let _bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    seat_as_delay_option(&mut runner, bt17_095);
+    runner.game.turn_count += 1; // Ready Delay; isolate the subject filter.
     let own_l3 = runner.place_on_field(0, "BT17095-L3-GREY", None);
 
     runner.game.delete_permanent_with_cause(
@@ -457,6 +477,10 @@ fn bt17_095_replacement_does_not_fire_for_own_low_level_greymon() {
         digimon_engine::replacement::ReplacementCause::OwnEffect,
     );
     runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "nonmatching subject must not offer replacement"
+    );
 
     let bt17_095_still_present = runner.game.players[0]
         .battle_area
@@ -465,6 +489,13 @@ fn bt17_095_replacement_does_not_fire_for_own_low_level_greymon() {
     assert!(
         bt17_095_still_present,
         "BT17-095 must remain on field; level_eq:6 filter rejects level-3 subject"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT17095-L3-GREY"),
+        "nonmatching subject must leave normally"
     );
 }
 
@@ -479,12 +510,17 @@ fn bt17_095_replacement_does_not_fire_for_own_l6_unmatched_name() {
         .expect("BT17-095 YAML parses")
         .add_card(l6_other.clone())
         .add_card(make_filler("FILL"))
+        .add_card(make_l7_omnimon("BT17095-NEG-OMNI"))
+        .add_card(make_l6_hand_partner("BT17095-NEG-PARTNER"))
+        .hand(0, &["BT17095-NEG-OMNI", "BT17095-NEG-PARTNER"])
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
         .start();
 
-    let _bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    seat_as_delay_option(&mut runner, bt17_095);
+    runner.game.turn_count += 1; // Ready Delay; isolate the subject filter.
     let own_l6 = runner.place_on_field(0, "BT17095-L6-OTHER", None);
 
     runner.game.delete_permanent_with_cause(
@@ -492,6 +528,10 @@ fn bt17_095_replacement_does_not_fire_for_own_l6_unmatched_name() {
         digimon_engine::replacement::ReplacementCause::OwnEffect,
     );
     runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "nonmatching subject must not offer replacement"
+    );
 
     let bt17_095_still_present = runner.game.players[0]
         .battle_area
@@ -500,6 +540,13 @@ fn bt17_095_replacement_does_not_fire_for_own_l6_unmatched_name() {
     assert!(
         bt17_095_still_present,
         "BT17-095 must remain on field; name filter rejects non-Greymon/non-Garurumon subject"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "BT17095-L6-OTHER"),
+        "nonmatching subject must leave normally"
     );
 }
 

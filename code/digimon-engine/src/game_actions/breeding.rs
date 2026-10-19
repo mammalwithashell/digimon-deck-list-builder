@@ -45,9 +45,8 @@ impl Game {
             let can_move = player
                 .breeding_area
                 .as_ref()
-                .and_then(|perm| perm.level(&self.card_data))
-                .unwrap_or(0)
-                >= 3;
+                .and_then(|perm| perm.top_card().digimon_dp(&self.card_data))
+                .is_some();
             if !can_move {
                 return false;
             }
@@ -145,23 +144,32 @@ impl Game {
         self.move_from_breeding(player_id)
     }
 
-    /// Play/place a Digimon from hand into the real breeding area.
-    ///
-    /// Returns false if the hand index is invalid, the card is not a Digimon
-    /// card, or the breeding area is already occupied.
-    pub fn play_to_breeding_from_hand(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
-        {
-            let player = self.player(player_id);
-            if player.breeding_area.is_some() || hand_index >= player.hand.len() {
-                return false;
-            }
-            let card = &player.hand[hand_index];
-            let kind = self.card_data[card.data_index].card_kind;
-            if !matches!(kind, CardKind::Digimon | CardKind::Dual) {
-                return false;
-            }
+    /// Shared eligibility for effect play into breeding. The actual card must
+    /// still be in its physical owner's hand. Field capacity is irrelevant.
+    pub fn can_play_to_breeding_from_hand(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+        effect_controller: PlayerId,
+    ) -> bool {
+        let Some(player) = self.players.get(player_id as usize) else { return false; };
+        let Some(card) = player.hand.get(hand_index) else { return false; };
+        if player.breeding_area.is_some() || card.owner != player_id || card.is_token {
+            return false;
         }
+        let kind = self.card_data[card.data_index].card_kind;
+        matches!(kind, CardKind::Digimon | CardKind::Dual)
+            && !self.modifiers.player_has(effect_controller, ModifierType::CannotPlayDigimonByEffect)
+            && !self.card_play_is_prohibited(effect_controller, card)
+    }
 
+    /// Play/place a Digimon from hand into the real breeding area. No On Play
+    /// or battle-area entry event fires from this destination.
+    pub fn play_to_breeding_from_hand(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
+        let controller = self.effect_source_player.unwrap_or(player_id);
+        if !self.can_play_to_breeding_from_hand(player_id, hand_index, controller) {
+            return false;
+        }
         let card = self.player_mut(player_id).hand.remove(hand_index);
         let permanent = crate::permanent::Permanent::new(card, self.turn_count);
         self.player_mut(player_id).breeding_area = Some(permanent);

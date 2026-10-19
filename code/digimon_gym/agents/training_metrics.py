@@ -83,6 +83,7 @@ class TrainingRunMetadata:
     tensor_size: int = 0
     tensor_layout_hash: str = ""
     action_space_size: int = 0
+    action_schema_version: int | None = None
     card_registry_capacity: int = 0
     embedding_dim: int = 0
     training_mode: str = "standard"

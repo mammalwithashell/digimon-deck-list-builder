@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT21-042",
+    "colors": "Yellow Red",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "5",
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[All Turns] [Once Per Turn] When any of your [Marcus Damon]s are played, this Digimon may digivolve into a yellow Digimon card with [RizeGreymon] in its name in the hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Dinosaur"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "0f5c8d0b4f424799805540dc02720e8b7f8b0dd77912be0d1afe5374090eeccd",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "4bcdf8bfd98005b1f19c7954dccba7b2772e79be63b9489076bdcb7ac4a0588b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-042",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-042"
+}

@@ -99,7 +99,7 @@ impl StepSnapshot {
 /// carries the player), hand / trash / reveal indices of the zone's owner.
 /// Other kinds fall back to `explain_action`; `None` means "not resolved
 /// here", never "no card".
-fn candidate_card(
+pub(super) fn candidate_card(
     game: &digimon_engine::Game,
     p: &digimon_engine::selection::PendingSelection,
     id: u16,
@@ -224,14 +224,21 @@ pub fn lower_and_run(
     // in which "our" post-clause state was compared against DCGO's pre-clause
     // row. Our state genuinely does not move at such a step, so the previous
     // projection is repeated.
-    let mut projections = vec![StateProjection::from_game(&session.game, 0)];
+    let project = |game: &digimon_engine::Game, step| {
+        let mut projection = StateProjection::from_game(game, step);
+        projection.measure_legal_option_plays(game, s.legal_option_plays_requested(step));
+        projection.measure_selection_can_decline(game, s.selection_can_decline_requested(step));
+        projection.measure_selection_candidates(game, s.selection_candidates_requested(step));
+        projection
+    };
+    let mut projections = vec![project(&session.game, 0)];
     let mut snapshots = Vec::with_capacity(s.steps.len());
     for i in 0..s.steps.len() {
         snapshots.push(StepSnapshot::of(&session.game, i));
         for _ in 0..specs_per_step[i] {
             session.step();
         }
-        projections.push(StateProjection::from_game(&session.game, i as u32 + 1));
+        projections.push(project(&session.game, i as u32 + 1));
     }
 
     Ok(LoweredRun {

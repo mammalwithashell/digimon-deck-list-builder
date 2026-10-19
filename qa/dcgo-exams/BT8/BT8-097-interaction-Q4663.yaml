@@ -1,0 +1,145 @@
+# Interaction draft for Q4663 (no oracle result claimed; no expect_ruling yet).
+# After Crimson Blaze's [Main] "your opponent can't play Digimon by effects until
+# the end of their turn", P0's OWN effect -- Dragomon (EX5-060) [When Digivolving]
+# "Your opponent plays 1 level 4 or lower Digimon card from their trash suspended
+# without paying the cost" -- still plays an opponent's Digimon in the same turn.
+# DCGO's floodgate only blocks effects whose source card the opponent owns
+# (BT8_097.cs:141-145 CardEffectCondition, consulted from CardSource.CanEnterField
+# via CanPlayAsNewPermanent in EX5_060.cs:130); ours installs
+# CannotPlayDigimonByEffect on the opponent (cards/bt8/BT8-097.yaml clause B).
+# Board: P0 hatches the red Koromon (ST1-01) on T1 purely for Crimson Blaze's
+# colour requirement (the oracle-confirmed BT8-097-tail-main line uses the same
+# device; the egg-only breeding decision auto-skips afterwards, and no red Lv.3 ever
+# reaches P0's hand), and builds DemiDevimon (ST6-02) -> Garurumon (ST6-06, purple
+# Lv.4) as the body Dragomon digivolves from (EX5-060: Lv.4 purple, cost 3).
+# P1 fields Biyomon (ST1-02), Dracomon (ST1-04) and, on T4, Phoenixmon (ST1-10,
+# cost 10 from 3 memory) so P0 starts T5 with 7: Crimson Blaze costs 6-3 = 3, the
+# sweep trashes the two <=6000 DP Digimon (Phoenixmon, 12000, survives), Dragomon's
+# digivolve costs 3, and P0 keeps a main-phase decision afterwards so the board
+# with P1's effect-played, suspended Digimon is projected before P1's unsuspend.
+# Dragomon's [All Turns][Once Per Turn] "play 1 purple Digimon ... from your trash"
+# also triggers on that play; P0's trash holds only Crimson Blaze, so DCGO's
+# CanActivate is false (EX5_060.cs:246-297, AutoProcessing.cs:1086) and ours has
+# no candidate: no prompt on either side.
+card: BT8-097
+clause: BT8-097#effect#1
+covers:
+- BT8-097#effect#1
+- BT8-097#effect#0
+interaction:
+  id: qa:Q4663
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST6-02     # opening hand
+    - ST6-06
+    - BT8-097
+    - EX5-060
+    - ST6-05
+    - ST6-03     # security
+    - ST6-03
+    - ST6-07
+    - ST6-07
+    - ST1-03
+    - ST1-05     # T3 draw
+    - ST1-06     # T3 digivolution draw
+    - ST1-05     # T5 draw
+    - ST1-06     # T5 digivolution draw
+    rest: BT8-097-interaction-Q4663-p0
+  p1:
+    stack:
+    - ST1-02     # opening hand
+    - ST1-04
+    - ST1-10
+    - ST1-07
+    - ST1-08
+    - ST1-03     # security
+    - ST1-03
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - ST2-02     # T2 draw
+    - ST2-03     # T4 draw
+    - ST2-04     # T6 draw
+    - ST2-05
+    rest: BT8-097-interaction-Q4663-p1
+steps:
+# T1 (P0, memory 0): hatch the red egg (colour for Crimson Blaze), play DemiDevimon
+# (cost 2 -> -2). P1 starts with 2.
+- actor: 0
+  do: { hatch: {} }
+  expect: { prompt: breeding_action }
+- actor: 0
+  do: { play: { card: ST6-02, from: hand } }
+  expect: { prompt: main_phase }
+# T2 (P1, memory 2): Biyomon (2 -> 0), Dracomon (3 -> -3). P0 starts with 3.
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 1
+  do: { play: { card: ST1-02, from: hand } }
+  expect: { prompt: main_phase }
+- actor: 1
+  do: { play: { card: ST1-04, from: hand } }
+  expect: { prompt: main_phase }
+# T3 (P0, memory 3; the egg-only breeding decision auto-skips): Garurumon over
+# DemiDevimon (cost 2 -> 1), then pass: P1 starts with 3 (6-5-1-7-1).
+- actor: 0
+  do: { digivolve: { from: field.0, using: ST6-06 } }
+  expect: { prompt: main_phase }
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: main_phase }
+# T4 (P1, memory 3): Phoenixmon, cost 10 -> -7. P0 starts with 7.
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+- actor: 1
+  do: { play: { card: ST1-10, from: hand } }
+  expect: { prompt: main_phase }
+# T5 (P0, memory 7): Crimson Blaze (6 - 3 opposing Digimon = 3 -> 4): floodgate on
+# P1 until the end of P1's turn, then Biyomon and Dracomon are deleted
+# (Phoenixmon stays). No prompt on either side.
+- actor: 0
+  do: { play: { card: BT8-097, from: hand } }
+  expect: { prompt: main_phase }
+# THE RULING: Dragomon digivolves (cost 3 -> 1); its [When Digivolving] makes P1
+# play a Lv.4-or-lower Digimon from P1's trash suspended -- P1 chooses, mandatory.
+- actor: 0
+  do: { digivolve: { from: field.0, using: EX5-060 } }
+  expect: { prompt: main_phase }
+- actor: 1
+  do: { select: { cards: [ST1-02] } }
+  expect: { prompt: SelectCardEffect }
+# Memory 1, still P0's turn: this decision projects P1's board with the
+# effect-played, suspended Biyomon beside Phoenixmon, Dracomon still in P1's trash.
+# Pass hands P1 3.
+- actor: 0
+  do: { pass: {} }
+  expect: { prompt: main_phase }
+# T6 (P1): trailing decision.
+- actor: 1
+  do: { pass: {} }
+  expect: { prompt: breeding_action }
+expect_ruling:
+  q_id: Q4663
+  assert:
+  - at: 10
+    that:
+      p1.field:
+      - ST1-10
+      p1.trash:
+      - ST1-02
+      - ST1-04
+  - at: 12
+    that:
+      p1.field:
+      - card_id: ST1-10
+        suspended: false
+      - card_id: ST1-02
+        suspended: true
+      p1.trash:
+      - ST1-04

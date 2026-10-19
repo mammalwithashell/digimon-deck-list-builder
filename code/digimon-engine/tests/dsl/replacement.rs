@@ -18,6 +18,7 @@ use std::sync::Arc;
 
 fn fixture_replacement(trigger: &str, scope: CompiledScope) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "F-REPL".into(),
         name: "Fixture Replacement".into(),
         kind: CompiledCardKind::Digimon,

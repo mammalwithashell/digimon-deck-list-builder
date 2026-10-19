@@ -1,0 +1,286 @@
+# Draft: awaiting completed DCGO comparison.
+# Singleton remainder is sim-only: base DCGO RevealLibrary.cs:478 moves one card directly; our engine requests its sole order.
+# Official observation 71671fa55340ba8944d21b8e7f20fa89f26e7ef0ce621239fb97891031b4c2d4; actual LM-055 image checked.
+card: LM-055
+clause: LM-055#security#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST2-03
+    - ST2-04
+    - ST2-05
+    - ST2-06
+    rest: lm-055-tail-security-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - LM-055
+    - ST2-04
+    - ST4-03
+    - ST1-03
+    rest: lm-055-tail-security-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      cards:
+      - ST4-03
+- actor: 1
+  do:
+    select:
+      cards:
+      - ST1-03
+      sim_only: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 8
+  that:
+    memory: 3
+    p1.security: 4
+    p1.trash: []
+- at: 0
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 1
+- at: 1
+  that:
+    _backfilled: true
+    memory: 0
+    p0.field: []
+    p0.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 1
+- at: 2
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 2
+- at: 3
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 2
+- at: 4
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Breeding
+    turn: 3
+- at: 5
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: false
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST2-04
+    p1.security: 5
+    p1.trash: []
+    phase: Main
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: ST1-03
+      dp: 2000
+      suspended: true
+      sources: []
+    p0.hand:
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST2-04
+    p0.security: 5
+    p0.trash: []
+    p1.field: []
+    p1.hand:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST1-06
+    - ST1-07
+    - ST2-04
+    p1.security: 4
+    p1.trash: []
+    turn: 3

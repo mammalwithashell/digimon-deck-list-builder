@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT12-021",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "Yes, as long as either a Digimon card with [Imperialdramon] in its name or the [Free] trait, or a Tamer card with [Davis Motomiya] in its name is among the cards revealed, you can add it to your hand."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Imperialdramon] in its name or the [Free] trait and 1 card with [Davis Motomiya] in its name among them to your hand. Place the rest at the bottom of your deck in any order."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Your Turn] This Digimon and one of your other Digimon in play may DNA digivolve into a Digimon card in your hand for the cost."
+      }
+    ],
+    "type": "Mini Dragon"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "0694216397718ac8c25b70b2485ba20817331013af750750681c410fb866e438",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "9c40edb4fc03ae5eb32d9e1b95b0ab4d0ce4288d409c8386a772f89515bcf0bf",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT12-021",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT12-021"
+}

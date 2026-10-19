@@ -1,0 +1,31 @@
+# On Play search: one eligible card and two nonmatching leftovers.
+# Official EX13 card list category 522039 and card image checked 2026-10-10.
+# Draft: no oracle assertion or confirmation until a measured comparison.
+card: EX13-008
+clause: EX13-008#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [EX13-008, EX13-045, EX13-045, EX13-024, EX13-024,
+            EX13-041, EX13-041, EX13-041, EX13-041, EX13-044,
+            EX13-018, LM-055, LM-055]
+    rest: examon-mikoml-20261008
+  p1:
+    stack: []
+    rest: examon-mikoml-20261008
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX13-008, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX13-018] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { cards: [LM-055, LM-055] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }

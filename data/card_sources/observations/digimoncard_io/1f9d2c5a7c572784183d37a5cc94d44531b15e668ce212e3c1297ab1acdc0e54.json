@@ -1,0 +1,105 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Red",
+        "Yellow"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Shoutmon + Star Sword",
+      "dp": 4000,
+      "effect_description_eng": "＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\r\n[On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with 2000 DP or less.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "",
+      "level": 3,
+      "play_cost": 5,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Enhancement",
+        "Xros Heart"
+      ]
+    },
+    "card_id": "BT11-009",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Red",
+          "cost": 0,
+          "level": 2,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "dp": 4000,
+        "effect_text": "＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\r\n[On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with 2000 DP or less.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 5,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "DigiXros Requirements [DigiXros -1] [Shoutmon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Red",
+      "color2": "Yellow",
+      "date_added": "2025-11-25 10:12:18",
+      "digi_type": "Enhancement",
+      "digi_type2": "Xros Heart",
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 4000,
+      "evolution_color": null,
+      "evolution_cost": 0,
+      "evolution_level": null,
+      "form": null,
+      "id": "BT11-009",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "＜Material Save 1＞ (When this Digimon would be deleted, you may place 1 card in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\r\n[On Play] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if DigiXrosing with 2 cards, delete 1 of your opponent's Digimon with 2000 DP or less.",
+      "name": "Shoutmon + Star Sword",
+      "play_cost": 5,
+      "pretty_url": "shoutmon-star-sword-bt11-009",
+      "rarity": "c",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-11: Booster Dimensional Phase"
+      ],
+      "source_effect": "",
+      "stage": null,
+      "tcgplayer_id": 477789,
+      "tcgplayer_name": "Shoutmon + Star Sword",
+      "type": "Digimon",
+      "xros_req": "DigiXros Requirements [DigiXros -1] [Shoutmon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "1f9d2c5a7c572784183d37a5cc94d44531b15e668ce212e3c1297ab1acdc0e54",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT11-009",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

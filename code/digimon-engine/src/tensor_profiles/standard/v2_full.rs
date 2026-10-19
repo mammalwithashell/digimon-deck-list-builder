@@ -13,9 +13,9 @@ pub const TENSOR_VERSION: u16 = v2_lite::TENSOR_VERSION;
 // (re-exported here) grows `permanent_slots` by 90 floats, shifting every
 // later section and `tensor_size` 43392 -> 43482. The LAYOUT_HASH below is
 // recomputed for the new layout.
-pub const FEATURE_SCHEMA_VERSION: &str = "standard_full_v2.3";
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_full_v2.4";
 pub const LAYOUT_HASH: &str =
-    "sha256:83dde7638d3a4dc86531162bb7d6cdad6397258ae946f1984fb44a6d3b89a7b2";
+    "sha256:86e9e086eb3eb7b9a86016c58d68307db84a03063fe52461ba4eca57b2cf8e63";
 
 pub const GLOBAL_FEATURES_SIZE: usize = v2_lite::GLOBAL_FEATURES_SIZE;
 pub const PLAYER_SUMMARY_SIZE: usize = v2_lite::PLAYER_SUMMARY_SIZE;
@@ -28,6 +28,9 @@ pub const RESERVED_SIZE: usize = v2_lite::RESERVED_SIZE;
 
 pub const ACTION_ID_ROWS: usize = crate::action::space::ACTION_SPACE_SIZE;
 pub const ACTION_ID_ROW_SIZE: usize = 16;
+pub const ACTION_COUNT_COMMIT_OFFSET: usize = 10;
+pub const ACTION_COUNT_PREVIOUS_OFFSET: usize = 11;
+pub const ACTION_COUNT_NEXT_OFFSET: usize = 15;
 pub const ACTION_ID_FEATURES_SIZE: usize = ACTION_ID_ROWS * ACTION_ID_ROW_SIZE;
 
 pub const OFF_GLOBAL_FEATURES: usize = v2_lite::OFF_GLOBAL_FEATURES;

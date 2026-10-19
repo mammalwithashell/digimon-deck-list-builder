@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX4-005",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] 0 from [Koromon]",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 0 from [Koromon]"
+      },
+      {
+        "label": "Effect",
+        "text": "[Start of Your Main Phase] If you have a red or yellow Tamer in play, gain 1 memory."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn][Once Per Turn] When one of your red or yellow Tamers becomes suspended, ＜Draw 1＞. (Draw 1 card from your deck.)"
+      }
+    ],
+    "type": "Dinosaur"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "a9da38d670d58cbfad4be78d85450364d60faaef3ccfef2e2407328ec4816499",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "8f6822f6e4eefc6d8bf0cefa29c15ef33ed8e99e90789a9f2425402ea0af51d3",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX4-005",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX4-005"
+}

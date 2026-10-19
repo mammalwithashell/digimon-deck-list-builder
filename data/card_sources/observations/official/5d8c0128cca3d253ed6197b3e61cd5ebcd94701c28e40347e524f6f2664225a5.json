@@ -1,0 +1,119 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX12-016",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Black"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "cost": 4,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Black"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "MetalGreymon",
+        "play_cost": 7,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.4 w/[Greymon] in name or w/[ME]/[VB] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Decode (Lv.4 or lower w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait)＞\n[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less. Then, give 1 of their Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -2: Lv.4 or lower w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Decode (Lv.4 or lower w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)"
+          }
+        ]
+      }
+    ],
+    "form": "Ultimate",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 5,
+    "name": "MetalGreymon",
+    "play_cost": 7,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-016.png?260529",
+      "printing_id": "EX12-016"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "You can give the effect, but if the Digimon isn't affected by effects at the time it would be triggered, it will not trigger.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6740",
+        "question": "Can I use this card's [On Play] [When Digivolving] effect to give \"[Start of Your Main Phase] This Digimon attacks\" to a Digimon that isn't affected by effects?"
+      },
+      {
+        "answer": "Yes, both have to be XX.\nFor example, \"1 level 4 or lower Digimon card with the [CS] trait or that is yellow or black\" means either \"1 level 4 or lower Digimon card with the [CS] trait\" or \"1 level 4 or lower Digimon card that is yellow or black.\" In both cases, the card must be level 4 or lower.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6741",
+        "question": "If a text says \"XX card with AA or BB,\" does that mean AA and BB both have to be XX?"
+      }
+    ],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.4 w/[Greymon] in name or w/[ME]/[VB] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Greymon] in name or w/[ME]/[VB] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Decode (Lv.4 or lower w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait)＞\n[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less. Then, give 1 of their Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "Assembly -2: Lv.4 or lower w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Decode (Lv.4 or lower w/[Agumon]/[Greymon] in name or w/[ME]/[VB] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)"
+      }
+    ],
+    "type": "Cyborg/ME/VB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "5d8c0128cca3d253ed6197b3e61cd5ebcd94701c28e40347e524f6f2664225a5",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-016:EX12-016",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

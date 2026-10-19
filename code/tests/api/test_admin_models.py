@@ -164,7 +164,9 @@ async def _grant_admin(session_factory, username: str) -> None:
 
 
 async def _create_model(client: AsyncClient, token: str, **overrides) -> dict:
+    from model_contract import current_contract
     payload = {
+        **current_contract("standard_compact_v1"),
         "name": "Test Model",
         "model_type": "mlp",
         "engine_commit": "abc1234",
@@ -554,6 +556,7 @@ class TestPublicManifest:
 
         required_keys = {
             "id", "name", "model_type", "tensor_size", "action_space_size",
+            "observation_profile", "tensor_version", "feature_schema_version", "tensor_layout_hash",
             "engine_commit", "trained_at", "file_sha256", "file_size_bytes",
             "url", "deck_id", "deck_name", "notes",
         }

@@ -1,3 +1,4 @@
+import type { ModelContract } from '@/utils/modelContract';
 // Tauri-invoke wrappers for the desktop model manager (see src-tauri/src/models.rs).
 //
 // Only meaningful in desktop builds (VITE_BUILD_TARGET=desktop). On the web
@@ -17,8 +18,13 @@ export interface ManifestModel {
   id: string;
   name: string;
   model_type: ModelArchitecture;
+  observation_profile?: string | null;
+  tensor_version?: number | null;
+  feature_schema_version?: string | null;
+  tensor_layout_hash?: string | null;
   tensor_size: number;
   action_space_size: number;
+  action_schema_version?: number | null;
   engine_commit: string | null;
   trained_at: string | null;
   file_sha256: string;
@@ -38,7 +44,7 @@ export interface LocalModelMeta extends ManifestModel {
   downloaded_at: number;
 }
 
-export interface EngineContract {
+export interface EngineContract extends ModelContract {
   tensor_size: number;
   action_space_size: number;
   engine_commit: string | null;
@@ -68,13 +74,18 @@ export async function loadCached(modelId: string): Promise<LocalModelMeta> {
   return invoke<LocalModelMeta>('models_load_cached', { modelId });
 }
 
-/// True if a manifest entry's shape contract matches the running engine.
+/// True if a manifest entry's complete training contract matches the running engine.
 /// The backend rejects mismatches at download time too, but checking client-
 /// side lets the UI grey out incompatible rows before the user clicks.
 export function isCompatible(model: ManifestModel, contract: EngineContract): boolean {
   return (
+    model.observation_profile === contract.observation_profile &&
+    model.tensor_version === contract.tensor_version &&
+    model.feature_schema_version === contract.feature_schema_version &&
+    model.tensor_layout_hash === contract.tensor_layout_hash &&
     model.tensor_size === contract.tensor_size &&
-    model.action_space_size === contract.action_space_size
+    model.action_space_size === contract.action_space_size &&
+    model.action_schema_version === contract.action_schema_version
   );
 }
 

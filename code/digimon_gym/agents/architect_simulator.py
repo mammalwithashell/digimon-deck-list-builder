@@ -127,7 +127,12 @@ class _SB3Policy:
             self._state = None
             self._episode_start = True
 
+        from model_contract import validate_checkpoint
+        self._contract = validate_checkpoint(self._model)
+
     def predict(self, obs: np.ndarray, mask: np.ndarray) -> int:
+        if obs.size != self._contract["tensor_size"] or mask.size != self._contract["action_space_size"]:
+            raise ValueError("Pilot inputs differ from its training contract")
         if self._is_lstm:
             action, self._state = self._model.predict(
                 obs, state=self._state, action_masks=mask,
@@ -188,6 +193,20 @@ def load_pilot_policy(path_or_name: str) -> PilotPolicy:
 # Standalone matchup function (module-level for multiprocessing)
 # ---------------------------------------------------------------------------
 
+def _matchup_observation_profile(pilot, opponent):
+    from digimon_gym.tensor_profiles import get_tensor_profile
+    profiles = set()
+    for policy in (pilot, opponent):
+        contract = getattr(policy, "_contract", None)
+        if isinstance(policy, _OnnxPolicy):
+            contract = policy._policy.contract
+        if contract is not None:
+            profiles.add(contract["observation_profile"])
+    if len(profiles) > 1:
+        raise ValueError("Pilot and opponent observation profiles differ")
+    return next(iter(profiles)) if profiles else get_tensor_profile().id
+
+
 def _run_matchup(
     deck1: List[str],
     deck2: List[str],
@@ -204,6 +223,7 @@ def _run_matchup(
     """
     pilot = load_pilot_policy(pilot_path)
     opponent = load_pilot_policy(opponent_path)
+    observation_profile = _matchup_observation_profile(pilot, opponent)
 
     wins = losses = draws = 0
 
@@ -222,7 +242,7 @@ def _run_matchup(
         try:
             # Even-parity seed keeps the first player constant (seed % 2),
             # so the d1/d2 side-swap above is what removes first-player bias.
-            runner = RustHeadlessGame(d1, d2, seed=2 * i)
+            runner = RustHeadlessGame(d1, d2, seed=2 * i, observation_profile=observation_profile)
 
             # Bind runner for greedy policies that need game state access
             if isinstance(pilot, _HeadlessGreedyPolicy):
@@ -394,6 +414,7 @@ class DeckSimulator:
 
         pilot = self._pilot
         opponent = self._opponent
+        observation_profile = _matchup_observation_profile(pilot, opponent)
 
         wins = losses = draws = 0
 
@@ -412,7 +433,7 @@ class DeckSimulator:
             try:
                 # Even-parity seed keeps the first player constant (seed % 2),
                 # so the d1/d2 side-swap above is what removes first-player bias.
-                runner = RustHeadlessGame(d1, d2, seed=2 * i)
+                runner = RustHeadlessGame(d1, d2, seed=2 * i, observation_profile=observation_profile)
 
                 # Bind runner for greedy policies
                 if isinstance(pilot, _HeadlessGreedyPolicy):

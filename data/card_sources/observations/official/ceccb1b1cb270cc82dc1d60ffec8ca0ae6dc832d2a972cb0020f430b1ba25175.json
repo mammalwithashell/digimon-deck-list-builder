@@ -1,0 +1,105 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX12-007",
+    "card_type": "Digimon",
+    "colors": [
+      "Red",
+      "Yellow"
+    ],
+    "dp": 2000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "cost": 1,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "dp": 2000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Gammamon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Gurimon]/Lv.2 w/[VB] trait: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in its text and 1 card with the [VB] trait among them to the hand. Return the rest to the bottom of the deck."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[Your Turn] This Digimon gets +2000 DP."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Gammamon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-007.png?260529",
+      "printing_id": "EX12-007"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6729",
+        "question": "What kind of card does \"a card with X in its text\" refer to?"
+      }
+    ],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] [Gurimon]/Lv.2 w/[VB] trait: Cost 0"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Gurimon]/Lv.2 w/[VB] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in its text and 1 card with the [VB] trait among them to the hand. Return the rest to the bottom of the deck."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Ceratopsian/VB"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "ceccb1b1cb270cc82dc1d60ffec8ca0ae6dc832d2a972cb0020f430b1ba25175",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-007:EX12-007",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

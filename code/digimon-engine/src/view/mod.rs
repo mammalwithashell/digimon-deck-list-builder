@@ -428,6 +428,7 @@ pub struct PendingSelectionDebugView {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EffectChoiceSummary {
+    pub count_choice: Option<crate::count_choice_wire::CountChoiceDto>,
     pub label: String,
     pub action_id: u16,
 }
@@ -474,6 +475,9 @@ impl PendingSelectionDebugView {
 
 fn effect_choice_summary(entry: &EffectChoiceEntry) -> EffectChoiceSummary {
     EffectChoiceSummary {
+        count_choice: entry
+            .count_choice
+            .map(crate::count_choice_wire::CountChoiceDto::from),
         label: entry.label.clone(),
         action_id: entry.action_id,
     }

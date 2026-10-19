@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "ST9-09",
+    "colors": "Green",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "Yes, if a Digimon with this card in its digivolution cards is itself blue, the effect activates."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "When you would play this card from your hand, if you have a blue Digimon in play, reduce its play cost by 1."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] If you have a blue Digimon in play, ＜Draw 1＞. (Draw 1 card from your deck.)"
+      }
+    ],
+    "type": "Insectoid"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "6d4311fcbc2f152e52de384c5898a993facb4ba34b32636809ca6bd644a60047",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "85d847fc5c534571cd160e7b3aa4ae2de7670477fada1c166604cb9a9464e829",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:ST9-09",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/ST9-09"
+}

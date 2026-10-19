@@ -1,3 +1,4 @@
+import { parseModelContract, type ModelContract } from '@/utils/modelContract';
 import { useEffect, useRef, useState } from 'react';
 import { listDecks } from '@/api/deckApi';
 import {
@@ -43,6 +44,8 @@ function formatBytes(bytes: number): string {
 }
 
 export function AdminModelsUploadModal({ open, onClose, onCreated }: Props) {
+  const [contract, setContract] = useState<ModelContract | null>(null);
+  const contractRead = useRef(0);
   const [step, setStep] = useState<Step>('metadata');
   const [meta, setMeta] = useState<MetaFormState>(EMPTY_META);
   const [decks, setDecks] = useState<DeckSummary[]>([]);
@@ -66,6 +69,8 @@ export function AdminModelsUploadModal({ open, onClose, onCreated }: Props) {
   // Reset all state when the modal opens
   useEffect(() => {
     if (open) {
+      contractRead.current += 1;
+      setContract(null);
       setStep('metadata');
       setMeta(EMPTY_META);
       setCreateResp(null);
@@ -82,9 +87,11 @@ export function AdminModelsUploadModal({ open, onClose, onCreated }: Props) {
   const handleMetaSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!contract) { setError('Choose the exported model metadata file first.'); return; }
     setSubmitting(true);
     try {
       const resp = await createModel({
+        ...contract,
         name: meta.name.trim(),
         model_type: meta.model_type,
         engine_commit: meta.engine_commit.trim() || null,
@@ -169,6 +176,24 @@ export function AdminModelsUploadModal({ open, onClose, onCreated }: Props) {
         {/* Step 1: Metadata */}
         {step === 'metadata' && (
           <form onSubmit={handleMetaSubmit} className="space-y-4">
+            <label className="block text-sm text-gray-300">
+              Exported model metadata (.onnx.meta.json)
+              <input type="file" accept=".json,application/json" required disabled={submitting}
+                onChange={async (event) => {
+                  const selected = event.target.files?.[0];
+                  const generation = ++contractRead.current;
+                  setContract(null);
+                  setError(null);
+                  if (!selected) return;
+                  try {
+                    const parsed = parseModelContract(await selected.text());
+                    if (generation === contractRead.current) setContract(parsed);
+                  } catch (err) {
+                    if (generation === contractRead.current) setError(err instanceof Error ? err.message : 'Invalid model metadata');
+                  }
+                }} />
+              {contract && <span className="block">{contract.observation_profile} · {contract.feature_schema_version}</span>}
+            </label>
             <div>
               <label className="block text-xs font-semibold text-gray-400 uppercase mb-1">
                 Name <span className="text-red-400">*</span>
@@ -262,7 +287,7 @@ export function AdminModelsUploadModal({ open, onClose, onCreated }: Props) {
             <div className="flex gap-2 pt-1">
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || !contract}
                 className="rounded bg-blue-500 hover:bg-blue-600 disabled:opacity-50 px-4 py-2 text-sm font-semibold text-white"
               >
                 {submitting ? 'Creating…' : 'Next: Upload File'}

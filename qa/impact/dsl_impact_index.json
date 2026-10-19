@@ -737,6 +737,28 @@
         "select_opponent_permanent"
       ]
     },
+    "BT11-022": {
+      "path": "bt11/BT11-022.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "event_card_name_contains",
+        "event_card_trait_has",
+        "event_target_is_source",
+        "event_target_kind",
+        "level_eq",
+        "name_is",
+        "your_turn"
+      ],
+      "timings": [
+        "on_ally_played"
+      ],
+      "verbs": [
+        "draw",
+        "gain_memory"
+      ]
+    },
     "BT11-033": {
       "path": "bt11/BT11-033.yaml",
       "predicates": [
@@ -1734,6 +1756,44 @@
         "suspend"
       ]
     },
+    "BT13-096": {
+      "path": "bt13/BT13-096.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "any_permanent",
+        "can_change_orientation",
+        "can_play_from_effect_without_cost",
+        "color_is",
+        "event_card_color_has",
+        "event_card_kind",
+        "event_target_kind",
+        "event_target_owner",
+        "host_kind_is",
+        "is_source",
+        "is_suspended",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "not",
+        "owner",
+        "source_is_unsuspended"
+      ],
+      "timings": [
+        "on_ally_played",
+        "on_play",
+        "on_security"
+      ],
+      "verbs": [
+        "if",
+        "place_as_bottom_source",
+        "play_from_security",
+        "play_selected_sources_free",
+        "select_hand",
+        "select_own_sources",
+        "suspend"
+      ]
+    },
     "BT13-101": {
       "path": "bt13/BT13-101.yaml",
       "predicates": [
@@ -2255,6 +2315,7 @@
       "predicates": [
         "all_of",
         "color_is",
+        "dna_origin",
         "effect_suspended_any_opponent_digimon",
         "is_unsuspended",
         "kind",
@@ -2264,12 +2325,11 @@
         "zone"
       ],
       "timings": [
-        "on_dna_digivolve",
         "when_attacking",
         "when_digivolving"
       ],
       "verbs": [
-        "add_modifier",
+        "add_player_modifier",
         "for_each",
         "if",
         "select_opponent_permanent",
@@ -2358,6 +2418,25 @@
         "place_remainder_on_deck",
         "reveal_top_deck",
         "select_reveal_buckets"
+      ]
+    },
+    "BT16-033": {
+      "path": "bt16/BT16-033.yaml",
+      "predicates": [
+        "color_is",
+        "event_target_is_source",
+        "level_eq",
+        "name_is",
+        "security_count",
+        "your_turn"
+      ],
+      "timings": [
+        "on_security_check"
+      ],
+      "verbs": [
+        "gain_memory",
+        "if",
+        "recover"
       ]
     },
     "BT16-040": {
@@ -2781,7 +2860,6 @@
     "BT17-078": {
       "path": "bt17/BT17-078.yaml",
       "predicates": [
-        "all_of",
         "any_permanent",
         "color_is",
         "dna_origin",
@@ -3933,6 +4011,42 @@
         "trash_from_hand_by_index"
       ]
     },
+    "BT20-002": {
+      "path": "bt20/BT20-002.yaml",
+      "predicates": [
+        "any_of",
+        "in_text_contains"
+      ],
+      "timings": [
+        "when_attacking"
+      ],
+      "verbs": [
+        "draw"
+      ]
+    },
+    "BT20-007": {
+      "path": "bt20/BT20-007.yaml",
+      "predicates": [
+        "any_of",
+        "color_is",
+        "count_gte",
+        "in_text_contains",
+        "level_eq",
+        "name_is",
+        "owner",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "start_of_your_main_phase"
+      ],
+      "verbs": [
+        "draw",
+        "gain_memory",
+        "select_hand",
+        "trash_from_hand_by_index"
+      ]
+    },
     "BT20-016": {
       "path": "bt20/BT20-016.yaml",
       "predicates": [
@@ -4045,6 +4159,93 @@
         "unsuspend"
       ]
     },
+    "BT20-023": {
+      "path": "bt20/BT20-023.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "can_digivolve_from_source",
+        "color_is",
+        "event_target_color_any_of",
+        "event_target_in_text_contains",
+        "event_target_kind",
+        "event_target_owner",
+        "kind",
+        "level_eq",
+        "name_contains",
+        "name_is",
+        "your_turn"
+      ],
+      "timings": [
+        "on_ally_played"
+      ],
+      "verbs": [
+        "effect_initiated_digivolve",
+        "if",
+        "select_hand"
+      ]
+    },
+    "BT20-025": {
+      "path": "bt20/BT20-025.yaml",
+      "predicates": [
+        "binding_present",
+        "color_is",
+        "dp_lte",
+        "kind",
+        "level_eq",
+        "name_is"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "if",
+        "select_opponent_permanent"
+      ]
+    },
+    "BT20-027": {
+      "path": "bt20/BT20-027.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "any_permanent",
+        "binding_present",
+        "can_change_orientation",
+        "can_unsuspend",
+        "color_is",
+        "in_text_contains",
+        "is_source",
+        "kind",
+        "level_eq",
+        "name_is",
+        "none_of",
+        "not",
+        "owner",
+        "replacement_cause",
+        "replacement_subject_is_mine",
+        "source_count",
+        "source_is_unsuspended"
+      ],
+      "timings": [
+        "on_opponent_security_removed",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "if",
+        "refund_opt",
+        "select_opponent_permanent",
+        "select_opponent_sources",
+        "select_own_permanent",
+        "suspend_and_cancel_all_matching_leaves",
+        "trash_selected_sources",
+        "unsuspend"
+      ]
+    },
     "BT20-036": {
       "path": "bt20/BT20-036.yaml",
       "predicates": [
@@ -4100,6 +4301,89 @@
         "suspend"
       ]
     },
+    "BT20-040": {
+      "path": "bt20/BT20-040.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "can_digivolve_from_source",
+        "color_is",
+        "event_target_color_any_of",
+        "event_target_in_text_contains",
+        "event_target_kind",
+        "event_target_owner",
+        "kind",
+        "level_eq",
+        "name_contains",
+        "name_is",
+        "your_turn"
+      ],
+      "timings": [
+        "on_ally_played"
+      ],
+      "verbs": [
+        "effect_initiated_digivolve",
+        "if",
+        "select_hand"
+      ]
+    },
+    "BT20-042": {
+      "path": "bt20/BT20-042.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "color_is",
+        "event_battle_deleter",
+        "event_winner_is_source",
+        "kind",
+        "level_eq",
+        "name_is",
+        "owner"
+      ],
+      "timings": [
+        "on_ally_won_battle",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "if",
+        "select_opponent_permanent",
+        "suspend",
+        "trash_top_security"
+      ]
+    },
+    "BT20-044": {
+      "path": "bt20/BT20-044.yaml",
+      "predicates": [
+        "any_of",
+        "binding_present",
+        "color_is",
+        "event_battle_deleter",
+        "in_text_contains",
+        "is_suspended",
+        "kind",
+        "level_eq",
+        "name_is",
+        "not_in_binding",
+        "owner"
+      ],
+      "timings": [
+        "on_ally_won_battle",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "if",
+        "may_attack_now",
+        "select_opponent_permanent",
+        "select_own_permanent",
+        "suspend"
+      ]
+    },
     "BT20-045": {
       "path": "bt20/BT20-045.yaml",
       "predicates": [
@@ -4120,9 +4404,37 @@
         "when_digivolving"
       ],
       "verbs": [
-        "for_each",
-        "return_to_deck",
+        "return_all_to_deck",
         "unsuspend"
+      ]
+    },
+    "BT20-053": {
+      "path": "bt20/BT20-053.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "can_play_to_breeding_from_hand",
+        "color_is",
+        "during_attack",
+        "kind",
+        "level_eq",
+        "name_is",
+        "opponents_turn",
+        "trait_has"
+      ],
+      "timings": [
+        "on_opponent_attack",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "grant_effect_immunity",
+        "if",
+        "play_to_breeding_from_hand",
+        "redirect_attack_target",
+        "select_hand",
+        "select_own_permanent"
       ]
     },
     "BT20-055": {
@@ -4327,6 +4639,35 @@
         "play_from_security",
         "select_hand",
         "suspend"
+      ]
+    },
+    "BT20-093": {
+      "path": "bt20/BT20-093.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "in_text_contains",
+        "kind",
+        "name_contains",
+        "name_is",
+        "none_of",
+        "owner",
+        "replacement_cause",
+        "replacement_subject_is_mine"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_security"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "effect_initiated_dna_digivolve",
+        "place_self_as_delay_option",
+        "play_from_hand",
+        "play_union_bound_free",
+        "select_dna_pair",
+        "select_hand",
+        "select_union_zone"
       ]
     },
     "BT20-100": {
@@ -4915,6 +5256,28 @@
         "select_trash"
       ]
     },
+    "BT21-046": {
+      "path": "bt21/BT21-046.yaml",
+      "predicates": [
+        "all_of",
+        "can_digivolve_onto",
+        "color_is",
+        "kind",
+        "level_eq",
+        "name_is",
+        "your_turn"
+      ],
+      "timings": [
+        "end_of_your_turn",
+        "start_of_your_main_phase",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "effect_initiated_digivolve",
+        "may_dna_digivolve_now",
+        "select_hand"
+      ]
+    },
     "BT21-047": {
       "path": "bt21/BT21-047.yaml",
       "predicates": [
@@ -4929,6 +5292,35 @@
         "place_remainder_on_deck",
         "reveal_top_deck",
         "select_reveal_buckets"
+      ]
+    },
+    "BT21-052": {
+      "path": "bt21/BT21-052.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "event_target_is_source",
+        "is_suspended",
+        "kind",
+        "level_eq",
+        "name_is",
+        "owner",
+        "self_source_count",
+        "zone"
+      ],
+      "timings": [
+        "on_suspend",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "for_each",
+        "if",
+        "select_opponent_permanent",
+        "suspend",
+        "trash_top_security",
+        "unsuspend"
       ]
     },
     "BT21-054": {
@@ -6389,10 +6781,8 @@
         "is_suspended",
         "kind",
         "level_eq",
-        "owner",
         "trait_has",
-        "your_turn",
-        "zone"
+        "your_turn"
       ],
       "timings": [
         "on_opponent_security_removed",
@@ -6400,7 +6790,7 @@
         "when_digivolving"
       ],
       "verbs": [
-        "add_modifier",
+        "add_player_modifier",
         "delete_permanent",
         "may_attack_now",
         "per_selected",
@@ -8014,9 +8404,9 @@
         "when_attacking"
       ],
       "verbs": [
-        "for_each",
         "if",
         "link_to_own_digimon",
+        "return_all_to_hand",
         "return_to_hand",
         "select_opponent_permanent",
         "select_own_permanent",
@@ -10117,9 +10507,9 @@
         "all_of",
         "any_of",
         "color_is",
-        "effect_text_contains",
         "equals",
         "event_permanent_is_source",
+        "in_text_contains",
         "level_eq",
         "trait_has"
       ],
@@ -13189,6 +13579,17 @@
       "timings": [],
       "verbs": []
     },
+    "BT4-011": {
+      "path": "bt4/BT4-011.yaml",
+      "predicates": [
+        "color_is",
+        "kind",
+        "level_eq",
+        "owner"
+      ],
+      "timings": [],
+      "verbs": []
+    },
     "BT4-014": {
       "path": "bt4/bt4_014.yaml",
       "predicates": [],
@@ -13575,6 +13976,85 @@
         "select_reveal_buckets"
       ]
     },
+    "BT7-058": {
+      "path": "bt7/BT7-058.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "can_digivolve_onto",
+        "color_is",
+        "is_source_permanent",
+        "kind",
+        "level_eq",
+        "name_contains",
+        "name_is",
+        "your_turn"
+      ],
+      "timings": [
+        "when_attacking"
+      ],
+      "verbs": [
+        "effect_initiated_digivolve",
+        "if",
+        "place_as_bottom_source",
+        "select_hand",
+        "select_own_permanent"
+      ]
+    },
+    "BT7-059": {
+      "path": "bt7/BT7-059.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "level_eq",
+        "name_contains",
+        "your_turn"
+      ],
+      "timings": [
+        "on_play"
+      ],
+      "verbs": [
+        "add_to_hand_from_reveal",
+        "place_remainder_on_deck",
+        "reveal_top_deck",
+        "select_reveal_buckets"
+      ]
+    },
+    "BT7-063": {
+      "path": "bt7/BT7-063.yaml",
+      "predicates": [
+        "all_of",
+        "all_turns",
+        "any_of",
+        "binding_present",
+        "can_play_from_effect_without_cost",
+        "color_is",
+        "count_gte",
+        "equals",
+        "kind",
+        "level_eq",
+        "name_in",
+        "name_is",
+        "not",
+        "not_in_binding",
+        "owner",
+        "self_source_count",
+        "zone"
+      ],
+      "timings": [
+        "on_play"
+      ],
+      "verbs": [
+        "if",
+        "place_as_top_source",
+        "play_from_materials",
+        "select_effect_choice",
+        "select_materials",
+        "select_union_zone"
+      ]
+    },
     "BT7-069": {
       "path": "bt7/BT7-069.yaml",
       "predicates": [],
@@ -13744,8 +14224,7 @@
       ],
       "verbs": [
         "add_player_modifier",
-        "delete_permanent",
-        "for_each"
+        "delete_all_permanents"
       ]
     },
     "BT8-107": {
@@ -13917,6 +14396,34 @@
         "select_trash"
       ]
     },
+    "BT9-109": {
+      "path": "bt9/BT9-109.yaml",
+      "predicates": [
+        "all_of",
+        "any_permanent",
+        "can_digivolve_onto",
+        "kind",
+        "name_is",
+        "not",
+        "owner",
+        "source_count",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_security",
+        "when_attacking"
+      ],
+      "verbs": [
+        "add_this_option_to_hand",
+        "effect_initiated_digivolve",
+        "gain_memory",
+        "place_self_under_permanent",
+        "select_hand",
+        "select_own_permanent"
+      ]
+    },
     "BT9-112": {
       "path": "bt9/BT9-112.yaml",
       "predicates": [
@@ -13978,12 +14485,16 @@
       "predicates": [
         "all_of",
         "all_turns",
+        "any_permanent",
+        "can_change_orientation",
         "can_hatch",
         "event_target_has_digivolution_cards",
         "event_target_kind",
         "event_target_level_gte",
         "event_target_owner",
+        "is_source",
         "kind",
+        "owner",
         "source_is_unsuspended"
       ],
       "timings": [
@@ -14058,7 +14569,7 @@
       "verbs": [
         "cancel_attack",
         "select_own_sources",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "EX10-010": {
@@ -14164,7 +14675,7 @@
         "select_opponent_permanent",
         "select_own_permanent",
         "select_own_sources",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "EX10-031": {
@@ -14225,7 +14736,7 @@
         "select_own_permanent",
         "select_own_sources",
         "select_trash",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "EX10-033": {
@@ -14248,7 +14759,7 @@
         "select_count_capped_multi",
         "select_opponent_permanent",
         "select_own_sources",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "EX10-034": {
@@ -14272,7 +14783,7 @@
         "grant_triggered_effect",
         "select_opponent_permanent",
         "select_own_sources",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "EX10-036": {
@@ -14294,7 +14805,7 @@
         "select_opponent_permanent",
         "select_own_sources",
         "select_trash",
-        "trash_selected_sources",
+        "trash_selected_sources_as_cost",
         "trash_top_security",
         "unsuspend"
       ]
@@ -14395,7 +14906,7 @@
       ],
       "verbs": [
         "select_own_sources",
-        "trash_selected_sources",
+        "trash_selected_sources_as_cost",
         "trash_top_security"
       ]
     },
@@ -14942,7 +15453,7 @@
         "select_opponent_permanent",
         "select_own_sources",
         "select_trash",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "EX11-046": {
@@ -17295,6 +17806,8 @@
         "all_of",
         "any_of",
         "any_permanent",
+        "binding_exists",
+        "can_change_orientation",
         "color_is",
         "equals",
         "in_text_contains",
@@ -17312,14 +17825,13 @@
         "when_digivolving"
       ],
       "verbs": [
-        "cancel_replacement",
-        "for_each",
         "if",
-        "return_to_deck",
+        "refund_opt",
+        "return_all_to_deck",
         "select_effect_choice",
         "select_opponent_sources",
         "select_own_permanent",
-        "suspend",
+        "suspend_and_cancel_all_matching_leaves",
         "trash_selected_sources"
       ]
     },
@@ -17935,9 +18447,8 @@
         "when_digivolving"
       ],
       "verbs": [
-        "add_dp_modifier",
+        "add_modifier",
         "battle",
-        "for_each",
         "force_attack",
         "if",
         "play_union_bound_free",
@@ -18064,8 +18575,7 @@
         "on_suspend"
       ],
       "verbs": [
-        "cancel_replacement",
-        "suspend",
+        "suspend_and_cancel_all_matching_leaves",
         "unsuspend"
       ]
     },
@@ -18854,6 +19364,66 @@
         "select_own_permanent"
       ]
     },
+    "EX2-007": {
+      "path": "ex2/EX2-007.yaml",
+      "predicates": [
+        "all_of",
+        "cost_target_from_hand",
+        "count_lte",
+        "in_breeding",
+        "name_is",
+        "not",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "main_on_field"
+      ],
+      "verbs": [
+        "place_cards_as_bottom_sources",
+        "select_zone_cards"
+      ]
+    },
+    "EX2-046": {
+      "path": "ex2/EX2-046.yaml",
+      "predicates": [
+        "all_of",
+        "cost_target_from_hand",
+        "count_gte",
+        "kind",
+        "name_is",
+        "none_of",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_play"
+      ],
+      "verbs": [
+        "draw"
+      ]
+    },
+    "EX2-055": {
+      "path": "ex2/EX2-055.yaml",
+      "predicates": [
+        "binding_present",
+        "name_is"
+      ],
+      "timings": [
+        "when_attacking"
+      ],
+      "verbs": [
+        "if",
+        "pay_source_prefix",
+        "place_cards_as_bottom_sources",
+        "select_zone_cards",
+        "unsuspend"
+      ]
+    },
     "EX3-008": {
       "path": "ex3/EX3-008.yaml",
       "predicates": [
@@ -18879,6 +19449,28 @@
         "select_trash"
       ]
     },
+    "EX3-012": {
+      "path": "ex3/EX3-012.yaml",
+      "predicates": [
+        "any_permanent",
+        "color_is",
+        "effect_deleted_any_opponent_digimon",
+        "kind",
+        "level_eq",
+        "owner",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking"
+      ],
+      "verbs": [
+        "add_player_modifier",
+        "delete_all_permanents",
+        "if",
+        "trash_top_security"
+      ]
+    },
     "EX3-014": {
       "path": "ex3/EX3-014.yaml",
       "predicates": [
@@ -18896,6 +19488,137 @@
       "verbs": [
         "delete_permanent",
         "select_opponent_permanent"
+      ]
+    },
+    "EX3-018": {
+      "path": "ex3/EX3-018.yaml",
+      "predicates": [
+        "any_of",
+        "color_is",
+        "level_eq",
+        "name_contains",
+        "source_name_contains"
+      ],
+      "timings": [],
+      "verbs": []
+    },
+    "EX3-020": {
+      "path": "ex3/EX3-020.yaml",
+      "predicates": [
+        "any_of",
+        "color_is",
+        "level_eq",
+        "name_contains",
+        "name_is",
+        "your_turn"
+      ],
+      "timings": [
+        "end_of_your_turn"
+      ],
+      "verbs": [
+        "may_dna_digivolve_now"
+      ]
+    },
+    "EX3-024": {
+      "path": "ex3/EX3-024.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "any_permanent",
+        "binding_present",
+        "can_change_orientation",
+        "color_is",
+        "during_attack",
+        "event_target_is_source",
+        "is_suspended",
+        "is_unsuspended",
+        "kind",
+        "level_eq",
+        "name_contains",
+        "name_is",
+        "none_of",
+        "not_in_binding",
+        "owner",
+        "zone"
+      ],
+      "timings": [
+        "on_suspend",
+        "start_of_opponents_main_phase"
+      ],
+      "verbs": [
+        "as_selecting_player",
+        "force_attack",
+        "if",
+        "select_opponent_permanent",
+        "select_own_permanent",
+        "suspend",
+        "unsuspend"
+      ]
+    },
+    "EX3-037": {
+      "path": "ex3/EX3-037.yaml",
+      "predicates": [
+        "all_of",
+        "all_turns",
+        "any_of",
+        "color_is",
+        "event_target_kind",
+        "event_target_name_contains",
+        "event_target_owner",
+        "level_eq",
+        "name_contains",
+        "name_is"
+      ],
+      "timings": [
+        "on_play",
+        "on_suspend"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "reveal_search"
+      ]
+    },
+    "EX3-041": {
+      "path": "ex3/EX3-041.yaml",
+      "predicates": [
+        "any_of",
+        "any_permanent",
+        "color_is",
+        "is_source",
+        "level_eq",
+        "name_contains",
+        "name_is",
+        "owner",
+        "your_turn"
+      ],
+      "timings": [
+        "end_of_your_turn"
+      ],
+      "verbs": [
+        "may_dna_digivolve_now"
+      ]
+    },
+    "EX3-044": {
+      "path": "ex3/EX3-044.yaml",
+      "predicates": [
+        "any_of",
+        "color_is",
+        "event_battle_surviving_deleter",
+        "event_target_is_source",
+        "kind",
+        "level_eq",
+        "name_contains",
+        "name_in",
+        "owner"
+      ],
+      "timings": [
+        "on_ally_won_battle",
+        "on_suspend"
+      ],
+      "verbs": [
+        "select_opponent_permanent",
+        "suspend",
+        "trash_top_security"
       ]
     },
     "EX3-057": {
@@ -18953,6 +19676,62 @@
         "grant_keyword",
         "select_hand",
         "select_opponent_permanent"
+      ]
+    },
+    "EX3-065": {
+      "path": "ex3/EX3-065.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "any_permanent",
+        "can_change_orientation",
+        "event_card_kind",
+        "event_card_trait_has",
+        "event_target_owner",
+        "is_source",
+        "is_suspended",
+        "kind",
+        "owner",
+        "source_is_unsuspended",
+        "your_turn"
+      ],
+      "timings": [
+        "on_digivolve",
+        "on_security",
+        "start_of_your_turn"
+      ],
+      "verbs": [
+        "gain_memory",
+        "if",
+        "play_from_security",
+        "refire_effect",
+        "suspend"
+      ]
+    },
+    "EX3-074": {
+      "path": "ex3/EX3-074.yaml",
+      "predicates": [
+        "any_of",
+        "color_is",
+        "dna_origin",
+        "dp_lte",
+        "event_target_is_source",
+        "kind",
+        "level_eq",
+        "name_contains"
+      ],
+      "timings": [
+        "on_suspend",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "if",
+        "place_as_bottom_source",
+        "play_from_hand_free",
+        "select_hand",
+        "select_opponent_permanent",
+        "suspend",
+        "unsuspend"
       ]
     },
     "EX4-003": {
@@ -19195,7 +19974,7 @@
         "select_opponent_permanent",
         "select_opponent_play_cost_budget",
         "select_own_sources",
-        "trash_selected_sources",
+        "trash_selected_sources_as_cost",
         "trash_top_security"
       ]
     },
@@ -19263,6 +20042,7 @@
       "path": "ex5/EX5-060.yaml",
       "predicates": [
         "all_of",
+        "can_play_from_effect_without_cost",
         "color_is",
         "event_is_effect_initiated",
         "event_target_kind",
@@ -20002,7 +20782,7 @@
         "if",
         "select_opponent_permanent",
         "select_own_sources",
-        "trash_selected_sources",
+        "trash_selected_sources_as_cost",
         "trash_top_security",
         "use_option_from_hand"
       ]
@@ -20035,6 +20815,20 @@
         "select_own_permanent",
         "select_reveal",
         "select_union_zone"
+      ]
+    },
+    "EX8-002": {
+      "path": "ex8/EX8-002.yaml",
+      "predicates": [
+        "all_of",
+        "memory_gte",
+        "memory_lte"
+      ],
+      "timings": [
+        "when_attacking"
+      ],
+      "verbs": [
+        "gain_memory"
       ]
     },
     "EX8-005": {
@@ -20341,7 +21135,7 @@
         "place_cards_as_bottom_sources",
         "select_count_capped_multi",
         "select_own_sources",
-        "trash_selected_sources",
+        "trash_selected_sources_as_cost",
         "unsuspend"
       ]
     },
@@ -20427,7 +21221,7 @@
         "select_opponent_permanent",
         "select_own_permanent",
         "select_own_sources",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "EX8-073": {
@@ -20906,11 +21700,14 @@
         "all_of",
         "any_permanent",
         "binding_exists",
+        "can_digivolve_onto",
         "color_is",
         "dp_lte",
+        "has_digivolve_candidate",
         "kind",
         "not",
-        "owner"
+        "owner",
+        "zone"
       ],
       "timings": [
         "main_from_hand",
@@ -20987,8 +21784,10 @@
       "predicates": [
         "all_of",
         "any_permanent",
+        "can_digivolve_onto",
         "color_is",
         "dp_lte",
+        "has_digivolve_candidate",
         "kind",
         "not",
         "owner",
@@ -21088,9 +21887,8 @@
       "path": "lm/LM-034.yaml",
       "predicates": [
         "all_of",
+        "any_field_permanent",
         "any_of",
-        "any_permanent",
-        "card_number_is",
         "color_is",
         "kind",
         "owner"
@@ -21275,9 +22073,11 @@
       "predicates": [
         "all_of",
         "any_of",
-        "card_number_is",
+        "can_digivolve_onto",
         "color_is",
+        "has_digivolve_candidate",
         "kind",
+        "name_is",
         "no_permanent",
         "owner",
         "zone"
@@ -21527,6 +22327,25 @@
         "place_self_as_delay_option",
         "reveal_top_deck",
         "select_reveal"
+      ]
+    },
+    "P-092": {
+      "path": "p/P-092.yaml",
+      "predicates": [
+        "can_digivolve_from_source",
+        "color_is",
+        "event_card_name_is",
+        "kind",
+        "level_eq",
+        "name_is",
+        "your_turn"
+      ],
+      "timings": [
+        "on_ally_played"
+      ],
+      "verbs": [
+        "effect_initiated_digivolve",
+        "select_hand"
       ]
     },
     "P-094": {
@@ -21997,7 +22816,7 @@
         "select_effect_choice",
         "select_opponent_permanent",
         "select_own_sources",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "P-169": {
@@ -24919,7 +25738,7 @@
         "select_opponent_permanent",
         "select_own_sources",
         "suspend",
-        "trash_selected_sources"
+        "trash_selected_sources_as_cost"
       ]
     },
     "ST4-14": {
@@ -25497,7 +26316,7 @@
       ]
     }
   },
-  "cards_root": "code/digimon-engine/cards",
+  "cards_root": "C:/Users/james/.codex/worktrees/toho-jupiter-pr739-integration/digimon-deck-list-builder-1/code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost_reduce": [
       "BT26-084"
@@ -25525,6 +26344,7 @@
       "BT10-093",
       "BT10-111",
       "BT11-018",
+      "BT11-022",
       "BT11-033",
       "BT11-042",
       "BT11-061",
@@ -25559,6 +26379,7 @@
       "BT13-087",
       "BT13-093",
       "BT13-095",
+      "BT13-096",
       "BT13-101",
       "BT13-103",
       "BT13-110",
@@ -25589,7 +26410,6 @@
       "BT17-018",
       "BT17-070",
       "BT17-077",
-      "BT17-078",
       "BT17-081",
       "BT17-093",
       "BT17-095",
@@ -25630,15 +26450,21 @@
       "BT20-017",
       "BT20-020",
       "BT20-021",
+      "BT20-023",
+      "BT20-027",
       "BT20-036",
       "BT20-037",
+      "BT20-040",
+      "BT20-042",
       "BT20-045",
+      "BT20-053",
       "BT20-055",
       "BT20-056",
       "BT20-059",
       "BT20-083",
       "BT20-084",
       "BT20-091",
+      "BT20-093",
       "BT20-100",
       "BT20-102",
       "BT21-001",
@@ -25658,6 +26484,8 @@
       "BT21-040",
       "BT21-042",
       "BT21-044",
+      "BT21-046",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-056",
@@ -25939,6 +26767,9 @@
       "BT6-082",
       "BT6-105",
       "BT7-056",
+      "BT7-058",
+      "BT7-059",
+      "BT7-063",
       "BT7-107",
       "BT8-084",
       "BT8-094",
@@ -25950,6 +26781,7 @@
       "BT9-092",
       "BT9-103",
       "BT9-108",
+      "BT9-109",
       "EX1-014",
       "EX1-021",
       "EX1-066",
@@ -26096,10 +26928,15 @@
       "EX13-074",
       "EX13-076",
       "EX13-077",
+      "EX2-007",
+      "EX2-046",
       "EX3-008",
       "EX3-014",
+      "EX3-024",
+      "EX3-037",
       "EX3-057",
       "EX3-063",
+      "EX3-065",
       "EX4-003",
       "EX4-005",
       "EX4-038",
@@ -26137,6 +26974,7 @@
       "EX7-071",
       "EX7-073",
       "EX7-074",
+      "EX8-002",
       "EX8-005",
       "EX8-019",
       "EX8-023",
@@ -26411,6 +27249,7 @@
       "BT4-097",
       "BT6-082",
       "BT6-084",
+      "BT7-063",
       "BT8-071",
       "BT8-094",
       "BT9-033",
@@ -26460,6 +27299,7 @@
       "EX13-074",
       "EX13-076",
       "EX13-077",
+      "EX3-037",
       "EX5-015",
       "EX8-030",
       "EX8-074",
@@ -26515,6 +27355,7 @@
       "EX8-023",
       "EX8-066",
       "LM-033",
+      "LM-034",
       "LM-035",
       "LM-036",
       "LM-037",
@@ -26546,6 +27387,7 @@
       "AD1-018",
       "AD1-021",
       "AD1-024",
+      "BT11-022",
       "BT11-042",
       "BT11-061",
       "BT11-089",
@@ -26570,6 +27412,7 @@
       "BT13-075",
       "BT13-087",
       "BT13-095",
+      "BT13-096",
       "BT13-102",
       "BT13-112",
       "BT15-096",
@@ -26610,11 +27453,20 @@
       "BT19-075",
       "BT19-089",
       "BT19-101",
+      "BT20-002",
+      "BT20-007",
       "BT20-016",
       "BT20-017",
+      "BT20-023",
+      "BT20-027",
       "BT20-037",
+      "BT20-040",
+      "BT20-042",
+      "BT20-044",
+      "BT20-053",
       "BT20-059",
       "BT20-084",
+      "BT20-093",
       "BT20-100",
       "BT20-102",
       "BT21-001",
@@ -26627,6 +27479,7 @@
       "BT21-025",
       "BT21-027",
       "BT21-040",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-071",
@@ -26813,6 +27666,9 @@
       "BT6-068",
       "BT6-082",
       "BT6-084",
+      "BT7-058",
+      "BT7-059",
+      "BT7-063",
       "BT7-073",
       "BT8-109",
       "BT9-041",
@@ -26927,6 +27783,14 @@
       "EX13-076",
       "EX13-077",
       "EX3-014",
+      "EX3-018",
+      "EX3-020",
+      "EX3-024",
+      "EX3-037",
+      "EX3-041",
+      "EX3-044",
+      "EX3-065",
+      "EX3-074",
       "EX4-005",
       "EX4-038",
       "EX4-039",
@@ -27039,6 +27903,7 @@
       "BT13-008",
       "BT13-030",
       "BT13-095",
+      "BT13-096",
       "BT13-112",
       "BT15-020",
       "BT15-084",
@@ -27067,6 +27932,7 @@
       "BT19-089",
       "BT20-016",
       "BT20-020",
+      "BT20-027",
       "BT20-045",
       "BT20-091",
       "BT21-029",
@@ -27150,7 +28016,9 @@
       "BT6-082",
       "BT6-105",
       "BT8-095",
+      "BT9-109",
       "EX1-021",
+      "EX1-066",
       "EX10-010",
       "EX10-025",
       "EX10-028",
@@ -27179,7 +28047,11 @@
       "EX13-069",
       "EX13-071",
       "EX13-073",
+      "EX3-012",
+      "EX3-024",
+      "EX3-041",
       "EX3-057",
+      "EX3-065",
       "EX4-005",
       "EX4-073",
       "EX6-072",
@@ -27213,7 +28085,6 @@
       "LM-030",
       "LM-031",
       "LM-032",
-      "LM-034",
       "P-094",
       "P-123",
       "P-128",
@@ -27333,6 +28204,7 @@
       "BT21-021",
       "BT24-088",
       "EX11-016",
+      "EX13-024",
       "EX9-021",
       "LM-027",
       "P-101",
@@ -27367,6 +28239,12 @@
       "BT19-066",
       "BT19-069",
       "BT20-021",
+      "BT20-023",
+      "BT20-025",
+      "BT20-027",
+      "BT20-040",
+      "BT20-042",
+      "BT20-044",
       "BT21-009",
       "BT21-013",
       "BT21-027",
@@ -27450,6 +28328,8 @@
       "BT26-102",
       "BT26-104",
       "BT4-086",
+      "BT7-058",
+      "BT7-063",
       "BT9-108",
       "EX11-020",
       "EX11-021",
@@ -27491,6 +28371,8 @@
       "EX13-070",
       "EX13-074",
       "EX13-076",
+      "EX2-055",
+      "EX3-024",
       "EX7-044",
       "EX9-024",
       "P-186",
@@ -27532,9 +28414,17 @@
       "EX9-013"
     ],
     "can_change_orientation": [
-      "EX13-023"
+      "BT13-096",
+      "BT20-027",
+      "EX1-066",
+      "EX13-023",
+      "EX13-024",
+      "EX3-024",
+      "EX3-065"
     ],
     "can_digivolve_from_source": [
+      "BT20-023",
+      "BT20-040",
       "BT24-009",
       "BT24-013",
       "BT24-021",
@@ -27549,6 +28439,7 @@
       "BT26-069",
       "BT26-076",
       "BT26-085",
+      "P-092",
       "P-196",
       "P-197",
       "P-198"
@@ -27556,6 +28447,7 @@
     "can_digivolve_onto": [
       "AD1-011",
       "BT12-030",
+      "BT21-046",
       "BT21-082",
       "BT21-091",
       "BT25-092",
@@ -27563,12 +28455,17 @@
       "BT26-038",
       "BT26-066",
       "BT26-091",
+      "BT7-058",
+      "BT9-109",
       "EX13-004",
       "EX13-055",
       "EX13-057",
       "EX13-069",
       "EX13-070",
+      "LM-027",
       "LM-028",
+      "LM-030",
+      "LM-055",
       "LM-057",
       "LM-058",
       "LM-059",
@@ -27580,6 +28477,17 @@
       "BT16-082",
       "EX1-066",
       "EX4-074"
+    ],
+    "can_play_from_effect_without_cost": [
+      "BT13-096",
+      "BT7-063",
+      "EX5-060"
+    ],
+    "can_play_to_breeding_from_hand": [
+      "BT20-053"
+    ],
+    "can_unsuspend": [
+      "BT20-027"
     ],
     "card_number_is": [
       "BT13-083",
@@ -27625,9 +28533,7 @@
       "EX7-070",
       "EX7-074",
       "EX8-067",
-      "LM-034",
       "LM-054",
-      "LM-055",
       "LM-056",
       "P-123",
       "P-130",
@@ -27662,6 +28568,7 @@
       "BT10-093",
       "BT10-111",
       "BT11-018",
+      "BT11-022",
       "BT11-033",
       "BT11-042",
       "BT11-061",
@@ -27685,6 +28592,7 @@
       "BT13-040",
       "BT13-075",
       "BT13-087",
+      "BT13-096",
       "BT13-111",
       "BT13-112",
       "BT14-009",
@@ -27699,6 +28607,7 @@
       "BT16-027",
       "BT16-028",
       "BT16-029",
+      "BT16-033",
       "BT16-055",
       "BT16-077",
       "BT16-101",
@@ -27735,13 +28644,21 @@
       "BT19-089",
       "BT19-101",
       "BT2-041",
+      "BT20-007",
       "BT20-016",
       "BT20-017",
       "BT20-020",
       "BT20-021",
+      "BT20-023",
+      "BT20-025",
+      "BT20-027",
       "BT20-036",
       "BT20-037",
+      "BT20-040",
+      "BT20-042",
+      "BT20-044",
       "BT20-045",
+      "BT20-053",
       "BT20-055",
       "BT20-056",
       "BT20-059",
@@ -27758,6 +28675,8 @@
       "BT21-023",
       "BT21-042",
       "BT21-044",
+      "BT21-046",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-056",
@@ -27895,6 +28814,7 @@
       "BT26-103",
       "BT3-077",
       "BT3-093",
+      "BT4-011",
       "BT4-072",
       "BT4-086",
       "BT5-033",
@@ -27903,6 +28823,9 @@
       "BT6-060",
       "BT7-032",
       "BT7-056",
+      "BT7-058",
+      "BT7-059",
+      "BT7-063",
       "BT7-071",
       "BT7-073",
       "BT7-107",
@@ -28046,9 +28969,17 @@
       "EX13-071",
       "EX13-076",
       "EX3-008",
+      "EX3-012",
       "EX3-014",
+      "EX3-018",
+      "EX3-020",
+      "EX3-024",
+      "EX3-037",
+      "EX3-041",
+      "EX3-044",
       "EX3-057",
       "EX3-063",
+      "EX3-074",
       "EX4-005",
       "EX4-051",
       "EX4-060",
@@ -28129,6 +29060,7 @@
       "P-035",
       "P-037",
       "P-039",
+      "P-092",
       "P-094",
       "P-101",
       "P-103",
@@ -28269,7 +29201,9 @@
       "ST24-08"
     ],
     "cost_target_from_hand": [
-      "BT5-092"
+      "BT5-092",
+      "EX2-007",
+      "EX2-046"
     ],
     "count_gte": [
       "AD1-017",
@@ -28292,6 +29226,7 @@
       "BT18-093",
       "BT19-001",
       "BT19-101",
+      "BT20-007",
       "BT20-036",
       "BT21-056",
       "BT21-058",
@@ -28366,6 +29301,7 @@
       "BT26-094",
       "BT26-098",
       "BT26-104",
+      "BT7-063",
       "BT9-041",
       "EX1-021",
       "EX10-032",
@@ -28405,6 +29341,7 @@
       "EX13-074",
       "EX13-076",
       "EX13-077",
+      "EX2-046",
       "EX4-006",
       "EX7-011",
       "EX7-013",
@@ -28482,6 +29419,7 @@
       "EX13-011",
       "EX13-067",
       "EX13-068",
+      "EX2-007",
       "EX4-061",
       "EX7-025",
       "EX8-048",
@@ -28507,6 +29445,7 @@
       "BT12-022",
       "BT12-028",
       "BT12-050",
+      "BT16-025",
       "BT16-077",
       "BT16-085",
       "BT17-078",
@@ -28516,6 +29455,7 @@
       "BT24-037",
       "EX13-045",
       "EX3-063",
+      "EX3-074",
       "EX6-011",
       "EX9-021"
     ],
@@ -28557,6 +29497,7 @@
       "BT20-017",
       "BT20-020",
       "BT20-021",
+      "BT20-025",
       "BT21-015",
       "BT21-023",
       "BT21-025",
@@ -28599,6 +29540,7 @@
       "EX13-033",
       "EX3-014",
       "EX3-057",
+      "EX3-074",
       "EX4-060",
       "EX7-011",
       "EX7-066",
@@ -28622,7 +29564,9 @@
       "ST9-05"
     ],
     "during_attack": [
-      "EX13-057"
+      "BT20-053",
+      "EX13-057",
+      "EX3-024"
     ],
     "effect_added_any_card_to_hand": [
       "BT25-091"
@@ -28638,6 +29582,7 @@
       "EX13-010",
       "EX13-013",
       "EX13-015",
+      "EX3-012",
       "EX3-057",
       "EX8-073"
     ],
@@ -28676,7 +29621,6 @@
       "BT21-072",
       "BT22-017",
       "BT24-088",
-      "BT25-078",
       "BT25-082",
       "BT25-092",
       "EX10-031",
@@ -28727,6 +29671,7 @@
       "BT26-073",
       "BT26-082",
       "BT26-101",
+      "BT7-063",
       "EX10-039",
       "EX10-044",
       "EX10-069",
@@ -28785,12 +29730,18 @@
       "P-244"
     ],
     "event_battle_deleter": [
+      "BT20-042",
+      "BT20-044",
       "EX13-041"
+    ],
+    "event_battle_surviving_deleter": [
+      "EX3-044"
     ],
     "event_card_color_count": [
       "BT13-101"
     ],
     "event_card_color_has": [
+      "BT13-096",
       "BT16-085",
       "BT25-013",
       "BT25-017",
@@ -28800,10 +29751,15 @@
     "event_card_color_only": [
       "BT13-101"
     ],
+    "event_card_kind": [
+      "BT13-096",
+      "EX3-065"
+    ],
     "event_card_name_contains": [
       "AD1-001",
       "AD1-010",
       "AD1-016",
+      "BT11-022",
       "BT13-087",
       "BT18-065",
       "BT21-042",
@@ -28817,10 +29773,14 @@
       "P-228",
       "P-229"
     ],
+    "event_card_name_is": [
+      "P-092"
+    ],
     "event_card_text_contains": [
       "AD1-018"
     ],
     "event_card_trait_has": [
+      "BT11-022",
       "BT13-007",
       "BT13-087",
       "BT24-004",
@@ -28828,6 +29788,7 @@
       "BT25-067",
       "BT25-091",
       "EX12-071",
+      "EX3-065",
       "P-217"
     ],
     "event_cause": [
@@ -28969,6 +29930,8 @@
       "BT13-015",
       "BT13-030",
       "BT16-017",
+      "BT20-023",
+      "BT20-040",
       "BT21-004",
       "BT21-044",
       "EX13-001",
@@ -28991,6 +29954,8 @@
       "BT21-091"
     ],
     "event_target_in_text_contains": [
+      "BT20-023",
+      "BT20-040",
       "BT26-078",
       "EX11-066",
       "EX12-066",
@@ -29006,22 +29971,29 @@
       "ST4-06"
     ],
     "event_target_is_source": [
+      "BT11-022",
       "BT13-087",
       "BT16-017",
+      "BT16-033",
       "BT20-017",
+      "BT21-052",
       "BT23-013",
       "BT25-055",
       "EX12-002",
       "EX13-018",
       "EX13-039",
       "EX13-056",
-      "EX13-064"
+      "EX13-064",
+      "EX3-024",
+      "EX3-044",
+      "EX3-074"
     ],
     "event_target_kind": [
       "AD1-014",
       "AD1-019",
       "AD1-024",
       "AD1-025",
+      "BT11-022",
       "BT11-089",
       "BT12-034",
       "BT12-038",
@@ -29031,6 +30003,7 @@
       "BT13-020",
       "BT13-030",
       "BT13-087",
+      "BT13-096",
       "BT13-101",
       "BT16-017",
       "BT16-021",
@@ -29042,6 +30015,8 @@
       "BT19-035",
       "BT19-075",
       "BT20-017",
+      "BT20-023",
+      "BT20-040",
       "BT20-045",
       "BT20-084",
       "BT21-004",
@@ -29103,6 +30078,7 @@
       "EX13-069",
       "EX13-073",
       "EX13-074",
+      "EX3-037",
       "EX4-003",
       "EX4-005",
       "EX4-038",
@@ -29148,6 +30124,7 @@
       "BT21-098",
       "EX13-031",
       "EX13-067",
+      "EX3-037",
       "EX4-061"
     ],
     "event_target_owner": [
@@ -29167,6 +30144,7 @@
       "BT13-020",
       "BT13-030",
       "BT13-087",
+      "BT13-096",
       "BT13-101",
       "BT16-017",
       "BT16-021",
@@ -29177,6 +30155,8 @@
       "BT17-081",
       "BT19-035",
       "BT20-017",
+      "BT20-023",
+      "BT20-040",
       "BT20-091",
       "BT21-004",
       "BT21-025",
@@ -29263,6 +30243,8 @@
       "EX13-072",
       "EX13-073",
       "EX13-074",
+      "EX3-037",
+      "EX3-065",
       "EX4-003",
       "EX4-005",
       "EX4-038",
@@ -29344,6 +30326,7 @@
       "ST19-14"
     ],
     "event_winner_is_source": [
+      "BT20-042",
       "EX13-045",
       "EX13-076"
     ],
@@ -29393,7 +30376,10 @@
       "BT26-066",
       "BT26-091",
       "EX13-069",
+      "LM-027",
       "LM-028",
+      "LM-030",
+      "LM-055",
       "LM-057",
       "LM-058",
       "LM-059",
@@ -29427,6 +30413,7 @@
       "BT10-042"
     ],
     "host_kind_is": [
+      "BT13-096",
       "BT25-103",
       "EX12-077"
     ],
@@ -29447,7 +30434,8 @@
       "P-169"
     ],
     "in_breeding": [
-      "BT13-007"
+      "BT13-007",
+      "EX2-007"
     ],
     "in_event_discarded_cards": [
       "BT24-007"
@@ -29455,6 +30443,11 @@
     "in_text_contains": [
       "BT17-070",
       "BT18-065",
+      "BT20-002",
+      "BT20-007",
+      "BT20-027",
+      "BT20-044",
+      "BT20-093",
       "BT21-054",
       "BT21-056",
       "BT21-058",
@@ -29464,6 +30457,7 @@
       "BT21-087",
       "BT21-098",
       "BT25-005",
+      "BT25-078",
       "BT25-083",
       "BT25-085",
       "BT25-092",
@@ -29545,13 +30539,19 @@
     ],
     "is_source": [
       "AD1-024",
+      "BT13-096",
       "BT19-075",
+      "BT20-027",
       "BT26-015",
       "BT26-086",
-      "EX13-021"
+      "EX1-066",
+      "EX13-021",
+      "EX3-041",
+      "EX3-065"
     ],
     "is_source_permanent": [
       "BT24-062",
+      "BT7-058",
       "EX13-032",
       "EX9-074"
     ],
@@ -29561,9 +30561,12 @@
       "BT12-031",
       "BT12-057",
       "BT13-060",
+      "BT13-096",
       "BT16-027",
       "BT16-028",
       "BT16-101",
+      "BT20-044",
+      "BT21-052",
       "BT23-047",
       "BT24-047",
       "BT24-051",
@@ -29593,6 +30596,8 @@
       "EX13-040",
       "EX13-043",
       "EX13-076",
+      "EX3-024",
+      "EX3-065",
       "EX8-045",
       "ST23-09",
       "ST4-16",
@@ -29629,6 +30634,7 @@
       "EX13-024",
       "EX13-043",
       "EX13-044",
+      "EX3-024",
       "EX8-067",
       "EX8-074",
       "P-130",
@@ -29699,6 +30705,7 @@
       "BT13-087",
       "BT13-093",
       "BT13-095",
+      "BT13-096",
       "BT13-101",
       "BT13-102",
       "BT13-103",
@@ -29774,15 +30781,23 @@
       "BT20-017",
       "BT20-020",
       "BT20-021",
+      "BT20-023",
+      "BT20-025",
+      "BT20-027",
       "BT20-036",
       "BT20-037",
+      "BT20-040",
+      "BT20-042",
+      "BT20-044",
       "BT20-045",
+      "BT20-053",
       "BT20-055",
       "BT20-056",
       "BT20-059",
       "BT20-060",
       "BT20-084",
       "BT20-091",
+      "BT20-093",
       "BT20-100",
       "BT20-102",
       "BT21-001",
@@ -29803,6 +30818,8 @@
       "BT21-042",
       "BT21-043",
       "BT21-044",
+      "BT21-046",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-056",
@@ -30071,6 +31088,7 @@
       "BT3-093",
       "BT3-105",
       "BT3-109",
+      "BT4-011",
       "BT4-072",
       "BT4-086",
       "BT4-098",
@@ -30084,6 +31102,8 @@
       "BT6-084",
       "BT6-102",
       "BT6-105",
+      "BT7-058",
+      "BT7-063",
       "BT7-071",
       "BT7-073",
       "BT7-107",
@@ -30096,6 +31116,7 @@
       "BT9-092",
       "BT9-103",
       "BT9-108",
+      "BT9-109",
       "BT9-112",
       "EX1-021",
       "EX1-066",
@@ -30244,10 +31265,16 @@
       "EX13-074",
       "EX13-076",
       "EX13-077",
+      "EX2-046",
       "EX3-008",
+      "EX3-012",
       "EX3-014",
+      "EX3-024",
+      "EX3-044",
       "EX3-057",
       "EX3-063",
+      "EX3-065",
+      "EX3-074",
       "EX4-005",
       "EX4-038",
       "EX4-039",
@@ -30340,6 +31367,7 @@
       "P-035",
       "P-037",
       "P-039",
+      "P-092",
       "P-094",
       "P-101",
       "P-103",
@@ -30489,6 +31517,7 @@
       "BT10-042",
       "BT10-111",
       "BT11-018",
+      "BT11-022",
       "BT11-033",
       "BT11-042",
       "BT11-061",
@@ -30510,6 +31539,7 @@
       "BT13-075",
       "BT13-083",
       "BT13-087",
+      "BT13-096",
       "BT13-103",
       "BT13-111",
       "BT13-112",
@@ -30523,6 +31553,7 @@
       "BT16-027",
       "BT16-028",
       "BT16-029",
+      "BT16-033",
       "BT16-040",
       "BT16-055",
       "BT16-077",
@@ -30567,13 +31598,21 @@
       "BT19-073",
       "BT19-075",
       "BT19-101",
+      "BT20-007",
       "BT20-016",
       "BT20-017",
       "BT20-020",
       "BT20-021",
+      "BT20-023",
+      "BT20-025",
+      "BT20-027",
       "BT20-036",
       "BT20-037",
+      "BT20-040",
+      "BT20-042",
+      "BT20-044",
       "BT20-045",
+      "BT20-053",
       "BT20-055",
       "BT20-056",
       "BT20-059",
@@ -30600,7 +31639,9 @@
       "BT21-040",
       "BT21-042",
       "BT21-044",
+      "BT21-046",
       "BT21-047",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-056",
@@ -30809,6 +31850,7 @@
       "BT26-084",
       "BT26-103",
       "BT3-077",
+      "BT4-011",
       "BT4-072",
       "BT4-086",
       "BT5-033",
@@ -30817,6 +31859,9 @@
       "BT6-060",
       "BT7-032",
       "BT7-056",
+      "BT7-058",
+      "BT7-059",
+      "BT7-063",
       "BT7-071",
       "BT7-073",
       "BT8-071",
@@ -30963,9 +32008,17 @@
       "EX13-071",
       "EX13-076",
       "EX3-008",
+      "EX3-012",
       "EX3-014",
+      "EX3-018",
+      "EX3-020",
+      "EX3-024",
+      "EX3-037",
+      "EX3-041",
+      "EX3-044",
       "EX3-057",
       "EX3-063",
+      "EX3-074",
       "EX4-051",
       "EX4-060",
       "EX4-073",
@@ -31024,6 +32077,7 @@
       "EX9-060",
       "LM-020",
       "LM-021",
+      "P-092",
       "P-094",
       "P-101",
       "P-117",
@@ -31195,6 +32249,7 @@
       "AD1-014",
       "BT11-033",
       "BT13-087",
+      "BT13-096",
       "BT15-092",
       "BT15-102",
       "BT16-077",
@@ -31365,7 +32420,8 @@
     ],
     "memory_gte": [
       "BT24-102",
-      "BT25-019"
+      "BT25-019",
+      "EX8-002"
     ],
     "memory_lte": [
       "BT1-085",
@@ -31403,6 +32459,7 @@
       "EX13-070",
       "EX13-074",
       "EX13-075",
+      "EX8-002",
       "EX8-067",
       "P-196",
       "P-197",
@@ -31485,8 +32542,11 @@
       "BT19-099",
       "BT20-016",
       "BT20-020",
+      "BT20-023",
       "BT20-036",
+      "BT20-040",
       "BT20-059",
+      "BT20-093",
       "BT20-100",
       "BT20-102",
       "BT21-013",
@@ -31540,6 +32600,8 @@
       "BT6-082",
       "BT6-084",
       "BT7-056",
+      "BT7-058",
+      "BT7-059",
       "BT9-041",
       "EX11-020",
       "EX11-021",
@@ -31572,8 +32634,15 @@
       "EX13-066",
       "EX13-069",
       "EX13-070",
+      "EX3-018",
+      "EX3-020",
+      "EX3-024",
+      "EX3-037",
+      "EX3-041",
+      "EX3-044",
       "EX3-057",
       "EX3-063",
+      "EX3-074",
       "EX4-038",
       "EX4-039",
       "EX4-051",
@@ -31626,14 +32695,17 @@
       "BT25-072",
       "BT26-028",
       "BT26-037",
+      "BT7-063",
       "EX12-048",
       "EX13-066",
+      "EX3-044",
       "ST22-12"
     ],
     "name_is": [
       "BT10-009",
       "BT10-013",
       "BT11-018",
+      "BT11-022",
       "BT11-061",
       "BT11-105",
       "BT12-011",
@@ -31650,6 +32722,7 @@
       "BT13-093",
       "BT13-110",
       "BT15-020",
+      "BT16-033",
       "BT16-040",
       "BT16-055",
       "BT17-007",
@@ -31665,16 +32738,27 @@
       "BT19-090",
       "BT19-093",
       "BT19-101",
+      "BT20-007",
+      "BT20-023",
+      "BT20-025",
+      "BT20-027",
+      "BT20-040",
+      "BT20-042",
+      "BT20-044",
+      "BT20-053",
       "BT20-056",
       "BT20-059",
       "BT20-083",
       "BT20-084",
       "BT20-091",
+      "BT20-093",
       "BT20-100",
       "BT21-006",
       "BT21-009",
       "BT21-040",
       "BT21-044",
+      "BT21-046",
+      "BT21-052",
       "BT21-058",
       "BT21-060",
       "BT21-062",
@@ -31747,7 +32831,10 @@
       "BT26-103",
       "BT4-086",
       "BT5-092",
+      "BT7-058",
+      "BT7-063",
       "BT9-070",
+      "BT9-109",
       "EX10-031",
       "EX10-032",
       "EX10-044",
@@ -31789,16 +32876,25 @@
       "EX13-072",
       "EX13-074",
       "EX13-077",
+      "EX2-007",
+      "EX2-046",
+      "EX2-055",
+      "EX3-020",
+      "EX3-024",
+      "EX3-037",
+      "EX3-041",
       "EX4-005",
       "EX4-006",
       "EX5-015",
       "EX8-048",
       "EX8-073",
+      "LM-055",
       "LM-057",
       "LM-058",
       "LM-059",
       "LM-060",
       "LM-061",
+      "P-092",
       "P-094",
       "P-128",
       "P-136",
@@ -31853,7 +32949,9 @@
       "BT13-075",
       "BT17-095",
       "BT17-097",
+      "BT20-027",
       "BT20-056",
+      "BT20-093",
       "BT21-056",
       "BT21-074",
       "BT22-015",
@@ -31912,6 +33010,8 @@
       "EX13-064",
       "EX13-065",
       "EX13-066",
+      "EX2-046",
+      "EX3-024",
       "EX4-060",
       "EX5-015",
       "EX6-057",
@@ -31930,7 +33030,9 @@
       "AD1-024",
       "BT11-089",
       "BT12-024",
+      "BT13-096",
       "BT19-006",
+      "BT20-027",
       "BT25-077",
       "BT25-081",
       "BT26-005",
@@ -31939,11 +33041,14 @@
       "BT26-055",
       "BT26-059",
       "BT26-075",
+      "BT7-063",
+      "BT9-109",
       "EX11-020",
       "EX13-002",
       "EX13-034",
       "EX13-042",
       "EX13-051",
+      "EX2-007",
       "EX7-051",
       "EX7-073",
       "LM-027",
@@ -31952,10 +33057,13 @@
     ],
     "not_in_binding": [
       "BT15-101",
+      "BT20-044",
       "BT20-102",
       "BT24-040",
+      "BT7-063",
       "EX11-046",
       "EX13-023",
+      "EX3-024",
       "EX3-063"
     ],
     "of_permanent": [
@@ -31983,6 +33091,7 @@
       "BT19-047",
       "BT19-051",
       "BT20-036",
+      "BT20-053",
       "BT20-059",
       "BT20-083",
       "BT20-091",
@@ -32098,6 +33207,7 @@
       "BT13-087",
       "BT13-088",
       "BT13-095",
+      "BT13-096",
       "BT13-106",
       "BT13-110",
       "BT13-111",
@@ -32139,13 +33249,18 @@
       "BT19-093",
       "BT19-101",
       "BT2-041",
+      "BT20-007",
       "BT20-016",
       "BT20-020",
+      "BT20-027",
       "BT20-036",
       "BT20-037",
+      "BT20-042",
+      "BT20-044",
       "BT20-045",
       "BT20-059",
       "BT20-091",
+      "BT20-093",
       "BT20-102",
       "BT21-009",
       "BT21-017",
@@ -32154,6 +33269,7 @@
       "BT21-037",
       "BT21-040",
       "BT21-044",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-056",
@@ -32184,7 +33300,6 @@
       "BT22-099",
       "BT23-014",
       "BT23-035",
-      "BT23-047",
       "BT23-057",
       "BT23-058",
       "BT23-059",
@@ -32327,6 +33442,7 @@
       "BT26-102",
       "BT26-104",
       "BT3-105",
+      "BT4-011",
       "BT4-086",
       "BT4-097",
       "BT4-098",
@@ -32336,12 +33452,15 @@
       "BT6-082",
       "BT6-084",
       "BT6-105",
+      "BT7-063",
       "BT8-095",
       "BT8-097",
       "BT9-041",
       "BT9-103",
+      "BT9-109",
       "BT9-112",
       "EX1-021",
+      "EX1-066",
       "EX1-068",
       "EX10-010",
       "EX10-025",
@@ -32432,8 +33551,15 @@
       "EX13-074",
       "EX13-076",
       "EX13-077",
+      "EX2-007",
+      "EX2-046",
+      "EX3-012",
+      "EX3-024",
+      "EX3-041",
+      "EX3-044",
       "EX3-057",
       "EX3-063",
+      "EX3-065",
       "EX4-005",
       "EX4-006",
       "EX4-061",
@@ -32693,7 +33819,9 @@
       "BT13-075",
       "BT17-095",
       "BT17-097",
+      "BT20-027",
       "BT20-056",
+      "BT20-093",
       "BT22-015",
       "BT22-036",
       "BT23-032",
@@ -32757,8 +33885,10 @@
       "BT19-075",
       "BT19-099",
       "BT20-016",
+      "BT20-027",
       "BT20-056",
       "BT20-091",
+      "BT20-093",
       "BT20-100",
       "BT22-036",
       "BT22-052",
@@ -32801,6 +33931,7 @@
       "BT19-073"
     ],
     "security_count": [
+      "BT16-033",
       "BT7-032"
     ],
     "security_count_gte": [
@@ -32911,8 +34042,10 @@
       "BT12-030",
       "BT18-065",
       "BT21-006",
+      "BT21-052",
       "BT25-085",
       "BT26-033",
+      "BT7-063",
       "EX11-046",
       "EX13-014",
       "EX13-061",
@@ -32922,10 +34055,12 @@
     ],
     "source_count": [
       "BT13-112",
+      "BT20-027",
       "BT21-054",
       "BT21-074",
       "BT25-085",
       "BT25-092",
+      "BT9-109",
       "EX7-010",
       "P-094"
     ],
@@ -32970,9 +34105,11 @@
     "source_is_unsuspended": [
       "AD1-019",
       "BT11-061",
+      "BT13-096",
       "BT14-084",
       "BT15-084",
       "BT18-092",
+      "BT20-027",
       "BT20-083",
       "BT21-084",
       "BT21-101",
@@ -33013,6 +34150,7 @@
       "EX13-072",
       "EX13-073",
       "EX13-076",
+      "EX3-065",
       "EX8-066",
       "P-217",
       "P-241",
@@ -33042,6 +34180,7 @@
       "EX13-017",
       "EX13-022",
       "EX13-032",
+      "EX3-018",
       "EX4-051",
       "ST24-06",
       "ST24-10"
@@ -33193,6 +34332,7 @@
       "BT19-101",
       "BT20-021",
       "BT20-036",
+      "BT20-053",
       "BT20-059",
       "BT20-091",
       "BT20-100",
@@ -33492,6 +34632,7 @@
       "BT7-056",
       "BT8-095",
       "BT9-092",
+      "BT9-109",
       "EX10-003",
       "EX10-025",
       "EX10-028",
@@ -33604,6 +34745,8 @@
       "EX13-073",
       "EX13-076",
       "EX13-077",
+      "EX2-007",
+      "EX2-046",
       "EX7-005",
       "EX7-011",
       "EX7-013",
@@ -33757,6 +34900,7 @@
       "BT10-087",
       "BT10-093",
       "BT10-111",
+      "BT11-022",
       "BT11-042",
       "BT11-061",
       "BT11-089",
@@ -33780,6 +34924,7 @@
       "BT14-084",
       "BT16-017",
       "BT16-029",
+      "BT16-033",
       "BT16-040",
       "BT16-082",
       "BT16-085",
@@ -33794,7 +34939,10 @@
       "BT19-057",
       "BT19-061",
       "BT2-041",
+      "BT20-007",
       "BT20-017",
+      "BT20-023",
+      "BT20-040",
       "BT20-055",
       "BT20-091",
       "BT21-001",
@@ -33814,6 +34962,7 @@
       "BT21-025",
       "BT21-040",
       "BT21-042",
+      "BT21-046",
       "BT21-055",
       "BT21-056",
       "BT21-059",
@@ -33925,6 +35074,8 @@
       "BT5-093",
       "BT6-060",
       "BT7-056",
+      "BT7-058",
+      "BT7-059",
       "BT8-084",
       "BT8-090",
       "BT9-041",
@@ -33971,6 +35122,11 @@
       "EX13-069",
       "EX13-072",
       "EX13-073",
+      "EX2-007",
+      "EX2-046",
+      "EX3-020",
+      "EX3-041",
+      "EX3-065",
       "EX4-003",
       "EX4-005",
       "EX4-038",
@@ -33989,6 +35145,7 @@
       "EX8-067",
       "EX9-012",
       "EX9-019",
+      "P-092",
       "P-117",
       "P-123",
       "P-130",
@@ -34111,6 +35268,7 @@
       "BT19-093",
       "BT19-101",
       "BT2-041",
+      "BT20-007",
       "BT20-016",
       "BT20-020",
       "BT20-036",
@@ -34126,6 +35284,7 @@
       "BT21-037",
       "BT21-040",
       "BT21-044",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-056",
@@ -34153,7 +35312,6 @@
       "BT23-014",
       "BT23-027",
       "BT23-035",
-      "BT23-047",
       "BT23-057",
       "BT23-058",
       "BT23-059",
@@ -34292,10 +35450,12 @@
       "BT6-082",
       "BT6-084",
       "BT6-105",
+      "BT7-063",
       "BT8-095",
       "BT8-097",
       "BT9-041",
       "BT9-103",
+      "BT9-109",
       "BT9-112",
       "EX1-021",
       "EX1-068",
@@ -34374,6 +35534,10 @@
       "EX13-074",
       "EX13-076",
       "EX13-077",
+      "EX2-007",
+      "EX2-046",
+      "EX3-012",
+      "EX3-024",
       "EX3-057",
       "EX3-063",
       "EX4-005",
@@ -34421,6 +35585,7 @@
       "EX9-033",
       "EX9-066",
       "LM-021",
+      "LM-027",
       "LM-028",
       "LM-030",
       "LM-032",
@@ -34576,6 +35741,7 @@
       "BT20-036",
       "BT20-084",
       "BT20-102",
+      "BT21-046",
       "BT21-081",
       "BT22-008",
       "BT22-017",
@@ -34599,6 +35765,8 @@
       "EX13-060",
       "EX13-070",
       "EX3-008",
+      "EX3-020",
+      "EX3-041",
       "EX7-013",
       "EX8-055",
       "EX9-013",
@@ -34630,6 +35798,7 @@
       "BT19-090",
       "BT19-093",
       "BT19-099",
+      "BT20-093",
       "BT20-100",
       "BT21-091",
       "BT21-092",
@@ -34691,6 +35860,7 @@
       "BT8-109",
       "BT9-103",
       "BT9-108",
+      "BT9-109",
       "EX1-068",
       "EX1-072",
       "EX10-032",
@@ -34800,6 +35970,7 @@
       "EX12-043",
       "EX13-071",
       "EX13-074",
+      "EX2-007",
       "P-224",
       "ST4-13",
       "ST5-13",
@@ -34839,10 +36010,14 @@
       "ST18-14"
     ],
     "on_ally_played": [
+      "BT11-022",
       "BT11-042",
       "BT13-087",
+      "BT13-096",
       "BT16-017",
       "BT20-017",
+      "BT20-023",
+      "BT20-040",
       "BT20-084",
       "BT23-013",
       "BT23-072",
@@ -34866,13 +36041,17 @@
       "EX13-064",
       "EX13-073",
       "EX13-074",
-      "EX8-066"
+      "EX8-066",
+      "P-092"
     ],
     "on_ally_won_battle": [
+      "BT20-042",
+      "BT20-044",
       "BT25-020",
       "EX13-041",
       "EX13-045",
-      "EX13-076"
+      "EX13-076",
+      "EX3-044"
     ],
     "on_any_deletion": [
       "BT13-015",
@@ -35097,6 +36276,7 @@
       "EX12-035",
       "EX12-036",
       "EX13-067",
+      "EX3-065",
       "EX4-003",
       "EX4-038",
       "EX4-039",
@@ -35134,7 +36314,6 @@
       "BT25-040"
     ],
     "on_dna_digivolve": [
-      "BT16-025",
       "BT23-032",
       "BT25-038",
       "ST9-05",
@@ -35216,6 +36395,7 @@
       "BT19-065",
       "BT19-072",
       "BT20-036",
+      "BT20-053",
       "BT21-060",
       "BT25-006",
       "BT25-039",
@@ -35240,6 +36420,7 @@
       "BT16-102",
       "BT18-087",
       "BT20-020",
+      "BT20-027",
       "BT20-056",
       "BT20-060",
       "BT21-001",
@@ -35326,6 +36507,7 @@
       "BT13-088",
       "BT13-093",
       "BT13-095",
+      "BT13-096",
       "BT13-101",
       "BT13-102",
       "BT13-111",
@@ -35367,7 +36549,12 @@
       "BT20-016",
       "BT20-017",
       "BT20-021",
+      "BT20-025",
+      "BT20-027",
       "BT20-036",
+      "BT20-042",
+      "BT20-044",
+      "BT20-053",
       "BT20-055",
       "BT20-056",
       "BT20-060",
@@ -35546,6 +36733,8 @@
       "BT6-082",
       "BT6-084",
       "BT7-056",
+      "BT7-059",
+      "BT7-063",
       "BT9-092",
       "BT9-112",
       "EX1-066",
@@ -35652,7 +36841,10 @@
       "EX13-075",
       "EX13-076",
       "EX13-077",
+      "EX2-046",
+      "EX3-012",
       "EX3-014",
+      "EX3-037",
       "EX4-006",
       "EX4-038",
       "EX4-039",
@@ -35743,6 +36935,7 @@
       "BT11-105",
       "BT12-092",
       "BT13-095",
+      "BT13-096",
       "BT13-101",
       "BT13-102",
       "BT13-103",
@@ -35766,6 +36959,7 @@
       "BT19-093",
       "BT19-099",
       "BT20-091",
+      "BT20-093",
       "BT20-100",
       "BT21-015",
       "BT21-043",
@@ -35864,6 +37058,7 @@
       "BT9-092",
       "BT9-103",
       "BT9-108",
+      "BT9-109",
       "EX1-066",
       "EX1-068",
       "EX1-072",
@@ -35897,6 +37092,7 @@
       "EX13-073",
       "EX13-074",
       "EX13-075",
+      "EX3-065",
       "EX4-061",
       "EX4-065",
       "EX6-072",
@@ -36006,6 +37202,9 @@
       "ST6-15",
       "ST6-16"
     ],
+    "on_security_check": [
+      "BT16-033"
+    ],
     "on_source_returned_to_deck_bottom": [
       "BT18-065",
       "BT21-058"
@@ -36025,6 +37224,7 @@
       "BT16-021",
       "BT20-045",
       "BT21-004",
+      "BT21-052",
       "BT21-086",
       "BT22-041",
       "BT23-058",
@@ -36049,6 +37249,10 @@
       "EX13-056",
       "EX13-061",
       "EX13-062",
+      "EX3-024",
+      "EX3-037",
+      "EX3-044",
+      "EX3-074",
       "EX4-005",
       "EX6-004",
       "ST24-11",
@@ -36063,6 +37267,9 @@
     "on_use_option": [
       "BT25-091",
       "BT3-096"
+    ],
+    "start_of_opponents_main_phase": [
+      "EX3-024"
     ],
     "start_of_opponents_turn": [
       "LM-020"
@@ -36080,6 +37287,8 @@
       "BT17-019",
       "BT18-092",
       "BT18-093",
+      "BT20-007",
+      "BT21-046",
       "BT21-062",
       "BT21-081",
       "BT21-082",
@@ -36185,6 +37394,7 @@
       "EX13-070",
       "EX13-074",
       "EX13-075",
+      "EX3-065",
       "EX8-067",
       "P-241",
       "RB1-035",
@@ -36226,6 +37436,7 @@
       "BT19-035",
       "BT19-057",
       "BT19-101",
+      "BT20-002",
       "BT20-021",
       "BT21-013",
       "BT21-030",
@@ -36305,6 +37516,8 @@
       "BT26-080",
       "BT3-002",
       "BT7-032",
+      "BT7-058",
+      "BT9-109",
       "EX1-021",
       "EX10-020",
       "EX10-032",
@@ -36360,6 +37573,8 @@
       "EX13-055",
       "EX13-058",
       "EX13-076",
+      "EX2-055",
+      "EX3-012",
       "EX3-057",
       "EX3-063",
       "EX4-051",
@@ -36371,6 +37586,7 @@
       "EX7-049",
       "EX7-059",
       "EX7-073",
+      "EX8-002",
       "EX8-019",
       "EX8-022",
       "EX8-028",
@@ -36518,9 +37734,14 @@
       "BT20-017",
       "BT20-020",
       "BT20-021",
+      "BT20-025",
+      "BT20-027",
       "BT20-036",
       "BT20-037",
+      "BT20-042",
+      "BT20-044",
       "BT20-045",
+      "BT20-053",
       "BT20-055",
       "BT20-056",
       "BT20-059",
@@ -36538,6 +37759,8 @@
       "BT21-037",
       "BT21-043",
       "BT21-044",
+      "BT21-046",
+      "BT21-052",
       "BT21-060",
       "BT21-062",
       "BT21-070",
@@ -36773,6 +37996,7 @@
       "EX3-008",
       "EX3-057",
       "EX3-063",
+      "EX3-074",
       "EX4-051",
       "EX4-060",
       "EX4-073",
@@ -36981,6 +38205,7 @@
       "BT2-041",
       "BT20-016",
       "BT20-036",
+      "BT20-053",
       "BT20-056",
       "BT20-060",
       "BT21-037",
@@ -37054,13 +38279,13 @@
       "EX13-033",
       "EX13-036",
       "EX13-037",
-      "EX13-045",
       "EX13-049",
       "EX13-055",
       "EX13-057",
       "EX13-060",
       "EX13-062",
       "EX13-065",
+      "EX3-037",
       "EX3-063",
       "EX6-004",
       "EX7-030",
@@ -37111,7 +38336,6 @@
       "BT15-092",
       "BT15-101",
       "BT16-021",
-      "BT16-025",
       "BT16-028",
       "BT17-027",
       "BT18-064",
@@ -37123,12 +38347,12 @@
       "BT19-089",
       "BT19-093",
       "BT20-037",
+      "BT20-042",
       "BT20-084",
       "BT21-044",
       "BT21-060",
       "BT21-074",
       "BT23-037",
-      "BT23-047",
       "BT23-054",
       "BT24-023",
       "BT24-040",
@@ -37184,6 +38408,7 @@
       "EX13-040",
       "EX13-041",
       "EX13-044",
+      "EX13-045",
       "EX13-054",
       "EX3-057",
       "EX4-074",
@@ -37209,12 +38434,15 @@
     "add_player_modifier": [
       "BT12-043",
       "BT15-092",
+      "BT16-025",
       "BT20-020",
       "BT23-014",
+      "BT23-047",
       "BT26-050",
       "BT8-097",
       "BT9-103",
       "EX1-072",
+      "EX3-012",
       "ST1-14",
       "ST24-11",
       "ST3-13"
@@ -37232,6 +38460,7 @@
       "BT3-103",
       "BT6-105",
       "BT7-107",
+      "BT9-109",
       "EX1-072",
       "EX6-072",
       "EX7-074",
@@ -37291,6 +38520,7 @@
       "BT3-093",
       "BT6-060",
       "BT7-056",
+      "BT7-059",
       "EX1-066",
       "EX11-014",
       "EX11-027",
@@ -37432,6 +38662,7 @@
       "BT26-076",
       "BT26-082",
       "EX12-047",
+      "EX3-024",
       "EX3-063",
       "EX5-060"
     ],
@@ -37478,7 +38709,6 @@
       "EX13-015",
       "EX13-016",
       "EX13-017",
-      "EX13-024",
       "EX13-025",
       "EX13-027",
       "EX13-028",
@@ -37486,7 +38716,6 @@
       "EX13-032",
       "EX13-043",
       "EX13-048",
-      "EX13-051",
       "EX13-052",
       "EX5-015",
       "EX6-057",
@@ -37573,7 +38802,9 @@
       "BT26-059",
       "BT26-080",
       "BT6-105",
-      "EX13-062"
+      "BT8-097",
+      "EX13-062",
+      "EX3-012"
     ],
     "delete_bound_permanents": [
       "BT17-018",
@@ -37628,7 +38859,11 @@
       "BT20-017",
       "BT20-020",
       "BT20-021",
+      "BT20-025",
+      "BT20-027",
+      "BT20-044",
       "BT20-055",
+      "BT20-093",
       "BT20-100",
       "BT20-102",
       "BT21-015",
@@ -37636,6 +38871,7 @@
       "BT21-023",
       "BT21-027",
       "BT21-029",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-058",
@@ -37698,7 +38934,6 @@
       "BT5-112",
       "BT7-107",
       "BT8-095",
-      "BT8-097",
       "BT8-107",
       "BT9-108",
       "BT9-112",
@@ -37804,6 +39039,7 @@
       "BT10-003",
       "BT10-009",
       "BT10-029",
+      "BT11-022",
       "BT11-095",
       "BT12-002",
       "BT13-040",
@@ -37824,6 +39060,8 @@
       "BT19-066",
       "BT2-069",
       "BT2-076",
+      "BT20-002",
+      "BT20-007",
       "BT20-091",
       "BT21-004",
       "BT21-005",
@@ -37920,6 +39158,7 @@
       "EX13-072",
       "EX13-073",
       "EX13-074",
+      "EX2-046",
       "EX4-003",
       "EX4-005",
       "EX7-013",
@@ -37974,11 +39213,14 @@
       "BT19-033",
       "BT19-047",
       "BT19-057",
+      "BT20-023",
+      "BT20-040",
       "BT20-083",
       "BT20-084",
       "BT21-001",
       "BT21-013",
       "BT21-042",
+      "BT21-046",
       "BT21-082",
       "BT21-091",
       "BT21-093",
@@ -38022,6 +39264,8 @@
       "BT26-091",
       "BT26-098",
       "BT26-102",
+      "BT7-058",
+      "BT9-109",
       "EX10-032",
       "EX10-069",
       "EX11-046",
@@ -38065,6 +39309,7 @@
       "LM-059",
       "LM-060",
       "LM-061",
+      "P-092",
       "P-103",
       "P-104",
       "P-105",
@@ -38087,6 +39332,7 @@
       "AD1-012",
       "BT20-016",
       "BT20-036",
+      "BT20-093",
       "BT24-035",
       "EX12-017",
       "EX13-070",
@@ -38126,28 +39372,24 @@
       "BT18-073",
       "BT2-041",
       "BT20-037",
-      "BT20-045",
       "BT20-102",
+      "BT21-052",
       "BT22-052",
       "BT23-035",
       "BT23-058",
       "BT24-030",
       "BT24-081",
-      "BT24-091",
       "BT25-018",
       "BT25-028",
       "BT25-075",
       "BT25-084",
       "BT25-093",
-      "BT8-097",
       "BT9-103",
       "BT9-112",
       "EX11-024",
       "EX11-046",
       "EX13-023",
-      "EX13-024",
       "EX13-036",
-      "EX13-045",
       "EX13-059",
       "EX3-063",
       "EX6-011",
@@ -38162,6 +39404,7 @@
       "EX10-034",
       "EX12-016",
       "EX13-045",
+      "EX3-024",
       "EX7-013",
       "P-240"
     ],
@@ -38169,6 +39412,7 @@
       "AD1-019",
       "BT1-090",
       "BT11-018",
+      "BT11-022",
       "BT11-033",
       "BT11-042",
       "BT11-095",
@@ -38187,6 +39431,7 @@
       "BT15-037",
       "BT16-004",
       "BT16-017",
+      "BT16-033",
       "BT16-085",
       "BT16-101",
       "BT17-077",
@@ -38194,6 +39439,7 @@
       "BT17-093",
       "BT18-019",
       "BT18-092",
+      "BT20-007",
       "BT20-037",
       "BT20-060",
       "BT20-091",
@@ -38245,6 +39491,7 @@
       "BT8-094",
       "BT8-108",
       "BT9-092",
+      "BT9-109",
       "EX1-021",
       "EX1-066",
       "EX1-068",
@@ -38270,6 +39517,7 @@
       "EX13-071",
       "EX13-072",
       "EX13-073",
+      "EX3-065",
       "EX4-005",
       "EX4-038",
       "EX4-039",
@@ -38277,6 +39525,7 @@
       "EX7-005",
       "EX7-063",
       "EX7-071",
+      "EX8-002",
       "EX8-005",
       "EX8-022",
       "EX8-066",
@@ -38326,6 +39575,7 @@
       "BT13-088",
       "BT16-102",
       "BT19-089",
+      "BT20-053",
       "BT20-059",
       "BT23-059",
       "BT25-019",
@@ -38464,6 +39714,7 @@
       "BT13-015",
       "BT13-083",
       "BT13-095",
+      "BT13-096",
       "BT13-102",
       "BT13-103",
       "BT13-106",
@@ -38479,6 +39730,7 @@
       "BT16-025",
       "BT16-027",
       "BT16-028",
+      "BT16-033",
       "BT16-077",
       "BT16-082",
       "BT16-085",
@@ -38502,6 +39754,13 @@
       "BT19-090",
       "BT20-020",
       "BT20-021",
+      "BT20-023",
+      "BT20-025",
+      "BT20-027",
+      "BT20-040",
+      "BT20-042",
+      "BT20-044",
+      "BT20-053",
       "BT20-059",
       "BT20-060",
       "BT20-100",
@@ -38511,6 +39770,7 @@
       "BT21-027",
       "BT21-037",
       "BT21-044",
+      "BT21-052",
       "BT21-058",
       "BT21-071",
       "BT21-082",
@@ -38645,6 +39905,8 @@
       "BT26-104",
       "BT4-086",
       "BT6-068",
+      "BT7-058",
+      "BT7-063",
       "BT9-041",
       "BT9-108",
       "EX1-066",
@@ -38736,8 +39998,13 @@
       "EX13-074",
       "EX13-076",
       "EX13-077",
+      "EX2-055",
       "EX3-008",
+      "EX3-012",
+      "EX3-024",
       "EX3-057",
+      "EX3-065",
+      "EX3-074",
       "EX4-051",
       "EX4-061",
       "EX4-065",
@@ -38880,6 +40147,7 @@
       "BT20-016",
       "BT20-017",
       "BT20-036",
+      "BT20-044",
       "BT21-018",
       "BT21-044",
       "BT21-072",
@@ -38920,6 +40188,7 @@
       "BT12-047",
       "BT17-007",
       "BT17-019",
+      "BT21-046",
       "BT22-008",
       "BT22-017",
       "BT23-027",
@@ -38928,6 +40197,8 @@
       "BT25-028",
       "EX12-001",
       "EX13-008",
+      "EX3-020",
+      "EX3-041",
       "EX4-051",
       "P-118"
     ],
@@ -38972,6 +40243,9 @@
       "EX13-049",
       "P-108",
       "P-167"
+    ],
+    "pay_source_prefix": [
+      "EX2-055"
     ],
     "per_selected": [
       "AD1-014",
@@ -39036,6 +40310,7 @@
       "BT13-007",
       "BT13-075",
       "BT13-093",
+      "BT13-096",
       "BT13-103",
       "BT13-110",
       "BT15-102",
@@ -39067,6 +40342,7 @@
       "BT26-089",
       "BT26-093",
       "BT26-098",
+      "BT7-058",
       "BT8-084",
       "EX10-025",
       "EX10-032",
@@ -39083,6 +40359,7 @@
       "EX12-077",
       "EX13-071",
       "EX13-074",
+      "EX3-074",
       "EX7-011",
       "EX7-044",
       "EX7-051",
@@ -39101,6 +40378,7 @@
     ],
     "place_as_top_source": [
       "BT13-088",
+      "BT7-063",
       "EX12-018",
       "EX12-077",
       "EX9-074"
@@ -39108,6 +40386,8 @@
     "place_cards_as_bottom_sources": [
       "BT26-102",
       "EX10-033",
+      "EX2-007",
+      "EX2-055",
       "EX8-055",
       "P-240"
     ],
@@ -39189,6 +40469,7 @@
       "BT26-084",
       "BT3-093",
       "BT7-056",
+      "BT7-059",
       "EX11-014",
       "EX11-027",
       "EX11-071",
@@ -39279,6 +40560,7 @@
       "BT17-095",
       "BT17-097",
       "BT19-099",
+      "BT20-093",
       "BT20-100",
       "BT21-091",
       "BT21-097",
@@ -39336,6 +40618,7 @@
       "ST20-14"
     ],
     "place_self_under_permanent": [
+      "BT9-109",
       "EX7-066",
       "EX7-070",
       "EX7-071",
@@ -39351,6 +40634,7 @@
     "play_from_hand": [
       "AD1-019",
       "BT15-096",
+      "BT20-093",
       "BT21-021",
       "BT21-092",
       "BT23-008",
@@ -39439,6 +40723,7 @@
       "EX13-042",
       "EX13-056",
       "EX13-068",
+      "EX3-074",
       "EX4-061",
       "EX7-025",
       "EX7-027",
@@ -39471,6 +40756,7 @@
       "BT26-029",
       "BT26-079",
       "BT26-083",
+      "BT7-063",
       "EX12-014",
       "EX12-016",
       "EX12-017",
@@ -39512,6 +40798,7 @@
       "BT11-095",
       "BT12-092",
       "BT13-095",
+      "BT13-096",
       "BT13-101",
       "BT13-102",
       "BT13-103",
@@ -39599,6 +40886,7 @@
       "EX13-073",
       "EX13-074",
       "EX13-075",
+      "EX3-065",
       "EX4-061",
       "EX7-063",
       "EX8-066",
@@ -39716,7 +41004,11 @@
       "BT26-082"
     ],
     "play_selected_sources_free": [
+      "BT13-096",
       "ST9-06"
+    ],
+    "play_to_breeding_from_hand": [
+      "BT20-053"
     ],
     "play_token": [
       "BT20-017",
@@ -39751,6 +41043,7 @@
       "BT17-095",
       "BT17-097",
       "BT19-099",
+      "BT20-093",
       "BT21-091",
       "BT21-092",
       "BT21-098",
@@ -39805,6 +41098,7 @@
       "BT1-087",
       "BT11-042",
       "BT13-012",
+      "BT16-033",
       "BT20-056",
       "BT20-060",
       "BT23-035",
@@ -39840,6 +41134,7 @@
       "BT19-065",
       "BT19-072",
       "BT20-036",
+      "BT20-053",
       "BT25-039",
       "BT25-055",
       "BT26-092",
@@ -39863,11 +41158,13 @@
       "BT22-040",
       "BT22-042",
       "BT24-102",
-      "EX13-060"
+      "EX13-060",
+      "EX3-065"
     ],
     "refund_opt": [
       "AD1-024",
       "BT19-001",
+      "BT20-027",
       "BT24-007",
       "BT24-009",
       "BT24-013",
@@ -39908,6 +41205,7 @@
       "EX13-020",
       "EX13-022",
       "EX13-023",
+      "EX13-024",
       "EX13-042",
       "EX13-043",
       "EX13-045",
@@ -39929,6 +41227,13 @@
     ],
     "return_all_sources_to_deck": [
       "EX13-076"
+    ],
+    "return_all_to_deck": [
+      "BT20-045",
+      "EX13-024"
+    ],
+    "return_all_to_hand": [
+      "BT24-091"
     ],
     "return_all_trash_to_deck_bottom": [
       "BT17-077"
@@ -39956,7 +41261,6 @@
       "BT17-078",
       "BT17-093",
       "BT19-101",
-      "BT20-045",
       "BT20-102",
       "BT21-030",
       "BT21-102",
@@ -39978,7 +41282,6 @@
       "EX12-035",
       "EX12-065",
       "EX13-023",
-      "EX13-024",
       "EX13-043",
       "EX13-076",
       "EX4-060",
@@ -40058,7 +41361,8 @@
       "EX13-046",
       "EX13-047",
       "EX13-048",
-      "EX13-075"
+      "EX13-075",
+      "EX3-037"
     ],
     "reveal_top_deck": [
       "BT11-061",
@@ -40114,6 +41418,7 @@
       "BT3-093",
       "BT6-060",
       "BT7-056",
+      "BT7-059",
       "EX1-066",
       "EX11-014",
       "EX11-027",
@@ -40291,6 +41596,7 @@
       "AD1-009",
       "AD1-012",
       "BT20-016",
+      "BT20-093",
       "BT24-035",
       "EX12-017",
       "EX13-070",
@@ -40337,6 +41643,7 @@
       "BT26-073",
       "BT26-082",
       "BT26-101",
+      "BT7-063",
       "EX10-039",
       "EX10-044",
       "EX10-069",
@@ -40404,6 +41711,7 @@
       "BT13-083",
       "BT13-088",
       "BT13-093",
+      "BT13-096",
       "BT13-101",
       "BT13-102",
       "BT13-103",
@@ -40432,10 +41740,15 @@
       "BT19-069",
       "BT2-069",
       "BT2-076",
+      "BT20-007",
       "BT20-016",
+      "BT20-023",
       "BT20-036",
+      "BT20-040",
+      "BT20-053",
       "BT20-083",
       "BT20-091",
+      "BT20-093",
       "BT20-100",
       "BT21-001",
       "BT21-009",
@@ -40445,6 +41758,7 @@
       "BT21-024",
       "BT21-025",
       "BT21-042",
+      "BT21-046",
       "BT21-056",
       "BT21-071",
       "BT21-082",
@@ -40577,8 +41891,10 @@
       "BT3-006",
       "BT5-092",
       "BT6-068",
+      "BT7-058",
       "BT7-069",
       "BT9-041",
+      "BT9-109",
       "EX10-039",
       "EX10-044",
       "EX10-063",
@@ -40644,6 +41960,7 @@
       "EX13-073",
       "EX3-008",
       "EX3-063",
+      "EX3-074",
       "EX4-051",
       "EX4-061",
       "EX5-015",
@@ -40676,6 +41993,7 @@
       "LM-059",
       "LM-060",
       "LM-061",
+      "P-092",
       "P-101",
       "P-103",
       "P-104",
@@ -40752,6 +42070,7 @@
       "BT13-112",
       "BT20-083",
       "BT23-072",
+      "BT7-063",
       "EX13-016"
     ],
     "select_opponent_dp_budget": [
@@ -40825,7 +42144,11 @@
       "BT20-017",
       "BT20-020",
       "BT20-021",
+      "BT20-025",
+      "BT20-027",
       "BT20-036",
+      "BT20-042",
+      "BT20-044",
       "BT20-055",
       "BT20-056",
       "BT20-059",
@@ -40839,6 +42162,7 @@
       "BT21-030",
       "BT21-037",
       "BT21-043",
+      "BT21-052",
       "BT21-054",
       "BT21-055",
       "BT21-058",
@@ -41052,8 +42376,11 @@
       "EX13-076",
       "EX13-077",
       "EX3-014",
+      "EX3-024",
+      "EX3-044",
       "EX3-057",
       "EX3-063",
+      "EX3-074",
       "EX4-060",
       "EX4-065",
       "EX4-073",
@@ -41143,6 +42470,7 @@
     ],
     "select_opponent_sources": [
       "BT16-085",
+      "BT20-027",
       "BT25-028",
       "BT25-103",
       "EX11-016",
@@ -41209,7 +42537,10 @@
       "BT19-090",
       "BT20-016",
       "BT20-017",
+      "BT20-027",
       "BT20-036",
+      "BT20-044",
+      "BT20-053",
       "BT20-084",
       "BT20-102",
       "BT21-001",
@@ -41296,9 +42627,11 @@
       "BT4-086",
       "BT4-098",
       "BT5-106",
+      "BT7-058",
       "BT7-107",
       "BT8-095",
       "BT8-107",
+      "BT9-109",
       "EX10-025",
       "EX10-028",
       "EX10-031",
@@ -41348,6 +42681,7 @@
       "EX13-071",
       "EX13-077",
       "EX3-008",
+      "EX3-024",
       "EX3-057",
       "EX4-051",
       "EX6-004",
@@ -41423,6 +42757,7 @@
     "select_own_sources": [
       "BT12-031",
       "BT13-075",
+      "BT13-096",
       "BT18-092",
       "BT18-102",
       "BT21-027",
@@ -41536,6 +42871,7 @@
       "BT3-093",
       "BT6-060",
       "BT7-056",
+      "BT7-059",
       "EX11-014",
       "EX11-071",
       "EX12-007",
@@ -41720,6 +43056,7 @@
       "BT19-061",
       "BT19-099",
       "BT20-021",
+      "BT20-093",
       "BT21-054",
       "BT21-062",
       "BT21-071",
@@ -41762,6 +43099,7 @@
       "BT26-100",
       "BT26-101",
       "BT26-102",
+      "BT7-063",
       "EX10-068",
       "EX11-022",
       "EX11-038",
@@ -41809,6 +43147,8 @@
     "select_zone_cards": [
       "BT26-081",
       "BT26-102",
+      "EX2-007",
+      "EX2-055",
       "P-240"
     ],
     "set_memory": [
@@ -41866,6 +43206,7 @@
       "BT12-057",
       "BT13-060",
       "BT13-095",
+      "BT13-096",
       "BT16-025",
       "BT16-028",
       "BT16-040",
@@ -41877,9 +43218,12 @@
       "BT19-079",
       "BT2-041",
       "BT20-037",
+      "BT20-042",
+      "BT20-044",
       "BT20-083",
       "BT20-091",
       "BT21-037",
+      "BT21-052",
       "BT21-081",
       "BT21-083",
       "BT21-086",
@@ -41930,13 +43274,15 @@
       "EX12-063",
       "EX13-017",
       "EX13-023",
-      "EX13-024",
       "EX13-040",
       "EX13-041",
       "EX13-043",
       "EX13-044",
-      "EX13-051",
       "EX13-076",
+      "EX3-024",
+      "EX3-044",
+      "EX3-065",
+      "EX3-074",
       "EX4-061",
       "EX8-045",
       "EX8-067",
@@ -41957,6 +43303,11 @@
       "ST24-14",
       "ST4-13",
       "ST4-15"
+    ],
+    "suspend_and_cancel_all_matching_leaves": [
+      "BT20-027",
+      "EX13-024",
+      "EX13-051"
     ],
     "trash_all_sources": [
       "BT17-077",
@@ -42036,6 +43387,7 @@
       "BT19-069",
       "BT2-069",
       "BT2-076",
+      "BT20-007",
       "BT21-056",
       "BT21-071",
       "BT21-091",
@@ -42165,8 +43517,21 @@
     ],
     "trash_selected_sources": [
       "BT16-085",
+      "BT20-027",
       "BT25-028",
       "BT25-103",
+      "EX11-016",
+      "EX11-017",
+      "EX11-057",
+      "EX12-035",
+      "EX13-024",
+      "EX7-010",
+      "EX7-021",
+      "EX7-023",
+      "EX8-023",
+      "EX8-066"
+    ],
+    "trash_selected_sources_as_cost": [
       "EX10-003",
       "EX10-028",
       "EX10-032",
@@ -42174,20 +43539,10 @@
       "EX10-034",
       "EX10-036",
       "EX10-056",
-      "EX11-016",
-      "EX11-017",
       "EX11-044",
-      "EX11-057",
-      "EX12-035",
-      "EX13-024",
       "EX4-073",
-      "EX7-010",
-      "EX7-021",
-      "EX7-023",
       "EX7-073",
-      "EX8-023",
       "EX8-055",
-      "EX8-066",
       "EX8-070",
       "P-167",
       "ST4-13"
@@ -42208,9 +43563,11 @@
       "BT19-075",
       "BT20-020",
       "BT20-021",
+      "BT20-042",
       "BT20-060",
       "BT21-024",
       "BT21-025",
+      "BT21-052",
       "BT21-098",
       "BT21-101",
       "BT22-013",
@@ -42253,6 +43610,8 @@
       "EX13-036",
       "EX13-037",
       "EX13-041",
+      "EX3-012",
+      "EX3-044",
       "EX4-051",
       "EX4-065",
       "EX4-073",
@@ -42313,8 +43672,10 @@
       "BT18-065",
       "BT19-090",
       "BT20-021",
+      "BT20-027",
       "BT20-045",
       "BT21-026",
+      "BT21-052",
       "BT21-101",
       "BT22-025",
       "BT22-026",
@@ -42354,6 +43715,9 @@
       "EX13-043",
       "EX13-051",
       "EX13-076",
+      "EX2-055",
+      "EX3-024",
+      "EX3-074",
       "EX7-021",
       "EX8-028",
       "EX8-055",

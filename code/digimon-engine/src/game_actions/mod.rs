@@ -5,6 +5,9 @@
 //! and the `activate_*_main` [Main] effect dispatchers live. All three are invoked
 //! by the action decoder and the Tauri/PyO3 bindings; none of them move here.
 
+pub(crate) mod play_cost_assignment;
+pub(crate) use play_cost_assignment::{CostPaymentReceipt, PlayCostAdjustments};
+
 use crate::card_source::{CardHandle, CardSource};
 use crate::digixros::DigiXrosMaterialOrigin;
 use crate::effect_context::{EffectContext, EffectReadContext};
@@ -29,10 +32,12 @@ use rand::seq::SliceRandom;
 mod breeding;
 mod cost;
 pub(crate) mod digivolve;
+mod field_top_source_move;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
 mod link; // DigiLink Shape-B (Digimon-link) — activate/begin/commit/absorb + facet-#9 chosen-card link
 mod misc;
 mod movement;
+mod grouped_return;
 pub(crate) mod options;
 mod play;
 mod security;
@@ -86,12 +91,21 @@ struct TakenCardSource {
 /// finalizes the host play (G-DIGIXROS-REDIRECT-EXTRACTION).
 #[derive(Debug, Clone)]
 pub(crate) struct DigiXrosResumeContinuation {
+    pub(crate) effect_controller: Option<PlayerId>,
     player: PlayerId,
     target_card: CardHandle,
-    total_reduction: i32,
+    total_reduction: crate::game_actions::PlayCostAdjustments,
     source: PlaySource,
     suppress_on_play: bool,
+    suspended: bool,
+    source_play_receipt: Option<u64>,
     next_material: usize,
+}
+
+impl DigiXrosResumeContinuation {
+    pub(crate) fn pending_cost_payment(&self) -> Option<u64> {
+        self.total_reduction.pending_payment
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -141,6 +155,8 @@ impl OptionSource {
 /// `[Main]` Option and a Link Option has two (`Standard`, then `Link`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum OptionPlayMode {
+    /// Persistent field Option with no printed Delay activation.
+    OrdinaryField,
     /// Played as a normal `[Main]` Option — pay the printed use cost,
     /// resolve the `OptionMain` body, dispose to trash.
     Standard,
@@ -157,6 +173,7 @@ impl OptionPlayMode {
     /// The disposal subtype this play mode resolves to.
     fn subtype(self) -> OptionSubtype {
         match self {
+            OptionPlayMode::OrdinaryField => OptionSubtype::OrdinaryField,
             OptionPlayMode::Standard => OptionSubtype::Standard,
             OptionPlayMode::Delay(trigger) => OptionSubtype::Delay(trigger),
             OptionPlayMode::Link { .. } => OptionSubtype::Link,
@@ -190,6 +207,7 @@ pub(crate) struct CostReductionKey {
 
 #[derive(Debug, Clone)]
 pub(crate) struct CostReductionCandidate {
+    assignment: Option<u16>,
     key: CostReductionKey,
     label: String,
     amount: i32,
@@ -264,6 +282,8 @@ pub(crate) struct DigimonLinkHostSelectionState {
 
 #[derive(Debug, Clone)]
 pub(crate) struct PlayFromHandCostReductionPromptState {
+    pub(crate) order: Option<play_cost_assignment::PlayCostOrder>,
+    pub(crate) effect_controller: Option<PlayerId>,
     pub(crate) player_id: PlayerId,
     pub(crate) hand_index: usize,
     pub(crate) target: CostTargetContext,
@@ -271,7 +291,7 @@ pub(crate) struct PlayFromHandCostReductionPromptState {
     pub(crate) source: PlaySource,
     pub(crate) origin: crate::game::PendingWouldPlayOrigin,
     pub(crate) suppress_on_play: bool,
-    pub(crate) accumulated_reduction: i32,
+    pub(crate) accumulated_reduction: crate::game_actions::PlayCostAdjustments,
     pub(crate) processed: Vec<CostReductionKey>,
     pub(crate) key: CostReductionKey,
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
@@ -367,6 +387,9 @@ fn classify_option_modes(effects: &[crate::effect::Effect]) -> Vec<OptionPlayMod
             has_standard_main = true;
         }
     }
+    if effects.iter().any(|effect| effect.ordinary_field_option) {
+        return vec![OptionPlayMode::OrdinaryField];
+    }
     // Delay / Training are exclusive whole-card subtypes.
     if let Some(trigger) = delay {
         return vec![OptionPlayMode::Delay(trigger)];
@@ -455,25 +478,15 @@ impl Game {
             card.card_kind(&self.card_data)
         };
 
-        // Phase 6: CannotPlayDigimonByEffect — when source is ByEffect and the
-        // card is a Digimon, gate on the player-scoped modifier.
-        if source == PlaySource::ByEffect
-            && card_kind == CardKind::Digimon
-            && self
-                .modifiers
-                .player_has(player_id, ModifierType::CannotPlayDigimonByEffect)
-        {
+        if source == PlaySource::ByEffect && self.effect_play_is_prohibited(player_id, card_kind) {
             return PlayFromHandCostResult::Failed;
         }
-
-        // Phase 6: CannotPlayTamerByEffect — when source is ByEffect and the
-        // card is a Tamer, gate on the player-scoped modifier.
-        if source == PlaySource::ByEffect
-            && card_kind == CardKind::Tamer
-            && self
-                .modifiers
-                .player_has(player_id, ModifierType::CannotPlayTamerByEffect)
-        {
+        let controller = if source == PlaySource::ByEffect {
+            self.effect_source_player.unwrap_or(player_id)
+        } else {
+            player_id
+        };
+        if self.card_play_is_prohibited(controller, &self.player(player_id).hand[hand_index]) {
             return PlayFromHandCostResult::Failed;
         }
 
@@ -498,7 +511,7 @@ impl Game {
             source,
             origin,
             suppress_on_play,
-            0,
+            PlayCostAdjustments::new(cost_delta),
             Vec::new(),
         )
     }
@@ -910,13 +923,26 @@ impl Game {
         };
         match outcome {
             crate::replacement::ReplacementOutcome::None => {
-                let _ = self.commit_play_from_hand_card_no_replace(
+                if let Some(prepared) = self.prepare_source_play_if_registered(resume.clone()) {
+                    if !prepared { self.restore_pending_would_play_origin(resume); }
+                    self.pending_digixros_transaction = None;
+                    return;
+                }
+                let previous_controller = self.effect_source_player;
+                self.effect_source_player = Some(resume.play_controller);
+                let played = self.commit_play_from_hand_card_no_replace(
                     resume.player,
                     resume.card,
                     resume.effective_cost,
                     resume.effect_initiated,
                     resume.suppress_on_play,
+                    resume.origin.enters_suspended(),
+                    resume.origin.source_play_receipt(),
                 );
+                self.effect_source_player = previous_controller;
+                if played.is_none() {
+                    self.restore_pending_would_play_origin(resume);
+                }
                 self.pending_digixros_transaction = None;
             }
             crate::replacement::ReplacementOutcome::Cancelled
@@ -1372,6 +1398,10 @@ impl Game {
     /// Idempotent: a handle whose slot is already empty is filtered by the
     /// batched-deletion entrypoint, so a re-run is a no-op.
     pub(crate) fn run_state_based_rules_check(&mut self) -> bool {
+        // Continuous effects must include new entrants (and removed aura
+        // sources) before rule processing reads their effective DP. Callers
+        // already restrict this check to completed resolution boundaries.
+        self.tick_declarative_effects();
         // Per-permanent rule-check action. Both §17-1-3-1 and §17-1-3-2 are
         // evaluated in one scan; they target disjoint permanents (a ≤0-DP
         // Digimon has a DP value, a DP-less top has none).
@@ -1420,7 +1450,16 @@ impl Game {
                         | crate::enums::CardKind::DigiEgg
                         | crate::enums::CardKind::Dual
                 );
-                if presents_as_digimon && self.effective_dp(handle).is_none() {
+                // Q1921: an Option exposed on a former Digimon stack has no
+                // legitimate field-Option state. It is likewise in no area and
+                // trashed at this resolution boundary, not deleted. Real Delay,
+                // Training and OrdinaryFieldOption permanents remain valid.
+                let exposed_option = self.players[pid].battle_area[idx].is_option(&self.card_data)
+                    && matches!(
+                        self.players[pid].battle_area[idx].option_state,
+                        crate::permanent::OptionState::Standard
+                    );
+                if (presents_as_digimon || exposed_option) && self.effective_dp(handle).is_none() {
                     actions.push((handle, RuleAction::TrashDpLess));
                     continue;
                 }
@@ -1439,13 +1478,26 @@ impl Game {
         // invalidate the handles still pending.
         for (handle, action) in actions.into_iter().rev() {
             if let RuleAction::TrashDpLess = action {
+                let movement_snapshot = self.movement_snapshot(handle);
                 // §17-1-3-2 trash: route every stacked card to the owner's trash
                 // with no deletion/leave triggers ("not considered trashing from
                 // the battle area").
+                // Overflow observes physical movement even though this is not
+                // deletion or an OnLeaveField event. Include linked cards too.
+                let permanent =
+                    &self.players[handle.player as usize].battle_area[handle.index as usize];
+                let mut leaving_cards = permanent.card_sources.clone();
+                leaving_cards.extend(permanent.linked_cards.iter().cloned());
+                self.clear_permanent_full(handle);
+                self.modifiers.expire_player_on_permanent_leave(handle);
                 self.trash_permanent_stack(handle.player, handle.index as usize);
-                if self.security_resolution.is_some() {
-                    self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
-                }
+                self.modifiers
+                    .shift_after_battle_area_remove(handle.player, handle.index);
+                self.shift_pending_attack_after_battle_area_remove(handle.player, handle.index);
+                self.shift_effect_queue_after_battle_area_remove(handle.player, handle.index);
+                self.mark_until_condition_dirty();
+                self.observe_rule_trash_completed(movement_snapshot);
+                self.apply_ace_overflow_for_sources(&leaving_cards);
                 continue;
             }
             // A ≤0-DP deletion is a STATE-BASED RULE action, not an effect.
@@ -1541,6 +1593,9 @@ impl Game {
         };
 
         match subtype {
+            OptionSubtype::OrdinaryField => {
+                self.install_field_option_as_ordinary(pending.card, pending.owner);
+            }
             OptionSubtype::Standard => {
                 use crate::replacement::{ReplacementCause, ReplacementSubject};
 
@@ -2042,6 +2097,20 @@ impl Game {
         &mut self,
         player: PlayerId,
         host: PermanentHandle,
+        host_card: CardHandle,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    ) {
+        self.enqueue_digivolution_card_trashed(player, host, host_card, card, cause);
+        self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
+    pub(crate) fn enqueue_digivolution_card_trashed(
+        &mut self,
+        player: PlayerId,
+        host: PermanentHandle,
         host_card: crate::card_source::CardHandle,
         card: crate::card_source::CardHandle,
         cause: crate::trigger_context::EventCause,
@@ -2069,16 +2138,6 @@ impl Game {
                 cause,
             },
         );
-        // Intentionally NOT routed through maybe_drain: EX10-036 (and
-        // similar multi-source trash chains) rely on observers firing
-        // synchronously between source trashes so secondary clauses can
-        // pick up the just-trashed cards mid-resolution. Behavioral test
-        // `ex10_036_clause_a_after_source_trash_prompts_opp_field_delete`
-        // documents the expected interleaving. Other observer fires
-        // (place_security, leave_field, link, attack, play) are deferred.
-        self.drain_effect_queue();
-        self.mark_until_condition_dirty();
-        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// Sibling of [`Self::fire_digivolution_card_trashed`], for the RETURN of a
@@ -2150,6 +2209,7 @@ impl Game {
         let Some(resume) = self.pending_would_digivolve_resume.take() else {
             return;
         };
+        self.clear_would_digivolve_identity(&resume);
         match outcome {
             crate::replacement::ReplacementOutcome::None => {
                 let _ = self.commit_digivolve_from_hand_no_replace(resume);
@@ -2259,7 +2319,15 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
     ) -> bool {
-        self.place_as_source_observed(source, target, observer_player, face_down, false, None)
+        self.place_as_source_observed(
+            source,
+            target,
+            observer_player,
+            face_down,
+            false,
+            None,
+            EffectSourceKind::Rule,
+        )
     }
 
     /// `place_as_bottom_source_observed` with the placing effect's source card
@@ -2273,6 +2341,7 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
         effect_source_card: CardHandle,
+        source_kind: EffectSourceKind,
     ) -> bool {
         self.place_as_source_observed(
             source,
@@ -2281,6 +2350,7 @@ impl Game {
             face_down,
             false,
             Some(effect_source_card),
+            source_kind,
         )
     }
 
@@ -2297,7 +2367,15 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
     ) -> bool {
-        self.place_as_source_observed(source, target, observer_player, face_down, true, None)
+        self.place_as_source_observed(
+            source,
+            target,
+            observer_player,
+            face_down,
+            true,
+            None,
+            EffectSourceKind::Rule,
+        )
     }
 
     /// Top-position sibling of `place_as_bottom_source_by_effect`.
@@ -2308,6 +2386,7 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
         effect_source_card: CardHandle,
+        source_kind: EffectSourceKind,
     ) -> bool {
         self.place_as_source_observed(
             source,
@@ -2316,7 +2395,20 @@ impl Game {
             face_down,
             true,
             Some(effect_source_card),
+            source_kind,
         )
+    }
+
+    /// Rule 4-18-3: a token cannot receive stacked cards.
+    /// Check before extracting the proposed source or opening movement events.
+    pub(crate) fn is_token_source_destination(&self, target: PermanentHandle) -> bool {
+        let Some(player) = self.players.get(target.player as usize) else { return false; };
+        let permanent = if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            player.breeding_area.as_ref()
+        } else {
+            player.battle_area.get(target.index as usize)
+        };
+        permanent.is_some_and(|p| p.card_sources.last().is_some_and(|c| c.is_token))
     }
 
     /// Shared body for `place_as_bottom_source_observed` /
@@ -2346,7 +2438,27 @@ impl Game {
         face_down: bool,
         top: bool,
         effect_source_card: Option<CardHandle>,
+        source_kind: EffectSourceKind,
     ) -> bool {
+        if self.is_token_source_destination(target) { return false; }
+        if let crate::enums::CardSourceRef::Material(donor, index) = source {
+            if self
+                .player(donor.player)
+                .battle_area
+                .get(donor.index as usize)
+                .is_some_and(|p| index + 1 == p.card_sources.len())
+            {
+                return self.begin_field_top_source_move(
+                    donor,
+                    target,
+                    observer_player,
+                    face_down,
+                    top,
+                    effect_source_card,
+                    source_kind,
+                );
+            }
+        }
         if let crate::enums::CardSourceRef::Security(defender, index) = source {
             if target.index == crate::action::space::BREEDING_TARGET as u8 {
                 if self.player(target.player).breeding_area.is_none() {
@@ -2573,10 +2685,32 @@ impl Game {
         None
     }
 
-    fn effect_source_kind_for_handle(
+    pub(crate) fn effect_source_kind_for_handle(
         &self,
         handle: crate::card_source::CardHandle,
     ) -> EffectSourceKind {
+        // Only a physical current top can contribute a native field effect.
+        // Inherited/link origins are classified separately as Digimon effects.
+        for (player, state) in self.players.iter().enumerate() {
+            for (index, permanent) in state.battle_area.iter().enumerate() {
+                if permanent.card_sources.last().map(|c| c.handle()) != Some(handle) {
+                    if permanent.card_sources.iter().any(|c| c.handle() == handle)
+                        || permanent.linked_cards.iter().any(|c| c.handle() == handle) {
+                        // Inherited and link effects are Digimon effects, even
+                        // when their physical source is a printed Tamer.
+                        return EffectSourceKind::Digimon;
+                    }
+                    continue;
+                }
+                let h = PermanentHandle { player: player as PlayerId, index: index as u8 };
+                let id = permanent.synth_identity(&self.card_data, &self.modifiers, h);
+                if (id.kind == CardKind::Digimon && id.retained_kind == Some(CardKind::Tamer))
+                    || (id.kind == CardKind::Tamer && id.retained_kind == Some(CardKind::Digimon)) {
+                    return EffectSourceKind::DigimonAndTamer;
+                }
+                break;
+            }
+        }
         self.card_kind_for_handle(handle)
             .map(source_kind_for_card_kind)
             .unwrap_or(EffectSourceKind::Rule)
@@ -3247,7 +3381,238 @@ impl Game {
         self.maybe_drain_effect_queue();
     }
 
+    fn remember_security_move(
+        &mut self,
+        target: PermanentHandle,
+        player: PlayerId,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer: PlayerId,
+        leave_complete: bool,
+    ) -> Option<(
+        PlayerId,
+        u64,
+        PlayerId,
+        crate::enums::StackPosition,
+        bool,
+        PlayerId,
+    )> {
+        let id = self.capture_source_play_host_identity(target)?;
+        let donor = (target.player, id);
+        let key = (target.player, id, player, position, face_up, observer);
+        if let Some(state) = self.pending_security_moves.iter_mut().rfind(|s| {
+            !s.top_only
+                && s.donor == donor
+                && s.player == player
+                && s.position == position
+                && s.face_up == face_up
+                && s.observer == observer
+        }) {
+            state.leave_complete |= leave_complete;
+        } else {
+            let card = self
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)?
+                .top_card()
+                .handle();
+            self.pending_security_moves
+                .push(crate::game::PendingSecurityMove {
+                    top_only: false,
+                    donor,
+                    card,
+                    player,
+                    position,
+                    face_up,
+                    observer,
+                    leave_complete,
+                });
+        }
+        Some(key)
+    }
+    fn finish_security_move_if_settled(
+        &mut self,
+        key: (
+            PlayerId,
+            u64,
+            PlayerId,
+            crate::enums::StackPosition,
+            bool,
+            PlayerId,
+        ),
+    ) {
+        if self.pending_selection.is_none()
+            || self.resolve_digivolve_host_identity(key.0, key.1).is_none()
+        {
+            self.pending_security_moves.retain(|s| {
+                !(!s.top_only
+                    && s.donor == (key.0, key.1)
+                    && s.player == key.2
+                    && s.position == key.3
+                    && s.face_up == key.4
+                    && s.observer == key.5)
+            });
+        }
+    }
     pub(crate) fn place_permanent_on_security(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer: PlayerId,
+    ) -> bool {
+        let Some(key) =
+            self.remember_security_move(target, player, position, face_up, observer, false)
+        else {
+            return false;
+        };
+        let result = self.run_permanent_on_security(player, target, position, face_up, observer);
+        self.finish_security_move_if_settled(key);
+        result
+    }
+    pub(crate) fn place_permanent_on_security_without_leave_replacement(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer: PlayerId,
+    ) -> bool {
+        let Some(key) =
+            self.remember_security_move(target, player, position, face_up, observer, true)
+        else {
+            return false;
+        };
+        let result = self.run_permanent_on_security_without_leave_replacement(
+            player, target, position, face_up, observer,
+        );
+        self.finish_security_move_if_settled(key);
+        result
+    }
+    pub(crate) fn resume_security_move(
+        &mut self,
+        subject: crate::replacement::ReplacementSubject,
+        cause: crate::replacement::ReplacementCause,
+        outcome: crate::replacement::ReplacementOutcome,
+    ) -> bool {
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+        let key = match subject {
+            ReplacementSubject::Permanent(h) => self
+                .player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .and_then(|p| p.battle_identity)
+                .map(|id| (h.player, id)),
+            ReplacementSubject::Card(card, _) => self
+                .pending_security_moves
+                .iter()
+                .rfind(|s| {
+                    s.card == card
+                        || self
+                            .resolve_digivolve_host_identity(s.donor.0, s.donor.1)
+                            .and_then(|h| {
+                                self.player(h.player)
+                                    .battle_area
+                                    .get(h.index as usize)
+                                    .map(|p| p.top_card().handle())
+                            })
+                            == Some(card)
+                })
+                .map(|s| s.donor),
+            _ => None,
+        };
+        let Some(key) = key else { return false };
+        let Some(i) = self
+            .pending_security_moves
+            .iter()
+            .rposition(|s| s.donor == key)
+        else {
+            return false;
+        };
+        let state = self.pending_security_moves.remove(i);
+        let Some(h) = self.resolve_digivolve_host_identity(key.0, key.1) else {
+            return true;
+        };
+        if state.top_only {
+            if outcome == ReplacementOutcome::None {
+                let still_exact_top = self
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some_and(|p| {
+                        p.card_sources.len() >= 2 && p.top_card().handle() == state.card
+                    });
+                if still_exact_top {
+                    // Re-enter the same WouldPlace window so a declined or
+                    // non-replacing optional effect cannot skip remaining candidates.
+                    self.place_top_stacked_on_security(
+                        state.player,
+                        h,
+                        state.position,
+                        state.face_up,
+                        state.observer,
+                    );
+                }
+            } else {
+                self.finish_top_stacked_security_move(state, outcome);
+            }
+            return true;
+        }
+        match outcome {
+            ReplacementOutcome::None => {
+                if state.leave_complete {
+                    self.place_permanent_on_security_without_leave_replacement(
+                        state.player,
+                        h,
+                        state.position,
+                        state.face_up,
+                        state.observer,
+                    );
+                } else {
+                    self.place_permanent_on_security(
+                        state.player,
+                        h,
+                        state.position,
+                        state.face_up,
+                        state.observer,
+                    );
+                }
+            }
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {}
+            ReplacementOutcome::Redirected(Zone::Hand) => {
+                self.return_to_hand(h);
+            }
+            ReplacementOutcome::Redirected(Zone::Deck) => {
+                self.return_to_deck(h, crate::enums::StackPosition::Bottom);
+            }
+            ReplacementOutcome::Redirected(Zone::Trash) => {
+                self.delete_permanent_with_cause(h, cause);
+            }
+            ReplacementOutcome::Redirected(Zone::Security) => {
+                self.place_permanent_on_security_without_leave_replacement(
+                    state.player,
+                    h,
+                    state.position,
+                    state.face_up,
+                    state.observer,
+                );
+            }
+            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => {
+                self.place_permanent_on_security(
+                    state.player,
+                    other,
+                    state.position,
+                    state.face_up,
+                    state.observer,
+                );
+            }
+            _ => {}
+        }
+        true
+    }
+
+    fn run_permanent_on_security(
         &mut self,
         player_id: PlayerId,
         target: PermanentHandle,
@@ -3331,7 +3696,7 @@ impl Game {
         )
     }
 
-    pub(crate) fn place_permanent_on_security_without_leave_replacement(
+    fn run_permanent_on_security_without_leave_replacement(
         &mut self,
         player_id: PlayerId,
         target: PermanentHandle,
@@ -3369,73 +3734,101 @@ impl Game {
             return false;
         }
 
+        // Capture event identity before removal; source disposal is a rule consequence.
+        let permanent = &self.player(target.player).battle_area[target.index as usize];
+        let data = self
+            .card_data_for_handle(source_card)
+            .expect("validated card data");
+        let source_handles = permanent
+            .card_sources
+            .iter()
+            .take(permanent.card_sources.len().saturating_sub(1))
+            .map(|c| c.handle())
+            .collect::<Vec<_>>();
+        let dp = self.effective_dp(target);
+        let identity = permanent.synth_identity(&self.card_data, &self.modifiers, target);
+        let snapshot = crate::trigger_context::DeletedObjectSnapshot {
+            former_controller: target.player,
+            top_card: source_card,
+            card_kind: identity.kind,
+            retained_kind: identity.retained_kind,
+            traits: identity.traits.clone(),
+            level: identity.level,
+            dp,
+            cause: crate::trigger_context::EventCause::SecurityPlacement,
+            dp_just_before: dp,
+            level_just_before: identity.level,
+            cost_just_before: Some(data.play_cost),
+            names_just_before: identity.card_names.clone(),
+            traits_just_before: identity.traits.clone(),
+            source_count_just_before: source_handles.len(),
+            digisources_just_before: source_handles.clone(),
+            is_token: permanent.top_card().is_token,
+        };
         let mut permanent = self
             .player_mut(target.player)
             .battle_area
             .remove(target.index as usize);
-        let Some(top) = permanent.card_sources.pop() else {
-            return false;
-        };
-        // Re-key the in-flight attack's handles after the `remove()` shift.
+        self.clear_permanent_full(target);
+        self.modifiers.expire_player_on_permanent_leave(target);
+        self.modifiers
+            .shift_after_battle_area_remove(target.player, target.index);
         self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
         self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
+        let top = permanent
+            .card_sources
+            .pop()
+            .expect("validated permanent top");
         let top_handle = top.handle();
         let face_up_key = top.card_index;
-
+        let egg = top.card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg;
+        let token = top.is_token;
         let mut leaving_sources = permanent.card_sources.clone();
+        leaving_sources.extend(permanent.linked_cards.iter().cloned());
         leaving_sources.push(top.clone());
-        self.apply_ace_overflow_for_sources(&leaving_sources);
-
-        match position {
-            crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).security.push(top);
+        if egg {
+            // 3-1-3-9-2: a Digi-Egg entering security goes to its owner's egg deck bottom.
+            self.player_mut(top.owner).digitama_deck.insert(0, top);
+        } else if !token {
+            match position {
+                crate::enums::StackPosition::Top => self.player_mut(player_id).security.push(top),
+                crate::enums::StackPosition::Bottom => {
+                    self.player_mut(player_id).security.insert(0, top)
+                }
+                crate::enums::StackPosition::Random => {
+                    use rand::Rng;
+                    let len = self.player(player_id).security.len();
+                    let index = self.rng.gen_range(0..=len);
+                    self.player_mut(player_id).security.insert(index, top);
+                }
             }
-            crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).security.insert(0, top);
-            }
-            crate::enums::StackPosition::Random => {
-                use rand::Rng;
-                let sec_len = self.player(player_id).security.len();
-                let idx = if sec_len == 0 {
-                    0
-                } else {
-                    self.rng.gen_range(0..=sec_len)
-                };
-                self.player_mut(player_id).security.insert(idx, top);
+            if face_up {
+                self.player_mut(player_id)
+                    .face_up_security
+                    .insert(face_up_key);
             }
         }
-
-        if face_up {
-            self.player_mut(player_id)
-                .face_up_security
-                .insert(face_up_key);
-        }
-
         for card in permanent.card_sources {
-            let source_card = card.handle();
-            // Owner-routed (Track E correctness): each source returns to
-            // its OWN owner's trash. Identical to controller-routed when
-            // owner == controller (the common case).
-            let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(card.owner).trash.push(card);
+        }
+        let had_linked = !permanent.linked_cards.is_empty();
+        for card in permanent.linked_cards {
+            self.player_mut(card.owner).trash.push(card);
+        }
+        // No observer runs before every card reaches its destination and handles are shifted.
+        self.apply_ace_overflow_for_sources(&leaving_sources);
+        self.tick_declarative_effects();
+        for card in source_handles {
             self.enqueue_triggered(
                 EffectTiming::OnDigivolutionCardTrashed,
                 TriggerSource::SourceTrashedFromStack {
                     player: target.player,
                     host: target,
                     host_card: top_handle,
-                    card: source_card,
-                    cause: crate::trigger_context::EventCause::SecurityPlacement,
+                    card,
+                    cause: crate::trigger_context::EventCause::Rule,
                 },
             );
-            self.drain_effect_queue();
-        }
-
-        let had_linked = !permanent.linked_cards.is_empty();
-        for linked in permanent.linked_cards {
-            // Owner-routed: linked cards return to their own owner's trash.
-            let owner = linked.owner;
-            self.player_mut(owner).trash.push(linked);
         }
         if had_linked {
             for pid in 0..self.players.len() {
@@ -3444,19 +3837,177 @@ impl Game {
                     TriggerSource::PlayerBattleArea(pid as PlayerId),
                 );
             }
-            self.drain_effect_queue();
         }
+        self.fire_on_leave_field(target, snapshot);
+        if !egg && !token {
+            self.fire_on_place_security(player_id, observer_player, top_handle);
+        }
+        !egg && !token
+    }
 
-        self.clear_permanent_full(target);
-        self.modifiers.expire_player_on_permanent_leave(target);
-        self.modifiers
-            .shift_after_battle_area_remove(target.player, target.index);
-        // Queue, captured event and attacker handles were rekeyed once just
-        // after the actual removal above. A second rekey would address the
-        // newly compacted slots as if another permanent had left.
+    /// Explicit printed top-card extraction (BT20-055 Q4388/Q4723).
+    /// A separate entry point preserves the semantic distinction from a
+    /// field Digimon selected through generic CardSourceRef::Material.
+    pub(crate) fn place_top_stacked_on_security(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer: PlayerId,
+    ) -> bool {
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+        if self
+            .modifiers
+            .player_has(observer, ModifierType::CannotAddSecurityByEffect)
+            || self
+                .player(observer)
+                .battle_area
+                .iter()
+                .enumerate()
+                .any(|(i, _)| {
+                    self.modifiers.has(
+                        PermanentHandle {
+                            player: observer,
+                            index: i as u8,
+                        },
+                        ModifierType::CannotAddSecurity,
+                    )
+                })
+        {
+            return false;
+        }
+        let Some(id) = self.capture_source_play_host_identity(target) else {
+            return false;
+        };
+        let Some(permanent) = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+        else {
+            return false;
+        };
+        if permanent.card_sources.len() < 2 {
+            return false;
+        }
+        let card = permanent.top_card().handle();
+        let state = crate::game::PendingSecurityMove {
+            top_only: true,
+            donor: (target.player, id),
+            card,
+            player,
+            position,
+            face_up,
+            observer,
+            leave_complete: true,
+        };
+        // Remember before opening replacement so nested requests and clones
+        // retain exact physical donor/top card and destination metadata.
+        self.pending_security_moves.push(state.clone());
+        let cause = self.infer_effect_cause(target.player);
+        let outcome = self.try_replace(
+            EffectTiming::WhenWouldPlaceInSecurity,
+            ReplacementSubject::Card(card, Zone::BattleArea),
+            cause,
+            Some(Zone::Security),
+        );
+        if self.pending_selection.is_some() {
+            return false;
+        }
+        if let Some(i) = self.pending_security_moves.iter().rposition(|s| {
+            s.top_only
+                && s.donor == state.donor
+                && s.card == card
+                && s.player == player
+                && s.position == position
+                && s.face_up == face_up
+                && s.observer == observer
+        }) {
+            self.pending_security_moves.remove(i);
+        }
+        self.finish_top_stacked_security_move(state, outcome)
+    }
 
-        self.fire_on_place_security(player_id, observer_player, top_handle);
-        true
+    fn finish_top_stacked_security_move(
+        &mut self,
+        state: crate::game::PendingSecurityMove,
+        outcome: crate::replacement::ReplacementOutcome,
+    ) -> bool {
+        use crate::replacement::ReplacementOutcome;
+        if matches!(
+            outcome,
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled
+        ) {
+            return false;
+        }
+        let Some(h) = self.resolve_digivolve_host_identity(state.donor.0, state.donor.1) else {
+            return false;
+        };
+        let p = &self.player(h.player).battle_area[h.index as usize];
+        // A nested operation cannot redirect this request onto a fresh top.
+        if p.card_sources.len() < 2 || p.top_card().handle() != state.card {
+            return false;
+        }
+        let destination = match outcome {
+            ReplacementOutcome::None => Zone::Security,
+            ReplacementOutcome::Redirected(z) => z,
+            _ => return false,
+        };
+        if !matches!(
+            destination,
+            Zone::Security | Zone::Trash | Zone::Hand | Zone::Deck
+        ) {
+            return false;
+        }
+        let card = self.player_mut(h.player).battle_area[h.index as usize]
+            .card_sources
+            .pop()
+            .unwrap();
+        let leaving = vec![card.clone()];
+        let is_egg = card.card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg;
+        let owner = card.owner;
+        let security = destination == Zone::Security && !is_egg;
+        match destination {
+            Zone::Security if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
+            Zone::Security => {
+                match state.position {
+                    crate::enums::StackPosition::Top => {
+                        self.player_mut(state.player).security.push(card)
+                    }
+                    crate::enums::StackPosition::Bottom => {
+                        self.player_mut(state.player).security.insert(0, card)
+                    }
+                    crate::enums::StackPosition::Random => {
+                        use rand::Rng;
+                        let len = self.player(state.player).security.len();
+                        let i = self.rng.gen_range(0..=len);
+                        self.player_mut(state.player).security.insert(i, card);
+                    }
+                }
+                if state.face_up {
+                    self.player_mut(state.player)
+                        .face_up_security
+                        .insert(state.card.0);
+                }
+            }
+            Zone::Trash => self.player_mut(owner).trash.push(card),
+            Zone::Hand if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
+            Zone::Hand => self.player_mut(owner).hand.push(card),
+            Zone::Deck if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
+            Zone::Deck => self.player_mut(owner).deck.insert(0, card),
+            _ => unreachable!(),
+        }
+        // Memory mutation (including Overflow) reevaluates UntilCondition.
+        // Publish the changed top/zone and remove its old aura first, so
+        // those predicates cannot observe a stale departed-top modifier.
+        self.tick_declarative_effects();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
+        self.apply_ace_overflow_for_sources(&leaving);
+        if security {
+            self.fire_on_place_security(state.player, state.observer, state.card);
+        }
+        security
     }
 
     pub(crate) fn place_on_security_observed(
@@ -3476,6 +4027,23 @@ impl Game {
         let Some((source_card, _, source_zone)) = self.card_source_ref_snapshot(source) else {
             return false;
         };
+
+        if let crate::enums::CardSourceRef::Material(carrier, index) = source {
+            let is_top = self
+                .player(carrier.player)
+                .battle_area
+                .get(carrier.index as usize)
+                .is_some_and(|p| index + 1 == p.card_sources.len());
+            if is_top {
+                return self.place_permanent_on_security(
+                    player_id,
+                    carrier,
+                    position,
+                    face_up,
+                    observer_player,
+                );
+            }
+        }
 
         let cause = self.infer_effect_cause(player_id);
         let subject = ReplacementSubject::Card(source_card, source_zone);
@@ -3602,6 +4170,10 @@ impl Game {
             return false;
         };
         let taken = taken.card;
+        if taken.card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg {
+            self.player_mut(taken.owner).digitama_deck.insert(0, taken);
+            return false;
+        }
 
         // face_up_security is HashSet<u16> keyed by card_index.
         let face_up_key = taken.card_index;
@@ -3658,12 +4230,13 @@ impl Game {
 #[cfg(feature = "dsl-yaml-loader")]
 #[derive(Clone, Copy, Debug)]
 pub struct AssemblyPlayParams {
+    pub(crate) effect_controller: Option<PlayerId>,
     pub(crate) cost_delta: crate::enums::CostDelta,
     pub(crate) source: PlaySource,
     pub(crate) origin: PendingWouldPlayOrigin,
     pub(crate) suppress_on_play: bool,
     /// Generic cost reduction accumulated by the BeforePayCost chain.
-    pub(crate) total_reduction: i32,
+    pub(crate) total_reduction: crate::game_actions::PlayCostAdjustments,
     /// The assembly-specific reduction (D5 — `cost:` on the alt-path).
     pub(crate) assembly_reduction: i32,
 }
@@ -3976,7 +4549,7 @@ fn assembly_finish(
     player: PlayerId,
     target_card: CardHandle,
     params: AssemblyPlayParams,
-    total_reduction: i32,
+    total_reduction: crate::game_actions::PlayCostAdjustments,
 ) -> PlayFromHandCostResult {
     let Some(hand_index) = game
         .player(player)
@@ -3986,14 +4559,139 @@ fn assembly_finish(
     else {
         return PlayFromHandCostResult::Failed;
     };
-    game.finish_play_from_hand_after_reductions(
-        player,
-        hand_index,
-        target_card,
-        params.cost_delta,
-        params.source,
-        params.origin,
-        params.suppress_on_play,
-        total_reduction,
-    )
+    game.with_play_declaration_controller(params.effect_controller, |game| {
+        game.finish_play_from_hand_after_reductions(
+            player,
+            hand_index,
+            target_card,
+            params.cost_delta,
+            params.source,
+            params.origin,
+            params.suppress_on_play,
+            total_reduction,
+        )
+    })
+}
+
+#[cfg(test)]
+mod security_move_lifecycle_tests {
+    use crate::card_source::CardHandle;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::effect::{CardEffect, Effect};
+    use crate::enums::{CardSourceRef, StackPosition};
+    use crate::permanent::PermanentHandle;
+    struct Protect;
+    impl CardEffect for Protect {
+        fn effects(&self, c: CardHandle) -> Vec<Effect> {
+            vec![Effect::when_would_leave_battle_area(c)
+                .optional()
+                .replacement_process(|ctx| ctx.cancel())
+                .build()]
+        }
+    }
+    fn parked() -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .add_card(make_test_card("TOP", "Top"))
+            .add_card(make_test_card("SOURCE", "Source"))
+            .deck(0, &["SOURCE"; 8])
+            .deck(1, &["SOURCE"; 8])
+            .build();
+        r.register_effect("TOP", std::sync::Arc::new(Protect));
+        r.place_stack(0, &["SOURCE", "TOP"]);
+        r.game.place_on_security(
+            1,
+            CardSourceRef::Material(
+                PermanentHandle {
+                    player: 0,
+                    index: 0,
+                },
+                1,
+            ),
+            StackPosition::Bottom,
+            true,
+        );
+        assert!(r.pending_kind().is_some());
+        assert_eq!(r.game.pending_security_moves.len(), 1);
+        r
+    }
+    #[test]
+    fn terminal_winner_clears_security_move_without_mutating_clone() {
+        let mut r = parked();
+        let saved = r.game.clone();
+        r.game
+            .declare_winner_with_reason(0, crate::TerminalOutcomeReason::EngineDeclared);
+        assert!(r.game.pending_security_moves.is_empty());
+        assert_eq!(saved.pending_security_moves.len(), 1);
+    }
+    #[test]
+    fn terminal_elimination_clears_security_move() {
+        let mut r = parked();
+        r.game.eliminate_player(1);
+        assert!(r.game.pending_security_moves.is_empty());
+    }
+    #[test]
+    fn terminal_deckout_clears_security_move() {
+        let mut r = parked();
+        r.game.handle_deckout(1);
+        assert!(r.game.pending_security_moves.is_empty());
+    }
+    #[test]
+    fn pending_security_digest_binds_destination_orientation_stage_and_physical_identity() {
+        let r = parked();
+        let baseline = r.game.verification_digest();
+        for variant in 0..6 {
+            let mut branch = r.game.clone();
+            let p = &mut branch.pending_security_moves[0];
+            match variant {
+                0 => p.player = 0,
+                1 => p.position = StackPosition::Top,
+                2 => p.face_up = false,
+                3 => p.leave_complete = true,
+                4 => p.observer ^= 1,
+                5 => p.donor.1 += 1,
+                _ => unreachable!(),
+            };
+            assert_ne!(
+                branch.verification_digest(),
+                baseline,
+                "pending payload variant {variant}"
+            );
+        }
+        assert_eq!(r.game.verification_digest(), baseline);
+    }
+    #[test]
+    fn declined_security_move_clears_intent_and_clone_digest_agrees() {
+        let mut r = parked();
+        r.execute_action(0, crate::action::space::PASS).unwrap();
+        assert!(r.game.pending_security_moves.is_empty());
+        assert!(r.game.players[0].battle_area.is_empty());
+        let clone = r.game.clone();
+        assert_eq!(clone.verification_digest(), r.game.verification_digest());
+    }
+}
+
+
+#[cfg(test)]
+mod physical_effect_origin_tests {
+    use crate::{debug_runner::DebugRunner, enums::EffectSourceKind};
+    fn source_kind(linked: bool) {
+        let mut r = DebugRunner::builder().dsl_card("BT12-092").unwrap()
+            .dsl_card("ST1-03").unwrap().start();
+        let h = r.place_on_field(0, "ST1-03", Some(0));
+        let index = r.add_to_hand(0, "BT12-092");
+        let card = r.game.players[0].hand.remove(index);
+        let physical = card.handle();
+        if linked { r.game.players[0].battle_area[h.index as usize].linked_cards.push(card); }
+        else { r.game.players[0].battle_area[h.index as usize].card_sources.insert(0, card); }
+        // This helper supplies explicit provenance to cost/replacement choosers.
+        // A separate same-ID hand copy remains a printed Tamer origin.
+        let other = r.add_to_hand(0, "BT12-092");
+        let other = r.game.players[0].hand[other].handle();
+        for g in [&r.game, &r.game.clone()] {
+            assert_eq!(g.effect_source_kind_for_handle(physical), EffectSourceKind::Digimon);
+            assert_eq!(g.effect_source_kind_for_handle(other), EffectSourceKind::Tamer);
+        }
+    }
+    #[test] fn inherited_tamer_physical_origin_for_cost_and_replacement_is_digimon() { source_kind(false); }
+    #[test] fn linked_tamer_physical_origin_for_cost_and_replacement_is_digimon() { source_kind(true); }
 }

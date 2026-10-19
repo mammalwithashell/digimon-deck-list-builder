@@ -1,0 +1,201 @@
+card: EX3-024
+clause: EX3-024#effect#1
+interaction:
+  id: qa:Q3401
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-041
+    - EX3-044
+    - EX3-074
+    - EX3-024
+    - ST1-05
+    - ST1-03
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-04
+    - ST2-04
+    - ST1-05
+    - ST2-06
+    - ST1-06
+    rest: Q3401-blind-v3-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST2-04
+    - ST1-05
+    - ST2-05
+    - ST1-04
+    - ST1-03
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-02
+    - ST1-04
+    - ST2-06
+    - ST1-05
+    - ST2-04
+    - ST1-06
+    rest: Q3401-blind-v3-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-041
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-03
+      from: hand
+- actor: 1
+  do:
+    play:
+      card: ST2-04
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX3-044
+- actor: 0
+  do:
+    select:
+      value: 4
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX3-074
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX3-024
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.1
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+expect_ruling:
+  q_id: Q3401
+  assert:
+  - at: 21
+    that:
+      p0.field:
+      - card_id: EX3-074
+        suspended: true
+      - card_id: EX3-024
+        suspended: false
+  - at: 22
+    that:
+      memory: -9
+      p0.field:
+      - card_id: EX3-074
+        suspended: false
+      - card_id: EX3-024
+        suspended: false
+      p1.field:
+      - card_id: ST1-03
+        suspended: true
+      - card_id: ST2-04
+        suspended: false
+  - at: 23
+    that:
+      p0.field:
+      - card_id: EX3-074
+        suspended: false
+      - card_id: EX3-024
+        suspended: false
+      p1.field:
+      - card_id: ST2-04
+        suspended: true
+      p1.trash:
+      - ST1-02
+      - ST1-02
+      - ST1-03
+      p1.security: 3

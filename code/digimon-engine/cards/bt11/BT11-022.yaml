@@ -1,0 +1,47 @@
+# Official observation ef6be7e5949581e869ad22a85ba4e39c4101b82ad22c0033b3ba4328b0b0d0a0,
+# printed image, and base DCGO BT11/Blue/BT11_022.cs verified.
+card: BT11-022
+name: Dracomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Dragon, Blue Flare]
+form: Rookie
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    from: { name_is: Bebydomon }
+    cost: 0
+effects:
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - event_target_is_source: false
+        - any_of:
+            - event_card_name_contains: Dramon
+            - event_card_trait_has: Blue Flare
+    summary: "[Your Turn][Once Per Turn] When you play another Dramon or Blue Flare Digimon, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - event_target_is_source: false
+        - any_of:
+            - event_card_name_contains: Dramon
+            - event_card_trait_has: Blue Flare
+    summary: "[Your Turn][Once Per Turn] When you play another Dramon or Blue Flare Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1

@@ -1,0 +1,124 @@
+card: LM-028
+clause: LM-028#effect#0
+interaction:
+  id: qa:Q4039
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-025
+    - BT20-042
+    - LM-028
+    - BT20-045
+    - ST2-10
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-07
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    rest: gating8-Q4039-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST2-03
+    - ST2-04
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-07
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    rest: gating8-Q4039-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-025
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: LM-028
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - ST2-10
+  expect:
+    prompt: SelectHandEffect
+    count: 1
+    candidates:
+    - ST2-10
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+expect_ruling:
+  q_id: Q4039
+  assert:
+  - at: 11
+    that:
+      p0.selection_candidates:
+      - ST2-10

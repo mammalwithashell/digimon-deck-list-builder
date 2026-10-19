@@ -2,9 +2,9 @@
 //!
 //! If any friendly Digimon carries `ModifierType::ForceAttack` and has at
 //! least one legal attack, the Main-phase mask is replaced with a mask
-//! containing only that Digimon's attack bits — every other action (play,
-//! digivolve, hatch, PASS, field effects, …) is zeroed. Mirrors Python
-//! `action_mask.py:227-280`.
+//! containing only legal attack bits of forced Digimon. Every other action
+//! (play, digivolve, hatch, PASS, field effects) is zeroed. The ordinary Main
+//! attack mask remains the authority for memory, identity and prohibitions.
 //!
 //! If no forced Digimon can actually attack (all suspended / all targets
 //! blocked), the replacement falls through and the normal Main-phase mask
@@ -34,6 +34,7 @@ fn make_digimon(id: &str, color: CardColor, dp: i32) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),
@@ -54,6 +55,94 @@ fn grant_force_attack(
         target,
         ModifierEntry::simple(ModifierType::ForceAttack, 1, Expiry::EndOfTurn, source),
     );
+}
+
+#[test]
+fn forced_mask_preserves_normal_memory_and_blitz_eligibility() {
+    let mut blitz = make_digimon("BLITZ", CardColor::Red, 5000);
+    blitz.keywords.push(Keyword::Blitz);
+    let mut r = DebugRunner::builder().add_card(blitz)
+        .add_card(make_digimon("FORCED", CardColor::Red, 5000)).start();
+    let tp = r.game.turn_player();
+    let forced = r.place_on_field(tp, "FORCED", Some(0));
+    let eligible = r.place_on_field(tp, "BLITZ", Some(0));
+    r.game.players[tp as usize].battle_area[eligible.index as usize].turn_digivolved = r.game.turn_count;
+    r.game.enter_main_phase();
+    // Inspect the Main boundary before end-turn advancement; no chooser is
+    // installed, so this compares the same normal and forced mask contract.
+    r.game.memory = -1;
+    let normal = build_action_mask(&r.game, tp);
+    let illegal = encode_attack(forced.index as u16, SECURITY_TARGET) as usize;
+    let legal = encode_attack(eligible.index as u16, SECURITY_TARGET) as usize;
+    assert_eq!(normal[illegal], 0.0);
+    assert_eq!(normal[legal], 1.0);
+    grant_force_attack(&mut r, forced, tp);
+    assert_eq!(build_action_mask(&r.game, tp), normal, "ineligible forced attacker preserves the normal choices");
+    grant_force_attack(&mut r, eligible, tp);
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(mask[illegal], 0.0);
+    assert_eq!(mask[legal], 1.0);
+    assert_eq!(mask[PASS as usize], 0.0);
+}
+
+#[test]
+fn player_attack_prohibition_with_no_digimon_target_keeps_pass() {
+    let mut r=DebugRunner::builder().add_card(make_digimon("FORCED",CardColor::Red,5000)).start();
+    let tp=r.game.turn_player();let h=r.place_on_field(tp,"FORCED",Some(0));
+    grant_force_attack(&mut r,h,tp);
+    r.game.modifiers.add(h,ModifierEntry::simple(ModifierType::CannotAttackPlayer,1,Expiry::EndOfTurn,tp));
+    r.game.enter_main_phase();
+    let mask=build_action_mask(&r.game,tp);
+    assert_eq!(mask[encode_attack(h.index as u16,SECURITY_TARGET) as usize],0.0);
+    assert_eq!(mask[PASS as usize],1.0,"no legal forced target must not trap the actor");
+}
+
+#[test]
+fn player_attack_prohibition_still_forces_legal_digimon_target() {
+    let mut r=DebugRunner::builder().add_card(make_digimon("FORCED",CardColor::Red,5000)).add_card(make_digimon("DEF",CardColor::Blue,2000)).start();
+    let tp=r.game.turn_player();let h=r.place_on_field(tp,"FORCED",Some(0));let d=r.place_on_field(1-tp,"DEF",Some(0));
+    r.game.players[(1-tp) as usize].battle_area[d.index as usize].is_suspended=true;
+    grant_force_attack(&mut r,h,tp);
+    r.game.modifiers.add(h,ModifierEntry::simple(ModifierType::CannotAttackPlayer,1,Expiry::EndOfTurn,tp));
+    r.game.enter_main_phase();
+    let mask=build_action_mask(&r.game,tp);
+    assert_eq!(mask[encode_attack(h.index as u16,SECURITY_TARGET) as usize],0.0);
+    assert_eq!(mask[encode_attack(h.index as u16,d.index as u16) as usize],1.0);
+    assert_eq!(mask[PASS as usize],0.0,"legal forced Digimon attack remains mandatory");
+}
+
+#[test]
+fn player_wide_attack_prohibition_overrides_force_attack() {
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r=DebugRunner::builder().add_card(make_digimon("FORCED",CardColor::Red,5000)).start();
+    let tp=r.game.turn_player();let h=r.place_on_field(tp,"FORCED",Some(0));
+    grant_force_attack(&mut r,h,tp);
+    r.game.modifiers.add_player_modifier(tp,PlayerModifierEntry::simple(ModifierType::CannotAttack,1,Expiry::EndOfTurn,None,tp));
+    r.game.enter_main_phase();
+    let mask=build_action_mask(&r.game,tp);
+    assert_eq!(mask[encode_attack(h.index as u16,SECURITY_TARGET) as usize],0.0);
+    assert_eq!(mask[PASS as usize],1.0);
+}
+
+#[test]
+fn effective_digimon_kinds_can_attack_in_main_and_forced_masks() {
+    use digimon_engine::modifiers::ModifierPayload;
+    for kind in [CardKind::Token,CardKind::DigiEgg,CardKind::Tamer] {
+        let mut data=make_digimon("ATTACKER",CardColor::Red,5000);data.card_kind=kind;
+        let mut r=DebugRunner::builder().add_card(data).start();
+        let tp=r.game.turn_player();let h=r.place_on_field(tp,"ATTACKER",Some(0));
+        if kind==CardKind::Tamer {
+            r.game.modifiers.add(h,ModifierEntry::simple(ModifierType::TreatAsDigimon,0,Expiry::EndOfTurn,tp)
+                .with_payload(ModifierPayload::AdditiveSynthIdentity{kind:CardKind::Digimon,level:3,colors:vec![],traits:vec![],dp:5000}));
+        }
+        r.game.enter_main_phase();
+        assert!(r.game.can_attack(h,false),"effective {kind:?} is a ready Digimon");
+        assert_eq!(build_action_mask(&r.game,tp)[encode_attack(h.index as u16,SECURITY_TARGET) as usize],1.0,"Main {kind:?}");
+        grant_force_attack(&mut r,h,tp);
+        let mask=build_action_mask(&r.game,tp);
+        assert_eq!(mask[encode_attack(h.index as u16,SECURITY_TARGET) as usize],1.0,"forced {kind:?}");
+        assert_eq!(mask[PASS as usize],0.0);
+    }
 }
 
 #[test]

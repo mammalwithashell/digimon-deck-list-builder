@@ -1,0 +1,77 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "P-067",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue"
+    ],
+    "dp": 2000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": 2000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Bulucomon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Security] At the end of the battle, ＜Draw 2＞. (Draw 2 cards from your deck.) Then, add this card to the hand."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Bulucomon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522902",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-067_P2.png?260529",
+      "printing_id": "P-067_P2"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, ＜Draw 2＞. (Draw 2 cards from your deck.) Then, add this card to the hand."
+      }
+    ],
+    "type": "Mini Dragon"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "b20806612a15762278167f8cd85c9756d704eb0975838ea79a48b71cfba8dd22",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "21a0bd2f0ac472bf751dcaad6c79231ead53bfebf72afc5fdbc64e961501c104",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522902:P-067:P-067_P2",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+}

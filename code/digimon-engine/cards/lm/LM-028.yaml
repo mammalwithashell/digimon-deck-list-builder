@@ -97,6 +97,7 @@ effects:
       - select_hand:
           of: you
           bind_as: evo
+          optional: true
           filter:
             all_of:
               - kind: digimon

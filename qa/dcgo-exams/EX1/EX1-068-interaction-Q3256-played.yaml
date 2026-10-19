@@ -1,0 +1,132 @@
+# Q3256 played-after-resolution limb. Draft only, empty assertions pending actual evidence.
+# P0 fields blue Gabumon T1; P1 passes T2 with no battle Digimon.
+# T3 P0 Ice Wall (3->2), then MetalGarurumon (12 cost -> -10).
+# T4 P1 hard-plays Werewolf Mode (10->1), which has printed Rush and no Cerberusmon target.
+# Its attack loses2 memory (1->-1), then loses9000-vs11000 to top-security MetalGarurumon.
+# Next P0 breeding decision proves the memory tax crossed turn control. Without dynamic grant,
+# P1 would still have1 memory and this actor/phase would be illegal. No pre-existing P1 Digimon.
+# Source official Q3256 472a2180..., BT4-086 436b6a3c..., actual images and base C#.
+card: EX1-068
+clause: EX1-068#effect#0
+interaction:
+  id: qa:Q3256
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST2-03
+    - EX1-068
+    - ST2-11
+    - ST2-04
+    - ST2-05
+    - ST1-02
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    - ST2-11
+    - ST1-05
+    - ST1-06
+    rest: EX1-068-interaction-Q3256-played-p0
+  p1:
+    stack:
+    - BT4-086
+    - ST1-02
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST2-02
+    - ST2-03
+    - ST2-04
+    - ST2-05
+    - ST2-06
+    - ST1-06
+    - ST1-07
+    rest: EX1-068-interaction-Q3256-played-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX1-068
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    play:
+      card: ST2-11
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT4-086
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+assert: []
+expect_ruling:
+  q_id: Q3256
+  assert:
+  - at: 9
+    that:
+      memory: -1
+      p1.field:
+      - card_id: BT4-086
+        suspended: false
+        sources: []
+  - at: 10
+    that:
+      memory: 1
+      phase: Breeding
+      turn: 5
+      p0.security: 4
+      p1.field: []
+      p1.trash:
+      - BT4-086

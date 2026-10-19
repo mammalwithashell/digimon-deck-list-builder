@@ -45,7 +45,7 @@ effects:
           bind_as: cost_sources
           prompt: "Trash 1 Mineral or Rock source from any of your Digimon"
           then:
-            - trash_selected_sources: { source_refs: cost_sources }
+            - trash_selected_sources_as_cost: { source_refs: cost_sources }
             - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
             - select_effect_choice:
                 labels: ["Add to hand", "Place as bottom digivolution card"]

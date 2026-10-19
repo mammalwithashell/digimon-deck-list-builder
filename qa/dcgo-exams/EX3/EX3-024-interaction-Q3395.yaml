@@ -1,0 +1,146 @@
+# LEGALITY REPAIR: P1 plays Bearmon first (slot 0) and Agumon second (slot 1), retaining two distinct eligible attackers.
+# Q3395: actor 1, the opponent, chooses Bearmon for the forced attack. P0 only chooses the suspension cost.
+# Bearmon attacks suspended Slayerdramon; after battle Bearmon is in P1 trash and Agumon remains.
+# Reordering avoids the current scenario target resolver failure for nonzero-slot forced attackers; no engine change or rulings classification.
+# Original raw author response remains in separate evidence. No expect_ruling is authored here.
+card: EX3-024
+clause: EX3-024#effect#1
+covers:
+- EX3-024#effect#1
+- EX3-024#effect#0
+interaction:
+  id: qa:Q3395
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-025
+    - EX3-024
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    - ST1-02
+    - ST2-04
+    - ST2-04
+    rest: EX3-024-effect1-repair-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST2-04
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-03
+    - ST2-03
+    - BT3-093
+    - BT3-093
+    - ST1-02
+    rest: EX3-024-effect1-repair-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-025
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST2-04
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: EX3-024
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 3
+  expect:
+    prompt: SelectCountEffect
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+  expect:
+    prompt: OptionalSkill
+- actor: 1
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 1
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+expect_ruling:
+  q_id: Q3395
+  assert:
+  - at: 12
+    that:
+      p1.field:
+      - ST2-04
+      - ST1-03

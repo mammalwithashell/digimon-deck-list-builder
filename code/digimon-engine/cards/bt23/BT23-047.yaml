@@ -22,6 +22,12 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, trait_has: CS }
     cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: green }
+      - { level_eq: 6, color_is: blue }
+    cost: 0
+    stacks_unsuspended: true
 
 effects:
   - kind: partition
@@ -50,16 +56,13 @@ effects:
   #     (the "Suspend 5" mandatory-affect-min(5,available) idiom — BT24-051 precedent).
   #   - GainCanNotUnsuspendPlayerEffect over opponent **Digimon only**
   #     (SharedCanSelectOpponentsDigimon = IsOpponentBattleAreaDigimon),
-  #     UntilOwnerActivePhase. The printed "next unsuspend phase" is modeled as a
-  #     CannotUnsuspend modifier with `end_of_opponents_turn` expiry: the modifier
-  #     is present during the opponent's next unsuspend phase (start of their turn)
-  #     and the engine's bulk unsuspend honors it (game_phases.rs). Precedent:
-  #     BT16-025 / BT24-095. (No `UntilNextUnsuspend` Expiry exists for modifiers;
-  #     the `end_of_opponents_turn` form is the established faithful pattern.)
+  #     UntilOwnerActivePhase, isOnlyActivePhase true. A player-scoped phase-only
+  #     modifier covers later entrants and persists after this Examon leaves.
+  #     Next-opponent-turn expiry also handles an opponent-turn invocation.
   #   - "Then, this Digimon may attack" → `may_attack_now { attacker: source,
   #     optional: true }` (PASS exposed).
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Suspend up to 5 opp Digimon/Tamers; opp Digimon can't unsuspend next phase; then this Digimon may attack"
+    summary: "[On Play][When Digivolving] Suspend 5 opp Digimon/Tamers; opp Digimon can't unsuspend next phase; then this Digimon may attack"
     process:
       - select_count_capped_multi:
           of: opponent
@@ -80,14 +83,11 @@ effects:
             - suspend: { target: suspended_target }
       # "None of your opponent's Digimon can unsuspend in their next unsuspend
       # phase." — Digimon-only lock (DCGO SharedCanSelectOpponentsDigimon).
-      - add_modifier:
-          target:
-            of: opponent
-            zone: [battle_area]
-            kind: digimon
-          modifier: CannotUnsuspend
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotUnsuspendInUnsuspendPhase
           value: 1
-          expiry: end_of_opponents_turn
+          expiry: end_of_opponents_next_turn
       # "Then, this Digimon may attack."
       - may_attack_now:
           attacker: source

@@ -258,7 +258,10 @@ impl<'a> EffectContext<'a> {
             return;
         };
         let cards: Vec<crate::card_source::CardHandle> =
-            own_digivolution_option_handles(perm, &self.game.card_data);
+            own_digivolution_option_handles(perm, &self.game.card_data)
+                .into_iter()
+                .filter(|card| !self.source_card_trash_blocked(host, *card))
+                .collect();
         if cards.is_empty() {
             return;
         }
@@ -288,7 +291,9 @@ impl<'a> EffectContext<'a> {
                 let Some(card) = cards.get(idx).copied() else {
                     return;
                 };
-                if cb_ctx.game.trash_specific_source_card(host, card) {
+                if !cb_ctx.source_card_trash_blocked(host, card)
+                    && cb_ctx.game.trash_specific_source_card(host, card)
+                {
                     cb_ctx.cancel_leave();
                 }
             },

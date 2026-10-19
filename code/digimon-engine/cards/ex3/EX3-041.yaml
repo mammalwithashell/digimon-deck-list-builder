@@ -1,0 +1,61 @@
+# Official observation a596d63c8e0cecb742f1e3c1b317583d0c8cbcd818063739c8200a1e9c3db34d,
+# inspected printed image, and base DCGO EX3_041.cs.
+# The result-scoped identity checks the actual Examon instance in its owner's hand.
+card: EX3-041
+name: Groundramon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Earth Dragon]
+form: Ultimate
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: {level_eq: 4, color_is: green}
+    cost: 4
+  - kind: digivolve
+    from: {level_eq: 4, color_is: blue}
+    cost: 4
+  - kind: digivolve
+    from: {name_is: Coredramon}
+    cost: 3
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+  - kind: aura
+    active_when: {your_turn: true}
+    target: {}
+    dna_material_identity:
+      for_result: Examon
+      result_scope: own_hand
+      level: 6
+    summary: "[Your Turn] [Examon] in your hand can treat this Digimon as level 6 for DNA digivolution"
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] This Digimon and another own Dramon may DNA digivolve into a Digimon in hand for its DNA cost"
+    process:
+      - may_dna_digivolve_now:
+          partner_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+              - name_contains: Dramon
+          target_filter: {of: you, kind: digimon}
+          cost: 0
+          ignore_requirements: false
+          optional: true
+          prompt: "Choose another Dramon to DNA digivolve with this Digimon"
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Blocker
+    active_when:
+      any_permanent:
+        of: you
+        is_source: true
+        any_of:
+          - name_contains: Dramon
+          - name_contains: Examon
+    summary: "Inherited [All Turns] While this Digimon has Dramon or Examon in its name, it gains Blocker"

@@ -1,0 +1,55 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT20-060",
+    "colors": "Black Yellow Red",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "dp": "16000",
+    "form": "Mega",
+    "play_cost": "9",
+    "qa": [
+      "No, it isn't deleted yet. Once all of the processing for this card's [On Play] [When Digivolving] effect is resolved, then all of the Digimon with 0 DP are deleted at the same time."
+    ],
+    "special_digivolution_condition": "[DNA Digivolve] Black Lv.6 + yellow/red Lv.6: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[DNA Digivolve] Black Lv.6 + yellow/red Lv.6: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "{Hand} [Counter] ＜Blast DNA Digivolve ([Alphamon] + [Ouryumon])＞ [On Play] [When Digivolving] 1 of your opponent's Digimon gets -15000 DP until the end of their turn. Then, if DNA digivolving, trash your opponent's top security card and ＜Recovery +1(Deck)＞. [All Turns] [Once per Turn] When security stacks are removed from, gain 3 memory."
+      },
+      {
+        "label": "Special Rule",
+        "text": "＜Overflow (-5)＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)"
+      }
+    ],
+    "type": "NO DATA/X Antibody/Royal Knight/Chronicle"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "ae40dcd4bf27634dfef33142da58964e530682d9f1d04a8c86a53b28de1151a5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "f5d4daa064d87f82bc81f59bcd1c99615ed25d0abd4d08d79213d86b5eee67b3",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-060",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-060"
+}

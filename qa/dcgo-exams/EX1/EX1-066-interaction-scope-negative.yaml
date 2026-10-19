@@ -1,0 +1,117 @@
+# Draft: own level 5 WereGarurumon is deleted in security battle without digivolution cards.
+# Analog Youth must not suspend/gain memory/hatch; next prompt stays Main. No recorded verdict.
+card: EX1-066
+clause: EX1-066#effect#1
+covers:
+- EX1-066#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX1-066
+    - ST2-08
+    - EX12-070
+    - EX12-074
+    - EX12-020
+    - EX12-009
+    - EX12-009
+    - EX12-020
+    - EX12-020
+    - EX12-026
+    - EX12-046
+    - EX12-070
+    - EX12-074
+    - EX12-011
+    - EX12-011
+    rest: EX1-066-tail-negative
+  p1:
+    stack:
+    - EX12-009
+    - EX12-009
+    - EX12-020
+    - EX12-020
+    - EX12-070
+    - EX12-036
+    - EX12-036
+    - EX12-047
+    - EX12-047
+    - EX12-076
+    rest: EX1-066-tail-toho-braves
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX1-066
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX12-046
+  expect:
+    prompt: SelectCardEffect
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-08
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.1
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+interaction:
+  id: probe:EX1-066#effect#1:scope:neg
+  source: probe
+  kind: negative

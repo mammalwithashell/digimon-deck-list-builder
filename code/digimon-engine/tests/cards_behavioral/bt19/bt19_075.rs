@@ -1117,8 +1117,22 @@ fn bt19_075_nested_replacement_cost_deletion_fires_the_opt_observer() {
     assert_eq!(runner.security_count(1), 3, "precondition: 3 opp security");
 
     // P1 resolves an Option that deletes P0's MoonMillenniummon.
+    runner.skip_mulligan();
+    runner.game.turn_player_idx = 1;
+    runner.game.memory = 3;
+    runner.place_on_field(1, "HAND-D", Some(0)); // red Option color provider
+    runner.game.enter_main_phase();
     let idx = runner.add_to_hand(1, "TEST-DEL-OPT");
-    runner.play(1, idx).expect("play the delete Option");
+    let action = digimon_engine::action::space::PLAY_HAND_START + idx as u16;
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 1)[action as usize],
+        1.0
+    );
+    runner.game.decode_action(action, 1);
+    assert!(runner.game.players[1]
+        .hand
+        .iter()
+        .all(|c| c.card_id(&runner.game.card_data) != "TEST-DEL-OPT"));
 
     // P1 picks MoonMillenniummon as the Option's victim.
     let victim = runner

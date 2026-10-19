@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Free",
+    "card_id": "BT25-037",
+    "colors": "Yellow Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Armor Form",
+    "play_cost": "6",
+    "qa": [
+      "Yes, you can. In such cases, you can't add a card from your security stack to your hand, therefore you place a specified card as the top or bottom security card."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Patamon]/Lv.3 w/[TS] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Patamon]/Lv.3 w/[TS] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Armor Purge＞ [On Play] [When Digivolving] Add your top security card to the hand. Then, you may place 1 [Angel], [Archangel], [Three Great Angels] or [Iliad] trait Digimon card or 1 [TS] trait Tamer card from your hand as the top or bottom security card."
+      }
+    ],
+    "type": "Holy Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "8063bf004ead0936ee50b24a3ad19136e03d0b4f3fd42929370e36c6824b8869",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "9bbba4fbe54794a3f48a650a88a1c554a74fab2f559f071bc1201d9439cb5643",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-037",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-037"
+}

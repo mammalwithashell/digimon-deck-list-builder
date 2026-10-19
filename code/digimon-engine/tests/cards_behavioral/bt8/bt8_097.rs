@@ -1,6 +1,6 @@
 //! BT8-097 Crimson Blaze — Option, Cost 6, Red.
 //!
-//! # Card text (cards.json)
+//! # Card text (official observation 4f4e0ee3a00e2bb6df7d0bdb47d1bcce3423e22727d5f3f28311125a7963cf31 and actual image)
 //!
 //! ```text
 //! When you would play this card, reduce its memory cost by 1 for each
@@ -18,11 +18,11 @@
 //! # Patterns this test covers
 //! - D2: Cost reduction with formula (1 × opponent battle-area Digimon count)
 //! - D6: Flood gate / opponent restriction (CannotPlayDigimonByEffect with EndOfOpponentsTurn)
-//! - for_each delete opp Digimon ≤6000 DP (automated sweep, no player choice)
+//! - simultaneous batch deletion of opponent Digimon ≤6000 DP (automated sweep, no player choice)
 //! - Option card [Main] from hand (when: main_from_hand)
 //! - [Security] activate Main (when: on_security mirrors main_from_hand body)
 //! - Filtered card_count_in_zone formula for per-Digimon cost reduction
-//! - dp_lte filter on for_each
+//! - dp_lte filter on delete_all_permanents
 //! - Player-level floodgate DSL via add_player_modifier
 
 use digimon_dsl::compiled::{
@@ -33,13 +33,268 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming, ModifierType};
 use digimon_engine::selection::TriggerSource;
 
+fn audit_runner() -> DebugRunner {
+    use digimon_engine::enums::{CardColor, GamePhase};
+    let mut b = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .unwrap()
+        .from_dsl_yaml(include_str!("../../../cards/ex5/EX5-060.yaml"))
+        .unwrap();
+    for (id, kind, dp, color) in [
+        ("A-RED", CardKind::Digimon, 7000, CardColor::Red),
+        ("A-BLUE", CardKind::Digimon, 7000, CardColor::Blue),
+        ("A-LOW", CardKind::Digimon, 6000, CardColor::Red),
+        ("A-TAMER", CardKind::Tamer, 1000, CardColor::Blue),
+        ("A-OPTION", CardKind::Option, 1000, CardColor::Blue),
+    ] {
+        let mut c = make_test_card(id, id);
+        c.card_kind = kind;
+        c.dp = Some(dp);
+        c.level = Some(3);
+        c.colors = vec![color];
+        c.play_cost = 1;
+        b = b.add_card(c);
+    }
+    let mut r = b
+        .hand(0, &["BT8-097", "EX5-060", "A-LOW"])
+        .hand(1, &["A-LOW", "A-TAMER"])
+        .deck(0, &["A-RED"; 12])
+        .deck(1, &["A-RED"; 12])
+        .security(0, &["BT8-097"])
+        .security(1, &["A-RED"; 4])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.inject_trash(1, "A-LOW");
+    r.game.current_phase = GamePhase::Main;
+    r
+}
+
+#[test]
+fn bt8_097_legal_option_mask_color_cost_filter_and_zero_floor() {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    for count in [0, 2, 7] {
+        let mut r = audit_runner();
+        r.place_on_field(0, "A-BLUE", None);
+        for _ in 0..count {
+            r.place_on_field(1, "A-BLUE", None);
+        }
+        r.place_on_field(1, "A-TAMER", None);
+        r.place_on_field(1, "A-OPTION", None);
+        assert_eq!(
+            build_action_mask(&r.game, 0)[PLAY_HAND_START as usize],
+            0.0,
+            "even zero-cost Crimson Blaze needs a red color source"
+        );
+        r.place_on_field(0, "A-RED", None);
+        assert!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize] > 0.0);
+        let before = r.memory();
+        r.game.decode_action(PLAY_HAND_START, 0);
+        assert_eq!(before - r.memory(), (6 - count).max(0));
+        assert!(r
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect));
+    }
+}
+
+#[test]
+fn bt8_097_sweep_filters_and_immunity_on_both_activation_paths() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::ModifierEntry;
+    for security in [false, true] {
+        let mut r = audit_runner();
+        r.place_on_field(0, "A-LOW", None);
+        r.place_on_field(1, "A-LOW", None);
+        r.place_on_field(1, "A-BLUE", None);
+        r.place_on_field(1, "A-TAMER", None);
+        r.place_on_field(1, "A-OPTION", None);
+        let immune = r.place_on_field(1, "A-LOW", None);
+        r.game.modifiers.add(
+            immune,
+            ModifierEntry::simple(ModifierType::CannotBeAffected, 0, Expiry::Permanent, 1),
+        );
+        let protected = r.place_on_field(1, "A-LOW", None);
+        r.game.modifiers.add(
+            protected,
+            ModifierEntry::simple(
+                ModifierType::CannotBeDestroyedByEffect,
+                0,
+                Expiry::Permanent,
+                1,
+            ),
+        );
+        if security {
+            let h = prepare_security_option(&mut r, "BT8-097");
+            r.game.enqueue_triggered(
+                EffectTiming::SecuritySkill,
+                TriggerSource::SecurityRevealed {
+                    defender: 0,
+                    card: h,
+                },
+            );
+            r.game.drain_effect_queue();
+        } else {
+            assert!(digimon_engine::action::build_action_mask(&r.game, 0)[0] > 0.0);
+            r.game.decode_action(0, 0);
+        }
+        assert_eq!(r.battle_area_size(1), 5);
+        assert!(r.pending_selection().is_none());
+        assert!(r
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect));
+        assert_eq!(
+            r.game.players[0].battle_area[0]
+                .top_card()
+                .card_id(&r.game.card_data),
+            "A-LOW"
+        );
+    }
+}
+
+#[test]
+fn bt8_097_effect_play_gate_persists_with_empty_board_and_allows_tamers() {
+    use digimon_engine::enums::{CostDelta, PlaySource};
+    let mut r = audit_runner();
+    r.place_on_field(0, "A-RED", None);
+    assert!(digimon_engine::action::build_action_mask(&r.game, 0)[0] > 0.0);
+    r.game.decode_action(0, 0);
+    assert!(r
+        .game
+        .play_from_hand_with_cost(1, 0, CostDelta::Free, PlaySource::ByEffect)
+        .is_none());
+    assert_eq!(r.game.players[1].hand.len(), 2);
+    assert!(r
+        .game
+        .play_from_hand_with_cost(1, 1, CostDelta::Free, PlaySource::ByEffect)
+        .is_some());
+    r.end_turn();
+    r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    assert!(digimon_engine::action::build_action_mask(&r.game, 1)[0] > 0.0);
+    r.game.decode_action(0, 1);
+    assert_eq!(r.battle_area_size(1), 2, "ordinary play remains legal");
+}
+
+#[test]
+fn bt8_097_q4663_own_effect_can_play_opponents_digimon() {
+    let mut r = audit_runner();
+    r.place_on_field(0, "A-RED", None);
+    assert!(digimon_engine::action::build_action_mask(&r.game, 0)[0] > 0.0);
+    r.game.decode_action(0, 0);
+    assert!(digimon_engine::action::build_action_mask(&r.game, 0)[0] > 0.0);
+    r.game.decode_action(0, 0); // My Dragomon, opponent's trash.
+    let v = r
+        .pending_selection_view()
+        .expect("opponent chooses trash Digimon");
+    assert_eq!(v.selecting_player, 1);
+    let a = v.valid_action_ids[0];
+    assert!(digimon_engine::action::build_action_mask(&r.game, 1)[a as usize] > 0.0);
+    r.game.decode_action(a, 1);
+    assert_eq!(
+        r.battle_area_size(1),
+        1,
+        "Q4663: Crimson Blaze blocks the opponent's effects, not my Dragomon playing their Digimon"
+    );
+}
+
+#[test]
+fn bt8_097_q6238_prevents_effect_play_into_breeding() {
+    let mut r = audit_runner();
+    r.place_on_field(0, "A-RED", None);
+    assert!(digimon_engine::action::build_action_mask(&r.game, 0)[0] > 0.0);
+    r.game.decode_action(0, 0);
+    assert!(
+        !r.game.play_to_breeding_from_hand(1, 0),
+        "Q6238: opponent cannot play a Digimon into breeding by effect"
+    );
+    assert!(r.game.players[1].breeding_area.is_none());
+    assert_eq!(r.game.players[1].hand.len(), 2);
+}
+
+// October 2026 audit: actual card image and official observation; DCGO
+// DestroyPermanentsClass treats the printed "all" as one deletion batch.
+#[test]
+fn bt8_097_sweep_is_one_batch_for_multi_target_replacement() {
+    use digimon_engine::action::{build_action_mask, space::PASS};
+    use digimon_engine::enums::{CardColor, GamePhase};
+    for security in [false, true] {
+        let mut carrier = make_test_card("AUDIT-CARRIER", "Carrier");
+        carrier.dp = Some(9000);
+        let mut ally = make_test_card("AUDIT-ALLY", "Dracomon");
+        ally.dp = Some(3000);
+        let mut red = make_test_card("AUDIT-RED", "Red");
+        red.colors = vec![CardColor::Red];
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+            .unwrap()
+            .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-027.yaml"))
+            .unwrap()
+            .add_card(carrier)
+            .add_card(ally)
+            .add_card(red)
+            .hand(0, &["BT8-097"])
+            .deck(0, &["AUDIT-RED"; 8])
+            .deck(1, &["AUDIT-RED"; 8])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.game.current_phase = GamePhase::Main;
+        r.place_on_field(0, "AUDIT-RED", None);
+        r.place_stack(1, &["BT20-027", "AUDIT-CARRIER"]);
+        r.place_on_field(1, "AUDIT-ALLY", None);
+        r.place_on_field(1, "AUDIT-ALLY", None);
+        if security {
+            let h = prepare_security_option(&mut r, "BT8-097");
+            r.game.enqueue_triggered(
+                EffectTiming::SecuritySkill,
+                TriggerSource::SecurityRevealed {
+                    defender: 0,
+                    card: h,
+                },
+            );
+            r.game.drain_effect_queue();
+        } else {
+            assert!(digimon_engine::action::build_action_mask(&r.game, 0)[0] > 0.0);
+            r.game.decode_action(0, 0);
+        }
+        let v = r.pending_selection_view().expect("paid replacement choice");
+        assert_eq!(v.selecting_player, 1);
+        assert!(v.is_optional);
+        let a = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+        assert!(build_action_mask(&r.game, 1)[a as usize] > 0.0);
+        let mut declined = r.game.clone();
+        assert!(build_action_mask(&declined, 1)[PASS as usize] > 0.0);
+        declined.decode_action(PASS, 1);
+        declined.drain_effect_queue();
+        if declined.pending_selection.is_some() {
+            assert!(build_action_mask(&declined, 1)[PASS as usize] > 0.0);
+            declined.decode_action(PASS, 1);
+            declined.drain_effect_queue();
+        }
+        assert_eq!(
+            declined.players[1].battle_area.len(),
+            1,
+            "declining all replacement offers must delete both eligible Digimon"
+        );
+        r.execute_action(1, a).unwrap();
+        r.game.drain_effect_queue();
+        assert_eq!(
+            r.battle_area_size(1),
+            3,
+            "one suspension protects both Dracomon in the same simultaneous sweep (BT20-027 Q4319)"
+        );
+        assert!(r.game.players[1].battle_area[0].is_suspended);
+    }
+}
+
 // ─── Helper fixtures ─────────────────────────────────────────────────────────
 
 /// Base runner with Crimson Blaze registered.
 fn runner() -> DebugRunner {
     DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .memory(8)
         .start()
 }
@@ -47,8 +302,8 @@ fn runner() -> DebugRunner {
 /// Runner with BT8-097 in player 0's hand plus 3-card decks for multi-turn tests.
 fn crimson_blaze_in_hand() -> DebugRunner {
     DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .hand(0, &["BT8-097"])
         .deck(0, &["BT8-097", "BT8-097", "BT8-097"])
         .deck(1, &["BT8-097", "BT8-097", "BT8-097"])
@@ -215,7 +470,7 @@ fn bt8_097_main_installs_cannot_play_digimon_by_effect_on_opponent() {
         fired,
         "activate_hand_main must return true for BT8-097 at hand index 0"
     );
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     // Floodgate modifier must be installed on opponent (player 1).
     assert!(
@@ -234,7 +489,7 @@ fn bt8_097_main_does_not_install_cannot_play_tamer_by_effect() {
     let mut runner = crimson_blaze_in_hand();
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     assert!(
         !runner
@@ -256,7 +511,7 @@ fn bt8_097_floodgate_modifier_active_during_opponents_turn() {
     let mut runner = crimson_blaze_in_hand();
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     assert!(
         runner
@@ -286,7 +541,7 @@ fn bt8_097_floodgate_modifier_expires_after_opponents_turn_ends() {
     let mut runner = crimson_blaze_in_hand();
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     // End P0's turn → P1 plays → end P1's turn → P0's turn.
     runner.end_turn();
@@ -315,7 +570,7 @@ fn bt8_097_main_no_crash_when_opponent_has_no_digimon() {
     assert_eq!(opp_before, 0);
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     // No selection, no crash, no field change.
     assert!(
@@ -334,8 +589,8 @@ fn bt8_097_main_deletes_opp_digimon_with_dp_lte_6000() {
     low_dp.level = Some(4);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .add_card(low_dp)
         .hand(0, &["BT8-097"])
         .deck(0, &["BT8-097", "BT8-097"])
@@ -348,7 +603,7 @@ fn bt8_097_main_deletes_opp_digimon_with_dp_lte_6000() {
     assert_eq!(opp_before, 1);
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     assert!(
         runner.game.pending_selection.is_none(),
@@ -382,8 +637,8 @@ fn bt8_097_main_deletes_multiple_opp_digimon_with_no_player_choice() {
     d2.level = Some(4);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .add_card(d1)
         .add_card(d2)
         .hand(0, &["BT8-097"])
@@ -397,7 +652,7 @@ fn bt8_097_main_deletes_multiple_opp_digimon_with_no_player_choice() {
     assert_eq!(runner.battle_area_size(1), 2);
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     assert!(
         runner.game.pending_selection.is_none(),
@@ -419,8 +674,8 @@ fn bt8_097_main_spares_opp_digimon_with_dp_above_6000() {
     high_dp.level = Some(5);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .add_card(high_dp)
         .hand(0, &["BT8-097"])
         .deck(0, &["BT8-097", "BT8-097"])
@@ -431,7 +686,7 @@ fn bt8_097_main_spares_opp_digimon_with_dp_above_6000() {
     runner.place_on_field(1, "OPP-HIGHDP", Some(0));
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     assert_eq!(
         runner.battle_area_size(1),
@@ -450,8 +705,8 @@ fn bt8_097_main_deletes_opp_digimon_with_exactly_6000_dp() {
     exactly_6000.level = Some(4);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .add_card(exactly_6000)
         .hand(0, &["BT8-097"])
         .deck(0, &["BT8-097", "BT8-097"])
@@ -462,7 +717,7 @@ fn bt8_097_main_deletes_opp_digimon_with_exactly_6000_dp() {
     runner.place_on_field(1, "OPP-6000DP", Some(0));
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     assert_eq!(
         runner.battle_area_size(1),
@@ -480,9 +735,8 @@ fn bt8_097_main_deletes_opp_digimon_with_exactly_6000_dp() {
 fn bt8_097_security_installs_cannot_play_digimon_by_effect_modifier() {
     let mut runner = runner();
 
-    // Manually place BT8-097 on field and fire on_security timing.
-    // (Simulates the card being revealed from security stack.)
-    let handle = runner.place_on_field(0, "BT8-097", None);
+    // Seat an actual revealed-security source before firing its security timing.
+    let handle = prepare_security_option(&mut runner, "BT8-097");
 
     assert!(
         !runner
@@ -494,7 +748,10 @@ fn bt8_097_security_installs_cannot_play_digimon_by_effect_modifier() {
 
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(handle),
+        TriggerSource::SecurityRevealed {
+            defender: 0,
+            card: handle,
+        },
     );
     runner.game.drain_effect_queue();
 
@@ -553,20 +810,23 @@ fn bt8_097_security_deletes_eligible_opp_digimon() {
     target.level = Some(4);
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .add_card(target)
         .memory(8)
         .start();
 
-    let handle = runner.place_on_field(0, "BT8-097", None);
+    let handle = prepare_security_option(&mut runner, "BT8-097");
     runner.place_on_field(1, "SEC-OPP-DIGI", Some(0));
     let opp_before = runner.battle_area_size(1);
     assert_eq!(opp_before, 1);
 
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(handle),
+        TriggerSource::SecurityRevealed {
+            defender: 0,
+            card: handle,
+        },
     );
     runner.game.drain_effect_queue();
 
@@ -614,8 +874,8 @@ fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_digimon() {
     opp_tamer.card_kind = CardKind::Tamer;
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .add_card(opp_digi.clone())
         .add_card(opp_tamer)
         .hand(0, &["BT8-097"])
@@ -632,7 +892,7 @@ fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_digimon() {
     // With 2 opp Digimon: base cost 6 - 2 = 4. If the Tamer were counted,
     // the cost would incorrectly become 3.
     runner.play(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     // Verify BT8-097 is no longer in hand (was played).
     assert_eq!(
@@ -679,8 +939,8 @@ fn bt8_097_floodgate_does_not_block_opponent_natural_play_from_hand() {
     }
 
     let mut runner = DebugRunner::builder()
-        .dsl_card("BT8-097")
-        .expect("BT8-097 in embedded DSL pack")
+        .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+        .expect("BT8-097 production YAML")
         .add_card(opp_digi())
         .hand(0, &["BT8-097"])
         .hand(1, &["OPP-NATURAL"])
@@ -690,7 +950,7 @@ fn bt8_097_floodgate_does_not_block_opponent_natural_play_from_hand() {
         .start();
 
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
     assert!(
         runner
             .game
@@ -725,7 +985,7 @@ fn bt8_097_floodgate_does_not_block_opponent_natural_play_from_hand() {
 fn bt8_097_floodgate_clears_at_exactly_opp_turn_end_boundary() {
     let mut runner = crimson_blaze_in_hand();
     runner.game.activate_hand_main(0, 0);
-    runner.auto_resolve();
+    runner.auto_resolve().unwrap();
 
     assert!(runner
         .game
@@ -748,4 +1008,77 @@ fn bt8_097_floodgate_clears_at_exactly_opp_turn_end_boundary() {
             .player_has(1, ModifierType::CannotPlayDigimonByEffect),
         "must clear at the boundary where P1's turn ends"
     );
+}
+
+// Tail audit: the sweep uses current DP and survives cloning before activation.
+#[test]
+fn bt8_097_tail_current_dp_and_clone_use_real_main_mask() {
+    use digimon_engine::action::{build_action_mask, space::PLAY_HAND_START};
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::ModifierEntry;
+    let mut r = audit_runner();
+    r.place_on_field(0, "A-RED", None);
+    let reduced = r.place_on_field(1, "A-BLUE", None);
+    let raised = r.place_on_field(1, "A-LOW", None);
+    r.game.modifiers.add(
+        reduced,
+        ModifierEntry::simple(ModifierType::ChangeDp, -1000, Expiry::Permanent, 1),
+    );
+    r.game.modifiers.add(
+        raised,
+        ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::Permanent, 1),
+    );
+    assert_eq!(r.effective_dp(reduced), Some(6000));
+    assert_eq!(r.effective_dp(raised), Some(7000));
+    let mut cloned = r.game.clone();
+    for game in [&mut r.game, &mut cloned] {
+        assert!(build_action_mask(game, 0)[PLAY_HAND_START as usize] > 0.0);
+        game.decode_action(PLAY_HAND_START, 0);
+        assert_eq!(game.players[1].battle_area.len(), 1);
+        assert_eq!(
+            game.players[1].battle_area[0]
+                .top_card()
+                .card_id(&game.card_data),
+            "A-LOW"
+        );
+        assert_eq!(game.memory, 6);
+        assert!(game.pending_selection.is_none());
+        assert!(game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect));
+    }
+}
+
+#[test]
+fn bt8_097_tail_actual_security_check_needs_no_red_color_or_cost() {
+    let mut r = audit_runner();
+    let attacker = r.place_on_field(1, "A-BLUE", Some(0));
+    r.place_on_field(1, "A-LOW", None);
+    r.game.turn_player_idx = 1;
+    let before = r.memory();
+    r.attack_player(attacker, 0, false);
+    assert_eq!(r.security_count(0), 0);
+    assert_eq!(r.battle_area_size(1), 1);
+    assert_eq!(r.memory(), before);
+    assert!(r
+        .game
+        .modifiers
+        .player_has(1, ModifierType::CannotPlayDigimonByEffect));
+    assert!(r.pending_selection().is_none());
+}
+
+// A SecurityRevealed card is outside the battle area while its security effect resolves.
+fn prepare_security_option(
+    runner: &mut DebugRunner,
+    id: &str,
+) -> digimon_engine::card_source::CardHandle {
+    runner.add_to_hand(0, id);
+    let card = runner.game.players[0].hand.pop().unwrap();
+    let handle = card.handle();
+    runner.game.pending_security = Some(digimon_engine::selection::PendingSecurity {
+        defender: 0,
+        card,
+        played: false,
+    });
+    handle
 }

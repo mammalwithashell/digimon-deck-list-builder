@@ -40,3 +40,6 @@ pub use errors::{DslError, ValidationError};
 pub use pack::CardPack;
 pub use registry::CardRegistry;
 pub use spec::CardSpec;
+
+/// Source-bound printed deck construction rules.
+pub mod deck_rule;

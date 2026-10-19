@@ -1,0 +1,90 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "P-066",
+    "card_type": "Digimon",
+    "colors": [
+      "Red"
+    ],
+    "dp": 2000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 2000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Huckmon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Security] At the end of the battle, delete 1 of your opponent's Digimon with 4000 DP or less. If no Digimon was deleted by this effect, ＜Draw 1＞. (Draw 1 card from your deck.) Then, add this card to its owner’s hand."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Huckmon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522902",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-066_P2.png?260529",
+      "printing_id": "P-066_P2"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, you can add it to your hand.",
+        "date": "Mar. 28, 2024",
+        "number": "Q4170",
+        "question": "Can I add this card to my hand even if this card's [Security] effect doesn't delete an opponent's Digimon with 4000 DP or less?"
+      },
+      {
+        "answer": "Yes, you add it to your hand.",
+        "date": "Jun. 13, 2025",
+        "number": "Q4845",
+        "question": "Do I use the part of the effect after \"then\" in this card's [Security] effect to add this card to the hand even if the \"if\" condition in the 2nd process isn't met?"
+      }
+    ],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, delete 1 of your opponent's Digimon with 4000 DP or less. If no Digimon was deleted by this effect, ＜Draw 1＞. (Draw 1 card from your deck.) Then, add this card to its owner’s hand."
+      }
+    ],
+    "type": "Mini Dragon"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "82605644750bceae8db6a99b5ed2c2f36a1c8e5daecc1dadeb71c0bf0512bae6",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "21a0bd2f0ac472bf751dcaad6c79231ead53bfebf72afc5fdbc64e961501c104",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522902:P-066:P-066_P2",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+}

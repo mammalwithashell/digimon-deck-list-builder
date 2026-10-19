@@ -1,0 +1,55 @@
+# Official primary observation 78c4631d764fdd1e209a11ae8c8c7941fa7e0972627c095f9202b9c9dab04d02,
+# printed card image, base DCGO EX3_020.cs; rules sections 8-1/8-2 and 16-21.
+card: EX3-020
+name: Wingdramon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+traits: [Sky Dragon]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: Coredramon }
+    cost: 3
+effects:
+  - kind: grant_keyword
+    keyword: Evade
+    summary: "<Evade>"
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dna_material_identity:
+      for_result: Examon
+      level: 6
+      result_scope: own_hand
+    summary: "[Your Turn] [Examon] in your hand can treat this Digimon as level 6 for DNA Digivolution"
+  - when: end_of_your_turn
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[End of Your Turn] This Digimon and 1 other Dramon may DNA digivolve into a Digimon card in your hand for its DNA cost"
+    process:
+      - may_dna_digivolve_now:
+          anchor: source
+          partner_filter: { of: you, kind: digimon, name_contains: Dramon }
+          target_filter: { of: you, kind: digimon }
+          cost: 0
+          ignore_requirements: false
+          optional: true
+          prompt: "DNA digivolve this Digimon and another Dramon?"
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Evade
+    active_when:
+      any_of:
+        - name_contains: Dramon
+        - name_contains: Examon
+    summary: "Inherited [All Turns] While this Digimon has Dramon or Examon in its name, it gains <Evade>"

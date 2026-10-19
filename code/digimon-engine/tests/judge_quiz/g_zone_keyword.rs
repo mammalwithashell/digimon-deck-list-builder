@@ -176,7 +176,13 @@ fn q4_security_attack_net_modifiers_one_check() {
 
     // Play Atomic Inferno's [Main]; Aldamon is the only Hybrid Digimon, so the
     // (mandatory) target selection has exactly one legal pick.
-    runner.play(p0, 0);
+    runner.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, p0)[action as usize],
+        1.0
+    );
+    runner.game.decode_action(action, p0);
     let pick = runner
         .pending_selection()
         .expect("Atomic Inferno [Main] surfaces a Hybrid-Digimon selection")
@@ -254,7 +260,13 @@ fn q4_control_atomic_inferno_plus_one_alone_checks_two() {
 
     let aldamon = runner.place_on_field(p0, "AD1-002", Some(0));
 
-    runner.play(p0, 0);
+    runner.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, p0)[action as usize],
+        1.0
+    );
+    runner.game.decode_action(action, p0);
     let pick = runner
         .pending_selection()
         .expect("Atomic Inferno [Main] surfaces a Hybrid-Digimon selection")

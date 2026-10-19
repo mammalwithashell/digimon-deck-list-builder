@@ -79,6 +79,12 @@ The oracle pass submits a `policy: "scripted"` job into the phase-1 queue and is
 subject to every phase-1 rule: the harness must be enabled (`dcgo-harness
 enable`), Unity must be in Play, and a job overdue past `timeout_seconds` is
 requeued then quarantined after two failures. See `docs/DCGO_HARNESS.md`.
+Exam jobs carry a 240 s limit, which the player enforces itself (`failed`,
+`timeout after 240s`). A `select:` DCGO's prompt cannot end on — one card for
+a `SelectCardEffect` that takes 2 or a cancel — fails at once as
+`prompt mismatch: step N selection did not complete 'SelectCardEffect'
+(wanted [..], prompt needs 2 picks or cancel)`, and a prompt that sits open
+10 s with nothing moving fails the same way (`… DCGO held a prompt open …`).
 
 ## The scenario file
 
@@ -125,6 +131,73 @@ cost is a known risk — see "Known gaps".
 | `covers` | Optional. Every clause id the line exercises (a ruling or combo spanning two cards); must include `clause` itself. Each must be a clause the extractor produces for its card, or the scenario is rejected like a bad `clause:`. |
 | `interaction` | Optional. `{ id, source: qa\|probe\|combo, kind: positive\|negative }`. Its presence makes the file an **interaction exam** — see below. |
 | `expect_ruling` | Q&A interaction exams only. `{ q_id: Q1601, assert: [ { at, that } ] }` — the publisher's answer as observables, never backfilled — see below. |
+
+### Optional observations of legal Option plays
+
+Legal Option plays can be asserted with `p0.legal_option_plays` or
+`p1.legal_option_plays`: a sorted list of printed card IDs, retaining duplicate
+copies. The value is measured before the requested decision from the actual Main
+actor's action mask. An empty list means no legal Option play; an absent value
+means it was not measured. Pending selections, other seats, breeding, and completed
+games do not provide this observation. A retained card in hand alone does not
+prove that playing it was illegal.
+
+Only requested rows/seats are compared. The diff and backfill fail closed if either
+engine lacks the requested measurement or the rows cannot be paired; older sidecars
+remain usable for scenarios that do not request these keys. `expect_ruling` still
+requires independent encoding of the publisher's answer and is never backfilled.
+
+The DCGO recorder extension is installed with
+`code/tools/dcgo_option_observation.py --project <isolated-copy> --reference
+<base-DCGO> --receipt-dir <new-directory>` (dry-run unless `--apply` is supplied).
+It verifies exact source anchors and rejects overlapping projects or shared files.
+Build the instrumented copy with `OptionObservationBuild.cs` in
+`code/tools/dcgo_catalog_repair/`, using a separate output and player data root.
+Keep the reference checkout read-only and retain the patch/build receipts.
+
+### Optional observations of selection decline
+
+`p0.selection_can_decline` and `p1.selection_can_decline` measure whether the
+acting player can decline the current selection. `false` proves a mandatory
+selection; a missing value means the capability was not measured. The Rust leg
+uses the actual selecting player's PASS action mask. The DCGO recorder captures
+`SelectCardEffect`'s live decline callback before UI or automatic selection.
+Other selectors remain unmeasured rather than reporting a guessed value.
+
+Request these keys only at the relevant pre-decision rows. Comparison and
+backfill reject missing measurements or invalid row pairings. Publisher rulings
+still require independent encoding and must never be inferred from backfill.
+
+Install `code/tools/dcgo_selection_observation.py` into an isolated DCGO copy,
+retaining its patch receipt, then build with `SelectionObservationBuild.cs`.
+This extension preserves the legal-Option observation support. Use the new
+build's own player data root and validate its live recordings before claiming
+either observation works.
+
+`p0.selection_candidates` and `p1.selection_candidates` optionally record the
+exact multiset of card IDs offered at the actual selecting player's supported
+card selection. Supported cases are independent single-card hand picks and
+single-source Digi-Burst 1 picks. Rust source observations require the installed
+single-pick SourceMulti physical candidate snapshot; a missing, mismatched or
+stale snapshot stays unknown. The isolated DCGO source observer is explicitly
+certified by IDigiBurst for count 1, whose end condition is just a nonempty
+selection. Other Custom source selectors, dependent or arbitrary end-selection
+predicates, batch picks, Assembly and DigiXros stay unmeasured.
+Another prompt kind, a missing identity, or an absent observation also stays
+unmeasured. Empty means
+a positively measured empty candidate list. Physical duplicate cards remain
+duplicated, and PASS is excluded. Both `assert` and `expect_ruling` can request
+this observation at the pre-decision row; paired comparison and backfill refuse
+missing observations on either side. Candidate guards on `expect` do not replace
+an explicit publisher-ruling assertion of the candidate set.
+
+The isolated DCGO recorder extension captures `SelectHandEffect`'s or the
+certified `SelectCardEffect` source picker's actual filtered candidate list before answering or applying the choice and passes it
+through `GameRecorder` to `StateDumper`. It never reconstructs candidates from
+the chosen card or the whole hand. The earlier selection-decline installer does
+not install this additional extension: apply its separately pinned recorder
+source patch and build an isolated observer player before measuring it. Legacy
+recordings without this field cannot satisfy a candidate-list assertion.
 
 ### `clause:` is an identity, not a label
 
@@ -549,6 +622,26 @@ one per step:
 - actor: 0
   do: { select: { decline: true } }                 # cancel an optional prompt
 ```
+
+### Explicit permanent identity on the oracle wire
+
+A `targets:` field reference identifies a physical permanent in the simulator's
+current selection state. The adapter emits `select_permanent_targets`, containing
+only public top/source/link identities, controller, suspension, effective DP,
+and current attack roles. It does not emit a `select_card_ids` fallback. Lower
+sources are bottom-to-top; linked cards are oldest-to-newest.
+
+The instrumented `SelectPermanentEffect` receiver must find a unique eligible
+object with that descriptor. A proper subset of indistinguishable copies is
+unmeasured. Selecting the complete identical group is supported only when the
+batch has no dependent target or end condition. Unknown identities, unsupported
+selector handlers, or a missing descriptor match fail closed. Offline replay retains its legal
+target action even when live emission is unsupported; the job builder rejects
+the unsupported wire before submission. Facedown lower/link sources use only a reserved `<face-down>` marker: their
+positions and count are public, but their identities never enter the descriptor.
+Hidden top cards, opaque face-up sources, and tokens remain unsupported. Existing `cards:`
+identity-only selection is unchanged. Installing the Rust emitter alone does not
+establish live support; the matching owned-player adapter must also be deployed.
 
 ### `ordinal:` — the stacked-trigger disambiguator (added 2026-08-23)
 
@@ -1343,3 +1436,12 @@ Full non-negotiables and the phase-by-phase driver live in the skill itself:
 - `code/tools/dcgo-harness/src/exam/` — scenario, lowering, projection, differ,
   verdict store, backfill, drafter
 - `qa/qa-reports/exam-verdicts/` — the verdict store itself
+
+
+### Public movement observations (version 1)
+
+Optional `p0.movement_observations` and `p1.movement_observations` maps are source-authored semantic recorder claims. A named public card is pinned to its physical identity at first ordinary public field/source projection. A different same-ID copy invalidates the watch permanently. Missing capture, duplicate ambiguity or incomplete movement is unmeasured, never zero. A watch's required fields are `version: 1`, `deletion_dispatches` and `rule_trashes`; each rule-trash row has exact ordered `lower_sources` and `linked` lists of `{owner, card_id}`. Source order is bottom-to-top. Partial records and unknown fields/versions are rejected. Only explicitly requested watches are compared, and backfill never creates these claims.
+
+Deletion measures actual dispatch after replacements, regardless of eligible listeners. Rule trash measures completed DP-less full-stack disposal and verifies physical owner-trash membership. Raw `movement_audit` retains local native handles only for audit; those identifiers never participate in cross-engine comparison or source assertions. Recorder state is excluded from game digests, actions and tensors. Require an ordinary observation before and after the event, supported recorder versions on both sides, and positive/deletion-cancel controls before claiming a negative deletion result.
+
+A movement claim requires two distinct requested observation anchors: an earlier public baseline and a later observation. Raw `public_watch_bound` audit entries carry the native binding-start decision. The harness verifies one unchanged physical handle and start anchor within each engine across that interval; a newly created post-event watch, reset/rebind, missing baseline or collapsed pairing is unmeasured. Native IDs and native wire steps are never compared across engines.

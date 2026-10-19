@@ -78,7 +78,8 @@
 #   effects" exclusion, BT20-056 Alphamon: Ouryuken idiom). The cost is the
 #   DECLARATIVE `cost: { delete_self: true }` + `outcome: prevent`, which
 #   compile_replacement_process lowers to the single self-contained
-#   `DeleteSelfAndCancelLeave` step (G-DSL-PROTECT-OTHER-BY-SELF-DELETE;
+#   `DeleteSelfAndCancelAllMatchingLeaves` step via explicit
+#   `prevent_all_matching: true` (G-DSL-PROTECT-OTHER-BY-SELF-DELETE;
 #   GREEN fixture: tests/dsl/protect_others_leave_replacement.rs
 #   BT25_039_CARRIER). Do NOT author an explicit `process:
 #   [delete_permanent: {target: source}, cancel_replacement: {}]` — explicit
@@ -225,6 +226,7 @@ effects:
         - none_of:
             - replacement_cause: own_effect
     summary: "[All Turns] By deleting this Digimon, your other [Shaman]/[Iliad] Digimon or Tamers don't leave the battle area (other than by your effects)"
+    prevent_all_matching: true
     cost:
       delete_self: true
     outcome: prevent

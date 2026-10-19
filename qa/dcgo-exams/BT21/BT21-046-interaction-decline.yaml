@@ -1,0 +1,153 @@
+card: BT21-046
+clause: BT21-046#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT21-046
+    - EX3-018
+    - BT20-025
+    - BT20-042
+    - BT20-045
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    - BT20-027
+    - BT20-027
+    rest: examon-core-fixture
+  p1:
+    stack:
+    - EX3-018
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    rest: examon-core-fixture
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT21-046
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX3-018
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-025
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 3
+  expect:
+    prompt: SelectCountEffect
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+  expect:
+    prompt: OptionalSkill
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+  expect:
+    prompt: OptionalSkill
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+interaction:
+  id: probe:BT21-046#inherited#0:optional_decline
+  source: probe
+  kind: positive
+assert:
+- at: 14
+  that:
+    p0.field:
+    - card_id: BT20-025
+      sources:
+      - BT21-046
+      - EX3-018
+    - card_id: BT20-042
+      sources: []
+- at: 15
+  that:
+    p0.field:
+    - card_id: BT20-025
+      sources:
+      - BT21-046
+      - EX3-018
+    - card_id: BT20-042
+      sources: []
+    p0.trash: []

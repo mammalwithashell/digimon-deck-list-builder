@@ -48,11 +48,13 @@ pub enum OptionState {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct SynthIdentity {
     pub card_name: String,
     pub card_names: Vec<String>,
     pub kind: CardKind,
+    /// Original category retained by an additive identity grant.
+    pub retained_kind: Option<CardKind>,
     pub level: Option<u8>,
     pub colors: Vec<CardColor>,
     pub traits: Vec<String>,
@@ -66,11 +68,16 @@ impl Default for OptionState {
 }
 
 /// A card (or digivolution stack) on the field.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Permanent {
     /// Monotonic face incarnation within this carrier. A temporary
     /// digivolution must not revive an older pending face effect when undone.
     pub(crate) face_generation: u64,
+    /// Opaque optional harness marker; omitted from Debug and replay hashes.
+    pub(crate) native_play_incarnation: Option<std::sync::Arc<()>>,
+    /// Stable identity for battle/replacement and queued observer events. Stack edits retain it;
+    /// a newly played permanent starts without one and DNA clears it.
+    pub(crate) battle_identity: Option<u64>,
     /// Digivolution stack: [base, evo1, evo2, ...]. Last is top card.
     pub card_sources: Vec<CardSource>,
     /// Option cards linked sideways.
@@ -100,11 +107,30 @@ pub struct Permanent {
     pub option_state: OptionState,
 }
 
+impl std::fmt::Debug for Permanent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Permanent")
+            .field("battle_identity", &self.battle_identity)
+            .field("card_sources", &self.card_sources)
+            .field("linked_cards", &self.linked_cards)
+            .field("is_suspended", &self.is_suspended)
+            .field("turn_played", &self.turn_played)
+            .field("turn_digivolved", &self.turn_digivolved)
+            .field("attacks_this_turn", &self.attacks_this_turn)
+            .field("is_attacking", &self.is_attacking)
+            .field("effect_activations", &self.effect_activations)
+            .field("option_state", &self.option_state)
+            .finish()
+    }
+}
+
 impl Permanent {
     /// Create a new permanent with a single card (played from hand or hatched).
     pub fn new(card: CardSource, turn: u16) -> Self {
         Self {
             face_generation: 0,
+            battle_identity: None,
+            native_play_incarnation: None,
             card_sources: vec![card],
             linked_cards: Vec::new(),
             is_suspended: false,
@@ -180,27 +206,28 @@ impl Permanent {
                 .map(ToString::to_string)
                 .collect(),
             kind: top.card_kind(data),
+            retained_kind: None,
             level: top.level(data),
-            colors: top.colors(data).to_vec(),
+            colors: top.digimon_colors(data).to_vec(),
             traits: top.traits(data).to_vec(),
             dp: top.dp(data),
         };
 
         for entry in modifiers.get(handle, ModifierType::TreatAsDigimon) {
-            if let ModifierPayload::SynthIdentity {
-                kind,
-                level,
-                colors,
-                traits,
-                dp,
-            } = &entry.payload
-            {
-                identity.kind = *kind;
-                identity.level = Some(*level);
-                identity.colors = colors.clone();
-                identity.traits = traits.clone();
-                identity.dp = Some(*dp);
-            }
+            let (kind, level, colors, traits, dp, additive) = match &entry.payload {
+                ModifierPayload::SynthIdentity { kind, level, colors, traits, dp } => (kind, level, colors, traits, dp, false),
+                ModifierPayload::AdditiveSynthIdentity { kind, level, colors, traits, dp } => (kind, level, colors, traits, dp, true),
+                _ => continue,
+            };
+            identity.retained_kind = if additive { Some(top.card_kind(data)).filter(|original| original != kind) } else { None };
+            identity.kind = *kind;
+            // An additive DP-only grant does not erase printed properties.
+            // Level zero is the DSL's existing omitted-level sentinel; a newer
+            // treatment resets that field to its printed value (Q6019).
+            identity.level = if additive && *level == 0 { top.level(data) } else { Some(*level) };
+            if !additive || !colors.is_empty() { identity.colors = colors.clone(); }
+            if !additive || !traits.is_empty() { identity.traits = traits.clone(); }
+            identity.dp = Some(*dp);
         }
         for entry in modifiers.get(handle, ModifierType::ChangePermanentLevel) {
             match &entry.payload {
@@ -319,6 +346,9 @@ impl Permanent {
                 }
             }
         }
+        if modifiers.has(handle, ModifierType::DontHaveDp) {
+            identity.dp = None;
+        }
         identity
     }
 
@@ -381,6 +411,8 @@ impl Permanent {
     /// `is_digimon` (the PRINTED-kind check, above) is deliberately NOT changed:
     /// it answers "what card type is on top", which for a token is genuinely
     /// `Token`.
+    // A Digi-Egg card on the field is a Digimon permanent (EX2-007 Q3274,
+    // Q3276, Q3285), while its printed card kind remains DigiEgg.
     pub fn is_digimon_for_rules(
         &self,
         data: &[CardData],
@@ -389,7 +421,7 @@ impl Permanent {
     ) -> bool {
         matches!(
             self.synth_identity(data, modifiers, handle).kind,
-            CardKind::Digimon | CardKind::Dual | CardKind::Token
+            CardKind::Digimon | CardKind::Dual | CardKind::Token | CardKind::DigiEgg
         )
     }
 
@@ -469,12 +501,13 @@ impl Permanent {
         if identity
             .card_names
             .iter()
-            .any(|card_name| card_name.to_lowercase().contains(&needle))
+            .any(|card_name| crate::card_data::rules_name_contains(card_name, &needle))
         {
             return true;
         }
         self.card_sources
             .iter()
+            .take(self.card_sources.len().saturating_sub(1))
             .any(|card| card.contains_card_name(name, data))
     }
 
@@ -540,4 +573,19 @@ impl Permanent {
         self.attacks_this_turn = 0;
         self.effect_activations.clear();
     }
+}
+
+impl std::fmt::Debug for SynthIdentity {
+ fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+ let mut d=f.debug_struct("SynthIdentity");
+ d.field("card_name", &self.card_name);
+ d.field("card_names", &self.card_names);
+ d.field("kind", &self.kind);
+ d.field("level", &self.level);
+ d.field("colors", &self.colors);
+ d.field("traits", &self.traits);
+ d.field("dp", &self.dp);
+ if self.retained_kind.is_some() { d.field("retained_kind", &self.retained_kind); }
+ d.finish()
+ }
 }

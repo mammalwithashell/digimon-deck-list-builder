@@ -25,6 +25,18 @@ CARDS = FIX / "cards.txt"
 UNIVERSE = ["BT7-056", "EX4-030", "BT21-029", "ST1-02"]
 
 
+def test_reviewed_security_text_matches_canonical_clause_denominator():
+    from tools.clause_coverage.extract import run
+
+    ids = ["LM-057", "LM-058"]
+    canonical = run(ids, "reviewed security regression")["clauses"]
+    expected = {c["id"]: c["text"] for c in canonical}
+    assert "LM-057#security#0" in expected
+    assert "LM-058#security#0" in expected
+    actual = {c["id"]: c["text"] for c in den.extract_clauses(ids)}
+    assert actual == expected, "interaction extraction must include reviewed image text"
+
+
 @pytest.fixture(scope="module")
 def clauses() -> list[dict]:
     return den.extract_clauses(UNIVERSE)

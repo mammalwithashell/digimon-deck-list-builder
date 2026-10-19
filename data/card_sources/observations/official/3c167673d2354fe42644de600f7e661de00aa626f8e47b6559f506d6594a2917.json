@@ -1,0 +1,42 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT25-047",
+    "colors": "Green",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[TS] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Vegetation] or [Shaman] trait card and 1 [TS] trait card among them to the hand. Return the rest to the bottom of the deck."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] All of your Digimon get +1000 DP."
+      }
+    ],
+    "type": "Vegetation/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3c167673d2354fe42644de600f7e661de00aa626f8e47b6559f506d6594a2917",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "5cceeff4e6ea46a4b134574f17e3245172b99ddf0df3428a2423f77e414f30ce",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-047",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-047"
+}

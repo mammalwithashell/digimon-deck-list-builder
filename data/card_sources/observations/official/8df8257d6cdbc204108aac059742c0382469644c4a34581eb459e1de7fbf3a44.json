@@ -1,0 +1,115 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX12-057",
+    "card_type": "Digimon",
+    "colors": [
+      "Black",
+      "Yellow"
+    ],
+    "dp": 12000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Black",
+          "Yellow"
+        ],
+        "cost": 4,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Black",
+          "Yellow"
+        ],
+        "dp": 12000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "Takutoumon",
+        "play_cost": 12,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] [Counter] [Once Per Turn] You may play 1 [Paishu] Token. (Digimon/Yellow/6000 DP/＜Blocker＞ ＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.))\n[All Turns] [Once Per Turn] When any of your Digimon are played, ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, 1 of their Digimon gets -6000 DP until their turn ends."
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "Takutoumon",
+    "play_cost": 12,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522037",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-057_P1.png?260529",
+      "printing_id": "EX12-057_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "No, you can't. Only 1 [Counter] effect can be activated during 1 attack.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6854",
+        "question": "Can I activate a [Counter] effect and then activate another [Counter] effect?"
+      },
+      {
+        "answer": "Yes, it triggers.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6855",
+        "question": "Does this card's [All Turns] effect also trigger when this card itself is played?"
+      },
+      {
+        "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6856",
+        "question": "Multiple effects trigger when this card is played. In what order do they activate?"
+      },
+      {
+        "answer": "Yes, you can.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6857",
+        "question": "Can I use this card's [On Play] [When Digivolving] [Counter] effect to play [Paishu] during the counter timing when an opponent's Digimon attacks, then use [Paishu] to block that attack?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[Shambala] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] [Counter] [Once Per Turn] You may play 1 [Paishu] Token. (Digimon/Yellow/6000 DP/＜Blocker＞ ＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.))\n[All Turns] [Once Per Turn] When any of your Digimon are played, ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, 1 of their Digimon gets -6000 DP until their turn ends."
+      }
+    ],
+    "type": "Shaman/Saneiketsu/Tentei Hachibushu/Shambala/SW"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "8df8257d6cdbc204108aac059742c0382469644c4a34581eb459e1de7fbf3a44",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "3203b2dba595db07347b3becb87b363ede3635b7de8cccc8ee026915ecf77fa9",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522037:EX12-057:EX12-057_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+}

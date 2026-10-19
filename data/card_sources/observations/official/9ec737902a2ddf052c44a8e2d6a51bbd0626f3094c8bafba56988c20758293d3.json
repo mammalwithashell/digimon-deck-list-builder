@@ -1,0 +1,85 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "P-132",
+    "card_type": "Digimon",
+    "colors": [
+      "Green"
+    ],
+    "dp": 5000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "cost": 2,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 5000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "Galemon",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[When Digivolving] By suspending 1 Digimon, this Digimon gets +2000 DP until the end of your opponent's turn.\n[Your Turn] While you have [Shoto Kazama], this Digimon gains ＜Piercing＞."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[Your Turn] This Digimon gets +2000 DP."
+          }
+        ]
+      }
+    ],
+    "form": "Champion",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 4,
+    "name": "Galemon",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-132.png?260529",
+      "printing_id": "P-132"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] By suspending 1 Digimon, this Digimon gets +2000 DP until the end of your opponent's turn.\n[Your Turn] While you have [Shoto Kazama], this Digimon gains ＜Piercing＞."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Puppet/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "9ec737902a2ddf052c44a8e2d6a51bbd0626f3094c8bafba56988c20758293d3",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-132:P-132",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

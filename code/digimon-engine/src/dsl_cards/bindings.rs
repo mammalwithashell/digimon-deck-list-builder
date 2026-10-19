@@ -57,6 +57,10 @@ pub enum BindingValue {
 }
 
 /// Reserved slot key holding a trash binding's stable-identity pin.
+fn hand_pin_key(name: &str) -> String {
+    format!("\u{0}hand_pin:{name}")
+}
+
 fn trash_pin_key(name: &str) -> String {
     format!("\u{0}trash_pin:{name}")
 }
@@ -65,6 +69,7 @@ fn trash_pin_key(name: &str) -> String {
 pub struct Bindings {
     slots: HashMap<String, BindingValue>,
     result_log: EffectResultLog,
+    played_identity_pins: HashMap<String, (PlayerId, u64)>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -72,15 +77,13 @@ pub struct EffectResultLog {
     pub suspended: Vec<PermanentHandle>,
     pub returned_cards: Vec<CardHandle>,
     pub returned_to_deck: Vec<CardHandle>,
-    /// Permanents deleted by THIS effect, each tagged with the pre-removal
-    /// effective DP snapshot captured at the delete-step call site (the
-    /// carrier is live in `battle_area` at that moment; after deletion it has
-    /// moved to trash and a live DP read is unavailable — rule 25). `None`
-    /// only when the deleted permanent had no DP (non-Digimon). Consumers that
-    /// only need owner-side membership read the handle component (so existing
-    /// `effect_deleted_any_*` consumers are unaffected); the DP component
-    /// powers the `effect_deleted_opponent_digimon_dp_gte` result predicate.
+    /// Completed permanent deletions attributed to THIS effect. The receipt
+    /// captures effective DP at the actual removal boundary, before modifiers
+    /// are cleared. Rows include non-Digimon; kind-sensitive predicates consult
+    /// the parallel classification instead of inferring card kind from DP.
     pub deleted: Vec<(PermanentHandle, Option<i32>)>,
+    /// Parallel classification captured before removal, never inferred from DP.
+    pub deleted_is_digimon: Vec<bool>,
     pub played: Vec<PermanentHandle>,
     pub digivolved: Vec<PermanentHandle>,
     pub added_to_hand: Vec<CardHandle>,
@@ -109,12 +112,20 @@ impl Bindings {
     }
 
     pub fn insert(&mut self, name: &str, value: BindingValue) {
+        self.played_identity_pins.remove(name);
         // Re-binding a name drops any stable-identity pin from a previous
         // trash pick under the same name.
         self.slots.remove(&trash_pin_key(name));
+        self.slots.remove(&hand_pin_key(name));
         self.slots.insert(name.to_string(), value);
     }
 
+    pub(crate) fn remove(&mut self, name: &str) {
+        self.slots.remove(name);
+        self.slots.remove(&trash_pin_key(name));
+        self.slots.remove(&hand_pin_key(name));
+        self.played_identity_pins.remove(name);
+    }
     pub fn get(&self, name: &str) -> Option<BindingValue> {
         self.get_ref(name).cloned()
     }
@@ -128,6 +139,10 @@ impl Bindings {
     pub fn merge_slots_from(&mut self, other: &Bindings) {
         for (k, v) in &other.slots {
             self.slots.insert(k.clone(), v.clone());
+            self.played_identity_pins.remove(k);
+            if let Some(pin) = other.played_identity_pins.get(k) {
+                self.played_identity_pins.insert(k.clone(), *pin);
+            }
         }
     }
 
@@ -173,8 +188,9 @@ impl Bindings {
     /// Record a permanent deleted by this effect alongside its pre-removal
     /// effective DP (captured by the caller BEFORE the carrier moves to trash;
     /// `None` when the deleted permanent had no DP). See `EffectResultLog::deleted`.
-    pub fn record_deleted(&mut self, handle: PermanentHandle, dp: Option<i32>) {
+    pub fn record_deleted(&mut self, handle: PermanentHandle, dp: Option<i32>, is_digimon: bool) {
         self.result_log.deleted.push((handle, dp));
+        self.result_log.deleted_is_digimon.push(is_digimon);
     }
 
     pub fn record_played(&mut self, handle: PermanentHandle) {
@@ -215,6 +231,11 @@ impl Bindings {
         self.result_log
             .deleted
             .extend(other.result_log.deleted[cursor.deleted..].iter().copied());
+        self.result_log.deleted_is_digimon.extend(
+            other.result_log.deleted_is_digimon[cursor.deleted..]
+                .iter()
+                .copied(),
+        );
         self.result_log
             .played
             .extend(other.result_log.played[cursor.played..].iter().copied());
@@ -302,6 +323,22 @@ impl Bindings {
         self.insert(name, BindingValue::PlayedPermanent { token, fallback });
     }
 
+    pub(crate) fn insert_played_permanent_with_identity(
+        &mut self,
+        name: &str,
+        token: ProvenanceToken,
+        fallback: PermanentHandle,
+        identity: u64,
+    ) {
+        self.insert_played_permanent(name, token, fallback);
+        self.played_identity_pins
+            .insert(name.to_owned(), (fallback.player, identity));
+    }
+
+    pub(crate) fn played_identity_pin(&self, name: &str) -> Option<(PlayerId, u64)> {
+        self.played_identity_pins.get(name).copied()
+    }
+
     /// Diagnostic getter for a played-permanent binding. Returns the raw
     /// `(token, fallback)` pair WITHOUT resolving the token. Production
     /// consumers MUST NOT use this — they SHALL route through
@@ -353,6 +390,42 @@ impl Bindings {
 
     pub fn insert_hand_index(&mut self, name: &str, player: PlayerId, i: u16) {
         self.insert(name, BindingValue::HandIndex(player, i));
+    }
+
+    /// Keep the public HandIndex shape, with stable identity in a reserved slot.
+    /// Like trash pins, this survives cloned continuations and slot merges.
+    pub fn insert_hand_index_pinned(
+        &mut self,
+        name: &str,
+        player: PlayerId,
+        i: u16,
+        card: Option<CardHandle>,
+    ) {
+        self.insert_hand_index(name, player, i);
+        if let Some(card) = card {
+            self.slots
+                .insert(hand_pin_key(name), BindingValue::Card(card));
+        }
+    }
+
+    pub fn hand_pin(&self, name: &str) -> Option<CardHandle> {
+        match self.slots.get(&hand_pin_key(name))? {
+            BindingValue::Card(card) => Some(*card),
+            _ => None,
+        }
+    }
+
+    pub fn resolve_pinned_hand_index(
+        &self,
+        name: &str,
+        hand: &[crate::card_source::CardSource],
+    ) -> Option<Option<u16>> {
+        let pin = self.hand_pin(name)?;
+        Some(
+            hand.iter()
+                .position(|card| card.handle() == pin)
+                .map(|i| i as u16),
+        )
     }
 
     pub fn insert_hand_index_for(&mut self, name: &str, player: PlayerId, i: u16) {

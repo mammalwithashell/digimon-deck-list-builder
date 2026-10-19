@@ -89,13 +89,15 @@ def test_vanilla_needs_a_real_official_entry_and_a_textless_card_record(official
 
 def test_failed_official_lookup_with_printed_text_is_not_ready(tmp_path):
     # LM-057's official-mirror entry is a failed-lookup skeleton (no colors, no
-    # sections), so extraction yields zero clauses -- yet the card prints an
-    # effect and a security effect. A true vanilla (ST1-02) stays ready.
+    # sections). Secondary printed text and reviewed image evidence must keep
+    # its actual clauses blocking. A true vanilla (ST1-02) stays ready.
     den = _denominator(tmp_path / "d.json", {}, {"LM-057": [], "ST1-02": []})
     data = build_readiness(["LM-057", "ST1-02"], scenarios_dir=tmp_path / "none",
                            verdicts_dir=tmp_path / "none", denominator_path=den)
     assert data["cards"]["LM-057"]["status"] == "not_ready"
-    assert data["cards"]["LM-057"]["blocking"] == ["LM-057#extraction#unresolved"]
+    assert data["cards"]["LM-057"]["blocking"] == [
+        "LM-057#effect#0", "LM-057#effect#1", "LM-057#effect#2", "LM-057#security#0"
+    ]
     assert data["cards"]["ST1-02"]["status"] == "ready"
 
 

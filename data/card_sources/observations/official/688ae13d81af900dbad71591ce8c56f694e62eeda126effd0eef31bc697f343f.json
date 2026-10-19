@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT19-057",
+    "colors": "Black Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "4",
+    "qa": [
+      "Yes, it activates. will already be activated while the Digimon with this effect is attacking."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[Twilight]/[Xros Heart] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[Twilight]/[Xros Heart] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Attacking] This Digimon may digivolve into [RaptorSparrowmon] under your Tamers without paying the cost. [On Deletion] ＜Save＞"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Collision＞."
+      }
+    ],
+    "type": "Avian/Twilight/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "688ae13d81af900dbad71591ce8c56f694e62eeda126effd0eef31bc697f343f",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "29b5a31d5618bf676a606c321556235465458ccc8eda6d47f83d2a0b886f3452",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT19-057",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT19-057"
+}

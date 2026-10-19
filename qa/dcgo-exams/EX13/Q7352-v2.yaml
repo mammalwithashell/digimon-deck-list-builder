@@ -1,0 +1,202 @@
+card: EX13-044
+clause: EX13-044#effect#4
+interaction:
+  id: qa:Q7352
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - ST1-03
+    - EX13-044
+    - BT1-090
+    - BT1-090
+    - ST2-03
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    rest: Q7352-v2-p0
+  p1:
+    stack:
+    - BT20-023
+    - ST1-03
+    - EX13-024
+    - BT1-090
+    - BT1-090
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    rest: Q7352-v2-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: BT20-023
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-044
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.0
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-03
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    play:
+      card: EX13-024
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    select:
+      choice: Don't return
+      sim_only: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.1
+      target: field.0
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      'yes': true
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.1
+- actor: 0
+  do:
+    select:
+      targets:
+      - opp.field.1
+- actor: 1
+  do:
+    select:
+      decline: true
+- actor: 1
+  do:
+    select:
+      'yes': true
+      sim_only: true
+- actor: 1
+  do:
+    select:
+      targets:
+      - own.field.1
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+expect_ruling:
+  q_id: Q7352
+  assert:
+  - at: 25
+    that:
+      p0.field:
+      - card_id: ST1-03
+      - card_id: EX13-044
+        suspended: true
+      p1.field:
+      - card_id: BT20-023
+        suspended: true
+      - card_id: EX13-024
+        suspended: true
+      p1.trash:
+      - ST1-03
+      - ST1-06
+      p1.security: 4

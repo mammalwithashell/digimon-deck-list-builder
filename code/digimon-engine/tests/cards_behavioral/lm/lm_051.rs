@@ -7,6 +7,8 @@
 //!   Then, place this card in the battle area.
 //! - [Main] <Delay> Gain 2 memory.
 //! - Security Effect [Security] Place this card in the battle area.
+//! Audit: official observation 7015da3dc289210a2033c1b73e18e6a0dbcc2a7bd14e9b7a26d3a9c1cc19e342,
+//! actual card image, base DCGO LM_051.cs, and rules section 16-16.
 //!
 #![allow(dead_code)]
 
@@ -382,4 +384,227 @@ fn lm_051_inherited_security_places_self_in_battle_area() {
             ..
         }
     ));
+}
+
+#[test]
+fn lm_051_color_access_owner_kind_and_breeding_matrix() {
+    for (kind, color, owner, breeding, allowed) in [
+        (CardKind::DigiEgg, CardColor::Green, 0, true, true),
+        (CardKind::DigiEgg, CardColor::Red, 0, true, true),
+        (CardKind::Digimon, CardColor::Green, 0, true, true),
+        (CardKind::Digimon, CardColor::Green, 0, false, true),
+        (CardKind::Tamer, CardColor::Red, 0, false, true),
+        (CardKind::Digimon, CardColor::Red, 0, true, true),
+        (CardKind::Option, CardColor::Green, 0, false, false),
+        (CardKind::Digimon, CardColor::Green, 1, false, false),
+        (CardKind::Tamer, CardColor::Blue, 0, false, false),
+    ] {
+        let mut c = digimon("ACCESS", color);
+        c.card_kind = kind;
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(YAML)
+            .unwrap()
+            .add_card(c)
+            .hand(0, &["LM-051"])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.place_on_field(owner, "ACCESS", None);
+        if breeding {
+            let p = r.game.players[owner as usize].battle_area.remove(0);
+            r.game.players[owner as usize].breeding_area = Some(p);
+        }
+        assert_eq!(
+            build_action_mask(&r.game, 0)[PLAY_HAND_START as usize] > 0.0,
+            allowed,
+            "{kind:?} {color:?} owner={owner} breeding={breeding}"
+        );
+    }
+}
+
+fn audit_reveal(top: &[&str]) -> DebugRunner {
+    use digimon_engine::card_source::CardSource;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .unwrap()
+        .add_card(digimon("B", CardColor::Green))
+        .add_card(digimon("G", CardColor::Red))
+        .add_card(digimon("R", CardColor::Blue))
+        .add_card(tamer("T", CardColor::Red))
+        .add_card(option("O", CardColor::Green))
+        .hand(0, &["LM-051"])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+    r.place_on_field(0, "B", None);
+    for id in top.iter().rev() {
+        let index = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == *id)
+            .unwrap();
+        let serial = r.game.next_card_index();
+        r.game.players[0]
+            .deck
+            .push(CardSource::new(index, 0, serial));
+    }
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    r
+}
+
+fn audit_order(r: &mut DebugRunner, reverse: bool) {
+    use digimon_engine::selection::SelectionKind;
+    for _ in 0..4 {
+        let Some(v) = r.pending_selection_view() else {
+            return;
+        };
+        assert!(matches!(v.kind, SelectionKind::OrderedPermutation { .. }));
+        assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 0.0);
+        let a = if reverse {
+            *v.valid_action_ids.last().unwrap()
+        } else {
+            v.valid_action_ids[0]
+        };
+        r.execute_action(0, a).unwrap();
+    }
+    panic!("remainder did not resolve");
+}
+
+#[test]
+fn lm_051_mandatory_search_offers_both_colors_and_clone_preserves_order_choices() {
+    use digimon_engine::action::space::SEL_REVEAL_START;
+    let mut r = audit_reveal(&["B", "G", "T", "R"]);
+    let m = build_action_mask(&r.game, 0);
+    assert_eq!(m[PASS as usize], 0.0);
+    assert_eq!(m[SEL_REVEAL_START as usize], 1.0);
+    assert_eq!(m[SEL_REVEAL_START as usize + 1], 1.0);
+    assert_eq!(m[SEL_REVEAL_START as usize + 2], 0.0);
+    let saved = r.game.clone();
+    r.execute_action(0, SEL_REVEAL_START).unwrap();
+    let order = r.pending_selection_view().unwrap();
+    assert_eq!(order.valid_action_ids.len(), 2);
+    audit_order(&mut r, false);
+    let first: Vec<_> = r.game.players[0]
+        .deck
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_owned())
+        .collect();
+    assert_eq!(r.hand_size(0), 1);
+    assert_eq!(r.game.players[0].hand[0].card_id(&r.game.card_data), "B");
+    assert_eq!(r.memory(), 7);
+    assert_eq!(r.game.players[0].battle_area.len(), 2);
+    r.game = saved;
+    r.execute_action(0, SEL_REVEAL_START).unwrap();
+    audit_order(&mut r, true);
+    let second: Vec<_> = r.game.players[0]
+        .deck
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_owned())
+        .collect();
+    assert_ne!(
+        first, second,
+        "both legal bottom orders must be player choices"
+    );
+    assert_eq!(first.last().map(String::as_str), Some("R"));
+    assert_eq!(second.last().map(String::as_str), Some("R"));
+}
+
+#[test]
+fn lm_051_no_eligible_and_short_deck_still_place_delay() {
+    for top in [&["O", "T", "R"][..], &["G"][..], &[][..]] {
+        let mut r = audit_reveal(top);
+        if top == ["G"] {
+            let v = r.pending_selection_view().unwrap();
+            assert_eq!(v.valid_action_ids.len(), 1);
+            r.execute_action(0, v.valid_action_ids[0]).unwrap();
+        }
+        audit_order(&mut r, false);
+        assert_eq!(r.hand_size(0), usize::from(top == ["G"]));
+        assert!(r.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "LM-051"));
+        assert_eq!(r.memory(), 7);
+    }
+}
+
+#[test]
+fn lm_051_security_placement_unlocks_delay_next_turn_without_color_access() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .unwrap()
+        .add_card(digimon("ATTACKER", CardColor::Blue))
+        .add_card(filler("FILL"))
+        .security(1, &["LM-051"])
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
+        .memory(3)
+        .start();
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    assert_eq!(
+        r.attack_player(attacker, 1, false),
+        AttackResult::SecurityCheckSurvived
+    );
+    let action = FIELD_EFFECT_START + FIELD_EFFECT_SLOT_FOR_MAIN;
+    assert_eq!(
+        r.hand_size(1),
+        0,
+        "security does not execute the Main search"
+    );
+    assert_eq!(r.deck_size(1), 8, "security does not reveal the deck");
+    assert_eq!(r.memory(), 3, "security does not immediately gain memory");
+    assert_eq!(build_action_mask(&r.game, 1)[action as usize], 0.0);
+    r.end_turn();
+    r.game.enter_main_phase();
+    assert_eq!(r.game.turn_player(), 1);
+    r.game.set_memory(3);
+    assert_eq!(
+        build_action_mask(&r.game, 1)[action as usize],
+        1.0,
+        "a security-placed Delay is usable next turn without a red or green permanent"
+    );
+    assert_eq!(build_action_mask(&r.game, 1)[PASS as usize], 1.0);
+    r.game.decode_action(action, 1);
+    assert_eq!(r.memory(), 5);
+    assert_eq!(r.game.players[1].battle_area.len(), 0);
+    assert_eq!(r.trash_size(1), 1);
+    assert_eq!(
+        r.game.players[1].trash[0].card_id(&r.game.card_data),
+        "LM-051"
+    );
+}
+
+#[test]
+fn lm_051_native_and_alternate_breeding_digiegg_allow_actual_paid_option_action() {
+    for color in [CardColor::Red, CardColor::Green] {
+        let mut egg = digimon("ACCESS-EGG", color);
+        egg.card_kind = CardKind::DigiEgg;
+        egg.level = Some(2);
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(YAML)
+            .unwrap()
+            .add_card(egg)
+            .hand(0, &["LM-051"])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.place_on_field(0, "ACCESS-EGG", None);
+        let egg = r.game.players[0].battle_area.remove(0);
+        r.game.players[0].breeding_area = Some(egg);
+        assert_eq!(
+            build_action_mask(&r.game, 0)[PLAY_HAND_START as usize],
+            1.0,
+            "{color:?} breeding Digi-Egg meets printed option access"
+        );
+        r.game.decode_action(PLAY_HAND_START, 0);
+        assert_eq!(r.memory(), 7, "actual action pays printed cost 3");
+        assert_eq!(r.hand_size(0), 0);
+        assert!(r.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "LM-051"));
+        assert!(r.game.players[0].breeding_area.is_some());
+    }
 }

@@ -1,0 +1,64 @@
+# qa:Q4358 (2025-01-24) -- "Can this card's [On Play] [When Digivolving] effect suspend a different card
+# from the one that's given 'can't unsuspend until the end of their turn'?" -> "Yes, it can."
+# P1 fields Dracomon ST1-04 (turn 2) and Agumon ST1-03 (turn 4) and attacks P0's security with Dracomon
+# on turn 4 (4000 vs the top security Gabumon ST2-03 2000: Gabumon is trashed, Dracomon survives and
+# stays SUSPENDED). P0 plays Groundramon BT20-042 on turn 5 (3 memory, cost 7 -> -4): the [On Play]
+# suspends Agumon (opp.field.1, the unsuspended one) and gives the can't-unsuspend to DRACOMON
+# (opp.field.0) -- a different permanent, already suspended. P1's turn-6 unsuspend phase is the
+# observation: Agumon (suspended by Groundramon, no restriction) is standing again, Dracomon (the
+# restricted one) is still suspended. If either engine forced both halves onto one permanent, step 14
+# would not lower (opp.field.0 absent from the candidates) or Agumon would stay suspended at step 15.
+# DCGO BT20_042.cs: two SelectPermanentEffect prompts (Mode.Tap, then Mode.Custom -> GainCanNotUnsuspend
+# UntilOpponentTurnEnd), both canNoSelect false; ours (BT20-042.yaml): two mandatory
+# select_opponent_permanent picks (suspend_target, lock_target) -- 1:1, picks answered by identity.
+# Slot safety: Dracomon is P1's first-entered Digimon (slot 0 on both wires) so `attack: field.0` is
+# index-safe; the two selects travel by identity (ST1-03 / ST1-04 are distinct).
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: BT20-042
+clause: BT20-042#effect#1
+covers: [BT20-042#effect#1]
+interaction: { id: "qa:Q4358", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: BT20-042, BT1-090 x2, BT3-093 x2 | security bottom->top: ST1-03 x4, ST2-03 (top = Gabumon, 2000 DP) | draws (T3, T5): ST1-02, ST1-02
+    stack: [BT20-042, BT1-090, BT1-090, BT3-093, BT3-093, ST1-03, ST1-03, ST1-03, ST1-03, ST2-03, ST1-02, ST1-02]
+    rest: BT20-042-interaction-Q4358-p0
+  p1:
+    # hand: ST1-04, ST1-03, BT1-090 x2, BT3-093 | security bottom->top: ST2-04 x4, ST2-03 | draws (T2, T4, T6): BT3-093, BT3-093, ST1-02
+    stack: [ST1-04, ST1-03, BT1-090, BT1-090, BT3-093, ST2-04, ST2-04, ST2-04, ST2-04, ST2-03, BT3-093, BT3-093, ST1-02]
+    rest: BT20-042-interaction-Q4358-p1
+steps:
+# T1 P0: nothing (memory 0 -> P1 starts at 3).
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T2 P1 (3): Dracomon ST1-04 (3) -> 0, pass.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-04, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T3 P0 (3): nothing.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T4 P1 (3): Agumon ST1-03 (3) -> 0; Dracomon attacks P0's security (Gabumon ST2-03 is trashed; Dracomon survives, suspended); pass.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-03, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { attack: { attacker: field.0, target: security } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T5 P0 (3): Groundramon BT20-042 (7) -> -4. [On Play]: suspend Agumon; Dracomon (already suspended) can't unsuspend.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: BT20-042, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { select: { targets: [opp.field.1] } } }
+- { actor: 0, do: { select: { targets: [opp.field.0] } } }
+# T6 P1: after P1's unsuspend phase -- Agumon standing (no restriction), Dracomon still suspended (restricted).
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+expect_ruling:
+  q_id: Q4358
+  assert:
+  - at: 15
+    that:
+      p1.field:
+      - card_id: ST1-04
+        suspended: true
+      - card_id: ST1-03
+        suspended: false

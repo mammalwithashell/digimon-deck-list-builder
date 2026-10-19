@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "EX4-006",
+    "colors": "Red Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "No, it means when the cards in your trash and the cards in your opponent's trash add up to 20 or more cards in total. For example, the condition is met if you have 12 cards in your trash and your opponent has 8 cards in their trash."
+    ],
+    "special_digivolution_condition": "[Digivolve] 0 from [Gigimon]",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 0 from [Gigimon]"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] If the total number of cards in both players' trashes is 20 or more, this Digimon gains ＜Rush＞ for the turn. (This Digimon may attack the turn it was played.)"
+      }
+    ],
+    "type": "Reptile"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "53941c4e92a658bd4dff8aef7638f2a73a67b06dd3c3631cd53d389db38c93a4",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "b5255416496b87c7cd70af95436e9a57e00d6f06a4aba5b48f943b05d8fd8c54",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX4-006",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX4-006"
+}

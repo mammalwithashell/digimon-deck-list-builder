@@ -14,6 +14,23 @@ from __future__ import annotations
 from tools.clause_coverage.extract import run
 
 
+def test_default_reviewed_image_cache_resolves_training_security(monkeypatch, tmp_path):
+    import json
+    from tools.clause_coverage import extract
+
+    cache = tmp_path / "reviewed.json"
+    cache.write_text(json.dumps({"LM-057": {"security": "[Security] Draw 1."}}))
+    monkeypatch.setattr(extract, "DEFAULT_IMAGE_CACHE", cache, raising=False)
+    # Hermetic empty scrape: a real reviewed correction must outrank this cache.
+    official = tmp_path / "card_official.json"
+    official.write_text(json.dumps({"cards": {"LM-057": {"text_sections": []}}}))
+    clauses = run(["LM-057"], "reviewed image fixture", official_json_path=official)["clauses"]
+    security = [c for c in clauses if c["zone"] == "security"]
+    assert len(security) == 1
+    assert security[0]["source"] == "image-cache"
+    assert security[0]["text"] == "Draw 1."
+
+
 def _clauses_for(card_id: str) -> list[dict]:
     result = run([card_id], f"test:{card_id}")
     assert result["cards"] == [card_id]
@@ -122,7 +139,12 @@ def test_every_official_security_effect_section_is_in_the_security_zone():
     clauses = run(card_ids, "test:official-security-effect")["clauses"]
     misfiled = [c["id"] for c in clauses if c["label"] == "Security Effect" and c["zone"] != "security"]
     assert not misfiled, f"{len(misfiled)} Security Effect clauses outside the security zone: {misfiled[:5]}"
-    assert {c["card_id"] for c in clauses if c["zone"] == "security"} == set(card_ids)
+    # Reviewed corrections may explicitly remove a spurious security box.
+    from tools.clause_coverage.card_sources import load_official_index
+    reviewed = load_official_index(DEFAULT_OFFICIAL_JSON)
+    removed = {cid for cid in card_ids if
+               reviewed[cid].get("_reviewed_text", {}).get("security_effect_description_eng") == ""}
+    assert {c["card_id"] for c in clauses if c["zone"] == "security"} == set(card_ids) - removed
 
 
 def test_full_vb_deck_denominator_counts_are_internally_consistent():

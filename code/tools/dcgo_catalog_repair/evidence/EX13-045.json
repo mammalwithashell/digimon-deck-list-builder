@@ -1,0 +1,161 @@
+{
+  "card_id": "EX13-045",
+  "printing": {
+    "printing_id": "EX13-045",
+    "image_url": "https://world.digimoncard.com/images/cardlist/card/EX13-045.png?260529",
+    "alternate_art": false,
+    "category_id": ""
+  },
+  "name": "Examon",
+  "rarity": "SR",
+  "card_type": "Digimon",
+  "level": 7,
+  "colors": [
+    "Green",
+    "Red",
+    "Blue"
+  ],
+  "play_cost": 15,
+  "dp": 15000,
+  "form": "Mega",
+  "attribute": "Data",
+  "type": "Holy Warrior/Royal Knight",
+  "evolution_routes": [
+    {
+      "slot": 1,
+      "colors": [
+        "Green",
+        "Red",
+        "Blue"
+      ],
+      "cost": 5,
+      "from_level": 6
+    }
+  ],
+  "grade_evolution_routes": [],
+  "tamer_evolution_routes": [],
+  "special_evolution_routes": [
+    "[DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0"
+  ],
+  "text_sections": [
+    {
+      "label": "Special Digivolution Condition",
+      "text": "[DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0"
+    },
+    {
+      "label": "Effect",
+      "text": "＜Raid＞ ＜Piercing＞ ＜Security A. +1＞ ＜Blocker＞ ＜Evade＞\n[When Digivolving] If DNA digivolving, this Digimon attacks and all of your Digimon get +10000 DP until your opponent's turn ends. Then, this Digimon may battle 1 of your opponent's Digimon.\n[Your Turn] [Once Per Turn] When this Digimon wins a battle, you may play or use 1 play or use cost 12 or lower [Dracomon] or [Examon] text card from your hand or its digivolution cards without paying the cost."
+    }
+  ],
+  "rule_grants": {
+    "traits": [],
+    "attributes": []
+  },
+  "qa": [
+    {
+      "number": "Q7354",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements.\nFor example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+    },
+    {
+      "number": "Q7355",
+      "date": "Sep. 18, 2026",
+      "question": "What kind of card does the text \"[AA] or [BB] in its text\" refer to?",
+      "answer": "It checks if that card has [AA] or [BB] in its text."
+    },
+    {
+      "number": "Q7356",
+      "date": "Sep. 18, 2026",
+      "question": "Can I process the part of the effect following \"then\" in this card's [When Digivolving] effect even if the \"if\" condition in the first part isn't met?",
+      "answer": "Yes, you can process it.\nEven if this Digimon didn't DNA digivolve, this card's [When Digivolving] effect can allow this Digimon to battle 1 of your opponent's Digimon."
+    },
+    {
+      "number": "Q7357",
+      "date": "Sep. 18, 2026",
+      "question": "What does \"may battle\" mean, exactly?",
+      "answer": "This effect immediately initiates a battle.\nIf this effect is activated, the chosen Digimon battle according to the standard rules."
+    },
+    {
+      "number": "Q7358",
+      "date": "Sep. 18, 2026",
+      "question": "If 2 Digimon including a Digimon that has an \"effects don't affect\" effect are chosen for a \"may battle\" effect, can those Digimon battle?",
+      "answer": "Yes, they can battle.\nA card that has an \"effects don't affect\" effect can still be chosen for an effect. In addition, a battle itself is a rule that compares DP, not an effect. Therefore, a Digimon that isn't affected by effects can be chosen, and then it can battle.\nIf it loses the battle, it will be deleted as normal according to the rules."
+    },
+    {
+      "number": "Q7359",
+      "date": "Sep. 18, 2026",
+      "question": "When does \"when this Digimon wins a battle\" trigger?",
+      "answer": "It triggers when the battle is won.\nWhen the Digimon with this effect wins a battle, the opponent's Digimon that lost the battle is deleted, then the \"when this Digimon wins a battle\" effect can be activated."
+    },
+    {
+      "number": "Q7360",
+      "date": "Sep. 18, 2026",
+      "question": "Does a \"when this Digimon wins a battle\" effect also trigger when a battle against a Security Digimon is won?",
+      "answer": "Yes, it triggers."
+    },
+    {
+      "number": "Q7361",
+      "date": "Sep. 18, 2026",
+      "question": "A Digimon with a \"when this Digimon wins a battle\" effect won a battle, and the opponent's Digimon that lost the battle is deleted.\nAt such times, in what order can players activate the \"when this Digimon wins a battle\" effect and the effects that trigger upon the losing Digimon being deleted?",
+      "answer": "They trigger simultaneously, so the turn player can activate their effects first."
+    },
+    {
+      "number": "Q7362",
+      "date": "Sep. 18, 2026",
+      "question": "A Digimon with a \"when this Digimon wins a battle\" effect won a battle, and the opponent's Digimon lost the battle.\nAt such times, in what order can players activate the winning Digimon's \"when this Digimon wins a battle\" effect and the losing Digimon's effects such as \"when this Digimon would be deleted\" and \"when this Digimon would leave the battle area\" effects?",
+      "answer": "The \"when this Digimon would be deleted\" and \"when this Digimon would leave the battle area\" effects can be activated first."
+    },
+    {
+      "number": "Q7363",
+      "date": "Sep. 18, 2026",
+      "question": "A Digimon with a \"when this Digimon wins a battle\" effect won a battle, and the opponent's Digimon lost the battle.\nAt such times, can the \"when this Digimon wins a battle\" effect be activated even if an effect prevents the opponent's Digimon from being deleted?",
+      "answer": "Yes, it can be activated."
+    },
+    {
+      "number": "Q7364",
+      "date": "Sep. 18, 2026",
+      "question": "During an attack by my Digimon with , I activate this card's [When Digivolving] effect. The attacking Digimon and one of my opponent's Digimon battle, and my opponent's Digimon is deleted in battle.\nThen, if my attack target successfully becomes an opponent's Digimon and it is also deleted in battle, can I use my Digimon's effect to perform 2 checks?",
+      "answer": "No, you only perform 1 security check for .\nOnly 1 security check can be performed during a single attack, even if activates multiple times.\nHowever, if the number of security checks is modified by , that number of cards will be checked in a single security check."
+    },
+    {
+      "number": "Q7365",
+      "date": "Sep. 18, 2026",
+      "question": "During an attack by my Digimon with , I use this card's [When Digivolving] effect to have that Digimon battle one of my opponent's Digimon and delete it.\nThen, if my attacking Digimon's attack target successfully becomes one of my opponent's Digimon, and that Digimon loses the battle but an effect prevents it from being deleted, can I still activate my Digimon's ?",
+      "answer": "Yes, you can.\nThe effect triggers and activates if the Digimon deletes one of the opponent's Digimon in battle while attacking, and it is resolved immediately before the end of attack timing.\nwill still trigger even if another battle occurred during the attack in which the Digimon with successfully attacked and battled a Digimon."
+    },
+    {
+      "number": "Q7366",
+      "date": "Sep. 18, 2026",
+      "question": "A Digimon with [EX13-021 Wingdramon] in its digivolution cards digivolves into this card, and I activate this card's [When Digivolving] effect to battle one of my opponent's Digimon with it.\nAt this time, in what order does this card's [Your Turn] effect and [EX13-021 Wingdramon]'s inherited effect activate?",
+      "answer": "The effects trigger simultaneously, so the player can choose the activation order.\nRelated Cards"
+    }
+  ],
+  "layout": "single",
+  "faces": [
+    {
+      "face_id": "primary",
+      "kind": "digimon",
+      "name": "Examon",
+      "colors": [
+        "Green",
+        "Red",
+        "Blue"
+      ],
+      "play_cost": 15,
+      "level": 7,
+      "dp": 15000,
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ ＜Piercing＞ ＜Security A. +1＞ ＜Blocker＞ ＜Evade＞\n[When Digivolving] If DNA digivolving, this Digimon attacks and all of your Digimon get +10000 DP until your opponent's turn ends. Then, this Digimon may battle 1 of your opponent's Digimon.\n[Your Turn] [Once Per Turn] When this Digimon wins a battle, you may play or use 1 play or use cost 12 or lower [Dracomon] or [Examon] text card from your hand or its digivolution cards without paying the cost."
+        }
+      ]
+    }
+  ],
+  "printing_field_gaps": []
+}

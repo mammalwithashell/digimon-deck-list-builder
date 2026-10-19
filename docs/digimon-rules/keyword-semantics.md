@@ -8,6 +8,12 @@
 > `BASE="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"` → `"$BASE/Digimon TCG resources/general_rule.pdf"`.
 > When the manual revises (e.g. Ver.3.7), re-verify §16 and bump this stamp.
 
+Decoy clarification: [official Rule Q&A](https://world.digimoncard.com/rule/),
+Keyword Effects → Decoy, Q228 (Mar. 28, 2024; retrieved Oct. 12, 2026), permits
+Decoy when its carrier and the protected Digimon are threatened by the same
+simultaneous deletion. The glossary's already-deleted-carrier restriction
+does not exclude a carrier that is still in play awaiting that deletion.
+
 ## Kind legend
 - **Persistent** — a rule-altering standing effect; not "processed" as an action (§15-8-2).
 - **Mandatory** — §16 states the processing is mandatory (must happen once triggered).
@@ -32,7 +38,7 @@
 | `<Rush>` | Persistent | — | Can attack the same turn it was played | 16-14 |
 | `<Blitz>` | Optional | After digivolving | May attack even if memory is ≥1 on opponent's side; "this Digimon may attack" is optional; can't if memory is already ≥0 on opp side upon activating, or if otherwise unable to attack | 16-15 |
 | `<Delay>` | Optional | Option in battle area | Trash this card to activate the linked effect; optional; not the turn it entered the battle area; no cost/color needed | 16-16 |
-| `<Decoy (X)>` | Opt-cost→Mand | Immediate; another of your (X) Digimon would be deleted by opp effect | *By deleting this Digimon* (optional), prevent that deletion (then mandatory); only one of simultaneous deletions; can't if this is itself deleted | 16-17 |
+| `<Decoy (X)>` | Opt-cost→Mand | Immediate; another of your (X) Digimon would be deleted by opp effect | *By deleting this Digimon* (optional), prevent that deletion (then mandatory); only one of simultaneous deletions; may pay even when this Digimon is also threatened in that deletion (official Rule Q&A Q228); an already deleted carrier cannot activate | 16-17 |
 | `<Armor Purge>` | Opt-cost→Mand | Immediate; this would be deleted | *By trashing the top card of this Digimon* (optional), prevent the deletion (then mandatory); needs ≥1 digivolution card; surviving modifiers carry over | 16-18 |
 | `<Save>` | Optional | On effect | May place this card under 1 of your Tamers; optional | 16-19 |
 | `<Material Save x>` | Optional | Immediate; this deleted | May place x of the top card's DigiXros-requirement cards from its digivolution cards under 1 of your Tamers; optional, but if processed must place the number whenever possible | 16-20 |

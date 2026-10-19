@@ -1,71 +1,9 @@
-# EX1-068 Ice Wall! — Option, Blue, Cost 1.
-# Traits: (none printed).
-#
-# Printed card text (data/cards.json):
-#
-#   [Main] All of your opponent's Digimon gain "[When Attacking] lose 2
-#   memory" until the end of their next turn.
-#
-# Inherited (Security):
-#   Security Effect [Security] Gain 2 memory.
-#
-# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX1/Blue/EX1_068.cs
-#
-# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
-#
-# Clause 1 — `EffectTiming.OptionSkill` (= [Main] play). DCGO iterates every
-#   permanent on the opponent's battle area that is a Digimon and not
-#   protected by `CanNotBeAffected`, applies a debuff visual, then registers
-#   a single `AddSkillClass` against `card.Owner.UntilOpponentTurnEndEffects`.
-#   The AddSkillClass installs a synthetic `OnAllyAttack` `ActivateClass` on
-#   each opponent Digimon whose body runs `cardSource.Owner.AddMemory(-2,
-#   activateClass)`. The expiry list `UntilOpponentTurnEndEffects` is drained
-#   at the end of the opponent's next turn. `SetUpActivateClass(..., -1,
-#   false, ...)` — outer trigger is NOT optional.
-#
-# Clause 2 — `EffectTiming.SecuritySkill` →
-#   `card.Owner.AddMemory(2, activateClass)`. Standard "gain N memory"
-#   security effect. `SetIsSecurityEffect(true)`. No canNoSelect — mandatory.
-#
-# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
-#
-# Printed Clause 1: "All of your opponent's Digimon GAIN ... until the end
-# of THEIR next turn." The "their next turn" is the opponent's turn — the
-# expiry runs through the end of the opponent's next turn after this Option
-# resolves. DCGO confirms via `card.Owner.UntilOpponentTurnEndEffects` (the
-# owner's list of "until opponent turn end" hooks). Engine `Expiry` enum has
-# `EndOfOpponentsTurn`; this maps to "end of the immediately next opponent
-# turn" — which matches printed text in the standard case where the Option
-# is played on the controller's own turn.
-#
-# Printed text reads "Digimon gain ..." — no "may", so the granted [When
-# Attacking] memory loss is MANDATORY (the opponent's Digimon does not get
-# to opt out of losing 2 memory when it attacks). DCGO confirms the inner
-# ActivateClass is `SetUpActivateClass(..., -1, false, ...)` — not optional.
-#
-# ─── Implementation status (faithfulness diff) ───────────────────────────────
-#
-# | Card-text element                                                   | Status |
-# |---------------------------------------------------------------------|--------|
-# | [Main] grant "[When Attacking] lose 2 memory" to opponent Digimon   | IMPLEMENTED |
-# | [Main] until-end-of-opponents-next-turn expiry on the granted effect | IMPLEMENTED (expiry: end_of_opponents_next_turn) |
-# | [Security] Gain 2 memory                                            | IMPLEMENTED via gain_memory: 2 |
-#
-# ─── G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT — RESOLVED (2026-05-29) ──────────
-#
-# The `grant_triggered_effect` DSL step + `ModifierType::GrantedTrigger` modifier
-# slot already existed (from the EX10-034 grant-to-binding work). The remaining
-# slice — targeting the OPPONENT's Digimon and attributing the granted effect to
-# the grantor for the <Progress> interaction — is closed by change
-# `add-grant-triggered-effect-dsl`:
-#   • A predicate `target` (`of: opponent`) walks both players' battle areas and
-#     installs the grant on each opponent Digimon at grant time (DCGO snapshot-
-#     foreach parity; a Digimon played LATER does not carry it).
-#   • The granted-trigger dispatch (`enqueue_from_permanent` → `progress_excludes`)
-#     skips firing when the carrier is unaffected by the grantor's effects — so a
-#     <Progress> opponent Digimon does not lose memory while attacking (Q2).
-# Full resolution note in `qa/resolved-gaps.md`; pinned by judge-quiz Q2
-# (`tests/judge_quiz/a_immunity_scope.rs`) + this card's behavioral tests.
+# EX1-068 Ice Wall! -- duration-scoped dynamic opponent grant.
+# Official observation 472a2180bbbd77ac42801729b5b7f630ae104bdd298e1770d2b02b477bf011c7,
+# actual image, and Q3255-Q3257 reviewed.
+# Q3256 includes opponent Digimon played or moved from breeding after resolution.
+# Dynamic recipient filtering also rechecks immunity with Option attribution.
+# Card-level RED: tail-batch6-red-ex1_068.log (9 passed, 7 failed).
 
 card: EX1-068
 name: "Ice Wall!"
@@ -80,12 +18,8 @@ effects:
   # Printed: "[Main] All of your opponent's Digimon gain '[When Attacking]
   # lose 2 memory' until the end of their next turn."
   #
-  # IMPLEMENTED 2026-05-29 (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT resolved —
-  # the `grant_triggered_effect` step + `GrantedTrigger` modifier substrate
-  # already existed from the EX10-034 work; a predicate `target` walks BOTH
-  # players' battle areas, so `of: opponent` installs on each opponent Digimon
-  # at grant time — DCGO's snapshot-foreach parity; a Digimon played AFTER this
-  # resolves does NOT carry the grant).
+  # Official Q3256 requires the duration to include later entrants;
+  # opt into dynamic filtering instead of snapshotting current recipients.
   #
   # `lose_memory: 2` runs in the granted body when the carrier (an opponent
   # Digimon) declares an attack; it reduces the shared memory gauge by 2, i.e.
@@ -103,6 +37,7 @@ effects:
     summary: "[Main] Grant opponent Digimon '[When Attacking] lose 2 memory' until end of their next turn"
     process:
       - grant_triggered_effect:
+          dynamic: true
           target:
             of: opponent
             zone: [battle_area]
@@ -118,7 +53,7 @@ effects:
   #
   # DCGO: standard `card.Owner.AddMemory(2, activateClass)` with
   # `SetIsSecurityEffect(true)`. No canNoSelect — mandatory ([Security]
-  # effects are not opt-out per RULES_CONTEXT.md §16). Identical shape to
+  # effects are not opt-out under the official rules). Identical shape to
   # ST2-13 Hammer Spark Clause 2 (`when: on_security` + `gain_memory: 2`).
   - when: on_security
     summary: "[Security] Gain 2 memory"

@@ -69,6 +69,19 @@ use digimon_engine::trigger_context::EventCause;
 /// canonical location under `cards/bt21/`.
 const YAML: &str = include_str!("../../../cards/bt21/BT21-093.yaml");
 
+fn use_raging_serpentine(runner: &mut DebugRunner) {
+    use digimon_engine::action::{mask::build_action_mask, space::PLAY_HAND_START};
+    runner.skip_mulligan();
+    runner.place_in_breeding(0, "RED-PROVIDER");
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert_eq!(runner.hand_size(0), 0, "used Option leaves hand");
+}
+
 fn runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT21-093")
@@ -387,13 +400,14 @@ fn bt21_093_cost_reduced_when_opp_has_3_or_fewer_security() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
+        .add_card(digimon("RED-PROVIDER", "RedProvider", 2000, &[]))
         .hand(0, &["BT21-093"])
         .security(1, &["BT21-093", "BT21-093", "BT21-093"])
         .memory(10)
         .start();
 
     let mem_before = runner.memory();
-    runner.play(0, 0);
+    use_raging_serpentine(&mut runner);
     let cost = mem_before - runner.memory();
     assert_eq!(
         cost, 4,
@@ -406,13 +420,14 @@ fn bt21_093_cost_not_reduced_when_opp_has_4_or_more_security() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
+        .add_card(digimon("RED-PROVIDER", "RedProvider", 2000, &[]))
         .hand(0, &["BT21-093"])
         .security(1, &["BT21-093", "BT21-093", "BT21-093", "BT21-093"])
         .memory(10)
         .start();
 
     let mem_before = runner.memory();
-    runner.play(0, 0);
+    use_raging_serpentine(&mut runner);
     let cost = mem_before - runner.memory();
     assert_eq!(cost, 8, "opponent at 4 security should pay full use cost");
 }
@@ -432,6 +447,7 @@ fn bt21_093_main_deletes_highest_dp_opponent_digimon() {
         .add_card(digimon("OPP-LOW", "OppLow", 3000, &[]))
         .add_card(digimon("OPP-MID", "OppMid", 6000, &[]))
         .add_card(digimon("OPP-HIGH", "OppHigh", 11000, &[]))
+        .add_card(digimon("RED-PROVIDER", "RedProvider", 2000, &[]))
         .hand(0, &["BT21-093"])
         .memory(20)
         .start();
@@ -441,7 +457,7 @@ fn bt21_093_main_deletes_highest_dp_opponent_digimon() {
     let high = runner.place_on_field(1, "OPP-HIGH", None);
     assert_eq!(runner.battle_area_size(1), 3, "3 opponent Digimon staged");
 
-    runner.play(0, 0);
+    use_raging_serpentine(&mut runner);
 
     // The [Main] highest-DP delete prompt must install as an OppField pick.
     let kind = runner
@@ -497,6 +513,7 @@ fn bt21_093_main_exposes_all_tied_highest_dp_targets() {
         .add_card(digimon("OPP-A", "OppA", 9000, &[]))
         .add_card(digimon("OPP-B", "OppB", 9000, &[]))
         .add_card(digimon("OPP-C", "OppC", 4000, &[]))
+        .add_card(digimon("RED-PROVIDER", "RedProvider", 2000, &[]))
         .hand(0, &["BT21-093"])
         .memory(20)
         .start();
@@ -505,7 +522,7 @@ fn bt21_093_main_exposes_all_tied_highest_dp_targets() {
     runner.place_on_field(1, "OPP-B", None);
     runner.place_on_field(1, "OPP-C", None);
 
-    runner.play(0, 0);
+    use_raging_serpentine(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -524,11 +541,12 @@ fn bt21_093_main_no_selection_when_opponent_has_no_digimon() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
+        .add_card(digimon("RED-PROVIDER", "RedProvider", 2000, &[]))
         .hand(0, &["BT21-093"])
         .memory(20)
         .start();
 
-    runner.play(0, 0);
+    use_raging_serpentine(&mut runner);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -548,12 +566,13 @@ fn bt21_093_main_places_self_in_battle_area_as_delay() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
+        .add_card(digimon("RED-PROVIDER", "RedProvider", 2000, &[]))
         .hand(0, &["BT21-093"])
         .memory(20)
         .start();
 
     assert_eq!(runner.battle_area_size(0), 0, "battle area starts empty");
-    runner.play(0, 0);
+    use_raging_serpentine(&mut runner);
     // No opponent Digimon → no delete prompt → the Main effect drains and the
     // Option is disposed straight into the battle area as a Delay permanent.
     assert!(
@@ -596,6 +615,18 @@ fn bt21_093_delay_activates_on_opp_security_removed() {
 
     // BT21-093 on P0's field (the Delay option) + a Reptile base to digivolve.
     let option = runner.place_on_field(0, "BT21-093", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[option.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn,
+        };
+
     let base = runner.place_on_field(0, "MY-REPTILE", Some(0));
     assert_eq!(runner.battle_area_size(0), 2);
     let base_stack_before = runner
@@ -753,7 +784,19 @@ fn bt21_093_delay_digivolve_is_optional_decline_keeps_trash() {
         .memory(20)
         .start();
 
-    runner.place_on_field(0, "BT21-093", Some(0));
+    let delay_fixture = runner.place_on_field(0, "BT21-093", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[delay_fixture.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn,
+        };
+
     runner.place_on_field(0, "MY-REPTILE", Some(0));
 
     runner.game.enqueue_triggered(
@@ -849,7 +892,19 @@ fn bt21_093_delay_can_be_declined() {
         .memory(20)
         .start();
 
-    runner.place_on_field(0, "BT21-093", Some(0));
+    let delay_fixture = runner.place_on_field(0, "BT21-093", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[delay_fixture.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn,
+        };
+
     runner.place_on_field(0, "MY-REPTILE", Some(0));
 
     runner.game.enqueue_triggered(
@@ -910,11 +965,24 @@ fn bt21_093_delay_does_not_activate_without_reptile_or_dragonkin_digimon() {
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
         .add_card(digimon("MY-PLAIN", "MyPlain", 4000, &[]))
+        .add_card(digimon("RED-PROVIDER", "RedProvider", 2000, &[]))
         .hand(0, &["BT21-093"])
         .memory(20)
         .start();
 
-    runner.place_on_field(0, "BT21-093", Some(0));
+    let delay_fixture = runner.place_on_field(0, "BT21-093", Some(0));
+    // This body fixture starts after the placing turn with a genuine Delay Option.
+    // A raw Standard Option is rule-trashed and cannot stand in for this state.
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.turn_count = placed_on_turn + 2;
+    runner.game.player_mut(0).battle_area[delay_fixture.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn,
+        };
+
     // A non-Reptile/Dragonkin Digimon — not a valid digivolve base, so the
     // Delay's CanActivateCondition gate fails.
     runner.place_on_field(0, "MY-PLAIN", Some(0));
@@ -957,9 +1025,7 @@ fn bt21_093_delay_does_not_activate_without_reptile_or_dragonkin_digimon() {
 /// `delete_permanent` body runs as for [Main].
 #[test]
 fn bt21_093_inherited_security_deletes_highest_dp_opponent_digimon() {
-    // P1 plays BT21-093 as a battle-area Option permanent so its inherited
-    // security body can be exercised through the OnSecurity timing; the
-    // opponent of the BT21-093 controller (P0) holds the Digimon to delete.
+    // P1 reveals the Option; its opponent (P0) holds the deletion targets.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-093")
         .expect("BT21-093 in embedded pack")
@@ -968,17 +1034,30 @@ fn bt21_093_inherited_security_deletes_highest_dp_opponent_digimon() {
         .memory(20)
         .start();
 
-    // BT21-093 carrier on P1's field; P0 holds the opponent Digimon.
-    let carrier = runner.place_on_field(1, "BT21-093", Some(0));
+    // A revealed Option uses SecurityRevealed, not a field permanent trigger.
+    runner.add_to_hand(1, "BT21-093");
+    let revealed = runner.game.players[1]
+        .hand
+        .pop()
+        .expect("security fixture card");
+    let handle = revealed.handle();
+    runner.game.pending_security = Some(digimon_engine::selection::PendingSecurity {
+        defender: 1,
+        card: revealed,
+        played: false,
+    });
     runner.place_on_field(0, "FOE-LOW", None);
     runner.place_on_field(0, "FOE-HIGH", None);
     assert_eq!(runner.battle_area_size(0), 2, "2 opponent Digimon staged");
 
-    // Fire the inherited [Security] body from the carrier.
+    // Fire the printed [Security] effect from the revealed card.
     // DSL `on_security` lowers to `EffectTiming::SecuritySkill`.
     runner.game.enqueue_triggered(
         EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(carrier),
+        TriggerSource::SecurityRevealed {
+            defender: 1,
+            card: handle,
+        },
     );
     runner.game.drain_effect_queue();
 

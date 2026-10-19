@@ -1,7 +1,7 @@
 card: BT1-090
 name: "Gravity Crush"
 kind: option
-color: [black]
+color: [red]
 cost: 0
 
 # ─── Clause 0: [Main] ────────────────────────────────────────────────────────

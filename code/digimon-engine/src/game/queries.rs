@@ -110,11 +110,8 @@ impl Game {
         let adopted = self.succession_source_indices(handle);
         for (source_index, data_index, src_id, src_handle) in source_ids {
             let is_under = source_index + 1 < stack_size;
-            if !is_under {
-                continue;
-            }
             let is_adopted = adopted.contains(&source_index);
-            if inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
+            if is_under && inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
                 return true;
             }
             if is_adopted && face_keywords(&self.card_data[data_index]).contains(&keyword) {
@@ -263,7 +260,7 @@ impl Game {
                 };
                 let source_kind_matches = filter
                     .source_kind
-                    .map(|expected| expected == source_kind)
+                    .map(|expected| source_kind.includes(expected))
                     .unwrap_or(true);
                 if !source_kind_matches {
                     return false;
@@ -454,13 +451,17 @@ impl Game {
     }
 
     /// Shared Digimon-target attack gate for target-scoped combat
-    /// restrictions. `CanAttackTargetDefendingPermanent` is the established
-    /// affirmative override for target-carried attack bans.
+    /// restrictions. Controller-wide player-only attacks are checked before
+    /// `CanAttackTargetDefendingPermanent`, which overrides target-carried bans
+    /// but cannot grant permission to attack Digimon in general.
     pub fn attack_target_blocked_by_modifier(
         &self,
         attacker: crate::permanent::PermanentHandle,
         target: crate::permanent::PermanentHandle,
     ) -> bool {
+        if self.modifiers.player_has(attacker.player, ModifierType::MayAttackPlayerOnly) {
+            return true;
+        }
         if self
             .modifiers
             .has(target, ModifierType::CanAttackTargetDefendingPermanent)

@@ -19,6 +19,7 @@ fn digixros_material_matching_sees_scoped_alias_but_name_predicates_do_not() {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: "MATERIAL_A".to_string(),

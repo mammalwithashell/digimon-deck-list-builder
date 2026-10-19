@@ -1,0 +1,87 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [],
+      "card_colors": [
+        "Red"
+      ],
+      "card_kind": "Option",
+      "card_name_eng": "From Master to Disciple",
+      "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] trait among them to your hand. Trash the rest. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] trait among them to your hand. Trash the rest. Then, place this card in your battle area.",
+      "level": null,
+      "play_cost": 2,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Royal Knight"
+      ]
+    },
+    "card_id": "ST12-15",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": null,
+        "effect_text": "[Main] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] trait among them to your hand. Trash the rest. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.",
+        "face_id": "primary",
+        "inherited_text": "Security Effect [Security] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] trait among them to your hand. Trash the rest. Then, place this card in your battle area.",
+        "kind": "option",
+        "level": null,
+        "play_cost": 2,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": null,
+      "color": "Red",
+      "color2": null,
+      "date_added": "2025-11-25 15:15:30",
+      "digi_type": "Royal Knight",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": null,
+      "evolution_color": null,
+      "evolution_cost": null,
+      "evolution_level": null,
+      "form": null,
+      "id": "ST12-15",
+      "level": null,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Main] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] trait among them to your hand. Trash the rest. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.",
+      "name": "From Master to Disciple",
+      "play_cost": 2,
+      "pretty_url": "from-master-to-disciple-st12-15",
+      "rarity": "c",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "Judge Pack 3",
+        "ST-12: Starter Deck Jesmon"
+      ],
+      "source_effect": "Security Effect [Security] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] trait among them to your hand. Trash the rest. Then, place this card in your battle area.",
+      "stage": null,
+      "tcgplayer_id": 490523,
+      "tcgplayer_name": "From Master to Disciple (Judge Pack 3)",
+      "type": "Option",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "e26901f00dc24755b6114fe1b513a6efd98e573a6e2bf4aee17f75c3f0d71027",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "ST12-15#2",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

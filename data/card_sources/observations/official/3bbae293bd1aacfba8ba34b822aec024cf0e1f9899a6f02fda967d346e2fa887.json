@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT23-057",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "11000",
+    "form": "Mega",
+    "play_cost": "11",
+    "qa": [
+      "No, you can't. A \"by\" condition can't be met if only some of the required actions are performed. The conditions for the 1st effect require you to return the specified number of cards to the deck."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[CS] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[CS] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "When this card would be played, by returning 3 cards with [Huckmon], [Sistermon] or [Jesmon] in their names from your trash to the top or bottom of the deck, reduce the play cost by 5. [On Play] [When Digivolving] You may play 1 [Hinukamuy] Token. (Digimon/White/6000 DP/＜Alliance＞＜Reboot＞＜Blocker＞) Then, delete 1 of your opponent's Digimon with a play cost of 6 or less. For each of your other Digimon, add 3 to this effect's play cost maximum."
+      }
+    ],
+    "type": "Holy Warrior/Royal Knight/CS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3bbae293bd1aacfba8ba34b822aec024cf0e1f9899a6f02fda967d346e2fa887",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "d373e2eb795006bc4ea4bba19317ca2487485931540029b5abdaa038c9abc392",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT23-057",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT23-057"
+}

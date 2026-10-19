@@ -38,6 +38,28 @@ fn write_action_id_features(tensor: &mut [f32], game: &Game, player_id: PlayerId
         tensor[base + 12] = uses_hand(explanation.source_zone, explanation.target_zone);
         tensor[base + 13] = uses_permanent(explanation.source_zone, explanation.target_zone);
         tensor[base + 14] = prompt_selection_action_flag(game, player_id, action_id_u16);
+        if let Some(count) = game
+            .pending_selection
+            .as_ref()
+            .filter(|p| p.selecting_player == player_id)
+            .and_then(|p| p.effect_choices.as_ref())
+            .and_then(|choices| choices.iter().find(|c| c.action_id == action_id_u16))
+            .and_then(|choice| choice.count_choice)
+            .filter(|_| mask[action_id] > 0.0)
+        {
+            let offset = match count.operation {
+                crate::count_choice::CountChoiceOperation::Commit(_) => {
+                    v2_full::ACTION_COUNT_COMMIT_OFFSET
+                }
+                crate::count_choice::CountChoiceOperation::PreviousPage => {
+                    v2_full::ACTION_COUNT_PREVIOUS_OFFSET
+                }
+                crate::count_choice::CountChoiceOperation::NextPage => {
+                    v2_full::ACTION_COUNT_NEXT_OFFSET
+                }
+            };
+            tensor[base + offset] = 1.0;
+        }
     }
 }
 

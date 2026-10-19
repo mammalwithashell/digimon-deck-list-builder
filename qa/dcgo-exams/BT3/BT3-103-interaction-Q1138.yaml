@@ -1,0 +1,78 @@
+# qa:Q1138 (2024-03-28) -- "During the same turn I used this card, I digivolve a non-green Digimon into a
+# green Digimon. Can I use this card's effect to reduce the digivolution cost?" -> "No, this card's effect only
+# applies when digivolving a Digimon that's already green."
+# Sources: data/card_bundles/BT3-103.md + official observation 013e0883... + card image; DCGO
+# BT3/Green/BT3_103.cs (PermanentCondition tests the DIGIVOLVING permanent's TopCard.CardColors for Green at
+# BeforePayCost -- i.e. the base before the new top card is placed; the result card's colour is never read);
+# ours BT3-103.yaml `arm_digivolve_cost_reducer target_color: green` keyed on the digivolving permanent's top
+# card. Groundramon BT20-042: data/card_bundles/BT20-042.md (GREEN/red Lv.5; circles Green Lv.4 / cost 4, Red
+# Lv.4 / cost 4, [Coredramon] cost 3), DCGO BT20/Green/BT20_042.cs and qa/dcgo-exams/BT20/BT20-042-interaction-
+# Q4358.yaml (two mandatory SelectPermanentEffect picks for its [When Digivolving]).
+# Line: Kunemon ST4-05 (green, T1 -- the green permanent that makes the green Option playable, and a green
+# Digimon that is present but NOT the one digivolving), Biyomon ST1-02 + Birdramon ST1-05 (T3; Birdramon is a
+# RED Lv.4 and the THIRD-entered Digimon -> index 2 on both wires, README "Slot safety"). P1 plays Agumon (T2)
+# so Groundramon's mandatory picks have a target on both engines. T5 (3): BT3-103, then Birdramon (field.2)
+# digivolves into Groundramon BT20-042 -- a NON-green Digimon into a GREEN one; from Birdramon only the "Red
+# Lv.4 / cost 4" circle applies, so no cost-choice prompt arises.
+# Discriminator: there is NO accept/decline row between the digivolve row and Groundramon's first target pick
+# -- an engine that offered the reducer for a red-into-green digivolution would park a yes/no there and the
+# `targets:` answer would fail to lower (ours) / abort as a prompt mismatch (DCGO); and the FULL cost is paid:
+# memory 3 -> -1, which ends P0's turn (next row = P1 breeding_action, turn 6) with Kunemon, Biyomon and
+# Groundramon (sources [ST1-05]) all unsuspended on P0's side.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: BT3-103
+clause: BT3-103#effect#0
+covers: [BT3-103#effect#0]
+interaction: { id: "qa:Q1138", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: ST4-05, ST1-02, ST1-05, BT3-103, BT20-042 | security bottom->top: ST1-04 x4, ST1-03 | draws (T3, T5, T5 digivolve-draw): ST2-04, ST2-04, ST2-03
+    stack: [ST4-05, ST1-02, ST1-05, BT3-103, BT20-042, ST1-04, ST1-04, ST1-04, ST1-04, ST1-03, ST2-04, ST2-04, ST2-03]
+    rest: BT3-103-interaction-Q1138-p0
+  p1:
+    # hand: ST1-03, ST1-04, ST2-03, ST2-04, ST1-05 | security bottom->top: ST1-02 x4, ST1-03 | draws (T2, T4, T6): ST1-04 x3
+    stack: [ST1-03, ST1-04, ST2-03, ST2-04, ST1-05, ST1-02, ST1-02, ST1-02, ST1-02, ST1-03, ST1-04, ST1-04, ST1-04]
+    rest: BT3-103-interaction-Q1138-p1
+steps:
+# T1 P0 (0): Kunemon ST4-05 (4) -> -4.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST4-05, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (4): Agumon ST1-03 (3) -> 1; pass.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-03, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T3 P0 (3): Biyomon ST1-02 (2) -> 1; Birdramon ST1-05 (4) -> -3 (RED Lv.4, third-entered Digimon).
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST1-02, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { play: { card: ST1-05, from: hand } }, expect: { prompt: main_phase } }
+# T4 P1 (3): nothing.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T5 P0 (3): BT3-103 (0); Birdramon (red, field.2) -> Groundramon BT20-042 (green/red): NO reducer prompt,
+# full cost 4 -> -1. Then Groundramon's own [When Digivolving]: suspend Agumon; Agumon can't unsuspend.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: BT3-103, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { digivolve: { from: field.2, using: BT20-042 } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { select: { targets: [opp.field.0] } } }
+- { actor: 0, do: { select: { targets: [opp.field.0] } } }
+# T6 P1: memory went to -1, so P0's turn ended -- the reducer never applied.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q1138
+  assert:
+  - at: 12
+    that:
+      memory: 3
+  - at: 13
+    that:
+      memory: -1
+      p0.field:
+      - card_id: ST4-05
+        suspended: false
+      - card_id: ST1-02
+        suspended: false
+      - card_id: BT20-042
+        suspended: false
+        sources:
+        - ST1-05

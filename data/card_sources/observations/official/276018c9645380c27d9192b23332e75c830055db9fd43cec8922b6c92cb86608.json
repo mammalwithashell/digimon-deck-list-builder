@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "AD1-001",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "5000",
+    "form": "Champion",
+    "play_cost": "5",
+    "qa": [
+      "No, you can't."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Omnimon] in text or w/[ADVENTURE] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Omnimon] in text or w/[ADVENTURE] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] You may return 1 card with [Greymon], [Garurumon] or [Omnimon] in its name from your trash to the hand. [All Turns] When your Digimon or Tamers are played or digivolve, if any of them have [Garurumon] or [Tai Kamiya] in their names, this Digimon may digivolve into a Digimon card with [Greymon] in its name in the hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+      }
+    ],
+    "type": "Dinosaur/ADVENTURE"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "276018c9645380c27d9192b23332e75c830055db9fd43cec8922b6c92cb86608",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "b1a666d3d2424d4a97279cc5c4da2743cb8bda0fd09474c99d30ab0c02e2ac58",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:AD1-001",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/AD1-001"
+}

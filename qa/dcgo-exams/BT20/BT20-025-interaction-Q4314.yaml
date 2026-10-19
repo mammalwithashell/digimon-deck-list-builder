@@ -1,0 +1,162 @@
+card: BT20-025
+clause: BT20-025#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-042
+    - BT20-044
+    - BT20-045
+    - BT20-027
+    - BT20-025
+    - BT20-025
+    - BT20-025
+    - BT20-025
+    - BT23-047
+    - BT23-047
+    - BT13-096
+    - BT13-096
+    rest: gating8-Q4314-p0
+  p1:
+    stack:
+    - ST2-09
+    - BT20-044
+    - BT20-044
+    - BT20-044
+    - BT23-047
+    - BT20-042
+    - BT20-042
+    - BT20-042
+    - BT20-025
+    - BT20-025
+    - BT13-096
+    - BT13-096
+    rest: gating8-Q4314-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-042
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: BT20-044
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 3
+  expect:
+    prompt: SelectCountEffect
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST2-09
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - BT20-045
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      'yes': true
+      dcgo_only: true
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.0
+- actor: 0
+  do:
+    select:
+      cards:
+      - BT20-027
+  expect:
+    prompt: SelectHandEffect
+    count: 1
+    candidates:
+    - BT20-027
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+interaction:
+  id: qa:Q4314
+  source: qa
+  kind: positive
+expect_ruling:
+  q_id: Q4314
+  assert:
+  - at: 18
+    that:
+      p0.selection_candidates:
+      - BT20-027

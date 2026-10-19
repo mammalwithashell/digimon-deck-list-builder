@@ -1,0 +1,68 @@
+# Negative scope interaction draft: real carrier/event; oracle comparison still required.
+# Adapted from BT20-040-effect2.yaml; no new assertions/verdict.
+card: BT20-040
+clause: BT20-040#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT20-040
+    - ST2-05
+    - BT20-042
+    - BT23-047
+    - BT23-047
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    rest: BT20-040-interaction-nontext-play-scope-p0
+  p1:
+    stack: []
+    rest: BT20-040-interaction-nontext-play-scope-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT20-040
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: ST2-05
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+covers:
+- BT20-040#effect#2
+interaction:
+  id: probe:BT20-040#effect#2:scope:neg
+  source: probe
+  kind: negative

@@ -25,6 +25,7 @@ fn card(id: &str, traits: &[&str]) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         dual: None,
         effect_class_name: id.replace('-', "_"),
@@ -88,11 +89,12 @@ fn deleted_source_snapshot_rescue_uses_arbitrary_trait_filter() {
     let blue_source = push_to_trash(&mut runner, 0, "BLUE-SOURCE");
     let other_source = push_to_trash(&mut runner, 0, "OTHER-SOURCE");
 
-    runner.game.current_trigger_context = Some(TriggerContext {
-        deleted_object: Some(DeletedObjectSnapshot {
+    let mut context = TriggerContext::default();
+    context.deleted_object = Some(DeletedObjectSnapshot {
             former_controller: 0,
             top_card: deleted_top,
             card_kind: CardKind::Digimon,
+            retained_kind: None,
             traits: vec!["Xros Heart".to_string()],
             level: Some(4),
             dp: Some(4000),
@@ -105,9 +107,8 @@ fn deleted_source_snapshot_rescue_uses_arbitrary_trait_filter() {
             source_count_just_before: 3,
             digisources_just_before: vec![xros_source, blue_source, other_source],
             is_token: false,
-        }),
-        ..TriggerContext::default()
-    });
+        });
+    runner.game.current_trigger_context = Some(context);
 
     let picked = Arc::new(Mutex::new(None::<Vec<CardHandle>>));
     {
@@ -170,11 +171,12 @@ fn snapshot_rescue_moves_selected_handles_under_tamer_after_carrier_left_battle(
     let blue_source = push_to_trash(&mut runner, 0, "BLUE-SOURCE");
     let other_source = push_to_trash(&mut runner, 0, "OTHER-SOURCE");
 
-    runner.game.current_trigger_context = Some(TriggerContext {
-        deleted_object: Some(DeletedObjectSnapshot {
+    let mut context = TriggerContext::default();
+    context.deleted_object = Some(DeletedObjectSnapshot {
             former_controller: 0,
             top_card: deleted_top,
             card_kind: CardKind::Digimon,
+            retained_kind: None,
             traits: vec!["Xros Heart".to_string()],
             level: Some(4),
             dp: Some(4000),
@@ -187,9 +189,8 @@ fn snapshot_rescue_moves_selected_handles_under_tamer_after_carrier_left_battle(
             source_count_just_before: 3,
             digisources_just_before: vec![xros_source, blue_source, other_source],
             is_token: false,
-        }),
-        ..TriggerContext::default()
-    });
+        });
+    runner.game.current_trigger_context = Some(context);
 
     {
         let mut ctx = EffectContext::new(&mut runner.game, deleted_top, None, 0);

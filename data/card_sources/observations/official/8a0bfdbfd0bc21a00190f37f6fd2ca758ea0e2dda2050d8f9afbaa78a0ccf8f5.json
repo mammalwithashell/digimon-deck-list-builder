@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "ST17-07",
+    "colors": "Green Black",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[Gargomon]/[Rapidmon] in name: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Gargomon]/[Rapidmon] in name: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have a green Tamer, until the end of your opponent's turn, your opponent's effects can't delete this Digimon or return it to the hand or deck."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, trash the top card of their security stack."
+      }
+    ],
+    "type": "Cyborg"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "8a0bfdbfd0bc21a00190f37f6fd2ca758ea0e2dda2050d8f9afbaa78a0ccf8f5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "45e0f53a8753b0b96cb17b205b4714f5286e2f9877f84255f3da3a7a262243de",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:ST17-07",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/ST17-07"
+}

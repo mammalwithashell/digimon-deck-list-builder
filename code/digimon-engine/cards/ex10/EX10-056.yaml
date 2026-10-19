@@ -91,6 +91,6 @@ effects:
           bind_as: paid_sources
           prompt: "Trash any 2 of this Digimon's digivolution cards"
           then:
-            - trash_selected_sources: { source_refs: paid_sources }
+            - trash_selected_sources_as_cost: { source_refs: paid_sources }
             - trash_top_security:
                 of: opponent

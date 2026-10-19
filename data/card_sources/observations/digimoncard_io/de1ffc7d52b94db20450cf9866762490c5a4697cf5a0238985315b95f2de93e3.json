@@ -1,0 +1,109 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Yellow"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Herissmon",
+      "dp": 2000,
+      "effect_description_eng": "[Security] At the end of the battle, 1 of your opponent's Digimon gains ＜Security A. -1＞ for the turn. (This Digimon checks 1 additional security card.) Then, add this card to its owner's hand.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Yellow"
+          ],
+          "cost": 0,
+          "from_level": 2
+        }
+      ],
+      "form_eng": [
+        "Rookie"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 3,
+      "play_cost": 3,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Mammal"
+      ]
+    },
+    "card_id": "P-068",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Yellow",
+        "cost": 0,
+        "derived": false,
+        "level": 2,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 2000,
+        "effect_text": "[Security] At the end of the battle, 1 of your opponent's Digimon gains ＜Security A. -1＞ for the turn. (This Digimon checks 1 additional security card.) Then, add this card to its owner's hand.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 3,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Data",
+      "color": "Yellow",
+      "color2": null,
+      "date_added": "2025-11-25 15:15:54",
+      "digi_type": "Mammal",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 2000,
+      "evolution_color": "Yellow",
+      "evolution_cost": 0,
+      "evolution_level": 2,
+      "form": "Rookie",
+      "id": "P-068",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Security] At the end of the battle, 1 of your opponent's Digimon gains ＜Security A. -1＞ for the turn. (This Digimon checks 1 additional security card.) Then, add this card to its owner's hand.",
+      "name": "Herissmon",
+      "play_cost": 3,
+      "pretty_url": "herissmon-p-068",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-12: Limited Card Pack",
+        "RB-01: Resurgence Booster"
+      ],
+      "source_effect": "",
+      "stage": "Rookie",
+      "tcgplayer_id": 533170,
+      "tcgplayer_name": "Herissmon - P-068 (Championship 2023 Gold Card Set)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "de1ffc7d52b94db20450cf9866762490c5a4697cf5a0238985315b95f2de93e3",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "P-068#2",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

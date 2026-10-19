@@ -1,0 +1,64 @@
+card: BT20-053
+name: Grademon
+kind: digimon
+level: 5
+color: [black, yellow]
+cost: 7
+dp: 7000
+traits: [Warrior, X Antibody, Chronicle]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Raptordramon
+        - all_of:
+            - level_eq: 4
+            - trait_has: Chronicle
+    cost: 3
+effects:
+  - when: [on_play, when_digivolving]
+    process:
+      - select_hand:
+          of: you
+          bind_as: chosen
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: Dorumon
+                  - name_is: Ryudamon
+              - can_play_to_breeding_from_hand: true
+          prompt: "You may play 1 Dorumon or Ryudamon into your empty breeding area"
+      - play_to_breeding_from_hand: { of: you, hand_index: chosen }
+      - if:
+          condition: { during_attack: true }
+          then:
+            - select_own_permanent:
+                bind_as: boosted
+                filter: { kind: digimon }
+                prompt: "Choose 1 Digimon for +5000 DP and immunity to opponent Digimon effects"
+            - grant_effect_immunity:
+                target: boosted
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+            - add_dp_modifier:
+                target: boosted
+                value: 5000
+                expiry: end_of_opponents_turn
+  - scope: inherited
+    when: on_opponent_attack
+    active_when: { opponents_turn: true }
+    optional: true
+    once_per_turn: true
+    process:
+      - redirect_attack_target: { new_target: source }

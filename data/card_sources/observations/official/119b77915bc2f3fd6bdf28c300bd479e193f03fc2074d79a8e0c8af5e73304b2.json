@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT20-056",
+    "colors": "Black Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "11000",
+    "form": "Mega",
+    "play_cost": "12",
+    "qa": [
+      "No, it doesn’t trigger."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Barrier＞ [On Play] [When Digivolving] ＜Recovery +1(Deck)＞. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost. [All Turns] [Once per Turn] When security stacks are removed from, 1 of your opponent's Digimon gets -8000 DP for the turn."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, if this Digimon is [Alphamon: Ouryuken], by trashing your top security card, it doesn't leave."
+      }
+    ],
+    "type": "Holy Warrior/X Antibody/Royal Knight/Chronicle"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "119b77915bc2f3fd6bdf28c300bd479e193f03fc2074d79a8e0c8af5e73304b2",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "30be435a1f40b147d16ed23690e4cb1df5ec8111ae60c78b5d47c1ddab3a9e4e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-056",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-056"
+}

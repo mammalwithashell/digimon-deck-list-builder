@@ -479,6 +479,7 @@ fn when_would_be_attack_target_opponent_cancel_filter() {
             source_permanent: None,
             source_player: 1,
             materialized_declarative: false,
+            pending_skips: 0,
             cause_filter: Some(ReplacementCause::OpponentEffect),
             replacement_condition: None,
             until_condition: None,

@@ -34,9 +34,10 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 } else {
                     None
                 };
+                let is_digimon=ctx.game.permanent_is_digimon_for_rules(h);
                 ctx.delete_permanent(h);
                 if existed {
-                    bindings.record_deleted(h, dp);
+                    bindings.record_deleted(h, dp, is_digimon);
                 }
             }
             true
@@ -68,8 +69,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         .map(|perm| perm.top_card().play_cost(&ctx.game.card_data))
                         .unwrap_or(0) as i32;
                     let dp = ctx.game.effective_dp(h);
-                    ctx.delete_permanent(h);
-                    bindings.record_deleted(h, dp);
+                    let is_digimon=ctx.game.permanent_is_digimon_for_rules(h);
+                ctx.delete_permanent(h);
+                    bindings.record_deleted(h, dp, is_digimon);
                     if cost > 0 {
                         let acc = ctx
                             .game
@@ -97,9 +99,10 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     } else {
                         None
                     };
+                    let is_digimon=ctx.game.permanent_is_digimon_for_rules(handle);
                     ctx.delete_permanent(handle);
                     if existed {
-                        bindings.record_deleted(handle, dp);
+                        bindings.record_deleted(handle, dp, is_digimon);
                     }
                 }
             }
@@ -133,14 +136,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if handles.is_empty() {
                 return true;
             }
-            let snapshots: Vec<(crate::permanent::PermanentHandle, Option<i32>)> = handles
+            let snapshots: Vec<(crate::permanent::PermanentHandle, Option<i32>, bool)> = handles
                 .iter()
-                .map(|&h| (h, ctx.game.effective_dp(h)))
+                .map(|&h| (h, ctx.game.effective_dp(h), ctx.game.permanent_is_digimon_for_rules(h)))
                 .collect();
             let cause = ctx.game.infer_deletion_cause(handles[0]);
             ctx.game.delete_permanents_batch(handles, cause);
-            for (h, dp) in snapshots {
-                bindings.record_deleted(h, dp);
+            for (h, dp, is_digimon) in snapshots {
+                bindings.record_deleted(h, dp, is_digimon);
             }
             true
         }
@@ -173,14 +176,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if matches.is_empty() {
                 return true;
             }
-            let snapshots: Vec<(crate::permanent::PermanentHandle, Option<i32>)> = matches
+            let snapshots: Vec<(crate::permanent::PermanentHandle, Option<i32>, bool)> = matches
                 .iter()
-                .map(|&h| (h, ctx.game.effective_dp(h)))
+                .map(|&h| (h, ctx.game.effective_dp(h), ctx.game.permanent_is_digimon_for_rules(h)))
                 .collect();
             let cause = ctx.game.infer_deletion_cause(matches[0]);
             ctx.game.delete_permanents_batch(matches, cause);
-            for (h, dp) in snapshots {
-                bindings.record_deleted(h, dp);
+            for (h, dp, is_digimon) in snapshots {
+                bindings.record_deleted(h, dp, is_digimon);
             }
             true
         }

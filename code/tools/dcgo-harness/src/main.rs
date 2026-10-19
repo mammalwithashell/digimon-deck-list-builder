@@ -1241,6 +1241,7 @@ fn exam_one(
 
     let (sidecar_path, recording_text) = oracle.expect("built above when !sim_only");
     let od = dcgo_harness::exam::oracle_diff::diff_lowered(
+        &s,
         projections,
         s.steps.len(),
         &wire_rows_per_step,

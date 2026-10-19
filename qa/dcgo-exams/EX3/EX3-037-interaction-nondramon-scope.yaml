@@ -1,0 +1,116 @@
+# Interaction draft: independently measured oracle comparison still required.
+# Adapted from EX3-037-inherited0.yaml; no invented assertions or verdict.
+card: EX3-037
+clause: EX3-037#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX3-037
+    - ST2-06
+    - BT23-047
+    - BT23-047
+    - BT20-044
+    - BT20-027
+    - BT20-027
+    - BT20-027
+    - BT20-044
+    - BT20-044
+    - BT13-096
+    - BT13-096
+    rest: EX3-037-interaction-nondramon-scope-p0
+  p1:
+    stack:
+    - BT23-047
+    - BT23-047
+    - BT23-047
+    - BT20-027
+    - BT20-027
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST1-03
+    - ST2-06
+    - BT13-096
+    - BT13-096
+    rest: EX3-037-interaction-nondramon-scope-p1
+steps:
+- actor: 0
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    digivolve:
+      from: breeding
+      using: EX3-037
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      value: 0
+  expect:
+    prompt: SelectCountEffect
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    move:
+      from: breeding
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: field.0
+      using: ST2-06
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+covers:
+- EX3-037#inherited#0
+interaction:
+  id: probe:EX3-037#inherited#0:scope:neg
+  source: probe
+  kind: negative

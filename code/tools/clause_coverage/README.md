@@ -324,7 +324,13 @@ cache file:
 }
 ```
 
-Pass `--image-cache path/to/cache.json` to `extract`; a cached zone is
+Extraction and library callers default to the reviewed `qa/clause-image-cache.json`
+when present. This fills missing security text only; substantive official text
+retains priority. Empty official scrape records are not proof that a card has no
+printed effects and fall back to the secondary sources. Record the inspected
+image and review date alongside each cache entry.
+
+Pass `--image-cache path/to/cache.json` to `extract` to use a different cache; a cached zone is
 consulted (and split through the same clause rules, tagged
 `"source": "image-cache"`) before falling back to `image-required`. This
 way the image-reading work is done once per card, not once per `extract`

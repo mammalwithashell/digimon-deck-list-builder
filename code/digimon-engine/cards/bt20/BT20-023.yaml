@@ -1,0 +1,59 @@
+# Official observation 064fe77ff3f21af1997ea928feb09f4244c849274d76e03e4c3624ce001de64d
+# and BT20-023 card image verified; base DCGO BT20/Blue/BT20_023.cs cross-check.
+card: BT20-023
+name: Coredramon
+kind: digimon
+level: 4
+color: [blue, red]
+cost: 5
+dp: 5000
+traits: [Dragon]
+form: Champion
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, name_contains: Dracomon }
+    cost: 2
+effects:
+  - kind: grant_keyword
+    keyword: Jamming
+  - when: on_ally_played
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [green]
+        - any_of:
+            - event_target_in_text_contains: Dracomon
+            - event_target_in_text_contains: Examon
+    summary: "[Your Turn] When your green [Dracomon]/[Examon]-text Digimon is played, this Digimon may digivolve into [Wingdramon] in hand for 2 less"
+    process:
+      - select_hand:
+          of: you
+          bind_as: wingdramon
+          optional: true
+          filter:
+            kind: digimon
+            name_is: Wingdramon
+            can_digivolve_from_source: true
+          prompt: "Digivolve into Wingdramon in your hand with the cost reduced by 2?"
+      - if:
+          condition: { binding_present: wingdramon }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: wingdramon
+                cost: { reduce: 2 }
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

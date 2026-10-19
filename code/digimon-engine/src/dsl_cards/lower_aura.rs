@@ -26,9 +26,9 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledAuraEffectImmunity, CompiledDnaMaterialIdentity, CompiledEffectController, CompiledFormula,
-    CompiledGrantKeywordValue, CompiledPlayerRef,
-    CompiledPredicate, CompiledScope, CompiledSynthIdentity,
+    CompiledAuraEffectImmunity, CompiledDnaMaterialIdentity, CompiledEffectController,
+    CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef, CompiledPredicate,
+    CompiledScope, CompiledSynthIdentity,
 };
 
 use crate::card_source::CardHandle;
@@ -73,6 +73,7 @@ pub fn lower_all(
     effect_immunity: Option<CompiledAuraEffectImmunity>,
     modifier_from: Option<CompiledEffectController>,
     dna_material_identity: Option<CompiledDnaMaterialIdentity>,
+    source_card_trash_protection: Option<CompiledPredicate>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Vec<Effect> {
     if applies_to_opponent_security_dp || applies_to_own_security_dp {
@@ -109,6 +110,7 @@ pub fn lower_all(
             && target_player.is_none()
             && grant_traits.is_empty()
             && dna_material_identity.is_none()
+            && source_card_trash_protection.is_none()
             && (dp_modifier.is_some()
                 || security_attack.is_some()
                 || modifier.is_some()
@@ -149,6 +151,7 @@ pub fn lower_all(
         effect_immunity,
         modifier_from,
         dna_material_identity,
+        source_card_trash_protection,
         raw,
     ) {
         vec![effect]
@@ -281,6 +284,7 @@ pub fn lower(
     effect_immunity: Option<CompiledAuraEffectImmunity>,
     modifier_from: Option<CompiledEffectController>,
     dna_material_identity: Option<CompiledDnaMaterialIdentity>,
+    source_card_trash_protection: Option<CompiledPredicate>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
     // G-ENGINE-STACKED-CARD-RETURN-PROTECTION — controller scope for the
@@ -339,6 +343,7 @@ pub fn lower(
         && effect_immunity.is_none()
         && grant_traits.is_none()
         && dna_material_identity.is_none()
+        && source_card_trash_protection.is_none()
     {
         if let Some(dp) = dp_modifier {
             builder = builder.dp_modifier(dp);
@@ -380,7 +385,7 @@ pub fn lower(
     let modifier = modifier.as_deref().and_then(lookup_modifier_type);
     // Name payload for name-carrying modifiers (CanOnlyDigivolveInto — Q3).
     let modifier_name = modifier_name.map(Arc::new);
-    // Structured SynthIdentity payload for a `TreatAsDigimon` mass aura
+    // Structured AdditiveSynthIdentity payload for a `TreatAsDigimon` mass aura
     // (BT25-104 "all of your [Marcus Damon]s are also treated as a 12000 DP
     // Digimon"). G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
     let synth_payload = synth_identity
@@ -397,6 +402,7 @@ pub fn lower(
                 result_name: d.for_result,
                 level: d.level,
                 name: d.name,
+                result_scope: d.result_scope,
             }
         });
         // task_69f10a66 Family 1: a SELF-aura keyword grant is semantically a
@@ -420,6 +426,9 @@ pub fn lower(
                 let Some(handle) = ctx.source_permanent else {
                     return;
                 };
+                if let Some(filter) = &source_card_trash_protection {
+                    install_source_protection(ctx, handle, filter);
+                }
                 if let Some(dp) = dp {
                     ctx.add_declarative_dp_modifier(handle, dp, Expiry::Permanent);
                 }
@@ -559,6 +568,9 @@ pub fn lower(
             }
             // Apply outside the read borrow.
             for h in matched {
+                if let Some(filter) = &source_card_trash_protection {
+                    install_source_protection(ctx, h, filter);
+                }
                 if let Some(dp) = dp {
                     ctx.add_declarative_dp_modifier(h, dp, Expiry::Permanent);
                 }
@@ -588,7 +600,7 @@ pub fn lower(
                 }
                 if let Some(modifier) = modifier {
                     if let Some(synth) = &synth_payload {
-                        // Structured SynthIdentity payload (TreatAsDigimon mass
+                        // Structured AdditiveSynthIdentity payload (TreatAsDigimon mass
                         // aura — BT25-104). G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
                         ctx.add_declarative_modifier_with_payload(
                             h,
@@ -681,4 +693,47 @@ fn eval_active_when(
         PredicateSubject::None
     };
     eval_predicate(predicate, rctx, subject)
+}
+
+fn install_source_protection(
+    ctx: &mut crate::effect_context::EffectContext<'_>,
+    host: PermanentHandle,
+    filter: &CompiledPredicate,
+) {
+    let cards = {
+        let read = ctx.as_read();
+        let Some(perm) = read
+            .game
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+        else {
+            return;
+        };
+        perm.card_sources
+            .iter()
+            .take(perm.card_sources.len().saturating_sub(1))
+            .enumerate()
+            .filter(|(index, card)| {
+                eval_predicate(
+                    filter,
+                    &read,
+                    PredicateSubject::Source(crate::selection::SourceSelectionRef {
+                        permanent: host,
+                        field_index: host.index,
+                        source_index: *index as u8,
+                        card: card.handle(),
+                    }),
+                )
+            })
+            .map(|(_, card)| card.handle())
+            .collect()
+    };
+    ctx.add_declarative_modifier_with_payload(
+        host,
+        ModifierType::CannotTrash,
+        0,
+        Expiry::Permanent,
+        crate::modifiers::ModifierPayload::ProtectedSourceCards(cards),
+    );
 }

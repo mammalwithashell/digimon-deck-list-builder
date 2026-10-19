@@ -26,6 +26,7 @@ fn colored_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
         inherited_text: String::new(),
         security_text: String::new(),
         link_text: String::new(),
+        requirement_text: String::new(),
         keywords: Vec::new(),
         effect_class_name: id.replace('-', "_"),
         index: 0,
@@ -208,8 +209,8 @@ traits: [Dragonkin]
 alt_paths:
   - kind: dna_digivolve
     materials:
-      - { level_eq: 4, color: red }
-      - { level_eq: 4, color: purple }
+      - { level_eq: 4, color_is: red }
+      - { level_eq: 4, color_is: purple }
     cost: 0
 effects: []
 "#;

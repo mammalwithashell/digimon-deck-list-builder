@@ -23,8 +23,11 @@ def _action_mask_fn(env):
 
 @pytest.mark.slow
 def test_mlp_onnx_roundtrip(tmp_path):
-    env = ActionMasker(DigimonEnv(), _action_mask_fn)
+    env = ActionMasker(DigimonEnv(tensor_profile="standard_lite_v2"), _action_mask_fn)
     model = MaskablePPO("MlpPolicy", env, n_steps=64, batch_size=32, verbose=0)
+    # This is a newly created model, before any training or serialization.
+    from model_contract import current_contract
+    model.digimon_contract = current_contract("standard_lite_v2")
     model.learn(total_timesteps=128)
 
     sb3_path = tmp_path / "tiny.zip"
@@ -72,7 +75,7 @@ def test_mlp_onnx_roundtrip(tmp_path):
 def test_lstm_onnx_roundtrip(tmp_path):
     from digimon_gym.agents.maskable_recurrent import MaskableRecurrentPPO
 
-    env = ActionMasker(DigimonEnv(), _action_mask_fn)
+    env = ActionMasker(DigimonEnv(tensor_profile="standard_lite_v2"), _action_mask_fn)
     model = MaskableRecurrentPPO(
         "MlpLstmPolicy",
         env,
@@ -81,6 +84,9 @@ def test_lstm_onnx_roundtrip(tmp_path):
         policy_kwargs=dict(lstm_hidden_size=64),
         verbose=0,
     )
+    # This is a newly created model, before any training or serialization.
+    from model_contract import current_contract
+    model.digimon_contract = current_contract("standard_lite_v2")
     model.learn(total_timesteps=128)
 
     sb3_path = tmp_path / "tiny_lstm.zip"

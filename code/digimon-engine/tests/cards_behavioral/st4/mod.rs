@@ -106,6 +106,20 @@ fn resolve_all(runner: &mut DebugRunner) {
     );
 }
 
+// Exercise the paid Option-use path with a genuine color provider in breeding.
+// The breeding provider does not alter battle-field slots or target assertions.
+fn use_fixture_option(runner: &mut DebugRunner, provider: &str) {
+    runner.place_in_breeding(0, provider);
+    runner.game.enter_main_phase();
+    let action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)[action as usize],
+        1.0,
+        "fixture Option must be legal before Main action dispatch"
+    );
+    runner.game.decode_action(action, 0);
+}
+
 #[test]
 fn st4_deck_library_recipe_has_canonical_counts() {
     let library: serde_json::Value =
@@ -525,13 +539,14 @@ fn st4_15_main_suspends_and_st4_16_main_returns_suspended_digimon() {
         .dsl_card("ST4-15")
         .expect("ST4-15 YAML loads")
         .add_card(digimon("TARGET", CardColor::Red, 4, 3000))
+        .add_card(digimon("OPTION-GREEN", CardColor::Green, 3, 2000))
         .hand(0, &["ST4-15"])
         .memory(10)
         .start();
     make_p0_turn(&mut spray);
     let target = spray.place_on_field(1, "TARGET", Some(0));
 
-    assert!(spray.play(0, 0).is_some());
+    use_fixture_option(&mut spray, "OPTION-GREEN");
     resolve_all(&mut spray);
     assert!(spray.game.players[1].battle_area[target.index as usize].is_suspended);
 
@@ -539,6 +554,7 @@ fn st4_15_main_suspends_and_st4_16_main_returns_suspended_digimon() {
         .dsl_card("ST4-16")
         .expect("ST4-16 YAML loads")
         .add_card(digimon("TARGET", CardColor::Red, 4, 3000))
+        .add_card(digimon("OPTION-GREEN", CardColor::Green, 3, 2000))
         .hand(0, &["ST4-16"])
         .memory(10)
         .start();
@@ -546,7 +562,7 @@ fn st4_15_main_suspends_and_st4_16_main_returns_suspended_digimon() {
     let target = shocker.place_on_field(1, "TARGET", Some(0));
     shocker.game.players[1].battle_area[target.index as usize].is_suspended = true;
 
-    assert!(shocker.play(0, 0).is_some());
+    use_fixture_option(&mut shocker, "OPTION-GREEN");
     resolve_all(&mut shocker);
     assert!(shocker.game.players[1].battle_area.is_empty());
     assert_eq!(
@@ -728,13 +744,14 @@ fn st4_15_main_suspend_is_mandatory() {
         .dsl_card("ST4-15")
         .expect("ST4-15 YAML loads")
         .add_card(digimon("TARGET", CardColor::Red, 4, 3000))
+        .add_card(digimon("OPTION-GREEN", CardColor::Green, 3, 2000))
         .hand(0, &["ST4-15"])
         .memory(10)
         .start();
     make_p0_turn(&mut runner);
     runner.place_on_field(1, "TARGET", Some(0));
 
-    assert!(runner.play(0, 0).is_some());
+    use_fixture_option(&mut runner, "OPTION-GREEN");
     let prompt = runner
         .pending_selection()
         .expect("ST4-15 installs the suspend selection");
@@ -750,6 +767,7 @@ fn st4_16_main_return_is_mandatory() {
         .dsl_card("ST4-16")
         .expect("ST4-16 YAML loads")
         .add_card(digimon("TARGET", CardColor::Red, 4, 3000))
+        .add_card(digimon("OPTION-GREEN", CardColor::Green, 3, 2000))
         .hand(0, &["ST4-16"])
         .memory(10)
         .start();
@@ -757,7 +775,7 @@ fn st4_16_main_return_is_mandatory() {
     let target = runner.place_on_field(1, "TARGET", Some(0));
     runner.game.players[1].battle_area[target.index as usize].is_suspended = true;
 
-    assert!(runner.play(0, 0).is_some());
+    use_fixture_option(&mut runner, "OPTION-GREEN");
     let prompt = runner
         .pending_selection()
         .expect("ST4-16 installs the return selection");

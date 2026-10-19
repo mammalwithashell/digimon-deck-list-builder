@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT25-058",
+    "colors": "Green Black",
+    "digivolve_costs": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "Yes, it can."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.5 w/[TS] trait: Cost 4",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Reboot＞ ＜Blocker＞ ＜Fortitude＞ [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends. [All Turns] [Once Per Turn] When effects play or digivolve any Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+      }
+    ],
+    "type": "Dark Animal/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "4f51132f285ed23ef391c7312674d3cd62d971dd1c8b71832f0f3a9d73cf1e79",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "7b6b81b1887e5ddd4daf9f71271abb897e4321f5bc72e67711c446260c1fd39f",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-058",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-058"
+}

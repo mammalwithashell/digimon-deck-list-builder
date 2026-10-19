@@ -1,0 +1,85 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "P-059",
+    "card_type": "Digimon",
+    "colors": [
+      "Red"
+    ],
+    "dp": 12000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 12000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Gammamon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[When Digivolving] Trash the top 3 cards of your deck. Then, if you have a Tamer in play, this Digimon gets +3000 DP for the turn."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[Your Turn] While you have a [Hiro Amanokawa] in play, this Digimon gets +2000 DP."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Gammamon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-059.png?260529",
+      "printing_id": "P-059"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Trash the top 3 cards of your deck. Then, if you have a Tamer in play, this Digimon gets +3000 DP for the turn."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] While you have a [Hiro Amanokawa] in play, this Digimon gets +2000 DP."
+      }
+    ],
+    "type": "Ceratopsian"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "d041e4bf5c7bebd6cba522c5c86a3f6bfd0648c0adfa3d493e5081ecece9428c",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-059:P-059",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

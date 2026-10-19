@@ -150,6 +150,25 @@ fn park_as_delay(runner: &mut DebugRunner, index: usize) {
 
 // ───────────────────────── Section 1: structure ─────────────────────────
 
+// Body-only fixtures model an Option already placed by its printed Main effect.
+// Keep the real placing turn: this is not permission to activate Delay early.
+fn place_delayed_fixture(
+    runner: &mut DebugRunner,
+    owner: u8,
+    card: &str,
+) -> digimon_engine::permanent::PermanentHandle {
+    let handle = runner.place_on_field(owner, card, Some(owner as u16));
+    let placed_on_turn = runner.game.turn_count;
+    runner.game.player_mut(owner).battle_area[handle.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner,
+            trash_on_turn: u16::MAX,
+            trigger: digimon_engine::enums::DelayTrigger::MainPhaseActivated,
+            placed_on_turn,
+        };
+    handle
+}
+
 #[test]
 fn lm_057_is_red_blue_option_cost_2() {
     let runner = builder().start();
@@ -252,7 +271,7 @@ fn lm_057_bypass_disabled_by_wall_training_in_battle_area() {
         .memory(10)
         .start();
     runner.place_on_field(0, "YELLOW-TAMER", Some(0));
-    runner.place_on_field(0, CARD_ID, Some(0));
+    place_delayed_fixture(&mut runner, 0, CARD_ID);
     runner.game.enter_main_phase();
     assert_eq!(
         build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
@@ -274,7 +293,7 @@ fn lm_057_bypass_disabled_by_any_card_named_wall_training() {
         .memory(10)
         .start();
     runner.place_on_field(0, "YELLOW-TAMER", Some(0));
-    runner.place_on_field(0, "WALL-ALT", Some(0));
+    place_delayed_fixture(&mut runner, 0, "WALL-ALT");
     runner.game.enter_main_phase();
     assert_eq!(
         build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
@@ -293,7 +312,7 @@ fn lm_057_opponents_wall_training_does_not_disable_bypass() {
         .memory(10)
         .start();
     runner.place_on_field(0, "YELLOW-TAMER", Some(0));
-    runner.place_on_field(1, CARD_ID, Some(1));
+    place_delayed_fixture(&mut runner, 1, CARD_ID);
     runner.game.enter_main_phase();
     assert_eq!(
         build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
@@ -314,7 +333,7 @@ fn lm_057_normal_color_requirement_still_works_with_wall_training_in_play() {
         .start();
     runner.place_on_field(0, "RED-TAMER", Some(0));
     runner.place_on_field(0, "BLUE-TAMER", Some(0));
-    runner.place_on_field(0, CARD_ID, Some(0));
+    place_delayed_fixture(&mut runner, 0, CARD_ID);
     runner.game.enter_main_phase();
     assert_eq!(
         build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
@@ -333,7 +352,7 @@ fn lm_057_one_of_two_colors_is_not_enough_without_bypass() {
         .memory(10)
         .start();
     runner.place_on_field(0, "BLUE-TAMER", Some(0));
-    runner.place_on_field(0, CARD_ID, Some(0));
+    place_delayed_fixture(&mut runner, 0, CARD_ID);
     runner.game.enter_main_phase();
     assert_eq!(
         build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
@@ -526,7 +545,7 @@ fn delay_runner(hand: &[&str]) -> (DebugRunner, digimon_engine::permanent::Perma
         .deck(1, &["FILL"; 6])
         .memory(5)
         .start();
-    let delay_perm = runner.place_on_field(0, CARD_ID, Some(0));
+    let delay_perm = place_delayed_fixture(&mut runner, 0, CARD_ID);
     (runner, delay_perm)
 }
 
@@ -732,5 +751,127 @@ fn lm_057_delay_target_excludes_digimon_with_only_off_color_candidate() {
         runner.pending_kind(),
         None,
         "no Digimon has a legal red/blue result card → no target prompt"
+    );
+}
+
+/// Actual paid Option placement, then a later Main activation (not synthetic Delay timing).
+fn audited_delay(two_routes: bool) -> DebugRunner {
+    let mut base = digimon("AUDIT-BASE", CardColor::Red, 3);
+    base.colors.push(CardColor::Blue);
+    let mut evo = lv4_evo("AUDIT-EVO", CardColor::Blue, CardColor::Red, 3);
+    if two_routes {
+        evo.evo_costs.push(EvoCost {
+            card_color: color_code(CardColor::Blue),
+            level: 3,
+            memory_cost: 4,
+        });
+    }
+    let mut r = builder()
+        .add_card(base)
+        .add_card(evo)
+        .add_card(filler("AUDIT-FILL"))
+        .hand(0, &[CARD_ID, "AUDIT-EVO"])
+        .deck(0, &["AUDIT-FILL"; 12])
+        .deck(1, &["AUDIT-FILL"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    r.auto_resolve().unwrap();
+    assert_eq!(r.memory(), 8, "the printed Option cost is paid");
+    assert!(delayed_self_in_battle_area(&r, 0));
+    r.place_on_field(0, "AUDIT-BASE", Some(0));
+    let index = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == CARD_ID)
+        .unwrap();
+    let action =
+        FIELD_EFFECT_START + index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN;
+    assert_eq!(
+        build_action_mask(&r.game, 0)[action as usize],
+        0.0,
+        "placing-turn activation is forbidden"
+    );
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.game.set_memory(5);
+    assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+    r.game.decode_action(action, 0);
+    assert_eq!(
+        r.trash_size(0),
+        1,
+        "Delay trashes the Option before selection"
+    );
+    r
+}
+
+#[test]
+fn lm_057_real_delay_target_decline_ends_without_hand_prompt() {
+    let mut r = audited_delay(false);
+    assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField));
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+    r.execute_action(0, PASS).unwrap();
+    assert!(
+        r.game.pending_selection.is_none(),
+        "declining the host must end the effect"
+    );
+    assert_eq!(r.memory(), 5);
+    assert!(hand_ids(&r, 0).iter().any(|id| id == "AUDIT-EVO"));
+    assert_eq!(r.game.player(0).battle_area[0].stack_size(), 1);
+}
+
+#[test]
+fn lm_057_real_delay_hand_decline_ends_without_payment() {
+    let mut r = audited_delay(false);
+    let pick = r.pending_selection_view().unwrap();
+    r.execute_action(0, pick.valid_action_ids[0]).unwrap();
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Hand));
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+    r.execute_action(0, PASS).unwrap();
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.memory(), 5);
+    assert!(hand_ids(&r, 0).iter().any(|id| id == "AUDIT-EVO"));
+}
+
+#[test]
+fn lm_057_real_delay_cloned_route_choice_keeps_both_reduced_costs() {
+    let mut r = audited_delay(true);
+    for _ in 0..2 {
+        let pick = r.pending_selection_view().unwrap();
+        r.execute_action(0, pick.valid_action_ids[0]).unwrap();
+    }
+    let routes = r
+        .pending_selection_view()
+        .expect("two printed evolution routes remain choices");
+    assert_eq!(routes.valid_action_ids.len(), 2);
+    assert!(!routes.is_optional);
+    let actions = routes.valid_action_ids.clone();
+    let saved = r.game.clone();
+    let mut memories = Vec::new();
+    for action in actions {
+        r.game = saved.clone();
+        assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+        r.execute_action(0, action).unwrap();
+        assert!(r.game.pending_selection.is_none());
+        memories.push(r.memory());
+        assert_eq!(
+            r.game.player(0).battle_area[0]
+                .top_card()
+                .card_id(&r.game.card_data),
+            "AUDIT-EVO"
+        );
+        assert_eq!(r.game.player(0).battle_area[0].stack_size(), 2);
+    }
+    memories.sort();
+    assert_eq!(
+        memories,
+        vec![3, 4],
+        "printed costs 3/4 reduced by 2 must pay 1/2"
     );
 }

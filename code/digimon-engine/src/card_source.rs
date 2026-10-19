@@ -217,16 +217,16 @@ impl CardSource {
     pub fn contains_card_name(&self, name: &str, data: &[CardData]) -> bool {
         let name_lower = name.to_lowercase();
         let card_name = &data[self.data_index].card_name;
-        if card_name.to_lowercase().contains(&name_lower) {
+        if crate::card_data::rules_name_contains(card_name, &name_lower) {
             return true;
         }
         for also in &data[self.data_index].also_treated_as {
-            if also.to_lowercase().contains(&name_lower) {
+            if crate::card_data::rules_name_contains(also, &name_lower) {
                 return true;
             }
         }
         for also in &self.also_treated_as {
-            if also.to_lowercase().contains(&name_lower) {
+            if crate::card_data::rules_name_contains(also, &name_lower) {
                 return true;
             }
         }

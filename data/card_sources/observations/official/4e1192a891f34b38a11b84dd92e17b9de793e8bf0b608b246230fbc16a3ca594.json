@@ -1,0 +1,47 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT25-022",
+    "colors": "Blue",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[TS] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Iliad] trait card and 1 [TS] trait card among them to the hand. Return the rest to the bottom of the deck."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+      }
+    ],
+    "type": "Mammal/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "4e1192a891f34b38a11b84dd92e17b9de793e8bf0b608b246230fbc16a3ca594",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "7121d9c4dcc830fe53483308b3cc175cb0842e37dc6bdd11df1d96db3afd7d92",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-022",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-022"
+}

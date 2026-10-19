@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "P-101",
+    "colors": "Black Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "4000",
+    "form": "Champion",
+    "play_cost": "4",
+    "qa": [
+      "This is a special rule for this card that always treats it as if it also has the [Cyborg] type trait."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "This card/Digimon is also treated as having the [Cyborg] trait. [On Play][When Digivolving] By trashing 1 card in your hand, ＜Draw 2＞."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] By trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon."
+      }
+    ],
+    "type": "Undead"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "1be6f32fd0f4b85c201dfa7a09e0e440721d03149f58fe8e77291e197d760747",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "ccc495e7adc60bfaedca3fe0dad4b5dca0add0718aab4b12ea8755078367c65a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:P-101",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/P-101"
+}

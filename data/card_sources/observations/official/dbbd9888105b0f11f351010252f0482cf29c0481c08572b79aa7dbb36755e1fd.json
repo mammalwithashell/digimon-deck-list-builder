@@ -1,0 +1,46 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT20-020",
+    "colors": "Red Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "dp": "13000",
+    "form": "Mega",
+    "play_cost": "13",
+    "qa": [
+      "[Security] effects take precedence for activation. Upon a security check, a [Security] effect will immediately activate without pending activation. For other triggered effects, the turn player activates their effects first."
+    ],
+    "special_digivolution_condition": "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Raid＞ ＜Piercing＞ [When Digivolving] Your opponent can't play Digimon or Tamers by effects until the end of their turn. Then, if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards, trash your opponent's top security card. [All Turns] [Once Per Turn] When your opponent's security stack is removed from, delete 1 of their Digimon with as much or less DP as this Digimon."
+      }
+    ],
+    "type": "Ancient Dragonkin"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "dbbd9888105b0f11f351010252f0482cf29c0481c08572b79aa7dbb36755e1fd",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "340cf2bb085bf562bbf8283d4c403412e014262600feaceceebb4e87b38a608c",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT20-020",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT20-020"
+}

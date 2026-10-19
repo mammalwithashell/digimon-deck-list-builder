@@ -182,6 +182,9 @@ fn tai_plus_shadow_wing_stacks_dp_on_own_attacker() {
         .hand(0, &["ST1-13"])
         .memory(10)
         .start();
+    runner.skip_mulligan();
+    runner.game.memory = 10;
+    runner.game.enter_main_phase();
 
     let attacker = runner.place_on_field(0, "ST1-05", Some(0));
     // Birdramon at base 5000 before any buff.
@@ -201,9 +204,16 @@ fn tai_plus_shadow_wing_stacks_dp_on_own_attacker() {
     );
 
     // Play Shadow Wing [Main] and target Birdramon for +3000 for the turn.
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)
+            [digimon_engine::action::space::PLAY_HAND_START as usize],
+        1.0,
+        "ST1-13 Shadow Wing from hand must be legal before dispatch"
+    );
     runner
-        .play(0, 0)
-        .expect("play ST1-13 Shadow Wing from hand");
+        .game
+        .decode_action(digimon_engine::action::space::PLAY_HAND_START, 0);
+    assert_eq!(runner.hand_size(0), 0, "paid Option leaves hand");
     runner.game.drain_effect_queue();
     runner
         .execute_action(0, encode_attack(0, attacker.index as u16))
@@ -229,6 +239,9 @@ fn tai_and_shadow_wing_do_not_buff_opponent_digimon() {
         .hand(0, &["ST1-13"])
         .memory(10)
         .start();
+    runner.skip_mulligan();
+    runner.game.memory = 10;
+    runner.game.enter_main_phase();
 
     let own = runner.place_on_field(0, "ST1-05", Some(0));
     let opp = runner.place_on_field(1, "ST2-05", Some(0));
@@ -238,9 +251,16 @@ fn tai_and_shadow_wing_do_not_buff_opponent_digimon() {
 
     // Play Shadow Wing — its only legal targets are your own Digimon, so the
     // opponent body can never be picked. Target your own Birdramon.
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)
+            [digimon_engine::action::space::PLAY_HAND_START as usize],
+        1.0,
+        "ST1-13 Shadow Wing from hand must be legal before dispatch"
+    );
     runner
-        .play(0, 0)
-        .expect("play ST1-13 Shadow Wing from hand");
+        .game
+        .decode_action(digimon_engine::action::space::PLAY_HAND_START, 0);
+    assert_eq!(runner.hand_size(0), 0, "paid Option leaves hand");
     runner.game.drain_effect_queue();
     let view = runner
         .pending_selection_view()
@@ -345,10 +365,15 @@ fn garudamon_when_digivolving_buff_stacks_additively_with_tai_aura() {
 /// - DCGO: `$BASE_DCGO/Assets/Scripts/CardEffect/ST1/Red/ST1_14.cs`.
 #[test]
 fn starlight_explosion_installs_own_security_digimon_dp_window() {
-    let mut runner = dsl_builder(&["ST1-14"])
+    let mut runner = dsl_builder(&["ST1-14", "ST1-12"])
         .hand(0, &["ST1-14"])
         .memory(10)
         .start();
+    runner.skip_mulligan();
+    runner.game.memory = 10;
+    runner.game.enter_main_phase();
+
+    runner.place_on_field(0, "ST1-12", Some(0));
 
     assert_eq!(
         runner
@@ -358,9 +383,16 @@ fn starlight_explosion_installs_own_security_digimon_dp_window() {
         "no own-security DP window before Starlight Explosion is played"
     );
 
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)
+            [digimon_engine::action::space::PLAY_HAND_START as usize],
+        1.0,
+        "ST1-14 Starlight Explosion from hand must be legal before dispatch"
+    );
     runner
-        .play(0, 0)
-        .expect("play ST1-14 Starlight Explosion from hand");
+        .game
+        .decode_action(digimon_engine::action::space::PLAY_HAND_START, 0);
+    assert_eq!(runner.hand_size(0), 0, "paid Option leaves hand");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -410,6 +442,9 @@ fn giga_destroyer_deletes_only_le_4000_opponents_and_tai_does_not_widen_window()
         .hand(0, &["ST1-15"])
         .memory(10)
         .start();
+    runner.skip_mulligan();
+    runner.game.memory = 10;
+    runner.game.enter_main_phase();
 
     // Tai on YOUR field — buffs only your Digimon, irrelevant to the opp window.
     runner.place_on_field(0, "ST1-12", Some(0));
@@ -425,9 +460,16 @@ fn giga_destroyer_deletes_only_le_4000_opponents_and_tai_does_not_widen_window()
 
     let before = snapshot(&runner);
 
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)
+            [digimon_engine::action::space::PLAY_HAND_START as usize],
+        1.0,
+        "ST1-15 Giga Destroyer from hand must be legal before dispatch"
+    );
     runner
-        .play(0, 0)
-        .expect("play ST1-15 Giga Destroyer from hand");
+        .game
+        .decode_action(digimon_engine::action::space::PLAY_HAND_START, 0);
+    assert_eq!(runner.hand_size(0), 0, "paid Option leaves hand");
     let prompt = runner
         .pending_selection()
         .expect("Giga Destroyer installs an up-to-2 selection");

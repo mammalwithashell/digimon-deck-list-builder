@@ -1,0 +1,127 @@
+# Source-derived draft; independent verification pending.
+card: EX13-024
+clause: EX13-024#effect#1
+interaction:
+  id: probe:EX13-024#effect#1:optional_decline
+  source: probe
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX13-024
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX13-024-interaction-raid-decline-ex13-choice-scope8-p0
+  p1:
+    stack:
+    - ST1-10
+    - ST1-02
+    - ST1-03
+    - BT1-090
+    - BT3-093
+    - ST1-04
+    - ST1-04
+    - ST1-05
+    - ST1-05
+    - ST1-06
+    - BT3-093
+    - BT3-093
+    - ST2-04
+    - ST2-04
+    - ST2-05
+    rest: EX13-024-interaction-raid-decline-ex13-choice-scope8-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    play:
+      card: ST1-10
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX13-024
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      choice: Don't return
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+assert:
+- at: 12
+  that:
+    memory: 3
+    p0.field:
+    - card_id: EX13-024
+      suspended: true
+    p1.field:
+    - card_id: ST1-10
+      suspended: false
+    p1.security: 4

@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "BT17-009",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Hybrid",
+    "play_cost": "3",
+    "qa": [
+      "Yes, even if you only reveal one of the applicable cards, you can still add it to your hand."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 Tamer card with inherited effects among them to the hand. Return the rest to the bottom of the deck."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[On Deletion] You may play 1 Tamer card with inherited effects from your hand without paying the cost."
+      }
+    ],
+    "type": "Wizard"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "860e4e81d0b14b018044123936aebf474c5f4481c87cb7f3656df2331639f686",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "c6a68ab7d30c25eb10a5a16cb42cec3d52ca9cdcd97e255356f6b68ed43e615c",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT17-009",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT17-009"
+}

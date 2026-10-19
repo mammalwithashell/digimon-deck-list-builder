@@ -1,0 +1,77 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "ST6-03",
+    "card_type": "Digimon",
+    "colors": [
+      "Purple"
+    ],
+    "dp": 2000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": 2000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Gabumon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] Trigger ＜Draw 1＞. (Draw 1 card from your deck.) Then, trash 1 card in your hand."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Gabumon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522106",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/ST6-03.png?260529",
+      "printing_id": "ST6-03"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] Trigger ＜Draw 1＞. (Draw 1 card from your deck.) Then, trash 1 card in your hand."
+      }
+    ],
+    "type": "Reptile"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "403b0f5a1c043ce6bb6634ed7e90ddd4d9579e54d9d9f814c2541d7be555c2b3",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "10697501458e7fe9b01c07fe280ad1d42f808e48f934096fd1a8a2aadfb7d7eb",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522106:ST6-03:ST6-03",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522106"
+}

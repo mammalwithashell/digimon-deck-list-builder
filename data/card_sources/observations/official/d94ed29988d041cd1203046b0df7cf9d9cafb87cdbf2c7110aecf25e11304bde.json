@@ -1,0 +1,77 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "P-069",
+    "card_type": "Digimon",
+    "colors": [
+      "Green"
+    ],
+    "dp": 2000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Green"
+        ],
+        "dp": 2000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Pulsemon",
+        "play_cost": 4,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Security] At the end of the battle, suspend 1 of your opponent's Digimon. Then, add this card to its owner’s hand."
+          }
+        ]
+      }
+    ],
+    "form": "Rookie",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Pulsemon",
+    "play_cost": 4,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-069.png?260529",
+      "printing_id": "P-069"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, suspend 1 of your opponent's Digimon. Then, add this card to its owner’s hand."
+      }
+    ],
+    "type": "Beastkin"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "d94ed29988d041cd1203046b0df7cf9d9cafb87cdbf2c7110aecf25e11304bde",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-069:P-069",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

@@ -65,7 +65,8 @@ impl Game {
     /// Reads the `ModifierType::DnaMaterialIdentity` entries the material's
     /// `dna_material_identity:` self-aura materialized this tick; an entry
     /// applies when any of `result`'s effective names (printed + "also treated
-    /// as" aliases) equals the entry's `result_name`.
+    /// as" aliases) equals the entry's `result_name` and its optional instance
+    /// scope matches the result's current zone in this game.
     pub fn dna_material_extras(
         &self,
         material: PermanentHandle,
@@ -84,10 +85,25 @@ impl Game {
                 result_name,
                 level,
                 name,
+                result_scope,
             } = &entry.payload
             else {
                 continue;
             };
+            // EX3-020/041 name an Examon in your hand. Query current zone
+            // membership by physical instance, so a second same-name card in
+            // hand cannot authorize a trash result, including on game clones.
+            if let Some(digimon_dsl::compiled::CompiledDnaMaterialResultScope::OwnHand) =
+                result_scope
+            {
+                if result.owner != material.player
+                    || !self.player(material.player).hand.iter().any(|card| {
+                        card.card_index == result.card_index && card.owner == result.owner
+                    })
+                {
+                    continue;
+                }
+            }
             if !result_names
                 .iter()
                 .any(|n| n.eq_ignore_ascii_case(result_name))
@@ -149,8 +165,34 @@ impl Game {
     }
 }
 
+/// Clone-safe identity carried by a chosen treated-as evolution route.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DigivolveTreatedIdentity {
+    pub kind: CardKind,
+    pub level: u8,
+    pub colors: u8,
+}
+impl DigivolveTreatedIdentity {
+    pub(crate) fn colors(self) -> Vec<CardColor> {
+        [
+            CardColor::Red,
+            CardColor::Blue,
+            CardColor::Yellow,
+            CardColor::Green,
+            CardColor::Black,
+            CardColor::Purple,
+            CardColor::White,
+        ]
+        .into_iter()
+        .filter(|c| self.colors & (1u8 << (*c as u8)) != 0)
+        .collect()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct DigivolveRouteMatch {
+    /// The chosen route's temporary source identity; never inferred from cost.
+    pub treated_as: Option<DigivolveTreatedIdentity>,
     pub memory_cost: u16,
     /// True when this route is an **App Fusion** alt-play (Appmon
     /// "App Fusion" mechanic). Unlike a normal/alt digivolve, App Fusion
@@ -171,6 +213,7 @@ impl DigivolveRouteMatch {
         Self {
             memory_cost,
             app_fusion: false,
+            treated_as: None,
         }
     }
 
@@ -179,6 +222,7 @@ impl DigivolveRouteMatch {
         Self {
             memory_cost,
             app_fusion: true,
+            treated_as: None,
         }
     }
 }
@@ -374,7 +418,7 @@ impl Game {
         // `route.app_fusion` to also consume the host's linked cards.
         routes.extend(self.collect_dsl_alt_digivolve_routes(card, base_handle, false));
         routes.extend(self.collect_app_fusion_routes(card, base_handle));
-        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion));
+        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion, r.treated_as.map(|p| (p.kind as u8, p.level, p.colors))));
         routes.dedup();
         routes
     }
@@ -414,16 +458,20 @@ impl Game {
                 identity.kind,
                 CardKind::Digimon | CardKind::Dual | CardKind::DigiEgg
             ) {
-                all_matching_evo_costs(card.digivolution_costs(&self.card_data), None, &identity.colors)
-                    .into_iter()
-                    .map(DigivolveRouteMatch::digivolve)
-                    .collect()
+                all_matching_evo_costs(
+                    card.digivolution_costs(&self.card_data),
+                    None,
+                    &identity.colors,
+                )
+                .into_iter()
+                .map(DigivolveRouteMatch::digivolve)
+                .collect()
             } else {
                 Vec::new()
             }
         };
         routes.extend(self.collect_dsl_alt_digivolve_routes(card, base_handle, true));
-        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion));
+        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion, r.treated_as.map(|p| (p.kind as u8, p.level, p.colors))));
         routes.dedup();
         routes
     }
@@ -568,16 +616,42 @@ impl Game {
                     }
                 }
 
+                let mut treated_identity = None;
                 let treated_as_cost = if let Some(profile) = path.source_treated_as.as_deref() {
-                    let Some(profile) = parse_treated_as_profile(profile) else {
+                    let Some(mut profile) = parse_treated_as_profile(profile) else {
                         continue;
                     };
+                    if profile.from_hand
+                        && !self.player(card.owner).hand.iter().any(|candidate| candidate.handle() == card.handle())
+                    {
+                        continue;
+                    }
+                    // Omitted profile colors retain the source's effective colors.
+                    // Treating a red Tamer as level 3 never removes its other colors.
+                    if profile.colors.is_empty() {
+                        profile.colors = base.synth_identity(&self.card_data, &self.modifiers, base_handle).colors;
+                    }
                     if profile.kind != CardKind::Digimon && profile.kind != CardKind::DigiEgg {
                         continue;
                     }
                     if profile.level == 0 || profile.colors.is_empty() {
                         continue;
                     }
+                    // Official Hybrid Q1157: the declared base is a Digimon
+                    // for prohibition checks, even though its printed card is a
+                    // Tamer. Probe only this already-applicable route; never
+                    // install the hypothetical identity in the live game.
+                    if !self.treated_digivolve_identity_permits_route(base_handle, &profile) {
+                        continue;
+                    }
+                    treated_identity = Some(DigivolveTreatedIdentity {
+                        kind: profile.kind,
+                        level: profile.level,
+                        colors: profile
+                            .colors
+                            .iter()
+                            .fold(0u8, |mask, c| mask | (1u8 << (*c as u8))),
+                    });
                     let profile_level = (!ignore_level).then_some(profile.level);
                     let Some(matching_cost) = all_matching_evo_costs(
                         card.digivolution_costs(&self.card_data),
@@ -626,7 +700,9 @@ impl Game {
                         memory_cost
                     }
                 };
-                routes.push(DigivolveRouteMatch::digivolve(memory_cost));
+                let mut route = DigivolveRouteMatch::digivolve(memory_cost);
+                route.treated_as = treated_identity;
+                routes.push(route);
             }
             routes
         }
@@ -635,6 +711,62 @@ impl Game {
             let _ = (card, base_handle);
             Vec::new()
         }
+    }
+
+    /// Re-evaluate declarative prohibitions under one route's temporary
+    /// source identity. This is a read-only legality probe: no payment,
+    /// activation, queue draining, or state-based deletion is performed.
+    #[cfg(feature = "dsl-yaml-loader")]
+    fn treated_digivolve_identity_permits_route(
+        &self,
+        base_handle: PermanentHandle,
+        profile: &TreatedAsProfile,
+    ) -> bool {
+        let Some(base) = self.digivolve_base_permanent(base_handle) else {
+            return false;
+        };
+        let identity = base.synth_identity(&self.card_data, &self.modifiers, base_handle);
+        if identity.kind == profile.kind
+            && identity.level == Some(profile.level)
+            && identity.colors == profile.colors
+        {
+            return !self
+                .modifiers
+                .has(base_handle, ModifierType::CannotDigivolve);
+        }
+        let mut probe = self.clone();
+        probe.modifiers.add(
+            base_handle,
+            crate::modifiers::ModifierEntry::simple(
+                ModifierType::TreatAsDigimon,
+                0,
+                crate::enums::Expiry::Permanent,
+                base_handle.player,
+            )
+            .with_payload(crate::modifiers::ModifierPayload::SynthIdentity {
+                kind: profile.kind,
+                level: profile.level,
+                colors: profile.colors.clone(),
+                traits: identity.traits,
+                dp: identity.dp.unwrap_or(0),
+            }),
+        );
+        if identity.dp.is_none() {
+            probe.modifiers.add(
+                base_handle,
+                crate::modifiers::ModifierEntry::simple(
+                    ModifierType::DontHaveDp,
+                    0,
+                    crate::enums::Expiry::Permanent,
+                    base_handle.player,
+                ),
+            );
+        }
+        probe.modifiers.invalidate_declarative_memo();
+        probe.tick_declarative_effects();
+        !probe
+            .modifiers
+            .has(base_handle, ModifierType::CannotDigivolve)
     }
 
     /// App Fusion route lookup (Appmon "App Fusion" mechanic).
@@ -1213,16 +1345,18 @@ struct TreatedAsProfile {
     level: u8,
     colors: Vec<CardColor>,
     kind: CardKind,
+    from_hand: bool,
 }
 
 fn parse_treated_as_profile(profile: &str) -> Option<TreatedAsProfile> {
+    let (profile, from_hand) = profile.strip_suffix("_from_hand").map_or((profile, false), |p| (p, true));
     let mut parts = profile.split('_');
     if parts.next()? != "level" {
         return None;
     }
     let level = parts.next()?.parse::<u8>().ok()?;
     let rest: Vec<_> = parts.collect();
-    if rest.len() < 2 {
+    if rest.is_empty() {
         return None;
     }
     let kind = match *rest.last()? {
@@ -1239,6 +1373,7 @@ fn parse_treated_as_profile(profile: &str) -> Option<TreatedAsProfile> {
         level,
         colors,
         kind,
+        from_hand,
     })
 }
 

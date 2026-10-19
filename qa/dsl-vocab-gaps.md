@@ -1,8 +1,78 @@
 # DSL Vocabulary Gaps Tracker
 
+## Direction-specific unsuspend eligibility and no-op activation [G-DSL-UNSUSPEND-TARGET-ELIGIBILITY] — focused and paired live checks verified
+
+BT20-027's security-removal effect permits an own Digimon with Dracomon or
+Examon in its text to unsuspend. It does not require the target to be suspended.
+The old condition and selector added that restriction, hiding a legal optional
+choice. Accepting an eligible already-unsuspended target spends the once-per-turn
+activation; declining preserves it for a later security removal in the same turn.
+
+The reusable `can_unsuspend` permanent predicate checks `CannotUnsuspend`
+independently of orientation. `CannotSuspend` does not prohibit this direction.
+BT20-027 now uses it for the condition and selector; its replacement suspension
+cost is unchanged. Binary DSL pack version 0.10.0 accounts for the new compiled
+field. Action IDs and observation contracts are unchanged.
+
+Five source-backed behavioral regressions verify accepted no-op OPT consumption,
+decline preservation, cloned pending choices, both restriction directions, and
+mixed target masks. The corrected tests load real printed CardData because
+DSL-only fixture registration omits the text needed by `in_text_contains`.
+All five fail against the archived old YAML and pass against the repaired YAML;
+see `unsuspend-noop-printed-fixture-red.log` and
+`unsuspend-noop-printed-fixture-green.log` in
+`qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/`.
+Earlier malformed-fixture failures are retained but are not behavioral RED
+proof. Both source-reviewed legal-opening no-op/decline cases are confirmed
+against DCGO on build12; evidence: `oracle/interaction-20261011T101432Z-89903204ce`.
+Q4316, Q4317 and the shared mixed-target scope check also confirm on build12
+(`oracle/interaction-20261011T100843Z-85cc3c0eb3`). These results establish the
+repaired branches, not full card parity.
+
+Authority: official general rules sections 15-10-2 and 15-11-1-3; official
+BT20-027 observation `d65ce267e6147e770d19a689be54b78549981c509f633db5dfd204a4ecc0b7b0`.
+DCGO `BT20_027.cs` uses `CanUnsuspend` without an orientation prerequisite;
+`MultipleSkills.cs`/`ICardEffect.cs` register activation before the unsuspend
+operation filters out already-unsuspended permanents. Source hashes and exact
+excerpts are preserved in the Examon evidence `verification/unsuspend-noop-gap/`
+and the frozen `unsuspend-noop-live` review packet.
+
 Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). This file tracks only open gaps and partial slices with remaining follow-up work.
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
+
+## BT16-025 DNA rider authoring checkpoint — existing vocabulary, no new DSL gap
+
+2026-10-11: `dna_origin` process predicates and `add_player_modifier` already
+support a conditional DNA-only opponent-wide unsuspend restriction inside one
+printed When Digivolving clause. BT16-025 now uses that composition instead of
+splitting the rider into a separate `on_dna_digivolve` trigger and snapshotting
+current opponent permanents. Three standalone behavioral regressions moved
+RED to GREEN; see `G-AUTHOR-DNA-RIDER-CLAUSE-ATOMICITY` in
+[engine-gaps.md](archetype-qa/engine-gaps.md) for source authority, exact test
+scope, and pending broader/live gates. Existing action/tensor contracts and DSL
+vocabulary are unchanged. This does not close other historical BT16-025 gaps
+by inference or establish whole-card parity.
+
+## Effect-play candidate legality and immutable event kind [G-DSL-EFFECT-PLAY-CANDIDATE-LEGALITY] — resolved 2026-10-11
+
+Surfaced 2026-10-11 in BT13-096 Homer Yushima behavioral tests. A source selector
+offered a blue level 3 even when its controller could not play Digimon by effects.
+The engine already exposes `can_play_card_from_effect_without_cost`; the new
+`can_play_from_effect_without_cost` predicate uses that controller-sensitive check,
+including one required field slot, before offering the candidate. Missing subjects
+fail closed for both requested boolean values. RED evidence:
+`archetype-qa/dsl/examon-2026-10-10-evidence/verification/tail-batch5-restored-red-bt13_096.log`.
+
+The same observer needs the captured `event_card_kind` after the played permanent
+leaves; `event_target_kind` deliberately addresses live/snapshot target semantics.
+This preserves Q2342's payable suspension choice after rule deletion. Homer's
+fifteen tests pass, including real blue-token and full-field cases. Aura refresh
+at the existing rule-check boundary passes two new timing regressions and the
+43 active judge-quiz tests. Evidence: `tail-homer-aura-green-bt13_096.log`,
+`tail-aura-boundaries-final.log`, and `tail-aura-judge-regressions.log` under the
+Examon evidence verification directory. Spec/quality approved the capability;
+complete card oracle coverage is still tracked separately.
 
 ## EX10-020 — [Hand][Main] reduced-cost SELF-play + delete-at-EoT rider  [G-DSL-HAND-MAIN-SELF-PLAY-REDUCED]
 
@@ -547,7 +617,7 @@ Format per entry:
 - First reported: 2026-05-04 Rocks pool implementation pass.
 
 ## Zephagamon / Vortexdramon — remaining battle-engine prep gaps
-- Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` now covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that an effect battle deletes the defender through DP battle but is not an attack: it must not trigger Piercing/security and must not leave `pending_attack` populated.
+- Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that a standalone effect battle does not declare an attack or create security checks. Clarified 2026-10-10: during an existing attack, that attacking Digimon can earn pending Piercing from an effect battle (16-6-2/4), covered by `tests/effect_battle_piercing.rs`.
 - Rule boundary: `battle:` is the correct DSL step for effects that say a Digimon battles another Digimon. Do not model these as `attack` or force-follow-up attack effects. Attack-only timings and Piercing security continuation remain tied to declared attacks, not effect battles.
 - EX11-074 remaining gap: the printed "[When Digivolving] [When Attacking] You may suspend 1 Digimon. If this effect suspended your Digimon..." branch needs a binding/condition result from the suspend step. The DSL can select and suspend, but cannot yet branch on "this effect suspended your Digimon" and bind that cost/result into the follow-up +6000 DP and immunity-until-opponent-turn-ends clause.
 - EX11-074 remaining gap: full `[All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend. Then, this Digimon may battle 1 opponent Digimon` still needs faithful optional trigger ordering and the unsuspend-then-optional-battle branch. The readiness fixture keeps the battle path focused instead of auto-implementing the whole printed clause.
@@ -4618,7 +4688,7 @@ Format per entry:
 - First reported: 2026-05-04 Rocks pool implementation pass.
 
 ## Zephagamon / Vortexdramon — remaining battle-engine prep gaps
-- Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` now covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that an effect battle deletes the defender through DP battle but is not an attack: it must not trigger Piercing/security and must not leave `pending_attack` populated.
+- Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that a standalone effect battle does not declare an attack or create security checks. Clarified 2026-10-10: during an existing attack, that attacking Digimon can earn pending Piercing from an effect battle (16-6-2/4), covered by `tests/effect_battle_piercing.rs`.
 - Rule boundary: `battle:` is the correct DSL step for effects that say a Digimon battles another Digimon. Do not model these as `attack` or force-follow-up attack effects. Attack-only timings and Piercing security continuation remain tied to declared attacks, not effect battles.
 - EX11-074 remaining gap: the printed "[When Digivolving] [When Attacking] You may suspend 1 Digimon. If this effect suspended your Digimon..." branch needs a binding/condition result from the suspend step. The DSL can select and suspend, but cannot yet branch on "this effect suspended your Digimon" and bind that cost/result into the follow-up +6000 DP and immunity-until-opponent-turn-ends clause.
 - EX11-074 remaining gap: full `[All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend. Then, this Digimon may battle 1 opponent Digimon` still needs faithful optional trigger ordering and the unsuspend-then-optional-battle branch. The readiness fixture keeps the battle path focused instead of auto-implementing the whole printed clause.
@@ -8833,3 +8903,161 @@ pins that the turn scan does not trash such a marker.
   non-empty printed inherited text on the event target's top card). Spec/compiled/compile in
   `code/digimon-dsl/src/{predicate,compiled,compile}.rs`; evaluated in `eval_event_fields`
   (`code/digimon-engine/src/dsl_cards/predicate.rs`). Tests: `cards_behavioral::bt21::bt21_091`.
+
+
+### Paid Delay with arbitrary field-pair DNA during removal [G-DSL-DELAY-FIELD-PAIR-DNA-REPLACEMENT] — RESOLVED FOR BT20-093 (2026-10-10)
+
+- Follow-up verification: 13 shared Delay tests now include deferred cost observers, shifted surviving observers, removed/replayed carriers, and inherited pending triggers in either DNA material. Queue identity fixes preserve snapshot-backed OnDeletion and zone-scoped effects; combat 257/257 and replacements 125/125 pass. See `examon-2026-10-10-evidence/verification/repair-followup-review.md`.
+- Repair: paid self-trash, result-scoped legal field pairs, printed cost, recipe stack ordering and stable original leave-subject handling now resume through cloneable frames. Shared suite 9/9 (`shared-neighbors-green.log`); BT20-093 restoration 9/9 (`bt20-093-green-2.log`). Included materials cancel the original departure only after a committed merge; excluded subjects retain the original cause/destination. Original diagnosis below is historical; oracle confirmation remains separate.
+
+- Card: BT20-093 Unleash the Dragon Gene, Delay clause. Official observation `074c2baf4836745b2e1d2faa6dc538674d4e5e5ae5c8686eb63f4c82231a3934`, image, and Q4436 govern; source-backed scout and independent reviewer confirmed the blocker.
+- Required capability: pay successful option self-trash, offer only legal field-material pairs for an Examon hand target, preserve printed requirements/cost, and preserve the original leave-subject identity through field compaction and clone/resume. Cancel the original leave only when successful DNA consumed that subject. If the chosen pair excludes it, its original removal must proceed.
+- Existing `DelayHandDnaDigivolveFlow` is threatened subject plus a hand partner, free cost, ignored requirements; it cannot represent this clause. Generic replacement steps do not establish paid Delay success or stable original-subject identity; `select_dna_pair` independently filters materials without result-dependent pair legality.
+- Relevant code: `src/dsl_cards/lower_replacement.rs` specialized Delay recognizer and generic fallback; `step/permanent_mutations.rs` ordinary delete; `step/selections.rs` pair selection. BT17-095 offers reusable paid-Delay/clone test structure; AD1-012 is a field-pair authoring shape, not proof of faithful masks.
+- Required regressions: threatened included in either material position versus excluded; illegal first/second materials; exact result name; printed nonzero cost; field-only identity; decline before/after payment; unavailable same-turn Delay; failed/replaced payment; field-index compaction; clone at every prompt.
+- Status: BT20-093 BLOCKED (engine/DSL). Main/security appear supported but no partial YAML was authored to imply full readiness. No action/tensor expansion proposed. This is a source-backed gap, not an oracle divergence.
+
+
+### Per-source-card protection from effect trashing [G-DSL-SOURCE-CARD-TRASH-PROTECTION] — primitive resolved; card verification pending (2026-10-11)
+
+- Repair: predicate-filtered `source_card_trash_protection` stores protected physical source handles without changing generic `CannotTrash`. Source mutations preserve fixed positional candidates; ordinary whole-stack departure remains valid. Explicit `trash_selected_sources_as_cost` counts successful removals and gates dependent benefits, with `min_count` for printed counted/up-to costs. Selected-source masks and Digi-Burst payment enforce protection. All 19 shared source-protection tests passed in `examon-2026-10-10-evidence/verification/tail-shared-primitives-green.log`; independent spec and quality review approved. Fourteen existing cost consumers were migrated and their available focused card suites passed (`tail-batch2-migrations-receipt.json`). BT9-109 still requires its own implementation, tests and oracle evidence. Original diagnosis follows.
+
+- Card: BT9-109 X Antibody inherited clause. Official observation `e7d98de2…fea0`, reviewed section/trait corrections, actual image and Q1920/Q1922/Q1923 govern. Independent scout and reviewer confirmed a hybrid engine/DSL blocker.
+- Required capability: predicate-filtered protection of individual source cards against both players' effects and effect costs. Fixed top/bottom-N candidate positions must not be substituted when protected: Q1922 bottom-two removes only the next source if the bottom X Antibody is protected. Cost fulfillment uses actual successful removal count (Q1923).
+- Current `effect_context/action/trash.rs` targeted, all-source, bottom-N and top-N paths only gate host-wide `ImmuneFromStackTrashing`. `CannotTrash` has enum/DSL mapping but no corresponding mutation enforcement. Whole-stack immunity would incorrectly protect unrelated cards.
+- Required tests: mixed/protected sources, own/opponent removal and costs, fixed positional selection, multiple protected cards, aura removal, selected-source legality, successful counts, clone/resume, and ordinary whole-stack departure/rules cleanup remaining valid.
+- Status: BT9-109 BLOCKED; no partial YAML authored. Other clauses appear expressible, but do not establish full readiness. Source-backed gap, not an oracle divergence.
+
+### Start of opponent main phase [G-OPPONENT-MAIN-PHASE] — RESOLVED (2026-10-10)
+
+- Repair: `start_of_opponents_main_phase` now reaches opposing face/inherited observers in the same main-entry queue drain, excluding ordinary breeding dispatch. `tests/opponent_main_phase.rs`: 5/5 passed; evidence `examon-2026-10-10-evidence/verification/opponent-main-green-2.log`. EX3-024 restoration and oracle measurement are tracked separately. Original diagnosis follows.
+
+- Cards: EX3-024 face and inherited effects. Official observation `ece42c6d13eec9504c73ba88ccba471f93b28a897583789dcfd02ee7d7baa42c`, image, and DCGO agree on opponent main-phase timing. Worker and independent reviewer confirmed.
+- DSL/compiled/engine expose StartOfYourMainPhase; main-phase fanout in game_phases.rs only visits the active player. A turn-start alias has incorrect timing. Add an opponent-main event with correct controller and inherited dispatch; preserve Q3397–Q3401 attack legality and sequencing. No partial production YAML retained.
+
+### DNA material identity restricted to result instance zone [G-DNA-MATERIAL-RESULT-ZONE-SCOPE] — RESOLVED (2026-10-10)
+
+- Repair: `dna_material_identity.result_scope: own_hand` checks the actual result card identity, zone and controller; omitted scope retains existing behavior. `dsl::dna_material_identity`: 18/18 passed, including movement, copies and clone checks; evidence `examon-2026-10-10-evidence/verification/dna-scope-green-2.log`. EX3-020/041 restoration and oracle measurement remain separate. Original diagnosis follows.
+
+- Cards: EX3-041 and EX3-020 specify an Examon in your hand. Official observations (EX3-041 a596d63c…, EX3-020 78c4631d…), images and DCGO HandCards.Contains agree. This is a residual of the existing DNA material identity capability.
+- DnaMaterialIdentitySpec and dna_material_extras match result name but cannot restrict actual result instance location/controller. A global hand-presence condition leaks to a separate trash copy. Need optional result-instance zone/controller scope, retaining unrestricted defaults for differently worded cards.
+- EX3-041 candidate tests: 5 passed, 1 failed when the actual Examon moved from hand to trash and incorrectly retained the level-6 material identity. Candidate YAML and evidence archived outside the active pack; EX3-020 likewise blocked. Cover hand/trash/opponent hand, simultaneous copies, movement and clone/resume. Independent reviewer confirmed no faithful existing composition.
+
+### Effect-driven digivolution cost choice [G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE] — RESOLVED (2026-10-10)
+
+- Repair: distinct payable routes use a cloneable effect-cost continuation with stable result/host identity, original reduction/source context and deferred result/tail execution. Affordability previews the existing synchronous reducer/observer flow on a clone, without charging the live game early. Free/fixed/duplicate costs do not create a false choice. Shared suite 10/10 (`shared-neighbors-green.log`); BT20-023/040 reduced-evolution clauses confirmed by live DCGO in `oracle/repair-20261010T234036Z-2674e4168a`. DCGO's printed-cost input and the engine's payable-cost input are explicitly translated in the scenarios. Original diagnosis follows.
+
+- Drivers: BT20-023 and BT20-040. Their real Wingdramon/Groundramon BT20-025/042 targets have both named Coredramon cost 3 and standard level/color cost 4 routes; reducing by 2 leaves legal costs 1 and 2. The engine must expose both.
+- `game_actions/digivolve.rs::effect_initiated_digivolve_from_source_inner` collects legal routes then `.min()`; its comment acknowledges automatic minimum as a follow-up. Main-action route-choice callbacks resume `digivolve_from_hand_inner` and cannot preserve the effect source/CostDelta contract by DSL composition. Prior independent trace: `qa/dcgo-exams/BT25/NOTES-BT25-026.md`.
+- Live BT20-023 attempt stops at DCGO's additional choice before evolution; unmeasured, not confirmed. Root behavioral probe observed 0/1 failure: after a legal hand selection, the engine commits instead of exposing both reduced costs. Independent reviewer confirmed the blocker. Prior single-route 5/5 tests for each card were insufficient; both candidates/tests archived outside the active card pack.
+- Required: continuation-safe effect route choice with stable result/host identity, preserved cost reductions/prohibitions, legal mask and clone/resume; free/fixed effects need separate assessment rather than blanket blocking. No action-space expansion is required by the known main-action choice shape.
+
+- Pool scope review also blocks existing EX13-018/039 (Reduce2, costs1/2) and LM-027 Red Scramble/LM-028 Blue Scramble (Reduce3, costs0/1). Relevant Coredramon and evolution targets satisfy their color/text filters. Existing YAML is retained as prior work, but prior authoring readiness is superseded. BT21-046 free evolution does not lose a distinct payable-cost choice.
+
+### Battle deleter snapshot including mutual deletion [G-BATTLE-DELETER-SNAPSHOT-INCLUDING-MUTUAL-DELETION] — RESOLVED (2026-10-10)
+
+- Repair: immutable combatant snapshots record committed battle deletions, with both deleters retained for mutual deletion; observing-host eligibility remains live. Deferred completion survives replacement choices and clone/resume. A transient winner identity survives ordinary evolution/de-digivolution while rejecting departed, replayed and DNA-created Digimon. Focused battle suite 19/19 (`battle-identity-green.log`), BT20-044 restoration 10/10 (`batch1-first-three.log`). Original diagnosis follows; oracle measurement remains separate.
+
+- Card: BT20-044 face and inherited. Official Q4364/Q4367 exclude death of the observer/host; a different qualifying ally may mutually delete its opponent while Breakdramon survives. DCGO explicitly uses isOnlyWinnerSurvive:false and retains both tied combatants in WinnerPermanents.
+- Current event_battle_deleter predicate and combat dispatch require a surviving combatant, losing this valid event. Need immutable battle-deleter snapshot including mutual deletion, while still requiring the observing host to remain eligible and excluding security battle.
+- Worker and independent reviewer confirmed sources. Focused candidate: 7 passed, 1 failed (13.14s), regression bt20_044_other_ally_mutual_battle_still_triggers. Unsupported YAML/tests archived outside active pack. Prior broad scout statement excluding all mutual deletion was incorrect and superseded.
+
+
+### G-EVENT-PERMANENT-IDENTITY (Examon campaign, 2026-10-10)
+
+Repair checkpoint (2026-10-11): durable battle incarnation identity now follows ordinary evolution and index shifts but rejects departure/replay and DNA-created objects. Captured event card level remains immutable and observer fallback does not fabricate an event subject. Ten identity regressions passed in `examon-2026-10-10-evidence/verification/tail-shared-primitives-green.log`, with independent spec/quality approval. BT13-096 and EX3-065 restoration and Hina refire attribution remain separate pending card work. Original diagnosis follows.
+
+**Engine gap; blocks BT13-096 and EX3-065.** Parked event-target resolution can select a replacement occupying the departed subject's position. BT13-096 and Hina refire regressions observed the wrong target. An experimental strict physical-top resolver prevents stale-slot reuse and follows index shifts, but loses the same Digimon after ordinary evolution. Whole-stack provenance can instead follow materials into a different DNA Digimon. Official general_rule.pdf p16, 8-1-2-3 and 8-1-2-8 preserve ordinary evolution identity; 8-2-2-1 distinguishes DNA. Need durable event-permanent identity with these lifecycle rules, not a name or position workaround. Experimental patch and candidates withdrawn. BT13 final experiment 8/10 included one valid normal-evolution failure and one unresolved immediate-deletion fixture; the latter is not a proven engine defect. Hina's grantor-versus-refired-effect source attribution is an additional static concern (refire.rs vs EX3_065.cs), requiring a completed behavioral regression before an experimental claim.
+
+### G-DSL-EXACT-EVENT-CARD-NAME (Examon campaign, 2026-10-10)
+
+Repair checkpoint (2026-10-11): `event_card_name_is` compares the immutable event card's exact rules names, retaining departed/evolved event context without accepting substrings. Three focused tests passed in `examon-2026-10-10-evidence/verification/tail-shared-primitives-green.log`; independent spec/quality approval complete. P-092 restoration and oracle measurement remain pending. Original diagnosis follows.
+
+**DSL gap; blocks P-092.** Needs an exact name comparison against the immutable event card even after it leaves or evolves before trigger resolution. A flattened any_permanent/name_is/event_target_is_source predicate loses the already-triggered Groundramon event after departure; event_card_name_contains admits substring names. binding_card_name_is reads named process bindings, not the special EventCard reference, and no general bind-event-card step exists. Candidate regression observed 2 pass / 1 fail at a parked TriggerOrder; fixed-cost evolution itself works. Official observation 6656f69699ddb9932dc35d343ed5ac034b1859e01a314483d9b37e4ed5242428 and Q4182 verified. Candidate withdrawn; no finite printing-list approximation.
+
+
+### G-EFFECT-PLAY-CONTROLLER-PROVENANCE / G-EFFECT-PLAY-BREEDING-FLOODGATE (Examon campaign, 2026-10-10)
+
+Repair checkpoint (2026-10-11): effect-play provenance now distinguishes the causing controller from the destination player across supported hand/trash/security/source/token/breeding play paths. Breeding play respects the same prohibition. Four focused controller regressions and 41 flood-gate tests passed in `examon-2026-10-10-evidence/verification/tail-shared-primitives-green.log`; independent spec/quality approval complete. BT8-097 full archived audit and oracle interactions remain pending. Original diagnosis follows.
+
+**Engine gaps; BT8-097 remains BLOCKED.** Official Q4663/Q4664 restrict the effect controller, not the owner/destination of the played card. Actual Crimson Blaze followed by the controller's EX5-060 effect must allow playing the opponent's trash Digimon, but current can_effect_play_card checks destination player_id and forbids it (0 played, expected 1; 27/28 audit result). Q6238 also requires the play prohibition to cover breeding: play_to_breeding_from_hand currently succeeds under the installed floodgate (isolated regression 0/1). Need consistent effect-actor provenance and breeding-zone enforcement across play APIs and their masks. Full failing audit preserved in qa/archetype-qa/dsl/examon-2026-10-10-evidence/blocked/BT8-097-audit-full.rs; no readiness promotion.
+
+Separately repaired the existing BT8-097 YAML's sequential for_each deletion with the native batch-delete primitive on both Main and Security. The old sequence abandoned remaining eligible targets when the first replacement parked; corrected original-YAML regression failed 0/1 (field 2, expected 1), native batch handles all targets and their legal protection choices. This local repair does not close either play-prohibition gap above.
+
+
+### G-ENGINE-DURATION-SCOPED-DYNAMIC-TRIGGER-GRANT (Examon, 2026-10-10)
+
+Repair checkpoint (2026-10-11): opt-in `grant_triggered_effect.dynamic: true` installs a duration-scoped predicate grant, while the default remains a snapshot. Trigger-time matching includes later entrants, preserves the grantor's source kind, rechecks immunity, distinguishes simultaneous carriers, and participates in cloning and verification digests. Eleven focused tests passed in `examon-2026-10-10-evidence/verification/tail-shared-primitives-green.log`; independent spec/quality approval complete. EX1-068 YAML promotion, full card regression and oracle interactions remain pending. Original diagnosis follows.
+
+**EX1-068 BLOCKED.** Official Q3256 requires the granted attack trigger on later-played and breeding-moved opponent Digimon. Existing grant_triggered_effect resolves a one-time list of PermanentHandles; continuous keyword/modifier grants cannot carry triggered bodies. Need a duration-scoped player predicate that dynamically grants a triggered body, retains grantor attribution, and respects changing immunity. Base DCGO AddSkillClass is persistent; its foreach only animates current recipients. Observed production-YAML audit: 9 pass / 1 fail, later entrant memory 0 expected 2. Full regression archived with campaign blocked evidence. Current-recipient dispatch, direct standard expiry, clone, and security checks pass, but do not establish complete combat/turn integration or opponent-turn expiry. Existing YAML retained BLOCKED; stale snapshot-parity comments corrected.
+
+
+### G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE — LM-055 extension (2026-10-10)
+
+Repair follow-up: the shared cost-choice primitive above is now resolved by the core repair, including reduced-cost choices. The following support-card findings describe the original audit; LM-055/057/058 remain pending their own re-audit, outside this core repair, and are not automatically promoted by the shared fix.
+
+LM-055 is also BLOCKED: real legal Delay activation, field and hand selections automatically paid 1 memory (5 to 4) for native routes costing 3 or 4 reduced by 2, instead of exposing the legal 1/2 cost choice. Full regression and RED output are archived with campaign evidence. Local repairs retained: supported use_requirement with an exact-name own-battle predicate replaces the inert hand flood_gate color bypass, and both Main/Security reveal picks are mandatory when eligible. These repairs do not close the reduced evolution cost choice gap or promote readiness.
+
+
+LM-057 Wall Training and LM-058 Parkour Training also use the same reduced evolution primitive. Final review inspected their actual card images: red/blue and blue/green in-hand Digimon respectively, cost -2. Both accept BT20-025 from Coredramon through native 4/3 routes, hence legal 2/1 payments. Reclassified prior SKIP rows to BLOCKED by the proven shared primitive; no separate runtime pass/failure is claimed. Remaining SKIP YAMLs contain no use of this operation. No matching official observation was found in the base checkout's partial snapshot; actual images were the printed-text source.
+
+
+### Security battle completion event [G-ENGINE-SECURITY-BATTLE-WIN-EVENT] — RESOLVED (2026-10-11)
+
+- Live EX13-045 evidence exposed missing `EndOfBattle` dispatch after fighting a Security Digimon. Official rules 13-1-7-3 and 14-2 distinguish a strict DP win from deletion: a Security Digimon is not battle-deleted.
+- Security resolution now captures the comparison once, finishes deletion/replacement choices, then drains ordinary and scheduled battle effects before check disposal or the next check. Ties, losses protected by Jamming/Barrier, and nonbattle checks do not produce a permanent winner; no security deleter is fabricated.
+- Nine tests in `tests/security_battle_winner.rs` cover the real EX13-045 reward, replacement choices, optional multi-check effects, scheduling and clone/resume. Evidence and independent review: `examon-2026-10-10-evidence/verification/repair-followup-review.md`.
+
+### Pending effect identity through removal and DNA [G-ENGINE-PENDING-CARRIER-DNA-IDENTITY] — RESOLVED (2026-10-11)
+
+- A paid Delay/DNA regression exposed queued observers lost after field compaction, and stale effects reviving on a removed/replayed carrier or an inherited source retained in a new DNA Digimon.
+- Queue compaction now shifts surviving carriers; removal and all DNA entry paths invalidate pending effects belonging to departing/consumed carriers. Snapshot-backed OnDeletion and zone-scoped effects retain their existing liveness rules. No new action IDs or hidden choices were added.
+- The 13-test Delay suite includes direct/nested payment and clones; combat 257/257 and replacements 125/125 pass. See `repair-followup-review.md` for RED/GREEN logs and review.
+
+### G-DATA-OFFICIAL-OBSERVATION-KIND — LM-036 (2026-10-10)
+
+Data-pipeline caveat: official base-printing observation `072c5e2161bb61838b0de691a588f3895629da95d55098ac41f6953a86a9310c` has `extracted.card_type: Digimon` and `extracted.faces[0].kind: digimon`, while its actual image and own Q4069 identify an Option. Official alternate-printing observations `98dab710f5d38a930050cd6141e8bcc34f78649d6512848f490eefce547733ec` (P1) and `dd6c0f90e91fbf886f0d7b69fc73b8e5d9f1f05904e95b1941e750aaf78fc1af` (P2) independently record Option/option; all share acquisition date 2026-07-13, so neither is described as a later correction. Existing production YAML is correctly `kind: option`. No LM-036 entry exists in the checked base `card_corrections.json`, and no generated compatibility file or base-repository correction was edited. Reconcile the inconsistent base-printing observation through the authoritative data pipeline; this is a recorded data discrepancy, not a missing Option behavior primitive.
+
+### Replacement subject incarnation [G-ENGINE-REPLACEMENT-SUBJECT-INCARNATION] — RESOLVED (2026-10-11)
+
+Pending removal follows the same permanent through compaction, ordinary evolution, and de-digivolution; DNA and leaving/replaying create a different subject even when it contains the same physical card. Official rule 8-2-2-1 governs the DNA boundary. Five clone regressions, the explicit BT20-016 material test, and 396 neighboring tests pass. This addresses replacement subjects only; the separate support-card event-target/refire gap still requires its own audit.
+
+### DNA result trigger origin [G-ENGINE-DNA-QUEUED-EVENT-ORIGIN] — RESOLVED (2026-10-11)
+
+A legal Gaia Force action followed by BT20-093 Delay exposed DNA triggers queued under the surrounding ordinary-effect context. All DNA entry paths now capture DNA origin around enqueue and drain, then restore the outer context. Fifteen focused and 442 neighboring tests pass, including exact physical destination, clone, and subsequent ordinary-evolution negative branches.
+
+### Blast DNA evolution bonus [G-ENGINE-BLAST-DNA-BONUS-DRAW] — RESOLVED (2026-10-11)
+
+The Blast DNA path omitted the draw required by official rule 8-2-3-3. It now draws exactly once after stacking and before evolution effects. Two regressions cover draw-before-effect, cloned material/effect prompts without repeated draws, and declined counters. Review and RED/GREEN evidence for these three follow-ups are in `examon-2026-10-10-evidence/verification/repair-followup-review.md`.
+
+### Hand-to-breeding effect play [G-DSL-HAND-TO-BREEDING-EFFECT-PLAY] — focused repair (2026-10-11)
+
+DSL `play_to_breeding_from_hand: { of: you, hand_index: chosen }` and predicate `can_play_to_breeding_from_hand: true` share actual physical hand-owner, Digimon/Dual, empty-breeding and effect-controller prohibition validation. Battle-area capacity does not block this destination. Hand choices retain physical identity through index shifts and clone/resume; removed copies are never replaced by same-ID cards. Breeding entry does not activate On Play. Nine primitive tests and 17 BT20-053 tests pass. Supporting Grademon/Q6238 require separate live oracle evidence and do not expand the 52-card campaign denominator. Pack format 0.9.0 requires rebuilt packs and generated DSL docs; action/tensor contracts are unchanged.
+
+### Effect evolution player reducers [G-COST-REDUCE-ALLY-DIGIVOLVE] — Q1140 extension (2026-10-11)
+
+Supported effect evolution now uses the player/field reducer chain with explicit route and optional payment choices, physical source/host identities, cloned continuations and nested result bindings. Affordability explores real payment choices on clones, preserving competition for resources. Probe-only selection resolution and an entire-search deferred-drain scope prevent waiting siblings or enclosing attack/security/Option/turn processing from funding payment, including synchronous suspend-self costs. Ten cost/continuation tests plus two independent boundary regressions pass after observed RED. Generic payment-created immediate replacement completion and arbitrary nested replacement/payment combinations remain unproven, with no observed failure asserted. This is not live Q1140 confirmation or full effect-evolution parity.
+
+### Printed evolution-cost cache identity [G-CARD-STORE-EVOLUTION-COST-CONTENT] — resolved slice (2026-10-11)
+
+The shared card-store fingerprint now hashes every ordered evolution route's color, level and memory cost alongside route count. Equal-length same-ID updates therefore expose new data while existing games retain their original immutable store. Three direct regressions failed before repair and pass afterward. Other length-only text/alias fields and omitted Dual metadata remain outside this closure; no broad cache-correctness claim is made.
+
+Evidence for these scoped repairs: `qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/breeding-q1140-cache-independent-review.md` and adjacent JSON source/log hashes. These tracker entries do not change oracle ledger verdicts.
+
+### Actual deletion-result continuations [G-DSL-ACTUAL-DELETION-RESULT-RECEIPTS] — focused repair (2026-10-11)
+
+The EX3-012 prerequisite exposed attempted targets being counted as successful deletions. DeletePermanent, DeletePermanents and DeleteAllPermanents now use physical identity capture and operation-scoped actual removal receipts across optional replacements, clones, unrelated nested effects and repeatedly parked batch members. Finalization waits for the corresponding remainder; direct single-step execution shares the same path. All permanent result rows remain available, with explicit kind classification for Digimon-only predicates.
+
+TDD evidence: initial 2 behavioral failures/1 control, expanded 6 failures/3 controls, then all9 focused tests pass. Source batch3, identity2 and origin1 controls also pass. See `qa/archetype-qa/dsl/examon-2026-10-10-evidence/verification/actual-deletion-receipts-implementation/`. The allocator-only digest regression passed after removing the non-semantic allocator counter; all 366 engine library tests passed in verification/digest-bt7-green-ex3-red.log. Pack format0.14 requires regenerated packs/docs; no action/tensor expansion. Legacy bound-list/cost-deletion paths remain outside this tested migration. Full EX3-012 and live Q3431 remain pending and no oracle verdict changes follow from focused engine tests.
+
+
+### Authored printed deck-copy rules — focused implementation (2026-10-11)
+
+Optional `deck_rule` carries `max_copies` and an official observation ID through CardSpec, compilation and pack format 0.15. Build validation binds the exact card, official record and printed allowance. Shared Rust deck validation and PyO3 CardData consumers use the same rule; explicit restrictions/singleton remain stricter. Schema/pack 3 and real Searcher deck-validation 3 tests pass. The getter requires a rebuilt wheel and binding verification. External raw `cards.json` consumers still carry the legacy omission until the authoritative producer is reconciled; no generated compatibility data was hand-edited. Evidence: `verification/support-and-contract-20261011/receipt.json` and scratch `deck-copy-rule-proposal/runtime-ownership.md`.
+
+
+### G-DSL-GROUPED-RETURN / G-DSL-PARKED-FOREACH (Examon implementation checkpoint)
+
+Explicit `return_all_to_hand` / `return_all_to_deck` separate printed simultaneous departures from imperative `for_each`. They capture actual physical members, process immediate replacements as one event, commit the group before leave-observer condition evaluation, expose public top/bottom ordering, and publish only actual return results. Compiler/validator/pack vocabulary is format 0.20.0. BT20-045 and BT24-091 are the two initial producers; no blanket sequential-loop migration occurred.
+
+`ForEachRemaining` preserves the rest of a parked sequential loop, lexical bindings, source controller and outer-tail order. This does NOT close the distinct parked `PerSelected` abort in PermanentList/CardList/SourceRefs. That gap and the separate field-capacity contract remain OPEN. See `docs/RUST_ENGINE_GAPS.md` and focused `bt25_simultaneous_nondeletion` tests. Independent review/live outcomes remain separate from implementation readiness.

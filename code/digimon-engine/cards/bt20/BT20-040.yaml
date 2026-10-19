@@ -1,0 +1,59 @@
+# Official observation a272d02119e737cf37067dc4815cb7e972c8f58734f5b4e1de34c9d5af5f84d4
+# and BT20-040 card image verified; base DCGO BT20/Green/BT20_040.cs cross-check.
+card: BT20-040
+name: Coredramon
+kind: digimon
+level: 4
+color: [green, red]
+cost: 5
+dp: 5000
+traits: [Dragon]
+form: Champion
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, name_contains: Dracomon }
+    cost: 2
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+  - when: on_ally_played
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [blue]
+        - any_of:
+            - event_target_in_text_contains: Dracomon
+            - event_target_in_text_contains: Examon
+    summary: "[Your Turn] When your blue [Dracomon]/[Examon]-text Digimon is played, this Digimon may digivolve into [Groundramon] in hand for 2 less"
+    process:
+      - select_hand:
+          of: you
+          bind_as: groundramon
+          optional: true
+          filter:
+            kind: digimon
+            name_is: Groundramon
+            can_digivolve_from_source: true
+          prompt: "Digivolve into Groundramon in your hand with the cost reduced by 2?"
+      - if:
+          condition: { binding_present: groundramon }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: groundramon
+                cost: { reduce: 2 }
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

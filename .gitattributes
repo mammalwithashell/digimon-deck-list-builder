@@ -27,6 +27,15 @@ qa/qa-reports/exam-log.jsonl merge=union
 qa/card-loop/attempts.jsonl merge=union text eol=lf
 qa/card-loop/corrections.jsonl merge=union text eol=lf
 qa/card-loop/audits.jsonl merge=union text eol=lf
+
+# Reviewed source-composition dependency hashes bind exact LF bytes. Windows
+# checkouts must preserve those bytes without replacing historical review pins.
+code/tools/card_data/adjudications.py text eol=lf
+code/tools/card_data/compatibility_corrections.py text eol=lf
+code/tools/card_data/errors.py text eol=lf
+code/tools/card_data/serialization.py text eol=lf
+code/tools/card_data/source_manifest.py text eol=lf
+code/tools/clause_coverage/dual_source_units.py text eol=lf
 # Exact checker bytes for the reviewed Dual association proof.
 code/tools/clause_coverage/dual_kind_association.py -text
 code/tests/tools/test_dual_kind_association.py -text

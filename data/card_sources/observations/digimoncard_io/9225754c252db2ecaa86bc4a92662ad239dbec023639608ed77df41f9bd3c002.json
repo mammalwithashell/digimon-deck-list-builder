@@ -1,0 +1,103 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Black"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Darkdramon",
+      "dp": 12000,
+      "effect_description_eng": "When you would digivolve into this card, by returning up to 5 cards with the [D-Brigade] trait from your trash to the top of your deck, reduce the digivolution cost by 1 for each returned card.\r\n[Your Turn] [Once Per Turn] When you play another Digimon with the [D-Brigade] trait, delete 1 of your opponent's Digimon with a play cost less than or equal to the Digimon you played, and unsuspend this Digimon.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "",
+      "level": 6,
+      "play_cost": 13,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Cyborg",
+        "D-Brigade"
+      ]
+    },
+    "card_id": "EX3-054",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Black",
+          "cost": 5,
+          "level": 5,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Black"
+        ],
+        "dp": 12000,
+        "effect_text": "When you would digivolve into this card, by returning up to 5 cards with the [D-Brigade] trait from your trash to the top of your deck, reduce the digivolution cost by 1 for each returned card.\r\n[Your Turn] [Once Per Turn] When you play another Digimon with the [D-Brigade] trait, delete 1 of your opponent's Digimon with a play cost less than or equal to the Digimon you played, and unsuspend this Digimon.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 6,
+        "play_cost": 13,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Black",
+      "color2": null,
+      "date_added": "2025-11-25 15:15:06",
+      "digi_type": "Cyborg",
+      "digi_type2": "D-Brigade",
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 12000,
+      "evolution_color": null,
+      "evolution_cost": 5,
+      "evolution_level": null,
+      "form": null,
+      "id": "EX3-054",
+      "level": 6,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "When you would digivolve into this card, by returning up to 5 cards with the [D-Brigade] trait from your trash to the top of your deck, reduce the digivolution cost by 1 for each returned card.\r\n[Your Turn] [Once Per Turn] When you play another Digimon with the [D-Brigade] trait, delete 1 of your opponent's Digimon with a play cost less than or equal to the Digimon you played, and unsuspend this Digimon.",
+      "name": "Darkdramon",
+      "play_cost": 13,
+      "pretty_url": "darkdramon-ex3-054",
+      "rarity": "sr",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "EX-03: Theme Booster Draconic Roar"
+      ],
+      "source_effect": "",
+      "stage": null,
+      "tcgplayer_id": 452953,
+      "tcgplayer_name": "Darkdramon",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "9225754c252db2ecaa86bc4a92662ad239dbec023639608ed77df41f9bd3c002",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "EX3-054#2",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

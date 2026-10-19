@@ -24,17 +24,25 @@ impl Game {
     /// all OnPlay/WhenDigivolving/etc. effects have resolved). Callers should
     /// invoke `check_turn_end()` at the natural resolution boundary.
     pub fn pay_memory(&mut self, cost: u16) -> bool {
-        if cost == 0 {
-            return true;
-        }
-        let new_memory = self.memory - cost as i16;
-        if new_memory < self.rules.memory_range.0 {
-            return false;
-        }
+        self.pay_memory_for(self.turn_player(), cost)
+    }
+
+    /// Check a payment against the paying player's side of the memory gauge.
+    pub fn can_pay_memory_for(&self, player: PlayerId, cost: u16) -> bool {
+        let signed_cost = if player == self.turn_player() { -(cost as i32) } else { cost as i32 };
+        let after = self.memory as i32 + signed_cost;
+        after >= self.rules.memory_range.0 as i32 && after <= self.rules.memory_range.1 as i32
+    }
+
+    /// Pay without ending the turn, including effect plays by the inactive player.
+    pub fn pay_memory_for(&mut self, player: PlayerId, cost: u16) -> bool {
+        if !self.can_pay_memory_for(player, cost) { return false; }
+        if cost == 0 { return true; }
+        let signed_cost = if player == self.turn_player() { -(cost as i32) } else { cost as i32 };
+        let new_memory = (self.memory as i32 + signed_cost) as i16;
         let delta = new_memory - self.memory;
         self.memory = new_memory;
         let seq = self.next_event_seq();
-        let player = self.turn_player();
         self.events.push(crate::events::GameEvent::MemoryChange {
             seq,
             player,

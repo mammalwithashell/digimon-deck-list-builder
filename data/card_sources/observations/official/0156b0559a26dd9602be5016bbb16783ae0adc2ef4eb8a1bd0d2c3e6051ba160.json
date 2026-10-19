@@ -1,0 +1,45 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "BT10-009",
+    "colors": "Red Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "8000",
+    "form": "Champion",
+    "play_cost": "9",
+    "qa": [
+      "Yes, you can."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Material Save 2＞ (When this Digimon would be deleted, you may place 2 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.) [On Play] ＜Draw 2＞. (Draw 2 cards from your deck.) [End of Attack] By placing all digivolution cards from under this Digimon under 1 of your Tamers, unsuspend 1 of your Tamers, and delete this Digimon."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "DigiXros -2: [Shoutmon] × [Ballistamon] × [Dorulumon] × [Starmons] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+      }
+    ],
+    "type": "Composite/Xros Heart"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "0156b0559a26dd9602be5016bbb16783ae0adc2ef4eb8a1bd0d2c3e6051ba160",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "f7799562c02f53c25cb99b796c74f83723d7541357ebcf4e4a8bd8462766a5d0",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT10-009",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT10-009"
+}

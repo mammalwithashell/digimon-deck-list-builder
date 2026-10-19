@@ -1,0 +1,38 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "ST19-05",
+    "colors": "Black Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "dp": "2000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Blocker＞ (This Digimon can block in the blocker timing.) [On Deletion] By trashing 1 card with the [Puppet] trait in your hand, ＜Draw 2＞. (Draw 2 cards from your deck.)"
+      }
+    ],
+    "type": "Puppet"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "82b0d97b656fe94ea3347e0758d072c08e2c61cde064a3f997a40885e930e766",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "507bb006c5956b3958d7524d98adb54bac82d1846df02563004be1db12aaac5a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:ST19-05",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/ST19-05"
+}

@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "BT25-009",
+    "colors": "Red",
+    "digivolve_costs": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "dp": "1000",
+    "form": "Rookie",
+    "play_cost": "3",
+    "qa": [
+      "It refers to when the memory gauge is at 4 or further to the right on your side."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.2 w/[TS] trait: Cost 0",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a Digimon card with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits or the [TS] trait in the hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] This Digimon gets +1000 DP."
+      }
+    ],
+    "type": "Beast/Iliad/TS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "cf9500f1096a62f11dbe38397d037c2e98bbcff73acb0bc240da9c1ecb7f11e5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "1f13d85e991f48c7e209fb661f19176ca1b5a4511f68699d2f9b83dff278775b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT25-009",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT25-009"
+}

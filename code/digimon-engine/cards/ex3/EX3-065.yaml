@@ -1,0 +1,37 @@
+# Image and official P2 observation dfdd563f61f01c3da9889155a550cdc4e44ac37ed3c414b999c2e7ab7a9a7df1.
+# The P2 observation and image say suspend this Tamer (primary/P1 has a typo).
+card: EX3-065
+name: Hina Kurihara
+kind: tamer
+color: [white]
+cost: 3
+effects:
+  - when: start_of_your_turn
+    condition:
+      any_permanent: { of: opponent, kind: digimon }
+    process:
+      - gain_memory: 1
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_card_kind: digimon
+        - any_of:
+            - event_card_trait_has: Rock Dragon
+            - event_card_trait_has: Earth Dragon
+            - event_card_trait_has: Machine Dragon
+            - event_card_trait_has: Sky Dragon
+        - source_is_unsuspended: true
+        - any_permanent: { of: you, is_source: true, can_change_orientation: true }
+    process:
+      - suspend: { target: source }
+      - if:
+          condition:
+            any_permanent: { of: you, is_source: true, is_suspended: true }
+          then:
+            - refire_effect: { source: event_target, timing: on_play, target_attribution: true }
+  - when: on_security
+    process:
+      - play_from_security: {}

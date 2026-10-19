@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Data",
+    "card_id": "EX11-021",
+    "colors": "Yellow Purple",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "dp": "6000",
+    "form": "Champion",
+    "play_cost": "5",
+    "qa": [
+      "No, you can't end that attack. If the \"by\" condition isn't met, the rest of the effect isn't processed. In this case, if you can't delete 1 of your other Digimon, then you can't end the attack."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.3 w/[Puppet] trait: Cost 2",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Puppet] trait: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Mirai Kinosaki] from your hand without paying the cost."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack."
+      }
+    ],
+    "type": "Puppet/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "98d059b1820855ad33756107a473aedd20ed37ef0978f9ea45a6f7e85f8fbdb3",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "0081f1cb5b20ae8e9f175bfa63651e32b4ac843cfa51ba31f456438e8a7771b7",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX11-021",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX11-021"
+}

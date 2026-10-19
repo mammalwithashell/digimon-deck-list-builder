@@ -52,6 +52,7 @@ pub mod lower;
 pub mod oracle;
 pub mod oracle_diff;
 pub mod projection;
+pub mod permanent_target;
 pub mod run;
 pub mod scenario;
 pub mod semantic_fingerprint;

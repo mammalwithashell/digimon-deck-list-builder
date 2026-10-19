@@ -65,6 +65,8 @@ fn runner() -> DebugRunner {
 fn same_level_pair_steps() -> Vec<CompiledStep> {
     vec![
         CompiledStep::SelectMaterials {
+            named_groups: Vec::new(),
+            require_max: false,
             of_permanent: CompiledBindingRef::Named("carrier".to_string()),
             max: CompiledCountBound::Literal(2),
             filter: CompiledPredicate::default(),

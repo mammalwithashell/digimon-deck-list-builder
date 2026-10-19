@@ -23,6 +23,8 @@ pub type UntilConditionFn =
 /// Typed payload carried by parametric modifier variants.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModifierPayload {
+    /// Only these stable source identities are protected; never the whole host.
+    ProtectedSourceCards(Vec<crate::card_source::CardHandle>),
     None,
     Traits {
         add: Vec<String>,
@@ -70,6 +72,13 @@ pub enum ModifierPayload {
         traits: Vec<String>,
         dp: i32,
     },
+    AdditiveSynthIdentity {
+        kind: CardKind,
+        level: u8,
+        colors: Vec<CardColor>,
+        traits: Vec<String>,
+        dp: i32,
+    },
     LevelOverride {
         value: i32,
         delta: bool,
@@ -82,6 +91,7 @@ pub enum ModifierPayload {
         result_name: String,
         level: Option<u8>,
         name: Option<String>,
+        result_scope: Option<digimon_dsl::compiled::CompiledDnaMaterialResultScope>,
     },
 }
 
@@ -384,6 +394,8 @@ pub struct PlayerModifierEntry {
     pub replacement_condition: Option<crate::replacement::ReplacementConditionFn>,
     pub until_condition: Option<UntilConditionFn>,
     pub effect_immunity_filter: Option<EffectImmunityFilter>,
+    /// Relevant turn ends to skip for next-turn expiry.
+    pub pending_skips: u8,
     #[doc(hidden)]
     pub install_order: u64,
 }
@@ -401,12 +413,19 @@ impl std::fmt::Debug for PlayerModifierEntry {
             .field("cause_filter", &self.cause_filter)
             .field("has_until_condition", &self.until_condition.is_some())
             .field("effect_immunity_filter", &self.effect_immunity_filter)
+            .field("pending_skips", &self.pending_skips)
             .field("install_order", &self.install_order)
             .finish_non_exhaustive()
     }
 }
 
 impl PlayerModifierEntry {
+    /// Set install-time skips for the existing next-turn expiry variants.
+    pub fn with_pending_skips(mut self, skips: u8) -> Self {
+        self.pending_skips = skips;
+        self
+    }
+
     /// Back-compat constructor: no cause filter, no replacement condition.
     pub fn simple(
         modifier: ModifierType,
@@ -427,6 +446,7 @@ impl PlayerModifierEntry {
             replacement_condition: None,
             until_condition: None,
             effect_immunity_filter: None,
+            pending_skips: 0,
             install_order: 0,
         }
     }
@@ -450,6 +470,7 @@ impl PlayerModifierEntry {
             replacement_condition: None,
             until_condition: None,
             effect_immunity_filter: None,
+            pending_skips: 0,
             install_order: 0,
         }
     }
@@ -475,6 +496,7 @@ impl PlayerModifierEntry {
             replacement_condition: None,
             until_condition: None,
             effect_immunity_filter: None,
+            pending_skips: 0,
             install_order: 0,
         }
     }
@@ -530,6 +552,7 @@ fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -
     matches!(
         (modifier, payload),
         (_, ModifierPayload::None)
+            | (ModifierType::CannotTrash, ModifierPayload::ProtectedSourceCards(_))
             | (ModifierType::ChangeTraits, ModifierPayload::Traits { .. })
             | (
                 ModifierType::ChangeBaseCardName,
@@ -577,7 +600,7 @@ fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -
             )
             | (
                 ModifierType::TreatAsDigimon,
-                ModifierPayload::SynthIdentity { .. }
+                ModifierPayload::SynthIdentity { .. } | ModifierPayload::AdditiveSynthIdentity { .. }
             )
             | (
                 ModifierType::ChangePermanentLevel,
@@ -747,6 +770,25 @@ impl std::fmt::Debug for GrantedTriggeredEffect {
     }
 }
 
+/// Source-independent, turn-bound grant, evaluated against each current carrier.
+/// Predicate/body closures capture immutable DSL data and clone through Arc.
+#[derive(Clone)]
+pub struct DynamicTriggeredGrant {
+    pub grant: GrantedTriggeredEffect,
+    pub source_kind: crate::enums::EffectSourceKind,
+    pub pending_skips: u8,
+    pub predicate: std::sync::Arc<dyn Fn(&crate::effect_context::EffectReadContext<'_>, PermanentHandle) -> bool + Send + Sync>,
+}
+
+impl std::fmt::Debug for DynamicTriggeredGrant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DynamicTriggeredGrant")
+            .field("grant", &self.grant)
+            .field("pending_skips", &self.pending_skips)
+            .finish_non_exhaustive()
+    }
+}
+
 /// Tracks all active modifiers in the game.
 #[derive(Debug, Default, Clone)]
 pub struct ModifierRegistry {
@@ -763,6 +805,7 @@ pub struct ModifierRegistry {
     /// `OnDeletion`; additional timings extend the hook in
     /// `Game::fire_granted_triggered_effects` without schema changes.
     granted_triggered: HashMap<PermanentHandle, Vec<GrantedTriggeredEffect>>,
+    pub(crate) dynamic_triggered: Vec<DynamicTriggeredGrant>,
     next_install_order: u64,
     /// Memo for the incremental declarative-materialization skip
     /// (`Game::tick_declarative_effects`). The tick computes a fingerprint
@@ -979,7 +1022,7 @@ impl ModifierRegistry {
         }
         for (player, entries) in &self.player_modifiers {
             for entry in entries {
-                out.push(format!(
+                let mut row = format!(
                     "PL|{}|{:?}|{}|{:?}|{:?}|{}|{}|{:?}|{}|{:?}|{:?}",
                     player,
                     entry.modifier,
@@ -992,7 +1035,11 @@ impl ModifierRegistry {
                     entry.until_condition.is_some(),
                     entry.cause_filter,
                     entry.effect_immunity_filter,
-                ));
+                );
+                if entry.pending_skips > 0 {
+                    row.push_str(&format!("|skip:{}", entry.pending_skips));
+                }
+                out.push(row);
             }
         }
         for (handle, entries) in &self.granted_triggered {
@@ -1007,6 +1054,19 @@ impl ModifierRegistry {
                     entry.expiry,
                 ));
             }
+        }
+        for entry in &self.dynamic_triggered {
+            let grant = &entry.grant;
+            out.push(format!(
+                "DGT|{}|{:?}|{}|{}|{:?}|{:?}|{}",
+                grant.body_id,
+                grant.timing,
+                grant.source_card.0,
+                grant.source_player,
+                grant.expiry,
+                entry.source_kind,
+                entry.pending_skips,
+            ));
         }
         out.sort();
         out
@@ -1298,6 +1358,9 @@ impl ModifierRegistry {
 
     /// Remove all modifiers attached to a permanent (e.g. when it leaves the field).
     pub fn clear_permanent(&mut self, target: PermanentHandle) {
+        // These operations can remove/rekey materialized outputs while the
+        // declarative input fingerprint remains unchanged.
+        self.invalidate_declarative_memo();
         self.permanent_modifiers.remove(&target);
         self.permanent_keywords.remove(&target);
         self.granted_triggered.remove(&target);
@@ -1307,6 +1370,9 @@ impl ModifierRegistry {
     /// permanent. Battle-area handles are index based, so every later
     /// permanent for the same player shifts down by one.
     pub fn shift_after_battle_area_remove(&mut self, player: PlayerId, removed_index: u8) {
+        // These operations can remove/rekey materialized outputs while the
+        // declarative input fingerprint remains unchanged.
+        self.invalidate_declarative_memo();
         fn shifted(
             handle: PermanentHandle,
             player: PlayerId,
@@ -1434,9 +1500,10 @@ impl ModifierRegistry {
     }
 
     pub fn contains_granted_triggered_body_id(&self, body_id: u64) -> bool {
-        self.granted_triggered
-            .values()
-            .any(|entries| entries.iter().any(|e| e.body_id == body_id))
+        self.dynamic_triggered.iter().any(|e| e.grant.body_id == body_id)
+            || self.granted_triggered
+                .values()
+                .any(|entries| entries.iter().any(|e| e.body_id == body_id))
     }
 
     /// Expire modifiers at the end of a player's turn.
@@ -1503,6 +1570,16 @@ impl ModifierRegistry {
         for entries in self.granted_triggered.values_mut() {
             entries.retain(|e| !relevant(e.expiry, e.source_player));
         }
+        self.dynamic_triggered.retain_mut(|entry| {
+            if !relevant(entry.grant.expiry, entry.grant.source_player) {
+                return true;
+            }
+            if entry.pending_skips > 0 {
+                entry.pending_skips -= 1;
+                return true;
+            }
+            false
+        });
     }
 
     /// Track H Phase 4k cleanup helper — collect body_ids of granted-
@@ -1529,6 +1606,10 @@ impl ModifierRegistry {
                 }
             }
         }
+        ids.extend(self.dynamic_triggered.iter().filter_map(|entry| {
+            (entry.pending_skips == 0 && relevant(entry.grant.expiry, entry.grant.source_player))
+                .then_some(entry.grant.body_id)
+        }));
         ids
     }
 
@@ -1593,6 +1674,13 @@ impl ModifierRegistry {
                     .sum()
             })
             .unwrap_or(0)
+    }
+
+    /// Strongest matching threshold; absence differs from an active zero.
+    /// Threshold prohibitions overlap by union, never by summing values.
+    pub fn player_max_modifier_value(&self, player: PlayerId, modifier: ModifierType) -> Option<i32> {
+        self.player_modifiers.get(&player).into_iter().flatten()
+            .filter(|entry| entry.modifier == modifier).map(|entry| entry.value).max()
     }
 
     pub fn end_turn_min_memory_floor(&self, player: PlayerId) -> Option<i32> {
@@ -1693,15 +1781,27 @@ impl ModifierRegistry {
     ///   (mirror of `EndOfOpponentsTurn`).
     pub fn expire_player_end_of_turn(&mut self, ending_player: PlayerId) {
         for entries in self.player_modifiers.values_mut() {
-            entries.retain(|e| match e.expiry {
-                Expiry::EndOfTurn => false,
-                Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
-                    e.source_player == ending_player
+            entries.retain_mut(|e| {
+                let relevant = match e.expiry {
+                    Expiry::EndOfTurn => true,
+                    Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
+                        e.source_player != ending_player
+                    }
+                    Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
+                        e.source_player == ending_player
+                    }
+                    _ => false,
+                };
+                if !relevant {
+                    return true;
                 }
-                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
-                    e.source_player != ending_player
+                if matches!(e.expiry, Expiry::EndOfOpponentsNextTurn | Expiry::EndOfYourNextTurn)
+                    && e.pending_skips > 0
+                {
+                    e.pending_skips -= 1;
+                    return true;
                 }
-                _ => true,
+                false
             });
         }
     }
@@ -2072,6 +2172,25 @@ mod tests {
         // Player 1's turn ends — the modifier should expire.
         reg.expire_player_end_of_turn(1);
         assert!(!reg.player_has(0, ModifierType::CannotPlayDigimonByEffect));
+    }
+
+    #[test]
+    fn player_next_turn_summary_keeps_skip_bound_to_entry() {
+        let make = |swap: bool| {
+            let mut reg = ModifierRegistry::new();
+            for (value, skips) in [(1, u8::from(swap)), (2, u8::from(!swap))] {
+                reg.add_player_modifier(1, PlayerModifierEntry::simple(
+                    ModifierType::ChangeDp, value, Expiry::EndOfOpponentsNextTurn, None, 0,
+                ).with_pending_skips(skips));
+            }
+            reg
+        };
+        let mut a = make(false);
+        let mut b = make(true);
+        assert_ne!(a.verification_summary(), b.verification_summary());
+        a.expire_player_end_of_turn(1);
+        b.expire_player_end_of_turn(1);
+        assert_ne!(a.verification_summary(), b.verification_summary());
     }
 
     #[test]

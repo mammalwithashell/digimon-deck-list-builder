@@ -217,6 +217,21 @@ fn tested_card_metadata_covers_allowlist_with_display_fields() {
     assert_eq!(stingmon.level, Some(4));
 }
 
+#[test]
+fn dual_metadata_preserves_dual_identity() {
+    let habakirimon = digimon_engine::deck_tools::tested_card_metadata()
+        .iter()
+        .find(|card| card.card_id == "BT25-043")
+        .expect("BT25-043 must retain display metadata");
+    assert_eq!(habakirimon.card_type, "Dual");
+    let cards = digimon_engine::deck_tools::full_card_data();
+    assert_eq!(
+        cards["BT25-043"].card_kind,
+        digimon_engine::enums::CardKind::Dual,
+        "display support must not flatten a structural Dual into a Digimon"
+    );
+}
+
 /// A link card's link box is its link effect, not an inherited effect
 /// (general_rule.pdf 2-3-12): BT21-009 Gatchmon prints <Raid> in its link box
 /// and has no inherited effect.

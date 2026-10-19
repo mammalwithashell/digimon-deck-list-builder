@@ -1,0 +1,97 @@
+# qa:Q1140 (2024-03-28) -- "After using this card, can I reduce the digivolution cost of my green Digimon
+# digivolving by suspending 1 of my Digimon when an effect to digivolve one of my Digimon is activated?" ->
+# "Yes, you can."
+# Sources: data/card_bundles/BT3-103.md + official observation 013e0883... + card image; DCGO
+# BT3/Green/BT3_103.cs (the reducer is a PLAYER effect at EffectTiming.BeforePayCost, isOptional true ->
+# SelectPermanentEffect Mode.Tap canNoSelect true -> Cost -= 5). Effect digivolution used: Green Scramble
+# LM-030, "[Main] 1 of your green Digimon may digivolve into a green Digimon card in the hand with the
+# digivolution cost reduced by 3. Then, place this card in the battle area." (data/card_bundles/LM-030.md;
+# DCGO LM/Green/LM_030.cs -> SelectPermanentEffect canNoSelect true -> CardEffectCommons.
+# DigivolveIntoHandOrTrashCard(payCost: true, reduceCost 3) -> SelectHandEffect -> PlayCardClass.PlayCard(),
+# whose cost path collects the player's BeforePayCost skills (CardController.cs ~783-788) -- the very seam
+# BT3_103.cs hooks, so DCGO offers the suspend-for-5 on this EFFECT digivolution). Oracle-confirmed sibling
+# shape: qa/dcgo-exams/LM/LM-028-tail-main.yaml (permanent pick, hand pick, nothing else, Option then seated).
+# Groundramon BT20-042 (green/red Lv.5; "Green Lv.4 / cost 4" is the only circle Kuwagamon satisfies; two
+# mandatory [When Digivolving] picks -- qa/dcgo-exams/BT20/BT20-042-interaction-Q4358.yaml).
+# Line: Kunemon ST4-05 (T1) -> Kuwagamon ST4-07 (T3, a plain hand digivolution BEFORE any reducer exists),
+# Biyomon ST1-02 (T3, a second Digimon = a suspend candidate other than the digivolver). P1 plays Agumon (T2)
+# so Groundramon's picks have a target. T5 (3): BT3-103 (0), Green Scramble (2 -> 1): pick Kuwagamon
+# (own.field.0, the only green Digimon), pick Groundramon from hand; LM-030 reduces 4 -> 1. THE RULING: the
+# BT3-103 reducer fires on this effect-activated digivolution -- accept, suspend Biyomon -> cost 0, memory
+# stays 1; then Groundramon's [When Digivolving] picks; LM-030 is seated in the battle area; pass.
+# Discriminator: memory 1 (not 0) at the pass row and Biyomon suspended, with Groundramon (sources [ST4-05,
+# ST4-07]) on P0's first slot.
+# Both engines now expose the effect-evolution reducer choice. Accept and suspend are shared
+# scenario actions; the expected result remains derived from official Q1140 and printed costs.
+# Draft: sim-only legality is not oracle confirmation. expect_ruling is authored later.
+card: BT3-103
+clause: BT3-103#effect#0
+covers: [BT3-103#effect#0]
+interaction: { id: "qa:Q1140", source: qa, kind: positive }
+seed: 424242
+decks:
+  p0:
+    # hand: ST4-05, ST4-07, ST1-02, BT3-103, LM-030 | security bottom->top: ST1-04 x4, ST1-03 | draws (T3 draw, T3 digivolve-draw, T5 draw, T5 effect-digivolve draw): BT20-042, ST2-04, ST2-04, ST2-03
+    stack: [ST4-05, ST4-07, ST1-02, BT3-103, LM-030, ST1-04, ST1-04, ST1-04, ST1-04, ST1-03, BT20-042, ST2-04, ST2-04, ST2-03]
+    rest: BT3-103-interaction-Q1140-p0
+  p1:
+    # hand: ST1-03, ST1-04, ST2-03, ST2-04, ST1-05 | security bottom->top: ST1-02 x4, ST1-03 | draws (T2, T4, T6): ST1-04 x3
+    stack: [ST1-03, ST1-04, ST2-03, ST2-04, ST1-05, ST1-02, ST1-02, ST1-02, ST1-02, ST1-03, ST1-04, ST1-04, ST1-04]
+    rest: BT3-103-interaction-Q1140-p1
+steps:
+# T1 P0 (0): Kunemon ST4-05 (4) -> -4.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: ST4-05, from: hand } }, expect: { prompt: main_phase } }
+# T2 P1 (4): Agumon ST1-03 (3) -> 1; pass.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { play: { card: ST1-03, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T3 P0 (3): Kunemon (lone Digimon, field.0) -> Kuwagamon ST4-07 (2) -> 1 (no reducer armed yet); Biyomon (2) -> -1.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { digivolve: { from: field.0, using: ST4-07 } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { play: { card: ST1-02, from: hand } }, expect: { prompt: main_phase } }
+# T4 P1 (3): nothing.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 1, do: { pass: {} }, expect: { prompt: main_phase } }
+# T5 P0 (3): BT3-103 (0) arms the reducer; Green Scramble LM-030 (2) -> 1 activates an EFFECT digivolution.
+- { actor: 0, do: { pass: {} }, expect: { prompt: breeding_action } }
+- { actor: 0, do: { play: { card: BT3-103, from: hand } }, expect: { prompt: main_phase } }
+- { actor: 0, do: { play: { card: LM-030, from: hand } }, expect: { prompt: main_phase } }
+# LM-030: the green Digimon that digivolves (Kuwagamon), then the green card from hand (Groundramon, 4 - 3 = 1).
+- { actor: 0, do: { select: { targets: [own.field.0] } }, expect: { prompt: SelectPermanentEffect } }
+- { actor: 0, do: { select: { cards: [BT20-042] } }, expect: { prompt: SelectHandEffect } }
+# THE RULING (DCGO BeforePayCost): BT3-103's reducer is offered on the effect digivolution -- accept, suspend
+# Biyomon (own.field.1) -> cost 0. Both engines execute these actual player choices.
+- { actor: 0, do: { select: { yes: true } }, expect: { prompt: OptionalSkill } }
+- { actor: 0, do: { select: { targets: [own.field.1] } }, expect: { prompt: SelectPermanentEffect } }
+# Groundramon's own [When Digivolving]: suspend Agumon; Agumon can't unsuspend.
+# The simulator labels its generic completion branch "Trash the used Option".
+# For LM-030 this calls dispose_option with subtype Delay and PLACES it in battle
+# area (game_actions/mod.rs), as printed; the label does not mean it is trashed.
+# Choose mandatory placement before the evolution triggers; row20 must retain LM-030.
+- { actor: 0, do: { select: { choice: "Trash the used Option", sim_only: true } } }
+- { actor: 0, do: { select: { targets: [opp.field.0] } } }
+- { actor: 0, do: { select: { targets: [opp.field.0] } } }
+# LM-030 now sits in P0's battle area; official costs imply memory 1 after the accepted reduction; pass.
+- { actor: 0, do: { pass: {} }, expect: { prompt: main_phase } }
+# T6 P1: post-turn observation.
+- { actor: 1, do: { pass: {} }, expect: { prompt: breeding_action } }
+expect_ruling:
+  q_id: Q1140
+  assert:
+  - at: 14
+    that:
+      memory: 1
+  - at: 20
+    that:
+      memory: 1
+      p0.field:
+      - card_id: BT20-042
+        sources:
+        - ST4-05
+        - ST4-07
+      - card_id: LM-030
+        sources: []
+        suspended: false
+      - card_id: ST1-02
+        suspended: true

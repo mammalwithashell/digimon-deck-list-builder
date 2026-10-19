@@ -116,16 +116,25 @@ effects:
             all_of:
               - kind: digimon
               - color_is: green
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - color_is: green
           prompt: "Choose 1 of your green Digimon to digivolve"
       # Step 2: choose the digivolve target from hand.
       # DCGO: DigivolveIntoHandOrTrashCard(isHand: true) — hand only.
       - select_hand:
           of: you
           bind_as: evo
+          optional: true
           filter:
             all_of:
               - kind: digimon
               - color_is: green
+              - can_digivolve_onto: target
           prompt: "Choose a green Digimon card to digivolve into"
       # Step 3: execute effect-initiated digivolve with cost -3.
       # DCGO: reduceCost: 3, payCost: true, ignore_requirements: false.

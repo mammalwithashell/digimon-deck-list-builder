@@ -1,0 +1,205 @@
+# Draft: legal-opening variant of EX12/EX1-066-effect1.yaml; not yet simulated or recorded.
+# Q3254 needs independent two-family expected-ruling encoding before oracle.
+card: EX1-066
+clause: EX1-066#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+    - EX12-061
+    - EX12-011
+    - EX12-031
+    - EX1-066
+    - EX12-070
+    - EX12-009
+    - EX12-009
+    - EX12-020
+    - EX12-020
+    - EX12-026
+    - EX12-074
+    - EX12-074
+    - EX12-020
+    - EX12-020
+    - EX12-009
+    - EX12-009
+    - EX12-046
+    - EX12-070
+    - EX12-074
+    - EX12-026
+    - EX12-063
+    rest: EX1-066-tail-toho-analog
+  p1:
+    stack:
+    - EX12-009
+    - EX12-009
+    - EX12-020
+    - EX12-020
+    - EX12-070
+    - EX12-036
+    - EX12-036
+    - EX12-047
+    - EX12-047
+    - EX12-076
+    rest: EX1-066-tail-toho-braves
+steps:
+- actor: 0
+  do:
+    hatch: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: breeding
+      using: EX12-061
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: breeding
+      using: EX12-011
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    digivolve:
+      from: breeding
+      using: EX12-031
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    move: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: EX1-066
+      from: hand
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX12-046
+  expect:
+    prompt: SelectCardEffect
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: OptionalSkill
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    attack:
+      attacker: field.0
+      target: security
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX12-063
+  expect:
+    prompt: SelectHandEffect
+- actor: 0
+  do:
+    select:
+      'yes': true
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+covers:
+- EX1-066#effect#1
+interaction:
+  id: probe:EX1-066#effect#1:leave_play
+  source: probe
+  kind: positive

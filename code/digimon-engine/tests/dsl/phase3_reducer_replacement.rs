@@ -66,6 +66,7 @@ fn compiled_replacement_card(
     process: Vec<CompiledStep>,
 ) -> CompiledCard {
     CompiledCard {
+        deck_rule: None,
         card: "TEST-REDUCER".into(),
         name: "Reducer Test".into(),
         kind: CompiledCardKind::Digimon,

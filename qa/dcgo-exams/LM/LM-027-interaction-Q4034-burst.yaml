@@ -1,0 +1,145 @@
+card: LM-027
+clause: LM-027#effect#0
+interaction:
+  id: qa:Q4034
+  source: qa
+  kind: positive
+seed: 424242
+decks:
+  p0:
+    stack:
+    - BT12-043
+    - BT12-092
+    - LM-027
+    - BT13-020
+    - ST1-10
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-07
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    rest: Q4034-burst-complement-p0
+  p1:
+    stack:
+    - ST1-03
+    - ST1-04
+    - ST1-05
+    - ST2-03
+    - ST2-04
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-06
+    - ST1-07
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    rest: Q4034-burst-complement-p1
+steps:
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT12-092
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    play:
+      card: BT12-043
+      from: hand
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: main_phase
+- actor: 0
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+- actor: 0
+  do:
+    select:
+      decline: true
+- actor: 0
+  do:
+    play:
+      card: LM-027
+      from: hand
+- actor: 0
+  do:
+    select:
+      targets:
+      - own.field.1
+- actor: 0
+  do:
+    select:
+      cards:
+      - BT13-020
+- actor: 0
+  do:
+    select:
+      decline: true
+      dcgo_only: true
+  expect:
+    prompt: OptionalSkill
+- actor: 0
+  do:
+    select:
+      choice: Trash the used Option
+      sim_only: true
+- actor: 1
+  do:
+    pass: {}
+  expect:
+    prompt: breeding_action
+expect_ruling:
+  q_id: Q4034
+  assert:
+  - at: 12
+    that:
+      memory: 1
+      p0.selection_candidates:
+      - BT13-020
+  - at: 15
+    that:
+      memory: -1
+      p0.field:
+      - card_id: BT12-092
+        suspended: false
+        sources: []
+      - card_id: BT13-020
+        suspended: false
+        sources:
+        - BT12-043
+      - card_id: LM-027
+        suspended: false
+        sources: []
+      p0.trash: []

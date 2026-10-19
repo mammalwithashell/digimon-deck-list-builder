@@ -51,5 +51,5 @@ effects:
           bind_as: cancel_sources
           prompt: "Trash 3 Mineral/Rock sources from this Digimon to end the attack"
           then:
-            - trash_selected_sources: { source_refs: cancel_sources }
+            - trash_selected_sources_as_cost: { source_refs: cancel_sources }
             - cancel_attack: {}

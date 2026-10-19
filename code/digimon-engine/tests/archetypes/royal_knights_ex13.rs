@@ -696,13 +696,19 @@ fn leopardmon_dna_examon_buffs_team_attacks_and_magnamon_wakes_it() {
     let mut want = vec![EXAMON.to_string(), LEOPARDMON.to_string(), PLESIOMON.to_string()];
     want.sort();
     assert_eq!(stack, want, "both Lv.6 Digimon went under Examon");
-    assert_eq!(runner.effective_dp(ex), Some(25_000), "Examon +10000");
-    assert_eq!(runner.effective_dp(mag), Some(17_000), "Magnamon +10000 (all your Digimon)");
+    assert_eq!(runner.effective_dp(ex), Some(15_000), "Examon is unbuffed before attack declaration");
+    assert_eq!(runner.effective_dp(mag), Some(7_000), "team buff follows attack declaration");
 
     // Forced attack at security; keep the target (decline Raid); battle Birdramon.
     let v = view(&runner);
-    assert!(!v.is_optional, "\"this Digimon attacks\" is mandatory; view={v:?}");
-    act(&mut runner, encode_attack(ex.index as u16, SECURITY_TARGET));
+    assert!(!v.is_optional, "the attack is mandatory; view={v:?}");
+    assert!(v.prompt.contains("attacks"), "expected attack target, got {v:?}");
+    let attack = encode_attack(ex.index as u16, SECURITY_TARGET);
+    assert_eq!(digimon_engine::action::build_action_mask(&runner.game, v.selecting_player)[attack as usize], 1.0);
+    act(&mut runner, attack);
+    assert_eq!(runner.effective_dp(ex), Some(25_000), "Examon +10000");
+    assert_eq!(runner.effective_dp(mag), Some(17_000), "Magnamon +10000 (all your Digimon)");
+    assert_eq!(runner.security_count(1), 5, "attack declaration precedes security checks");
     let mut battled = false;
     for _ in 0..12 {
         let Some(v) = runner.pending_selection_view() else {

@@ -1,0 +1,50 @@
+{
+  "extracted": {
+    "attribute": "Vaccine",
+    "card_id": "EX11-016",
+    "colors": "Blue Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "dp": "7000",
+    "form": "Ultimate",
+    "play_cost": "7",
+    "qa": [
+      "Yes, it triggers. If an effect's trigger conditions are met when the effect is gained, that effect will trigger. In this case, your opponent no longer has Digimon with digivolution cards at the same timing as when your opponent's Digimon is deleted in battle, therefore you can activate ."
+    ],
+    "special_digivolution_condition": "[Digivolve] Lv.4 w/[Ice-Snow] trait: Cost 3",
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Ice-Snow] trait: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Iceclad＞ [On Play] [When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon. Then, you may place 1 of their Digimon with no digivolution cards as the top or bottom security card."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[Your Turn] While your opponent has no Digimon with digivolution cards, this [Ice-Snow] trait Digimon gains ＜Piercing＞ and ＜Security A. +1＞."
+      }
+    ],
+    "type": "Ice-Snow/LIBERATOR"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "3aa27097c93d17044fdb9b208f338c55b6aa3d9dbb69e7fe9171d67e80d2d3d5",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "47b7acc51dcb60f394ea1e1db4d93aefa7fb341d259cd346d4cc0849d48a669c",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX11-016",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX11-016"
+}

@@ -1,0 +1,41 @@
+{
+  "extracted": {
+    "attribute": "Social",
+    "card_id": "BT21-043",
+    "colors": "Yellow",
+    "digivolve_costs": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Sup./Appmon",
+    "play_cost": "4",
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] 1 of your opponent's Digimon gets -2000 DP until their turn ends."
+      },
+      {
+        "label": "Special Rule",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] 1 of your opponent's Digimon gets -2000 DP until their turn ends."
+      }
+    ],
+    "type": "SNS"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "44f1cef12158e18cb37b04013b39c6142c84ca4a03b5278db3b8dd5b33aba450",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "708a2113ee68ba5705c542792df205060288aba809ad38146f0f177b1341626e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:BT21-043",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/BT21-043"
+}

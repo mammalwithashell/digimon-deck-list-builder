@@ -460,6 +460,7 @@ export function dtoToGameState(dto: GameStateDto): GameState {
             // Pass engine action_id through so SelectionPanel can dispatch
             // it directly without recomputing from index.
             actionId: c.action_id,
+            countChoice: c.count_choice,
           })),
         }
       : null,

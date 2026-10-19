@@ -1,9 +1,9 @@
-# EX5-060 Dragomon — Digimon, Lv.5, Purple, DP 7000, Cost 7.
+# EX5-060 Dragomon â€” Digimon, Lv.5, Purple, DP 7000, Cost 7.
 # Traits: Aquabeast. Form: Ultimate. Attribute: Virus.
-# Standard digivolve (card image): Lv.4 / Cost 3 — authored as an alt_path
+# Standard digivolve (card image): Lv.4 / Cost 3 â€” authored as an alt_path
 # (DSL fixtures carry no printed evo_costs).
 #
-# Printed card text (card image, judge-quiz PDF p.63 + cards.json — agree):
+# Printed card text (card image, judge-quiz PDF p.63 + cards.json â€” agree):
 #
 #   [On Play] [When Digivolving] Your opponent plays 1 level 4 or lower
 #     Digimon card from their trash suspended without paying the cost.
@@ -12,43 +12,43 @@
 #     you may play 1 purple Digimon card with a level less than or equal to
 #     it from your trash without paying the cost.
 #
-#   Inherited Effect: ＜Piercing＞
+#   Inherited Effect: ï¼œPiercingï¼ž
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX5/Purple/EX5_060.cs
 #
-# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+# â”€â”€â”€ DCGO crosscheck (clause-by-clause) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
-# Clause 1 — [On Play][When Digivolving]: the OPPONENT is the selecting
-#   player over THEIR OWN trash (Lv≤4 Digimon); the pick is played SUSPENDED
-#   for free, with its own `[On Play]` suppressed. → `as_selecting_player
+# Clause 1 â€” [On Play][When Digivolving]: the OPPONENT is the selecting
+#   player over THEIR OWN trash (Lvâ‰¤4 Digimon); the pick is played SUSPENDED
+#   for free, with its own `[On Play]` suppressed. â†’ `as_selecting_player
 #   { of: opponent }` + `select_trash { of: opponent }` +
 #   `play_from_trash_free { suspended: true, suppress_on_play: true }`.
 #   Q28 NOTE: the don't-activate rider is an EFFECT of Dragomon on the
-#   played Digimon — the engine consults the played permanent's protection
+#   played Digimon â€” the engine consults the played permanent's protection
 #   (`permanent_is_unaffected_by_effect`) before honoring the skip, so a
 #   Digimon protected from opponent-Digimon effects (Gankoomon X's grant)
 #   still activates its [On Play] (judge Q28: YES, plays AND activates).
 #   G-OPPONENT-PLAY-FROM-OWN-TRASH-SUSPENDED + G-PLAY-ENTERS-SUSPENDED.
 #
-# Clause 2 — [All Turns][Once Per Turn] (DCGO gates `IsByEffect`): when an
+# Clause 2 â€” [All Turns][Once Per Turn] (DCGO gates `IsByEffect`): when an
 #   EFFECT (not a hard play) plays an opponent's Digimon, the controller may
-#   play 1 purple Digimon with level ≤ the played one's level
-#   (`LevelJustAfterPlayed`) from their own trash for free. → timing
+#   play 1 purple Digimon with level â‰¤ the played one's level
+#   (`LevelJustAfterPlayed`) from their own trash for free. â†’ timing
 #   `on_any_digimon_played` + `event_is_effect_initiated: true` +
 #   `event_target_owner: opponent` + `level_lte: { formula:
 #   { event_target_level: {} } }` (G-EVENT-PLAYED-LEVEL-FORMULA). Note:
 #   Dragomon's OWN clause 1 plays an opponent's Digimon by effect, so it
-#   chains into clause 2 (faithful — same in DCGO).
+#   chains into clause 2 (faithful â€” same in DCGO).
 #
-# Inherited — ＜Piercing＞ → `kind: grant_keyword, scope: inherited`.
+# Inherited â€” ï¼œPiercingï¼ž â†’ `kind: grant_keyword, scope: inherited`.
 #
-# ─── Implementation status (faithfulness diff) ───────────────────────────────
+# â”€â”€â”€ Implementation status (faithfulness diff) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 #
 # | Card-text element                                          | Status        |
 # |------------------------------------------------------------|---------------|
 # | Standard digivolve Lv.4 / Cost 3 (as alt_path)             | IMPLEMENTED   |
-# | [On Play][When Digivolving] opp plays Lv≤4 suspended, no OP| IMPLEMENTED   |
-# | [All Turns][OPT] effect-play recursion (level ≤ it)        | IMPLEMENTED   |
+# | [On Play][When Digivolving] opp plays Lvâ‰¤4 suspended, no OP| IMPLEMENTED   |
+# | [All Turns][OPT] effect-play recursion (level â‰¤ it)        | IMPLEMENTED   |
 # | Inherited <Piercing>                                       | IMPLEMENTED   |
 #
 # Verdict: IMPLEMENTED.
@@ -70,7 +70,7 @@ alt_paths:
     cost: 3
 
 effects:
-  # ─── Clause 1 — [On Play][When Digivolving] ────────────────────────────────
+  # â”€â”€â”€ Clause 1 â€” [On Play][When Digivolving] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Your opponent plays 1 level 4 or lower Digimon card from their trash suspended without paying the cost. [On Play] effects on Digimon played by this effect don't activate"
     process:
@@ -84,6 +84,7 @@ effects:
                   all_of:
                     - kind: digimon
                     - level_lte: 4
+                    - can_play_from_effect_without_cost: true
                 prompt: "Play 1 level 4 or lower Digimon card from your trash suspended without paying the cost"
             - play_from_trash_free:
                 of: opponent
@@ -91,7 +92,7 @@ effects:
                 suspended: true
                 suppress_on_play: true
 
-  # ─── Clause 2 — [All Turns][Once Per Turn] effect-play recursion ──────────
+  # â”€â”€â”€ Clause 2 â€” [All Turns][Once Per Turn] effect-play recursion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   - when: on_any_digimon_played
     once_per_turn: true
     optional: true
@@ -117,7 +118,7 @@ effects:
           of: you
           hand_index: recur_pick
 
-  # ─── Inherited — <Piercing> ────────────────────────────────────────────────
+  # â”€â”€â”€ Inherited â€” <Piercing> â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   - kind: grant_keyword
     scope: inherited
     keyword: Piercing

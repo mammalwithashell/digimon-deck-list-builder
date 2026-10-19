@@ -14,7 +14,23 @@ use crate::raw_rust_registry::RawRustRegistry;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-pub const PACK_FORMAT_VERSION: &str = "0.4.1";
+// 0.8 adds explicit target attribution for refiring and captured-event kind /
+// effect-play candidate predicates after 0.7's source costs and dynamic grants.
+// Rebuild packs; bincode layouts differ.
+// 0.9 adds hand-to-breeding play and its eligibility predicate; rebuild bincode packs.
+// 0.10 adds direction-specific unsuspend eligibility; rebuild bincode packs.
+// 0.11 adds source-play entry orientation; rebuild bincode packs.
+// 0.12.0 adds engine-generated source-play continuation variants.
+// 0.13.0 adds named-role source selection fields to compiled steps.
+// 0.14.0 appends internal deletion receipt continuations.
+// 0.15.0 adds source-bound printed deck-copy metadata.
+// 0.16.0 adds typed play-cost assignment, prefix payment and runtime payment receipts.
+// 0.17.0 adds captured surviving-battle-deleter predicates. Rebuild packs.
+// 0.18.0 adds typed physical-payer deletion prevention and post-payment
+// simultaneous-member target continuations. Rebuild packs.
+// 0.19.0 distinguishes explicit plural paid prevention from singular choice.
+// 0.20.0 adds explicit grouped returns and captured remaining ForEach iterations.
+pub const PACK_FORMAT_VERSION: &str = "0.21.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {
@@ -67,8 +83,20 @@ impl CardPack {
         bincode::serialize(self).map_err(|e| format!("bincode serialize failed: {e}"))
     }
 
-    /// Deserialize from bincode bytes.
+    /// Deserialize only the current compiled layout. The manifest precedes
+    /// cards in every supported envelope; inspect it before bincode can decode
+    /// enum discriminants using a different CompiledStep layout.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+        // The slice reader bounds-checks lengths before allocating; an I/O
+        // reader could allocate from a corrupt manifest's length prefix.
+        let manifest: PackManifest = bincode::deserialize(bytes)
+            .map_err(|e| format!("bincode manifest deserialize failed: {e}"))?;
+        if manifest.pack_version != PACK_FORMAT_VERSION {
+            return Err(format!(
+                "unsupported pack format '{}'; expected '{}'; rebuild this card pack",
+                manifest.pack_version, PACK_FORMAT_VERSION,
+            ));
+        }
         bincode::deserialize(bytes).map_err(|e| format!("bincode deserialize failed: {e}"))
     }
 }
@@ -266,6 +294,9 @@ fn collect_declarative_raw_rust_fns(
 
 fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) {
     match step {
+        CompiledStep::PaySourcePrefix { host_filter, .. } => {
+            collect_predicate_raw_rust_fns(host_filter, names)
+        }
         CompiledStep::AddDpModifier { value, .. } => {
             collect_modifier_value_raw_rust_fns(value, names);
         }
@@ -335,10 +366,11 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
                 collect_step_raw_rust_fns(step, names);
             }
         }
-        CompiledStep::DeleteAllPermanents { over, .. } => {
+        CompiledStep::DeleteAllPermanents { over, .. } | CompiledStep::ReturnAllToHand {over,..} | CompiledStep::ReturnAllToDeck {over,..} => {
             collect_predicate_raw_rust_fns(over, names);
         }
-        CompiledStep::PerSelected { body, .. }
+        CompiledStep::ForEachRemaining {body,..}
+        | CompiledStep::PerSelected { body, .. }
         | CompiledStep::ScheduleDelayed { body, .. }
         | CompiledStep::AsSelectingPlayer { body, .. } => {
             for step in body {
@@ -546,6 +578,7 @@ mod tests {
     #[test]
     fn pack_with_one_card_round_trips() {
         let card = CompiledCard {
+            deck_rule: None,
             card: "X-1".into(),
             name: "Test".into(),
             kind: CompiledCardKind::Option,
@@ -574,6 +607,7 @@ mod tests {
     #[test]
     fn pack_metadata_collects_required_raw_rust_fns() {
         let card = CompiledCard {
+            deck_rule: None,
             card: "X-RAW".into(),
             name: "Raw".into(),
             kind: CompiledCardKind::Digimon,
@@ -655,6 +689,7 @@ mod tests {
                     summary_key: None,
                 }),
                 CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction {
+                    set_cost: None,
                     scope: CompiledScope::FaceUp,
                     active_when: None,
                     reduction_timing: None,

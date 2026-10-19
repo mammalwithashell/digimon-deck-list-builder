@@ -48,6 +48,10 @@ ASSERTION_KEYS = (
     "turn", "phase", "memory", "p0.memory", "p1.memory",
     "p0.security", "p1.security", "p0.hand", "p1.hand",
     "p0.trash", "p1.trash", "p0.field", "p1.field",
+    "p0.legal_option_plays", "p1.legal_option_plays",
+    "p0.selection_can_decline", "p1.selection_can_decline",
+    "p0.selection_candidates", "p1.selection_candidates",
+    "p0.movement_observations", "p1.movement_observations",
 )
 
 #: Read-only references every Q&A packet points at (not inlined).
@@ -71,7 +75,13 @@ CLASSIFY_TASK = (
 ENCODE_AUTHOR_TASK = (
     "Encode the publisher's answer to ruling {q_id} as an `expect_ruling` block for the "
     "scenario given -- the line authored to exercise this ruling: the observable state "
-    "after the step at which the answer applies, using only the listed projection keys. "
+    "at the pre-decision row for the selected scenario step, using only the listed projection keys. "
+    "To observe an earlier action's resolved outcome, select a later observation step; "
+    "the row is not a post-action snapshot of its own decision. "
+    "selection_can_decline is an opt-in boolean measured only for the live selecting actor; "
+    "false means declining is unavailable, while missing is unmeasured and cannot satisfy false. "
+    "selection_candidates is an opt-in exact multiset of legal offered card IDs for the live hand-selecting actor; "
+    "physical copies remain duplicated, unsupported or missing observations never mean an empty list. "
     "Encode exactly what the answer says -- no more (do not assert incidental state the "
     "answer does not decide), no less. Quote the answer words each observable encodes. If "
     "no step of the line reaches the situation the question describes, return "
@@ -80,6 +90,8 @@ ENCODE_AUTHOR_TASK = (
 )
 
 ENCODE_VERIFY_TASK = (
+    "selection_candidates measures the exact offered card multiset only at the live hand-selection boundary; "
+    "missing or unsupported is unmeasured, never empty, and duplicated physical copies are significant. "
     "Another model encoded the publisher's answer to ruling {q_id} as the `expect_ruling` "
     "block given. Decide whether it encodes the answer -- no more, no less -- against the "
     "scenario's line. Set `agrees`, leave `expect_ruling` null, and quote the answer words "
@@ -296,6 +308,23 @@ def agree_encoding(q_id: str, author: Mapping | None, verifier: Mapping | None) 
     return Agreement(True, "encoded", False)
 
 
+def valid_movement_claim(value) -> bool:
+    """Source-authored public watches only; no native IDs, partial rows or booleans as counts."""
+    def card(c):
+        return isinstance(c, dict) and set(c) == {"owner", "card_id"} and type(c["owner"]) is int and c["owner"] in (0, 1) and isinstance(c["card_id"], str) and bool(c["card_id"].strip())
+    if not isinstance(value, dict) or not value:
+        return False
+    for key, w in value.items():
+        if not isinstance(key, str) or not key.strip() or not isinstance(w, dict) or set(w) != {"version", "deletion_dispatches", "rule_trashes"}:
+            return False
+        if type(w["version"]) is not int or w["version"] != 1 or type(w["deletion_dispatches"]) is not int or not 0 <= w["deletion_dispatches"] <= 4294967295 or not isinstance(w["rule_trashes"], list):
+            return False
+        for r in w["rule_trashes"]:
+            if not isinstance(r, dict) or set(r) != {"lower_sources", "linked"} or any(not isinstance(r[k], list) or not all(card(c) for c in r[k]) for k in ("lower_sources", "linked")):
+                return False
+    return True
+
+
 def validate_encode_result(result: Mapping, mode: str) -> list[str]:
     """Cross-field rules the strict schema cannot express."""
     problems = []
@@ -307,13 +336,32 @@ def validate_encode_result(result: Mapping, mode: str) -> list[str]:
         if result.get("agrees") is not None:
             problems.append("author result must leave agrees null")
         for row in (result.get("expect_ruling") or {}).get("assert", []):
+            if type(row.get("at")) is not int or row["at"] < 0:
+                problems.append("assertion anchor must be a nonnegative integer")
             for pair in row.get("that", []):
                 if pair.get("key") not in ASSERTION_KEYS:
                     problems.append(f"unknown assertion key {pair.get('key')!r}")
                 try:
-                    json.loads(pair.get("value_json", ""))
+                    value = json.loads(pair.get("value_json", ""))
+                    if str(pair.get("key", "")).endswith(".movement_observations") and not valid_movement_claim(value):
+                        problems.append("movement_observations requires complete named version-1 histories")
                 except (TypeError, ValueError):
                     problems.append(f"value_json for {pair.get('key')!r} is not JSON")
+        movement_anchors = {}
+        for row in (result.get("expect_ruling") or {}).get("assert", []):
+            if type(row.get("at")) is not int or row["at"] < 0:
+                continue
+            for pair in row.get("that", []):
+                if str(pair.get("key", "")).endswith(".movement_observations"):
+                    try:
+                        value = json.loads(pair.get("value_json", ""))
+                        if isinstance(value, dict):
+                            for card_id in value:
+                                movement_anchors.setdefault((pair["key"], card_id), set()).add(row.get("at"))
+                    except (TypeError, ValueError):
+                        pass
+        if any(len(anchors) < 2 for anchors in movement_anchors.values()):
+            problems.append("movement history requires an earlier public baseline and later observation")
     else:
         if result.get("expect_ruling") is not None:
             problems.append("verify result must leave expect_ruling null")

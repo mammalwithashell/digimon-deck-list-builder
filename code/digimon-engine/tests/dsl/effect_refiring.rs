@@ -27,7 +27,30 @@ effects:
         panic!("expected triggered clause");
     };
     let process = &clause.process;
-    assert!(matches!(process[0], CompiledStep::RefireEffect { .. }));
+    assert!(matches!(
+        process[0],
+        CompiledStep::RefireEffect {
+            target_attribution: false,
+            ..
+        }
+    ));
+    let target_yaml = yaml.replace(
+        "optional: true",
+        "optional: true\n          target_attribution: true",
+    );
+    let target_spec: CardSpec =
+        serde_yml::from_str(&target_yaml).expect("target attribution parses");
+    let target_compiled = compile(&target_spec).expect("target attribution compiles");
+    let CompiledClause::Triggered(target_clause) = &target_compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    assert!(matches!(
+        target_clause.process[0],
+        CompiledStep::RefireEffect {
+            target_attribution: true,
+            ..
+        }
+    ));
 }
 
 #[test]

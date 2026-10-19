@@ -110,8 +110,15 @@ fn infer_effect_source_kind(
         {
             if let Some(top) = perm.card_sources.last() {
                 if top.handle() == source_card {
-                    return source_kind_for_card_kind(top.card_kind(&game.card_data));
+                    return game.effect_source_kind_for_handle(source_card);
                 }
+            }
+            if perm.card_sources.iter().any(|card| card.handle() == source_card)
+                || perm.linked_cards.iter().any(|card| card.handle() == source_card) {
+                // Inherited effects: 15-3-2. Links are gained by the Digimon
+                // (4-2-6), so its activated effects use 15-2-1-1 regardless
+                // of the physical link card's printed category.
+                return EffectSourceKind::Digimon;
             }
         }
     }
@@ -399,7 +406,7 @@ impl<'a> EffectReadContext<'a> {
         self.game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_permanent)
+            .and_then(|trigger| trigger.resolve_event_permanent(self.game))
     }
 
     pub fn event_card(&self) -> Option<CardHandle> {
@@ -410,15 +417,22 @@ impl<'a> EffectReadContext<'a> {
     }
 
     pub fn event_card_name_contains(&self, needle: &str) -> bool {
+        self.event_card_name_matches(|name| crate::card_data::rules_name_contains(name, needle))
+    }
+
+    pub(crate) fn event_card_name_matches(&self, matches: impl Fn(&str) -> bool) -> bool {
         let Some(card) = self.event_card() else {
             return false;
         };
-        let Some(data) = self.game.card_data_for_handle(card) else {
-            return false;
-        };
-        data.card_name
-            .to_lowercase()
-            .contains(&needle.to_lowercase())
+        // A deleted event object retains its last-known rules names. Bind by
+        // exact physical card so another event card cannot borrow this snapshot.
+        if let Some(snapshot) = self.game.current_trigger_context.as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+            .filter(|snapshot| snapshot.top_card == card)
+        {
+            return snapshot.names_just_before.iter().any(|name| matches(name));
+        }
+        self.game.card_rules_name_matches(card, matches)
     }
 
     /// Case-insensitive substring scan against the triggering event card's
@@ -457,6 +471,11 @@ impl<'a> EffectReadContext<'a> {
             .as_ref()
             .and_then(|trigger| {
                 let handle = trigger.event_host_permanent?;
+                if trigger.event_permanent_identity.is_some()
+                    && trigger.event_permanent == Some(handle)
+                {
+                    return trigger.resolve_event_permanent(self.game);
+                }
                 live_event_permanent(self.game, handle, trigger.event_host_card)
             })
     }
@@ -680,7 +699,7 @@ impl<'a> EffectReadContext<'a> {
     }
 
     pub fn source_is_digimon(&self) -> bool {
-        self.source_kind == EffectSourceKind::Digimon
+        self.source_kind.includes(EffectSourceKind::Digimon)
     }
 
     /// Returns `true` if this effect's source card is a Tamer.
@@ -689,11 +708,11 @@ impl<'a> EffectReadContext<'a> {
     /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
     /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
     pub fn source_is_tamer(&self) -> bool {
-        self.source_kind == EffectSourceKind::Tamer
+        self.source_kind.includes(EffectSourceKind::Tamer)
     }
 
     pub fn source_is_option(&self) -> bool {
-        self.source_kind == EffectSourceKind::Option
+        self.source_kind.includes(EffectSourceKind::Option)
     }
 
     // ─── Security-check sugar (§2.5g) ────────────────────────────────
@@ -718,6 +737,7 @@ impl<'a> EffectReadContext<'a> {
         self.game
             .pending_attack
             .as_ref()
+            .filter(|attack| !attack.effective_target_removed_by_dna)
             .map(|attack| attack.effective_target)
     }
 
@@ -951,6 +971,8 @@ pub struct EffectContext<'a> {
     /// True when the cost currently being resolved is a digivolve cost.
     /// `G-COST-REDUCTION-DIGIVOLVE-INTO`.
     pub cost_is_digivolve: bool,
+    /// Declared digivolution hosts for target-aware payment predicates.
+    pub cost_target_permanents: Vec<PermanentHandle>,
     /// Set by a `pay_cost` step that aborts because the cost is UNPAYABLE (e.g.
     /// `trash_bottom_face_down_source_under_tamer` with no eligible Tamer). Such
     /// a step returns `RunOutcome::Synchronous` (a clean abort, not a park), which
@@ -1001,6 +1023,7 @@ impl<'a> EffectContext<'a> {
             cost_target_card: None,
             cost_target_from_hand: false,
             cost_is_digivolve: false,
+            cost_target_permanents: Vec::new(),
             cost_unpayable: false,
         }
     }
@@ -1219,7 +1242,7 @@ impl<'a> EffectContext<'a> {
         self.game
             .current_trigger_context
             .as_ref()
-            .and_then(|trigger| trigger.event_permanent)
+            .and_then(|trigger| trigger.resolve_event_permanent(self.game))
     }
 
     pub fn event_card(&self) -> Option<CardHandle> {
@@ -1257,6 +1280,11 @@ impl<'a> EffectContext<'a> {
             .as_ref()
             .and_then(|trigger| {
                 let handle = trigger.event_host_permanent?;
+                if trigger.event_permanent_identity.is_some()
+                    && trigger.event_permanent == Some(handle)
+                {
+                    return trigger.resolve_event_permanent(self.game);
+                }
                 live_event_permanent(self.game, handle, trigger.event_host_card)
             })
     }
@@ -1437,7 +1465,7 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn source_is_digimon(&self) -> bool {
-        self.source_kind == EffectSourceKind::Digimon
+        self.source_kind.includes(EffectSourceKind::Digimon)
     }
 
     /// Returns `true` if this effect's source card is a Tamer.
@@ -1446,11 +1474,11 @@ impl<'a> EffectContext<'a> {
     /// that allow Tamer-sourced effects but block Digimon/Option-sourced ones.
     /// Matches DCGO's `ICardEffect.IsTamerEffect` property.
     pub fn source_is_tamer(&self) -> bool {
-        self.source_kind == EffectSourceKind::Tamer
+        self.source_kind.includes(EffectSourceKind::Tamer)
     }
 
     pub fn source_is_option(&self) -> bool {
-        self.source_kind == EffectSourceKind::Option
+        self.source_kind.includes(EffectSourceKind::Option)
     }
 
     // ─── Security-check sugar (§2.5g) ────────────────────────────────
@@ -1478,6 +1506,7 @@ impl<'a> EffectContext<'a> {
         self.game
             .pending_attack
             .as_ref()
+            .filter(|attack| !attack.effective_target_removed_by_dna)
             .map(|attack| attack.effective_target)
     }
 
@@ -1616,7 +1645,7 @@ impl<'a> EffectContext<'a> {
             cost_target_card: self.cost_target_card,
             cost_target_from_hand: self.cost_target_from_hand,
             cost_is_digivolve: self.cost_is_digivolve,
-            cost_target_permanents: Vec::new(),
+            cost_target_permanents: self.cost_target_permanents.clone(),
             dna_result_card: None,
         }
     }
@@ -1658,6 +1687,7 @@ impl<'a> EffectContext<'a> {
     }
 
     fn own_tamer_target(&self, tamer: PermanentHandle) -> bool {
+        if self.game.is_token_source_destination(tamer) { return false; }
         if tamer.player != self.player {
             return false;
         }

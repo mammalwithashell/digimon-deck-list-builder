@@ -1,0 +1,104 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Red"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Gammamon",
+      "dp": 4000,
+      "effect_description_eng": "[Your Turn] While you have a red Tamer in play, this Digimon can attack your opponent's unsuspended Digimon.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "cost": 1,
+          "from_level": 2
+        }
+      ],
+      "form_eng": [],
+      "inherited_effect_description_eng": "",
+      "level": 3,
+      "play_cost": 4,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Ceratopsian"
+      ]
+    },
+    "card_id": "P-058",
+    "derived_diagnostics": [],
+    "explicit_evolution_routes": [
+      {
+        "authority": "secondary",
+        "color": "Red",
+        "cost": 1,
+        "derived": false,
+        "level": 2,
+        "ordinal": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Red"
+        ],
+        "dp": 4000,
+        "effect_text": "[Your Turn] While you have a red Tamer in play, this Digimon can attack your opponent's unsuspended Digimon.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 4,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Red",
+      "color2": null,
+      "date_added": "2025-11-25 15:16:05",
+      "digi_type": "Ceratopsian",
+      "digi_type2": null,
+      "digi_type3": null,
+      "digi_type4": null,
+      "dp": 4000,
+      "evolution_color": "Red",
+      "evolution_cost": 1,
+      "evolution_level": 2,
+      "form": null,
+      "id": "P-058",
+      "level": 3,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "[Your Turn] While you have a red Tamer in play, this Digimon can attack your opponent's unsuspended Digimon.",
+      "name": "Gammamon",
+      "play_cost": 4,
+      "pretty_url": "gammamon-p-058",
+      "rarity": "p",
+      "series": "Digimon Card Game",
+      "set_name": [],
+      "source_effect": "",
+      "stage": null,
+      "tcgplayer_id": 272898,
+      "tcgplayer_name": "Gammamon (New Awakening Pre-Release Tournament)",
+      "type": "Digimon",
+      "xros_req": ""
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "ddce6a8b0b048c6b76ef34df545df7423ef58ebd0711556293c688dedbf6d5d6",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "P-058",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

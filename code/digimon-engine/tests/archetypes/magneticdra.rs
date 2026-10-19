@@ -172,7 +172,19 @@ fn c1_zofr_kabus_source_trash_fans_out_inherited_delete_and_buffs() {
 
     // Play Zofr Kabus from hand: select carrier → trash its EX8-047 source →
     // buff carrier → fan out EX8-047's inherited cost-≤4 delete (pick a victim).
-    runner.play(0, 0);
+    runner.skip_mulligan();
+    runner.game.enter_main_phase();
+    let option_action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)[option_action as usize],
+        1.0
+    );
+    runner.game.decode_action(option_action, 0);
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "Zofr Kabus must leave hand through Option use"
+    );
     drive_first_valid(&mut runner, 30);
     let after = snapshot(&runner);
 
@@ -253,7 +265,19 @@ fn c1_zofr_kabus_non_inherited_source_buffs_but_does_not_fan_out_delete() {
     runner.push_source(carrier, "BT14-009");
 
     let before = snapshot(&runner);
-    runner.play(0, 0);
+    runner.skip_mulligan();
+    runner.game.enter_main_phase();
+    let option_action = digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        digimon_engine::action::mask::build_action_mask(&runner.game, 0)[option_action as usize],
+        1.0
+    );
+    runner.game.decode_action(option_action, 0);
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "Zofr Kabus must leave hand through Option use"
+    );
     drive_first_valid(&mut runner, 30);
     let after = snapshot(&runner);
 

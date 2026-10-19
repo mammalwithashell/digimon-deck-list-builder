@@ -57,8 +57,8 @@ seed: 424242
 decks:
   p0:
     stack:
-      # hand [0-4]: cost 12/16 bricks -- unplayable at memory 3, no hand [Main]
-      - EX12-047
+      # hand [0-4]: a payable inert card keeps the explicit main-pass prompt live.
+      - EX12-020
       - EX12-047
       - EX12-065
       - EX12-065

@@ -1,0 +1,48 @@
+{
+  "extracted": {
+    "attribute": "System",
+    "card_id": "EX10-029",
+    "colors": "Black",
+    "digivolve_costs": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "dp": "4000",
+    "form": "Sup./Appmon",
+    "play_cost": "4",
+    "qa": [
+      "Yes, you can."
+    ],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] At the end of the battle, play this card without paying the cost. ＜Blocker＞"
+      },
+      {
+        "label": "Link DP",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Link Condition",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+      },
+      {
+        "label": "Link Effect",
+        "text": "[When Linking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve＞ effects don't affect 1 of your Digimon until your opponent's turn ends."
+      }
+    ],
+    "type": "Transmission"
+  },
+  "first_acquired_at": "2026-07-12T00:00:00Z",
+  "observation_id": "7a437efe472f8060975bf3aa78872aa0a2753a0c7bff1156fc3bb19286edf120",
+  "parser_version": "legacy-official-mirror-bootstrap-v1",
+  "raw_payload_digest": "f71b0785073f88fe2065b47c4f2110df472b18e69e113b9ed7583892c456ca31",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "legacy-official-mirror:EX10-029",
+  "source_schema_version": "legacy-card-official-json-record-v1",
+  "source_url": "repository://legacy-official-mirror/data/card_official.json#/cards/EX10-029"
+}
