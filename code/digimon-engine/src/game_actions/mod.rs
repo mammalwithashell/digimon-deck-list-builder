@@ -1939,7 +1939,7 @@ impl Game {
                 self.log_card_to_hand(pending.owner, card_id, card_name);
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Deck) => {
-                self.player_mut(pending.owner).deck.insert(0, pending.card);
+                self.player_mut(pending.owner).insert_in_deck(0, pending.card);
                 self.log_card_to_deck(pending.owner, card_id, card_name, "bottom");
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Hand) => {
@@ -4106,7 +4106,7 @@ impl Game {
         leaving_sources.push(top.clone());
         if egg {
             // 3-1-3-9-2: a Digi-Egg entering security goes to its owner's egg deck bottom.
-            self.player_mut(top.owner).digitama_deck.insert(0, top);
+            self.player_mut(top.owner).insert_in_digi_egg_deck(0, top);
         } else if !token {
             match position {
                 crate::enums::StackPosition::Top => self.player_mut(player_id).put_on_security_top(top),
@@ -4288,7 +4288,7 @@ impl Game {
         let owner = card.owner;
         let security = destination == Zone::Security && !is_egg;
         match destination {
-            Zone::Security if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
+            Zone::Security if is_egg => self.player_mut(owner).insert_in_digi_egg_deck(0, card),
             Zone::Security => {
                 match state.position {
                     crate::enums::StackPosition::Top => {
@@ -4311,10 +4311,10 @@ impl Game {
                 }
             }
             Zone::Trash => self.player_mut(owner).put_in_trash(card),
-            Zone::Hand if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
+            Zone::Hand if is_egg => self.player_mut(owner).insert_in_digi_egg_deck(0, card),
             Zone::Hand => self.player_mut(owner).put_in_hand(card),
-            Zone::Deck if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
-            Zone::Deck => self.player_mut(owner).deck.insert(0, card),
+            Zone::Deck if is_egg => self.player_mut(owner).insert_in_digi_egg_deck(0, card),
+            Zone::Deck => self.player_mut(owner).insert_in_deck(0, card),
             _ => unreachable!(),
         }
         // Memory mutation (including Overflow) reevaluates UntilCondition.
@@ -4491,7 +4491,7 @@ impl Game {
         };
         let taken = taken.card;
         if taken.card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg {
-            self.player_mut(taken.owner).digitama_deck.insert(0, taken);
+            self.player_mut(taken.owner).insert_in_digi_egg_deck(0, taken);
             return false;
         }
 

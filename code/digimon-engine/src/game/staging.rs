@@ -77,7 +77,7 @@ impl Game {
         match zone {
             "hand" => p.put_in_hand(card),
             // Deck top = end of the vec (draw pops from the end).
-            "deck_top" => p.deck.push(card),
+            "deck_top" => p.put_on_deck_top(card),
             // Security top = end of the vec.
             "security_top" => p.put_on_security_top(card),
             "trash" => p.put_in_trash(card),

@@ -80,7 +80,7 @@ impl Game {
                 }
             } else if !token {
                 if top.card_kind(&self.card_data) == CardKind::DigiEgg {
-                    self.player_mut(owner).digitama_deck.insert(0, top);
+                    self.player_mut(owner).insert_in_digi_egg_deck(0, top);
                 } else {
                     self.player_mut(owner).put_in_hand(top);
                     completed.push((card, true));

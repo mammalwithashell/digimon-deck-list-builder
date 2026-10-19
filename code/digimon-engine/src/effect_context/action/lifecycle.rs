@@ -532,17 +532,9 @@ impl<'a> EffectContext<'a> {
     ) {
         let owner = card.owner;
         let is_egg = card.card_kind(&self.game.card_data) == CardKind::DigiEgg;
-        let player = self.game.player_mut(owner);
-        let deck = if is_egg {
-            &mut player.digitama_deck
-        } else {
-            &mut player.deck
-        };
-        if to_bottom {
-            deck.insert(0, card);
-        } else {
-            deck.push(card);
-        }
+        self.game
+            .player_mut(owner)
+            .put_in_deck_or_digi_egg_deck(card, is_egg, to_bottom);
         // G-ENGINE-ON-ADD-TO-DECK: Digi-Eggs routed to the Digi-Egg deck do
         // not fire "when effects add to decks" (DCGO ruling).
         if !is_egg {

@@ -1589,7 +1589,8 @@ impl Game {
         }
         let starting_hand = self.rules.starting_hand;
         let p = self.player_mut(player);
-        p.deck.extend(p.hand.drain(..));
+        let hand: Vec<_> = p.hand.drain(..).collect();
+        p.put_all_on_deck_top(hand);
         // Borrow the game's rng via a local reshuffle: move the cards into a
         // local vec, shuffle with game rng, put back.
         let mut deck = std::mem::take(&mut p.deck);
@@ -1730,8 +1731,7 @@ impl Game {
         let removed = permanent.card_sources.remove(pos);
         self.apply_ace_overflow_for_sources(std::slice::from_ref(&removed));
         self.player_mut(source_ref.permanent.player)
-            .trash
-            .push(removed);
+            .put_in_trash(removed);
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         // Soft-remove the carrier slot if the trash emptied it. Sibling of
@@ -1790,8 +1790,7 @@ impl Game {
         let removed = permanent.card_sources.remove(pos);
         let card = removed.handle();
         self.player_mut(source_ref.permanent.player)
-            .hand
-            .push(removed);
+            .put_in_hand(removed);
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         Some(card)

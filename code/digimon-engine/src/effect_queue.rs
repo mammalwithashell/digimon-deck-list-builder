@@ -5048,17 +5048,8 @@ impl Game {
                         // deck bottom = index 0 — matching `move_card_to_deck`.
                         let is_egg = security.card.card_kind(&self.card_data)
                             == crate::enums::CardKind::DigiEgg;
-                        let player = self.player_mut(owner);
-                        let deck = if is_egg {
-                            &mut player.digitama_deck
-                        } else {
-                            &mut player.deck
-                        };
-                        if to_bottom {
-                            deck.insert(0, security.card);
-                        } else {
-                            deck.push(security.card);
-                        }
+                        self.player_mut(owner)
+                            .put_in_deck_or_digi_egg_deck(security.card, is_egg, to_bottom);
                         if !is_egg {
                             self.note_effect_deck_add_if_resolving();
                         }

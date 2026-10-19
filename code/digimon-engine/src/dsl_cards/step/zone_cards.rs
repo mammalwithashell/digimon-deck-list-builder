@@ -521,12 +521,11 @@ fn return_cards_to_deck(
         let Some(mut c) = ctx.game.take_card_by_handle(card) else {
             continue;
         };
-        c.face_down = false;
         let owner = c.owner;
-        let deck = &mut ctx.game.player_mut(owner).deck;
+        let player = ctx.game.player_mut(owner);
         match position {
-            StackPosition::Top => deck.push(c),
-            _ => deck.insert(0, c),
+            StackPosition::Top => player.put_on_deck_top(c),
+            _ => player.insert_in_deck(0, c),
         }
         moved = true;
     }

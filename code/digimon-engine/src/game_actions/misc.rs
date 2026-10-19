@@ -1558,8 +1558,7 @@ impl Game {
             }
         };
         self.player_mut(owner)
-            .digitama_deck
-            .splice(index..index, cards);
+            .insert_all_in_digi_egg_deck(index, cards);
     }
 
     pub(crate) fn insert_card_into_deck(
@@ -1577,10 +1576,10 @@ impl Game {
         self.note_effect_deck_add_if_resolving();
         match position {
             crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).deck.push(card);
+                self.player_mut(player_id).put_on_deck_top(card);
             }
             crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).deck.insert(0, card);
+                self.player_mut(player_id).insert_in_deck(0, card);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -1590,7 +1589,7 @@ impl Game {
                 } else {
                     self.rng.gen_range(0..=deck_len)
                 };
-                self.player_mut(player_id).deck.insert(idx, card);
+                self.player_mut(player_id).insert_in_deck(idx, card);
             }
         }
     }
@@ -1622,10 +1621,10 @@ impl Game {
         }
         match position {
             crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).deck.extend(stack);
+                self.player_mut(player_id).put_all_on_deck_top(stack);
             }
             crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).deck.splice(0..0, stack);
+                self.player_mut(player_id).insert_all_in_deck(0, stack);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -1635,7 +1634,7 @@ impl Game {
                 } else {
                     self.rng.gen_range(0..=deck_len)
                 };
-                self.player_mut(player_id).deck.splice(idx..idx, stack);
+                self.player_mut(player_id).insert_all_in_deck(idx, stack);
             }
         }
     }

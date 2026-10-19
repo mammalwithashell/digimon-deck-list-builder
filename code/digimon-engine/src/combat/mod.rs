@@ -3885,8 +3885,7 @@ impl Game {
             ReplacementOutcome::Redirected(crate::enums::Zone::Deck) => {
                 if let Some(pending) = self.pending_security.take() {
                     self.player_mut(pending.defender)
-                        .deck
-                        .insert(0, pending.card);
+                        .insert_in_deck(0, pending.card);
                 }
                 self.set_security_phase(SecurityPhase::DisposeFinalize);
             }

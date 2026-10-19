@@ -37,10 +37,10 @@ impl Game {
         taken.clear_reveal_overlay();
         match position {
             crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).deck.push(taken);
+                self.player_mut(player_id).put_on_deck_top(taken);
             }
             crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).deck.insert(0, taken);
+                self.player_mut(player_id).insert_in_deck(0, taken);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -50,7 +50,7 @@ impl Game {
                 } else {
                     self.rng.gen_range(0..=deck_len)
                 };
-                self.player_mut(player_id).deck.insert(idx, taken);
+                self.player_mut(player_id).insert_in_deck(idx, taken);
             }
         }
         true
@@ -215,7 +215,7 @@ impl Game {
         let top_is_egg = top.card_kind(&self.card_data) == CardKind::DigiEgg;
         if top_is_egg {
             // Rule 3-1-3-9-2: a Digi-Egg cannot enter hand.
-            self.player_mut(top_owner).digitama_deck.insert(0, top);
+            self.player_mut(top_owner).insert_in_digi_egg_deck(0, top);
         } else {
             self.player_mut(top_owner).put_in_hand(top);
         }

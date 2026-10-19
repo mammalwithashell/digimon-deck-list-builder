@@ -218,9 +218,9 @@ impl DebugRunner {
         let next_idx = self.game.next_card_index();
         let mut card = CardSource::new(data_idx, player, next_idx);
         card.card_index = next_idx;
-        let hand = &mut self.game.players[player as usize].hand;
-        hand.push(card);
-        hand.len() - 1
+        let p = &mut self.game.players[player as usize];
+        p.put_in_hand(card);
+        p.hand.len() - 1
     }
 
     pub fn place_stack(&mut self, player: PlayerId, card_ids: &[&str]) -> PermanentHandle {
@@ -1271,7 +1271,7 @@ impl DebugRunnerBuilder {
             if let Some(ids) = self.decks.get(&pid) {
                 for card_id in ids {
                     let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
-                    game.players[pid as usize].deck.push(card);
+                    game.players[pid as usize].put_on_deck_top(card);
                 }
             }
             if let Some(ids) = self.securities.get(&pid) {
@@ -1286,7 +1286,7 @@ impl DebugRunnerBuilder {
                     if card_data_store[card.data_index].card_kind != CardKind::DigiEgg {
                         // Allow non-eggs in digitama for tests, but warn via debug.
                     }
-                    game.players[pid as usize].digitama_deck.push(card);
+                    game.players[pid as usize].put_on_digi_egg_deck_top(card);
                 }
             }
         }
