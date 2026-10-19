@@ -1182,9 +1182,7 @@ impl Game {
         // `DeletePeremanentAndProcessAccordingToResult` → attack only
         // `if (isDeleted)`.
         let cost_identity = self.capture_digivolve_host_identity(sacrifice_handle);
-        let receipt = self.next_deletion_receipt;
-        self.next_deletion_receipt = receipt.checked_add(1).expect("deletion receipt exhausted");
-        self.deletion_receipts.push((receipt, Vec::new()));
+        let receipt = self.open_deletion_receipt();
 
         let previous_cause = self.current_deletion_event_cause_override;
         self.current_deletion_event_cause_override =
@@ -1200,6 +1198,13 @@ impl Game {
             // A decision parked inside the deletion (an optional replacement
             // such as <Armor Purge>, or a deletion trigger): the attack waits
             // for it and re-checks the receipt (`resume_pending_overclock_attack`).
+            // A second <Overclock> parking before the first resumed overwrites
+            // the single slot (the open §11-1-4 ordering half of
+            // G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL); close the
+            // overwritten entry's receipt so it does not linger.
+            if let Some((.., stale_receipt)) = self.pending_overclock_attack {
+                self.deletion_receipts.retain(|(id, _)| *id != stale_receipt);
+            }
             self.pending_overclock_attack = Some((
                 state.player,
                 state.source_card,
@@ -1210,7 +1215,7 @@ impl Game {
             return;
         }
 
-        if self.take_overclock_cost_deleted(state.player, cost_identity, receipt) {
+        if self.take_deletion_receipt_matching(receipt, state.player, cost_identity, None) {
             self.resume_overclock_attack(state.player, state.source_card, state.opponent);
         }
     }
@@ -1224,32 +1229,9 @@ impl Game {
         else {
             return;
         };
-        if self.take_overclock_cost_deleted(player, cost_identity, receipt) {
+        if self.take_deletion_receipt_matching(receipt, player, cost_identity, None) {
             self.resume_overclock_attack(player, source_card, opponent);
         }
-    }
-
-    /// Consume `<Overclock>`'s cost deletion receipt and report whether the
-    /// chosen Digimon (`player`'s stack `cost_identity`) was actually
-    /// deleted. A prevented deletion records nothing; a substituted one
-    /// records another Digimon, which does not execute the condition either.
-    fn take_overclock_cost_deleted(
-        &mut self,
-        player: PlayerId,
-        cost_identity: u64,
-        receipt: u64,
-    ) -> bool {
-        let Some(index) = self
-            .deletion_receipts
-            .iter()
-            .position(|(id, _)| *id == receipt)
-        else {
-            return false;
-        };
-        let (_, completed) = self.deletion_receipts.remove(index);
-        completed.iter().any(|(handle, _, _, (_, identity))| {
-            handle.player == player && *identity == cost_identity
-        })
     }
 
     fn resume_overclock_attack(

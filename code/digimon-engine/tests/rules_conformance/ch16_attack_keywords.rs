@@ -2007,6 +2007,56 @@ fn overclock_condition_executed_after_declined_prevention_attacks() {
 }
 
 /// §16-34-2 "<Overclock> is a trigger-type effect that triggers at the end of
+/// your turn": it activates once in the end-of-turn pool, and that activation
+/// spends it. A prevented condition is "not executed" (§15-7-2), which stops
+/// only the processing after it; nothing re-opens the trigger. The exact
+/// prompt sequence: P0's condition pick, P0's <Armor Purge> decision (accepted)
+/// -- then no further P0 decision (no second <Overclock> pick), and the end of
+/// turn proceeds to P1's turn with the [Puppet] Digimon still on P0's field.
+#[test]
+fn overclock_prevented_condition_is_not_offered_again() {
+    cite!(
+        "16-34-2",
+        "d2abce098c733349c81dcc728df5453f32a89e52a3085a72af19a83d50e7d4aa"
+    );
+    let mut r = overclock_armor_purge_board();
+    r.end_turn();
+    let pick = current_prompt(&r).expect("the condition's pick");
+    assert_eq!(
+        (pick.player, pick.kind, pick.optional),
+        (0, SelectionKind::OwnField, true),
+        "{pick:?}"
+    );
+    assert_eq!(offered_slots(&pick), vec![1], "the [Puppet] stack");
+    pick_field(&mut r, 1);
+    let purge = current_prompt(&r).expect("<Armor Purge>");
+    assert_eq!((purge.player, purge.optional), (0, true), "{purge:?}");
+    assert_ne!(purge, pick, "a different decision than the pick");
+    accept(&mut r, 0);
+    assert_eq!(current_prompt(&r), None, "no second <Overclock> pick");
+    for _ in 0..4 {
+        if r.turn_player() != 0 || r.current_phase() != GamePhase::EndOfTurnAction {
+            break;
+        }
+        let mask = build_action_mask(&r.game, 0);
+        let legal: Vec<usize> = (0..mask.len()).filter(|&i| mask[i] == 1.0).collect();
+        assert_eq!(legal, vec![PASS as usize], "only PASS is left");
+        r.game.decode_action(PASS, 0);
+        let next = current_prompt(&r);
+        assert!(
+            next.as_ref().map_or(true, |p| p.player != 0),
+            "no further P0 decision: {next:?}"
+        );
+    }
+    assert_eq!(r.turn_player(), 1, "the turn passed");
+    assert_eq!(
+        field_top_ids(&r, 0),
+        owned(&["OVERCLOCK", "PUPPET"]),
+        "<Armor Purge>: not deleted"
+    );
+}
+
+/// §16-34-2 "<Overclock> is a trigger-type effect that triggers at the end of
 /// YOUR turn."
 ///
 /// In P0's main phase <Overclock> is not offered; P0 passes its turn

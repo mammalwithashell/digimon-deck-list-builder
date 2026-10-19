@@ -258,9 +258,7 @@ fn start_deletion_payment(
     if !ctx.can_affect_permanent(payer_handle) { return None; }
     let top = ctx.game.player(payer_handle.player).battle_area.get(payer_handle.index as usize)?.top_card().handle().0;
     let payer = (payer_handle.player, top, ctx.game.capture_digivolve_host_identity(payer_handle));
-    let receipt = ctx.game.next_deletion_receipt;
-    ctx.game.next_deletion_receipt = receipt.checked_add(1).expect("deletion receipt exhausted");
-    ctx.game.deletion_receipts.push((receipt, Vec::new()));
+    let receipt = ctx.game.open_deletion_receipt();
     // A resumed replacement may still carry the initiating opponent's ambient
     // attribution. Payment is this keyword carrier's effect, never the payer's.
     let previous = (ctx.game.effect_source_player, ctx.game.effect_source_card, ctx.game.effect_source_permanent);

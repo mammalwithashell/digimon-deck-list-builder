@@ -845,8 +845,8 @@
   note: "Only the specified ([Puppet]) Digimon is offered as the cost; the attack is on the player and the attacker stays unsuspended. The Token half is not staged (no DSL Token fixture)."
 "16-34-2":
   status: proven
-  tests: ["ch16_attack_keywords::overclock_kind_matches_rule", "ch16_attack_keywords::overclock_timing_matches_rule"]
-  note: "Timing (not in the main phase, not at the opponent's end of turn) and kind: <Overclock> is a trigger-type end-of-turn effect pending with EOT_MEM in one TriggerOrder; activated first, its condition is offered inside the pool, and after the deletion the attack is declared there; EOT_MEM resolves before the security check (Q3868/Q3869 by analogy, W3 reading (a))."
+  tests: ["ch16_attack_keywords::overclock_kind_matches_rule", "ch16_attack_keywords::overclock_timing_matches_rule", "ch16_attack_keywords::overclock_prevented_condition_is_not_offered_again"]
+  note: "Timing (not in the main phase, not at the opponent's end of turn) and kind: <Overclock> is a trigger-type end-of-turn effect pending with EOT_MEM in one TriggerOrder; activated first, its condition is offered inside the pool, and after the deletion the attack is declared there; EOT_MEM resolves before the security check (Q3868/Q3869 by analogy, W3 reading (a)). One activation per end of turn: a prevented condition (<Armor Purge> accepted on the cost) spends it and no second pick is offered (Task 36)."
 "16-34-3":
   status: proven
   tests: ["ch16_attack_keywords::overclock_optional_cost_then_mandatory_attack_without_suspending", "ch16_attack_keywords::overclock_optionality_matches_rule", "ch16_attack_keywords::overclock_prevented_condition_does_not_attack", "ch16_attack_keywords::overclock_condition_executed_after_declined_prevention_attacks"]

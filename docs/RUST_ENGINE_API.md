@@ -4653,11 +4653,23 @@ in the action space). The `EndOfTurnAction` window remains for `MayAttack` /
 never auto-deletes a cost permanent. The selection stores the exact legal cost
 action IDs in `valid_action_ids`, uses the Overclock controller as
 `selecting_player`, sets `is_optional = true` and marks the §18-3 optional
-decision. `PASS` declines (nothing else happens). A cost pick deletes the cost
-and declares the Overclock attack on the opponent without suspending; the
-pool's remaining entries resolve before its counter timing, and once the
-attack has ended (after its End of Attack pool, §11-6-2) the end of turn
-continues (`settle_end_of_turn_attack`).
+decision. `PASS` declines (nothing else happens). A cost pick deletes the
+chosen Digimon, and the Overclock attack on the opponent (without suspending)
+is declared **only if that deletion actually happened** (§16-34-3 "if the
+content of that condition is executed", §15-7-1 "and is successful",
+§15-7-2; DCGO `OverclockProcess` attacks only `if (isDeleted)`). The cost is
+deleted under a deletion receipt (`Game::open_deletion_receipt`), and the
+attack is gated on `Game::take_deletion_receipt_matching` finding the chosen
+stack's identity in it. A deletion a replacement prevents (§15-8-5-2: "it
+isn't deleted", e.g. `<Armor Purge>` trashing the top card) records nothing,
+and a substituted deletion records another stack; either way there is no
+attack and nothing else of the body runs. The once-per-turn use is still
+spent: <Overclock> is a trigger-type effect that activates once at the end of
+your turn (§16-34-2), and a prevented condition does not re-open it, so no
+second cost pick is offered. When the attack is declared, the pool's remaining
+entries resolve before its counter timing, and once the attack has ended
+(after its End of Attack pool, §11-6-2) the end of turn continues
+(`settle_end_of_turn_attack`).
 
 Candidate action IDs reuse the field-target half of the attack range:
 `encode_attack(0, field_index)`. The action mask must emit only those stored
@@ -4665,14 +4677,30 @@ candidate bits plus `PASS`. The decoder/resolver must reject any non-candidate
 target before deleting the cost or starting the Overclock attack.
 
 Legal cost candidates are Tokens plus other Digimon accepted by the Overclock
-parameter. Printed text like `＜Overclock ([Puppet] Trait)＞` derives a trait
+parameter (`is_specified_overclock_cost`) whose deletion can be executed
+(`is_legal_overclock_cost`): §15-7-4 "If executing an optional processing
+condition's contents isn't possible, then the player can't choose to execute
+them", so a Digimon a passive "can't be deleted" restriction protects
+(`replacement::deletion_passively_prevented`, a mandatory `PassiveCancel`
+candidate for `ReplacementCause::Cost`) is not offered, and with no other
+candidate the condition is not offered at all. An optional or effect-based
+prevention (`<Armor Purge>`) stays offered: that deletion is executable and
+only replaced, so its outcome is read from the receipt. Printed text like `＜Overclock ([Puppet] Trait)＞` derives a trait
 filter from the bracketed trait. DSL `grant_keyword` clauses may provide an
 `overclock_cost_filter` predicate; lowering attaches it with
 `EffectBuilder::overclock_with_cost_filter`, and runtime candidate collection
 uses the same predicate path.
 
-If deleting the Overclock cost produces observer selections, the attack is
-paused and resumed after those selections finish. The resumed attack re-finds
+If deleting the Overclock cost parks a decision -- a replacement decision
+such as `<Armor Purge>`'s yes/no prompt, or an observer selection -- the
+attack is paused (`pending_overclock_attack` holds the cost stack's identity
+and the receipt; plain data, clone-safe) and `resume_pending_overclock_attack`
+runs at the `resolve_selection` tail once those selections finish. The resume
+re-checks the deletion receipt before declaring: `<Armor Purge>` accepted
+means no deletion and no attack; declined means the deletion committed under
+the receipt and the attack follows. (Open, non-blocking: the parked attack is
+declared after the pool's remaining entries, §11-1-4 --
+G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL.) The resumed attack re-finds
 the Overclock source by its stable `CardHandle`, not by the pre-cost
 battle-area index, so lower-slot sacrifices and observer-driven field changes
 do not stale the attacker handle.

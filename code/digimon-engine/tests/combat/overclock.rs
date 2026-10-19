@@ -523,7 +523,7 @@ fn overclock_cost_parks_board() -> (DebugRunner, usize, usize) {
 /// tail, AFTER the tail's drain has already resolved the pool's remaining
 /// entry: `EOT`'s memory gain comes before the declaration.
 #[test]
-#[ignore = "G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL (§11-1-4, §16-34-2)"]
+#[ignore = "G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL ordering half: stays open, non-blocking by controller ruling (§11-1-4, §16-34-2; Task 21 re-review M-4 / Task 36 brief)"]
 fn overclock_attack_declared_before_the_rest_of_the_pool_when_its_cost_parks() {
     let (mut r, cp, _) = overclock_cost_parks_board();
     let tp = r.turn_player();

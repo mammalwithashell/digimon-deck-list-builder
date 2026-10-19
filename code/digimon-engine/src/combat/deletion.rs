@@ -88,6 +88,45 @@ impl Game {
         }
     }
 
+    /// Allocate a fresh deletion receipt id without opening it (a lowering
+    /// that opens it later, at its `DeleteCapturedBatch`).
+    pub(crate) fn allocate_deletion_receipt(&mut self) -> u64 {
+        let receipt = self.next_deletion_receipt;
+        self.next_deletion_receipt = receipt.checked_add(1).expect("deletion receipt exhausted");
+        receipt
+    }
+
+    /// Allocate a deletion receipt and open it empty: a deletion run under
+    /// `with_deletion_receipt(Some(id))` records each completed removal into it.
+    pub(crate) fn open_deletion_receipt(&mut self) -> u64 {
+        let receipt = self.allocate_deletion_receipt();
+        self.deletion_receipts.push((receipt, Vec::new()));
+        receipt
+    }
+
+    /// Close `receipt` and report whether it recorded the deletion of
+    /// `player`'s stack `identity` (and, when `top` is given, with that top
+    /// card). A prevented deletion records nothing and a substituted one
+    /// records another stack, so both read false. Shared by the paid
+    /// deletion preventions (`take_paid_receipt`) and `<Overclock>`'s cost.
+    pub(crate) fn take_deletion_receipt_matching(
+        &mut self,
+        receipt: u64,
+        player: crate::enums::PlayerId,
+        identity: u64,
+        top: Option<u16>,
+    ) -> bool {
+        let Some(index) = self.deletion_receipts.iter().position(|(id, _)| *id == receipt) else {
+            return false;
+        };
+        let (_, completed) = self.deletion_receipts.remove(index);
+        completed.iter().any(|(handle, _, _, (deleted_top, deleted_identity))| {
+            handle.player == player
+                && *deleted_identity == identity
+                && top.map_or(true, |top| *deleted_top == top)
+        })
+    }
+
     pub fn delete_permanents_batch(
         &mut self,
         handles: Vec<PermanentHandle>,
