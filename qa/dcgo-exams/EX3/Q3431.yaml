@@ -115,11 +115,13 @@ steps:
       ordinal: 0
   expect:
     prompt: MultipleSkills
+# RE-LOWERED 2026-10-19: shared (was dcgo_only). An optional effect picked
+# from our TriggerOrder now passes through its own you-may gate (§15-7-1;
+# Task 2 fix round, da93979e8) -- the same OptionalSkill DCGO asks here.
 - actor: 0
   do:
     select:
       'yes': true
-      dcgo_only: true
   expect:
     prompt: OptionalSkill
 - actor: 1
