@@ -148,21 +148,20 @@ steps:
   # mid-cost; it waits until BT25-035's effect (the digivolve) finishes
   # (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS, 0870820d1) and pends
   # beside BT25-041's [When Digivolving]. The turn player picks ST23-13's
-  # first (ours holds it twice -- see the sim-only pick below), then declines.
+  # first, then declines.
+  # DIVERGENCE: G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+  # BT25-035's "by trashing 2 bottom face-down cards" is ONE processing
+  # condition: the two cards leave in one event and ST23-13 triggers once
+  # (§15-5-2). Our cost trashes per card (one Tamer pick each), so ST23-13
+  # pends TWICE; this line is left FAILING here on the rules-correct pool
+  # [ST23-13, BT25-041] (header ENGINE FINDING 2; pre-existing -- the line
+  # carried a sim-only decline for the extra copy before this branch).
   - actor: 0
-    do: { select: { cards: [ST23-13], ordinal: 0 } }
-    expect: { prompt: MultipleSkills }
+    do: { select: { cards: [ST23-13] } }
+    expect: { prompt: MultipleSkills, candidates: [ST23-13, BT25-041] }
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
-  # SIM-ONLY: ST23-13 pends AGAIN for the second card -- our two per-card
-  # Tamer picks are two trash events, one trigger each (§15-4-2-4; Task 6
-  # ruling #5), where DCGO's single Tamer selection is one -- see ENGINE
-  # FINDING in the header. Picked and declined on our side only.
-  - actor: 0
-    do: { select: { cards: [ST23-13], sim_only: true } }
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
   # Free digivolve into Murasamemon done; BT25-041's optional [When
   # Digivolving] -> decline.
   - actor: 0
@@ -172,7 +171,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 25
+  - at: 23
     that:
       turn: 3
       p0.memory: 2

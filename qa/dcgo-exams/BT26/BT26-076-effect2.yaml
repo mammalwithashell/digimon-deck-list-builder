@@ -75,12 +75,20 @@ steps:
   - actor: 1
     do: {select: {cards: [ST1-08]}}
     expect: {prompt: SelectHandEffect}
-  # DCGO stacks all four reactive triggers (Crowmon and Keenan, once per
-  # event -- its oracle run aborted on the bare id as AMBIGUOUS), so the pick
-  # carries `ordinal: 0`; ours offers this event's pair.
+  # DIVERGENCE: G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS.
+  # Crowmon's one [When Digivolving] trashes a Tamer source AND P1's hand card,
+  # so Keenan (BT26-094) and Crowmon (BT26-076 [Your Turn]) each trigger once
+  # per event (§15-4-2-4) -- four triggers, all triggered before that one
+  # effect resolved, so they trigger simultaneously and form ONE pool the turn
+  # player orders (§15-4-3-2, §15-4-3-5-1); DCGO measured exactly that
+  # (BT26-076-effect2's oracle abort: a 4-entry MultipleSkills). Our engine
+  # offers two successive per-event pairs, so this line is left FAILING here
+  # on the rules-correct 4-entry expectation. (Picking one of Crowmon's two
+  # entries will need `ordinal:` once the pool is fixed.) The rows after this
+  # one still encode the per-pair order and must be re-authored with the fix.
   - actor: 0
-    do: {select: {cards: [BT26-076], ordinal: 0}}
-    expect: {prompt: MultipleSkills}
+    do: {select: {cards: [BT26-076]}}
+    expect: {prompt: MultipleSkills, candidates: [BT26-094, BT26-094, BT26-076, BT26-076]}
   # THE CLAUSE: accept the optional gate, then pick the target.
   - actor: 0
     do: {select: {yes: true}}
