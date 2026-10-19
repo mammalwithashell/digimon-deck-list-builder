@@ -656,7 +656,7 @@ pub(crate) fn partition_extract_and_play(
             permanent.card_sources.remove(pos)
         };
         let owner = removed.owner;
-        ctx.game.player_mut(owner).trash.push(removed);
+        ctx.game.player_mut(owner).put_in_trash(removed);
         extracted.push(*handle);
     }
     // Sources left the stack without the trash observer (partition trashes are

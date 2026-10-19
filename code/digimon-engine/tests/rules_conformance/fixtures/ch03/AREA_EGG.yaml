@@ -1,0 +1,9 @@
+# AREA_EGG -- Digi-Egg, Lv.2, red. No text.
+# A Digi-Egg card stashed face-down under the Tamer, returned to the deck
+# (Digi-Eggs go to the Digi-Egg deck).
+card: AREA_EGG
+name: Areatama
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0

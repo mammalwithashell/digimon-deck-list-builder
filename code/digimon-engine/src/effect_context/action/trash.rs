@@ -369,12 +369,12 @@ impl<'a> EffectContext<'a> {
         if !perm.card_sources.is_empty() && !perm.top_card().is_token {
             for card in perm.card_sources {
                 let owner = card.owner;
-                self.game.player_mut(owner).trash.push(card);
+                self.game.player_mut(owner).put_in_trash(card);
             }
         }
         for card in perm.linked_cards {
             let owner = card.owner;
-            self.game.player_mut(owner).trash.push(card);
+            self.game.player_mut(owner).put_in_trash(card);
         }
 
         self.game.clear_permanent_full(target);
@@ -721,7 +721,7 @@ impl<'a> EffectContext<'a> {
         );
         let handles: Vec<_> = removed.iter().map(|card| card.handle()).collect();
         for card in removed {
-            self.game.player_mut(card.owner).trash.push(card);
+            self.game.player_mut(card.owner).put_in_trash(card);
         }
         self.game
             .enqueue_top_cards_trashed(target.player, target, host_card, handles, cause);

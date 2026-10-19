@@ -45,7 +45,7 @@ impl Game {
         }
         let count = removed.len();
         for source in &removed {
-            self.player_mut(source.owner).trash.push(source.clone());
+            self.player_mut(source.owner).put_in_trash(source.clone());
         }
         self.tick_declarative_effects();
         self.mark_until_condition_dirty();
@@ -105,7 +105,7 @@ impl Game {
         cause: crate::trigger_context::EventCause,
     ) {
         let source_card = removed.handle();
-        self.player_mut(trash_owner).trash.push(removed);
+        self.player_mut(trash_owner).put_in_trash(removed);
         self.fire_digivolution_card_trashed(
             fire_target.player,
             fire_target,
@@ -533,7 +533,7 @@ impl Game {
                 stack.pop().expect("stack_size-guarded pop")
             };
             trashed.push(popped_card.handle());
-            self.player_mut(owner).trash.push(popped_card);
+            self.player_mut(owner).put_in_trash(popped_card);
             // The departed top card's continuous text stops applying and the
             // new top card's applies before the next trash.
             self.tick_declarative_effects();

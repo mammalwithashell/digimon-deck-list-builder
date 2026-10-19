@@ -239,8 +239,7 @@ impl Game {
         };
         let leaving: Vec<CardSource> =
             stack.iter().chain(perm.linked_cards.iter()).cloned().collect();
-        for mut card in stack.into_iter().chain(perm.linked_cards) {
-            card.face_down = false; // Trash is face-up (3-6-3).
+        for card in stack.into_iter().chain(perm.linked_cards) {
             let owner = card.owner;
             self.trash_card(owner, card);
         }

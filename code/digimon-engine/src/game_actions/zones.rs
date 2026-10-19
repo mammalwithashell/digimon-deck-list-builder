@@ -212,7 +212,7 @@ impl Game {
         };
         let mut taken = self.revealed_cards.remove(pos);
         taken.clear_reveal_overlay();
-        self.player_mut(player_id).hand.push(taken);
+        self.player_mut(player_id).put_in_hand(taken);
         true
     }
 
@@ -227,7 +227,7 @@ impl Game {
         };
         let mut taken = self.revealed_cards.remove(pos);
         taken.clear_reveal_overlay();
-        self.player_mut(player_id).trash.push(taken);
+        self.player_mut(player_id).put_in_trash(taken);
         true
     }
 }

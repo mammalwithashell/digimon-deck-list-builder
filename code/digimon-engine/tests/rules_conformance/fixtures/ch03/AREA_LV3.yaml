@@ -1,0 +1,9 @@
+# AREA_LV3 -- Digimon, Lv.3, red, 3000 DP, play cost 3. No text.
+# The card stashed face-down under the Tamer, then played from the hand.
+card: AREA_LV3
+name: Areamon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000

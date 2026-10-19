@@ -1670,14 +1670,7 @@ impl Game {
     ) -> Vec<crate::card_source::CardSource> {
         let movement_snapshot = self.movement_snapshot(handle);
         let permanent =
-            &mut self.players[handle.player as usize].battle_area[handle.index as usize];
-        for card in permanent
-            .card_sources
-            .iter_mut()
-            .chain(permanent.linked_cards.iter_mut())
-        {
-            card.face_down = false; // Trash is face-up (3-6-3).
-        }
+            &self.players[handle.player as usize].battle_area[handle.index as usize];
         // Overflow observes physical movement even though this is not
         // deletion or an OnLeaveField event. Include linked cards too.
         let mut leaving_cards = permanent.card_sources.clone();
@@ -1942,15 +1935,15 @@ impl Game {
                 self.trash_card(pending.owner, pending.card);
             }
             ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
-                self.player_mut(pending.owner).hand.push(pending.card);
+                self.player_mut(pending.owner).put_in_hand(pending.card);
                 self.log_card_to_hand(pending.owner, card_id, card_name);
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Deck) => {
-                self.player_mut(pending.owner).deck.insert(0, pending.card);
+                self.player_mut(pending.owner).insert_in_deck(0, pending.card);
                 self.log_card_to_deck(pending.owner, card_id, card_name, "bottom");
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Hand) => {
-                self.player_mut(pending.owner).hand.push(pending.card);
+                self.player_mut(pending.owner).put_in_hand(pending.card);
                 self.log_card_to_hand(pending.owner, card_id, card_name);
             }
             ReplacementOutcome::Redirected(other) => {
@@ -2061,7 +2054,7 @@ impl Game {
             on_decline: optional.then(|| {
                 Box::new(move |game: &mut Game| {
                     if let Some(pending) = game.pending_option.take() {
-                        game.player_mut(pending.owner).trash.push(pending.card);
+                        game.player_mut(pending.owner).put_in_trash(pending.card);
                         game.check_turn_end();
                     }
                 }) as Box<dyn FnOnce(&mut Game) + Send + Sync>
@@ -2090,7 +2083,7 @@ impl Game {
         if is_pass {
             if state.optional {
                 if let Some(pending) = self.pending_option.take() {
-                    self.player_mut(pending.owner).trash.push(pending.card);
+                    self.player_mut(pending.owner).put_in_trash(pending.card);
                     self.check_turn_end();
                 }
             }
@@ -2141,7 +2134,7 @@ impl Game {
             let Some(pending) = self.pending_option.take() else {
                 return;
             };
-            self.player_mut(pending.owner).trash.push(pending.card);
+            self.player_mut(pending.owner).put_in_trash(pending.card);
             self.check_turn_end();
             return;
         }
@@ -2178,7 +2171,7 @@ impl Game {
             | crate::replacement::ReplacementOutcome::Redirected(_)
             | crate::replacement::ReplacementOutcome::Substituted(_) => {
                 if let Some(pending) = self.pending_option.take() {
-                    self.player_mut(pending.owner).trash.push(pending.card);
+                    self.player_mut(pending.owner).put_in_trash(pending.card);
                 }
                 self.check_turn_end();
             }
@@ -3536,7 +3529,7 @@ impl Game {
         let had_sources = !permanent.card_sources.is_empty();
         for source in permanent.card_sources.drain(..) {
             let owner = source.owner;
-            self.player_mut(owner).trash.push(source);
+            self.player_mut(owner).put_in_trash(source);
         }
         if had_sources {
             for pid in 0..self.players.len() {
@@ -3552,7 +3545,7 @@ impl Game {
         let had_linked = !permanent.linked_cards.is_empty();
         for linked in permanent.linked_cards.drain(..) {
             let owner = linked.owner;
-            self.player_mut(owner).trash.push(linked);
+            self.player_mut(owner).put_in_trash(linked);
         }
         if had_linked {
             for pid in 0..self.players.len() {
@@ -3567,10 +3560,10 @@ impl Game {
         let face_up_key = card.card_index;
         match position {
             crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).security.push(card);
+                self.player_mut(player_id).put_on_security_top(card);
             }
             crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).security.insert(0, card);
+                self.player_mut(player_id).insert_in_security(0, card);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -3580,7 +3573,7 @@ impl Game {
                 } else {
                     self.rng.gen_range(0..=sec_len)
                 };
-                self.player_mut(player_id).security.insert(idx, card);
+                self.player_mut(player_id).insert_in_security(idx, card);
             }
         }
         if face_up {
@@ -3665,7 +3658,7 @@ impl Game {
 
         let had_linked = !permanent.linked_cards.is_empty();
         for linked in permanent.linked_cards {
-            self.player_mut(target.player).trash.push(linked);
+            self.player_mut(target.player).put_in_trash(linked);
         }
         if had_linked {
             self.enqueue_triggered(
@@ -3675,7 +3668,7 @@ impl Game {
             self.drain_effect_queue();
         }
 
-        self.player_mut(player_id).security.insert(0, card);
+        self.player_mut(player_id).insert_in_security(0, card);
         self.fire_on_place_security(player_id, observer_player, source_card);
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
@@ -4113,18 +4106,18 @@ impl Game {
         leaving_sources.push(top.clone());
         if egg {
             // 3-1-3-9-2: a Digi-Egg entering security goes to its owner's egg deck bottom.
-            self.player_mut(top.owner).digitama_deck.insert(0, top);
+            self.player_mut(top.owner).insert_in_digi_egg_deck(0, top);
         } else if !token {
             match position {
-                crate::enums::StackPosition::Top => self.player_mut(player_id).security.push(top),
+                crate::enums::StackPosition::Top => self.player_mut(player_id).put_on_security_top(top),
                 crate::enums::StackPosition::Bottom => {
-                    self.player_mut(player_id).security.insert(0, top)
+                    self.player_mut(player_id).insert_in_security(0, top)
                 }
                 crate::enums::StackPosition::Random => {
                     use rand::Rng;
                     let len = self.player(player_id).security.len();
                     let index = self.rng.gen_range(0..=len);
-                    self.player_mut(player_id).security.insert(index, top);
+                    self.player_mut(player_id).insert_in_security(index, top);
                 }
             }
             if face_up {
@@ -4134,11 +4127,11 @@ impl Game {
             }
         }
         for card in permanent.card_sources {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
         }
         let had_linked = !permanent.linked_cards.is_empty();
         for card in permanent.linked_cards {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
         }
         // No observer runs before every card reaches its destination and handles are shifted.
         self.apply_ace_overflow_for_sources(&leaving_sources);
@@ -4295,20 +4288,20 @@ impl Game {
         let owner = card.owner;
         let security = destination == Zone::Security && !is_egg;
         match destination {
-            Zone::Security if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
+            Zone::Security if is_egg => self.player_mut(owner).insert_in_digi_egg_deck(0, card),
             Zone::Security => {
                 match state.position {
                     crate::enums::StackPosition::Top => {
-                        self.player_mut(state.player).security.push(card)
+                        self.player_mut(state.player).put_on_security_top(card)
                     }
                     crate::enums::StackPosition::Bottom => {
-                        self.player_mut(state.player).security.insert(0, card)
+                        self.player_mut(state.player).insert_in_security(0, card)
                     }
                     crate::enums::StackPosition::Random => {
                         use rand::Rng;
                         let len = self.player(state.player).security.len();
                         let i = self.rng.gen_range(0..=len);
-                        self.player_mut(state.player).security.insert(i, card);
+                        self.player_mut(state.player).insert_in_security(i, card);
                     }
                 }
                 if state.face_up {
@@ -4317,11 +4310,11 @@ impl Game {
                         .insert(state.card.0);
                 }
             }
-            Zone::Trash => self.player_mut(owner).trash.push(card),
-            Zone::Hand if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
-            Zone::Hand => self.player_mut(owner).hand.push(card),
-            Zone::Deck if is_egg => self.player_mut(owner).digitama_deck.insert(0, card),
-            Zone::Deck => self.player_mut(owner).deck.insert(0, card),
+            Zone::Trash => self.player_mut(owner).put_in_trash(card),
+            Zone::Hand if is_egg => self.player_mut(owner).insert_in_digi_egg_deck(0, card),
+            Zone::Hand => self.player_mut(owner).put_in_hand(card),
+            Zone::Deck if is_egg => self.player_mut(owner).insert_in_digi_egg_deck(0, card),
+            Zone::Deck => self.player_mut(owner).insert_in_deck(0, card),
             _ => unreachable!(),
         }
         // Memory mutation (including Overflow) reevaluates UntilCondition.
@@ -4439,7 +4432,7 @@ impl Game {
                     }
                 };
                 let owner = taken.owner;
-                self.player_mut(owner).trash.push(taken);
+                self.player_mut(owner).put_in_trash(taken);
                 // Soft-remove the carrier slot if Material extraction
                 // emptied it. Sibling of the digivolve-from-material fix
                 // landed in PR #533. See
@@ -4498,7 +4491,7 @@ impl Game {
         };
         let taken = taken.card;
         if taken.card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg {
-            self.player_mut(taken.owner).digitama_deck.insert(0, taken);
+            self.player_mut(taken.owner).insert_in_digi_egg_deck(0, taken);
             return false;
         }
 
@@ -4507,10 +4500,10 @@ impl Game {
 
         match position {
             crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).security.push(taken);
+                self.player_mut(player_id).put_on_security_top(taken);
             }
             crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).security.insert(0, taken);
+                self.player_mut(player_id).insert_in_security(0, taken);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -4522,7 +4515,7 @@ impl Game {
                 } else {
                     self.rng.gen_range(0..=sec_len)
                 };
-                self.player_mut(player_id).security.insert(idx, taken);
+                self.player_mut(player_id).insert_in_security(idx, taken);
             }
         }
 

@@ -515,7 +515,7 @@ impl<'a> EffectContext<'a> {
             // controller's trash rather than dropping the card on the floor.
             // Trashed cards are not face-down sources, so `face_down` is not
             // applied on this path.
-            target_player.trash.push(taken);
+            target_player.put_in_trash(taken);
             return;
         }
         taken.face_down = face_down;
@@ -677,7 +677,7 @@ impl<'a> EffectContext<'a> {
         // `OnLinkedCardTrashed` per player if any were present.
         let had_linked = !tamer_perm.linked_cards.is_empty();
         for linked in tamer_perm.linked_cards.drain(..) {
-            self.game.player_mut(controller).trash.push(linked);
+            self.game.player_mut(controller).put_in_trash(linked);
         }
         if had_linked {
             for pid in 0..self.game.players.len() {
@@ -702,7 +702,7 @@ impl<'a> EffectContext<'a> {
         // (safe-fail — same shape as `place_card_under_permanent_bottom`).
         let target_player = self.game.player_mut(controller);
         if digimon_idx >= target_player.battle_area.len() {
-            target_player.trash.push(top);
+            target_player.put_in_trash(top);
             self.game.end_source_trash_event(event);
             return;
         }
@@ -792,7 +792,7 @@ impl<'a> EffectContext<'a> {
             .get(perm.index as usize)
             .map(|permanent| permanent.top_card().handle())
             .unwrap_or(top_handle);
-        self.game.player_mut(controller).trash.push(top);
+        self.game.player_mut(controller).put_in_trash(top);
         self.game.enqueue_top_cards_trashed(
             controller,
             perm,
@@ -966,7 +966,7 @@ impl<'a> EffectContext<'a> {
             permanent.card_sources.remove(pos)
         };
         let owner = removed.owner;
-        self.game.player_mut(owner).hand.push(removed);
+        self.game.player_mut(owner).put_in_hand(removed);
         // The source has left the stack — refresh materialized declaratives so
         // continuous grants sourced from the departed card stop applying
         // immediately (same contract as `fire_digivolution_card_trashed`).

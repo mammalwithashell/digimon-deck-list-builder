@@ -130,7 +130,15 @@ impl std::fmt::Debug for Permanent {
 
 impl Permanent {
     /// Create a new permanent with a single card (played from hand or hatched).
-    pub fn new(card: CardSource, turn: u16) -> Self {
+    ///
+    /// The field is a public area; cards are placed face-up in it (§3-4-2).
+    /// A card that was a face-down digivolution card (§4-7-9) is a new card
+    /// once it moves (§3-1-3-1-2), so the new permanent's card is face-up
+    /// whatever zone it came from. (Only a card already ON the field can end
+    /// up a face-down top -- a source exposed when the cards above it leave --
+    /// and the rule check trashes that one, §17-1-3-2-4.)
+    pub fn new(mut card: CardSource, turn: u16) -> Self {
+        card.face_down = false;
         Self {
             battle_identity: None,
             native_play_incarnation: None,
@@ -559,8 +567,20 @@ impl Permanent {
 
     /// Digivolve: push a new card on top of the stack.
     pub fn digivolve(&mut self, card: CardSource, turn: u16) {
-        self.card_sources.push(card);
+        self.push_top(card);
         self.turn_digivolved = turn;
+    }
+
+    /// Stack `card` on top as this permanent's new TOP card, face-up
+    /// (§3-4-2), whatever zone it came from -- a hand or trash card, or a
+    /// digivolution card digivolved into from under a permanent. Every path
+    /// that installs a new top card on an existing stack (digivolution, DNA
+    /// digivolution, Blast DNA, Assembly-style merges) goes through here.
+    /// Digivolution cards placed UNDER the top keep the face they are placed
+    /// with (§4-7-5, §4-7-9): use `push_under` / `push_as_top_source`.
+    pub fn push_top(&mut self, mut card: CardSource) {
+        card.face_down = false;
+        self.card_sources.push(card);
     }
 
     /// Insert `card` at the bottom of the digivolution stack (position 0).

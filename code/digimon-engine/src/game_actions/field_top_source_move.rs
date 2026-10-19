@@ -313,11 +313,11 @@ impl Game {
             .cloned()
             .collect::<Vec<_>>();
         for card in donor_perm.card_sources {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
         }
         let linked = !donor_perm.linked_cards.is_empty();
         for card in donor_perm.linked_cards {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
         }
         self.apply_ace_overflow_for_sources(&overflow);
         self.tick_declarative_effects();

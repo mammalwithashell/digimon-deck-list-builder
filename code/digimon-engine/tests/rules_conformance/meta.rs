@@ -11,6 +11,7 @@ use crate::cite::*;
 /// fails `chapter_source_list_is_complete`, which compares this list with the
 /// `*.rs` files actually present in the directory.
 const CHAPTER_SOURCES: &[(&str, &str)] = &[
+    ("ch03_areas.rs", include_str!("ch03_areas.rs")),
     (
         "ch15_04_effect_states.rs",
         include_str!("ch15_04_effect_states.rs"),

@@ -91,7 +91,7 @@ impl Game {
             let source = if host.index == crate::action::space::BREEDING_TARGET as u8 {
                 self.player_mut(host.player).breeding_area.as_mut().expect("resolved carrier").card_sources.remove(index)
             } else { self.remove_source_from_permanent(host, index) };
-            self.player_mut(declaration.player).hand.push(source);
+            self.player_mut(declaration.player).put_in_hand(source);
             let previous_controller = self.effect_source_player;
             self.effect_source_player = Some(declaration.play_controller);
             let previous_assembly = self.pending_assembly_materials.take();
@@ -1110,7 +1110,7 @@ impl Game {
         let resolved = self.resolve_source_play_host_identity(host, identity);
         let source = self.player_mut(player).hand.remove(index);
         let Some(resolved) = resolved else {
-            self.player_mut(player).trash.push(source);
+            self.player_mut(player).put_in_trash(source);
             return;
         };
         let owner = self.player_mut(player);
@@ -1146,12 +1146,12 @@ impl Game {
             PendingWouldPlayOrigin::Trash { index } => {
                 let card = self.player_mut(resume.player).hand.remove(hand_index);
                 let insert_at = index.min(self.player(resume.player).trash.len());
-                self.player_mut(resume.player).trash.insert(insert_at, card);
+                self.player_mut(resume.player).insert_in_trash(insert_at, card);
             }
             PendingWouldPlayOrigin::SecurityTop { was_face_up } => {
                 let card = self.player_mut(resume.player).hand.remove(hand_index);
                 let card_index = card.card_index;
-                self.player_mut(resume.player).security.push(card);
+                self.player_mut(resume.player).put_on_security_top(card);
                 if was_face_up {
                     self.player_mut(resume.player)
                         .face_up_security
@@ -1284,7 +1284,7 @@ impl Game {
                     {
                         perm.push_under(cs);
                     } else {
-                        self.player_mut(player_id).trash.push(cs);
+                        self.player_mut(player_id).put_in_trash(cs);
                     }
                 }
             } else {
@@ -1389,7 +1389,7 @@ impl Game {
                 let mut removed = self.player_mut(player).battle_area.remove(idx);
                 let top = removed.card_sources.pop()?;
                 if !removed.card_sources.is_empty() {
-                    self.player_mut(player).trash.extend(removed.card_sources);
+                    self.player_mut(player).put_all_in_trash(removed.card_sources);
                 }
                 Some(top)
             }
@@ -1488,7 +1488,7 @@ impl Game {
         };
 
         if pending.card.handle() != resume.card {
-            self.player_mut(pending.owner).trash.push(pending.card);
+            self.player_mut(pending.owner).put_in_trash(pending.card);
             self.check_turn_end();
             return;
         }
@@ -1504,7 +1504,7 @@ impl Game {
             })
             .unwrap_or(false);
         if !host_live {
-            self.player_mut(pending.owner).trash.push(pending.card);
+            self.player_mut(pending.owner).put_in_trash(pending.card);
             self.check_turn_end();
             return;
         }
@@ -1558,8 +1558,7 @@ impl Game {
             }
         };
         self.player_mut(owner)
-            .digitama_deck
-            .splice(index..index, cards);
+            .insert_all_in_digi_egg_deck(index, cards);
     }
 
     pub(crate) fn insert_card_into_deck(
@@ -1577,10 +1576,10 @@ impl Game {
         self.note_effect_deck_add_if_resolving();
         match position {
             crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).deck.push(card);
+                self.player_mut(player_id).put_on_deck_top(card);
             }
             crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).deck.insert(0, card);
+                self.player_mut(player_id).insert_in_deck(0, card);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -1590,7 +1589,7 @@ impl Game {
                 } else {
                     self.rng.gen_range(0..=deck_len)
                 };
-                self.player_mut(player_id).deck.insert(idx, card);
+                self.player_mut(player_id).insert_in_deck(idx, card);
             }
         }
     }
@@ -1622,10 +1621,10 @@ impl Game {
         }
         match position {
             crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).deck.extend(stack);
+                self.player_mut(player_id).put_all_on_deck_top(stack);
             }
             crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).deck.splice(0..0, stack);
+                self.player_mut(player_id).insert_all_in_deck(0, stack);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -1635,7 +1634,7 @@ impl Game {
                 } else {
                     self.rng.gen_range(0..=deck_len)
                 };
-                self.player_mut(player_id).deck.splice(idx..idx, stack);
+                self.player_mut(player_id).insert_all_in_deck(idx, stack);
             }
         }
     }

@@ -237,23 +237,23 @@ impl Game {
             CardSourceRef::Hand(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.hand.len());
-                player.hand.insert(idx, taken.card);
+                player.insert_in_hand(idx, taken.card);
                 true
             }
             CardSourceRef::Trash(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.trash.len());
-                player.trash.insert(idx, taken.card);
+                player.insert_in_trash(idx, taken.card);
                 true
             }
             CardSourceRef::DeckTop(p) => {
-                self.player_mut(p).deck.push(taken.card);
+                self.player_mut(p).put_on_deck_top(taken.card);
                 true
             }
             CardSourceRef::Security(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.security.len());
-                player.security.insert(idx, taken.card);
+                player.insert_in_security(idx, taken.card);
                 true
             }
             CardSourceRef::PendingSecurity => {
@@ -483,19 +483,8 @@ impl Game {
         // Deck routing (deck bottom = index 0; Digi-Eggs -> digitama deck).
         let owner = removed.owner;
         let is_egg = removed.card_kind(&self.card_data) == CardKind::DigiEgg;
-        {
-            let player = self.player_mut(owner);
-            let deck = if is_egg {
-                &mut player.digitama_deck
-            } else {
-                &mut player.deck
-            };
-            if to_bottom {
-                deck.insert(0, removed);
-            } else {
-                deck.push(removed);
-            }
-        }
+        self.player_mut(owner)
+            .put_in_deck_or_digi_egg_deck(removed, is_egg, to_bottom);
         if !is_egg {
             self.note_effect_deck_add_if_resolving();
         }

@@ -25,6 +25,7 @@ mod fixtures;
 // Shared prompt-driving / board-reading helpers (infrastructure, no tests).
 mod support;
 
+mod ch03_areas;
 mod ch11_14_attack_procedure;
 mod ch15_04_effect_states;
 mod ch15_07_optional_conditions;

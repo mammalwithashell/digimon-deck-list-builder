@@ -223,10 +223,10 @@ impl<'a> EffectContext<'a> {
         let card = pending.card;
         match position {
             crate::enums::StackPosition::Top => {
-                self.game.player_mut(owner).security.push(card);
+                self.game.player_mut(owner).put_on_security_top(card);
             }
             crate::enums::StackPosition::Bottom => {
-                self.game.player_mut(owner).security.insert(0, card);
+                self.game.player_mut(owner).insert_in_security(0, card);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -236,7 +236,7 @@ impl<'a> EffectContext<'a> {
                 } else {
                     self.game.rng.gen_range(0..=sec_len)
                 };
-                self.game.player_mut(owner).security.insert(idx, card);
+                self.game.player_mut(owner).insert_in_security(idx, card);
             }
         }
         if face_up {
@@ -381,7 +381,7 @@ impl<'a> EffectContext<'a> {
         }
 
         let owner = pending.card.owner;
-        self.game.player_mut(owner).hand.push(pending.card);
+        self.game.player_mut(owner).put_in_hand(pending.card);
         self.game.fire_on_add_to_hand_by_effect(owner);
         true
     }

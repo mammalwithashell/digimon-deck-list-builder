@@ -111,6 +111,67 @@ fn trigger_type_waits_for_causing_effect_to_finish() {
     );
 }
 
+/// §15-8-3-2 with official Q&A Q6958 (Pinamon BT26-005, "Does this card's
+/// inherited effect allow me to play the card under the Tamer after trashing
+/// it?" -- "Yes, you can play it."): a play from the trash of the very card
+/// the same effect's cost just trashed from under a Tamer, while the
+/// source-trash trigger that trash raised is still pending.
+///
+/// `MAIN_TRASH_UNDER_PLAY` ("[Main] By trashing the bottom face-down card from
+/// under 1 of your Tamers, you may play 1 play cost 3 or lower Tamer card from
+/// your trash without paying the cost") trashes the face-down `PLAIN_TAMER`
+/// under P0's Tamer -- the only Tamer card in P0's trash -- which triggers P0's
+/// `OBS_TAMER_TRASH`. That trigger waits for the effect to finish (§15-8-3-2),
+/// so it is pending while the play runs; nothing lets a pending trigger change
+/// what the resolving effect may play (§15-7-1: once the optional condition is
+/// performed, the processing after it is performed). The just-trashed card is
+/// played, and the observer activates after.
+#[test]
+fn play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_08_cards()])
+        .hand(0, &["MAIN_TRASH_UNDER_PLAY"])
+        .deck(0, &[FILL; 4])
+        .memory(5)
+        .start();
+    let tamer = r.place_on_field(0, "PLAIN_TAMER", Some(0));
+    attach_face_down(&mut r, tamer, "PLAIN_TAMER");
+    r.place_on_field(0, "OBS_TAMER_TRASH", Some(0));
+    let cp = r.event_checkpoint();
+    use_option(&mut r, 0, "MAIN_TRASH_UNDER_PLAY");
+    step_prompt(&mut r); // the Tamer pick (one Tamer carries a face-down card)
+    assert_eq!(
+        trash_ids(&r, 0),
+        owned(&["PLAIN_TAMER"]),
+        "the face-down card under the Tamer was trashed"
+    );
+    let pick = digimon_engine::action::space::TRASH_EFFECT_START;
+    {
+        let sel = r.pending_selection().expect("the trash pick");
+        assert!(sel.valid_action_ids.contains(&pick), "{sel:?}");
+    }
+    r.execute_action(0, pick).expect("pick the just-trashed Tamer");
+    assert_eq!(
+        field_top_ids(&r, 0),
+        owned(&["PLAIN_TAMER", "OBS_TAMER_TRASH", "PLAIN_TAMER"]),
+        "Q6958: the card the cost just trashed is played"
+    );
+    assert!(
+        !trash_ids(&r, 0).contains(&"PLAIN_TAMER".to_string()),
+        "the played card left the trash: {:?}",
+        trash_ids(&r, 0)
+    );
+    resolve_prompts(&mut r);
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(0, "OBS_TAMER_TRASH".to_string())],
+        "the pending source-trash trigger activates after the effect"
+    );
+}
+
 // ─── §15-8-3-5 ──────────────────────────────────────────────────────────────
 
 /// A board for the §15-8-3-5 test: P0's `LV5_PLAIN` (7000 DP) attacks P1's

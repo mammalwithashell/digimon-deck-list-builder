@@ -5034,10 +5034,10 @@ impl Game {
                 match pending.destination {
                     SecurityRemovalDestination::Trash => {
                         let owner = security.card.owner;
-                        self.player_mut(owner).trash.push(security.card);
+                        self.player_mut(owner).put_in_trash(security.card);
                     }
                     SecurityRemovalDestination::Hand(owner) => {
-                        self.player_mut(owner).hand.push(security.card);
+                        self.player_mut(owner).put_in_hand(security.card);
                         // An effect moved the removed security card to hand;
                         // hand-gain observers run after this removal resolves.
                         self.fire_on_add_to_hand_by_effect(owner);
@@ -5048,17 +5048,8 @@ impl Game {
                         // deck bottom = index 0 — matching `move_card_to_deck`.
                         let is_egg = security.card.card_kind(&self.card_data)
                             == crate::enums::CardKind::DigiEgg;
-                        let player = self.player_mut(owner);
-                        let deck = if is_egg {
-                            &mut player.digitama_deck
-                        } else {
-                            &mut player.deck
-                        };
-                        if to_bottom {
-                            deck.insert(0, security.card);
-                        } else {
-                            deck.push(security.card);
-                        }
+                        self.player_mut(owner)
+                            .put_in_deck_or_digi_egg_deck(security.card, is_egg, to_bottom);
                         if !is_egg {
                             self.note_effect_deck_add_if_resolving();
                         }
@@ -5073,7 +5064,7 @@ impl Game {
                         let mut seated = false;
                         if self.is_token_source_destination(target) {
                             let owner = security.card.owner;
-                            self.player_mut(owner).trash.push(security.card);
+                            self.player_mut(owner).put_in_trash(security.card);
                         } else if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
                                 self.player_mut(target.player).breeding_area.as_mut()
@@ -5082,7 +5073,7 @@ impl Game {
                                 seated = true;
                             } else {
                                 let owner = security.card.owner;
-                                self.player_mut(owner).trash.push(security.card);
+                                self.player_mut(owner).put_in_trash(security.card);
                             }
                         } else if let Some(perm) = self
                             .player_mut(target.player)
@@ -5093,7 +5084,7 @@ impl Game {
                             seated = true;
                         } else {
                             let owner = security.card.owner;
-                            self.player_mut(owner).trash.push(security.card);
+                            self.player_mut(owner).put_in_trash(security.card);
                         }
                         if seated {
                             self.note_effect_added_sources(
@@ -5117,7 +5108,7 @@ impl Game {
                         let mut seated = false;
                         if self.is_token_source_destination(target) {
                             let owner = security.card.owner;
-                            self.player_mut(owner).trash.push(security.card);
+                            self.player_mut(owner).put_in_trash(security.card);
                         } else if target.index == crate::action::space::BREEDING_TARGET as u8 {
                             if let Some(breeding) =
                                 self.player_mut(target.player).breeding_area.as_mut()
@@ -5126,7 +5117,7 @@ impl Game {
                                 seated = true;
                             } else {
                                 let owner = security.card.owner;
-                                self.player_mut(owner).trash.push(security.card);
+                                self.player_mut(owner).put_in_trash(security.card);
                             }
                         } else if let Some(perm) = self
                             .player_mut(target.player)
@@ -5137,7 +5128,7 @@ impl Game {
                             seated = true;
                         } else {
                             let owner = security.card.owner;
-                            self.player_mut(owner).trash.push(security.card);
+                            self.player_mut(owner).put_in_trash(security.card);
                         }
                         if seated {
                             self.note_effect_added_sources(
@@ -5166,7 +5157,7 @@ impl Game {
                             completed_digivolve = Some((target, event_card));
                         } else {
                             let owner = security.card.owner;
-                            self.player_mut(owner).trash.push(security.card);
+                            self.player_mut(owner).put_in_trash(security.card);
                         }
                     }
                     SecurityRemovalDestination::Security {
@@ -5178,10 +5169,10 @@ impl Game {
                         let face_up_key = security.card.card_index;
                         match position {
                             crate::enums::StackPosition::Top => {
-                                self.player_mut(player).security.push(security.card);
+                                self.player_mut(player).put_on_security_top(security.card);
                             }
                             crate::enums::StackPosition::Bottom => {
-                                self.player_mut(player).security.insert(0, security.card);
+                                self.player_mut(player).insert_in_security(0, security.card);
                             }
                             crate::enums::StackPosition::Random => {
                                 use rand::Rng;
@@ -5191,7 +5182,7 @@ impl Game {
                                 } else {
                                     self.rng.gen_range(0..=len)
                                 };
-                                self.player_mut(player).security.insert(idx, security.card);
+                                self.player_mut(player).insert_in_security(idx, security.card);
                             }
                         }
                         if face_up {

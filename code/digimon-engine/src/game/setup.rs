@@ -98,14 +98,14 @@ impl Game {
 
                 // Route to correct deck based on card kind
                 if card_data.card_kind == crate::enums::CardKind::DigiEgg {
-                    player.digitama_deck.push(card);
+                    player.put_on_digi_egg_deck_top(card);
                     let entry = original_deck_counts
                         .entry(card_id.clone())
                         .or_insert((0, true));
                     entry.0 += 1;
                     entry.1 = true;
                 } else {
-                    player.deck.push(card);
+                    player.put_on_deck_top(card);
                     let entry = original_deck_counts
                         .entry(card_id.clone())
                         .or_insert((0, false));
@@ -779,8 +779,7 @@ impl Game {
             let card_index = self.next_card_index;
             self.next_card_index += 1;
             self.players[pid as usize]
-                .security
-                .push(CardSource::new_opaque_security_placeholder(pid, card_index));
+                .put_on_security_top(CardSource::new_opaque_security_placeholder(pid, card_index));
         }
         Ok(())
     }
