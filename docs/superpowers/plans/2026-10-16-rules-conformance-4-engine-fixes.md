@@ -715,3 +715,19 @@ Tasks 16–20 touch disjoint files and may run in parallel sessions (each on its
 - [ ] **Step 5: Commit** — `cards+dsl: a Digimon's name is its top card's; carrier-name predicates re-authored (§4-7-7, §4-8-2; G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS)`.
 
 **Phase G in Task 23's closure:** the digest headline and the "blocking gaps with no task" list are updated to reflect Tasks 25-35; W5 and W12 are recorded as owner-decided; the §4-7-7 / top-card characteristics ruling (Tasks 31, 35) is listed for owner sign-off.
+
+### Task 36: `<Overclock>` attacks only if its cost deletion actually happened
+
+**Gap:** `G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL` (filed non-blocking by Task 21; the attack-after-prevented-cost half is BLOCKING per the Task 21 re-review — flip the entry and sidecar `16-34-3` to `blocks_training: true`). **Rules:** §16-34-3 (by deleting 1 of your Tokens / specified Digimon — the optional processing condition), §15-7-1/-2 (an optional processing condition's processing happens only when the condition is fulfilled), §15-8-5-2 (a replacement that prevents the deletion means the deletion did not happen), §11-1-4 (ordering half, stays non-blocking). DCGO `Overclock.cs` attacks only `if (isDeleted)`. Reachable with ST19-12 / ST19-08 (Overclock) against ST19-10 / ST19-13 / BT22-038 / BT22-076 (`<Armor Purge>` [Puppet]).
+
+**Files:**
+- Modify: `code/digimon-engine/src/cards/keyword_effects.rs` (the Overclock body) and `code/digimon-engine/src/game_phases.rs::run_overclock_selection_step` / the parking path: key the attack declaration on the chosen Digimon having actually left the battle area by deletion (read the deletion batch's outcome / a departed-referent check after the replacement window resolves), on BOTH the non-parking and the parking path; when the deletion is prevented, no attack and no `<Overclock>` use consumed beyond the attempted cost (§15-7-2: the condition was attempted but not fulfilled — read the text and say which).
+- Candidates: §15-7-4 — a candidate that cannot be deleted (e.g. an un-deletable Digimon) is not offered as a cost choice; check `CostGuard`/`leading_cost_guard` for the Overclock cost shape.
+- Tests to un-ignore: the two `#[ignore]`d tests Task 21 added in `tests/combat/overclock.rs` (they fail at their rule assertion today); add a clone-while-parked variant (clone during the Armor Purge replacement prompt, resolve both choices on clones).
+- Keep green: `--test combat`, `--test keyword_phase_f`, `--test rules_conformance`, `--test cards_behavioral -- overclock st19 armor_purge puppet` (filter), `--test clone_fuzz --features dsl-yaml-loader`, the dcgo-harness tests + the Overclock sim-only exam (BT20-037), then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Un-ignore both; run → FAIL.**
+- [ ] **Step 2: Implement** on both paths.
+- [ ] **Step 3: Run → PASS**; regression list; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `16-34-3` → proven (list the tests); the ordering half stays an open non-blocking note under the gap. Regenerate; `--check`. Entry: blocking half RESOLVED.
+- [ ] **Step 5: Commit** — `engine: <Overclock> attacks only when its cost deletion happened (§16-34-3, §15-7-1, §15-8-5-2; G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL)`.
