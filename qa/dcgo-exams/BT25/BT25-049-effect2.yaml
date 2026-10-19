@@ -122,14 +122,6 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
-  # suspending this Tamer, ..." -> yes; +3000 to Armalizamon.
-  - actor: 0
-    do: { select: { yes: true } }
-    expect: { prompt: OptionalSkill }
-  - actor: 0
-    do: { select: { targets: [own.field.1] } }
-    expect: { prompt: SelectPermanentEffect }
   # P-236 [Main]: reveal 3, add 1 [Glowing Dawn]; the other two to the bottom
   # (ours one position at a time, DCGO one row).
   - actor: 0
@@ -142,6 +134,17 @@ steps:
   - actor: 0
     do: { select: { cards: [ST23-10, BT25-032], dcgo_only: true } }
     expect: { prompt: SelectCardEffect }
+  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
+  # suspending this Tamer, ..." -> yes; +3000 to Armalizamon.
+  # RE-LOWERED 2026-10-19: the trash happened while using P-236, so the
+  # trigger waits until P-236's [Main] has finished (§15-8-3-2;
+  # G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS, 0870820d1) -- after the reveal.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }

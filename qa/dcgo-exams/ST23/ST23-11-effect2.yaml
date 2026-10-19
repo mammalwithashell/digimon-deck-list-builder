@@ -101,6 +101,13 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect }
+  # RE-LOWERED 2026-10-19: ST23-13's trash-from-under trigger now waits for
+  # the digivolution to finish (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-
+  # TRIGGERS, 0870820d1) and pends beside ST23-08's [When Digivolving]
+  # effects, so the turn player orders them: ST23-13's first (then declined).
+  - actor: 0
+    do: { select: { cards: [ST23-13] } }
+    expect: { prompt: MultipleSkills }
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
@@ -111,12 +118,18 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect }
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
+  # (Re-lowered: ST23-08's own trash fires ST23-13 again; that trigger now
+  # waits for ST23-08's effect -- the hand pick -- to finish, §15-8-3-2.)
   - actor: 0
     do: { select: { cards: [BT25-049] } }
     expect: { prompt: SelectHandEffect }
+  # ...and pends beside the played BT25-049's [On Play]: ST23-13's first.
+  - actor: 0
+    do: { select: { cards: [ST23-13] } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -135,7 +148,7 @@ assert:
           dp: -1
           suspended: false
           sources: [BT25-032, ST23-06]
-  - at: 19
+  - at: 20
     that:
       turn: 5
       p0.memory: 2
@@ -149,7 +162,7 @@ assert:
           dp: -1
           suspended: false
           sources: [ST23-06]
-  - at: 24
+  - at: 26
     that:
       turn: 5
       p0.memory: 1

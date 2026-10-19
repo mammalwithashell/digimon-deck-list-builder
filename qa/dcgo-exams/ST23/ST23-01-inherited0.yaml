@@ -95,9 +95,15 @@ steps:
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
   # Tomoro & Kyo's [Your Turn] trash trigger (ST23-13#effect#1, examined in
-  # its own file) -- DECLINED here. ENGINE FINDING: ours resolves it mid-way
-  # through Kekkomon's effect (before the digivolve); 15-8-3-2 makes it wait
-  # until the effect finishes, so DCGO should ask it AFTER the digivolve.
+  # its own file) -- DECLINED here. RE-LOWERED 2026-10-19: it no longer
+  # resolves mid-way through Kekkomon's effect; it waits until the effect
+  # (the digivolve) finishes (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS,
+  # 0870820d1) and then pends beside BT25-049's [When Digivolving], so the
+  # turn player orders the two: BT25-049 first, then the lone optional
+  # trash trigger is declined.
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+    expect: { prompt: MultipleSkills }
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
@@ -110,7 +116,7 @@ assert:
   # attack; the bottom face-down card (ST23-04) is the only card in the trash,
   # BT25-043 is the one left under the Tamer; the attack still checked P1's
   # security (BT1-009).
-  - at: 14
+  - at: 15
     that:
       turn: 3
       p0.memory: 3

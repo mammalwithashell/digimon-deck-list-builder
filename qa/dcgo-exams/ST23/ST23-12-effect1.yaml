@@ -82,6 +82,12 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [ST23-03] } }
+    expect: { prompt: SelectCardEffect, count: 1 }
+  # RE-LOWERED 2026-10-19 (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS,
+  # 0870820d1): the engine now holds the trigger until the effect finishes.
+  # So the payoff pick (SelectCardEffect) comes first, then this trigger.
   # ENGINE FINDING (expected oracle divergence): the cost trash fires
   # Tomoro & Kyo's [Your Turn] "When effects trash cards from under this
   # Tamer" trigger, and OUR engine resolves it HERE -- mid-way through
@@ -95,9 +101,6 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
-  - actor: 0
-    do: { select: { cards: [ST23-03] } }
-    expect: { prompt: SelectCardEffect, count: 1 }
   - actor: 0
     do: { pass: {} }
 assert:

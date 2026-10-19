@@ -50,6 +50,10 @@
 #   effect processing; it waits as pending until Chiropmon's [On Play]
 #   finishes. Rules-correct (and likely DCGO) order is: Tamer pick -> trash
 #   return pick -> OptionalSkill -> Jamming pick. End state is identical.
+#   RE-LOWERED 2026-10-19: the engine now holds the trigger until Chiropmon's
+#   [On Play] finishes (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS,
+#   0870820d1), so the line answers the return pick before the OptionalSkill
+#   and the Jamming pick. The oracle verdict must be re-earned.
 card: ST23-14
 clause: ST23-14#effect#1
 seed: 424242
@@ -103,14 +107,14 @@ steps:
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
   - actor: 0
+    do: { select: { cards: [ST23-02] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
     do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
-  - actor: 0
-    do: { select: { cards: [ST23-02] } }
-    expect: { prompt: SelectCardEffect }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }

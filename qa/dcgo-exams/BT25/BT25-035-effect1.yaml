@@ -138,19 +138,29 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
-  # suspending this Tamer, ..." fires off the FIRST trashed card, mid-cost.
-  # Declined.
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
   # SIM-ONLY: the 2nd per-card Tamer pick. With one Tamer holding >=2
   # face-down cards DCGO's single Tamer selection covers both (BT25-035.yaml:
   # CanEndSelectCondition "2 from one Tamer").
   - actor: 0
     do: { select: { targets: [own.field.0], sim_only: true } }
-  # SIM-ONLY: ST23-13 fires AGAIN for the second card (one effect trashing two
-  # cards is one trigger event) -- see ENGINE FINDING in the header.
+  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
+  # suspending this Tamer, ..." -- RE-LOWERED 2026-10-19: it no longer fires
+  # mid-cost; it waits until BT25-035's effect (the digivolve) finishes
+  # (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS, 0870820d1) and pends
+  # beside BT25-041's [When Digivolving]. The turn player picks ST23-13's
+  # first (ours holds it twice -- see the sim-only pick below), then declines.
+  - actor: 0
+    do: { select: { cards: [ST23-13], ordinal: 0 } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # SIM-ONLY: ST23-13 pends AGAIN for the second card -- our two per-card
+  # Tamer picks are two trash events, one trigger each (§15-4-2-4; Task 6
+  # ruling #5), where DCGO's single Tamer selection is one -- see ENGINE
+  # FINDING in the header. Picked and declined on our side only.
+  - actor: 0
+    do: { select: { cards: [ST23-13], sim_only: true } }
   - actor: 0
     do: { select: { decline: true, sim_only: true } }
   # Free digivolve into Murasamemon done; BT25-041's optional [When
@@ -162,7 +172,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 23
+  - at: 25
     that:
       turn: 3
       p0.memory: 2

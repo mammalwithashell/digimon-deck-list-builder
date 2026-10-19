@@ -67,26 +67,32 @@ steps:
   - actor: 0
     do: {select: {targets: [own.field.0]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
-  # Our engine parks the trigger order first; DCGO asks P1's hand pick first.
-  - actor: 0
-    do: {select: {cards: [BT26-076], sim_only: true}}
-  - actor: 0
-    do: {select: {cards: [BT26-082], sim_only: true}}
-  - actor: 0
-    do: {select: {choice: "pay", sim_only: true}}
+  # RE-LOWERED 2026-10-19: the reactive triggers now wait until Crowmon's
+  # [When Digivolving] finishes (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-
+  # TRIGGERS, 0870820d1), so P1's hand pick comes first in BOTH engines and
+  # the three sim-only rows that answered our earlier trigger order are gone;
+  # the stacked-trigger rows below, formerly dcgo_only, are shared.
   - actor: 1
     do: {select: {cards: [ST1-08]}}
     expect: {prompt: SelectHandEffect}
+  # DCGO stacks all four reactive triggers (Crowmon and Keenan, once per
+  # event -- its oracle run aborted on the bare id as AMBIGUOUS), so the pick
+  # carries `ordinal: 0`; ours offers this event's pair.
   - actor: 0
-    do: {select: {cards: [BT26-076], dcgo_only: true}}
+    do: {select: {cards: [BT26-076], ordinal: 0}}
     expect: {prompt: MultipleSkills}
-  # THE CLAUSE: accept the optional gate (DCGO-only), then pick the target.
+  # THE CLAUSE: accept the optional gate, then pick the target.
   - actor: 0
-    do: {select: {yes: true, dcgo_only: true}}
+    do: {select: {yes: true}}
     expect: {prompt: OptionalSkill}
   - actor: 0
-    do: {select: {cards: [BT26-082], dcgo_only: true}}
+    do: {select: {cards: [BT26-082]}}
     expect: {prompt: SelectCardEffect}
+  # The digivolution cost route (pre-existing on main): [Crowmon] special
+  # condition 3 - 1 = 2 vs the purple Lv.5 circle 4 - 1 = 3. Take 2.
+  - actor: 0
+    do: {select: {value: 2}}
+    expect: {prompt: SelectCountEffect}
   # Keenan reacts to the Tamer-source trash and the hand trash; decline both.
   - actor: 0
     do: {select: {decline: true}}

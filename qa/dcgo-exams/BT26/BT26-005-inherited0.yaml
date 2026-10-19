@@ -84,32 +84,34 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
-  # Keenan's own "[Your Turn] effects trash cards from under this Tamer"
-  # trigger: ours resolves it inline right here (engine observer contract),
-  # DCGO stacks it after Pinamon's effect, so it is a dcgo_only OptionalSkill
-  # row after the play below.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+  # (RE-LOWERED 2026-10-19: Keenan's trigger no longer resolves inline at the
+  # Tamer pick; it waits until Pinamon's effect finishes (§15-8-3-2;
+  # G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS, 0870820d1) -- DCGO's order. The
+  # sim-only inline decline is gone and the stacked-trigger rows below that
+  # were dcgo_only are now shared.)
   # ... then the free play from the trash. Pinamon itself is not offered in
   # our trash prompt, so the pick is Falcomon ST24-12 (the deleted Digimon,
   # [DATA SQUAD], play cost 3).
   - actor: 0
     do: { select: { cards: [ST24-12] } }
     expect: { prompt: SelectCardEffect }
+  # Keenan's trigger and the free-played Falcomon's [On Play] stack: Falcomon
+  # first (both engines: MultipleSkills / our TriggerOrder).
+  - actor: 0
+    do: { select: { cards: [ST24-12] } }
+    expect: { prompt: MultipleSkills }
   # The free-played Falcomon ST24-12 ([On Play] "you may": ours asks a
-  # Replacement yes/no, DCGO an OptionalSkill) and Keenan's stacked trigger.
+  # Replacement yes/no that DCGO does not -- see the next row).
   - actor: 0
     do: { select: { decline: true, sim_only: true } }
-  - actor: 0
-    do: { select: { cards: [ST24-12], dcgo_only: true } }
-    expect: { prompt: MultipleSkills }
   # ST24-12's [On Play] is not DCGO-optional-gated: it asks the Tamer pick
   # (canNoSelect) straight away; declining it skips the trash/return.
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectPermanentEffect }
+  # Keenan's trigger, now alone: declined (OptionalSkill).
   - actor: 0
-    do: { select: { decline: true, dcgo_only: true } }
+    do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }
   - actor: 0
     do: { pass: {} }

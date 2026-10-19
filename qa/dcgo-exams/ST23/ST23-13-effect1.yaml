@@ -107,8 +107,16 @@ steps:
   # effect processing -- it waits until Kekkomon's effect finishes. DCGO is
   # expected to ask this AFTER the digivolve, with BT25-049 as the target.
   # Outcome-neutral here: the DP modifier rides the same permanent either way.
+  # RE-LOWERED 2026-10-19 (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS,
+  # 0870820d1): the engine now holds the trigger until the effect finishes.
+  # It now pends beside BT25-049's [When Digivolving] after the digivolve, so
+  # the turn player orders the two (ST23-13's first), then answers its own
+  # optional gate.
   - actor: 0
     do: { select: { cards: [ST23-13] } }
+    expect: { prompt: MultipleSkills }
+  - actor: 0
+    do: { select: { yes: true } }
     expect: { prompt: OptionalSkill }
   # "1 of your [Glowing Dawn] trait Digimon" -- the only one is the attacker
   # (own.field.1; the Tamer is not a Digimon). DCGO: SelectPermanentEffect
@@ -147,7 +155,7 @@ assert:
   # T3, attack resolved: Tomoro & Kyo suspended to pay the trigger; the
   # Chiropmon that got +3000 became Armalizamon mid-effect and the modifier
   # rode the permanent: 4000 + 3000 = 7000.
-  - at: 15
+  - at: 16
     that:
       turn: 3
       p0.memory: 3
@@ -162,7 +170,7 @@ assert:
           suspended: true
           sources: [BT25-043]
   # T4, during the opponent's turn: still 7000.
-  - at: 17
+  - at: 18
     that:
       turn: 4
       p0.field:
@@ -175,7 +183,7 @@ assert:
           suspended: true
           sources: [BT25-043]
   # T5, P0's breeding phase: "until your opponent's turn ends" has expired.
-  - at: 18
+  - at: 19
     that:
       turn: 5
       p0.field:

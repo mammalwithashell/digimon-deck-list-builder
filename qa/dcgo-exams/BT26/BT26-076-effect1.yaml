@@ -101,6 +101,13 @@ steps:
   - actor: 0
     do: {select: {targets: [own.field.0]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
+  # The opponent trashes 1 card from hand. RE-LOWERED 2026-10-19: this now
+  # comes BEFORE the reactive triggers -- they wait until Crowmon's
+  # [When Digivolving] finishes (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-
+  # TRIGGERS, 0870820d1) instead of resolving inline at the Tamer trash.
+  - actor: 1
+    do: {select: {cards: [ST1-08]}}
+    expect: {prompt: SelectHandEffect}
   # Two reactive triggers stack on the Tamer trash (Keenan's Execute gate and
   # Crowmon's own once-per-turn digivolve); resolve Crowmon's, decline it.
   - actor: 0
@@ -108,10 +115,6 @@ steps:
     expect: {prompt: MultipleSkills, count: 2, candidates: [BT26-094, BT26-076]}
   - actor: 0
     do: {select: {decline: true}}
-  # The opponent trashes 1 card from hand.
-  - actor: 1
-    do: {select: {cards: [ST1-08]}}
-    expect: {prompt: SelectHandEffect}
   # Keenan's reactive Execute grant (Tamer-trash event): our TriggerOrder(1) is
   # sim-only; DCGO asks an OptionalSkill gate, then the Digimon pick. Accepting
   # it suspends Keenan, so the hand-trash event's second Keenan trigger below
@@ -124,6 +127,13 @@ steps:
   - actor: 0
     do: {select: {targets: [own.field.1]}}
     expect: {prompt: SelectPermanentEffect, count: 1}
+  # Crowmon's trigger again, for the hand-trash event (§15-4-2-4; its declined
+  # [Once Per Turn] is unspent): declined. Keenan's hand-trash trigger is not
+  # offered -- Keenan is suspended, so its "by suspending this Tamer" can't
+  # be executed (§15-7-4). Sim-only, like the row it replaces (the second
+  # Keenan pick); the reactive tail is outside this clause and its DCGO shape
+  # (one MultipleSkills over all four triggers, per BT26-076-effect2's oracle
+  # abort) is unmeasured here.
   - actor: 0
-    do: {select: {cards: [BT26-094], sim_only: true}}
+    do: {select: {decline: true, sim_only: true}}
 assert: []
