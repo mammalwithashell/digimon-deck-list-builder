@@ -249,6 +249,7 @@ const CH16_ATK: &[&str] = &[
     include_str!("ch16_atk/PIERCING.yaml"),
     include_str!("ch16_atk/PROGRESS.yaml"),
     include_str!("ch16_atk/PUPPET.yaml"),
+    include_str!("ch16_atk/PUPPET_ARMOR.yaml"),
     include_str!("ch16_atk/RAID.yaml"),
     include_str!("ch16_atk/RAID_WA.yaml"),
     include_str!("ch16_atk/RETALIATION.yaml"),

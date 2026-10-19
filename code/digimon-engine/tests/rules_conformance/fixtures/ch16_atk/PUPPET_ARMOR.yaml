@@ -1,0 +1,18 @@
+# PUPPET_ARMOR -- Digimon, Lv.4, red, 4000 DP, play cost 4. Trait [Puppet].
+#   <Armor Purge> (When this Digimon would be deleted, by trashing the top
+#   card of this Digimon, it isn't deleted.)
+# A [Puppet] Digimon <Overclock ([Puppet] trait)> can choose as its cost whose
+# deletion <Armor Purge> can prevent (§16-34-3, §16-19; ST19-10 ExTyrannomon,
+# ST19-13 ShinMonzaemon, BT22-038 Monzaemon, BT22-076 ShinMonzaemon).
+card: PUPPET_ARMOR
+name: Armorpuppetmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+traits: [Puppet]
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge> (When this Digimon would be deleted, by trashing the top card of this Digimon, it isn't deleted.)"
