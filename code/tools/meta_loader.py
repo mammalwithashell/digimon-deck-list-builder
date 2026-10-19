@@ -1,19 +1,21 @@
 """Fetch meta stats and scrape decklists from external sources, build deck_library.json.
 
-Ingests tournament decklists from DCG Nexus, DigimonMeta.com, Egman Events,
-DigimonCard.io, and the DigiLab PostgreSQL database.
-Optionally enriches with meta stats from DigiLab.
+Ingests tournament decklists from the DigiLab public API, DCG Nexus,
+DigimonMeta.com, Egman Events, DigimonCard.io, and (historically) the DigiLab
+PostgreSQL mirror. Optionally enriches with meta stats from DigiLab.
 Computes meta share and conversion rate from scraped placement data.
 
-DCG Nexus is the only source that tags events with their legal format, so it is
-the one to reach for when scoping a run to the current format.
+The DigiLab API and DCG Nexus both tag events with their legal format, so they
+are the sources to reach for when scoping a run to the current format.
 
 Usage:
+    python tools/meta_loader.py --scrape-digilab-api --digilab-api-format EX13 \
+        --digilab-api-since 2026-08-01            # needs DIGILAB_API_KEY in the env
     python tools/meta_loader.py --scrape-dcg-nexus --dcg-nexus-format EX12
     python tools/meta_loader.py --scrape-digimonmeta URL   # Scrape BT24/EX11 decks
     python tools/meta_loader.py --scrape-egman URL          # Scrape Egman tournament decks
     python tools/meta_loader.py --scrape-digimoncard-io URL # Scrape DigimonCard.io tourney
-    python tools/meta_loader.py --scrape-digilab            # Scrape decklists from DigiLab DB
+    python tools/meta_loader.py --scrape-digilab            # Historical DigiLab DB mirror
     python tools/meta_loader.py --import-file FILE          # Import local deck file
     python tools/meta_loader.py --fetch-meta                # DigiLab stats (optional)
     python tools/meta_loader.py --build                     # Resolve + dedup + stats + write
@@ -60,8 +62,16 @@ ARCHETYPE_ALIASES_PATH = str(_ARCHETYPE_ALIASES_PATH)
 # with its legal format, and it carries placement, player count, and player
 # name together on the same page.
 SOURCE_PRIORITY = {
-    "dcg_nexus": 4, "digimonmeta": 3, "digilab": 2, "egman": 2,
+    "digilab_api": 4, "dcg_nexus": 4, "digimonmeta": 3, "digilab": 2, "egman": 2,
     "digimoncard_io": 1, "manual": 0, "file": 0,
+}
+
+# DigiLab's terms of use ask for a visible link back whenever its data is shown
+# publicly; this string is written into deck_library.json and shown in docs.
+DIGILAB_ATTRIBUTION = "Data provided by DigiLab (digilab.cards) - https://digilab.cards"
+SOURCES_ATTRIBUTION = {
+    "digilab_api": DIGILAB_ATTRIBUTION,
+    "digilab": DIGILAB_ATTRIBUTION,
 }
 
 
@@ -112,6 +122,18 @@ RE_DIGIMONMETA_ENTRY = re.compile(r"(\d)n([A-Z]{1,3}\d*-\d{2,3})a?")
 
 # ─── DCG Nexus ───────────────────────────────────────────────────────
 DCG_NEXUS_BASE = "https://dcg-nexus.com"
+
+# DigiLab public REST API (https://digilab.cards/docs). The game is chosen by
+# the host, so call the Digimon host directly rather than api.digilab.cards
+# (which 302-redirects every /api/ request here).
+DIGILAB_API_BASE = "https://digimon.digilab.cards/api"
+DIGILAB_API_KEY_ENV = "DIGILAB_API_KEY"
+# Documented limits: 60 req/min per IP address and 300 req/min per key. A
+# single machine is bound by the per-IP cap, so pace under 60 by default.
+DIGILAB_API_DEFAULT_RPM = 55
+DIGILAB_API_PER_PAGE = 100  # documented maximum
+# A DigiLab card id, with any alt-art / parallel suffix ("BT10-038_P1") dropped.
+RE_DIGILAB_CARD_ID = re.compile(r"^([A-Z]{1,3}\d*-\d{2,3})")
 
 # Tournament slugs end in the event date: ".../my-event-name-2026-07-18"
 RE_DCG_NEXUS_SLUG_DATE = re.compile(r"-(\d{4})-(\d{2})-(\d{2})$")
@@ -242,6 +264,208 @@ def _card_counts_diff(a: Dict[str, int], b: Dict[str, int]) -> int:
     """Count total card differences between two decklists."""
     all_ids = set(a.keys()) | set(b.keys())
     return sum(abs(a.get(cid, 0) - b.get(cid, 0)) for cid in all_ids)
+
+
+# ─── DigiLab public API client ───────────────────────────────────────
+
+class DigiLabApiKeyMissing(RuntimeError):
+    """Raised before any network call when DIGILAB_API_KEY is not set."""
+
+
+class DigiLabApiError(RuntimeError):
+    """A non-retryable HTTP error from the DigiLab API (never echoes the key)."""
+
+    def __init__(self, status: int, path: str, detail: str = "") -> None:
+        self.status = status
+        self.path = path
+        super().__init__(f"DigiLab API returned {status} for {path}{': ' + detail if detail else ''}")
+
+
+class _TokenBucket:
+    """Token bucket limiter: ``rate_per_min`` sustained, ``burst`` tokens at once.
+
+    ``clock`` / ``sleep`` are injectable so tests can run it on a fake clock.
+    """
+
+    def __init__(
+        self,
+        rate_per_min: float,
+        burst: int = 10,
+        clock=None,
+        sleep=None,
+    ) -> None:
+        import time
+
+        self.rate_per_min = float(rate_per_min)
+        self.burst = max(1, int(burst))
+        self._per_sec = self.rate_per_min / 60.0
+        self._clock = clock or time.monotonic
+        self._sleep = sleep or time.sleep
+        self._tokens = float(self.burst)
+        self._last = self._clock()
+
+    def _refill(self) -> None:
+        now = self._clock()
+        self._tokens = min(float(self.burst), self._tokens + (now - self._last) * self._per_sec)
+        self._last = now
+
+    def acquire(self) -> None:
+        """Block until a token is available, then consume it."""
+        self._refill()
+        if self._tokens < 1.0:
+            wait = (1.0 - self._tokens) / self._per_sec
+            self._sleep(wait)
+            self._refill()
+        self._tokens -= 1.0
+
+
+class DigiLabApiClient:
+    """Thin, rate-limited GET client for the DigiLab public API.
+
+    * Reads the key from ``DIGILAB_API_KEY`` (or ``api_key``) and sends it in the
+      ``X-API-Key`` header. The key is never logged or put in a URL; the
+      resolve step fails fast with :class:`DigiLabApiKeyMissing` if it is unset.
+    * Paces requests with a token bucket (default 55/min, under the documented
+      60/min per-IP cap) plus an optional fixed ``delay`` before every request.
+    * On 429 honours ``Retry-After`` when present, otherwise backs off
+      exponentially (2s, 4s, 8s, ... capped at 60s), up to ``max_retries``.
+      5xx responses retry the same way; 401/403 raise immediately.
+    """
+
+    _USER_AGENT = "digimon-deck-list-builder/meta_loader (DigiLab API client)"
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: str = DIGILAB_API_BASE,
+        session=None,
+        rate_per_min: float = DIGILAB_API_DEFAULT_RPM,
+        burst: int = 10,
+        delay: float = 0.0,
+        max_retries: int = 5,
+        timeout: float = 30.0,
+        sleep=None,
+        clock=None,
+    ) -> None:
+        import time
+
+        self._api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self._session = session
+        self.rate_per_min = rate_per_min
+        self.delay = max(0.0, float(delay))
+        self.max_retries = max(0, int(max_retries))
+        self.timeout = timeout
+        self._sleep = sleep or time.sleep
+        self._bucket = _TokenBucket(rate_per_min, burst=burst, clock=clock, sleep=self._sleep)
+        self.requests_made = 0
+
+    # ── key + session ────────────────────────────────────────────
+
+    def _resolve_key(self) -> str:
+        if not self._api_key:
+            self._api_key = os.environ.get(DIGILAB_API_KEY_ENV, "").strip() or None
+        if not self._api_key:
+            raise DigiLabApiKeyMissing(
+                f"{DIGILAB_API_KEY_ENV} is not set. DigiLab API keys are issued by "
+                "DigiLab admins in the #api channel of their Discord "
+                "(https://digilab.cards/docs). Export the key in the environment "
+                "before running --scrape-digilab-api; it is never written to disk."
+            )
+        return self._api_key
+
+    def _get_session(self):
+        if self._session is None:
+            import requests
+
+            self._session = requests.Session()
+        return self._session
+
+    # ── requests ─────────────────────────────────────────────────
+
+    def get(self, path: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """GET ``base_url + path`` and return the decoded JSON body.
+
+        Raises :class:`DigiLabApiError` for 4xx responses other than 429 (the
+        caller decides whether a 404 is fatal) and ``RuntimeError`` when the
+        retry budget for 429/5xx is exhausted.
+        """
+        key = self._resolve_key()
+        url = f"{self.base_url}/{path.lstrip('/')}"
+        headers = {"X-API-Key": key, "Accept": "application/json", "User-Agent": self._USER_AGENT}
+        session = self._get_session()
+
+        attempt = 0
+        while True:
+            if self.delay > 0:
+                self._sleep(self.delay)
+            self._bucket.acquire()
+            self.requests_made += 1
+            logger.debug("DigiLab API GET %s %s", path, params or {})
+            response = session.get(url, params=params, headers=headers, timeout=self.timeout)
+            status = int(response.status_code)
+
+            if 200 <= status < 300:
+                return response.json()
+
+            if status in (401, 403):
+                raise DigiLabApiError(
+                    status, path,
+                    f"the API rejected the key from {DIGILAB_API_KEY_ENV} (key not shown)",
+                )
+
+            if status == 429 or status >= 500:
+                if attempt >= self.max_retries:
+                    raise RuntimeError(
+                        f"DigiLab API returned {status} {attempt + 1} times in a row for "
+                        f"{path}; giving up (max_retries={self.max_retries})"
+                    )
+                wait = self._retry_wait(response, attempt)
+                logger.warning(
+                    "DigiLab API %s on %s — backing off %.1fs (attempt %d/%d)",
+                    status, path, wait, attempt + 1, self.max_retries,
+                )
+                self._sleep(wait)
+                attempt += 1
+                continue
+
+            detail = ""
+            try:
+                body = response.json()
+                if isinstance(body, dict) and body.get("error"):
+                    detail = str(body["error"])
+            except Exception:
+                pass
+            raise DigiLabApiError(status, path, detail)
+
+    @staticmethod
+    def _retry_wait(response, attempt: int) -> float:
+        header = None
+        try:
+            header = response.headers.get("Retry-After")
+        except Exception:
+            header = None
+        if header:
+            try:
+                return max(0.0, float(header))
+            except ValueError:
+                pass
+        return float(min(60.0, 2.0 * (2 ** attempt)))
+
+    def paginate(self, path: str, params: Optional[Dict[str, Any]] = None):
+        """Yield ``(page_number, payload)`` for every page of a listing endpoint."""
+        base = dict(params or {})
+        base.setdefault("per_page", DIGILAB_API_PER_PAGE)
+        page = 1
+        while True:
+            payload = self.get(path, {**base, "page": page})
+            yield page, payload
+            rows = payload.get("data") or []
+            pagination = payload.get("pagination") or {}
+            total_pages = int(pagination.get("total_pages") or 0)
+            if not rows or page >= total_pages:
+                return
+            page += 1
 
 
 # ─── DeckIngestor ────────────────────────────────────────────────────
@@ -845,7 +1069,234 @@ class DeckIngestor:
             card_counts[card_id] = card_counts.get(card_id, 0) + int(entry.group(1))
         return card_counts
 
-    # ── DigiLab PostgreSQL ───────────────────────────────────────
+    # ── DigiLab public API ───────────────────────────────────────
+
+    @staticmethod
+    def _digilab_api_decklist_to_card_counts(decklist: Optional[Dict[str, Any]]) -> Dict[str, int]:
+        """Flatten a ``/api/decklist/{id}`` ``decklist`` object to ``{card_id: count}``.
+
+        The API groups cards as ``eggs`` / ``digimon`` / ``tamers`` / ``options``;
+        the retired DB mirror used singular keys, so both spellings are read.
+        Ids are upper-cased and any alt-art suffix is dropped; rows without a
+        recognisable id or a positive count are skipped.
+        """
+        counts: Dict[str, int] = {}
+        if not isinstance(decklist, dict):
+            return counts
+        for key in ("eggs", "egg", "digimon", "tamers", "tamer", "options", "option"):
+            for entry in decklist.get(key) or []:
+                if not isinstance(entry, dict):
+                    continue
+                raw_id = str(entry.get("card_id") or "").strip().upper()
+                m = RE_DIGILAB_CARD_ID.match(raw_id)
+                if not m:
+                    continue
+                try:
+                    count = int(entry.get("count") or 0)
+                except (TypeError, ValueError):
+                    continue
+                if count <= 0:
+                    continue
+                card_id = m.group(1)
+                counts[card_id] = counts.get(card_id, 0) + count
+        return counts
+
+    def scrape_digilab_api(
+        self,
+        formats: Optional[Set[str]] = None,
+        since: Optional[str] = None,
+        max_tournaments: Optional[int] = None,
+        delay: float = 0.0,
+        client: Optional[DigiLabApiClient] = None,
+    ) -> int:
+        """Ingest tournament decklists from the DigiLab public API.
+
+        Walk (all GET, key in ``X-API-Key``, see https://digilab.cards/docs):
+
+        1. ``/api/tournaments?format=&date_from=`` — the format-scoped,
+           newest-first event list. Page 1 also carries the API's ``formats``
+           list, used to warn about unknown format ids. ``max_tournaments``
+           bounds this set (across all requested formats).
+        2. ``/api/decklists?format=&date_from=`` — one row per submitted
+           decklist with ``result_id``, placement, record, player and
+           archetype. The standings endpoint (``/api/tournament/{id}``) only
+           exposes an opaque ``decklist_url`` and no ``result_id``, so this
+           listing is the documented way to reach the parsed card list; rows
+           are kept only for tournaments selected in step 1.
+        3. ``/api/decklist/{result_id}`` — the parsed card list. Results whose
+           ``decklist`` is ``null`` (DigiLab has not parsed the submission) are
+           skipped; results already present in the library (same
+           ``source_url``) are not refetched.
+
+        Records land with ``source="digilab_api"``, ``format_tag`` = the API's
+        format id, placement, top-cut flag, event date, field size and player
+        name, and dedupe through :meth:`deduplicate` like every other source.
+
+        Args:
+            formats: Format ids to keep (e.g. ``{"EX13"}``). None walks every
+                format the API returns.
+            since: ISO date (YYYY-MM-DD); only events on or after it.
+            max_tournaments: Stop after this many tournaments.
+            delay: Extra fixed seconds slept before every request, on top of
+                the client's token bucket (55/min by default).
+            client: Injected :class:`DigiLabApiClient` (tests pass a fake
+                session through it). Built from the environment when omitted.
+
+        Returns number of decklists ingested. Raises
+        :class:`DigiLabApiKeyMissing` before any request if the key is unset.
+        """
+        if client is None:
+            client = DigiLabApiClient(delay=delay)
+        elif delay and not client.delay:
+            client.delay = delay
+
+        format_list: List[Optional[str]] = sorted(formats) if formats else [None]
+
+        def _listing_params(fmt: Optional[str]) -> Dict[str, Any]:
+            params: Dict[str, Any] = {
+                "per_page": DIGILAB_API_PER_PAGE, "sort": "date", "sort_dir": "desc",
+            }
+            if fmt:
+                params["format"] = fmt
+            if since:
+                params["date_from"] = since
+            return params
+
+        # 1. Tournaments (newest first), bounded by max_tournaments.
+        tournaments: Dict[int, Dict[str, Any]] = {}
+        capped = False
+        for fmt in format_list:
+            if capped:
+                break
+            logger.info(
+                "DigiLab API: listing %s tournaments%s...",
+                fmt or "all", f" since {since}" if since else "",
+            )
+            for page_no, payload in client.paginate("/tournaments", _listing_params(fmt)):
+                if page_no == 1 and fmt:
+                    known = {
+                        str(f.get("format_id"))
+                        for f in (payload.get("formats") or [])
+                        if isinstance(f, dict) and f.get("format_id")
+                    }
+                    if known and fmt not in known:
+                        logger.warning(
+                            "DigiLab API: requested format %s is not among the API's "
+                            "known formats (%s); continuing with the server-side filter",
+                            fmt, ", ".join(sorted(known)),
+                        )
+                for row in payload.get("data") or []:
+                    tid = row.get("tournament_id")
+                    if tid is None or tid in tournaments:
+                        continue
+                    if max_tournaments is not None and len(tournaments) >= max_tournaments:
+                        capped = True
+                        break
+                    tournaments[int(tid)] = row
+                if capped:
+                    break
+        logger.info("DigiLab API: %d tournaments selected", len(tournaments))
+        if not tournaments:
+            return 0
+
+        # 2. Decklist listing → result ids, scoped to the selected tournaments.
+        results: Dict[int, Dict[str, Any]] = {}
+        for fmt in format_list:
+            for _page_no, payload in client.paginate("/decklists", _listing_params(fmt)):
+                for row in payload.get("data") or []:
+                    rid = row.get("result_id")
+                    tid = row.get("tournament_id")
+                    if rid is None or tid is None or int(tid) not in tournaments:
+                        continue
+                    results.setdefault(int(rid), row)
+        logger.info("DigiLab API: %d decklist results listed", len(results))
+
+        existing_urls: Set[str] = {
+            d.source_url
+            for arch in self.archetypes.values()
+            for d in arch.decklists
+            if d.source == "digilab_api"
+        }
+        existing_urls.update(
+            d.source_url for d in self.unresolved_decks if d.source == "digilab_api"
+        )
+
+        # 3. Parsed card lists.
+        count = 0
+        skipped_known = 0
+        skipped_unparsed = 0
+        for rid, row in results.items():
+            source_url = f"{DIGILAB_API_BASE}/decklist/{rid}"
+            if source_url in existing_urls:
+                skipped_known += 1
+                continue
+            existing_urls.add(source_url)
+
+            try:
+                detail = client.get(f"/decklist/{rid}")
+            except DigiLabApiError as e:
+                if e.status == 404:
+                    logger.debug("DigiLab API: result %s has no decklist (404)", rid)
+                    continue
+                raise
+            except DigiLabApiKeyMissing:
+                raise
+            except Exception:
+                logger.warning("DigiLab API: failed to fetch decklist %s", rid, exc_info=True)
+                continue
+
+            card_counts = self._digilab_api_decklist_to_card_counts(detail.get("decklist"))
+            if not card_counts:
+                skipped_unparsed += 1
+                continue
+
+            tid = int(detail.get("tournament_id") or row.get("tournament_id"))
+            event = tournaments.get(tid, {})
+            placement = detail.get("placement", row.get("placement"))
+            placement_str = str(placement) if placement is not None else None
+            event_players = (
+                detail.get("player_count") or row.get("player_count")
+                or event.get("player_count") or None
+            )
+            archetype_name = detail.get("archetype_name") or row.get("archetype_name") or None
+            player_name = detail.get("player_name") or row.get("player_name") or None
+
+            deck = IngestedDeck(
+                deck_id=f"digilab_api_{_deck_fingerprint(card_counts)[:12]}",
+                source="digilab_api",
+                source_url=source_url,
+                card_ids=expand_deck_dict(card_counts),
+                card_counts=card_counts,
+                archetype_name=archetype_name,
+                format_tag=detail.get("format") or row.get("format") or event.get("format") or None,
+                placement=placement_str,
+                is_top_cut=_is_top_cut(placement_str, event_players),
+                event_date=detail.get("event_date") or row.get("event_date") or event.get("event_date"),
+                event_players=int(event_players) if event_players else None,
+                player_name=str(player_name).strip() if player_name else None,
+            )
+
+            if archetype_name:
+                self._add_deck_to_archetype(archetype_name, deck)
+                arch = self.archetypes[deck.archetype_name]
+                if arch.primary_color is None and detail.get("primary_color"):
+                    arch.primary_color = detail["primary_color"]
+                if arch.secondary_color is None and detail.get("secondary_color"):
+                    arch.secondary_color = detail["secondary_color"]
+                if arch.display_card_id is None and detail.get("display_card_id"):
+                    arch.display_card_id = detail["display_card_id"]
+            else:
+                self.unresolved_decks.append(deck)
+            count += 1
+
+        logger.info(
+            "DigiLab API: ingested %d decklists from %d tournaments "
+            "(%d already in library, %d unparsed, %d requests)",
+            count, len(tournaments), skipped_known, skipped_unparsed, client.requests_made,
+        )
+        return count
+
+    # ── DigiLab PostgreSQL (historical) ──────────────────────────
 
     @staticmethod
     def _digilab_connect():
@@ -917,7 +1368,12 @@ class DeckIngestor:
         return card_ids, card_counts
 
     def scrape_digilab(self, min_placement: Optional[int] = None) -> int:
-        """Scrape decklists from DigiLab PostgreSQL database.
+        """Scrape decklists from the DigiLab PostgreSQL mirror (HISTORICAL).
+
+        The mirror stopped ingesting on 2026-03-12 (newest format EX11), so
+        this path can only replay the historical corpus already in the library.
+        For current-format lists use ``--scrape-digilab-api``
+        (:meth:`scrape_digilab_api`), which reads DigiLab's public REST API.
 
         Fetches tournament results that have decklist_json, joined with
         deck_archetypes for archetype names and tournaments for event metadata.
@@ -1425,6 +1881,8 @@ class DeckIngestor:
             "version": 1,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "total_entries": sum(len(a.decklists) for a in self.archetypes.values()),
+            # Required visible attribution for sources whose terms ask for it.
+            "sources_attribution": dict(SOURCES_ATTRIBUTION),
             "archetypes": {},
         }
 
@@ -1811,8 +2269,37 @@ def main():
         help="Delay between DCG Nexus requests (default: 0.5)",
     )
     parser.add_argument(
+        "--scrape-digilab-api", action="store_true",
+        help=(
+            "Ingest tournament decklists from the DigiLab public API "
+            f"(needs {DIGILAB_API_KEY_ENV} in the environment)"
+        ),
+    )
+    parser.add_argument(
+        "--digilab-api-format", metavar="TAGS", default=None,
+        help="Comma-separated DigiLab format ids to keep (e.g. 'EX13' or 'EX13,BT26')",
+    )
+    parser.add_argument(
+        "--digilab-api-since", metavar="YYYY-MM-DD", default=None,
+        help="Only DigiLab API tournaments on or after this date",
+    )
+    parser.add_argument(
+        "--digilab-api-max-tournaments", metavar="N", type=int, default=None,
+        help="Stop after N DigiLab API tournaments",
+    )
+    parser.add_argument(
+        "--digilab-api-delay", metavar="SECONDS", type=float, default=0.0,
+        help=(
+            "Extra delay before each DigiLab API request, on top of the built-in "
+            f"{DIGILAB_API_DEFAULT_RPM} req/min pacing (default: 0)"
+        ),
+    )
+    parser.add_argument(
         "--scrape-digilab", action="store_true",
-        help="Scrape decklists from DigiLab PostgreSQL database",
+        help=(
+            "Scrape decklists from the historical DigiLab PostgreSQL mirror "
+            "(stopped 2026-03-12; use --scrape-digilab-api for current formats)"
+        ),
     )
     parser.add_argument(
         "--digilab-min-placement", metavar="N", type=int, default=None,
@@ -1902,6 +2389,24 @@ def main():
             delay=args.dcg_nexus_delay,
             event_url=args.dcg_nexus_event,
         )
+        actions_taken = True
+
+    if args.scrape_digilab_api:
+        fmts = (
+            {t.strip() for t in args.digilab_api_format.split(",") if t.strip()}
+            if args.digilab_api_format else None
+        )
+        try:
+            ingestor.scrape_digilab_api(
+                formats=fmts,
+                since=args.digilab_api_since,
+                max_tournaments=args.digilab_api_max_tournaments,
+                delay=args.digilab_api_delay,
+            )
+        except DigiLabApiKeyMissing as e:
+            # Fail fast and clean: nothing was fetched and nothing is written.
+            print(f"error: {e}", file=sys.stderr)
+            sys.exit(2)
         actions_taken = True
 
     if args.scrape_digilab:

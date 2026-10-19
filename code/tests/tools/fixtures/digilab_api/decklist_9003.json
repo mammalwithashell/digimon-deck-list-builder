@@ -1,0 +1,52 @@
+{
+  "result_id": 9003,
+  "tournament_id": 6290,
+  "event_date": "2026-09-07",
+  "event_type": "locals",
+  "format": "EX13",
+  "player_count": 12,
+  "placement": 2,
+  "wins": 3,
+  "losses": 1,
+  "ties": 0,
+  "player_name": "Carol",
+  "player_slug": "carol",
+  "store_name": "Evolution Gaming",
+  "store_slug": "evolution-gaming",
+  "scene_name": "Milwaukee",
+  "scene_slug": "milwaukee",
+  "archetype_name": "Blue Flare",
+  "archetype_slug": "blue-flare",
+  "primary_color": "Blue",
+  "secondary_color": null,
+  "display_card_id": "BT10-029",
+  "decklist_url": "https://digimoncard.app/deck/blue-flare-carol",
+  "decklist": {
+    "eggs": [
+      { "card_id": "BT10-002", "name": "Pickmon", "count": 4, "color": "Blue" }
+    ],
+    "digimon": [
+      { "card_id": "BT10-029", "name": "Greymon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-031", "name": "MetalGreymon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-033", "name": "MailBirdramon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-034", "name": "Cyberdramon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-035", "name": "MetalGreymon + Cyber Launcher", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-036", "name": "Deckerdramon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-037", "name": "ZekeGreymon", "count": 4, "color": "Blue" },
+      { "card_id": "BT12-031", "name": "Monitamon", "count": 4, "color": "Blue" },
+      { "card_id": "BT12-035", "name": "Greymon", "count": 4, "color": "Blue" },
+      { "card_id": "EX13-021", "name": "Golemon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-038_P1", "name": "Blue Flare Shoutmon (alt art)", "count": 2, "color": "Blue" },
+      { "card_id": "not-a-card", "name": "Garbage row", "count": 1, "color": null }
+    ],
+    "tamers": [
+      { "card_id": "BT10-091", "name": "Christopher Aonuma", "count": 4, "color": "Blue" }
+    ],
+    "options": [
+      { "card_id": "BT10-104", "name": "Plasma Shot", "count": 4, "color": "Blue" }
+    ],
+    "total_cards": 54,
+    "total_eggs": 4,
+    "total_main": 50
+  }
+}

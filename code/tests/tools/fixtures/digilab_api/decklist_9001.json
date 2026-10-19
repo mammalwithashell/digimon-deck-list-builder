@@ -1,0 +1,53 @@
+{
+  "result_id": 9001,
+  "tournament_id": 6301,
+  "event_date": "2026-09-14",
+  "event_type": "locals",
+  "format": "EX13",
+  "player_count": 18,
+  "placement": 1,
+  "wins": 4,
+  "losses": 0,
+  "ties": 0,
+  "player_name": "Alice",
+  "player_slug": "alice",
+  "store_name": "Card Masters",
+  "store_slug": "card-masters-austin",
+  "scene_name": "Texas",
+  "scene_slug": "texas",
+  "archetype_name": "Blue Flare",
+  "archetype_slug": "blue-flare",
+  "primary_color": "Blue",
+  "secondary_color": null,
+  "display_card_id": "BT10-029",
+  "decklist_url": "https://digimoncard.app/deck/blue-flare-alice",
+  "decklist": {
+    "eggs": [
+      { "card_id": "BT10-002", "name": "Pickmon", "count": 4, "color": "Blue" }
+    ],
+    "digimon": [
+      { "card_id": "BT10-029", "name": "Greymon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-031", "name": "MetalGreymon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-033", "name": "MailBirdramon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-034", "name": "Cyberdramon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-035", "name": "MetalGreymon + Cyber Launcher", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-036", "name": "Deckerdramon", "count": 3, "color": "Blue" },
+      { "card_id": "BT10-037", "name": "ZekeGreymon", "count": 4, "color": "Blue" },
+      { "card_id": "BT10-038", "name": "Blue Flare Shoutmon", "count": 2, "color": "Blue" },
+      { "card_id": "BT12-031", "name": "Monitamon", "count": 4, "color": "Blue" },
+      { "card_id": "BT12-035", "name": "Greymon", "count": 4, "color": "Blue" },
+      { "card_id": "EX13-021", "name": "Golemon", "count": 3, "color": "Blue" }
+    ],
+    "tamers": [
+      { "card_id": "BT10-091", "name": "Christopher Aonuma", "count": 4, "color": "Blue" },
+      { "card_id": "EX13-063", "name": "Kiriha", "count": 2, "color": "Blue" }
+    ],
+    "options": [
+      { "card_id": "BT10-104", "name": "Plasma Shot", "count": 2, "color": "Blue" },
+      { "card_id": "EX13-070", "name": "Trident Arm", "count": 2, "color": "Blue" }
+    ],
+    "total_cards": 54,
+    "total_eggs": 4,
+    "total_main": 50
+  }
+}
