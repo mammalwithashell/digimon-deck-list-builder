@@ -110,9 +110,12 @@ def test_rule_check_leaves_never_seeded_not_testable():
 def test_committed_sidecar_overrides_applied():
     from tools.rules.build_obligations import DEFAULT_SIDECAR, load_sidecar
 
-    obs = build(SRC, load_sidecar(DEFAULT_SIDECAR), MECH)["obligations"]
+    sidecar = load_sidecar(DEFAULT_SIDECAR)
+    obs = build(SRC, sidecar, MECH)["obligations"]
     assert obs["16-4"]["status"] == "not-testable" and obs["16-4"]["note"]
-    assert obs["17-1-3-2-4"]["status"] == "gap"
+    # A rule-check leaf seeds as `gap`; whatever the committed sidecar says about
+    # it (Plan 4 Task 4 proved 17-1-3-2-4) must be what the build reports.
+    assert obs["17-1-3-2-4"]["status"] == sidecar["17-1-3-2-4"]["status"]
 
 
 def test_summary_mechanics_proven_and_not_testable_counts():
