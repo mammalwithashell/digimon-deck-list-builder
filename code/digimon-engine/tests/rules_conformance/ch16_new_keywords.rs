@@ -2036,6 +2036,71 @@ fn dual_digivolution_card_referenced_as_option_card_for_digivolution_card_search
     );
 }
 
+/// §4-6-6-2 "A DUAL card's Option information can be referenced when
+/// referencing the card as an Option card."
+///
+/// The digivolution-card counterpart of
+/// `dual_option_information_referenced_as_option_card` (hand): a DUAL card
+/// lying under a Digimon, referenced as an Option card, is read through its
+/// Option INFORMATION, not only its category (official Q&A Q6395 / Q6404:
+/// BT25-085 under a Digimon "is treated as an Option card with the [Three
+/// Musketeers] trait"). P1's stack is `[LV5_PLAIN, DUAL_ARTS]` with
+/// `DUAL_ARTS` underneath (Digimon information red, Option information
+/// purple):
+/// - `SRC_PICK_PURPLE_OPT` ("Trash 1 purple Option card from the digivolution
+///   cards of 1 of your opponent's Digimon") can choose it and trashes it;
+/// - `SRC_PICK_RED_OPT` can't: referenced as an Option card it is purple, not
+///   red;
+/// - `SRC_PICK_PURPLE_DIGI` can't: referenced as a Digimon card it is red,
+///   not purple.
+/// The two negatives rule out reading the Digimon information under an
+/// Option reference and a "both informations together" reading in this zone.
+#[test]
+fn dual_digivolution_card_referenced_as_option_card_reads_option_information() {
+    cite!(
+        "4-6-6-2",
+        "048c65a256d7f9e5a4d1bfb47bdb99c098feb6678a7d999b6b2062c4e2e40b52"
+    );
+    let staged = |picker: &str| {
+        let mut r = board(&[picker]);
+        red_anchor(&mut r);
+        r.place_stack(1, &["DUAL_ARTS", "LV5_PLAIN"]);
+        use_option(&mut r, 0, picker);
+        r
+    };
+
+    let mut r = staged("SRC_PICK_PURPLE_OPT");
+    step_prompt(&mut r); // the opponent's only Digimon
+    assert!(
+        r.pending_selection().is_some(),
+        "referenced as an Option card the DUAL digivolution card is purple: a legal pick (no pick offered)"
+    );
+    step_prompt(&mut r);
+    resolve_prompts(&mut r);
+    assert_eq!(trash_ids(&r, 1), owned(&["DUAL_ARTS"]));
+
+    for (picker, why) in [
+        (
+            "SRC_PICK_RED_OPT",
+            "referenced as an Option card, DUAL_ARTS is purple, not red",
+        ),
+        (
+            "SRC_PICK_PURPLE_DIGI",
+            "referenced as a Digimon card, DUAL_ARTS is red, not purple",
+        ),
+    ] {
+        let mut r = staged(picker);
+        step_prompt(&mut r); // the opponent's only Digimon
+        assert!(
+            r.pending_selection().is_none(),
+            "{picker}: {why}: {:?}",
+            r.pending_selection()
+        );
+        resolve_prompts(&mut r);
+        assert!(trash_ids(&r, 1).is_empty(), "{picker}: {why}");
+    }
+}
+
 /// §4-6-3 "A DUAL card placed on the field is treated as a Digimon. It can't
 /// be referenced as an Option card placed on the field. (Example: A DUAL
 /// card that is digivolved by placing it on top of one of your cards on the
