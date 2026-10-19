@@ -251,10 +251,14 @@ impl Player {
         if perm.top_card().is_token {
             return;
         }
-        for card in perm.card_sources {
+        // The trash is a public area; cards are placed face-up in it
+        // (§3-6-3), a face-down card stashed under a Tamer (§4-7-9) too.
+        for mut card in perm.card_sources {
+            card.face_down = false;
             self.trash.push(card);
         }
-        for card in perm.linked_cards {
+        for mut card in perm.linked_cards {
+            card.face_down = false;
             self.trash.push(card);
         }
     }

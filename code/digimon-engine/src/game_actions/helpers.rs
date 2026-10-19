@@ -45,7 +45,12 @@ impl Game {
         }
         let count = removed.len();
         for source in &removed {
-            self.player_mut(source.owner).trash.push(source.clone());
+            // The trash is a public area; cards are placed face-up in it
+            // (§3-6-3), whatever their state under the permanent was (a
+            // face-down card stashed under a Tamer, §4-7-9).
+            let mut card = source.clone();
+            card.face_down = false;
+            self.player_mut(source.owner).trash.push(card);
         }
         self.tick_declarative_effects();
         self.mark_until_condition_dirty();
@@ -100,11 +105,18 @@ impl Game {
         &mut self,
         trash_owner: PlayerId,
         fire_target: PermanentHandle,
-        removed: CardSource,
+        mut removed: CardSource,
         host_card: crate::card_source::CardHandle,
         cause: crate::trigger_context::EventCause,
     ) {
         let source_card = removed.handle();
+        // The trash is a public area; cards are placed face-up in it
+        // (§3-6-3). A face-down card trashed from under a Tamer (§4-7-9)
+        // keeping its flag became a face-down TOP card when an effect then
+        // played it from the trash (official Q&A Q6958), and the next rule
+        // check trashed it again as a face-down card on the field
+        // (§17-1-3-2-4). G-ENGINE-PLAY-FROM-TRASH-OF-JUST-TRASHED-SOURCE-NOT-PLAYED.
+        removed.face_down = false;
         self.player_mut(trash_owner).trash.push(removed);
         self.fire_digivolution_card_trashed(
             fire_target.player,

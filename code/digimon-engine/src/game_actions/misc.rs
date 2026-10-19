@@ -1221,7 +1221,10 @@ impl Game {
         }
 
         let turn = self.turn_count;
-        let card = self.player_mut(player_id).hand.remove(hand_index);
+        let mut card = self.player_mut(player_id).hand.remove(hand_index);
+        // A played card is placed face-up on the field (§3-4-2), whatever
+        // zone it came from.
+        card.face_down = false;
         let mut perm = crate::permanent::Permanent::new(card, turn);
         // G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060 "plays ... suspended"):
         // a flagged play enters the battle area suspended, BEFORE the

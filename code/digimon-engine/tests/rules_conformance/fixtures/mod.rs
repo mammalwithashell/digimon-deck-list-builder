@@ -108,6 +108,7 @@ const CH15_08: &[&str] = &[
     include_str!("ch15_08/MAIN_PLAY_LV4.yaml"),
     include_str!("ch15_08/MAIN_TRASH_BOTTOM_SRC.yaml"),
     include_str!("ch15_08/MAIN_TRASH_UNDER_MEM.yaml"),
+    include_str!("ch15_08/MAIN_TRASH_UNDER_PLAY.yaml"),
     include_str!("ch15_08/OBS_ATK_CHRON.yaml"),
     include_str!("ch15_08/OBS_ATK_GE10K.yaml"),
     include_str!("ch15_08/OBS_ATK_GE5.yaml"),

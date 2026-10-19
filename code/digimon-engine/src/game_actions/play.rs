@@ -147,6 +147,46 @@ impl Game {
         self.play_from_trash_with_cost_suppress(player_id, trash_index, cost_delta, source, false)
     }
 
+    /// Why `player_id` can't play the card at `trash_index` of their trash
+    /// right now, or `None` if nothing stops it before the cost is computed:
+    /// the checks [`Self::play_from_trash_with_cost_suppress`] makes before
+    /// it moves the card. Read-only, so a caller whose play did not happen
+    /// can report the reason instead of silently doing nothing.
+    pub(crate) fn trash_play_refusal(
+        &self,
+        player_id: PlayerId,
+        trash_index: usize,
+        source: PlaySource,
+    ) -> Option<&'static str> {
+        if self
+            .modifiers
+            .player_has(player_id, ModifierType::CannotPlayFromTrash)
+        {
+            return Some("playing cards from the trash is prohibited");
+        }
+        let player = self.player(player_id);
+        let Some(card) = player.trash.get(trash_index) else {
+            return Some("the card is no longer in the trash");
+        };
+        if player.battle_area.len() >= self.rules.field_slots as usize {
+            return Some("the battle area is full");
+        }
+        if source == PlaySource::ByEffect
+            && self.effect_play_is_prohibited(player_id, card.card_kind(&self.card_data))
+        {
+            return Some("playing this kind of card by effects is prohibited");
+        }
+        let controller = if source == PlaySource::ByEffect {
+            self.effect_source_player.unwrap_or(player_id)
+        } else {
+            player_id
+        };
+        if self.card_play_is_prohibited(controller, card) {
+            return Some("playing this card is prohibited");
+        }
+        None
+    }
+
     /// As [`Self::play_from_trash_with_cost`], but threads a `suppress_on_play`
     /// flag (PUPPETS-G030). When `true`, the just-played permanent's own
     /// `[On Play]` effects are skipped for this play event only. Used by
@@ -159,33 +199,7 @@ impl Game {
         source: PlaySource,
         suppress_on_play: bool,
     ) -> Option<usize> {
-        if self
-            .modifiers
-            .player_has(player_id, ModifierType::CannotPlayFromTrash)
-        {
-            return None;
-        }
-        let field_slots = self.rules.field_slots;
-
-        let card_kind = {
-            let player = self.player(player_id);
-            if trash_index >= player.trash.len() {
-                return None;
-            }
-            if player.battle_area.len() >= field_slots as usize {
-                return None;
-            }
-            let card = &player.trash[trash_index];
-            card.card_kind(&self.card_data)
-        };
-
-        if source == PlaySource::ByEffect && self.effect_play_is_prohibited(player_id, card_kind) {
-            return None;
-        }
-        let controller = if source == PlaySource::ByEffect {
-            self.effect_source_player.unwrap_or(player_id)
-        } else { player_id };
-        if self.card_play_is_prohibited(controller, &self.player(player_id).trash[trash_index]) {
+        if self.trash_play_refusal(player_id, trash_index, source).is_some() {
             return None;
         }
 

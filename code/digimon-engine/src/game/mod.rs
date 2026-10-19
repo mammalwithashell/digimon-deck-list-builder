@@ -1812,7 +1812,9 @@ impl Game {
         }
 
         let turn = self.turn_count;
-        let card_source = self.player_mut(player_id).hand.remove(hand_index);
+        let mut card_source = self.player_mut(player_id).hand.remove(hand_index);
+        // A played card is placed face-up on the field (§3-4-2).
+        card_source.face_down = false;
         let perm = crate::permanent::Permanent::new(card_source, turn);
         self.player_mut(player_id).battle_area.push(perm);
         let field_index = self.player(player_id).battle_area.len() - 1;
@@ -1910,7 +1912,10 @@ impl Game {
 
         let turn = self.turn_count;
         let mut entered = Vec::with_capacity(removed.len());
-        for (player_id, card_source) in removed {
+        for (player_id, mut card_source) in removed {
+            // A played card is placed face-up on the field (§3-4-2), even a
+            // face-down digivolution card played from under a permanent.
+            card_source.face_down = false;
             let card = card_source.handle();
             let emitted_card_id = card_source.card_id(&self.card_data).to_string();
             let emitted_card_name = card_source.card_name(&self.card_data).to_string();
@@ -2573,7 +2578,16 @@ impl Game {
         if field_index >= p.battle_area.len() {
             return;
         }
-        let perm = p.battle_area.remove(field_index);
+        let mut perm = p.battle_area.remove(field_index);
+        // The trash is a public area; cards are placed face-up in it
+        // (§3-6-3), a face-down card stashed under a Tamer (§4-7-9) too.
+        for card in perm
+            .card_sources
+            .iter_mut()
+            .chain(perm.linked_cards.iter_mut())
+        {
+            card.face_down = false;
+        }
 
         // Empty-stack guard (parity with Player::delete_permanent): if the
         // stack was already drained by a mid-deletion effect, only linked

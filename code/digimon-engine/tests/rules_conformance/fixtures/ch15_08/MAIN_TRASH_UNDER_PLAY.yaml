@@ -1,0 +1,26 @@
+# MAIN_TRASH_UNDER_PLAY -- Option, red, use cost 0.
+#   [Main] By trashing the bottom face-down card from under 1 of your Tamers,
+#   you may play 1 play cost 3 or lower Tamer card from your trash without
+#   paying the cost.
+# The shape of Pinamon (BT26-005)'s inherited effect (official Q&A Q6958):
+# the card the cost trashes may be the card played.
+card: MAIN_TRASH_UNDER_PLAY
+name: Underreplay
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] By trashing the bottom face-down card from under 1 of your Tamers, you may play 1 play cost 3 or lower Tamer card from your trash without paying the cost."
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - select_trash:
+          of: you
+          bind_as: revive
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - play_cost_lte: 3
+          prompt: "You may play 1 play cost 3 or lower Tamer card from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive }

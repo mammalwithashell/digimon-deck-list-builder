@@ -723,6 +723,25 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     _ => None,
                 };
             if let Some((controller, h)) = resolved {
+                // Read before the play moves the card: if the play does not
+                // happen, the reason is reported below.
+                let trash_index = ctx
+                    .game
+                    .player(controller)
+                    .trash
+                    .iter()
+                    .position(|c| c.handle() == h);
+                let card_id = trash_index
+                    .map(|i| {
+                        ctx.game.player(controller).trash[i]
+                            .card_id(&ctx.game.card_data)
+                            .to_string()
+                    })
+                    .unwrap_or_default();
+                let refusal = trash_index.map_or(Some("the card is no longer in the trash"), |i| {
+                    ctx.game
+                        .trash_play_refusal(controller, i, crate::enums::PlaySource::ByEffect)
+                });
                 // G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060): a flagged play
                 // enters suspended — the commit site consumes the slot.
                 if *suspended {
@@ -745,8 +764,25 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 // any unconsumed slots so they cannot leak to a later play.
                 ctx.game.play_enters_suspended = false;
                 ctx.game.on_play_suppressor = None;
-                if let Some(played) = played {
-                    bindings.record_played(played);
+                match played {
+                    Some(played) => bindings.record_played(played),
+                    // A parked play (a cost-reduction prompt) is not dropped:
+                    // its own resume frame finishes it, and the remaining
+                    // steps park behind that prompt.
+                    None if ctx.game.pending_selection.is_some() => {}
+                    // The chosen card could not be played: say why rather
+                    // than do nothing silently.
+                    None => {
+                        let seq = ctx.game.next_event_seq();
+                        ctx.game.events.push(crate::events::GameEvent::EffectFizzled {
+                            seq,
+                            source_permanent: ctx.source_permanent,
+                            reason: format!(
+                                "play of {card_id} from the trash not performed: {}",
+                                refusal.unwrap_or("the play did not complete")
+                            ),
+                        });
+                    }
                 }
             }
             true
