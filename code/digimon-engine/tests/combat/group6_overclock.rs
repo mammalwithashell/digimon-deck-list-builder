@@ -4,7 +4,7 @@ use digimon_engine::action::space::{
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, CardKind, GamePhase, Keyword};
+use digimon_engine::enums::{CardColor, CardKind, Keyword};
 
 fn digimon(id: &str, traits: &[&str]) -> CardData {
     CardData {
@@ -66,7 +66,9 @@ fn setup_puppet_overclock() -> DebugRunner {
     r.place_on_field(0, "PUPPET-TOKEN", Some(0));
     r.place_on_field(0, "BT5-008", Some(0));
     r.place_on_field(0, "PUPPET-ALLY", Some(0));
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-34-2: <Overclock> triggers at the end of the turn and parks its
+    // optional condition's pick inside the end-of-turn pool.
+    r.game.end_turn();
     r
 }
 
@@ -74,15 +76,15 @@ fn setup_puppet_overclock() -> DebugRunner {
 fn overclock_only_exposes_token_or_matching_other_digimon_as_cost() {
     let mut r = setup_puppet_overclock();
 
+    // §16-34-2: no separate activation bit; the condition's pick is the
+    // pending selection.
     let effect_bit = encode_field_effect(0, FIELD_EFFECT_SLOT_FOR_OVERCLOCK);
-    let mask = build_action_mask(&r.game, 0);
-    assert_eq!(
-        mask[effect_bit as usize], 1.0,
-        "Overclock activation should be visible"
-    );
-
-    r.game.decode_action(effect_bit, 0);
     let cost_mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        cost_mask[effect_bit as usize], 0.0,
+        "no EndOfTurnAction activation bit"
+    );
+    assert!(r.game.pending_selection.is_some(), "the condition's pick");
     assert_eq!(
         cost_mask[encode_attack(0, 1) as usize],
         1.0,
@@ -105,8 +107,6 @@ fn overclock_only_exposes_token_or_matching_other_digimon_as_cost() {
 fn overclock_decode_rejects_non_candidate_cost_target() {
     let mut r = setup_puppet_overclock();
 
-    r.game
-        .decode_action(encode_field_effect(0, FIELD_EFFECT_SLOT_FOR_OVERCLOCK), 0);
     r.game.decode_action(encode_attack(0, 2), 0);
 
     assert!(
@@ -130,10 +130,8 @@ fn overclock_attack_survives_cost_deleting_lower_slot() {
 
     r.place_on_field(0, "PUPPET-ALLY", Some(0));
     r.place_on_field(0, "PUPPET-OVERCLOCK", Some(0));
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    r.game.end_turn();
 
-    r.game
-        .decode_action(encode_field_effect(1, FIELD_EFFECT_SLOT_FOR_OVERCLOCK), 0);
     r.game.decode_action(encode_attack(0, 0), 0);
 
     assert_eq!(
@@ -157,9 +155,7 @@ fn overclock_decline_does_not_delete_or_attack() {
 
     r.place_on_field(0, "PUPPET-OVERCLOCK", Some(0));
     r.place_on_field(0, "PUPPET-TOKEN", Some(0));
-    r.game.current_phase = GamePhase::EndOfTurnAction;
-    r.game
-        .decode_action(encode_field_effect(0, FIELD_EFFECT_SLOT_FOR_OVERCLOCK), 0);
+    r.game.end_turn();
     r.game.decode_action(PASS, 0);
 
     assert_eq!(r.game.player(0).battle_area.len(), 2);

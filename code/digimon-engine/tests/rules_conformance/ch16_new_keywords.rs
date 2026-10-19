@@ -546,11 +546,20 @@ fn engage_board(extra: &[&str]) -> (DebugRunner, PermanentHandle) {
     (r, engage)
 }
 
+/// Whether P0 is offered `engage`'s attack on P1. §16-44-2 (2026-10-18,
+/// G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS): <Engage>'s processing
+/// is its own decision inside the `[End of Your Turn]` pool, so the attack is
+/// a pending selection of P0's (with PASS = decline, §16-44-3); the former
+/// post-drain `EndOfTurnAction` window is accepted too.
 fn engage_attack_offered(r: &DebugRunner, engage: PermanentHandle) -> bool {
-    r.current_phase() == GamePhase::EndOfTurnAction
-        && build_action_mask(&r.game, 0)
-            [encode_attack(engage.index as u16, SECURITY_TARGET) as usize]
-            == 1.0
+    let attack = encode_attack(engage.index as u16, SECURITY_TARGET);
+    match r.pending_selection() {
+        Some(sel) => sel.selecting_player == 0 && sel.valid_action_ids.contains(&attack),
+        None => {
+            r.current_phase() == GamePhase::EndOfTurnAction
+                && build_action_mask(&r.game, 0)[attack as usize] == 1.0
+        }
+    }
 }
 
 /// §16-44-1 "<Engage> is a keyword effect where a Digimon with this effect
@@ -568,8 +577,10 @@ fn engage_optional_eot_attack() {
         "83f9fd35763868aef8b7abb5a551e9a077c1cec4987d41294f0a22bc8c51abec"
     );
     let (mut r, engage) = engage_board(&[]);
+    // §16-44-2: <Engage> is the only `[End of Your Turn]` effect; its
+    // processing (the attack, or the decline) is offered as soon as it
+    // activates.
     r.end_turn();
-    settle_declining(&mut r);
     assert!(
         engage_attack_offered(&r, engage),
         "the end-of-turn attack is offered"
@@ -594,8 +605,11 @@ fn engage_optional_eot_attack() {
 
 /// §16-44-3 "The processing from <Engage> is optional."
 ///
-/// P0 ends its turn and declines the <Engage> attack (PASS): no attack, and
-/// the turn passes to P1. (Matrix row `Engage`: `optional`, agrees.)
+/// P0 ends its turn and declines the <Engage> attack: no attack, and the
+/// turn passes to P1. (Matrix row `Engage`: `optional`, agrees.) Since
+/// 2026-10-18 (§16-44-2) the decline is the decline of <Engage>'s own
+/// decision in the `[End of Your Turn]` pool, not a PASS in a later
+/// `EndOfTurnAction` window.
 #[test]
 fn engage_optionality_matches_rule() {
     cite!(
@@ -605,9 +619,10 @@ fn engage_optionality_matches_rule() {
     let (mut r, engage) = engage_board(&[]);
     let cp = r.event_checkpoint();
     r.end_turn();
-    settle_declining(&mut r);
     assert!(engage_attack_offered(&r, engage));
-    r.game.decode_action(PASS, 0);
+    let p = current_prompt(&r).expect("<Engage>'s decision");
+    assert!(p.optional, "{p:?}");
+    r.decline_optional_trigger().expect("decline <Engage>");
     settle_declining(&mut r);
     assert!(revealed(&r, cp, 1).is_empty(), "declined: no attack");
     assert_eq!(r.security_count(1), 3);
@@ -628,12 +643,12 @@ fn engage_timing_matches_rule() {
     );
     let (mut r, engage) = engage_board(&[]);
     r.end_turn();
-    settle_declining(&mut r);
     assert!(
         engage_attack_offered(&r, engage),
         "P0's end of turn: offered"
     );
-    r.game.decode_action(PASS, 0);
+    // §16-44-3: declined (the decline of <Engage>'s own decision).
+    r.decline_optional_trigger().expect("decline <Engage>");
     settle_declining(&mut r);
     assert_eq!(r.turn_player(), 1);
 
@@ -645,6 +660,7 @@ fn engage_timing_matches_rule() {
         GamePhase::EndOfTurnAction,
         "P1's end of turn: P0's <Engage> does not trigger"
     );
+    assert!(!engage_attack_offered(&r, engage), "nothing offered to P0");
     assert!(revealed(&r, cp, 1).is_empty());
     assert_eq!(r.turn_player(), 0, "the turn passed back to P0");
 }
@@ -674,7 +690,6 @@ fn engage_timing_matches_rule() {
 /// DCGO the other effect waits for the whole attack. The official ruling
 /// governs over DCGO here.
 #[test]
-#[ignore = "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS (§16-44-2)"]
 fn engage_kind_matches_rule() {
     cite!(
         "16-44-2",

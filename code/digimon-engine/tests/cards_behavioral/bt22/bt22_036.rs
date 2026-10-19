@@ -167,15 +167,14 @@ fn bt22_036_runtime_overclock_masks_only_token_or_other_puppet_costs() {
     runner.place_on_field(0, "COST-TOKEN", Some(0));
     runner.place_on_field(0, "NON-PUPPET", Some(0));
     runner.place_on_field(0, "PUPPET-ALLY", Some(0));
-    runner.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-34-2: <Overclock> triggers at the end of the turn and offers its
+    // condition's pick inside the end-of-turn pool (no separate activation
+    // bit).
+    runner.game.end_turn();
 
     let effect_bit = encode_field_effect(0, FIELD_EFFECT_SLOT_FOR_OVERCLOCK);
-    let mask = build_action_mask(&runner.game, 0);
-    assert_eq!(mask[effect_bit as usize], 1.0, "Overclock is legal");
-
-    runner.game.decode_action(effect_bit, 0);
-
     let cost_mask = build_action_mask(&runner.game, 0);
+    assert_eq!(cost_mask[effect_bit as usize], 0.0, "no activation bit");
     assert_eq!(
         cost_mask[encode_attack(0, 1) as usize],
         1.0,

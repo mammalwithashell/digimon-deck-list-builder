@@ -145,11 +145,15 @@ fn pick_first(runner: &mut DebugRunner, label: &str) {
         .unwrap_or_else(|e| panic!("{label}: pick failed: {e:?}"));
 }
 
+/// Decline the pending prompt, then settle the rest. Playing Titamon moves
+/// the memory to the opponent's side, so the turn ends inside the
+/// resolution and its <Execute> (§16-38-2) offers an end-of-turn attack;
+/// that decision is declined too (these tests are about the [On Play]).
 fn decline(runner: &mut DebugRunner) {
     assert!(runner.pending_is_optional(), "PASS must be legal");
     let player = runner.pending_selection().expect("prompt").selecting_player;
     runner.execute_action(player, PASS).expect("decline");
-    let _ = runner.auto_resolve();
+    let _ = runner.auto_resolve_declining_end_of_turn_attacks();
 }
 
 fn play_titamon(runner: &mut DebugRunner) -> PermanentHandle {
@@ -351,7 +355,9 @@ fn bt24_081_on_play_trashing_a_hand_card_deletes_every_lowest_level_opponent_dig
         "HAND-X and HAND-Y are both trashable"
     );
     pick_first(&mut runner, "trash a hand card");
-    let _ = runner.auto_resolve();
+    // The turn ends inside the resolution (memory on the opponent's side);
+    // decline <Execute>'s end-of-turn attack (§16-38-2).
+    let _ = runner.auto_resolve_declining_end_of_turn_attacks();
 
     assert_eq!(runner.hand_size(0), 1, "one hand card trashed");
     assert_eq!(runner.trash_size(0), 1);
@@ -589,3 +595,4 @@ fn bt24_081_assembly_plays_for_8_and_stacks_both_named_materials_from_trash() {
     );
     assert_eq!(memory_before - runner.game.memory, 8, "14 − 6 = 8");
 }
+

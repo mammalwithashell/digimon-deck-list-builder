@@ -25,7 +25,8 @@ use digimon_engine::combat::AttackResult;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{Expiry, GamePhase, Keyword};
+use digimon_engine::enums::{Expiry, GamePhase, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{AttackState, AttackTarget};
 
@@ -132,10 +133,14 @@ fn clone_parked_in_end_of_attack_drain_resolves_independently() {
     assert_eq!(r.effective_dp(atk), Some(6000));
 }
 
-/// P0 has two `<Engage>` Digimon. At the end of P0's turn both may attack.
-/// After the first attacks, the `EndOfTurnAction` window stays open and the
-/// second's attack is still offered (with PASS). After the second attacks,
-/// nothing is left: the turn passes at once, with no PASS-only step.
+/// P0 has two Digimon with a `MayAttack` grant ("may attack at the end of
+/// the turn", the `EndOfTurnAction` window's remaining user). At the end of
+/// P0's turn both may attack. After the first attacks, the window stays open
+/// and the second's attack is still offered (with PASS). After the second
+/// attacks, nothing is left: the turn passes at once, with no PASS-only step.
+/// (Until 2026-10-18 this used two `<Engage>` Digimon; <Engage> now declares
+/// its attack inside the `[End of Your Turn]` pool, §16-44-2 -- see
+/// `combat::end_of_turn_keyword_pool`.)
 #[test]
 fn end_of_turn_window_stays_open_only_while_another_action_remains() {
     let mut eng = make_test_card("ENG", "ENG");
@@ -153,9 +158,10 @@ fn end_of_turn_window_stays_open_only_while_another_action_remains() {
     let a = r.place_on_field(0, "ENG", Some(0));
     let b = r.place_on_field(0, "ENG", Some(0));
     for h in [a, b] {
-        r.game
-            .modifiers
-            .grant_keyword(h, Keyword::Engage, Expiry::EndOfTurn, 0);
+        r.game.modifiers.add(
+            h,
+            ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, 0),
+        );
     }
     r.game.end_turn();
     assert!(r.pending_selection().is_none());
@@ -169,7 +175,7 @@ fn end_of_turn_window_stays_open_only_while_another_action_remains() {
     assert_eq!(
         r.game.current_phase,
         GamePhase::EndOfTurnAction,
-        "the second <Engage> attack is still available"
+        "the second granted attack is still available"
     );
     let mask = build_action_mask(&r.game, 0);
     assert_eq!(

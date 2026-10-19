@@ -360,12 +360,12 @@ fn ex11_060_all_turns_overclock_deletion_may_play_level_4_or_lower_puppet() {
     let _arisa = runner.place_on_field(0, "EX11-060", Some(0));
     let overclock = runner.place_on_field(0, "PUPPET-OVERCLOCK", Some(0));
     let sacrifice = runner.place_on_field(0, "PUPPET-SAC", Some(0));
-    runner.game.current_phase = GamePhase::EndOfTurnAction;
+    let _ = overclock;
 
     let cp = runner.event_checkpoint();
-
-    let overclock_action = encode_field_effect(overclock, FIELD_EFFECT_SLOT_FOR_OVERCLOCK);
-    runner.game.decode_action(overclock_action, 0);
+    // §16-34-2: <Overclock> triggers at the end of the turn and offers its
+    // condition's pick inside the end-of-turn pool.
+    runner.game.end_turn();
     runner
         .game
         .resolve_selection(0, encode_attack(0, sacrifice.index as u16))
@@ -436,10 +436,10 @@ fn ex11_060_all_turns_overclock_puppet_play_is_optional_and_may_be_declined() {
     let _arisa = runner.place_on_field(0, "EX11-060", Some(0));
     let overclock = runner.place_on_field(0, "PUPPET-OVERCLOCK", Some(0));
     let sacrifice = runner.place_on_field(0, "PUPPET-SAC", Some(0));
-    runner.game.current_phase = GamePhase::EndOfTurnAction;
-
-    let overclock_action = encode_field_effect(overclock, FIELD_EFFECT_SLOT_FOR_OVERCLOCK);
-    runner.game.decode_action(overclock_action, 0);
+    let _ = overclock;
+    // §16-34-2: <Overclock> triggers at the end of the turn and offers its
+    // condition's pick inside the end-of-turn pool.
+    runner.game.end_turn();
     runner
         .game
         .resolve_selection(0, encode_attack(0, sacrifice.index as u16))

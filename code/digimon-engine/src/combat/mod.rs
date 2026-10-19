@@ -485,7 +485,7 @@ impl Game {
     }
 
     /// Declare an `<Overclock>` attack. The sacrifice must already have been
-    /// paid by the caller ([`Game::activate_overclock`] drives this via a
+    /// paid by the caller ([`Game::install_overclock_selection`] drives this via a
     /// `PendingSelection`). Identical to [`Game::begin_attack`] except:
     ///
     /// - The attacker is **not** suspended on declaration (§4.6c-residual
@@ -2696,43 +2696,38 @@ impl Game {
         }
     }
 
-    /// Park an effect-offered attack declaration for `attacker`'s controller:
-    /// one optional prompt whose choices are `valid_action_ids` (the
-    /// carrier's legal `encode_attack` declarations) and PASS. Resume-driven
-    /// (`ResumeFrame::BlitzAttackDecision`); the closures only mirror the
+    /// Park an effect-offered attack declaration for `state.attacker`'s
+    /// controller: one optional prompt whose choices are
+    /// `state.valid_action_ids` (the carrier's legal `encode_attack`
+    /// declarations) and PASS. Resume-driven
+    /// (`ResumeFrame::AttackDeclarationDecision`); the closures only mirror the
     /// frame. A declinable decision, so it marks the §18-3 loop watch
     /// (`mark_pending_selection_as_optional_decision`). The selecting player
     /// is always the attacker's controller (the Digimon "may attack" for its
     /// controller), whatever selecting-player override the enclosing effect
-    /// runs under. Returns whether a prompt was installed (none when nothing
-    /// is offered or a decision is already parked).
+    /// runs under. Returns whether a prompt was installed (none on a finished
+    /// game, when nothing is offered, or when a decision is already parked).
     ///
-    /// While parked, `check_turn_end` is a no-op (a selection is pending), so
-    /// the turn cannot end, and the mask exposes only this prompt's choices.
-    ///
-    /// TODO(Task 21): carry `source_kind`, `without_suspending`,
-    /// `ignore_summoning_sickness` and `cost_upgrade` in the state (hard-coded
-    /// here for <Blitz>) when this generalises to `AttackDeclarationDecision`
-    /// for Engage / Execute / Vortex / Overclock, and fold
-    /// `ResumeSelectKind::BeginAttack` into it.
+    /// Offered by `<Blitz>` (§16-16-3, inside the effect that executes it)
+    /// and by the `[End of Your Turn]` trigger bodies of `<Engage>`,
+    /// `<Execute>` and `<Vortex>` (§16-44-2, §16-38-2, §16-33-2), inside the
+    /// end-of-turn pool. While parked, `check_turn_end` is a no-op (a
+    /// selection is pending) and the mask exposes only this prompt's choices.
     pub(crate) fn install_attack_declaration_decision(
         &mut self,
-        attacker: PermanentHandle,
-        source_card: CardHandle,
-        valid_action_ids: Vec<u16>,
+        state: crate::resume::AttackDeclarationDecisionState,
         prompt: &str,
     ) -> bool {
         // A finished game offers no decisions (§1-2-2; G-ENGINE-GAME-OVER-NOT-TERMINAL):
         // the drainer stops on `game_over`, and so does this installer.
-        if self.game_over || valid_action_ids.is_empty() || self.pending_selection.is_some() {
+        if self.game_over || state.valid_action_ids.is_empty() || self.pending_selection.is_some()
+        {
             return false;
         }
-        let state = crate::resume::AttackDeclarationDecisionState {
-            attacker,
-            source_card,
-            valid_action_ids: valid_action_ids.clone(),
-            outer_conts: Vec::new(),
-        };
+        let attacker = state.attacker;
+        let source_card = state.source_card;
+        let source_kind = state.source_kind;
+        let valid_action_ids = state.valid_action_ids.clone();
         let callback_state = state.clone();
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
@@ -2747,7 +2742,7 @@ impl Game {
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
-            source_kind: crate::enums::EffectSourceKind::Digimon,
+            source_kind,
             // Resume-driven (frame below); the closures mirror it.
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 game.run_attack_declaration_decision_step(&callback_state, action_id, false);
@@ -2755,57 +2750,80 @@ impl Game {
             on_decline: Some(Box::new(|_game: &mut Game| {})),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::BlitzAttackDecision(state)],
+            frames: vec![crate::resume::ResumeFrame::AttackDeclarationDecision(state)],
         });
         self.mark_pending_selection_as_optional_decision();
         true
     }
 
-    /// Resolve a parked effect-offered attack declaration: PASS declares
-    /// nothing; a pick among the offered declarations declares the attack
-    /// through the normal procedure (§11-1-5: every following timing occurs).
-    /// The attack does not re-check the memory gate that let the effect offer
-    /// it (§16-16-4 for `<Blitz>`). The caller runs the frame's
-    /// `outer_conts`.
-    pub(crate) fn run_attack_declaration_decision_step(
-        &mut self,
-        state: &crate::resume::AttackDeclarationDecisionState,
+    /// The `AttackTarget` an effect-offered attack declaration `action_id`
+    /// (`encode_attack(attacker, target)`) names for `attacker`, or `None`
+    /// when the id is another Digimon's declaration. `SECURITY_TARGET` is the
+    /// opposing player; any other target index is that opponent's Digimon.
+    /// Shared by every effect-offered declaration decode
+    /// (`run_attack_declaration_decision_step`, `ResumeSelectKind::BeginAttack`).
+    pub(crate) fn decode_effect_attack_target(
+        &self,
+        attacker: PermanentHandle,
         action_id: u16,
-        is_pass: bool,
-    ) {
-        // TODO(Task 21): this decode → `AttackTarget` → `begin_attack_open` is
-        // the fifth copy (see `ResumeSelectKind::BeginAttack`, the
-        // `may_attack_now*` / redirect closures); extract one
-        // `decode_effect_attack_target` when the frames are folded.
+    ) -> Option<AttackTarget> {
         use crate::action::space::{decode_attack, SECURITY_TARGET};
-        if is_pass || !state.valid_action_ids.contains(&action_id) {
-            return;
-        }
         let (decoded_attacker, decoded_target) = decode_attack(action_id);
-        if decoded_attacker as u8 != state.attacker.index {
-            return;
+        if decoded_attacker as u8 != attacker.index {
+            return None;
         }
-        let opponent = self.next_clockwise(state.attacker.player);
-        let target = if decoded_target == SECURITY_TARGET {
+        let opponent = self.next_clockwise(attacker.player);
+        Some(if decoded_target == SECURITY_TARGET {
             AttackTarget::Player(opponent)
         } else {
             AttackTarget::Digimon(PermanentHandle {
                 player: opponent,
                 index: decoded_target as u8,
             })
+        })
+    }
+
+    /// Resolve a parked effect-offered attack declaration: PASS declares
+    /// nothing; a pick among the offered declarations declares the attack
+    /// through the normal procedure (§11-1-5: every following timing occurs),
+    /// opened as `state` says (initiator, suspension, upgrade). The attack
+    /// does not re-check the memory gate that let the effect offer it
+    /// (§16-16-4 for `<Blitz>`). The caller runs the frame's `outer_conts`.
+    ///
+    /// An end-of-turn keyword's declaration (`state.end_of_turn_keyword`) is
+    /// made inside the `[End of Your Turn]` pool: the declaration's own
+    /// triggers and the pool's remaining entries resolve before the counter
+    /// timing (§11-1-4; Q3869), because `advance_pending_attack` yields while
+    /// the queue is non-empty and the `resolve_selection` tail resumes it once
+    /// the pool has drained. The keyword is recorded for the attack
+    /// (`end_of_turn_attack_keyword`, cleared when the attack ends).
+    pub(crate) fn run_attack_declaration_decision_step(
+        &mut self,
+        state: &crate::resume::AttackDeclarationDecisionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if is_pass || !state.valid_action_ids.contains(&action_id) {
+            return;
+        }
+        let Some(target) = self.decode_effect_attack_target(state.attacker, action_id) else {
+            return;
         };
-        let _ = self.begin_attack_open(AttackOpen {
+        let previous_keyword = self.end_of_turn_attack_keyword;
+        self.end_of_turn_attack_keyword = state.end_of_turn_keyword;
+        let result = self.begin_attack_open(AttackOpen {
             attacker: state.attacker,
-            initiator: AttackInitiator::Effect {
-                source: Some(state.source_card),
-                optional: true,
-            },
-            suspend_attacker: true,
-            ignore_summoning_sickness: false,
+            initiator: state.initiator,
+            suspend_attacker: state.suspend_attacker,
+            ignore_summoning_sickness: state.ignore_summoning_sickness,
             target_constraint: TargetConstraint::Forced(target),
             allow_cancel: true,
-            cost_upgrade: None,
+            cost_upgrade: state.cost_upgrade,
         });
+        // No attack was installed (an illegal declaration): nothing to tag.
+        if result == AttackResult::Invalid && self.pending_attack.is_none() {
+            self.end_of_turn_attack_keyword = previous_keyword;
+        }
     }
 
     /// Resolve the battle once all interrupt windows have cleared.
@@ -4027,10 +4045,17 @@ impl Game {
         &mut self,
         outcome: AttackResult,
     ) -> AttackResult {
-        let end_of_turn_attack = self
-            .pending_attack
-            .as_ref()
-            .is_some_and(|pa| pa.return_phase == crate::enums::GamePhase::EndOfTurnAction);
+        // An end-of-turn attack: declared inside the `[End of Your Turn]`
+        // pool (`EndTurn`: `<Engage>` / `<Execute>` / `<Vortex>` /
+        // `<Overclock>`, §16-44-2 / §16-38-2 / §16-33-2 / §16-34-2, or any
+        // other end-of-turn effect's attack) or in the `EndOfTurnAction`
+        // window (a `MayAttack` grant).
+        let end_of_turn_attack = self.pending_attack.as_ref().is_some_and(|pa| {
+            matches!(
+                pa.return_phase,
+                crate::enums::GamePhase::EndOfTurnAction | crate::enums::GamePhase::EndTurn
+            )
+        });
         // The attacker by identity: a DNA / DigiXros field removal does not
         // re-key `pa.attacker`, and a Digimon that compacted into its slot is
         // not the attacker. Nothing to clear once it has left (e.g. deleted
@@ -4047,6 +4072,7 @@ impl Game {
 
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
+        self.end_of_turn_attack_keyword = None;
         self.attack_attacker_identity = None;
         self.attack_attacker_card = None;
         self.attack_target_identity = None;
@@ -4078,8 +4104,9 @@ impl Game {
             self.check_turn_end();
         }
         // §16-44-1 / §16-38-1 / §16-33-1 / §16-34-1: an end-of-turn attack is
-        // over; the end of turn continues (no PASS-only step). Settled once
-        // nothing is resolving (`settle_end_of_turn_attack`).
+        // over; the end of turn continues (a waiting keyword offer, then the
+        // rest of the end of turn; no PASS-only step). Settled once nothing is
+        // resolving (`settle_end_of_turn_attack`).
         if end_of_turn_attack {
             self.end_of_turn_attack_settle_pending = true;
             self.settle_end_of_turn_attack();

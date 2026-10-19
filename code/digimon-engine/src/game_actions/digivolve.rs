@@ -2008,7 +2008,7 @@ impl Game {
 
         // 6-1-4-1: the turn ends only once the digivolution's processing is
         // over. A `<Blitz>` attack decision parked by a [When Digivolving]
-        // (§16-16-3, `ResumeFrame::BlitzAttackDecision`) is a pending
+        // (§16-16-3, `ResumeFrame::AttackDeclarationDecision`) is a pending
         // selection, so this is a no-op until it resolves; the decline, or
         // the attack's cleanup, re-runs the check.
         self.check_turn_end();

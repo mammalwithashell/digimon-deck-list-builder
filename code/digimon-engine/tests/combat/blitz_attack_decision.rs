@@ -1,5 +1,5 @@
 //! `<Blitz>` (§16-16, Comprehensive Rules Ver. 4.3): the attack it offers is
-//! its own resumable decision (`ResumeFrame::BlitzAttackDecision`), so a game
+//! its own resumable decision (`ResumeFrame::AttackDeclarationDecision`), so a game
 //! cloned while that decision is parked resolves it on the clone (accept and
 //! decline) without touching the original — the engine stays cloneable for
 //! search / training (make-engine-cloneable; CLAUDE.md rule 28).
@@ -79,7 +79,7 @@ fn parked_blitz() -> (DebugRunner, u16) {
     assert!(
         matches!(
             r.game.pending_selection_resume.as_ref().map(|s| &s.frames[..]),
-            Some([ResumeFrame::BlitzAttackDecision(_)])
+            Some([ResumeFrame::AttackDeclarationDecision(_)])
         ),
         "the decision is a resumable-VM frame, not a closure"
     );
@@ -197,7 +197,7 @@ fn printed_when_digivolving_blitz_offers_the_attack_and_clones() {
     assert_eq!(sel.valid_action_ids, vec![attack]);
     assert!(matches!(
         r.game.pending_selection_resume.as_ref().map(|s| &s.frames[..]),
-        Some([ResumeFrame::BlitzAttackDecision(_)])
+        Some([ResumeFrame::AttackDeclarationDecision(_)])
     ));
     assert_eq!(r.game.turn_player(), 0, "the turn has not ended");
     let original = r.game.clone();

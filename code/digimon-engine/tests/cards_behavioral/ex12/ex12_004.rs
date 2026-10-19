@@ -37,9 +37,10 @@ fn ex12_004_inherited_grants_execute_to_tb_carrier_on_your_turn() {
 /// TDD RED — task_69f10a66 ruling (a): a DECLARATIVELY granted `<Execute>`
 /// must actually fire its end-of-your-turn trigger and surface the printed
 /// "may attack" choice, exactly like printed Execute does
-/// (`keyword_phase_f/execute.rs`): `end_turn` parks `GamePhase::EndOfTurnAction`
-/// with `MayAttack` + `CanAttackUnsuspended` granted on the carrier, so the
-/// §4.6 mask offers the attack and PASS declines.
+/// (`keyword_phase_f/execute.rs`): since 2026-10-18 (§16-38-2,
+/// G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS) `end_turn` activates the
+/// trigger inside the `[End of Your Turn]` pool and it offers the attack as
+/// its own optional decision (the attack bits, PASS declines).
 ///
 /// Rules: 16-37-2 (<Execute> is a trigger-type effect that triggers at the
 /// end of your turn) + 16-38-3 ("The processing from <Execute> is optional")
@@ -84,29 +85,29 @@ fn ex12_004_granted_execute_fires_at_end_of_your_turn() {
         "precondition: carrier is attack-legal (not summoning-sick)"
     );
 
-    // End the controller's turn: 16-37-2 says the trigger fires NOW, and the
-    // optional processing (16-38-3) must be the player's choice — surfaced
-    // here as the EndOfTurnAction park (attack via the mask, or PASS).
+    // End the controller's turn: §16-38-2 says the trigger fires NOW, and the
+    // optional processing (§16-38-3) must be the player's choice — surfaced
+    // as its own decision inside the end-of-turn pool (attack, or PASS).
     runner.game.end_turn();
 
+    let sel = runner.pending_selection().expect(
+        "granted <Execute> must offer its attack at end of your turn \
+         (the EndOfYourTurn body never fired — declarative grant is inert)",
+    );
+    assert_eq!(sel.selecting_player, 0);
     assert!(
-        runner.game.modifiers.has(carrier, ModifierType::MayAttack),
-        "granted <Execute> must grant MayAttack at end of your turn \
-         (the EndOfYourTurn body never fired — declarative grant is inert)"
+        sel.is_optional,
+        "the player chooses the Execute attack or PASS (rule 16-38-3 optional \
+         processing; no-approximations rule 17)"
     );
     assert!(
-        runner
-            .game
-            .modifiers
-            .has(carrier, ModifierType::CanAttackUnsuspended),
-        "granted <Execute> must also widen targeting to unsuspended Digimon"
+        sel.valid_action_ids.contains(&digimon_engine::action::space::encode_attack(
+            carrier.index as u16,
+            digimon_engine::action::space::SECURITY_TARGET
+        )),
+        "{sel:?}"
     );
-    assert_eq!(
-        runner.game.current_phase,
-        GamePhase::EndOfTurnAction,
-        "end_turn must park so the player can choose the Execute attack or PASS \
-         (rule 16-38-3 optional processing; no-approximations rule 17)"
-    );
+    assert_ne!(runner.game.current_phase, GamePhase::EndOfTurnAction);
 }
 
 #[test]
@@ -200,14 +201,13 @@ fn ex12_004_granted_execute_attacks_unsuspended_then_self_deletes() {
     );
 
     runner.game.end_turn();
-    assert_eq!(
-        runner.game.current_phase,
-        GamePhase::EndOfTurnAction,
-        "precondition: the granted trigger parks the optional gate"
+    assert!(
+        runner.pending_selection().is_some(),
+        "precondition: the granted trigger offers its optional attack"
     );
 
-    // The widened defender condition must reach the ACTION SPACE, not just the
-    // modifier table — an unsuspended defender is otherwise not a legal target.
+    // The widened defender condition must reach the ACTION SPACE — an
+    // unsuspended defender is otherwise not a legal target.
     let mask = digimon_engine::build_action_mask(&runner.game, 0);
     assert_eq!(
         mask[bit], 1.0,
@@ -216,7 +216,9 @@ fn ex12_004_granted_execute_attacks_unsuspended_then_self_deletes() {
          unsuspended Digimon')"
     );
 
-    runner.attack_digimon(carrier, defender, false);
+    runner
+        .execute_action(0, bit as u16)
+        .expect("declare the <Execute> attack on the unsuspended defender");
 
     assert_eq!(
         runner.game.players[1].battle_area.len(),
@@ -247,8 +249,8 @@ fn ex12_004_granted_execute_attacks_unsuspended_then_self_deletes() {
 
 /// The other half of 16-38-3: this is the path 8 of the 10 exam scenarios
 /// actually take (they DECLINE the granted gate to reach some other clause).
-/// PASS at the park must leave the carrier untouched and expire the grant's
-/// end-of-turn modifiers.
+/// Declining the granted <Execute>'s decision must leave the carrier
+/// untouched; nothing is granted to expire.
 #[test]
 fn ex12_004_granted_execute_declined_leaves_the_carrier_alive() {
     let mut runner = DebugRunner::builder()
@@ -268,15 +270,14 @@ fn ex12_004_granted_execute_declined_leaves_the_carrier_alive() {
     runner.game.tick_declarative_effects();
 
     runner.game.end_turn();
-    assert_eq!(runner.game.current_phase, GamePhase::EndOfTurnAction);
+    assert!(runner.pending_selection().is_some(), "the <Execute> decision");
 
-    runner.game.pass_end_of_turn_action();
+    runner
+        .decline_optional_trigger()
+        .expect("decline the granted <Execute>");
 
-    assert_ne!(
-        runner.game.current_phase,
-        GamePhase::EndOfTurnAction,
-        "PASS must rotate the turn out of the end-of-turn park"
-    );
+    assert_ne!(runner.game.current_phase, GamePhase::EndOfTurnAction);
+    assert_eq!(runner.game.turn_player(), 1, "the decline lets the turn end");
     assert_eq!(
         runner.game.players[0].battle_area.len(),
         1,
@@ -284,14 +285,14 @@ fn ex12_004_granted_execute_declined_leaves_the_carrier_alive() {
     );
     assert!(
         !runner.game.modifiers.has(carrier, ModifierType::MayAttack),
-        "the grant's MayAttack must expire on rotation"
+        "no MayAttack is left behind"
     );
     assert!(
         !runner
             .game
             .modifiers
             .has(carrier, ModifierType::CanAttackUnsuspended),
-        "the grant's CanAttackUnsuspended must expire on rotation"
+        "no CanAttackUnsuspended is left behind"
     );
     assert!(
         runner.game.players[0].trash.is_empty(),

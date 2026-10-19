@@ -1656,8 +1656,9 @@ fn vortex_board(extra: &[&str]) -> (DebugRunner, PermanentHandle) {
 ///
 /// `VORTEX` was played this turn: in P0's main phase it can't attack. At the
 /// end of P0's turn it may attack P1's suspended `FILL` (not P1 itself), or
-/// P0 may PASS. It attacks: `FILL` battles and is deleted, then the turn
-/// passes to P1.
+/// P0 may decline. It attacks: `FILL` battles and is deleted, then the turn
+/// passes to P1. (§16-33-2: <Vortex> is the only `[End of Your Turn]` effect,
+/// so its attack decision is offered as soon as P0 ends the turn.)
 #[test]
 fn vortex_optional_eot_attack_on_digimon_and_same_turn_played() {
     cite!(
@@ -1673,7 +1674,7 @@ fn vortex_optional_eot_attack_on_digimon_and_same_turn_played() {
         !legal(&r, 0, encode_attack(v.index as u16, 0)),
         "main phase: played this turn"
     );
-    end_p0_turn(&mut r);
+    r.end_turn();
     assert!(eot_attack_offered(&r, v, 0), "end of turn: <Vortex> attack");
     assert!(
         !eot_attack_offered(&r, v, SECURITY_TARGET),
@@ -1692,8 +1693,9 @@ fn vortex_optional_eot_attack_on_digimon_and_same_turn_played() {
 
 /// §16-33-3 "The processing from <Vortex> is optional."
 ///
-/// At the end of P0's turn P0 declines the <Vortex> attack (PASS): no
-/// battle, and the turn passes to P1.
+/// At the end of P0's turn P0 declines the <Vortex> attack: no battle, and
+/// the turn passes to P1. (§16-33-2: the decline of <Vortex>'s own decision
+/// in the `[End of Your Turn]` pool, not a PASS in a later window.)
 #[test]
 fn vortex_optionality_matches_rule() {
     cite!(
@@ -1701,9 +1703,11 @@ fn vortex_optionality_matches_rule() {
         "5b2d7bf75281743817524e6703812bf0247df1956f34e6386b2aabec7d60cb7a"
     );
     let (mut r, v) = vortex_board(&[]);
-    end_p0_turn(&mut r);
+    r.end_turn();
     assert!(eot_attack_offered(&r, v, 0));
-    r.game.decode_action(PASS, 0);
+    let p = current_prompt(&r).expect("<Vortex>'s decision");
+    assert!(p.optional, "{p:?}");
+    r.decline_optional_trigger().expect("decline <Vortex>");
     settle_declining(&mut r);
     assert_eq!(field_top_ids(&r, 1), owned(&[FILL]), "declined");
     assert_eq!(r.turn_player(), 1);
@@ -1743,7 +1747,6 @@ fn vortex_timing_matches_rule() {
 /// still-pending effect resolves AFTER the attack declaration and BEFORE the
 /// counter timing / battle; the test pins declaration < `EOT_MEM` < battle.
 #[test]
-#[ignore = "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS (§16-33-2)"]
 fn vortex_kind_matches_rule() {
     cite!(
         "16-33-2",
@@ -1798,7 +1801,7 @@ fn vortex_attack_target_is_a_suspended_digimon() {
     );
     let (mut r, v) = vortex_board(&[]);
     r.place_on_field(1, "LV4_PLAIN", Some(0));
-    end_p0_turn(&mut r);
+    r.end_turn();
     assert!(eot_attack_offered(&r, v, 0), "the suspended Digimon");
     assert!(!eot_attack_offered(&r, v, 1), "not the unsuspended Digimon");
 }
@@ -1836,7 +1839,7 @@ fn vortex_attack_has_block_timing() {
     );
     let (mut r, v) = vortex_board(&[]);
     r.place_on_field(1, "BLOCKER", Some(0));
-    end_p0_turn(&mut r);
+    r.end_turn();
     assert!(eot_attack_offered(&r, v, 0));
     r.game.decode_action(encode_attack(v.index as u16, 0), 0);
     let p = current_prompt(&r).expect("the block window");
@@ -1866,6 +1869,9 @@ fn overclock_board(extra: &[&str]) -> (DebugRunner, PermanentHandle) {
     (r, oc)
 }
 
+/// The former `EndOfTurnAction` field-effect bit for `<Overclock>`. Since
+/// 2026-10-18 (§16-34-2) <Overclock> is offered only inside the `[End of Your
+/// Turn]` pool, as its condition's pick; this bit is never legal.
 fn overclock_action(oc: PermanentHandle) -> u16 {
     FIELD_EFFECT_START + oc.index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_OVERCLOCK
 }
@@ -1882,6 +1888,8 @@ fn overclock_action(oc: PermanentHandle) -> u16 {
 /// condition: delete `PUPPET` (the [Puppet] Digimon; not `FILL`, not
 /// `OVERCLOCK` itself). P0 deletes `PUPPET`: with no further decision
 /// `OVERCLOCK` attacks P1 (a security check), and stays unsuspended.
+/// (§16-34-2: <Overclock> is the only `[End of Your Turn]` effect, so its
+/// condition is offered as soon as P0 ends the turn.)
 #[test]
 fn overclock_optional_cost_then_mandatory_attack_without_suspending() {
     cite!(
@@ -1894,11 +1902,10 @@ fn overclock_optional_cost_then_mandatory_attack_without_suspending() {
     );
     let (mut r, oc) = overclock_board(&[]);
     let cp = r.event_checkpoint();
-    end_p0_turn(&mut r);
-    assert_eq!(r.current_phase(), GamePhase::EndOfTurnAction);
-    assert!(legal(&r, 0, overclock_action(oc)), "<Overclock> is offered");
-    r.game.decode_action(overclock_action(oc), 0);
+    r.end_turn();
+    assert!(!legal(&r, 0, overclock_action(oc)), "no separate activation");
     let p = current_prompt(&r).expect("the condition's pick");
+    assert_eq!(p.player, 0, "{p:?}");
     assert!(p.optional, "{p:?}");
     assert_eq!(offered_slots(&p), vec![1], "only the [Puppet] Digimon");
     pick_field(&mut r, 1);
@@ -1916,18 +1923,19 @@ fn overclock_optional_cost_then_mandatory_attack_without_suspending() {
 /// Digimon" in <Overclock> is an OPTIONAL processing condition."
 ///
 /// At the end of P0's turn P0 declines the condition: nothing is deleted, no
-/// attack, and the turn passes to P1.
+/// attack, and the turn passes to P1. (§16-34-2: the condition is offered
+/// inside the `[End of Your Turn]` pool.)
 #[test]
 fn overclock_optionality_matches_rule() {
     cite!(
         "16-34-3",
         "3b555b19ab0a61d1f67e101c4efabf15414ca10ee988576313a8c36c33aa9fd9"
     );
-    let (mut r, oc) = overclock_board(&[]);
+    let (mut r, _oc) = overclock_board(&[]);
     let cp = r.event_checkpoint();
-    end_p0_turn(&mut r);
-    assert!(legal(&r, 0, overclock_action(oc)));
-    r.game.decode_action(overclock_action(oc), 0);
+    r.end_turn();
+    let p = current_prompt(&r).expect("the condition's pick");
+    assert!(p.optional, "{p:?}");
     r.decline_optional_trigger().expect("decline the condition");
     settle_declining(&mut r);
     if r.current_phase() == GamePhase::EndOfTurnAction {
@@ -1976,7 +1984,6 @@ fn overclock_timing_matches_rule() {
 /// counter timing / battle; the test pins declaration < `EOT_MEM` < security check (the same simultaneous-trigger order the rulings give for
 /// <Vortex>).
 #[test]
-#[ignore = "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS (§16-34-2)"]
 fn overclock_kind_matches_rule() {
     cite!(
         "16-34-2",
@@ -2177,7 +2184,9 @@ fn execute_optional_eot_attack_then_pending_deletion_at_end_of_attack() {
         "1b5f8339dafb6d36f24a37380b4ccbcf4131788de779f4d1800da5a65bbd3372"
     );
     let (mut r, e) = execute_board(&["EOA_OBS"]);
-    end_p0_turn(&mut r);
+    // §16-38-2: <Execute> is the only `[End of Your Turn]` effect; its
+    // attack decision is offered as soon as P0 ends the turn.
+    r.end_turn();
     assert!(eot_attack_offered(&r, e, 0), "the unsuspended Digimon");
     assert!(eot_attack_offered(&r, e, SECURITY_TARGET), "or the player");
     assert!(legal(&r, 0, PASS));
@@ -2206,8 +2215,10 @@ fn execute_optional_eot_attack_then_pending_deletion_at_end_of_attack() {
 
 /// §16-38-3 "The processing from <Execute> is optional."
 ///
-/// At the end of P0's turn P0 declines the <Execute> attack (PASS): no
-/// attack, `EXECUTE` is not deleted, and the turn passes to P1.
+/// At the end of P0's turn P0 declines the <Execute> attack: no attack,
+/// `EXECUTE` is not deleted, and the turn passes to P1. (§16-38-2: the
+/// decline of <Execute>'s own decision in the `[End of Your Turn]` pool, not
+/// a PASS in a later window.)
 #[test]
 fn execute_optionality_matches_rule() {
     cite!(
@@ -2215,9 +2226,11 @@ fn execute_optionality_matches_rule() {
         "d5984a8699f79076ec9ab2d55b5b0b0e07891cb8491f35e1b0afcd0f32a899a2"
     );
     let (mut r, e) = execute_board(&[]);
-    end_p0_turn(&mut r);
+    r.end_turn();
     assert!(eot_attack_offered(&r, e, 0));
-    r.game.decode_action(PASS, 0);
+    let p = current_prompt(&r).expect("<Execute>'s decision");
+    assert!(p.optional, "{p:?}");
+    r.decline_optional_trigger().expect("decline <Execute>");
     settle_declining(&mut r);
     assert_eq!(field_top_ids(&r, 0), owned(&["EXECUTE"]));
     assert_eq!(field_top_ids(&r, 1), owned(&[FILL]));
@@ -2271,7 +2284,6 @@ fn execute_timing_matches_rule() {
 /// counter timing / battle; the test pins declaration < `EOT_MEM` < security check (the same simultaneous-trigger order the rulings give for
 /// <Vortex>).
 #[test]
-#[ignore = "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS (§16-38-2)"]
 fn execute_kind_matches_rule() {
     cite!(
         "16-38-2",
@@ -2438,3 +2450,4 @@ fn progress_kind_matches_rule() {
     );
     assert_eq!(r.effective_dp(a), Some(3000), "affected once the attack ends");
 }
+

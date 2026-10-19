@@ -726,18 +726,21 @@ pub enum ResumeFrame {
     /// Second follow-up prompt for Counter-window Blast DNA: pick the hand
     /// material and perform the DNA digivolve.
     CounterBlastDnaHandMaterial(CombatBlastDnaHandMaterialState),
-    /// End-of-turn `<Overclock>` sacrifice prompt. Decode the chosen own-field
-    /// sacrifice or PASS, then continue the keyword attack flow.
+    /// `<Overclock>`'s optional processing condition (§16-34-3), offered by its
+    /// `[End of Your Turn]` trigger body (§16-34-2): pick 1 of your Tokens or
+    /// other specified Digimon to delete, or PASS (decline). A pick deletes it
+    /// and the mandatory attack on a player without suspending follows.
     OverclockSelection(crate::game_phases::OverclockSelectionState),
-    /// `<Blitz>`'s optional attack declaration (§16-16-3 "This Digimon may
-    /// attack" is optional processing): one prompt whose choices are the
-    /// carrier's legal attack declarations plus PASS (decline). A pick declares
-    /// the attack through the normal procedure (`begin_attack_open`); PASS
-    /// declares nothing. Either way the enclosing effect's remaining steps
-    /// (`outer_conts`) run after. Shaped as "carrier + legal targets +
-    /// decline" so other effect-offered attack declarations can share it.
+    /// An effect-offered optional attack declaration: one prompt whose choices
+    /// are the carrier's legal attack declarations plus PASS (decline). A pick
+    /// declares the attack through the normal procedure (`begin_attack_open`);
+    /// PASS declares nothing. Either way the enclosing effect's remaining steps
+    /// (`outer_conts`) run after. Offered by `<Blitz>`'s processing (§16-16-3)
+    /// and by the end-of-turn attack keywords' trigger bodies (`<Engage>`
+    /// §16-44-2, `<Execute>` §16-38-2, `<Vortex>` §16-33-2), whose attack is
+    /// declared inside the `[End of Your Turn]` pool.
     /// See [`AttackDeclarationDecisionState`].
-    BlitzAttackDecision(AttackDeclarationDecisionState),
+    AttackDeclarationDecision(AttackDeclarationDecisionState),
     /// BO3 between-game play-order prompt (`Game::request_play_order_selection`).
     /// Decode `PLAY_FIRST` / `PLAY_SECOND` and write `Game::last_play_order_choice`.
     /// This is an engine/lifecycle prompt, never nested inside a DSL clause.
@@ -827,10 +830,13 @@ pub struct PerColorDeleteState {
     pub outer_conts: Vec<OuterContinuation>,
 }
 
-/// A parked effect-offered attack declaration (`ResumeFrame::BlitzAttackDecision`).
-/// `valid_action_ids` are the `encode_attack(attacker, target)` declarations
-/// offered when the prompt was installed (§11-2-7-1 target legality, no
-/// Main-phase memory gate); PASS declines. Plain data, no closures.
+/// A parked effect-offered attack declaration
+/// (`ResumeFrame::AttackDeclarationDecision`). `valid_action_ids` are the
+/// `encode_attack(attacker, target)` declarations offered when the prompt was
+/// installed (§11-2-7-1 target legality plus whatever the offering effect
+/// widens, e.g. `<Execute>`'s unsuspended Digimon, §16-38-1; no Main-phase
+/// memory gate); PASS declines. The rest says how a pick opens the attack
+/// (`Game::run_attack_declaration_decision_step`). Plain data, no closures.
 #[derive(Debug, Clone)]
 pub struct AttackDeclarationDecisionState {
     /// The Digimon that may attack.
@@ -839,9 +845,75 @@ pub struct AttackDeclarationDecisionState {
     pub source_card: CardHandle,
     /// The offered declarations (attack action ids of `attacker`).
     pub valid_action_ids: Vec<u16>,
+    /// The offering effect's source kind (the prompt's `source_kind`).
+    pub source_kind: EffectSourceKind,
+    /// How the declared attack opens (`AttackOpen::initiator`): an effect's
+    /// optional attack, or `<Vortex>` (whose initiator carries the
+    /// played-this-turn exemption, §16-33-1).
+    pub initiator: crate::combat::AttackInitiator,
+    /// Whether the declaration suspends the attacker (§11-2-1).
+    pub suspend_attacker: bool,
+    /// Whether the declaration ignores the played-this-turn restriction.
+    pub ignore_summoning_sickness: bool,
+    /// Modifiers attached for the attack after an optional upgrade cost.
+    pub cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    /// The end-of-turn attack keyword whose `[End of Your Turn]` trigger body
+    /// offered this attack (`<Engage>`, `<Execute>`, `<Vortex>`), if any.
+    /// Recorded on the declared attack (`Game::end_of_turn_attack_keyword`):
+    /// `<Execute>`'s deletion at the end of THAT attack keys on it (§16-38-4).
+    pub end_of_turn_keyword: Option<crate::enums::Keyword>,
     /// Outer-tail continuations composed when nested inside a DSL clause; run
     /// after the declaration (or the decline), in push order.
     pub outer_conts: Vec<OuterContinuation>,
+}
+
+impl AttackDeclarationDecisionState {
+    /// `<Blitz>`'s "This Digimon may attack" (§16-16-3): an ordinary
+    /// optional attack of the effect's source card, suspending the attacker.
+    pub fn blitz(attacker: PermanentHandle, source_card: CardHandle, valid_action_ids: Vec<u16>) -> Self {
+        Self {
+            attacker,
+            source_card,
+            valid_action_ids,
+            source_kind: EffectSourceKind::Digimon,
+            initiator: crate::combat::AttackInitiator::Effect {
+                source: Some(source_card),
+                optional: true,
+            },
+            suspend_attacker: true,
+            ignore_summoning_sickness: false,
+            cost_upgrade: None,
+            end_of_turn_keyword: None,
+            outer_conts: Vec::new(),
+        }
+    }
+
+    /// An end-of-turn attack keyword's "this Digimon may attack"
+    /// (`<Engage>` §16-44-1, `<Execute>` §16-38-1, `<Vortex>` §16-33-1),
+    /// declared inside the `[End of Your Turn]` pool (§16-44-2 / §16-38-2 /
+    /// §16-33-2). `<Vortex>` opens with `AttackInitiator::Vortex` (it may
+    /// attack the turn it was played); the others as the keyword's optional
+    /// effect attack. Every one suspends the attacker.
+    pub fn end_of_turn_keyword(
+        attacker: PermanentHandle,
+        source_card: CardHandle,
+        valid_action_ids: Vec<u16>,
+        keyword: crate::enums::Keyword,
+    ) -> Self {
+        let initiator = if keyword == crate::enums::Keyword::Vortex {
+            crate::combat::AttackInitiator::Vortex
+        } else {
+            crate::combat::AttackInitiator::Effect {
+                source: Some(source_card),
+                optional: true,
+            }
+        };
+        Self {
+            initiator,
+            end_of_turn_keyword: Some(keyword),
+            ..Self::blitz(attacker, source_card, valid_action_ids)
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

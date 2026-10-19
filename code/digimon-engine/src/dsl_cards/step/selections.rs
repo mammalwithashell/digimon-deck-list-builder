@@ -1133,20 +1133,7 @@ pub(crate) fn run_resume(
                     // (counter/block/alliance interrupts), which may park a nested
                     // selection — threaded via the empty inner_tail + run_outer_conts
                     // (below), exactly as the wrapped accept closure did.
-                    let (decoded_attacker, decoded_target) =
-                        crate::action::space::decode_attack(action_id);
-                    if decoded_attacker as u8 == attacker.index {
-                        let opponent = game.next_clockwise(attacker.player);
-                        let target = if decoded_target == crate::action::space::SECURITY_TARGET {
-                            crate::selection::AttackTarget::Player(opponent)
-                        } else {
-                            crate::selection::AttackTarget::Digimon(
-                                crate::permanent::PermanentHandle {
-                                    player: opponent,
-                                    index: decoded_target as u8,
-                                },
-                            )
-                        };
+                    if let Some(target) = game.decode_effect_attack_target(attacker, action_id) {
                         let _ = game.begin_attack_open(crate::combat::AttackOpen {
                             attacker,
                             initiator: crate::combat::AttackInitiator::Effect {
@@ -1566,7 +1553,7 @@ pub(crate) fn run_resume(
         ResumeFrame::OverclockSelection(state) => {
             game.run_overclock_selection_step(state, action_id, is_pass);
         }
-        ResumeFrame::BlitzAttackDecision(state) => {
+        ResumeFrame::AttackDeclarationDecision(state) => {
             // §16-16-3: the <Blitz> attack (or its decline) is processing of
             // the effect that contains it; that effect's remaining steps run
             // after the declaration.

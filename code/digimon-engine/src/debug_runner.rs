@@ -885,6 +885,51 @@ impl DebugRunner {
         self.execute_action(player, action_id)
     }
 
+    /// Whether the pending decision is an end-of-turn attack keyword's own
+    /// decision inside the `[End of Your Turn]` pool: an `<Engage>` /
+    /// `<Execute>` / `<Vortex>` attack declaration
+    /// (`ResumeFrame::AttackDeclarationDecision` with an end-of-turn keyword)
+    /// or `<Overclock>`'s cost pick (`ResumeFrame::OverclockSelection`)
+    /// (Comprehensive Rules 4.3 §16-44-2, §16-38-2, §16-33-2, §16-34-2).
+    pub fn pending_is_end_of_turn_keyword_decision(&self) -> bool {
+        match self
+            .game
+            .pending_selection_resume
+            .as_ref()
+            .map(|stack| stack.frames.as_slice())
+        {
+            Some([crate::resume::ResumeFrame::AttackDeclarationDecision(state)]) => {
+                state.end_of_turn_keyword.is_some()
+            }
+            Some([crate::resume::ResumeFrame::OverclockSelection(_)]) => true,
+            _ => false,
+        }
+    }
+
+    /// [`Self::auto_resolve`], except that every end-of-turn attack keyword's
+    /// decision ([`Self::pending_is_end_of_turn_keyword_decision`]) is
+    /// DECLINED instead of taking its first attack / cost candidate. For
+    /// tests that only cross the end of a turn: those decisions used to wait
+    /// in the `EndOfTurnAction` window, which `auto_resolve` never entered.
+    pub fn auto_resolve_declining_end_of_turn_attacks(&mut self) -> Result<(), SelectionError> {
+        while let Some(sel) = self.pending_selection() {
+            let player = sel.selecting_player;
+            let first = sel.valid_action_ids.first().copied();
+            let optional = sel.is_optional;
+            let action_id = if optional && self.pending_is_end_of_turn_keyword_decision() {
+                crate::action::space::PASS
+            } else {
+                match first {
+                    Some(id) => id,
+                    None if optional => crate::action::space::PASS,
+                    None => return Err(SelectionError::InvalidAction),
+                }
+            };
+            self.execute_action(player, action_id)?;
+        }
+        Ok(())
+    }
+
     pub fn auto_resolve(&mut self) -> Result<(), SelectionError> {
         while let Some(sel) = self.pending_selection() {
             let player = sel.selecting_player;

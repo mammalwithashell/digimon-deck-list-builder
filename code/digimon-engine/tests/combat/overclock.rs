@@ -1,10 +1,13 @@
-//! §4.6c-residual Overclock execution tests.
+//! `<Overclock>` execution tests.
 //!
-//! `Game::activate_overclock` parks a sacrifice prompt, the callback deletes
-//! the chosen sacrifice and fires an end-of-turn attack on the opponent
-//! player without suspending the attacker. Mirrors Python
-//! `action_decoder._initiate_overclock` /
-//! [action_decoder.py:501-522](../digimon_gym/engine/game/action_decoder.py#L501).
+//! §16-34-2 (Comprehensive Rules 4.3): <Overclock> is a trigger-type effect
+//! that triggers at the end of your turn. Its `[End of Your Turn]` body parks
+//! the optional processing condition (§16-34-3: "by deleting 1 of your Tokens
+//! or 1 of your other specified Digimon") as a sacrifice prompt inside the
+//! end-of-turn pool (`Game::install_overclock_selection`); resolving it
+//! deletes the chosen sacrifice and declares the mandatory attack on the
+//! opponent player without suspending the attacker (§16-34-1). There is no
+//! separate `EndOfTurnAction` activation any more.
 
 use std::sync::{Arc, Mutex};
 
@@ -15,7 +18,6 @@ use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword};
-use digimon_engine::game::OverclockError;
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{AttackTarget, SelectionKind};
 
@@ -66,9 +68,10 @@ fn setup_overclock_scenario() -> (
         .modifiers
         .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
 
-    // Drive into EndOfTurnAction phase.
+    // §16-34-2: ending the turn activates <Overclock>'s trigger, which parks
+    // its condition's sacrifice prompt inside the end-of-turn pool.
     r.game.end_turn();
-    assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    assert!(r.game.pending_selection.is_some(), "the <Overclock> prompt");
 
     (r, tp, oc)
 }
@@ -88,12 +91,8 @@ impl CardEffect for CaptureDeletionCause {
 }
 
 #[test]
-fn activate_installs_sacrifice_prompt() {
-    let (mut r, tp, _oc) = setup_overclock_scenario();
-
-    r.game
-        .activate_overclock(0)
-        .expect("Overclock with a sacrifice available must install a prompt");
+fn end_of_turn_installs_sacrifice_prompt() {
+    let (r, tp, _oc) = setup_overclock_scenario();
 
     let sel = r
         .game
@@ -103,7 +102,8 @@ fn activate_installs_sacrifice_prompt() {
     assert_eq!(sel.kind, SelectionKind::OwnField);
     assert_eq!(sel.selecting_player, tp);
     assert!(sel.is_optional, "<Overclock> may be declined");
-    assert_eq!(sel.previous_phase, GamePhase::EndOfTurnAction);
+    // §16-34-2: offered inside the end-of-turn pool, not in a later window.
+    assert_eq!(sel.previous_phase, GamePhase::EndTurn);
 
     // Only the non-Overclock slot (index 1) is a valid sacrifice.
     let expected_id = encode_attack(0, 1);
@@ -112,7 +112,7 @@ fn activate_installs_sacrifice_prompt() {
 }
 
 #[test]
-fn activate_rejects_without_keyword() {
+fn no_prompt_without_keyword() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("OC", 5000))
         .add_card(make_digimon("SAC", 3000))
@@ -121,19 +121,15 @@ fn activate_rejects_without_keyword() {
     let _oc = r.place_on_field(tp, "OC", Some(0));
     let _sac = r.place_on_field(tp, "SAC", Some(0));
     // Note: NO Overclock keyword granted.
-    // Force phase manually since end_turn wouldn't park here.
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    r.game.end_turn();
 
-    let err = r
-        .game
-        .activate_overclock(0)
-        .expect_err("no keyword → NotOverclock");
-    assert_eq!(err, OverclockError::NotOverclock);
     assert!(r.game.pending_selection.is_none());
+    assert_ne!(r.game.turn_player(), tp, "nothing to offer: the turn passed");
 }
 
 #[test]
-fn activate_rejects_without_sacrifice() {
+fn no_trigger_without_sacrifice() {
+    // DCGO `CanActivateOverclock`: no legal candidate, no activation.
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("OC", 5000))
         .start();
@@ -142,31 +138,34 @@ fn activate_rejects_without_sacrifice() {
     r.game
         .modifiers
         .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    r.game.end_turn();
 
-    let err = r
-        .game
-        .activate_overclock(0)
-        .expect_err("alone on field → NoSacrifice");
-    assert_eq!(err, OverclockError::NoSacrifice);
+    assert!(r.game.pending_selection.is_none());
+    assert_ne!(r.game.turn_player(), tp, "nothing to offer: the turn passed");
 }
 
 #[test]
-fn activate_rejects_wrong_phase() {
-    let (mut r, _tp, _oc) = setup_overclock_scenario();
+fn no_prompt_before_the_end_of_turn() {
+    // §16-34-2: the trigger is the end of your turn; nothing is offered in
+    // the main phase.
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", 5000))
+        .add_card(make_digimon("SAC", 3000))
+        .start();
+    let tp = r.game.turn_player();
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let _sac = r.place_on_field(tp, "SAC", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
     r.game.current_phase = GamePhase::Main;
 
-    let err = r
-        .game
-        .activate_overclock(0)
-        .expect_err("outside EndOfTurnAction → WrongPhase");
-    assert_eq!(err, OverclockError::WrongPhase);
+    assert!(r.game.pending_selection.is_none());
 }
 
 #[test]
 fn decline_consumes_current_end_turn_overclock_opportunity() {
     let (mut r, tp, oc) = setup_overclock_scenario();
-    r.game.activate_overclock(0).unwrap();
 
     let sac_count_before = r.game.player(tp).battle_area.len();
     r.game
@@ -174,7 +173,6 @@ fn decline_consumes_current_end_turn_overclock_opportunity() {
         .expect("optional prompt accepts PASS");
 
     assert!(r.game.pending_selection.is_none());
-    assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
     assert_eq!(
         r.game.player(tp).battle_area.len(),
         sac_count_before,
@@ -185,16 +183,14 @@ fn decline_consumes_current_end_turn_overclock_opportunity() {
         !oc_perm.is_suspended,
         "Overclock Digimon not suspended on decline"
     );
-
-    assert!(
-        !r.game.has_end_of_turn_keywords(tp),
-        "declining the Overclock cost should not re-offer the same optional action forever"
-    );
-    r.game.pass_end_of_turn_action();
+    // §16-34-3: declining the optional condition ends <Overclock>'s
+    // processing; the trigger activated once, so nothing is re-offered and
+    // the end of turn continues.
+    assert_ne!(r.game.current_phase, GamePhase::EndOfTurnAction);
     assert_ne!(
         r.game.turn_player(),
         tp,
-        "with the declined Overclock consumed, passing the EOT window should rotate"
+        "with the declined Overclock consumed, the turn passes"
     );
 }
 
@@ -215,12 +211,11 @@ fn full_flow_sacrifice_and_attack_resolves_on_security() {
         .modifiers
         .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
     r.game.end_turn();
-    assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    assert!(r.game.pending_selection.is_some(), "the <Overclock> prompt");
 
     let battle_area_before = r.game.player(tp).battle_area.len();
     let sec_before = r.game.player(opp).security.len();
 
-    r.game.activate_overclock(0).unwrap();
     // Resolve with the sacrifice.
     let sac_action = encode_attack(0, sac.index as u16);
     r.game.resolve_selection(tp, sac_action).unwrap();
@@ -274,7 +269,6 @@ fn overclock_sacrifice_prompt_clones_faithfully() {
 
     let own_before = r.game.player(tp).battle_area.len();
     let sec_before = r.game.player(opp).security.len();
-    r.game.activate_overclock(0).unwrap();
     assert!(
         r.game.pending_selection_resume.is_some(),
         "Overclock sacrifice prompt must park a data frame for clone-faithful prompts"
@@ -339,7 +333,6 @@ fn overclock_sacrifice_deletion_reports_overclock_cause() {
         .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
     r.game.end_turn();
 
-    r.game.activate_overclock(0).unwrap();
     let sac_action = encode_attack(0, sac.index as u16);
     r.game.resolve_selection(tp, sac_action).unwrap();
 
@@ -369,7 +362,6 @@ fn full_flow_against_empty_security_wins_game() {
     r.game.player_mut(opp).security.clear();
     r.game.end_turn();
 
-    r.game.activate_overclock(0).unwrap();
     let sac_action = encode_attack(0, sac.index as u16);
     r.game.resolve_selection(tp, sac_action).unwrap();
 
@@ -443,7 +435,6 @@ fn action_id_decodes_correctly_when_sac_at_higher_index() {
         .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
     r.game.end_turn();
 
-    r.game.activate_overclock(0).unwrap();
     let sel = r.game.pending_selection.as_ref().unwrap();
     // Three sacrifices (slots 1, 2, 3) are legal.
     assert_eq!(sel.valid_action_ids.len(), 3);

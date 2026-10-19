@@ -315,6 +315,8 @@ impl Game {
             pending_turn_boundary_resume: None,
             pending_enter_main_after_selection: false,
             end_of_turn_attack_settle_pending: false,
+            end_of_turn_attack_keyword: None,
+            deferred_end_of_turn_attack_offers: Vec::new(),
             draining_deferred: 0,
             source_trash_event_open: false,
             turn_end_check_deferred: false,
@@ -503,6 +505,8 @@ impl Game {
         self.pending_turn_boundary_resume = None;
         self.pending_enter_main_after_selection = false;
         self.end_of_turn_attack_settle_pending = false;
+        self.end_of_turn_attack_keyword = None;
+        self.deferred_end_of_turn_attack_offers.clear();
         self.draining_deferred = 0;
         self.source_trash_event_open = false;
         self.turn_end_check_deferred = false;

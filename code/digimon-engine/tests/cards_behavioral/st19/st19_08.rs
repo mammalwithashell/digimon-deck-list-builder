@@ -135,17 +135,16 @@ fn st19_08_overclock_end_of_turn_masks_only_token_or_other_puppet_costs() {
     runner.place_on_field(0, "COST-TOKEN", Some(0));
     runner.place_on_field(0, "NON-PUPPET", Some(0));
     runner.place_on_field(0, "PUPPET-ALLY", Some(0));
-    runner.game.current_phase = GamePhase::EndOfTurnAction;
-
-    // ShoeShoemon (field index 0) exposes Overclock as a legal end-turn action.
+    // §16-34-2: ShoeShoemon's <Overclock> triggers at the end of the turn and
+    // offers its condition's pick inside the end-of-turn pool (no separate
+    // activation bit).
+    runner.game.end_turn();
     let overclock_action = encode_field_effect(shoe.index as u16, FIELD_EFFECT_SLOT_FOR_OVERCLOCK);
-    let mask = build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[overclock_action as usize], 1.0,
-        "ShoeShoemon's <Overclock> is a legal end-of-turn field effect"
+        build_action_mask(&runner.game, 0)[overclock_action as usize],
+        0.0,
+        "no activation bit"
     );
-
-    runner.game.decode_action(overclock_action, 0);
 
     // The Overclock cost prompt: delete 1 Token or other Puppet Digimon.
     let cost_mask = build_action_mask(&runner.game, 0);

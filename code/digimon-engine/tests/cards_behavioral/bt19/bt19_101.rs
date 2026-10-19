@@ -264,12 +264,10 @@ fn bt19_101_overclock_sacrifice_accepts_token() {
     runner.set_first_player(0);
     let zeed = runner.place_on_field(0, CARD_ID, Some(0));
     let _tok = runner.place_on_field(0, "TOKEN-A", Some(0));
-    runner.game.current_phase = digimon_engine::enums::GamePhase::EndOfTurnAction;
-
-    runner
-        .game
-        .activate_overclock(zeed.index as usize)
-        .expect("Overclock with a Token sacrifice available must install a prompt");
+    let _ = zeed;
+    // §16-34-2: <Overclock> triggers at the end of the turn and offers its
+    // condition's pick inside the end-of-turn pool.
+    runner.end_turn();
 
     let sel = runner
         .game
@@ -285,13 +283,19 @@ fn bt19_101_overclock_sacrifice_accepts_other_composite_digimon() {
     let mut runner = base_runner();
     runner.set_first_player(0);
     let zeed = runner.place_on_field(0, CARD_ID, Some(0));
-    let _composite = runner.place_on_field(0, "COMPOSITE-A", Some(0));
-    runner.game.current_phase = digimon_engine::enums::GamePhase::EndOfTurnAction;
+    let composite = runner.place_on_field(0, "COMPOSITE-A", Some(0));
+    let _ = zeed;
+    runner.end_turn();
 
-    runner
+    let sel = runner
         .game
-        .activate_overclock(zeed.index as usize)
+        .pending_selection
+        .as_ref()
         .expect("a [Composite]-trait Digimon is a legal Overclock sacrifice");
+    assert_eq!(sel.kind, SelectionKind::OwnField);
+    assert!(sel
+        .valid_action_ids
+        .contains(&digimon_engine::action::space::encode_attack(0, composite.index as u16)));
 }
 
 #[test]
@@ -300,13 +304,16 @@ fn bt19_101_overclock_sacrifice_rejects_non_composite_non_token() {
     runner.set_first_player(0);
     let zeed = runner.place_on_field(0, CARD_ID, Some(0));
     let _plain = runner.place_on_field(0, "PLAIN-A", Some(0));
-    runner.game.current_phase = digimon_engine::enums::GamePhase::EndOfTurnAction;
+    let _ = zeed;
+    runner.end_turn();
 
-    let err = runner.game.activate_overclock(zeed.index as usize);
+    // No legal candidate: <Overclock> does not activate (DCGO
+    // `CanActivateOverclock`), so nothing is offered and the turn passes.
     assert!(
-        err.is_err(),
+        runner.game.pending_selection.is_none(),
         "a non-Token, non-[Composite] Digimon is not a legal Overclock sacrifice"
     );
+    assert_eq!(runner.turn_player(), 1);
 }
 
 // ════════════════════════════════════════════════════════════════════════════

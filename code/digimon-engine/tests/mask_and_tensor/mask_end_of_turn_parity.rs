@@ -1,20 +1,23 @@
-//! End-of-turn phase mask parity tests.
+//! End-of-turn mask parity tests.
 //!
-//! Covers the Vortex slice of §4.6 from RUST_PYTHON_PARITY.md. When
-//! `current_phase == GamePhase::EndOfTurnAction`, the mask should emit:
-//!   - `PASS` (always, to decline the end-of-turn action)
-//!   - Digimon-target attack bits for any permanent with modifier-granted
-//!     `Keyword::Vortex` whose `can_attack(vortex=true)` returns true.
-//!     Vortex bypasses summoning sickness (via §2.1 plumbing) but NOT the
-//!     target rule: only a suspended enemy Digimon, or one the attacker may
-//!     attack unsuspended (CAN_ATTACK_UNSUSPENDED), is a valid target
-//!     (§11-2-7-1, §16-33-1); <Raid> switches the target after the
-//!     declaration (§16-23-1) and adds none. Player/security targets
-//!     require a separate `VortexCanAttackPlayer` extension.
+//! <Vortex> and <Overclock> (Comprehensive Rules 4.3 §16-33-2 / §16-34-2) are
+//! trigger-type effects at the end of your turn: since 2026-10-18
+//! (G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS) their decision is
+//! offered INSIDE the `[End of Your Turn]` pool, as a pending selection, so
+//! these tests end the turn (`end_turn`) and read the mask of that decision:
+//!   - `PASS` (the decline, §16-33-3)
+//!   - Digimon-target attack bits for the <Vortex> Digimon whose
+//!     `can_attack(vortex=true)` returns true. Vortex bypasses summoning
+//!     sickness (via §2.1 plumbing) but NOT the target rule: only a suspended
+//!     enemy Digimon, or one the attacker may attack unsuspended
+//!     (CAN_ATTACK_UNSUSPENDED), is a valid target (§11-2-7-1, §16-33-1);
+//!     <Raid> switches the target after the declaration (§16-23-1) and adds
+//!     none. Player/security targets require a separate
+//!     `VortexCanAttackPlayer` extension.
 //!
-//! Phase-transition logic (deciding *when* to enter `EndOfTurnAction`),
-//! Overclock / MAY_ATTACK / FORCE_ATTACK bits, and the full interrupt-
-//! phase mask builders are all §4.6b / §4.6c / §4.6d residuals.
+//! The `EndOfTurnAction` window itself remains for `MAY_ATTACK` /
+//! `FORCE_ATTACK` grants; those tests still set the phase directly.
+//!
 
 use digimon_engine::action::{
     build_action_mask, encode_attack, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_OVERCLOCK,
@@ -74,13 +77,15 @@ fn mask_vortex_emits_attacks_in_end_of_turn_phase() {
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let mask = build_action_mask(&r.game, tp);
 
     assert_eq!(
         mask[PASS as usize], 1.0,
-        "PASS is always legal in EndOfTurnAction"
+        "PASS declines the <Vortex> decision"
     );
     assert_eq!(
         mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
@@ -105,7 +110,9 @@ fn base_vortex_does_not_emit_security_target_without_player_extension() {
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
@@ -135,7 +142,9 @@ fn vortex_player_extension_emits_security_target() {
             tp,
         ),
     );
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
@@ -169,7 +178,9 @@ fn vortex_player_extension_respects_cannot_attack_player() {
         attacker,
         ModifierEntry::simple(ModifierType::CannotAttackPlayer, 1, Expiry::EndOfTurn, tp),
     );
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
@@ -194,7 +205,9 @@ fn fresh_vortex_may_attack_without_player_extension_does_not_emit_security_targe
         attacker,
         ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
     );
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
@@ -219,7 +232,9 @@ fn fresh_vortex_may_attack_without_player_extension_does_not_decode_security_att
         attacker,
         ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
     );
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     r.game
         .decode_action(encode_attack(attacker.index as u16, SECURITY_TARGET), tp);
@@ -250,7 +265,9 @@ fn fresh_vortex_player_extension_emits_and_decodes_security_as_vortex() {
             tp,
         ),
     );
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let security_attack = encode_attack(attacker.index as u16, SECURITY_TARGET);
     let mask = build_action_mask(&r.game, tp);
@@ -288,7 +305,9 @@ fn fresh_vortex_may_attack_emits_and_decodes_digimon_target_as_vortex() {
         attacker,
         ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
     );
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let digimon_attack = encode_attack(attacker.index as u16, defender.index as u16);
     let mask = build_action_mask(&r.game, tp);
@@ -357,7 +376,9 @@ fn mask_vortex_bypasses_summoning_sickness() {
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
@@ -384,7 +405,9 @@ fn decode_vortex_attack_uses_vortex_flag_for_fresh_attacker() {
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let attack = encode_attack(attacker.index as u16, defender.index as u16);
     r.game.decode_action(attack, tp);
@@ -406,50 +429,53 @@ fn decode_vortex_attack_uses_vortex_flag_for_fresh_attacker() {
 /// suspending one lights exactly that one.
 #[test]
 fn mask_vortex_does_not_target_unsuspended_digimon() {
-    let mut r = DebugRunner::builder()
-        .add_card(make_digimon("ATK", CardColor::Red, 5000))
-        .add_card(make_digimon_without_dp("WEAK", CardColor::Blue))
-        .add_card(make_digimon_without_dp("STRONG", CardColor::Blue))
-        .start();
+    // `suspend_weak`: whether WEAK is suspended before the turn ends.
+    let board = |suspend_weak: bool| {
+        let mut r = DebugRunner::builder()
+            .add_card(make_digimon("ATK", CardColor::Red, 5000))
+            .add_card(make_digimon_without_dp("WEAK", CardColor::Blue))
+            .add_card(make_digimon_without_dp("STRONG", CardColor::Blue))
+            .start();
 
-    let tp = r.game.turn_player();
-    let opp = 1 - tp;
-    let attacker = r.place_on_field(tp, "ATK", Some(0));
-    let weak_idx = r.place_on_field(opp, "WEAK", Some(0)).index;
-    let strong_idx = r.place_on_field(opp, "STRONG", Some(0)).index;
-    // Both unsuspended.
-    for p in &mut r.game.players[opp as usize].battle_area {
-        p.is_suspended = false;
-    }
+        let tp = r.game.turn_player();
+        let opp = 1 - tp;
+        let attacker = r.place_on_field(tp, "ATK", Some(0));
+        let weak_idx = r.place_on_field(opp, "WEAK", Some(0)).index;
+        let strong_idx = r.place_on_field(opp, "STRONG", Some(0)).index;
+        // Both unsuspended.
+        for p in &mut r.game.players[opp as usize].battle_area {
+            p.is_suspended = false;
+        }
+        r.game.players[opp as usize].battle_area[weak_idx as usize].is_suspended = suspend_weak;
 
-    r.game
-        .modifiers
-        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+        r.game
+            .modifiers
+            .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+        // §16-33-2: the decision is offered inside the `[End of Your Turn]`
+        // pool.
+        r.game.end_turn();
+        let mask = build_action_mask(&r.game, tp);
+        (
+            mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize],
+            mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize],
+            r.game.pending_selection.is_some(),
+        )
+    };
 
-    let mask = build_action_mask(&r.game, tp);
-    assert_eq!(
-        mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize],
-        0.0,
-        "an unsuspended enemy Digimon is not a <Vortex> target (weak)",
-    );
-    assert_eq!(
-        mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize],
-        0.0,
-        "an unsuspended enemy Digimon is not a <Vortex> target (strong)",
-    );
+    // Both unsuspended: no legal <Vortex> declaration, so it does not activate
+    // (DCGO `CanActivateVortex`) and nothing is offered.
+    let (weak, strong, offered) = board(false);
+    assert_eq!(weak, 0.0, "an unsuspended enemy Digimon is not a <Vortex> target (weak)");
+    assert_eq!(strong, 0.0, "an unsuspended enemy Digimon is not a <Vortex> target (strong)");
+    assert!(!offered, "no legal declaration: <Vortex> does not activate");
 
-    r.game.players[opp as usize].battle_area[weak_idx as usize].is_suspended = true;
-    let mask = build_action_mask(&r.game, tp);
+    // WEAK suspended: exactly WEAK is offered.
+    let (weak, strong, offered) = board(true);
+    assert!(offered, "<Vortex> offers its attack");
+    assert_eq!(weak, 1.0, "the suspended enemy Digimon is a <Vortex> target");
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, weak_idx as u16) as usize],
-        1.0,
-        "the suspended enemy Digimon is a <Vortex> target",
-    );
-    assert_eq!(
-        mask[encode_attack(attacker.index as u16, strong_idx as u16) as usize],
-        0.0,
-        "the still-unsuspended one is not",
+        strong, 0.0,
+        "the unsuspended enemy Digimon is still not a <Vortex> target"
     );
 }
 
@@ -479,7 +505,9 @@ fn vortex_with_can_attack_unsuspended_targets_an_unsuspended_digimon() {
         attacker,
         ModifierEntry::simple(ModifierType::CanAttackUnsuspended, 1, Expiry::EndOfTurn, tp),
     );
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let attack = encode_attack(attacker.index as u16, defender.index as u16);
     let mask = build_action_mask(&r.game, tp);
@@ -533,7 +561,9 @@ fn vortex_with_raid_declares_on_a_legal_target_then_may_switch() {
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Raid, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let low_attack = encode_attack(attacker.index as u16, low.index as u16);
     let high_attack = encode_attack(attacker.index as u16, high.index as u16);
@@ -547,10 +577,17 @@ fn vortex_with_raid_declares_on_a_legal_target_then_may_switch() {
     );
     assert_eq!(mask[sus_attack as usize], 1.0, "the suspended Digimon");
 
-    // The decoder agrees: a declaration on HIGH is refused (nothing happens).
+    // The decoder agrees: a declaration on HIGH is refused (nothing happens;
+    // the <Vortex> decision is still the pending one).
     r.game.decode_action(high_attack, tp);
     assert!(r.game.pending_attack.is_none(), "the decoder refused HIGH");
-    assert!(r.game.pending_selection.is_none(), "no <Raid> prompt: no attack");
+    assert!(
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_some_and(|sel| sel.valid_action_ids.contains(&sus_attack)),
+        "no <Raid> prompt: still the <Vortex> decision"
+    );
     assert_eq!(r.game.players[opp as usize].battle_area.len(), 3);
 
     r.game.decode_action(sus_attack, tp);
@@ -608,7 +645,9 @@ fn mask_vortex_respects_cannot_attack_target() {
         defender,
         ModifierEntry::simple(ModifierType::CannotAttackTarget, 1, Expiry::EndOfTurn, opp),
     );
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    // §16-33-2 / §16-34-2: the decision is offered inside the
+    // `[End of Your Turn]` pool.
+    r.game.end_turn();
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
@@ -623,16 +662,21 @@ fn mask_vortex_respects_cannot_attack_target() {
     );
 }
 
-// ─── §4.6c Overclock ───────────────────────────────────────────────────
+// ─── §16-34 Overclock ────────────────────────────────────────────────
 
+/// The former `EndOfTurnAction` field-effect bit for <Overclock>; never legal
+/// since <Overclock> offers its condition inside the end-of-turn pool.
 fn overclock_bit(field_index: usize) -> usize {
     (FIELD_EFFECT_START
         + field_index as u16 * EFFECTS_PER_PERMANENT
         + FIELD_EFFECT_SLOT_FOR_OVERCLOCK) as usize
 }
 
+/// §16-34-2 / §16-34-3: with a legal candidate, ending the turn activates
+/// <Overclock> and offers its optional condition's pick (the candidate's
+/// own-field bit plus PASS) as a pending selection; no activation bit.
 #[test]
-fn mask_overclock_emits_sub_slot_0_bit_with_sacrifice_available() {
+fn overclock_offers_its_condition_with_a_sacrifice_available() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("OC", CardColor::Red, 5000))
         .add_card(make_digimon("SAC", CardColor::Red, 1000))
@@ -640,22 +684,26 @@ fn mask_overclock_emits_sub_slot_0_bit_with_sacrifice_available() {
 
     let tp = r.game.turn_player();
     let oc = r.place_on_field(tp, "OC", Some(0));
-    let _sac = r.place_on_field(tp, "SAC", Some(0));
+    let sac = r.place_on_field(tp, "SAC", Some(0));
     r.game
         .modifiers
         .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    r.game.end_turn();
 
     let mask = build_action_mask(&r.game, tp);
+    assert_eq!(mask[overclock_bit(oc.index as usize)], 0.0, "no activation bit");
     assert_eq!(
-        mask[overclock_bit(oc.index as usize)],
+        mask[encode_attack(0, sac.index as u16) as usize],
         1.0,
-        "Overclock with at least one other Digimon must emit sub-slot 0",
+        "the sacrifice candidate is offered",
     );
+    assert_eq!(mask[PASS as usize], 1.0, "the condition is optional");
 }
 
+/// §16-34-2: with no legal candidate <Overclock> does not activate (DCGO
+/// `CanActivateOverclock`): nothing is offered and the turn passes.
 #[test]
-fn mask_overclock_suppressed_when_no_sacrifice() {
+fn overclock_does_not_activate_without_sacrifice() {
     // Only the Overclock Digimon on the field — nothing else to sacrifice.
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("OC", CardColor::Red, 5000))
@@ -666,14 +714,12 @@ fn mask_overclock_suppressed_when_no_sacrifice() {
     r.game
         .modifiers
         .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
-    r.game.current_phase = GamePhase::EndOfTurnAction;
+    r.game.end_turn();
 
+    assert!(r.game.pending_selection.is_none(), "nothing offered");
+    assert_ne!(r.game.turn_player(), tp, "the turn passed");
     let mask = build_action_mask(&r.game, tp);
-    assert_eq!(
-        mask[overclock_bit(oc.index as usize)],
-        0.0,
-        "no sacrifice available → Overclock bit must not emit",
-    );
+    assert_eq!(mask[overclock_bit(oc.index as usize)], 0.0);
 }
 
 // ─── §4.6c MayAttack ──────────────────────────────────────────────────

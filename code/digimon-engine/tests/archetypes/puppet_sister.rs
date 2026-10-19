@@ -40,7 +40,7 @@
 
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{DelayTrigger, EffectTiming, GamePhase, Keyword};
+use digimon_engine::enums::{DelayTrigger, EffectTiming, Keyword};
 use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::selection::OptionPlayResult;
 
@@ -924,7 +924,7 @@ fn combo3_without_fodder_no_cheat_digivolve_and_no_death_fanout() {
 ///   delete 1 opponent lowest-level Digimon") + BT22-002 Kyaromon (inherited
 ///   [Your Turn] Draw 1 on your Token/other-Puppet deletion).
 /// - Expected mechanical outcome: driven through the *real* <Overclock> keyword
-///   path (`activate_overclock` at end of turn), Nyabootmon's extra-attack cost
+///   path (its `[End of Your Turn]` trigger, §16-34-2), Nyabootmon's extra-attack cost
 ///   deletes a [Puppet] fodder — a DEATH event that fans out the controller's
 ///   death triggers in one shot. With Kaguyamon on field, that death fires its
 ///   "delete opponent lowest-level Digimon" removal (opp field −1), and
@@ -988,21 +988,32 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
     runner.place_on_field(opp, "ST5-05", Some(0));
     runner.place_on_field(opp, "ST5-10", Some(0));
 
-    // Drive into the EndOfTurnAction window (where <Overclock> activates).
-    runner.game.end_turn();
-    assert_eq!(runner.game.current_phase, GamePhase::EndOfTurnAction);
-
     let before = snapshot(&runner);
 
-    // Activate Nyabootmon's <Overclock> through its OWN keyword path.
+    // Activate Nyabootmon's <Overclock> through its OWN keyword path: a
+    // trigger-type effect at the end of the turn (§16-34-2) whose condition's
+    // pick is offered inside the end-of-turn pool.
     assert!(
         runner.game.has_keyword(nyaboot, Keyword::Overclock),
         "Nyabootmon must carry <Overclock> to pay the sacrifice cost"
     );
-    runner
-        .game
-        .activate_overclock(nyaboot.index as usize)
-        .expect("Nyabootmon <Overclock> with a Puppet sacrifice available");
+    runner.game.end_turn();
+    // If other `[End of Your Turn]` effects pend with it, activate
+    // Nyabootmon's <Overclock> first.
+    while let Some(sel) = runner.pending_selection_view() {
+        if sel.kind != digimon_engine::selection::SelectionKind::TriggerOrder {
+            break;
+        }
+        let action = sel
+            .effect_choices
+            .as_ref()
+            .and_then(|cs| cs.iter().find(|c| c.label.starts_with("BT22-042")))
+            .map(|c| c.action_id)
+            .expect("Nyabootmon's <Overclock> in the TriggerOrder");
+        runner
+            .execute_action(sel.selecting_player, action)
+            .expect("activate <Overclock> first");
+    }
 
     // The sacrifice prompt is installed: choose the Puppet fodder (its death is
     // what fans out). Kaguyamon is also a legal Puppet sacrifice, so target the
@@ -1072,13 +1083,12 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
 
 /// Combo C4 unhappy path: with NO Token/other-Puppet fodder besides the
 /// Overclock body itself, the keyword's deletion cost cannot be paid —
-/// `activate_overclock` rejects with `NoSacrifice`, so no extra attack, no death
+/// <Overclock> does not activate at the end of the turn (no legal candidate;
+/// DCGO `CanActivateOverclock`), so no extra attack, no death
 /// event, and neither Kaguyamon's removal nor Kyaromon's draw fires. The whole
 /// closing line is *gated on a payable sacrifice*.
 #[test]
 fn combo4_without_fodder_overclock_unpayable_no_fanout() {
-    use digimon_engine::game::OverclockError;
-
     // Same real cast as the happy path, minus the Puppet fodder.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -1112,21 +1122,19 @@ fn combo4_without_fodder_overclock_unpayable_no_fanout() {
     runner.place_on_field(opp, "ST5-05", Some(0));
     runner.place_on_field(opp, "ST5-10", Some(0));
 
-    // With no sacrifice available, set the EOT <Overclock> window directly —
-    // mirroring the per-card Overclock tests (ex7_030.rs).
-    runner.game.current_phase = GamePhase::EndOfTurnAction;
-
     let before = snapshot(&runner);
 
-    // Overclock has no legal sacrifice (no Token / no *other* Puppet Digimon).
-    let err = runner
-        .game
-        .activate_overclock(nyaboot.index as usize)
-        .expect_err("Overclock must reject when no sacrifice is available");
-    assert_eq!(
-        err,
-        OverclockError::NoSacrifice,
+    // Overclock has no legal sacrifice (no Token / no *other* Puppet Digimon):
+    // ending the turn offers nothing for it.
+    assert!(runner.game.has_keyword(nyaboot, Keyword::Overclock));
+    assert!(
+        !runner.game.has_overclock_sacrifice(tp, nyaboot.index as usize),
         "with no spare Token/Puppet fodder, the Overclock cost is unpayable"
+    );
+    runner.game.end_turn();
+    assert!(
+        runner.pending_selection().is_none(),
+        "<Overclock> does not activate without a legal candidate"
     );
 
     let after = snapshot(&runner);

@@ -1,9 +1,15 @@
 //! §4.6b end-of-turn phase transition tests.
 //!
 //! `Game::end_turn` must park in `GamePhase::EndOfTurnAction` when the ending
-//! player has a permanent with a pending end-of-turn keyword action
-//! (Vortex / Overclock / MayAttack). Turn rotation is deferred until the
-//! player resumes via `pass_end_of_turn_action`.
+//! player has a permanent with a pending end-of-turn action (a `MayAttack`
+//! grant). Turn rotation is deferred until the player resumes via
+//! `pass_end_of_turn_action`.
+//!
+//! <Vortex> / <Overclock> (Comprehensive Rules 4.3 §16-33-2 / §16-34-2) are
+//! trigger-type effects instead: ending the turn activates them inside the
+//! `[End of Your Turn]` pool, and the end of turn waits for their decision
+//! (a pending selection), not for an `EndOfTurnAction` window
+//! (G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS).
 //!
 //! Mirrors Python `_complete_end_phase` and `next_phase` branches at
 //! [digimon_gym/engine/game/__init__.py:294-324]. ForceAttack is NOT part
@@ -45,7 +51,38 @@ fn make_digimon(id: &str, color: CardColor) -> CardData {
 // ─── Parking cases ────────────────────────────────────────────────────
 
 #[test]
-fn end_turn_parks_in_eot_phase_when_vortex_present() {
+fn end_turn_holds_for_the_vortex_decision_when_a_target_exists() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red))
+        .add_card(make_digimon("DEF", CardColor::Blue))
+        .start();
+
+    let tp = r.game.turn_player();
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    let def = r.place_on_field(1 - tp, "DEF", Some(0));
+    r.game.players[def.player as usize].battle_area[def.index as usize].is_suspended = true;
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+
+    let turn_before = r.game.turn_count;
+    r.game.end_turn();
+
+    // §16-33-2: <Vortex>'s decision is pending inside the end-of-turn pool.
+    assert!(r.game.pending_selection.is_some(), "the <Vortex> decision");
+    assert_ne!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    assert_eq!(r.game.turn_player(), tp, "turn must not rotate yet");
+    assert_eq!(
+        r.game.turn_count, turn_before,
+        "turn_count must not advance"
+    );
+}
+
+#[test]
+fn end_turn_does_not_hold_for_vortex_without_a_target() {
+    // DCGO `CanActivateVortex`: no opponent's Digimon it may attack (and no
+    // `VortexCanAttackPlayer`) → <Vortex> does not activate; no PASS-only
+    // step (G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP residual).
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("ATK", CardColor::Red))
         .start();
@@ -56,19 +93,14 @@ fn end_turn_parks_in_eot_phase_when_vortex_present() {
         .modifiers
         .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
 
-    let turn_before = r.game.turn_count;
     r.game.end_turn();
-
-    assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
-    assert_eq!(r.game.turn_player(), tp, "turn must not rotate yet");
-    assert_eq!(
-        r.game.turn_count, turn_before,
-        "turn_count must not advance"
-    );
+    assert!(r.game.pending_selection.is_none());
+    assert_ne!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    assert_eq!(r.game.turn_player(), 1 - tp, "the turn passed");
 }
 
 #[test]
-fn end_turn_parks_when_overclock_has_sacrifice() {
+fn end_turn_holds_for_overclock_when_it_has_a_sacrifice() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("OC", CardColor::Red))
         .add_card(make_digimon("SAC", CardColor::Red))
@@ -82,7 +114,11 @@ fn end_turn_parks_when_overclock_has_sacrifice() {
         .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
 
     r.game.end_turn();
-    assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    // §16-34-2: <Overclock>'s condition is pending inside the end-of-turn
+    // pool; the turn has not rotated.
+    assert!(r.game.pending_selection.is_some(), "the <Overclock> condition");
+    assert_ne!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    assert_eq!(r.game.turn_player(), tp);
 }
 
 #[test]
@@ -181,9 +217,10 @@ fn pass_end_of_turn_action_rotates_turn() {
     let tp = r.game.turn_player();
     let opp = 1 - tp;
     let attacker = r.place_on_field(tp, "ATK", Some(0));
-    r.game
-        .modifiers
-        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
+    );
 
     let memory_before = r.game.memory;
     let turn_before = r.game.turn_count;
@@ -228,19 +265,21 @@ fn pass_end_of_turn_action_expires_modifiers() {
 
     let tp = r.game.turn_player();
     let attacker = r.place_on_field(tp, "ATK", Some(0));
-    r.game
-        .modifiers
-        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
+    );
 
     r.game.end_turn();
+    assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
     assert!(
-        r.game.modifiers.has_keyword(attacker, Keyword::Vortex),
+        r.game.modifiers.has(attacker, ModifierType::MayAttack),
         "modifiers should still be live while parked in EOT",
     );
 
     r.game.pass_end_of_turn_action();
     assert!(
-        !r.game.modifiers.has_keyword(attacker, Keyword::Vortex),
+        !r.game.modifiers.has(attacker, ModifierType::MayAttack),
         "EndOfTurn modifiers must expire after pass_end_of_turn_action",
     );
 }

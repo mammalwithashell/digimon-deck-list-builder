@@ -3290,7 +3290,7 @@ retarget rider was deleted (2026-10-17, G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUS
 
 **`AttackState::PostBattle`** — processes owed `<Piercing>` before EndOfAttack, after battle rewards resolve. The active attacking Digimon can earn Piercing by deleting an opponent in either the attack's ordinary battle or an effect-caused battle during that attack. A vanished declared target does not erase this pending check. There is only one transition to security checking per attack: an ordinary player-attack check consumes that transition, and multiple Piercing activations cannot add another. A nonattacking effect battler cannot earn Piercing for the attacker. Ending the attack by an effect skips to EndOfAttack; removing the attacker also prevents its pending check. See official rules 16-6-2/4, 15-15-1-1 and [Bandai's CRM4 clarification](https://en.digimoncard.com/rule/revised/).
 
-**`AttackState::EndOfAttackDrain(outcome)`** — the End of Attack timing (§11-6-2: "the attack won't end until all processing has been resolved"). `cleanup_attack` enqueues the `EndOfAttack` effects of every battle area plus the scheduled pending processing due then (one §18-1-2 pool, e.g. `<Execute>`'s deletion, §16-38-4), sets this state carrying the attack's outcome, and drains. While the pool resolves the attack is still in progress: `pending_attack` stays set, the attacker keeps `is_attacking` (`current_attacker()` is valid), and the "for the attack" (`Expiry::EndOfAttack`) modifiers still apply. If the pool parks on a decision the attack entry point returns `AttackResult::InProgress`; the `resolve_selection` tail drains the rest and re-enters `advance_pending_attack`, whose `EndOfAttackDrain` arm calls `finish_attack_after_end_of_attack_timing`: clear `is_attacking`, `expire_end_of_attack()`, clear `pending_attack`, rule check, turn-end check, and return the carried outcome. The state is plain data (clone-safe). After an end-of-turn attack (`PendingAttack::return_phase == EndOfTurnAction`) the finish arms `settle_end_of_turn_attack` (`game_phases.rs`): once nothing is resolving it re-checks `has_end_of_turn_keywords` and rotates the turn when no end-of-turn action is left (§16-44-1; no PASS-only step), otherwise the `EndOfTurnAction` window stays open. An effect in the End of Attack pool must not declare a new attack (`begin_attack_open` refuses it while this state is held; no card does so).
+**`AttackState::EndOfAttackDrain(outcome)`** — the End of Attack timing (§11-6-2: "the attack won't end until all processing has been resolved"). `cleanup_attack` enqueues the `EndOfAttack` effects of every battle area plus the scheduled pending processing due then (one §18-1-2 pool, e.g. `<Execute>`'s deletion, §16-38-4), sets this state carrying the attack's outcome, and drains. While the pool resolves the attack is still in progress: `pending_attack` stays set, the attacker keeps `is_attacking` (`current_attacker()` is valid), and the "for the attack" (`Expiry::EndOfAttack`) modifiers still apply. If the pool parks on a decision the attack entry point returns `AttackResult::InProgress`; the `resolve_selection` tail drains the rest and re-enters `advance_pending_attack`, whose `EndOfAttackDrain` arm calls `finish_attack_after_end_of_attack_timing`: clear `is_attacking`, `expire_end_of_attack()`, clear `pending_attack`, rule check, turn-end check, and return the carried outcome. The state is plain data (clone-safe). After an end-of-turn attack (`PendingAttack::return_phase` is `EndTurn` — declared inside the `[End of Your Turn]` pool — or `EndOfTurnAction` — a `MayAttack` grant's window) the finish arms `settle_end_of_turn_attack` (`game_phases.rs`): once nothing is resolving it continues the end of turn — `resume_pending_end_turn` (the next waiting end-of-turn keyword offer, then the §6-6-4 swing-back check and the rotation) for a pool attack, or, in the `EndOfTurnAction` window, a re-check of `has_end_of_turn_keywords` that rotates the turn when no end-of-turn action is left (§16-44-1; no PASS-only step). An effect in the End of Attack pool must not declare a new attack (`begin_attack_open` refuses it while this state is held; no card does so).
 
 ### Keyword consumers wired
 
@@ -4599,18 +4599,65 @@ Unrecognized keyword names are ignored silently. Cards that need
 behavior not covered by the `Keyword` enum must use the modifier-based
 API via `Effect` builders.
 
+### End-of-turn attack keywords (`<Engage>`, `<Execute>`, `<Vortex>`, `<Overclock>`)
+
+All four are trigger-type effects at the end of your turn (§16-44-2, §16-38-2,
+§16-33-2, §16-34-2). Each is a `keyword_to_auto_effect` `EndOfYourTurn` body
+(`keyword_effects::end_of_turn_keyword_attack_process`), dispatched from the
+modifier registry like `<Raid>` / `<Alliance>` (`keyword_trigger_dispatched_from_registry`)
+so printed, DSL-granted, aura-granted and raw registry grants all reach the
+pool once, with the activation condition kept
+(`end_of_turn_keyword_can_activate`: a legal declaration, or for
+`<Overclock>` a legal cost candidate; DCGO `CanActivate*`). They pend with
+the other `[End of Your Turn]` effects and the turn player orders them
+(`TriggerOrder`, §15-4-3-5-1).
+
+When an entry activates, its processing is its own resumable decision inside
+the pool (`Game::offer_end_of_turn_keyword_attack`):
+
+- `<Engage>` / `<Execute>` / `<Vortex>`: one optional attack declaration
+  (`ResumeFrame::AttackDeclarationDecision`, shared with `<Blitz>`; targets from
+  `action::mask::end_of_turn_keyword_attack_action_ids`: Engage the player or a
+  suspended Digimon; Execute also unsuspended Digimon, §16-38-1; Vortex an
+  opponent's Digimon, the player only under `VortexCanAttackPlayer`, opened as
+  `AttackInitiator::Vortex` so it may attack the turn it was played). PASS
+  declines; nothing else happens.
+- `<Overclock>`: its optional processing condition (below), then the mandatory
+  attack on the player without suspending.
+
+A declaration made there is made inside the pool: `advance_pending_attack`
+yields while the effect queue is non-empty, so the declaration's own
+`[When Attacking]` triggers and the pool's remaining entries resolve before the
+counter timing (§11-1-4; Q3868 / Q3869), then the `resolve_selection` tail
+resumes the attack. The end of turn waits for it (`continue_end_turn_after_delays`
+/ `resume_pending_end_turn` hold while `pending_attack` is set, §6-6-2) and
+continues when it ends (`settle_end_of_turn_attack`). Only one attack is in
+progress at a time: a keyword entry that activates while an earlier keyword's
+attack waits for its counter timing does not nest a second attack; its offer
+is queued (`Game::deferred_end_of_turn_attack_offers`, carrier by stack
+identity) and made after that attack has ended, in activation order. The
+declared keyword is recorded on the attack (`Game::end_of_turn_attack_keyword`,
+cleared at the attack's end); `<Execute>`'s End of Attack deletion (§16-38-4)
+keys on it, so a Main-phase attack by an `<Execute>` Digimon is never deleted.
+
+There is no `EndOfTurnAction` offer for these keywords any more (no Vortex /
+Engage attack bits, no `FIELD_EFFECT_SLOT_FOR_OVERCLOCK` bit; the constant stays
+in the action space). The `EndOfTurnAction` window remains for `MayAttack` /
+`ForceAttack` grants and registered end-of-turn DNA routes.
+
 ### Overclock Cost Selection
 
-`<Overclock (...)>` is optional and always surfaces its cost as a
-`PendingSelection` during `GamePhase::EndOfTurnAction`; it never auto-deletes a
-cost permanent. The selection stores the exact legal cost action IDs in
-`valid_action_ids`, uses the selecting Overclock controller as
-`selecting_player`, sets `is_optional = true`. `PASS` restores
-`EndOfTurnAction`. A cost pick deletes the cost and starts the Overclock
-attack from `EndOfTurnAction`; once that attack has ended (after its End of
-Attack pool, §11-6-2) the end of turn continues: the `EndOfTurnAction` window
-stays open only if another end-of-turn action is still available, otherwise
-the turn rotates (§16-34-1, §16-44-1; `settle_end_of_turn_attack`).
+`<Overclock (...)>`'s cost is optional (§16-34-3) and always surfaces as a
+`PendingSelection` (`Game::install_overclock_selection`,
+`ResumeFrame::OverclockSelection`) inside the `[End of Your Turn]` pool; it
+never auto-deletes a cost permanent. The selection stores the exact legal cost
+action IDs in `valid_action_ids`, uses the Overclock controller as
+`selecting_player`, sets `is_optional = true` and marks the §18-3 optional
+decision. `PASS` declines (nothing else happens). A cost pick deletes the cost
+and declares the Overclock attack on the opponent without suspending; the
+pool's remaining entries resolve before its counter timing, and once the
+attack has ended (after its End of Attack pool, §11-6-2) the end of turn
+continues (`settle_end_of_turn_attack`).
 
 Candidate action IDs reuse the field-target half of the attack range:
 `encode_attack(0, field_index)`. The action mask must emit only those stored

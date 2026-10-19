@@ -13,7 +13,8 @@
 //! Auto-installed: Barrier, Evade, Decode (Phase 7); Fragment(N), ArmorPurge,
 //! Save, Decoy, Fortitude, Partition, MaterialSave(N) (Phase D);
 //! Retaliation, Scapegoat (Phase E); Execute, MindLink, Training (Phase F);
-//! Engage and Guard (EX12).
+//! Engage and Guard (EX12); Vortex and Overclock (Comprehensive Rules 4.3
+//! §16-33-2 / §16-34-2: trigger-type effects).
 //!
 //! Selection-bearing replacements consume Phase C's parked-replacement
 //! substrate via `ctx.cancel_leave / handle_replacement / substitute_replacement`.
@@ -22,11 +23,12 @@
 //! replacement. Guard is an optional cross-permanent `WhenWouldLeaveBattleArea`
 //! cancel replacement. MindLink and Training are `[Main]` active skills;
 //! MaterialSave(N) is a non-cancelling `WhenWouldBeDeleted` immediate effect
-//! (§16-21-2) that rescues sources while the carrier stands. Execute is an
-//! `EndOfYourTurn` triggered effect granting `MayAttack` +
-//! `CanAttackUnsuspended` for the EOT-attack window with an `EndOfAttack`
-//! self-delete observer; Engage grants only normal `MayAttack` for that same
-//! EOT-attack window.
+//! (§16-21-2) that rescues sources while the carrier stands. Engage, Execute,
+//! Vortex and Overclock are `EndOfYourTurn` trigger-type effects whose
+//! processing offers the attack (Overclock: its optional deletion, then the
+//! attack) as its own resumable decision inside the end-of-turn pool
+//! (`end_of_turn_keyword_attack_process`); Execute adds an `EndOfAttack`
+//! self-delete observer for the attack it declared.
 //!
 //! The legacy DCGO `KeyWordEffects/*.cs` keyword set has matching Rust enum
 //! variants + consumers (auto-install or resolution-site consumption). Later
@@ -687,8 +689,22 @@ pub(crate) fn partition_extract_and_play(
 pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool {
     // `<Piercing>` (§16-7-2) too: its trigger condition (this Digimon won the
     // battle and deleted its opponent while attacking) lives in the body's
-    // `condition`, which the granted-triggered store would drop.
-    matches!(keyword, Keyword::Alliance | Keyword::Raid | Keyword::Piercing)
+    // `condition`, which the granted-triggered store would drop. So do the
+    // end-of-turn attack keywords (§16-44-2, §16-38-2, §16-33-2, §16-34-2):
+    // their activation condition (a legal declaration / candidate) keeps a
+    // carrier that cannot attack out of the end-of-turn pool, and a raw
+    // registry grant reaches the pool the way it reached the former
+    // `EndOfTurnAction` offers (through `Game::has_keyword`).
+    matches!(
+        keyword,
+        Keyword::Alliance
+            | Keyword::Raid
+            | Keyword::Piercing
+            | Keyword::Engage
+            | Keyword::Execute
+            | Keyword::Vortex
+            | Keyword::Overclock
+    )
 }
 
 /// `<Blitz>`'s processing (§16-16), executed when the effect that contains it
@@ -705,7 +721,7 @@ pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool
 ///   target legality as every effect-offered attack, §11-2-7-1, without the
 ///   Main-phase memory gate) and the decline
 ///   (`Game::install_attack_declaration_decision`,
-///   `ResumeFrame::BlitzAttackDecision`). While it is parked the turn cannot
+///   `ResumeFrame::AttackDeclarationDecision`). While it is parked the turn cannot
 ///   end (a selection is pending) and nothing else is legal.
 /// - §16-16-4: once declared, the attack proceeds through the normal
 ///   procedure even if the memory returns to 0 or more.
@@ -747,12 +763,99 @@ pub(crate) fn blitz_process(
         crate::effect_context::AttackTargetRestriction::Any,
         false,
     );
-    ctx.game.install_attack_declaration_decision(
-        carrier,
-        source_card,
-        declarations,
-        "<Blitz> - this Digimon may attack",
-    );
+    let mut state =
+        crate::resume::AttackDeclarationDecisionState::blitz(carrier, source_card, declarations);
+    state.source_kind = ctx.source_kind;
+    ctx.game
+        .install_attack_declaration_decision(state, "<Blitz> - this Digimon may attack");
+}
+
+/// Whether an end-of-turn attack keyword's trigger can activate for its
+/// carrier (`rctx.source_permanent`): the activation condition of the
+/// `[End of Your Turn]` body (DCGO `CanActivateEngage` / `CanActivateExecute`
+/// / `CanActivateVortex` / `CanActivateOverclock`). `<Engage>`, `<Execute>`
+/// and `<Vortex>` need a legal attack declaration; `<Overclock>` a legal
+/// candidate for its processing condition (§16-34-3). An attack already in
+/// progress does not stop the trigger: its offer waits for that attack to end
+/// (`end_of_turn_keyword_attack_process`).
+pub(crate) fn end_of_turn_keyword_can_activate(
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    keyword: Keyword,
+) -> bool {
+    let Some(carrier) = rctx.source_permanent else {
+        return false;
+    };
+    let game = rctx.game;
+    if carrier.player != game.turn_player() {
+        return false;
+    }
+    match keyword {
+        Keyword::Overclock => game.has_overclock_sacrifice(carrier.player, carrier.index as usize),
+        Keyword::Engage | Keyword::Execute | Keyword::Vortex => {
+            !crate::action::mask::end_of_turn_keyword_attack_action_ids(game, carrier, keyword)
+                .is_empty()
+        }
+        _ => false,
+    }
+}
+
+/// The processing of an end-of-turn attack keyword's `[End of Your Turn]`
+/// trigger (`<Engage>` §16-44-2, `<Execute>` §16-38-2, `<Vortex>` §16-33-2,
+/// `<Overclock>` §16-34-2), run when its entry of the end-of-turn pool
+/// activates (the turn player orders the simultaneous entries, §15-4-3-5-1).
+/// It offers the keyword's attack as its own resumable decision
+/// (`Game::offer_end_of_turn_keyword_attack`): the declaration (or, for
+/// `<Overclock>`, the condition's deletion and then the attack) is made right
+/// here, and the pool's remaining entries then resolve before the attack's
+/// counter timing (§11-1-4: "the counter timing won't begin until any
+/// triggered [When Attacking] effects and other triggered effects have been
+/// resolved"; Q3869). Declining declares nothing.
+///
+/// Only one attack is in progress at a time. When this activates while an
+/// attack declared earlier in the same pool is waiting for its counter timing,
+/// the offer is queued (`Game::deferred_end_of_turn_attack_offers`) and made
+/// once that attack has ended (`Game::resume_pending_end_turn`); attacks are
+/// never nested.
+pub(crate) fn end_of_turn_keyword_attack_process(ctx: &mut EffectContext<'_>, keyword: Keyword) {
+    let Some(carrier) = ctx.source_permanent else {
+        return;
+    };
+    if carrier.player != ctx.game.turn_player() || ctx.game.pending_selection.is_some() {
+        return;
+    }
+    let source_card = ctx.source_card;
+    let source_kind = ctx.source_kind;
+    if ctx.game.pending_attack.is_some() {
+        if ctx
+            .game
+            .players
+            .get(carrier.player as usize)
+            .and_then(|p| p.battle_area.get(carrier.index as usize))
+            .is_none()
+        {
+            return;
+        }
+        let carrier_identity = ctx.game.capture_digivolve_host_identity(carrier);
+        ctx.game
+            .deferred_end_of_turn_attack_offers
+            .push(crate::game::DeferredEndOfTurnAttackOffer {
+                player: carrier.player,
+                carrier_identity,
+                keyword,
+                source_card,
+                source_kind,
+            });
+        return;
+    }
+    ctx.game
+        .offer_end_of_turn_keyword_attack(carrier, keyword, source_card, source_kind);
+}
+
+/// Whether the attack in progress is the one `<Execute>` declared for `me`
+/// (§16-38-1 "At the end of the attack, this Digimon is deleted").
+fn execute_attack_is(game: &crate::game::Game, me: crate::permanent::PermanentHandle) -> bool {
+    game.end_of_turn_attack_keyword == Some(Keyword::Execute)
+        && game.pending_attack.as_ref().is_some_and(|pa| pa.attacker == me)
 }
 
 /// Map a printed keyword to zero-or-more synthesized `Effect`s that install
@@ -1998,206 +2101,95 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             })
             .build()],
 
-        // Phase F Task 3 — printed Execute: "At end of your turn, this
-        // Digimon may attack — including unsuspended Digimon — and when
-        // the attack ends it is deleted." DCGO `Execute.cs:18-87`.
-        // RULES_CONTEXT 16-38 (Trigger-type, Optional).
+        // §16-38 <Execute>: "At the end of your turn, the Digimon with this
+        // keyword effect may attack. At the end of the attack, this Digimon is
+        // deleted. This effect also allows for attacking an opponent's
+        // unsuspended Digimon." DCGO `Execute.cs` / `ExecuteProcess`.
         //
-        // ## Two-effect install
-        //
-        // 1. `EndOfYourTurn` triggered effect (NOT `.optional()` — see
-        //    "Where the 'may' lives" below). Body unconditionally
-        //    grants `MayAttack` + `CanAttackUnsuspended` modifiers on
-        //    self with `Expiry::EndOfTurn`. The end-of-turn-attack flow
-        //    in `game_phases::end_turn` reads `has_end_of_turn_keywords`,
-        //    sees the `MayAttack` modifier, and parks the phase in
-        //    `EndOfTurnAction` so the player can spend the granted
-        //    attack via the §4.6 attack mask. The
-        //    `CanAttackUnsuspended` half widens that mask to also offer
-        //    unsuspended-target attack bits — equivalent to DCGO's
-        //    `CanAttackTargetDefendingPermanentClass` with
-        //    `defenderCondition: !defender.IsSuspended`.
-        //
-        // 2. `EndOfAttack` observer. Self-deletes the carrier with
-        //    `ReplacementCause::OwnEffect` when the attack ends — gated
-        //    on `pa.attacker == me` so it only fires for attacks the
-        //    Execute carrier itself initiated, not for other attacks
-        //    that resolve while it's on field. Cause = OwnEffect
-        //    matches the keyword being the carrier's own triggered
-        //    effect (cf. Retaliation's same cause-labeling rationale).
-        //
-        // ## Optionality (RULES_CONTEXT 16-38: Optional)
-        //
-        // The printed "may" surfaces at the EOT-action phase PASS
-        // exit, not at the EndOfYourTurn trigger — see "Where the
-        // 'may' lives" below for the design rationale. PASS at
-        // EOT-action skips the granted attack; the `EndOfAttack`
-        // observer is gated on `pa.attacker == me`, which never holds
-        // when no attack initiates, so a declined Execute leaves the
-        // carrier on field and the `Expiry::EndOfTurn` modifiers expire
-        // cleanly on rotation. DCGO arrives at the same observable
-        // outcome via `UntilEndAttackEffects` only firing when
-        // `SelectAttackEffect` actually runs.
-        //
-        // ## Self-scope
-        //
-        // The `EndOfYourTurn` enqueue path in
-        // `enqueue_from_permanent` keys on the carrier's permanent
-        // handle, so the trigger fires per-carrier (a sibling
-        // permanent's EndOfYourTurn does not trigger this Execute).
-        // The `EndOfAttack` observer additionally checks
-        // `pa.attacker == me` so it only fires for the carrier's own
-        // attack, not for any other end-of-attack on the same field.
+        // 1. §16-38-2: a trigger-type effect at the end of your turn. Its
+        //    processing (optional, §16-38-3) is one attack declaration decision
+        //    over the carrier's legal declarations, the player and every
+        //    opponent's Digimon, suspended or not (§16-38-1), plus the decline
+        //    (`end_of_turn_keyword_attack_process`). The attack is declared
+        //    inside the `[End of Your Turn]` pool: the pool's other entries
+        //    resolve before its counter timing (§11-1-4; Q3868 / Q3869).
+        // 2. §16-38-4: the deletion at the end of THAT attack is pending
+        //    processing: an `EndOfAttack` observer that pools with the other
+        //    End of Attack effects (§18-1-2), gated on the attack being the one
+        //    <Execute> declared (`Game::end_of_turn_attack_keyword`, recorded at
+        //    the declaration). A Main-phase attack by a Digimon that merely HAS
+        //    <Execute> is never deleted (exam witness EX12-036-effect3).
         Keyword::Execute => vec![
-            // (1) EndOfYourTurn — grant attack modifiers unconditionally.
-            //
-            // ## Where the "may" lives
-            //
-            // RULES_CONTEXT 16-37 / DCGO `Execute.cs` describe an
-            // optional trigger: the player may decline the entire
-            // sequence at the OnEndYourTurn dialog, and on decline no
-            // modifiers / attack / self-delete happen.
-            //
-            // The Rust engine's effect-queue drainer auto-fires single
-            // optional triggers without a dedicated may-dialog (see
-            // `effect_queue::drain_effect_queue`, single-trigger fast
-            // path). And nesting an inner `select_own_permanent` as a
-            // makeshift may-prompt doesn't help: when the inner select
-            // parks, control returns to `Game::end_turn` BEFORE the
-            // modifiers land, so `has_end_of_turn_keywords` finds
-            // nothing to park for and the phase rotates straight
-            // through. By the time the player accepts the inner pick
-            // and the modifiers land, the EOT-action phase window has
-            // already passed.
-            //
-            // We therefore push the "may" decision down to the EOT-
-            // action phase itself, which already exposes PASS as the
-            // standard exit. The modifier grant is unconditional in
-            // the EndOfYourTurn body; the player either uses the
-            // granted attack (via the §4.6 mask) or PASSes the
-            // EOT-action phase to decline. PASS skips the attack —
-            // the `EndOfAttack` self-delete observer is gated on
-            // `pa.attacker == me`, which never holds when no attack
-            // initiates, so a declined Execute leaves the carrier on
-            // field. Modifiers carry `Expiry::EndOfTurn` so they
-            // expire cleanly on the eventual turn rotation.
-            //
-            // Observable parity with DCGO:
-            //   - Accept + attack: modifiers granted, attack runs,
-            //     carrier deletes via EndOfAttack observer.
-            //   - Decline (PASS at EOT-action): no attack, no
-            //     self-delete, modifiers expire. Identical
-            //     observable outcome to DCGO's "decline OnEndYourTurn
-            //     trigger" path — `UntilEndAttackEffects` only fires
-            //     when a SelectAttackEffect actually runs in DCGO,
-            //     and the EndOfAttack observer here only fires when
-            //     `pending_attack` actually carries this carrier as
-            //     the attacker.
             Effect::end_of_your_turn(card)
                 .name("<Execute>")
-                .process(|ctx| {
-                    let Some(me) = ctx.source_permanent else {
-                        return;
-                    };
-                    // Grant MayAttack — drives `has_end_of_turn_keywords`
-                    // to park the phase in EOT-action and the §4.6 mask
-                    // emitter to surface attack bits for this permanent.
-                    // Through the context's gated install (not a raw
-                    // registry push) so the entry carries the keyword
-                    // effect's category (§15-2-1-1) like every other
-                    // effect-installed modifier.
-                    ctx.add_modifier(me, ModifierType::MayAttack, 1, Expiry::EndOfTurn);
-                    // Grant CanAttackUnsuspended — widens the §4.6 mask
-                    // to include unsuspended-target attack bits, matching
-                    // DCGO's `defenderCondition: !defender.IsSuspended`.
-                    ctx.add_modifier(me, ModifierType::CanAttackUnsuspended, 1, Expiry::EndOfTurn);
-                })
+                .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Execute))
+                .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Execute))
                 .build(),
-            // (2) EndOfAttack — self-delete when the carrier was the
-            //     attacker of the just-resolved EXECUTE attack.
             Effect::end_of_attack(card)
                 .name("<Execute> self-delete")
-                // Condition-level phase gate (task_69f10a66): without it the
-                // observer still ENQUEUES for a Main-phase attack and — when
-                // other EndOfAttack triggers are pending — parks a vacuous
-                // TriggerOrder prompt DCGO never shows (its delete registers
-                // only inside the Execute activation). The queue's condition
-                // filter drops it before any ordering prompt.
+                // Without this gate the observer would still ENQUEUE for every
+                // other attack and, with other End of Attack triggers pending,
+                // park a vacuous TriggerOrder prompt DCGO never shows (its
+                // delete registers only inside the Execute activation).
                 .condition(|rctx| {
-                    rctx.game.current_phase == crate::enums::GamePhase::EndOfTurnAction
+                    rctx.source_permanent.is_some_and(|me| execute_attack_is(rctx.game, me))
                 })
                 .process(|ctx| {
                     use crate::replacement::ReplacementCause;
                     let Some(me) = ctx.source_permanent else {
                         return;
                     };
-                    // Gate 1 (task_69f10a66): only the END-OF-TURN attack is
-                    // "that attack" in §16-38's "At the end of that attack,
-                    // delete this Digimon" — the printed text scopes the
-                    // self-delete to the attack Execute itself granted, and
-                    // DCGO registers the delete inside `ExecuteProcess`
-                    // (`UntilEndAttackEffects`), never for ordinary attacks.
-                    // Our EOT attacks resolve while the phase is parked in
-                    // `EndOfTurnAction` (decode_end_of_turn_action →
-                    // execute_attack; `cleanup_attack` fires this observer
-                    // before any phase rotation), so a Main-phase attack by
-                    // a carrier that merely HAS Execute must not self-delete.
-                    // (Exam witness: EX12-036-effect3 — Ryugumon with
-                    // granted Execute attacks security in its MAIN phase and
-                    // must survive; without this gate the observer deleted it
-                    // and cascaded a spurious <Decode> window.)
-                    if ctx.game.current_phase != crate::enums::GamePhase::EndOfTurnAction {
+                    if !execute_attack_is(ctx.game, me) {
                         return;
                     }
-                    // Gate 2: only fire on the Execute carrier's own
-                    // attack. EndOfAttack is a global timing — it
-                    // would otherwise fire for any attack while the
-                    // carrier sits on the field, e.g. an attack
-                    // initiated next turn by some other Digimon.
-                    let attacker_is_me = ctx
-                        .game
-                        .pending_attack
-                        .as_ref()
-                        .map(|pa| pa.attacker == me)
-                        .unwrap_or(false);
-                    if !attacker_is_me {
-                        return;
-                    }
-                    // Cause = OwnEffect — the deletion is driven by the
-                    // carrier's own triggered keyword, not by combat
-                    // resolution or any opponent effect. Matches the
-                    // labeling pattern Retaliation uses (see
-                    // `Keyword::Retaliation` arm above) and is
-                    // accurate per DCGO `Execute.cs:74-83` (the
-                    // `DeleteSelfEffect` is the carrier's own
-                    // queued ICardEffect, not a battle outcome).
+                    // Cause = OwnEffect: the carrier's own keyword deletes it
+                    // (DCGO `DeleteSelfEffect`), not the battle.
                     ctx.game
                         .delete_permanent_with_cause(me, ReplacementCause::OwnEffect);
                 })
                 .build(),
         ],
 
-        // EX12 — printed Engage: "At the end of your turn, this Digimon may
-        // attack." Official rules 16-44. This is intentionally narrower than
-        // Execute/Vortex:
-        //   - normal attack legality (`game.can_attack(..., false)`) controls
-        //     whether `has_end_of_turn_keywords` parks the phase;
-        //   - no `CanAttackUnsuspended` grant, so the action mask offers only
-        //     normal targets;
-        //   - no `EndOfAttack` self-delete observer.
-        //
-        // Optionality follows the same practical shape as Execute: the EOT
-        // trigger grants the temporary attack permission, and PASS in
-        // EndOfTurnAction is the player-facing decline path.
+        // §16-44 <Engage>: "a Digimon with this effect may attack at the end
+        // of your turn." §16-44-2: a trigger-type effect at the End of Your
+        // Turn timing; §16-44-3: optional. Its processing is one attack
+        // declaration decision over the carrier's ordinary legal declarations
+        // (the player, suspended Digimon) plus the decline, made inside the
+        // `[End of Your Turn]` pool (§11-1-4; Q3869 by analogy). DCGO
+        // `Engage.cs` / `EngageProcess`.
         Keyword::Engage => vec![Effect::end_of_your_turn(card)
             .name("<Engage>")
-            .process(|ctx| {
-                let Some(me) = ctx.source_permanent else {
-                    return;
-                };
-                // Gated install (see `<Execute>` above).
-                ctx.add_modifier(me, ModifierType::MayAttack, 1, Expiry::EndOfTurn);
-            })
+            .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Engage))
+            .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Engage))
+            .build()],
+
+        // §16-33 <Vortex>: "allows the Digimon with this effect to attack an
+        // opponent's Digimon at the end of your turn ... also allows a Digimon
+        // to attack in the same turn it was played." §16-33-2: a trigger-type
+        // effect at the end of your turn (it pends with the other `[End of
+        // Your Turn]` effects; Q3868); §16-33-3: optional. Its processing is
+        // one attack declaration decision over the opponent's Digimon it may
+        // attack (§11-2-7-1; the player only under `VortexCanAttackPlayer`)
+        // plus the decline, opened as a `<Vortex>` attack (played-this-turn
+        // exemption). Nothing triggers without a legal declaration (DCGO
+        // `CanActivateVortex`).
+        Keyword::Vortex => vec![Effect::end_of_your_turn(card)
+            .name("<Vortex>")
+            .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Vortex))
+            .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Vortex))
+            .build()],
+
+        // §16-34 <Overclock>: "At the end of your turn, by deleting 1 of your
+        // Tokens or 1 of your other specified Digimon, the Digimon with this
+        // effect attacks a player without suspending." §16-34-2: a
+        // trigger-type effect at the end of your turn; §16-34-3: the deletion
+        // is an optional processing condition, the attack mandatory once it is
+        // executed (`Game::install_overclock_selection`). Nothing triggers
+        // without a legal candidate (DCGO `CanActivateOverclock`).
+        Keyword::Overclock => vec![Effect::end_of_your_turn(card)
+            .name("<Overclock>")
+            .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Overclock))
+            .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Overclock))
             .build()],
 
         // EX12 — printed Guard: "When another of your Digimon would leave the

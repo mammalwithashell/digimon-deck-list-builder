@@ -85,6 +85,14 @@ fn familiar_count(r: &DebugRunner, player: usize) -> usize {
         .count()
 }
 
+/// Whether P1's `OppTarget` is still on the field.
+fn opp_on_field(r: &DebugRunner) -> bool {
+    r.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_name(&r.game.card_data) == "OppTarget")
+}
+
 fn handle_of_name(r: &DebugRunner, player: u8, name: &str) -> PermanentHandle {
     PermanentHandle {
         player,
@@ -153,12 +161,43 @@ fn resolve_taking_affirmative(r: &mut DebugRunner) {
 }
 
 /// Fire `overclock`'s end-of-turn Overclock, paying its cost by deleting the
-/// `sacrifice` permanent. Mirrors the proven path in
+/// `sacrifice` permanent. <Overclock> is a trigger-type effect at the end of
+/// the turn (§16-34-2): ending the turn offers its condition's pick inside the
+/// end-of-turn pool. Mirrors the proven path in
 /// `cards_behavioral/ex11/ex11_060.rs`.
+///
+/// Any OTHER end-of-turn keyword in the pool (a second <Overclock> Digimon) is
+/// activated first and declined, so the scenario exercises `overclock` alone
+/// (each <Overclock> triggers once per end of turn; the former
+/// `EndOfTurnAction` window simply left the other one unused).
 fn fire_overclock_deleting(r: &mut DebugRunner, overclock: PermanentHandle, sacrifice_index: u16) {
-    r.game.current_phase = GamePhase::EndOfTurnAction;
-    let action = encode_field_effect(overclock, FIELD_EFFECT_SLOT_FOR_OVERCLOCK);
-    r.game.decode_action(action, 0);
+    let overclock_card = r.game.players[overclock.player as usize].battle_area
+        [overclock.index as usize]
+        .top_card()
+        .card_id(&r.game.card_data)
+        .to_string();
+    r.game.end_turn();
+    for _ in 0..8 {
+        let view = r
+            .pending_selection_view()
+            .expect("the end-of-turn pool offers <Overclock>");
+        if view.kind == SelectionKind::TriggerOrder {
+            let choices = view.effect_choices.clone().expect("TriggerOrder branches");
+            let pick = choices
+                .iter()
+                .find(|c| !c.label.starts_with(&overclock_card))
+                .or_else(|| choices.iter().find(|c| c.label.starts_with(&overclock_card)))
+                .expect("a TriggerOrder branch");
+            r.execute_action(view.selecting_player, pick.action_id)
+                .expect("order the end-of-turn pool");
+            continue;
+        }
+        if view.source_permanent == Some(overclock) {
+            break;
+        }
+        r.execute_action(view.selecting_player, PASS)
+            .expect("decline the other end-of-turn keyword");
+    }
     r.game
         .resolve_selection(0, encode_attack(0, sacrifice_index))
         .expect("Overclock cost: choose the Token/[Puppet] sacrifice");
@@ -172,6 +211,12 @@ fn fire_overclock_deleting(r: &mut DebugRunner, overclock: PermanentHandle, sacr
 // Familiar's `[On Deletion]` -3000 DP onto an opponent Digimon AND Arisa's
 // `[All Turns]` suspend-to-Draw-1. The signature engine of every Puppets deck.
 //
+// The opponent's target has 3000 DP: the Familiar's "-3000 DP for the turn"
+// drops it to 0 and it is deleted (§17-1-3-1), an outcome that outlasts the
+// turn. (<Overclock> is a trigger-type effect, §16-34-2: once its attack is
+// over the turn ends and the "for the turn" modifier expires, so a surviving
+// target's DP could not be read after it.)
+//
 // Sources: $BASE_DCGO/.../ST19/Yellow/ST19_12.cs, EX11/Yellow/EX11_060.cs;
 // deletion → on-deletion timing (general_rule.pdf §6, §16). Per-card coverage:
 // cards_behavioral/st19/st19_12.rs + ex11/ex11_060.rs.
@@ -183,7 +228,7 @@ fn c1_runner() -> DebugRunner {
         .dsl_card("EX11-060")
         .expect("EX11-060 loads")
         .add_card(lv5_base("C1-BASE"))
-        .add_card(opp_digimon("C1-OPP", "OppTarget", 10000))
+        .add_card(opp_digimon("C1-OPP", "OppTarget", 3000))
         .add_card(make_test_card("C1-FILL", "Fill"))
         .deck(0, &["C1-FILL"; 10])
         .deck(1, &["C1-FILL"; 10])
@@ -227,13 +272,12 @@ fn c1_overclock_token_sacrifice_draws_for_arisa_and_reduces_opponent_dp() {
         hand_before + 1,
         "Arisa suspends to Draw 1 when the Overclock deletes your Familiar Token"
     );
-    // (b) The deleted Familiar's On-Deletion put -3000 DP on the opponent.
-    let opp = handle_of_name(&r, 1, "OppTarget");
-    let opp_dp_after = r.effective_dp(opp).expect("opp DP after");
-    assert_eq!(
-        opp_dp_after,
-        opp_dp_before - 3000,
-        "the sacrificed Familiar's On-Deletion reduces an opponent Digimon by 3000 DP"
+    // (b) The deleted Familiar's On-Deletion put -3000 DP on the opponent's
+    // 3000 DP Digimon: 0 DP, deleted (§17-1-3-1).
+    assert_eq!(opp_dp_before, 3000);
+    assert!(
+        !opp_on_field(&r),
+        "the sacrificed Familiar's On-Deletion reduces an opponent Digimon by 3000 DP (to 0: deleted)"
     );
     // One token was consumed by the Overclock cost.
     assert_eq!(
@@ -270,11 +314,10 @@ fn c1_value_loop_yields_no_draw_when_arisa_cannot_pay_the_suspend_cost() {
         hand_before,
         "a suspended Arisa cannot pay the suspend cost, so no card is drawn"
     );
-    let opp = handle_of_name(&r, 1, "OppTarget");
-    assert_eq!(
-        r.effective_dp(opp).expect("opp DP after"),
-        opp_dp_before - 3000,
-        "the Familiar's On-Deletion -3000 DP still fires independent of Arisa"
+    assert_eq!(opp_dp_before, 3000);
+    assert!(
+        !opp_on_field(&r),
+        "the Familiar's On-Deletion -3000 DP still fires independent of Arisa (to 0: deleted)"
     );
 }
 
