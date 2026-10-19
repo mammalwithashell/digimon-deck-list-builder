@@ -1,12 +1,13 @@
 //! Turn lifecycle and phase transitions — split out of `game.rs` for readability.
 //!
 //! Everything here lives in `impl Game` blocks so the call surface is unchanged.
-//! Callers still invoke `game.end_turn()`, `game.pass_turn()`, `game.activate_overclock(...)`.
+//! Callers still invoke `game.end_turn()`, `game.pass_turn()`.
 //! The split exists because the forthcoming observer-firing gap work (Phase A
 //! of the Medusamon plan) will land in this file — `StartOfYourTurn`,
 //! `StartOfYourMainPhase`, and `OnLoseSecurity` fan-out all live at phase
 //! boundaries.
 
+use crate::action::space::PASS;
 use crate::card_source::CardHandle;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{
@@ -15,7 +16,6 @@ use crate::enums::{
 use crate::game::{
     DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind, EndTurnResume, Game,
     TurnBoundaryResume,
-    OverclockError,
 };
 use crate::permanent::PermanentHandle;
 use crate::selection::{AttackTarget, PendingSelection, SelectionKind};
@@ -398,8 +398,14 @@ impl Game {
     /// effect restored memory from negative to non-negative, the turn continues
     /// and returns to Main phase instead of switching.
     ///
-    /// If the ending player has a permanent with a pending end-of-turn action
-    /// (§4.6b: Vortex / Overclock / MayAttack), the phase parks in
+    /// The `[End of Your Turn]` pool includes the end-of-turn attack
+    /// keywords (<Engage>, <Execute>, <Vortex>, <Overclock>; §16-44-2,
+    /// §16-38-2, §16-33-2, §16-34-2): each offers its attack as its own
+    /// decision when its entry activates, and the end of turn waits for that
+    /// attack (§6-6-2; `resume_pending_end_turn`).
+    ///
+    /// If the ending player then has a pending end-of-turn action (§4.6b: a
+    /// `MayAttack` grant, an end-of-turn DNA route), the phase parks in
     /// `GamePhase::EndOfTurnAction` and the caller resumes by picking an attack
     /// bit or calling `pass_end_of_turn_action`. Matches Python
     /// `_complete_end_phase`.
@@ -439,7 +445,14 @@ impl Game {
         // fire them, then see if an effect restored memory from negative.
         let memory_before = self.memory;
         self.fire_end_of_your_turn(ending_player);
-        if self.pending_selection.is_some() {
+        // A decision in the pool, or an attack declared in it (an end-of-turn
+        // attack keyword's processing, §16-44-2 / §16-38-2 / §16-33-2 /
+        // §16-34-2), holds the end of turn until it has all resolved (§6-6-2);
+        // `resume_pending_end_turn` continues it.
+        if self.pending_selection.is_some()
+            || self.pending_attack.is_some()
+            || !self.deferred_end_of_turn_attack_offers.is_empty()
+        {
             self.pending_end_turn_resume = Some(EndTurnResume {
                 ending_player,
                 memory_before_end_effects: memory_before,
@@ -457,10 +470,14 @@ impl Game {
         }
 
         // §4.6b: park in EndOfTurnAction if the player has a pending
-        // end-of-turn-keyword action. Turn rotation is deferred until the
-        // player resumes via `pass_end_of_turn_action`. ForceAttack is not
-        // checked here (Python doesn't either): it's enforced at the
-        // Main-phase mask (§4.7d) before the turn reaches `end_turn`.
+        // end-of-turn action (a `MayAttack` grant, a registered end-of-turn
+        // DNA route). Turn rotation is deferred until the player resumes via
+        // `pass_end_of_turn_action`. ForceAttack is not checked here (Python
+        // doesn't either): it's enforced at the Main-phase mask (§4.7d)
+        // before the turn reaches `end_turn`. The end-of-turn attack keywords
+        // are not here: they are trigger-type effects whose attack is
+        // declared inside the `[End of Your Turn]` pool (§16-44-2, §16-38-2,
+        // §16-33-2, §16-34-2).
         if self.has_end_of_turn_keywords(ending_player) {
             self.current_phase = GamePhase::EndOfTurnAction;
             return;
@@ -629,7 +646,17 @@ impl Game {
             return;
         }
         self.end_of_turn_attack_settle_pending = false;
-        if self.game_over || self.current_phase != GamePhase::EndOfTurnAction {
+        if self.game_over {
+            return;
+        }
+        // An attack declared inside the `[End of Your Turn]` pool: the end of
+        // turn continues where the pool left it (a waiting keyword offer, then
+        // the swing-back check and the rotation).
+        if self.pending_end_turn_resume.is_some() {
+            self.resume_pending_end_turn();
+            return;
+        }
+        if self.current_phase != GamePhase::EndOfTurnAction {
             return;
         }
         if self.has_end_of_turn_keywords(self.turn_player()) {
@@ -687,9 +714,32 @@ impl Game {
         }
     }
 
+    /// Continue the end of turn parked by its `[End of Your Turn]` pool
+    /// (`pending_end_turn_resume`) once nothing in it is resolving. Called
+    /// from the `resolve_selection` tail and when an end-of-turn attack ends
+    /// (`settle_end_of_turn_attack`).
+    ///
+    /// An end-of-turn attack keyword's attack (§16-44-2, §16-38-2, §16-33-2,
+    /// §16-34-2) is declared inside the pool; the pool's other entries
+    /// resolve before its counter timing (§11-1-4; Q3869), and the end of turn
+    /// waits for the attack to end (§6-6-2). Only one attack is in progress at
+    /// a time: a keyword whose trigger activated while an attack was in
+    /// progress offers its own attack now, after that attack has ended, in
+    /// activation order (`deferred_end_of_turn_attack_offers`). Once every
+    /// offer is made (declined, or its attack ended) the end of turn goes on:
+    /// the §6-6-4 swing-back check, then the rotation.
     pub(crate) fn resume_pending_end_turn(&mut self) {
-        if self.pending_selection.is_some() {
+        if self.pending_selection.is_some() || self.pending_attack.is_some() {
             return;
+        }
+        if self.pending_end_turn_resume.is_none() {
+            return;
+        }
+        while !self.deferred_end_of_turn_attack_offers.is_empty() {
+            let offer = self.deferred_end_of_turn_attack_offers.remove(0);
+            if self.offer_deferred_end_of_turn_attack(offer) {
+                return;
+            }
         }
         let Some(resume) = self.pending_end_turn_resume.take() else {
             return;
@@ -712,9 +762,32 @@ impl Game {
         });
     }
 
-    /// True iff the given player has any permanent with a pending end-of-turn
-    /// keyword action (Vortex attack, Overclock sacrifice-and-attack, or
-    /// MayAttack). Mirrors Python `_has_end_of_turn_keywords`.
+    /// The end-of-turn attack keyword whose own decision is the pending
+    /// selection, if any: an `<Engage>` / `<Execute>` / `<Vortex>` attack
+    /// declaration (`ResumeFrame::AttackDeclarationDecision` carrying its
+    /// end-of-turn keyword) or `<Overclock>`'s cost pick
+    /// (`ResumeFrame::OverclockSelection`), offered inside the `[End of Your
+    /// Turn]` pool (§16-44-2, §16-38-2, §16-33-2, §16-34-2). Read by the
+    /// DCGO exam lowering and the test harness.
+    pub fn pending_end_of_turn_keyword_decision(&self) -> Option<Keyword> {
+        self.pending_selection.as_ref()?;
+        match self
+            .pending_selection_resume
+            .as_ref()
+            .map(|stack| stack.frames.as_slice())
+        {
+            Some([crate::resume::ResumeFrame::AttackDeclarationDecision(state)]) => {
+                state.end_of_turn_keyword
+            }
+            Some([crate::resume::ResumeFrame::OverclockSelection(_)]) => Some(Keyword::Overclock),
+            _ => None,
+        }
+    }
+
+    /// True iff the given player has an action for the `EndOfTurnAction`
+    /// window: a registered end-of-turn DNA route, or a Digimon with a
+    /// `MayAttack` grant that can attack. (The end-of-turn attack keywords
+    /// declare their attack inside the `[End of Your Turn]` pool instead.)
     pub fn has_end_of_turn_keywords(&self, player: PlayerId) -> bool {
         let Some(me) = self.players.get(player as usize) else {
             return false;
@@ -733,22 +806,12 @@ impl Game {
                 player,
                 index: i as u8,
             };
-            // Vortex — matches Python `perm.can_attack(is_vortex=True)`.
-            if self.has_keyword(handle, Keyword::Vortex)
-                && self.can_attack(handle, /* vortex = */ true)
-            {
-                return true;
-            }
-            // Overclock — needs at least one other sacrificeable permanent.
-            if self.has_keyword(handle, Keyword::Overclock)
-                && !self.is_overclock_declined_for_action_mask(handle)
-                && self.has_overclock_sacrifice(player, i)
-            {
-                return true;
-            }
-            // MayAttack / Engage — normal can_attack (not vortex-exempt).
-            if (self.modifiers.has(handle, ModifierType::MayAttack)
-                || self.has_keyword(handle, Keyword::Engage))
+            // MayAttack — normal can_attack. The end-of-turn attack keywords
+            // (<Engage>, <Execute>, <Vortex>, <Overclock>) are not offered
+            // here: their attack is declared inside the `[End of Your Turn]`
+            // pool by their trigger bodies (§16-44-2, §16-38-2, §16-33-2,
+            // §16-34-2; `keyword_effects::end_of_turn_keyword_attack_process`).
+            if self.modifiers.has(handle, ModifierType::MayAttack)
                 && self.can_attack(handle, /* vortex = */ false)
             {
                 return true;
@@ -902,67 +965,61 @@ impl Game {
         None
     }
 
-    /// Activate `<Overclock>` on the turn player's battle-area permanent at
-    /// `overclock_index`. Installs a `PendingSelection` over the other
-    /// sacrificeable battle-area Digimon; resolving it deletes the sacrifice
-    /// and fires an end-of-turn attack on the opponent player that does NOT
-    /// suspend the attacker. Declining (PASS) is legal and returns to
-    /// `EndOfTurnAction` with no side effects — the Overclock bit remains
-    /// available on the next mask build.
+    /// `<Overclock>`'s processing (§16-34-1, §16-34-3), run by its
+    /// `[End of Your Turn]` trigger body (§16-34-2) inside the end-of-turn
+    /// pool: the optional processing condition "by deleting 1 of your Tokens
+    /// or 1 of your other specified Digimon" as one optional pick over the
+    /// legal candidates (`overclock_cost_action_ids`; PASS declines). A pick
+    /// deletes it and the mandatory processing follows: `carrier` attacks
+    /// the opponent without suspending (`run_overclock_selection_step`). The
+    /// attack is declared inside the pool, so the pool's other entries
+    /// resolve before its counter timing (§11-1-4). Resume-driven
+    /// (`ResumeFrame::OverclockSelection`); the closures only mirror the
+    /// frame. A declinable decision, so it marks the §18-3 loop watch.
     ///
-    /// Target is always the opposing player (security check). Mirrors Python
-    /// `action_decoder._initiate_overclock` /
-    /// [action_decoder.py:501-522](../digimon_gym/engine/game/action_decoder.py#L501).
+    /// Returns whether the pick was installed (none on a finished game, with
+    /// a decision already parked, or with no legal candidate).
     ///
-    /// § Parity: §4.6c-residual.
-    pub fn activate_overclock(&mut self, overclock_index: usize) -> Result<(), OverclockError> {
-        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
-
-        if self.current_phase != GamePhase::EndOfTurnAction {
-            return Err(OverclockError::WrongPhase);
+    /// DCGO `CardEffectCommons.OverclockProcess`: `SelectPermanentEffect`
+    /// with `canNoSelect: true`, then on a deletion `SelectAttackEffect` on
+    /// the player only with `SetWithoutTap()` + `SetCanNotSelectNotAttack()`.
+    pub(crate) fn install_overclock_selection(
+        &mut self,
+        carrier: PermanentHandle,
+        source_kind: crate::enums::EffectSourceKind,
+    ) -> bool {
+        if self.game_over || self.pending_selection.is_some() {
+            return false;
         }
-        if self.pending_selection.is_some() || self.pending_attack.is_some() {
-            return Err(OverclockError::Busy);
-        }
-
-        let player = self.turn_player();
-        let overclock_handle = PermanentHandle {
-            player,
-            index: overclock_index as u8,
-        };
-
-        let me = self
+        let player = carrier.player;
+        let overclock_index = carrier.index as usize;
+        let Some(overclock_perm) = self
             .players
             .get(player as usize)
-            .ok_or(OverclockError::InvalidIndex)?;
-        let overclock_perm = me
-            .battle_area
-            .get(overclock_index)
-            .ok_or(OverclockError::InvalidIndex)?;
-
-        if !self.has_keyword(overclock_handle, Keyword::Overclock) {
-            return Err(OverclockError::NotOverclock);
-        }
+            .and_then(|p| p.battle_area.get(overclock_index))
+        else {
+            return false;
+        };
         if !overclock_perm.is_digimon(&self.card_data) {
-            return Err(OverclockError::NotOverclock);
+            return false;
         }
-        if !self.has_overclock_sacrifice(player, overclock_index) {
-            return Err(OverclockError::NoSacrifice);
-        }
-
-        // Build the OwnField selection over sacrificeable Digimon. Encoding
-        // uses the ATTACK target-half range — same convention the existing
-        // `install_field_selection` helper uses for OwnField/OppField selects.
+        // Encoding uses the ATTACK target-half range, the convention of the
+        // `install_field_selection` OwnField picks.
         let valid_action_ids = self.overclock_cost_action_ids(player, overclock_index);
-        debug_assert!(
-            !valid_action_ids.is_empty(),
-            "has_overclock_sacrifice promised ≥1"
-        );
+        if valid_action_ids.is_empty() {
+            return false;
+        }
 
         let source_card = overclock_perm.top_card().handle();
         let opponent = self.next_clockwise(player);
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
+        let callback_state = OverclockSelectionState {
+            player,
+            source_card,
+            opponent,
+        };
+        let decline_state = callback_state.clone();
 
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
@@ -971,40 +1028,18 @@ impl Game {
             previous_phase,
             valid_action_ids,
             is_optional: true,
-            prompt: "Choose a Digimon to sacrifice for <Overclock>".to_string(),
+            prompt: "<Overclock> - delete 1 of your Tokens or other specified Digimon to attack"
+                .to_string(),
             effect_choices: None,
             source_card,
-            source_permanent: Some(overclock_handle),
-            source_kind: crate::enums::EffectSourceKind::Digimon,
+            source_permanent: Some(carrier),
+            source_kind,
+            // Resume-driven (frame below); the closures mirror it.
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let sacrifice_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                let sacrifice_handle = PermanentHandle {
-                    player,
-                    index: sacrifice_index,
-                };
-
-                // Delete the sacrifice (firing OnDeletion triggers). Replacement
-                // windows still see this as a cost; observer payloads see the
-                // keyword-specific Overclock cause.
-                let previous_cause = game.current_deletion_event_cause_override;
-                game.current_deletion_event_cause_override =
-                    Some(crate::trigger_context::EventCause::Overclock);
-                game.delete_permanent_with_cause(
-                    sacrifice_handle,
-                    crate::replacement::ReplacementCause::Cost,
-                );
-                game.current_deletion_event_cause_override = previous_cause;
-
-                if game.pending_selection.is_some() {
-                    game.pending_overclock_attack = Some((player, source_card, opponent));
-                    return;
-                }
-
-                game.resume_overclock_attack(player, source_card, opponent);
+                game.run_overclock_selection_step(callback_state.clone(), action_id, false);
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
-                game.declined_overclock_this_eot.insert(source_card);
+                game.run_overclock_selection_step(decline_state.clone(), PASS, true);
             })),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
@@ -1016,8 +1051,68 @@ impl Game {
                 },
             )],
         });
+        self.mark_pending_selection_as_optional_decision();
+        true
+    }
 
-        Ok(())
+    /// Offer an end-of-turn attack keyword's processing for `carrier`:
+    /// `<Engage>` / `<Execute>` / `<Vortex>` as an optional attack
+    /// declaration over the carrier's legal declarations
+    /// (`action::mask::end_of_turn_keyword_attack_action_ids`), `<Overclock>`
+    /// as its optional processing condition (`install_overclock_selection`).
+    /// Returns whether a decision was installed (nothing is offered when no
+    /// declaration / candidate is legal).
+    pub(crate) fn offer_end_of_turn_keyword_attack(
+        &mut self,
+        carrier: PermanentHandle,
+        keyword: Keyword,
+        source_card: CardHandle,
+        source_kind: crate::enums::EffectSourceKind,
+    ) -> bool {
+        let prompt = match keyword {
+            Keyword::Overclock => return self.install_overclock_selection(carrier, source_kind),
+            Keyword::Engage => "<Engage> - this Digimon may attack",
+            Keyword::Execute => {
+                "<Execute> - this Digimon may attack; at the end of the attack, it is deleted"
+            }
+            Keyword::Vortex => "<Vortex> - this Digimon may attack an opponent's Digimon",
+            _ => return false,
+        };
+        let declarations =
+            crate::action::mask::end_of_turn_keyword_attack_action_ids(self, carrier, keyword);
+        let mut state = crate::resume::AttackDeclarationDecisionState::end_of_turn_keyword(
+            carrier,
+            source_card,
+            declarations,
+            keyword,
+        );
+        state.source_kind = source_kind;
+        self.install_attack_declaration_decision(state, prompt)
+    }
+
+    /// Make a waiting end-of-turn keyword offer (see
+    /// [`crate::game::DeferredEndOfTurnAttackOffer`]) now that the attack in
+    /// progress has ended. The carrier is found by stack identity; nothing is
+    /// offered once it has left the battle area or can no longer attack.
+    /// Returns whether a decision was installed.
+    fn offer_deferred_end_of_turn_attack(
+        &mut self,
+        offer: crate::game::DeferredEndOfTurnAttackOffer,
+    ) -> bool {
+        if self.game_over || offer.player != self.turn_player() {
+            return false;
+        }
+        let Some(carrier) =
+            self.resolve_digivolve_host_identity(offer.player, offer.carrier_identity)
+        else {
+            return false;
+        };
+        self.offer_end_of_turn_keyword_attack(
+            carrier,
+            offer.keyword,
+            offer.source_card,
+            offer.source_kind,
+        )
     }
 
     pub(crate) fn run_overclock_selection_step(
@@ -1055,17 +1150,6 @@ impl Game {
         }
 
         self.resume_overclock_attack(state.player, state.source_card, state.opponent);
-    }
-
-    pub(crate) fn is_overclock_declined_for_action_mask(&self, handle: PermanentHandle) -> bool {
-        self.players
-            .get(handle.player as usize)
-            .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|perm| {
-                self.declined_overclock_this_eot
-                    .contains(&perm.top_card().handle())
-            })
-            .unwrap_or(false)
     }
 
     pub(crate) fn resume_pending_overclock_attack(&mut self) {

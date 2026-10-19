@@ -383,11 +383,15 @@ fn p_241_vortex_and_dp_boost_expire_end_of_turn() {
     );
 
     // End P0's turn → expiry fires.
-    // Vortex grants an end-of-turn-keyword window so end_turn() parks at
-    // GamePhase::EndOfTurnAction; rotate_turn_player (and expire_end_of_turn)
-    // fires only after pass_end_of_turn_action() completes the rotation.
+    // <Vortex> is a trigger-type effect at the end of the turn (§16-33-2):
+    // with a legal target it offers its attack inside the end-of-turn pool;
+    // decline it so the turn rotates (and `expire_end_of_turn` fires).
     r.game.end_turn();
-    r.game.pass_end_of_turn_action();
+    if r.game.pending_selection.is_some() {
+        r.game
+            .resolve_selection(0, PASS)
+            .expect("decline the <Vortex> attack");
+    }
 
     assert!(
         !r.game.has_keyword(appmon_handle, Keyword::Vortex),

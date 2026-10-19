@@ -76,8 +76,16 @@ Action IDs are intentionally reused across phases.
 ### EndOfTurnAction (`GamePhase=15`)
 
 - `62`: decline / finish end-of-turn action window
-- `100-...`: Vortex end-of-turn attack selections
-- `1000-...`: Overclock-style effect activations
+- `100-...`: end-of-turn attack selections granted by `MayAttack` / `ForceAttack`
+- `63-...`: DNA digivolve routes registered for the end of turn (hand index)
+
+The end-of-turn attack keywords (<Engage>, <Execute>, <Vortex>, <Overclock>)
+are not offered here: they are trigger-type effects (Comprehensive Rules 4.3
+§16-44-2, §16-38-2, §16-33-2, §16-34-2) whose decision is a pending selection
+inside the `[End of Your Turn]` pool — the attack declaration in the attack
+range `100-399` plus `62` (decline), or for <Overclock> its cost pick
+(`encode_attack(0, field_idx)`) plus `62`. The former Overclock field-effect
+bit (`1000 + perm_idx * 10 + 0`) is never legal.
 
 ### AllianceTiming (`GamePhase=16`)
 
@@ -153,7 +161,7 @@ Target mapping:
 
 `action_id = 1000 + perm_idx * 10 + effect_idx`
 
-Current engine usage includes training, delay, and end-of-turn effect hooks (for example overclock flow), depending on phase and card state.
+Current engine usage includes training and delay effect hooks, depending on phase and card state.
 
 ## Source Selection Formula
 

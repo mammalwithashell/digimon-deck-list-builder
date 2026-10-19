@@ -303,6 +303,7 @@ No blocking gap. (Plan 1 did not cover chapter 7.)
 - DCGO: partly disagrees (pools and orders them, as the rule requires, but runs the whole attack inside the activating coroutine, so the other effect waits for the whole attack, not just the declaration).
 - Aegis: partial (`engage-lifecycle.md`: optional End of Your Turn self-attack; `vortex-timing.md`: Vortex is an optional EndOfYourTurn effect ordered against Shoto's end-turn effect both ways; the Q3869 sub-order is not evidenced).
 - Fix: each keyword body declares the attack as its own resumable decision inside the drain; the remaining end-of-turn entries resolve after the declaration and before the counter timing, then the attack continues. Update the end-of-turn tests that treat decline as PASS.
+- **Fixed** (Plan 4 Task 21, `b46d19d80`) on W3 reading (a): §16-44-2, §16-38-2, §16-33-2, §16-34-2 `proven`.
 
 **G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK**: `PDF-explicit` (+ Q602)
 - Rules: §16-16-1, -2, -3, -4, -5.
@@ -424,6 +425,7 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 **W3. Confirmation: end-of-turn attack order for <Engage>, <Execute>, <Overclock>.** Q3868/Q3869 are rulings on <Vortex> (EX7-064): another end-of-turn effect ordered after it resolves after the attack declaration and before the counter timing. For the other three this is not analogy alone: §11-1-4 ("After declaring an attack, the counter timing won't begin until any triggered [When Attacking] effects and other triggered effects have been resolved") gives the same order for any pending trigger once an attack is declared. (Does not hold up the fix.)
 - (a) The same order for every trigger-type end-of-turn "may attack" keyword (declaration < other effect < counter timing), per §11-1-4 + Q3869. Suite assumes (a) for all four.
 - (b) For the others the other effect waits for the whole attack (DCGO's coroutine shape for all of them, including <Vortex>, contrary to Q3869).
+- **Fixed on reading (a); owner may override.** Task 21 of Plan 4 (`b46d19d80`) declares each keyword's attack inside the `[End of Your Turn]` pool: the other end-of-turn effects resolve after the declaration and before the counter timing for all four keywords; `ch16_new_keywords::engage_kind_matches_rule` and `ch16_attack_keywords::{execute,vortex,overclock}_kind_matches_rule` are un-ignored and the four §16-3x-2 / §16-44-2 obligations are `proven`. Reading (b) would make the other effect wait for the whole attack (DCGO's coroutine shape).
 
 **W4. §16-46-2 <Detach>: trigger-type or immediate-type?** The rule says "trigger-type" but defines the trigger as "would leave the battle area" and refers to §15-8-5.
 - (a) Immediate-type: offered while the Digimon is still on the field with its link card. Suite assumes (a) (`detach_kind_matches_rule`, `detach_timing_matches_rule`, proven).

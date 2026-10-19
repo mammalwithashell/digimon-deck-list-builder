@@ -13,11 +13,11 @@ use crate::action::space::{
     decode_digivolve, ACTION_SPACE_SIZE, ATTACK_START, BREEDING_TARGET, DIGIVOLVE_END,
     DIGIVOLVE_START, DNA_DIGIVOLVE_END, DNA_DIGIVOLVE_START, EFFECTS_PER_PERMANENT,
     FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_SLOT_FOR_MAIN,
-    FIELD_EFFECT_SLOT_FOR_OVERCLOCK, FIELD_EFFECT_START, HAND_EFFECT_END, HAND_EFFECT_START, HATCH,
+    FIELD_EFFECT_START, HAND_EFFECT_END, HAND_EFFECT_START, HATCH,
     MOVE_FROM_BREEDING, PASS, PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET,
     TARGETS_PER_ATTACKER, TRASH_EFFECT_END, TRASH_EFFECT_START,
 };
-use crate::enums::{CardKind, GamePhase, Keyword, ModifierType, PlaySource, PlayerId};
+use crate::enums::{CardKind, GamePhase, ModifierType, PlaySource, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
@@ -267,25 +267,16 @@ impl Game {
             return;
         }
 
-        // [100..400) — End-of-turn attacks (Vortex, MayAttack)
+        // [100..400) — End-of-turn attacks granted by `MayAttack` /
+        // `ForceAttack`. (<Vortex> / <Engage> / <Execute> / <Overclock> offer
+        // their decision inside the `[End of Your Turn]` pool, as a pending
+        // selection: §16-33-2, §16-44-2, §16-38-2, §16-34-2.)
         if (ATTACK_START..ATTACK_START + 300).contains(&action_id) {
             let offset = action_id - ATTACK_START;
             let attacker_idx = (offset / TARGETS_PER_ATTACKER) as u8;
             let target_idx = (offset % TARGETS_PER_ATTACKER) as u8;
-            if let Some(vortex) = self.end_of_turn_attack_vortex_flag(tp, attacker_idx, target_idx)
-            {
-                self.execute_attack(tp, attacker_idx, target_idx, vortex);
-            }
-            return;
-        }
-
-        // [1000..1150) — Overclock sacrifice-and-attack (effect slot 0).
-        if (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id) {
-            let offset = action_id - FIELD_EFFECT_START;
-            let perm_idx = (offset / EFFECTS_PER_PERMANENT) as usize;
-            let effect_slot = offset % EFFECTS_PER_PERMANENT;
-            if effect_slot == FIELD_EFFECT_SLOT_FOR_OVERCLOCK {
-                let _ = self.activate_overclock(perm_idx);
+            if self.end_of_turn_window_attack_legal(tp, attacker_idx, target_idx) {
+                self.execute_attack(tp, attacker_idx, target_idx, false);
             }
         }
     }
@@ -319,57 +310,48 @@ impl Game {
         let _ = self.attack_digimon(attacker_handle, defender, vortex);
     }
 
-    fn end_of_turn_attack_vortex_flag(
+    /// Whether the `EndOfTurnAction` window's attack `attacker_idx` ->
+    /// `target_idx` is legal (the mask's `EndOfTurnAction` attack bits): a
+    /// `MayAttack` / `ForceAttack` Digimon that can attack, at the player or a
+    /// suspended Digimon (or any Digimon under `CanAttackUnsuspended`).
+    fn end_of_turn_window_attack_legal(
         &self,
         player: PlayerId,
         attacker_idx: u8,
         target_idx: u8,
-    ) -> Option<bool> {
+    ) -> bool {
         if (attacker_idx as usize) >= self.player(player).battle_area.len() {
-            return None;
+            return false;
         }
         if self
             .modifiers
             .player_has(player, ModifierType::CannotAttack)
         {
-            return None;
+            return false;
         }
 
         let attacker = PermanentHandle {
             player,
             index: attacker_idx,
         };
-        let has_vortex = self.has_keyword(attacker, Keyword::Vortex);
-        let has_normal_eot_attack = self.modifiers.has(attacker, ModifierType::MayAttack)
-            || self.modifiers.has(attacker, ModifierType::ForceAttack)
-            || self.has_keyword(attacker, Keyword::Engage);
-        let vortex_legal = has_vortex && self.can_attack(attacker, /* vortex = */ true);
-        let normal_legal =
-            has_normal_eot_attack && self.can_attack(attacker, /* vortex = */ false);
+        let granted = self.modifiers.has(attacker, ModifierType::MayAttack)
+            || self.modifiers.has(attacker, ModifierType::ForceAttack);
+        if !granted || !self.can_attack(attacker, /* vortex = */ false) {
+            return false;
+        }
 
         if target_idx == SECURITY_TARGET as u8 {
-            if self
+            return !self
                 .modifiers
-                .has(attacker, ModifierType::CannotAttackPlayer)
-            {
-                return None;
-            }
-            if vortex_legal
-                && self
-                    .modifiers
-                    .has(attacker, ModifierType::VortexCanAttackPlayer)
-            {
-                return Some(true);
-            }
-            return normal_legal.then_some(false);
+                .has(attacker, ModifierType::CannotAttackPlayer);
         }
 
         let opponent = self.next_clockwise(player);
         let Some(target) = self.player(opponent).battle_area.get(target_idx as usize) else {
-            return None;
+            return false;
         };
         if !target.is_digimon(&self.card_data) {
-            return None;
+            return false;
         }
         let defender = PermanentHandle {
             player: opponent,
@@ -378,23 +360,13 @@ impl Game {
         // Track C / D consult site (2026-05-08): `CanAttackTargetDefendingPermanent`
         // overrides `CannotAttackTarget` at attack action decode.
         if self.attack_target_blocked_by_modifier(attacker, defender) {
-            return None;
+            return false;
         }
-        if !vortex_legal && !normal_legal {
-            return None;
-        }
-        // Either grant attacks only a legal target: suspended, or one this
-        // attacker may attack unsuspended (§11-2-7-1). <Vortex> grants the
-        // attack, not a target permission (§16-33-1; contrast <Execute>
-        // §16-38-1), and <Raid> switches the target after the declaration
-        // (§16-23-1), so neither adds a declaration target. A legal <Vortex>
-        // grant is preferred for the flag (it carries the played-this-turn
-        // exemption).
-        let flag = vortex_legal;
-
-        let can_attack_unsuspended = self
-            .modifiers
-            .has(attacker, ModifierType::CanAttackUnsuspended);
-        (target.is_suspended || can_attack_unsuspended).then_some(flag)
+        // §11-2-7-1: a suspended Digimon, or one this attacker may attack
+        // unsuspended.
+        target.is_suspended
+            || self
+                .modifiers
+                .has(attacker, ModifierType::CanAttackUnsuspended)
     }
 }

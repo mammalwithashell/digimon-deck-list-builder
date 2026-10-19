@@ -96,7 +96,11 @@ fn ex11_024_on_play_may_play_level4_or_lower_puppet_then_tokens_per_opponent_dig
     runner
         .execute_action(0, token_choice.valid_action_ids[0])
         .expect("choose token generation");
-    runner.auto_resolve().expect("finish On Play effect");
+    // The play moved the memory to the opponent's side: the turn ends and
+    // <Overclock> (§16-34-2) offers its cost pick; decline it.
+    runner
+        .auto_resolve_declining_end_of_turn_attacks()
+        .expect("finish On Play effect");
 
     assert!(
         runner.game.players[0]
@@ -146,7 +150,11 @@ fn ex11_024_declining_hand_play_still_offers_token_generation() {
     runner
         .execute_action(0, token_choice.valid_action_ids[0])
         .expect("choose token generation");
-    runner.auto_resolve().expect("finish token generation");
+    // The play moved the memory to the opponent's side: the turn ends and
+    // <Overclock> (§16-34-2) offers its cost pick; decline it.
+    runner
+        .auto_resolve_declining_end_of_turn_attacks()
+        .expect("finish token generation");
 
     assert_eq!(runner.hand_size(0), 1, "Puppet card remains in hand");
     assert_eq!(familiar_count(&runner, 0), 1, "one token is played");

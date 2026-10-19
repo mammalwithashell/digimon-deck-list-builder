@@ -6975,15 +6975,15 @@
       "text": "<Vortex> allows the Digimon with this effect to attack an opponent's Digimon at the end of your turn. <Vortex> is a keyword effect that also allows a Digimon to attack in the same turn it was played."
     },
     "16-33-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "9ac3af1732d2fd1a4588d9b79e7717d9d4c870c92614e7be23d7a8f2b05d7ca1",
-      "gap_id": "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Timing half proven (no <Vortex> at the opponent's end of turn). Kind half fails: <Vortex> is not a trigger at all; [End of Your Turn] effects resolve with no TriggerOrder and the attack is offered afterwards in EndOfTurnAction. #[ignore]d.",
-      "status": "gap",
+      "note": "Timing (no <Vortex> at the opponent's end of turn) and kind: <Vortex> is a trigger-type end-of-turn effect pending with EOT_MEM in one TriggerOrder; activated first, its attack is declared inside the pool and EOT_MEM resolves before the battle (Q3868/Q3869).",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::vortex_kind_matches_rule",
         "ch16_attack_keywords::vortex_timing_matches_rule"
@@ -7035,15 +7035,15 @@
       "text": "<Overclock> is a keyword effect. At the end of your turn, by deleting 1 of your Tokens or 1 of your other specified Digimon, the Digimon with this effect attacks a player without suspending. This is shown on cards using text such as <Overclock ([Puppet] Trait)>."
     },
     "16-34-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "d2abce098c733349c81dcc728df5453f32a89e52a3085a72af19a83d50e7d4aa",
-      "gap_id": "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Timing half proven (not in the main phase, not at the opponent's end of turn). Kind half fails: <Overclock> is not a trigger; [End of Your Turn] effects resolve with no TriggerOrder and <Overclock> is offered afterwards in EndOfTurnAction. #[ignore]d.",
-      "status": "gap",
+      "note": "Timing (not in the main phase, not at the opponent's end of turn) and kind: <Overclock> is a trigger-type end-of-turn effect pending with EOT_MEM in one TriggerOrder; activated first, its condition is offered inside the pool, and after the deletion the attack is declared there; EOT_MEM resolves before the security check (Q3868/Q3869 by analogy, W3 reading (a)).",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::overclock_kind_matches_rule",
         "ch16_attack_keywords::overclock_timing_matches_rule"
@@ -7333,15 +7333,15 @@
       "text": "<Execute> is a keyword effect. At the end of your turn, the Digimon with this keyword effect may attack. At the end of the attack, this Digimon is deleted. This effect also allows for attacking an opponent's unsuspended Digimon."
     },
     "16-38-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "01e0440be41939f399496200cabe760c9f909e0e54aa9099b61c76b33435c75c",
-      "gap_id": "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Timing half proven (a main-phase attack doesn't delete it; nothing at the opponent's end of turn). Kind half fails: <Execute> pends in a TriggerOrder with EOT_MEM, but choosing it first only grants the attack; EOT_MEM resolves before the attack. #[ignore]d.",
-      "status": "gap",
+      "note": "Timing (a main-phase attack doesn't delete it; nothing at the opponent's end of turn) and kind: <Execute> pends in a TriggerOrder with EOT_MEM; activated first, its attack is declared inside the pool and EOT_MEM resolves before the security check (Q3868/Q3869 by analogy, W3 reading (a)).",
+      "status": "proven",
       "tests": [
         "ch16_attack_keywords::execute_kind_matches_rule",
         "ch16_attack_keywords::execute_timing_matches_rule"
@@ -7779,15 +7779,15 @@
       "text": "<Engage> is a keyword effect where a Digimon with this effect may attack at the end of your turn."
     },
     "16-44-2": {
-      "blocks_training": true,
+      "blocks_training": false,
       "chapter": 16,
       "fingerprint": "79b60bcf0f08f7a04f7b1871680339ca5d113e9d2fe8b5302292d199840ba737",
-      "gap_id": "G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS",
+      "gap_id": null,
       "mechanisms": [
         "keywords"
       ],
-      "note": "Timing half proven (no <Engage> at the end of the opponent's turn). Kind half fails: <Engage> pends in a TriggerOrder with another [End of Your Turn] effect, but choosing it first only grants MayAttack; the other effect resolves before the attack declaration, which happens after the drain in EndOfTurnAction. The test pins declaration < other effect < security check (Q3868/Q3869, EX7-064, by analogy with <Vortex>). engage_kind_matches_rule is #[ignore]d.",
-      "status": "gap",
+      "note": "Timing (no <Engage> at the end of the opponent's turn) and kind: <Engage> pends in one TriggerOrder with another [End of Your Turn] effect; activated first, its attack is offered as its own decision inside the pool, the other effect resolves after the declaration and before the security check (declaration < EOT_MEM < security check; Q3868/Q3869 by analogy, W3 reading (a)).",
+      "status": "proven",
       "tests": [
         "ch16_new_keywords::engage_kind_matches_rule",
         "ch16_new_keywords::engage_timing_matches_rule"
@@ -15305,9 +15305,9 @@
         "total": 244
       },
       "16": {
-        "gap": 4,
+        "gap": 0,
         "not_testable": 44,
-        "proven": 158,
+        "proven": 162,
         "total": 206
       },
       "17": {
@@ -15371,15 +15371,15 @@
         "total": 13
       }
     },
-    "gap": 602,
+    "gap": 598,
     "mechanics": {
-      "gap_blocking": 4,
+      "gap_blocking": 0,
       "gap_nonblocking": 320,
       "not_testable": 152,
-      "proven": 239
+      "proven": 243
     },
     "not-testable": 246,
-    "proven": 271
+    "proven": 275
   },
   "version": 1
 }

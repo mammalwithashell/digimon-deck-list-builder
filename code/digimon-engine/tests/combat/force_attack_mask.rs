@@ -61,7 +61,7 @@ fn grant_force_attack(
 /// Main-phase memory gate holds for forced attackers too. A printed <Blitz>
 /// digivolved this turn is no exemption: §16-16-2 (Ver. 4.3) "<Blitz> effects
 /// execute processing", offered inside the effect that executes it
-/// (`ResumeFrame::BlitzAttackDecision`), never through the Main-phase mask.
+/// (`ResumeFrame::AttackDeclarationDecision`), never through the Main-phase mask.
 /// (This test used to pin the retired "Blitz + digivolved this turn"
 /// carve-out as a legal forced attack; G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK.)
 #[test]

@@ -175,7 +175,7 @@ fn mask_option_color_check_accepts_tamer() {
 
 /// §16-16-2 (Ver. 4.3) "<Blitz> effects execute processing": the <Blitz>
 /// attack is offered as its own decision inside the effect that executes it
-/// (`ResumeFrame::BlitzAttackDecision`), never through the Main-phase mask.
+/// (`ResumeFrame::AttackDeclarationDecision`), never through the Main-phase mask.
 /// So a Digimon that digivolved this turn and merely HAS <Blitz> gets no
 /// Main-phase attack bit while the memory is on the opponent's side. (This
 /// test used to pin the retired "Blitz + digivolved this turn" carve-out;

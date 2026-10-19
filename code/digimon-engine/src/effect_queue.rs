@@ -6175,9 +6175,6 @@ impl Game {
             self.resume_pending_delayed_option_lifecycle();
         }
         if self.pending_selection.is_none() {
-            self.resume_pending_end_turn();
-        }
-        if self.pending_selection.is_none() {
             self.resume_pending_turn_boundary();
         }
         // Parked Breeding → Main advance (user bug 2026-07-09): a breeding
@@ -6205,6 +6202,17 @@ impl Game {
                 || self.turn_end_check_deferred)
         {
             self.check_turn_end();
+        }
+        // The end of turn parked by its `[End of Your Turn]` pool continues
+        // once this resolution has unwound (§6-6-2: all processing resolved),
+        // after the turn-end check above, which belongs to the ending turn:
+        // the same point at which an end-of-turn attack's end (below) and the
+        // `EndOfTurnAction` PASS continue it, so the next turn starts the
+        // same way whichever of them ends the turn. An attack declared in the
+        // pool (an end-of-turn attack keyword, §16-44-2 / §16-38-2 / §16-33-2
+        // / §16-34-2) holds it until the attack has ended.
+        if self.pending_selection.is_none() {
+            self.resume_pending_end_turn();
         }
         // §16-44-1: an end-of-turn attack that ended inside this resolution
         // lets the end of turn continue now that the resolution has unwound.

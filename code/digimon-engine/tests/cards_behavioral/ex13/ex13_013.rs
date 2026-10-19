@@ -284,11 +284,17 @@ fn ex13_013_inherited_once_per_turn() {
 #[test]
 fn ex13_013_engage_opens_an_end_of_turn_attack_window() {
     let mut r = start(&[], 5);
-    r.place_on_field(0, CARD_ID, Some(0));
+    let me = r.place_on_field(0, CARD_ID, Some(0));
     r.end_turn();
-    assert_eq!(
-        r.game.current_phase,
-        digimon_engine::enums::GamePhase::EndOfTurnAction,
-        "<Engage>: this Digimon may attack at the end of your turn"
-    );
+    // §16-44-2: <Engage> triggers at the end of the turn and offers its attack
+    // as its own optional decision inside the `[End of Your Turn]` pool.
+    let sel = r
+        .pending_selection()
+        .expect("<Engage>: this Digimon may attack at the end of your turn");
+    assert_eq!(sel.selecting_player, 0);
+    assert!(sel.is_optional);
+    assert!(sel.valid_action_ids.contains(&digimon_engine::action::space::encode_attack(
+        me.index as u16,
+        digimon_engine::action::space::SECURITY_TARGET
+    )));
 }

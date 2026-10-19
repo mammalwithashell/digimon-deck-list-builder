@@ -151,8 +151,29 @@ fn bt26_045_granted_vortex_offers_end_of_turn_attack() {
     r.game.players[1].battle_area[opp.index as usize].is_suspended = true;
     r.game.tick_declarative_effects();
     assert!(r.game.has_keyword(bug, Keyword::Vortex));
-    assert!(
-        r.game.has_end_of_turn_keywords(0),
-        "<Vortex> end-of-turn attack offered"
-    );
+    // §16-33-2: the granted <Vortex> triggers at the end of the turn and
+    // offers its attack as its own decision inside the end-of-turn pool.
+    r.end_turn();
+    let attack = digimon_engine::action::space::encode_attack(bug.index as u16, opp.index as u16);
+    let offered = |r: &DebugRunner| {
+        r.pending_selection()
+            .is_some_and(|sel| sel.valid_action_ids.contains(&attack))
+    };
+    // Other end-of-turn entries (this card's own granted <Vortex>) may pend
+    // with it: order them, and decline any other keyword's offer first.
+    for _ in 0..4 {
+        if offered(&r) {
+            break;
+        }
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
+        if sel.kind == digimon_engine::selection::SelectionKind::TriggerOrder {
+            let pick = sel.effect_choices.as_ref().expect("branches")[0].action_id;
+            r.execute_action(0, pick).unwrap();
+        } else {
+            r.decline_optional_trigger().unwrap();
+        }
+    }
+    assert!(offered(&r), "<Vortex> end-of-turn attack offered");
 }

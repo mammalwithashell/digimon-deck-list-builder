@@ -228,9 +228,11 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
     );
 
     runner.pass_turn();
-    if runner.game.current_phase == digimon_engine::enums::GamePhase::EndOfTurnAction {
-        runner.game.pass_end_of_turn_action();
-    }
+    // Nyabootmon's <Overclock> (§16-34-2) offers its cost pick inside the
+    // end-of-turn pool; decline it.
+    runner
+        .auto_resolve_declining_end_of_turn_attacks()
+        .expect("decline <Overclock>");
     assert_eq!(
         runner.turn_player(),
         1,
@@ -247,9 +249,11 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
         "debuff persists through the opponent's turn"
     );
     runner.pass_turn();
-    if runner.game.current_phase == digimon_engine::enums::GamePhase::EndOfTurnAction {
-        runner.game.pass_end_of_turn_action();
-    }
+    // Nyabootmon's <Overclock> (§16-34-2) offers its cost pick inside the
+    // end-of-turn pool; decline it.
+    runner
+        .auto_resolve_declining_end_of_turn_attacks()
+        .expect("decline <Overclock>");
     assert_eq!(
         runner.turn_player(),
         0,

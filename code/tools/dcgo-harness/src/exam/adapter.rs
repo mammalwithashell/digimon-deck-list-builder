@@ -175,31 +175,40 @@ pub enum LoweredStep {
     Action(u16),
     NativePlay { action_id:u16, bind_play_ref:String },
     Select(SelectWire),
-    /// task_69f10a66 Family 1 — an action lowered while OUR engine is parked
-    /// in `GamePhase::EndOfTurnAction`: the sim surface for the end-of-turn
-    /// attack keywords (`<Execute>` — printed OR granted — `<Engage>`,
-    /// Vortex, MayAttack). Our engine surfaces the §16-37-3 "may" as the
-    /// phase park's mask (attack bits + PASS); DCGO surfaces the SAME choice
-    /// as an `OptionalSkill` yes/no followed (on yes) by a
-    /// `SelectAttackEffect` target pick. The gates are 1:1 — DCGO's
-    /// `CanActivateExecute` requires `CanAttack`, exactly the condition our
-    /// `has_end_of_turn_keywords` park requires — so the emitter maps:
+    /// task_69f10a66 Family 1 — the end-of-turn attack gate: a `pass` /
+    /// `attack` step answering an end-of-turn attack keyword's OWN decision.
+    /// Since 2026-10-18 (Comprehensive Rules 4.3 §16-44-2 / §16-38-2 /
+    /// §16-33-2) `<Engage>` / `<Execute>` (printed OR granted) / `<Vortex>`
+    /// are trigger-type effects whose processing is a pending
+    /// `SelectionKind::Target` inside the `[End of Your Turn]` pool
+    /// (`ResumeFrame::AttackDeclarationDecision` with its end-of-turn keyword,
+    /// `Game::pending_end_of_turn_keyword_decision`): its choices are the
+    /// carrier's attack declarations plus PASS (decline). A `MayAttack` grant
+    /// still parks the `GamePhase::EndOfTurnAction` window, whose attack bits +
+    /// PASS lower the same way. DCGO surfaces the SAME choice as an
+    /// `OptionalSkill` yes/no followed (on yes) by a `SelectAttackEffect`
+    /// target pick (DCGO `CanActivateEngage` / `CanActivateExecute` /
+    /// `CanActivateVortex` are our activation conditions), so the emitter
+    /// maps:
     ///   PASS   -> OptionalSkill(select_bool: false)
     ///   attack -> OptionalSkill(select_bool: true) + SelectAttackEffect row
-    /// Known limitation: with SEVERAL gate carriers on one board, one PASS
-    /// declines our whole park while DCGO asks one OptionalSkill per
-    /// carrier; scenarios with more than one end-of-turn attacker must
-    /// answer each DCGO gate (extra select rows) explicitly.
+    /// Both engines ask one gate per carrier, in the order the turn player
+    /// activates them. `<Overclock>`'s cost pick (DCGO `SelectPermanentEffect`
+    /// with `canNoSelect`) is answered by a `select:` step and passes through
+    /// as a plain selection row.
     EndOfTurnGate {
         action_id: u16,
         /// `None` = PASS (decline the gate); `Some(t)` = take the attack.
         attack: Option<EotAttackTarget>,
     },
     /// An action our engine needs that has NO DCGO counterpart — emitted as
-    /// NOTHING on the wire. Today: the PASS that exits the `EndOfTurnAction`
-    /// phase AFTER the last gate was spent (e.g. after the Execute attack
-    /// resolved and the carrier self-deleted, our phase still parks until a
-    /// PASS, while DCGO simply rotates — no prompt exists to consume a row).
+    /// NOTHING on the wire. Today: the explicit forced Main pass
+    /// (`pass_sim_only`), the PASS that exits a `MayAttack`
+    /// `EndOfTurnAction` window after its last attack, and the RETIRED
+    /// window-exit PASS a line still authors after an end-of-turn keyword's
+    /// gate: the keyword's decision is its own trigger processing now, so
+    /// the end of turn continues by itself (§16-44-1); that step neither
+    /// moves our game nor reaches the wire.
     SimOnlyAction(u16),
     /// The MIRROR of `SimOnlyAction`: a selection DCGO asks that our engine
     /// never parks — emitted to the wire, consumed by NOTHING sim-side.
@@ -395,6 +404,8 @@ impl ScenarioAdapter {
         // emitter cannot pair the wire with `s.steps` positionally — it pairs
         // through this. See `ScenarioAdapter::lowered_owners`.
         let mut lowered_owner: Vec<usize> = Vec::with_capacity(s.steps.len());
+        // `(player, turn)` of the last end-of-turn attack gate lowered.
+        let mut last_eot_gate: Option<(PlayerId, u16)> = None;
 
         for (i, step) in s.steps.iter().enumerate() {
             native_plays.collect(&mut game)?;
@@ -647,6 +658,22 @@ impl ScenarioAdapter {
                     lowered.push(LoweredStep::DcgoOnlySelect(wire));
                     lowered_owner.push(i);
                 }
+                // The RETIRED window-exit PASS (see `LoweredStep::SimOnlyAction`):
+                // a `pass` by the player whose end-of-turn keyword gate was
+                // answered earlier this turn, once that end of turn has moved
+                // on by itself (no gate of theirs is parked any more). Our game
+                // does not move and no wire row is written.
+                StepAction::Pass(_)
+                    if last_eot_gate.is_some_and(|(gate_actor, gate_turn)| {
+                        gate_actor == actor
+                            && game.turn_count == gate_turn + 1
+                            && digimon_engine::policies::current_decision_player(&game) != actor
+                    }) =>
+                {
+                    last_eot_gate = None;
+                    lowered.push(LoweredStep::SimOnlyAction(digimon_engine::action::space::PASS));
+                    lowered_owner.push(i);
+                }
                 _ => {
                     check_actor_is_decider(&game, i, actor)?;
                     let action_id = lower_step(&game, actor, &step.act).map_err(|e| match e {
@@ -678,6 +705,13 @@ impl ScenarioAdapter {
                     });
                     spec_owner.push(i);
                     let mut classified=classify_scenario_action(&game, i, actor, &step.act, action_id)?;
+                    // The end-of-turn gate of this turn's player: a `pass` they
+                    // author once the turn has rotated is the retired
+                    // window-exit PASS (arm above).
+                    last_eot_gate = match classified {
+                        LoweredStep::EndOfTurnGate { .. } => Some((actor, game.turn_count)),
+                        _ => last_eot_gate.filter(|(_, t)| game.turn_count <= t + 1),
+                    };
                     attach_native_attack_targets(&game,actor,action_id,&native_plays,&mut classified);
                     use digimon_engine::action::space::{PLAY_HAND_START,PLAY_HAND_END};
                     let classified=if game.pending_selection.is_none()
@@ -712,7 +746,19 @@ impl ScenarioAdapter {
             // position the author never saw (the selection mask), and on the
             // DCGO side the same prompt would sit unanswered until the job
             // timeout, indistinguishable from a hung Unity.
-            if let Some(pending) = game.pending_selection.as_ref() {
+            // An end-of-turn attack keyword's decision is answered by the next
+            // `pass` / `attack` step (the end-of-turn gate), not a `select:`.
+            let keyword_gate_answered_next = game.pending_selection.as_ref().is_some_and(|sel| {
+                pending_end_of_turn_attack_gate(&game, sel.selecting_player)
+            }) && s.steps[i + 1..]
+                .iter()
+                .find(|n| !matches!(n.act, StepAction::SelectDcgoOnly(_)))
+                .is_some_and(|n| matches!(n.act, StepAction::Pass(_) | StepAction::Attack { .. }));
+            if let Some(pending) = game
+                .pending_selection
+                .as_ref()
+                .filter(|_| !keyword_gate_answered_next)
+            {
                 // `SelectSimOnly` counts: it answers OUR prompt (it just emits
                 // no DCGO wire row). `SelectDcgoOnly` does NOT answer it -- it
                 // answers a prompt only DCGO has -- but it also does not BLOCK
@@ -1469,18 +1515,35 @@ fn check_actor_is_decider(game: &Game, i: usize, actor: PlayerId) -> Result<(), 
     ))
 }
 
+/// Whether the pending selection is an end-of-turn attack keyword's own
+/// attack decision (`<Engage>` / `<Execute>` / `<Vortex>`; §16-44-2 /
+/// §16-38-2 / §16-33-2) that `actor` answers: a scenario answers it with a
+/// `pass` (decline) or `attack` step, lowered as the end-of-turn gate.
+/// `<Overclock>`'s cost pick is answered by a `select:` step instead.
+fn pending_end_of_turn_attack_gate(game: &Game, actor: PlayerId) -> bool {
+    game.pending_end_of_turn_keyword_decision()
+        .is_some_and(|kw| kw != digimon_engine::enums::Keyword::Overclock)
+        && game
+            .pending_selection
+            .as_ref()
+            .is_some_and(|sel| sel.selecting_player == actor)
+}
+
 /// Classify a lowered action for the wire (task_69f10a66 Family 1). An
-/// action lowered while our engine is parked in `EndOfTurnAction` is the
-/// end-of-turn attack-keyword gate — DCGO's surface for the same choice is
-/// `OptionalSkill` (+ `SelectAttackEffect` on yes), so the emitter must not
-/// pass the raw action id through. Everything else stays `Action(id)`.
+/// action answering an end-of-turn attack keyword's parked decision
+/// ([`pending_end_of_turn_attack_gate`]), or lowered while our engine is
+/// parked in the `MayAttack` `EndOfTurnAction` window, is the end-of-turn
+/// attack gate — DCGO's surface for the same choice is `OptionalSkill`
+/// (+ `SelectAttackEffect` on yes), so the emitter must not pass the raw
+/// action id through. Everything else stays `Action(id)`.
 fn classify_lowered_action(
     game: &Game,
     actor: PlayerId,
     action_id: u16,
 ) -> Result<LoweredStep, String> {
     use digimon_engine::action::explain::{explain_action, ActionKind, ActionZone};
-    if game.current_phase != digimon_engine::enums::GamePhase::EndOfTurnAction {
+    let keyword_gate = pending_end_of_turn_attack_gate(game, actor);
+    if !keyword_gate && game.current_phase != digimon_engine::enums::GamePhase::EndOfTurnAction {
         return field_or_plain_action(game, actor, action_id);
     }
     // The park belongs to the turn player; a step someone else answers at
@@ -1493,10 +1556,10 @@ fn classify_lowered_action(
         ActionKind::Pass => {
             // A PASS while a gate is still live declines it — DCGO's
             // OptionalSkill answered "no". A PASS with NO live gate (the
-            // phase-exit after the last end-of-turn attack was already
-            // spent) has no DCGO counterpart: DCGO rotates on its own, so
-            // the row must not reach the wire at all.
-            if game.has_end_of_turn_keywords(actor) {
+            // `MayAttack` window's exit after its last attack) has no DCGO
+            // counterpart: DCGO rotates on its own, so the row must not
+            // reach the wire at all.
+            if keyword_gate || game.has_end_of_turn_keywords(actor) {
                 Ok(LoweredStep::EndOfTurnGate {
                     action_id,
                     attack: None,
@@ -3686,4 +3749,50 @@ fn attach_native_attack_targets(game:&Game,actor:PlayerId,action_id:u16,tracking
   let mut row=field_or_plain_action(&r.game,0,id).unwrap();attach_native_attack_targets(&r.game,0,id,&native_play_tracking::NativePlayTracking::default(),&mut row);
   let LoweredStep::FieldAction{action_id,refs}=row else{panic!("offline native attack disappeared")};assert_eq!(action_id,id);assert!(refs.unsupported_reason.as_deref().is_some_and(|s|s.contains("opaque")));assert!(refs.attack_permanent_target.is_none());
  }
+}
+
+#[cfg(test)]
+mod end_of_turn_keyword_gate_tests {
+    //! The end-of-turn attack gate over an end-of-turn keyword's own decision
+    //! (Comprehensive Rules 4.3 §16-44-2): `<Engage>` parks a
+    //! `SelectionKind::Target` in the `[End of Your Turn]` pool, and a
+    //! scenario's `pass` / `attack` step answering it lowers to
+    //! `LoweredStep::EndOfTurnGate` (OptionalSkill no / yes + target on the
+    //! DCGO wire), not to a raw action id.
+    use super::{classify_lowered_action, pending_end_of_turn_attack_gate, EotAttackTarget, LoweredStep};
+    use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
+    use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+    use digimon_engine::enums::{CardKind, Keyword};
+
+    fn parked_engage() -> DebugRunner {
+        let mut engage = make_test_card("ENGAGE", "Engagemon");
+        engage.card_kind = CardKind::Digimon;
+        engage.level = Some(4);
+        engage.dp = Some(5000);
+        engage.keywords = vec![Keyword::Engage];
+        let mut r = DebugRunner::builder().add_card(engage).start();
+        r.place_on_field(0, "ENGAGE", Some(0));
+        r.end_turn();
+        r
+    }
+
+    #[test]
+    fn a_parked_engage_decision_is_the_end_of_turn_gate() {
+        let r = parked_engage();
+        assert_eq!(r.game.pending_end_of_turn_keyword_decision(), Some(Keyword::Engage));
+        assert!(pending_end_of_turn_attack_gate(&r.game, 0));
+        assert!(!pending_end_of_turn_attack_gate(&r.game, 1), "P0's decision");
+        assert_eq!(
+            classify_lowered_action(&r.game, 0, PASS),
+            Ok(LoweredStep::EndOfTurnGate { action_id: PASS, attack: None })
+        );
+        let attack = encode_attack(0, SECURITY_TARGET);
+        assert_eq!(
+            classify_lowered_action(&r.game, 0, attack),
+            Ok(LoweredStep::EndOfTurnGate {
+                action_id: attack,
+                attack: Some(EotAttackTarget::Player),
+            })
+        );
+    }
 }

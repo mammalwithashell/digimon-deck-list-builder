@@ -77,7 +77,10 @@ fn bt26_078_trash_titan_played_grants_rush_execute() {
     r.fire_play_event_triggers(0, t.index as usize, false, false);
     assert!(r.pending_is_optional(), "by returning — optional");
     r.accept_optional_trigger().unwrap();
-    let _ = r.auto_resolve();
+    // The memory is on the opponent's side, so the turn ends inside the
+    // resolution and the granted <Execute> offers its attack (§16-38-2);
+    // stop there, while the "for the turn" grants still apply.
+    resolve_until_end_of_turn_keyword_decision(&mut r);
     assert!(!trash_ids(&r, 0).contains(&CARD_ID.to_string()));
     assert_eq!(deck_ids(&r, 0).first().map(String::as_str), Some(CARD_ID));
     assert!(has_kw(&r, t, Keyword::Rush));
@@ -91,7 +94,10 @@ fn bt26_078_trash_chronomon_text_counts() {
     let t = r.place_on_field(0, "TEXTED", None);
     r.fire_play_event_triggers(0, t.index as usize, false, false);
     r.accept_optional_trigger().unwrap();
-    let _ = r.auto_resolve();
+    // The memory is on the opponent's side, so the turn ends inside the
+    // resolution and the granted <Execute> offers its attack (§16-38-2);
+    // stop there, while the "for the turn" grants still apply.
+    resolve_until_end_of_turn_keyword_decision(&mut r);
     assert!(has_kw(&r, t, Keyword::Execute));
 }
 
@@ -174,4 +180,25 @@ fn bt26_078_trash_only_on_your_turn() {
     r.fire_play_event_triggers(0, t.index as usize, true, false);
     assert!(r.pending_selection_view().is_none(), "[Your Turn] only");
     assert!(trash_ids(&r, 0).contains(&CARD_ID.to_string()));
+}
+
+/// Settle prompts (first valid choice) until an end-of-turn attack keyword's
+/// decision is pending.
+fn resolve_until_end_of_turn_keyword_decision(r: &mut DebugRunner) {
+    for _ in 0..16 {
+        if r.pending_is_end_of_turn_keyword_decision() {
+            return;
+        }
+        let Some(sel) = r.pending_selection() else {
+            panic!("no end-of-turn keyword decision was offered");
+        };
+        let player = sel.selecting_player;
+        let action = sel
+            .valid_action_ids
+            .first()
+            .copied()
+            .unwrap_or(digimon_engine::action::space::PASS);
+        r.execute_action(player, action).unwrap();
+    }
+    panic!("no end-of-turn keyword decision after 16 prompts");
 }

@@ -182,7 +182,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // player's side. There is no <Blitz> carve-out: <Blitz> offers its
             // attack as its own decision inside the effect that executes it
             // (§16-16-2/-3, `keyword_effects::blitz_process` →
-            // `ResumeFrame::BlitzAttackDecision`), never through the Main-phase
+            // `ResumeFrame::AttackDeclarationDecision`), never through the Main-phase
             // mask, so a Digimon that merely has <Blitz> cannot attack with the
             // memory on the opponent's side.
             let attack_blocked = game
@@ -535,19 +535,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     index: i as u8,
                 };
 
-                // §4.6c Overclock (sub-slot 0 of the per-permanent field
-                // effect range). Mirrors Python action_mask.py:354-361:
-                // emits when the Digimon has Overclock AND at least one
-                // other sacrificeable permanent exists on the battle area.
-                if game.has_keyword(handle, Keyword::Overclock)
-                    && !game.is_overclock_declined_for_action_mask(handle)
-                    && game.has_overclock_sacrifice(player_id, i)
-                {
-                    let bit = FIELD_EFFECT_START
-                        + i as u16 * EFFECTS_PER_PERMANENT
-                        + FIELD_EFFECT_SLOT_FOR_OVERCLOCK;
-                    mask[bit as usize] = 1.0;
-                }
+                // No `<Overclock>` field-effect bit and no `<Vortex>` /
+                // `<Engage>` / `<Execute>` attack bits here: those keywords are
+                // trigger-type effects whose decision is offered inside the
+                // `[End of Your Turn]` pool, as a pending selection (§16-33-2,
+                // §16-34-2, §16-38-2, §16-44-2).
 
                 // §4.7e CannotAttack gate — skip all attack-bit emission
                 // for this permanent when the player-scoped modifier is set.
@@ -563,35 +555,21 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
 
-                // §4.6 attack bits: Vortex / MayAttack / ForceAttack / Engage
-                // all share the 100-399 attack range and use the same
-                // suspended / CanAttackUnsuspended target legality as
-                // Main-phase attacks (§11-2-7-1). <Vortex> grants the attack
-                // and the played-this-turn exemption, not a target permission
-                // (§16-33-1; contrast <Execute> §16-38-1); <Raid> switches the
-                // target after the declaration (§16-23-1), not before.
-                let vortex = game.has_keyword(handle, Keyword::Vortex);
+                // §4.6 attack bits: MayAttack / ForceAttack share the 100-399
+                // attack range and use the same suspended /
+                // CanAttackUnsuspended target legality as Main-phase attacks
+                // (§11-2-7-1); <Raid> switches the target after the
+                // declaration (§16-23-1), not before.
                 let may_attack = game.modifiers.has(handle, ModifierType::MayAttack);
                 let force_attack = game.modifiers.has(handle, ModifierType::ForceAttack);
-                let engage = game.has_keyword(handle, Keyword::Engage);
-                if !vortex && !may_attack && !force_attack && !engage {
+                if !may_attack && !force_attack {
                     continue;
                 }
-                let vortex_can_attack = vortex && game.can_attack(handle, /* vortex = */ true);
-                let normal_eot_can_attack = (may_attack || force_attack || engage)
-                    && game.can_attack(handle, /* vortex = */ false);
-                if !vortex_can_attack && !normal_eot_can_attack {
+                if !game.can_attack(handle, /* vortex = */ false) {
                     continue;
                 }
 
-                let can_attack_player = normal_eot_can_attack
-                    || (vortex_can_attack
-                        && game
-                            .modifiers
-                            .has(handle, ModifierType::VortexCanAttackPlayer));
-                if can_attack_player
-                    && !game.modifiers.has(handle, ModifierType::CannotAttackPlayer)
-                {
+                if !game.modifiers.has(handle, ModifierType::CannotAttackPlayer) {
                     mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
                 }
 
@@ -944,12 +922,78 @@ pub(crate) fn effect_attack_target_action_ids(
     )
 }
 
+/// The attack declarations an end-of-turn attack keyword's trigger body
+/// offers for `attacker` (`Game::offer_end_of_turn_keyword_attack`), as
+/// `encode_attack` ids; empty when it cannot attack at all.
+///
+/// - `<Engage>` (§16-44-1): an ordinary attack: the opponent, or a suspended
+///   Digimon (§11-2-7-1).
+/// - `<Execute>` (§16-38-1): also an opponent's UNSUSPENDED Digimon.
+/// - `<Vortex>` (§16-33-1): an opponent's Digimon it may attack (suspended,
+///   §11-2-7-1; W2 reading (a)), the player only under
+///   `VortexCanAttackPlayer` (DCGO `PermanentHasVortexCanAttackPlayers`);
+///   it may attack the turn it was played (`can_attack(.., vortex = true)`).
+///
+/// The same player- and permanent-scoped gates as every other offered attack
+/// (`attack_declaration_action_ids`: `CannotAttack`, `CannotAttackPlayer`,
+/// `MayAttackPlayerOnly` and the per-target bans in
+/// `attack_target_blocked_by_modifier`); no Main-phase memory gate.
+pub(crate) fn end_of_turn_keyword_attack_action_ids(
+    game: &Game,
+    attacker: PermanentHandle,
+    keyword: Keyword,
+) -> Vec<u16> {
+    let (restriction, vortex, unsuspended_targets) = match keyword {
+        Keyword::Engage => (AttackTargetRestriction::Any, false, false),
+        Keyword::Execute => (AttackTargetRestriction::Any, false, true),
+        Keyword::Vortex => (
+            if game
+                .modifiers
+                .has(attacker, ModifierType::VortexCanAttackPlayer)
+            {
+                AttackTargetRestriction::Any
+            } else {
+                AttackTargetRestriction::DigimonOnly
+            },
+            true,
+            false,
+        ),
+        _ => return Vec::new(),
+    };
+    attack_declaration_action_ids(game, attacker, restriction, false, false, vortex, unsuspended_targets)
+}
+
 pub(crate) fn effect_attack_target_action_ids_with_options(
     game: &Game,
     attacker: PermanentHandle,
     restriction: AttackTargetRestriction,
     without_suspending: bool,
     ignore_summoning_sickness: bool,
+) -> Vec<u16> {
+    attack_declaration_action_ids(
+        game,
+        attacker,
+        restriction,
+        without_suspending,
+        ignore_summoning_sickness,
+        false,
+        false,
+    )
+}
+
+/// The one target enumeration behind every effect-offered attack
+/// declaration (`effect_attack_target_action_ids*`, the end-of-turn attack
+/// keywords). `vortex` exempts the played-this-turn check (§16-33-1);
+/// `unsuspended_targets` adds the opponent's unsuspended Digimon
+/// (`<Execute>`, §16-38-1) on top of a `CanAttackUnsuspended` grant.
+fn attack_declaration_action_ids(
+    game: &Game,
+    attacker: PermanentHandle,
+    restriction: AttackTargetRestriction,
+    without_suspending: bool,
+    ignore_summoning_sickness: bool,
+    vortex: bool,
+    unsuspended_targets: bool,
 ) -> Vec<u16> {
     if game
         .modifiers
@@ -968,9 +1012,9 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
     } else if ignore_summoning_sickness {
         game.can_attack_ignoring_summoning_sickness(attacker)
     } else if without_suspending {
-        game.can_attack_without_suspending(attacker, false)
+        game.can_attack_without_suspending(attacker, vortex)
     } else {
-        game.can_attack(attacker, false)
+        game.can_attack(attacker, vortex)
     };
     if !attacker_can_attack {
         return Vec::new();
@@ -994,9 +1038,10 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
         restriction,
         AttackTargetRestriction::Any | AttackTargetRestriction::DigimonOnly
     ) {
-        let can_attack_unsuspended = game
-            .modifiers
-            .has(attacker, ModifierType::CanAttackUnsuspended);
+        let can_attack_unsuspended = unsuspended_targets
+            || game
+                .modifiers
+                .has(attacker, ModifierType::CanAttackUnsuspended);
         let max_opp = game.player(opponent).battle_area.len().min(FIELD_SLOTS);
 
         for j in 0..max_opp {

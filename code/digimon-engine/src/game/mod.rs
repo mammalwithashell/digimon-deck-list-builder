@@ -22,41 +22,6 @@ use crate::selection::{
 use crate::token_registry::TokenRegistry;
 use crate::trigger_context::TriggerContext;
 
-/// Reasons `Game::activate_overclock` can fail. Exposed so callers
-/// (Tauri commands, tests, Python bindings) can distinguish between
-/// phase-violation and state-violation errors.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OverclockError {
-    /// Current phase is not `EndOfTurnAction`.
-    WrongPhase,
-    /// Another selection or attack is in flight.
-    Busy,
-    /// The indicated permanent does not have `<Overclock>` (either the
-    /// keyword isn't granted, or the slot doesn't hold a Digimon).
-    NotOverclock,
-    /// No sacrificeable Digimon is available to pay the Overclock cost.
-    NoSacrifice,
-    /// `overclock_index` is out of range for the turn player's battle area.
-    InvalidIndex,
-}
-
-impl std::fmt::Display for OverclockError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::WrongPhase => write!(f, "activate_overclock called outside EndOfTurnAction"),
-            Self::Busy => write!(
-                f,
-                "activate_overclock called while a selection or attack is in flight"
-            ),
-            Self::NotOverclock => write!(f, "permanent does not have <Overclock>"),
-            Self::NoSacrifice => write!(f, "no sacrificeable Digimon available"),
-            Self::InvalidIndex => write!(f, "overclock_index out of range"),
-        }
-    }
-}
-
-impl std::error::Error for OverclockError {}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
 pub enum TerminalOutcomeReason {
     SecurityAttack,
@@ -188,6 +153,24 @@ pub(crate) enum TurnBoundaryResume {
 pub(crate) struct EndTurnResume {
     pub(crate) ending_player: PlayerId,
     pub(crate) memory_before_end_effects: i16,
+}
+
+/// An end-of-turn attack keyword's processing (`<Engage>`, `<Execute>`,
+/// `<Vortex>`, `<Overclock>`) whose trigger activated in the `[End of Your
+/// Turn]` pool while another attack was already declared and not yet ended.
+/// Only one attack is in progress at a time (§11-1-4: the declared attack's
+/// timings follow once the pool has resolved), so its offer waits until that
+/// attack has ended (`Game::resume_pending_end_turn`). The carrier is kept by
+/// stack identity, so a slot shift in between cannot misdirect it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DeferredEndOfTurnAttackOffer {
+    pub(crate) player: PlayerId,
+    /// `Permanent::battle_identity` of the carrier.
+    pub(crate) carrier_identity: u64,
+    pub(crate) keyword: crate::enums::Keyword,
+    /// The card whose keyword triggered (printed, inherited or granted).
+    pub(crate) source_card: CardHandle,
+    pub(crate) source_kind: crate::enums::EffectSourceKind,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -389,7 +372,7 @@ pub(crate) struct PendingWouldDigivolveResume {
 /// - `game.rs` â€” struct, constructor, mulligan, state queries, memory
 ///   mgmt, tensor/DP/OPT helpers, elimination.
 /// - `game_phases.rs` â€” turn lifecycle: `begin_turn`, `end_turn`,
-///   `rotate_turn_player`, `pass_turn`, `activate_overclock`,
+///   `rotate_turn_player`, `pass_turn`, `install_overclock_selection`,
 ///   `fire_end_of_your_turn`.
 /// - `game_actions.rs` â€” player mutators: `play_from_hand`,
 ///   `digivolve_from_hand`, `move_from_breeding`, `activate_*_main`,
@@ -1036,9 +1019,10 @@ pub struct Game {
     /// is re-resolved by handle/token instead of trusting the old slot.
     #[doc(hidden)]
     pub(crate) pending_overclock_attack: Option<(PlayerId, CardHandle, PlayerId)>,
-    /// Overclock source cards declined during the current EndOfTurnAction
-    /// window. Decline is a real choice; without this guard the same optional
-    /// cost prompt can be re-opened indefinitely without changing game state.
+    /// Overclock source cards whose optional cost was declined this end of
+    /// turn. <Overclock> is a trigger that activates once per end of turn
+    /// (§16-34-2), so nothing re-offers it; the set is kept (cleared on
+    /// rotation) because the verification digest reads it.
     #[doc(hidden)]
     pub(crate) declined_overclock_this_eot: HashSet<CardHandle>,
 
@@ -1297,6 +1281,15 @@ pub struct Game {
     /// the end-of-turn keywords once everything has settled and lets the end
     /// of turn continue (§16-44-1). Plain data: survives `Game::clone`.
     pub(crate) end_of_turn_attack_settle_pending: bool,
+    /// The end-of-turn attack keyword (`<Engage>`, `<Execute>`, `<Vortex>`)
+    /// whose trigger body declared the attack in progress, if any. Set at the
+    /// declaration (`run_attack_declaration_decision_step`), cleared when the
+    /// attack ends. `<Execute>`'s "At the end of the attack, this Digimon is
+    /// deleted" applies to THAT attack only (§16-38-1, §16-38-4).
+    pub(crate) end_of_turn_attack_keyword: Option<crate::enums::Keyword>,
+    /// End-of-turn attack keyword offers waiting for the attack in progress to
+    /// end (see [`DeferredEndOfTurnAttackOffer`]), in activation order.
+    pub(crate) deferred_end_of_turn_attack_offers: Vec<DeferredEndOfTurnAttackOffer>,
 
     /// Deferred-drain depth counter (post-2026-05-23 architectural change).
     ///

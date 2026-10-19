@@ -520,6 +520,17 @@ fn explain_selection(game: &Game, player_id: PlayerId, action_id: u16) -> Action
         return with_battle_card(e, game, opponent, target);
     }
 
+    // An end-of-turn attack keyword's own decision (§16-44-2 / §16-38-2 /
+    // §16-33-2): its choices are attack declarations, so explain them as
+    // attacks (attacker slot, target), not as anonymous selection options.
+    if (ATTACK_START..ATTACK_END).contains(&action_id)
+        && game
+            .pending_end_of_turn_keyword_decision()
+            .is_some_and(|kw| kw != crate::enums::Keyword::Overclock)
+    {
+        return explain_attack(game, player_id, action_id);
+    }
+
     if game.current_phase == GamePhase::SelectBreedingPermanent {
         let mut e = base(
             game,

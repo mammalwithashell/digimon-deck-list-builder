@@ -455,11 +455,9 @@
   tests: ["ch16_new_keywords::engage_optional_eot_attack"]
   note: "At the end of P0's turn an attack with the <Engage> Digimon is offered (with PASS); it checks security, then the turn passes to P1 with no further decision: no PASS-only EndOfTurnAction step follows the attack (G-ENGINE-ENGAGE-EOT-PASS-ONLY-STEP resolved)."
 "16-44-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS
+  status: proven
   tests: ["ch16_new_keywords::engage_kind_matches_rule", "ch16_new_keywords::engage_timing_matches_rule"]
-  note: "Timing half proven (no <Engage> at the end of the opponent's turn). Kind half fails: <Engage> pends in a TriggerOrder with another [End of Your Turn] effect, but choosing it first only grants MayAttack; the other effect resolves before the attack declaration, which happens after the drain in EndOfTurnAction. The test pins declaration < other effect < security check (Q3868/Q3869, EX7-064, by analogy with <Vortex>). engage_kind_matches_rule is #[ignore]d."
+  note: "Timing (no <Engage> at the end of the opponent's turn) and kind: <Engage> pends in one TriggerOrder with another [End of Your Turn] effect; activated first, its attack is offered as its own decision inside the pool, the other effect resolves after the declaration and before the security check (declaration < EOT_MEM < security check; Q3868/Q3869 by analogy, W3 reading (a))."
 "16-44-3":
   status: proven
   tests: ["ch16_new_keywords::engage_optionality_matches_rule"]
@@ -834,11 +832,9 @@
   tests: ["ch16_attack_keywords::vortex_optional_eot_attack_on_digimon_and_same_turn_played", "ch16_attack_keywords::vortex_attack_target_is_a_suspended_digimon", "ch16_attack_keywords::vortex_attack_has_block_timing"]
   note: "A Digimon played this turn may attack an opponent's suspended Digimon (not the player) at the end of the turn; not an UNSUSPENDED one (W2 reading (a): <Vortex> grants the attack, not a target permission); and the attack is an ordinary attack: P1's block timing follows it (Q3869)."
 "16-33-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS
+  status: proven
   tests: ["ch16_attack_keywords::vortex_kind_matches_rule", "ch16_attack_keywords::vortex_timing_matches_rule"]
-  note: "Timing half proven (no <Vortex> at the opponent's end of turn). Kind half fails: <Vortex> is not a trigger at all; [End of Your Turn] effects resolve with no TriggerOrder and the attack is offered afterwards in EndOfTurnAction. #[ignore]d."
+  note: "Timing (no <Vortex> at the opponent's end of turn) and kind: <Vortex> is a trigger-type end-of-turn effect pending with EOT_MEM in one TriggerOrder; activated first, its attack is declared inside the pool and EOT_MEM resolves before the battle (Q3868/Q3869)."
 "16-33-3":
   status: proven
   tests: ["ch16_attack_keywords::vortex_optional_eot_attack_on_digimon_and_same_turn_played", "ch16_attack_keywords::vortex_optionality_matches_rule"]
@@ -848,11 +844,9 @@
   tests: ["ch16_attack_keywords::overclock_optional_cost_then_mandatory_attack_without_suspending"]
   note: "Only the specified ([Puppet]) Digimon is offered as the cost; the attack is on the player and the attacker stays unsuspended. The Token half is not staged (no DSL Token fixture)."
 "16-34-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS
+  status: proven
   tests: ["ch16_attack_keywords::overclock_kind_matches_rule", "ch16_attack_keywords::overclock_timing_matches_rule"]
-  note: "Timing half proven (not in the main phase, not at the opponent's end of turn). Kind half fails: <Overclock> is not a trigger; [End of Your Turn] effects resolve with no TriggerOrder and <Overclock> is offered afterwards in EndOfTurnAction. #[ignore]d."
+  note: "Timing (not in the main phase, not at the opponent's end of turn) and kind: <Overclock> is a trigger-type end-of-turn effect pending with EOT_MEM in one TriggerOrder; activated first, its condition is offered inside the pool, and after the deletion the attack is declared there; EOT_MEM resolves before the security check (Q3868/Q3869 by analogy, W3 reading (a))."
 "16-34-3":
   status: proven
   tests: ["ch16_attack_keywords::overclock_optional_cost_then_mandatory_attack_without_suspending", "ch16_attack_keywords::overclock_optionality_matches_rule"]
@@ -890,11 +884,9 @@
   tests: ["ch16_attack_keywords::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack"]
   note: "The end-of-turn attack (an unsuspended Digimon or the player) is offered and resolves; with another end-of-attack effect pending with the deletion the attack stays in progress until both resolve, so the <Execute> Digimon is deleted in the chosen order, and the turn then passes with no PASS-only step (G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE resolved)."
 "16-38-2":
-  status: gap
-  blocks_training: true
-  gap_id: G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS
+  status: proven
   tests: ["ch16_attack_keywords::execute_kind_matches_rule", "ch16_attack_keywords::execute_timing_matches_rule"]
-  note: "Timing half proven (a main-phase attack doesn't delete it; nothing at the opponent's end of turn). Kind half fails: <Execute> pends in a TriggerOrder with EOT_MEM, but choosing it first only grants the attack; EOT_MEM resolves before the attack. #[ignore]d."
+  note: "Timing (a main-phase attack doesn't delete it; nothing at the opponent's end of turn) and kind: <Execute> pends in a TriggerOrder with EOT_MEM; activated first, its attack is declared inside the pool and EOT_MEM resolves before the security check (Q3868/Q3869 by analogy, W3 reading (a))."
 "16-38-3":
   status: proven
   tests: ["ch16_attack_keywords::execute_optionality_matches_rule"]
