@@ -1874,17 +1874,22 @@ impl TriggerCandidate {
 /// `<Material Save>` trigger, and the `1` is that keyword's PARAMETER, not part
 /// of its name. `trigger:` names the keyword; it does not address a parameter.
 ///
-/// `<Piercing>` is spelled `Pierce`: that is DCGO's `ICardEffect.EffectName`
-/// for the keyword (`KeyWordEffects/Pierce.cs`, `SetUpICardEffect("Pierce",
-/// ...)`), the same wire name [`crate::exam::projection::KEYWORD_PROBES`]
-/// pairs with `Keyword::Piercing`. A `trigger:` / `trigger_not:` row is ONE
+/// A keyword in [`crate::exam::projection::KEYWORD_PROBES`] takes that
+/// table's wire name -- DCGO's spelling -- so the one shared table is the
+/// single source of truth: `<Piercing>` is `Pierce` there, DCGO's
+/// `ICardEffect.EffectName` for the keyword (`KeyWordEffects/Pierce.cs`,
+/// `SetUpICardEffect("Pierce", ...)`). A `trigger:` / `trigger_not:` row is ONE
 /// string both engines normalize and match against their own branch names, so
 /// our side must spell the branch the way DCGO does -- `trigger_not: Pierce`
-/// otherwise excludes nothing here (EX13-045's battle-result pool, where
-/// <Piercing> became a pooled trigger, Task 28).
+/// otherwise excludes nothing (EX13-045's battle-result pool, where <Piercing>
+/// became a pooled trigger, Task 28). Every other probe name equals the
+/// `Debug` name once normalized.
 fn keyword_display_name(keyword: digimon_engine::enums::Keyword) -> String {
-    if matches!(keyword, digimon_engine::enums::Keyword::Piercing) {
-        return "Pierce".to_string();
+    if let Some((wire, _)) = crate::exam::projection::KEYWORD_PROBES
+        .iter()
+        .find(|(_, k)| *k == keyword)
+    {
+        return (*wire).to_string();
     }
     let debug = format!("{keyword:?}");
     match debug.split_once('(') {
