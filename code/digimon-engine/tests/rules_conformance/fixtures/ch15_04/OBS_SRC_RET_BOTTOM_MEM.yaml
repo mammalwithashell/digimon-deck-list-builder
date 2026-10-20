@@ -1,0 +1,17 @@
+# OBS_SRC_RET_BOTTOM_MEM -- Tamer, red, play cost 2.
+#   [All Turns] When digivolution cards are returned to the bottom of a deck,
+#   gain 1 memory.
+# The trigger shape of Vemmon (BT18-065) / BT21-058's inherited "When any
+# [Vemmon] return to the bottom of the deck from this Digimon's digivolution
+# cards" without the name, host and [Once Per Turn] qualifiers, so how many
+# times it triggers for one return of several cards is visible (§15-5-2).
+card: OBS_SRC_RET_BOTTOM_MEM
+name: Undertow Tamer
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: on_source_returned_to_deck_bottom
+    summary: "[All Turns] When digivolution cards are returned to the bottom of a deck, gain 1 memory."
+    process:
+      - gain_memory: 1

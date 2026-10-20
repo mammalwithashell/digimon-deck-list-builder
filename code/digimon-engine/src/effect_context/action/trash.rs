@@ -576,7 +576,7 @@ impl<'a> EffectContext<'a> {
             .collect();
 
         // Every source is trashed at the same time: one event (§15-5-2).
-        let event = self.game.begin_source_trash_event();
+        let event = self.game.begin_source_move_event();
         for source in source_handles {
             let Some(permanent) = self
                 .game
@@ -597,7 +597,7 @@ impl<'a> EffectContext<'a> {
                 let _ = self.trash_card_source(target, source);
             }
         }
-        self.game.end_source_trash_event(event);
+        self.game.end_source_move_event(event);
         true
     }
 
@@ -762,12 +762,12 @@ impl<'a> EffectContext<'a> {
             })
             .unwrap_or_default();
         // The N cards are trashed at the same time: one event (§15-5-2).
-        let event = self.game.begin_source_trash_event();
+        let event = self.game.begin_source_move_event();
         let trashed = cards
             .into_iter()
             .filter(|card| self.trash_card_source(target, *card))
             .count() as u8;
-        self.game.end_source_trash_event(event);
+        self.game.end_source_move_event(event);
         trashed
     }
 
@@ -842,12 +842,12 @@ impl<'a> EffectContext<'a> {
             })
             .unwrap_or_default();
         // One effect step: one event (§15-5-2).
-        let event = self.game.begin_source_trash_event();
+        let event = self.game.begin_source_move_event();
         let trashed = cards
             .into_iter()
             .filter(|card| self.trash_card_source(target, *card))
             .count();
-        self.game.end_source_trash_event(event);
+        self.game.end_source_move_event(event);
         trashed
     }
 
@@ -919,7 +919,7 @@ impl<'a> EffectContext<'a> {
     /// from (§15-5-2). An observer scoped to one Tamer ("under this Tamer",
     /// ST23-13) triggers once if any card left that Tamer; one scoped to all
     /// of them ("under your Tamers") once. The event's members are every
-    /// trashed card (`coalesce_source_trash_event`).
+    /// trashed card (`coalesce_source_move_event`).
     ///
     /// Each pick takes the lowest face-down card left under that Tamer
     /// (`trash_bottom_face_down_source`), so a Tamer listed twice gives up its
@@ -980,7 +980,7 @@ impl<'a> EffectContext<'a> {
         // trash. Should that ever break, stop at the first failure (loudly in
         // dev/test) instead of trashing the rest of a payment that already
         // failed.
-        let event = self.game.begin_source_trash_event();
+        let event = self.game.begin_source_move_event();
         let mut paid = true;
         for &target in targets {
             if !self.trash_bottom_face_down_source(target) {
@@ -993,7 +993,7 @@ impl<'a> EffectContext<'a> {
                 break;
             }
         }
-        self.game.end_source_trash_event(event);
+        self.game.end_source_move_event(event);
         paid
     }
 
@@ -1153,12 +1153,12 @@ impl<'a> EffectContext<'a> {
             .collect();
         // Every Digimon's cards are trashed at the same time: one event
         // (§15-5-2).
-        let event = self.game.begin_source_trash_event();
+        let event = self.game.begin_source_move_event();
         let trashed = targets
             .into_iter()
             .filter(|(host, card)| self.trash_card_source(*host, *card))
             .count();
-        self.game.end_source_trash_event(event);
+        self.game.end_source_move_event(event);
         trashed
     }
 }

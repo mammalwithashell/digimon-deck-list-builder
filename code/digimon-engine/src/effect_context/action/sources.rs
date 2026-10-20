@@ -662,7 +662,7 @@ impl<'a> EffectContext<'a> {
         // before the Mind Link placement has finished (§15-8-3-2) — the
         // event scope closes after the placement below.
         let top_handle = top.handle();
-        let event = self.game.begin_source_trash_event();
+        let event = self.game.begin_source_move_event();
         for source in tamer_perm.card_sources.drain(..) {
             self.game.trash_source_and_fire_with_cause(
                 controller,
@@ -703,7 +703,7 @@ impl<'a> EffectContext<'a> {
         let target_player = self.game.player_mut(controller);
         if digimon_idx >= target_player.battle_area.len() {
             target_player.put_in_trash(top);
-            self.game.end_source_trash_event(event);
+            self.game.end_source_move_event(event);
             return;
         }
         // Insert at the bottom of the target's stack. `face_down` stays
@@ -719,7 +719,7 @@ impl<'a> EffectContext<'a> {
         let cause = self.placing_effect_attribution();
         self.game
             .note_effect_added_sources(host, vec![top_handle], cause);
-        self.game.end_source_trash_event(event);
+        self.game.end_source_move_event(event);
     }
 
     /// Trash the current top Digimon of `perm` and promote the next-highest
@@ -1045,11 +1045,15 @@ impl<'a> EffectContext<'a> {
         to_bottom: bool,
     ) -> bool {
         let mut all_ok = true;
+        // The selected cards are returned at the same time: one event
+        // (§15-5-2), whose observers wait for the effect (§15-8-3-2).
+        let event = self.game.begin_source_move_event();
         for source_ref in selected {
             if !self.return_card_source_to_deck(source_ref.permanent, source_ref.card, to_bottom) {
                 all_ok = false;
             }
         }
+        self.game.end_source_move_event(event);
         all_ok
     }
 }

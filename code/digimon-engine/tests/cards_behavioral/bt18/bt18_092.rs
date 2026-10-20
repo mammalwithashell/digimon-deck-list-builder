@@ -1297,3 +1297,148 @@ fn bt18_092_security_clause_structural_shape() {
 
     assert_eq!(clause.scope, CompiledScope::FaceUp);
 }
+
+// ─── §15-8-3-2 / §15-4-3-2 / §15-5-2: the return waits for the whole effect ──
+
+/// Sorted card ids of the pending `TriggerOrder` branches (labels are
+/// `"<card_id> slot <n> (...)"`).
+fn trigger_order_cards(r: &DebugRunner) -> Vec<String> {
+    let sel = r.pending_selection().expect("a TriggerOrder prompt");
+    assert_eq!(sel.kind, SelectionKind::TriggerOrder, "{sel:?}");
+    let mut cards: Vec<String> = sel
+        .effect_choices
+        .as_ref()
+        .expect("TriggerOrder branches")
+        .iter()
+        .map(|c| c.label.split(" slot ").next().unwrap_or(&c.label).to_string())
+        .collect();
+    cards.sort();
+    cards
+}
+
+/// Resolve the pending `TriggerOrder` by picking a `card_id` branch.
+fn choose_trigger(r: &mut DebugRunner, card_id: &str) {
+    let (player, action) = {
+        let sel = r.pending_selection().expect("a TriggerOrder prompt");
+        assert_eq!(sel.kind, SelectionKind::TriggerOrder, "{sel:?}");
+        let choice = sel
+            .effect_choices
+            .as_ref()
+            .expect("TriggerOrder branches")
+            .iter()
+            .find(|c| c.label.starts_with(&format!("{card_id} ")))
+            .unwrap_or_else(|| panic!("no {card_id} branch: {sel:?}"));
+        (sel.selecting_player, choice.action_id)
+    };
+    r.execute_action(player, action).unwrap();
+}
+
+/// §15-8-3-2 "Trigger-type effects can't activate during the processing for a
+/// rule or effect"; §15-4-3-2 "If multiple effects are triggered before a
+/// single rule or effect is resolved, they all trigger simultaneously";
+/// §15-5-2 "A triggering from 1 trigger condition is considered to only
+/// trigger once, even if it occurred multiple times at the same time".
+///
+/// Zenith's attack clause returns 2 [Vemmon] from the attacker's digivolution
+/// cards (ONE return, DCGO `ReturnToLibraryBottomDigivolutionCardsClass`
+/// stacks ONE `OnDigivolutionCardReturnToDeckBottom` for the list) and then
+/// De-Digivolves. Snatchmon (BT18-065)'s inherited "[All Turns] [Once Per
+/// Turn] When any [Vemmon] return to the bottom of the deck from this
+/// Digimon's digivolution cards, this Digimon unsuspends and gains <Blocker>"
+/// (a source under the attacker) and Butenmon (BT26-015)'s "[Your Turn] [Once
+/// Per Turn] When your effects add to decks, ..." both trigger during that
+/// effect: neither activates before the De-Digivolve, Snatchmon's triggers
+/// once, and they pend in ONE pool. G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH.
+///
+/// The parked pool clones faithfully for search: two clones resolve it in
+/// different orders and both settle with the attacker unsuspended.
+#[test]
+fn bt18_092_return_observers_wait_for_the_whole_effect_and_pool_once() {
+    let mut weak_defender = make_defender("OPP-WEAK", 5);
+    weak_defender.dp = Some(1000);
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT18-092")
+        .expect("BT18-092 in embedded DSL pack")
+        .dsl_card("BT18-065")
+        .expect("BT18-065 in embedded DSL pack")
+        .dsl_card("BT26-015")
+        .expect("BT26-015 in embedded DSL pack")
+        .add_card(make_vemmon("VEM-SRC-A"))
+        .add_card(make_vemmon("VEM-SRC-B"))
+        .add_card(make_attacker("ATK-TOP"))
+        .add_card(weak_defender)
+        .add_card(make_filler("DECK-PAD"))
+        .deck(0, &["DECK-PAD"; 5])
+        .deck(1, &["DECK-PAD"; 5])
+        .memory(10)
+        .start();
+    r.place_on_field(0, "BT18-092", None);
+    r.place_on_field(0, "BT26-015", Some(0));
+    let attacker = r.place_stack(0, &["VEM-SRC-A", "VEM-SRC-B", "BT18-065", "ATK-TOP"]);
+    let defender = r.place_on_field(1, "OPP-WEAK", Some(0));
+    r.push_source(defender, "OPP-WEAK");
+
+    let _ = r.attack_digimon(attacker, defender, false);
+    assert_eq!(r.pending_kind(), Some(SelectionKind::TriggerOrder));
+    r.accept_optional_trigger()
+        .expect("accept Zenith's attack clause");
+    for _ in 0..2 {
+        let pick = r.pending_selection_view().expect("a Vemmon source pick");
+        assert!(
+            matches!(pick.kind, SelectionKind::SourceMulti { .. }),
+            "{pick:?}"
+        );
+        let vemmon = pick
+            .effect_choices
+            .as_ref()
+            .and_then(|choices| {
+                choices
+                    .iter()
+                    .find(|c| c.label.contains("Vemmon"))
+                    .map(|c| c.action_id)
+            })
+            .unwrap_or(pick.valid_action_ids[0]);
+        r.execute_action(pick.selecting_player, vemmon)
+            .expect("Vemmon source pick");
+    }
+
+    let target = r
+        .pending_selection_view()
+        .expect("the De-Digivolve target pick");
+    assert_eq!(target.kind, SelectionKind::OppField);
+    assert_eq!(
+        r.game.players[0].battle_area[attacker.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "both Vemmon were returned"
+    );
+    assert!(
+        r.game.players[0].battle_area[attacker.index as usize].is_suspended,
+        "Snatchmon's reaction has not activated in the middle of Zenith's effect"
+    );
+    r.execute_action(target.selecting_player, target.valid_action_ids[0])
+        .expect("De-Digivolve target pick");
+
+    assert_eq!(
+        trigger_order_cards(&r),
+        vec!["BT18-065", "BT26-015"],
+        "after the whole effect: ONE pool, Snatchmon's reaction once (one return of 2 cards)"
+    );
+
+    for first in ["BT18-065", "BT26-015"] {
+        let mut c = DebugRunner::wrap(r.game.clone());
+        choose_trigger(&mut c, first);
+        let _ = c.auto_resolve();
+        assert!(c.game.pending_selection.is_none(), "{first} first: settled");
+        let atk = c.game.players[0]
+            .battle_area
+            .iter()
+            .find(|p| p.top_card().card_id(&c.game.card_data) == "ATK-TOP")
+            .expect("the attacker survived");
+        assert!(
+            !atk.is_suspended,
+            "{first} first: Snatchmon's reaction unsuspended the attacker"
+        );
+    }
+}

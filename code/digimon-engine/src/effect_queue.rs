@@ -2073,7 +2073,15 @@ impl Game {
         // Every queued effect captured its origin. Restore the caller before
         // draining so nested events do not inherit a temporary DNA scope.
         self.current_dna_origin = previous_dna_origin;
-        self.drain_effect_queue();
+        // A digivolution an effect performs (DemiMeramon EX13-004's "may
+        // digivolve into ... If this effect digivolved, trash your top
+        // security card") is part of that effect's processing: its triggers
+        // wait for the effect to finish (§15-8-3-2) and pend with the rest of
+        // what it triggered (§15-4-3-2). DCGO's `DigivolveIntoHandOrTrashCard`
+        // only stacks them (`StackSkillInfos`) and runs the effect's tail
+        // first. A player's digivolve action has no effect around it, so it
+        // drains here as before. G-ENGINE-EFFECT-DIGIVOLVE-WD-DRAINS-MID-BODY.
+        self.maybe_drain_effect_queue();
     }
 
     // ─── Internal helpers ───────────────────────────────────────────
@@ -3987,9 +3995,9 @@ impl Game {
         self.collapse_event_batch(first_index, true, false);
     }
 
-    /// Coalesce one source-trash event (`Game::begin_source_trash_event`):
+    /// Coalesce one source-move event (`Game::begin_source_move_event`):
     /// the `OnDigivolutionCardTrashed` entries the event stamped
-    /// (`TriggerContext::in_source_trash_event`, selected wherever they sit,
+    /// (`TriggerContext::in_source_move_event`, selected wherever they sit,
     /// so a queue `retain_mut` or swap mid-event cannot misattribute them)
     /// were enqueued once per trashed card, but cards trashed at the same
     /// time are ONE event, so each observer triggers once for it (§15-5-2,
@@ -4002,37 +4010,59 @@ impl Game {
     /// A trashed card's own inherited "when this card is trashed" effect is a
     /// different effect per card, so each still triggers. Other timings
     /// enqueued meanwhile are left alone. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
-    pub(crate) fn coalesce_source_trash_event(&mut self) {
+    pub(crate) fn coalesce_source_move_event(&mut self) {
         let stamped = |qe: &QueuedEffect| {
             qe.trigger_context
                 .as_ref()
-                .is_some_and(|c| c.in_source_trash_event)
+                .is_some_and(|c| c.in_source_move_event)
         };
-        let mut cards: Vec<CardHandle> = Vec::new();
-        for qe in self.effect_queue.iter().filter(|qe| stamped(qe)) {
-            if let Some(card) = qe.trigger_context.as_ref().and_then(|c| c.event_source_card) {
-                if !cards.contains(&card) {
-                    cards.push(card);
-                }
-            }
-        }
-        if cards.len() >= 2 {
-            for qe in self.effect_queue.iter_mut().filter(|qe| stamped(qe)) {
-                if let Some(context) = qe.trigger_context.as_mut() {
-                    for set in context.moved_card_sets.iter_mut() {
-                        set.cards = cards.clone();
+        // The same scope also coalesces digivolution cards returned to the
+        // bottom of a deck by one step (`fire_digivolution_card_returned_to_deck_bottom`,
+        // §15-5-2). Each timing is its own event: its members are the cards
+        // of that timing only.
+        let mut any_collapse = false;
+        for timing in [
+            EffectTiming::OnDigivolutionCardTrashed,
+            EffectTiming::OnDigivolutionCardReturnedToDeckBottom,
+        ] {
+            let mut cards: Vec<CardHandle> = Vec::new();
+            for qe in self
+                .effect_queue
+                .iter()
+                .filter(|qe| stamped(qe) && qe.timing == timing)
+            {
+                if let Some(card) = qe.trigger_context.as_ref().and_then(|c| c.event_source_card) {
+                    if !cards.contains(&card) {
+                        cards.push(card);
                     }
                 }
             }
+            if cards.len() >= 2 {
+                any_collapse = true;
+                for qe in self
+                    .effect_queue
+                    .iter_mut()
+                    .filter(|qe| stamped(qe) && qe.timing == timing)
+                {
+                    if let Some(context) = qe.trigger_context.as_mut() {
+                        for set in context.moved_card_sets.iter_mut() {
+                            set.cards = cards.clone();
+                        }
+                    }
+                }
+            }
+        }
+        if any_collapse {
+            // Grouping keys on the timing too, so the two events never merge.
             self.collapse_event_batch(0, true, true);
         }
         // The stamp only scopes this event: clear it (members included) so a
         // later event, and the §18-3 loop signature, never see it.
         for qe in self.effect_queue.iter_mut() {
             if let Some(context) = qe.trigger_context.as_mut() {
-                context.in_source_trash_event = false;
+                context.in_source_move_event = false;
                 for member in context.simultaneous_play_members.iter_mut() {
-                    member.in_source_trash_event = false;
+                    member.in_source_move_event = false;
                 }
             }
         }
@@ -4042,7 +4072,7 @@ impl Game {
         &mut self,
         first_index: usize,
         retain_play_subjects: bool,
-        source_trash_event: bool,
+        source_move_event: bool,
     ) {
         type Key = (
             CardHandle,
@@ -4053,12 +4083,12 @@ impl Game {
             EffectTiming,
         );
         let len = self.effect_queue.len();
-        // A source-trash event also separates entries by WHERE they are
+        // A source-move event (trash or deck-bottom return) also separates entries by WHERE they are
         // pending: a digivolution card's inherited effect enqueued from its
         // host's scan (pending on the host, `source_permanent: Some`) and the
         // same card's own "when this card is trashed" entry once it is in the
         // trash (`source_permanent: None`) are different pending effects.
-        let by_location = source_trash_event;
+        let by_location = source_move_event;
         let key_of = |qe: &QueuedEffect| -> Key {
             (
                 qe.source_card,
@@ -4079,13 +4109,13 @@ impl Game {
         // Group batch entries by identity, preserving queue order.
         let mut groups: Vec<(Key, Vec<usize>)> = Vec::new();
         for i in first_index..len {
-            // A source-trash event collapses only the entries it stamped,
+            // A source-move event collapses only the entries it stamped,
             // wherever they sit in the queue.
-            if source_trash_event
+            if source_move_event
                 && !self.effect_queue[i]
                     .trigger_context
                     .as_ref()
-                    .is_some_and(|c| c.in_source_trash_event)
+                    .is_some_and(|c| c.in_source_move_event)
             {
                 continue;
             }

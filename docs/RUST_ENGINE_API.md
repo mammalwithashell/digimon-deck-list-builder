@@ -4392,8 +4392,9 @@ from `BattleArea` to `Trash` naming every card of the trashing event. DSL
 the host-card snapshot, so return-to-hand/deck source disposition remains
 observable after the host leaves the battle area.
 Source-trash observers never drain inline (§15-8-3-2): one step that trashes
-several digivolution cards wraps them in `Game::begin_source_trash_event()` /
-`end_source_trash_event(..)` (a deferred-drain scope), and a rule process that
+several digivolution cards wraps them in `Game::begin_source_move_event()` /
+`end_source_move_event(..)` (a deferred-drain scope shared by source trashes and
+source returns to the deck bottom; renamed from `*_source_trash_event` in Task 41), and a rule process that
 moves a whole stack uses `Game::enqueue_digivolution_cards_trashed(..)`. Either
 way the cards form ONE event, so each observer triggers once for it (§15-5-2,
 the kept entry retains every card as a member, like a simultaneous play), and a

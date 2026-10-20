@@ -4914,7 +4914,13 @@ impl Game {
     /// loser's `[On Deletion]` and the `BattleResult` effects, one pool (see
     /// `enqueue_pending_battle_result_triggers`) -- all resolve before the
     /// end of the battle timing (`EndOfBattle`), which pools with the pending
-    /// processing due at the end of the battle (§18-1-1 / §18-1-2).
+    /// processing due at the end of the battle (§18-1-1 / §18-1-2). That
+    /// sequencing holds for an attack's battle. A battle an effect performs is
+    /// part of that effect's processing (§15-8-3-2): its battle-triggered
+    /// effects, its end-of-battle effects and the pending processing all wait
+    /// for the effect to finish and then pend in ONE pool with whatever else
+    /// it triggered (§15-4-3-2; DCGO `IBattle(..., IsWithoutAttack: true)`
+    /// stacks them and skips `AutoProcessCheck`).
     pub(crate) fn resume_pending_battle_resolutions(&mut self) {
         while self.pending_selection.is_none() && self.pending_deletion_batch_rest.is_empty() {
             if !self
@@ -4927,7 +4933,24 @@ impl Game {
             // Normally enqueued (and drained) by the battle deletion's flush;
             // a no-op then.
             self.enqueue_pending_battle_result_triggers();
-            self.drain_effect_queue();
+            // A battle an effect performs (EX13-077 "This Digimon may battle
+            // 1 of your opponent's Digimon") is part of that effect's
+            // processing: its triggers -- and the end-of-battle ones below --
+            // wait for the effect to finish (§15-8-3-2) and pend with the rest
+            // of what it triggered (§15-4-3-2). DCGO agrees: `IBattle` with
+            // `IsWithoutAttack` stacks them and skips `AutoProcessCheck`. An
+            // attack's battle resolves them before the attack continues
+            // (§14-2-4), so it keeps the direct drain.
+            // G-ENGINE-EFFECT-BATTLE-DRAIN-RUNS-TRIGGERS-MID-EFFECT.
+            let is_attack = self
+                .pending_battle_resolutions
+                .last()
+                .is_some_and(|state| state.is_attack);
+            if is_attack {
+                self.drain_effect_queue();
+            } else {
+                self.maybe_drain_effect_queue();
+            }
             if self.pending_selection.is_some() {
                 return;
             }
@@ -4943,7 +4966,11 @@ impl Game {
             // §18-1-2: pending processing due at the end of the battle pools
             // with the end-of-battle effects.
             self.enqueue_scheduled_for_timing(EffectTiming::EndOfBattle);
-            self.drain_effect_queue();
+            if state.is_attack {
+                self.drain_effect_queue();
+            } else {
+                self.maybe_drain_effect_queue();
+            }
         }
     }
 

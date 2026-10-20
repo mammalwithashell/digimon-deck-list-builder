@@ -318,7 +318,7 @@ impl Game {
             end_of_turn_attack_keyword: None,
             deferred_end_of_turn_attack_offers: Vec::new(),
             draining_deferred: 0,
-            source_trash_event_open: false,
+            source_move_event_open: false,
             turn_end_check_deferred: false,
             selection_resolution_depth: 0,
             play_enters_suspended: false,
@@ -508,7 +508,7 @@ impl Game {
         self.end_of_turn_attack_keyword = None;
         self.deferred_end_of_turn_attack_offers.clear();
         self.draining_deferred = 0;
-        self.source_trash_event_open = false;
+        self.source_move_event_open = false;
         self.turn_end_check_deferred = false;
         self.selection_resolution_depth = 0;
         self.until_condition_dirty = false;
