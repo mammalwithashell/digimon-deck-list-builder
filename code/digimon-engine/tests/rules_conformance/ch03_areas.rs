@@ -117,6 +117,8 @@ fn place_sourceless_digimon_of(chosen: PlayerId) -> (Vec<String>, Vec<String>) {
     let pick = if chosen == 0 { own } else { opp };
     use_option(&mut r, 0, "MAIN_SOURCELESS_TO_SECURITY");
     let sel = r.pending_selection().expect("the Digimon pick");
+    // An any-player field pick encodes (controller, slot) in the attack-id
+    // block (the same idiom as bt24_040's `encode_any_permanent`).
     let action = encode_attack(pick.player as u16, pick.index as u16);
     for h in [own, opp] {
         assert!(
@@ -149,8 +151,14 @@ fn place_sourceless_digimon_of(chosen: PlayerId) -> (Vec<String>, Vec<String>) {
 /// ("... at the top of your security stack", `MAIN_SRC_TO_SECURITY`) is
 /// authored `of: you`; text that names none is authored `to_owner: true`.
 /// Production shapes: BT24-040 Venusmon's leave-replacement cost (owner ruling
-/// 2026-10-20: the chosen Digimon goes to its owner's security, "other
-/// Digimon" being either player's per Q5781) and BT25-044 Junomon.
+/// 2026-10-20: the chosen Digimon, either player's per the unqualified printed
+/// text, goes to its owner's security) and BT25-044 Junomon.
+///
+/// This test exercises only the `disposition: none` path. The
+/// `disposition: cancel` (replacement-cost) route is pinned by
+/// `cards_behavioral::bt24_040_protection_paid_with_opponent_digimon_places_it_in_opponent_security`
+/// and `…_opponent_cost_body_is_checked_from_opponent_security_into_owner_trash`,
+/// not by this test.
 #[test]
 fn card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack() {
     cite!(
