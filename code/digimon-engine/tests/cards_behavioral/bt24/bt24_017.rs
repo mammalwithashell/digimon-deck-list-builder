@@ -101,9 +101,10 @@ fn push_to_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .expect("card in card_data");
     let idx = runner.game.next_card_index();
-    runner.game.players[p as usize]
-        .trash
-        .push(digimon_engine::card_source::CardSource::new(
+    runner
+        .game
+        .player_mut(p)
+        .put_in_trash(digimon_engine::card_source::CardSource::new(
             data_idx, p, idx,
         ));
 }
@@ -1118,4 +1119,17 @@ fn bt24_017_deck_add_observer_waits_for_the_whole_effect() {
         .as_ref()
         .expect("BT26-015's deck-add reaction is offered after the effect");
     assert_eq!(sel.selecting_player, 0, "{sel:?}");
+    assert_eq!(
+        runner
+            .game
+            .card_data_for_handle(sel.source_card)
+            .map(|c| c.card_id.as_str()),
+        Some("BT26-015"),
+        "the pending prompt is BT26-015's deck-add reaction: {sel:?}"
+    );
+    assert!(
+        sel.prompt.starts_with("1 of your Digimon may get +3000 DP"),
+        "BT26-015's own prompt: {:?}",
+        sel.prompt
+    );
 }

@@ -1228,7 +1228,7 @@ fn push_trash_card(r: &mut DebugRunner, player: u8, card_id: &str) {
         .unwrap_or_else(|| panic!("unknown card_id {card_id}"));
     let index = r.game.next_card_index();
     let card = digimon_engine::card_source::CardSource::new(data_index, player, index);
-    r.game.players[player as usize].trash.push(card);
+    r.game.player_mut(player).put_in_trash(card);
 }
 
 /// Answer the pending prompt with its first legal non-PASS option.
@@ -1375,6 +1375,116 @@ fn rule_check_triggers_pend_with_the_finished_effects_triggers() {
         "the rule check's trigger pends with the effect's"
     );
     choose(&mut r, "TAMER_TWO_EVENT_OBS_MEM");
+    resolve_prompts(&mut r);
+    assert_eq!(memory_sources(&r, cp).len(), 2);
+}
+
+/// §15-8-3-2 "Trigger-type effects can't activate during the processing for a
+/// rule or effect", also when a step of the effect drains the effect queue
+/// itself.
+///
+/// `WD_RETURN_SOURCE_THEN_MEM` ("[When Digivolving] Return 1 of this
+/// Digimon's digivolution cards to the bottom of the deck. Then, gain 1
+/// memory.") resumes after its source pick; returning the source drains the
+/// queue directly (its return-to-deck-bottom observers) while the effect is
+/// still resolving, and the return is a deck add for `OBS_OWN_DECK_ADD_MEM`
+/// ("When your effects add cards to a deck, gain 1 memory"). That observer
+/// activates only after the effect's own "gain 1 memory".
+#[test]
+fn window_triggers_wait_through_a_direct_drain_inside_a_resumed_effect() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_OWN_DECK_ADD_MEM", Some(0));
+    let carrier = r.place_stack(0, &[FILL, FILL, "WD_RETURN_SOURCE_THEN_MEM"]);
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+    for _ in 0..4 {
+        if r.pending_selection().is_none() {
+            break;
+        }
+        pick_first_option(&mut r); // the source to return (the effect resumes)
+    }
+
+    assert!(r.pending_selection().is_none(), "{:?}", r.pending_selection());
+    assert_eq!(
+        r.game.player(0).battle_area[carrier.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "1 digivolution card was returned"
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![
+            (0, "WD_RETURN_SOURCE_THEN_MEM".to_string()),
+            (0, "OBS_OWN_DECK_ADD_MEM".to_string()),
+        ],
+        "the deck-add observer activated after the whole effect, not at the return's drain"
+    );
+}
+
+/// §15-4-3-3 (as above), for the rule check that runs between two queued
+/// effects. `WD_RETURN_ALL_TRASH_SELF_MINUS` ("[When Digivolving] Return all
+/// cards in your trash to the bottom of your deck. Then, this Digimon gets
+/// -1000 DP for the turn. [On Deletion] Gain 1 memory.") resolves without a
+/// decision and leaves itself at 0 DP; the rule check right after it deletes
+/// it. Its [On Deletion] and the deck add's `OBS_OWN_DECK_ADD_MEM` pend in
+/// ONE pool.
+#[test]
+fn rule_check_after_a_queued_effect_pools_with_its_window_triggers() {
+    cite!(
+        "15-4-3-3",
+        "efae2fbeb8e4b5a4143c869cd417e1b33da48f07c2603d922ab1acc947401e3f"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_OWN_DECK_ADD_MEM", Some(0));
+    push_trash_card(&mut r, 0, FILL);
+    let carrier = r.place_on_field(0, "WD_RETURN_ALL_TRASH_SELF_MINUS", Some(0));
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+
+    assert!(r.game.player(0).trash.iter().all(|c| c
+        .card_id(&r.game.card_data)
+        != FILL), "the trash card was returned to the deck");
+    assert!(
+        !field_top_ids(&r, 0).contains(&"WD_RETURN_ALL_TRASH_SELF_MINUS".to_string()),
+        "the 0 DP Digimon was deleted by the rule check"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "nothing activated before the pool: {:?}",
+        memory_sources(&r, cp)
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&["OBS_OWN_DECK_ADD_MEM", "WD_RETURN_ALL_TRASH_SELF_MINUS"]),
+        "the rule check's [On Deletion] pends with the effect's deck-add trigger"
+    );
+    choose(&mut r, "OBS_OWN_DECK_ADD_MEM");
     resolve_prompts(&mut r);
     assert_eq!(memory_sources(&r, cp).len(), 2);
 }

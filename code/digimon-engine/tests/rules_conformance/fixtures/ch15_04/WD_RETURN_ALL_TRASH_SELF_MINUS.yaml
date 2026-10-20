@@ -1,0 +1,27 @@
+# WD_RETURN_ALL_TRASH_SELF_MINUS -- Digimon, Lv.3, red, 1000 DP, play cost 3.
+#   [When Digivolving] Return all cards in your trash to the bottom of your
+#   deck. Then, this Digimon gets -1000 DP for the turn.
+#   [On Deletion] Gain 1 memory.
+# A deck add (a batch-window event) by an effect that resolves without a
+# decision and leaves its own Digimon at 0 DP for the rule check that runs
+# right after it (§17-1-2-2): the §15-4-3-3 between-effects rule-check test.
+card: WD_RETURN_ALL_TRASH_SELF_MINUS
+name: Fadermon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Return all cards in your trash to the bottom of your deck. Then, this Digimon gets -1000 DP for the turn."
+    process:
+      - return_all_trash_to_deck_bottom: { of: you }
+      - add_dp_modifier:
+          target: source
+          value: -1000
+          expiry: end_of_turn
+  - when: on_deletion
+    summary: "[On Deletion] Gain 1 memory."
+    process:
+      - gain_memory: 1

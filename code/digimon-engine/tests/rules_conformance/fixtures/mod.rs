@@ -87,6 +87,8 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/WA_HYBRID_DIGI.yaml"),
     include_str!("ch15_04/WA_MEM_INH.yaml"),
     include_str!("ch15_04/WD_DEL_RET.yaml"),
+    include_str!("ch15_04/WD_RETURN_ALL_TRASH_SELF_MINUS.yaml"),
+    include_str!("ch15_04/WD_RETURN_SOURCE_THEN_MEM.yaml"),
     include_str!("ch15_04/WD_RETURN_TRASH_PLAY_TOKEN.yaml"),
     include_str!("ch15_04/WIN_MEM.yaml"),
     include_str!("ch15_04/WOULD_DEL_STRIKE.yaml"),

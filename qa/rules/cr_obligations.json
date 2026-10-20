@@ -4160,7 +4160,8 @@
       "status": "proven",
       "tests": [
         "ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers",
-        "ch15_04_effect_states::rule_check_triggers_pend_with_the_finished_effects_triggers"
+        "ch15_04_effect_states::rule_check_triggers_pend_with_the_finished_effects_triggers",
+        "ch15_04_effect_states::rule_check_after_a_queued_effect_pools_with_its_window_triggers"
       ],
       "text": "When an effect is triggered by a rule check, it triggers simultaneously with other effects that triggered at that timing. (Example: An [On Deletion] effect on a Digimon that was deleted by its DP becoming 0 at the start of your turn will trigger simultaneously with [Start of Your Turn] effects.)"
     },
@@ -4750,7 +4751,8 @@
       "tests": [
         "ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish",
         "ch15_08_effect_categories::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends",
-        "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes"
+        "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes",
+        "ch15_04_effect_states::window_triggers_wait_through_a_direct_drain_inside_a_resumed_effect"
       ],
       "text": "Trigger-type effects can't activate during the processing for a rule or effect."
     },
