@@ -4,6 +4,7 @@
 //!
 //! [All Turns] All of your Digimon with [Huckmon] in their name or [Royal Knight] trait get +2000 DP.
 //! [On Play] Gain 1 memory.
+//! Official Q1470 (2024-08-01): always also treated as Sistermon Noir and Virus.
 //!
 //! `inherited_effect_description_eng` duplicates "Card Effect(s)" for this card
 //! in the ingested data. The printed text is not an inherited effect, so these
@@ -64,9 +65,25 @@ fn bt6_084_has_printed_metadata() {
     assert!(card.traits.iter().any(|trait_name| trait_name == "Puppet"));
     assert_eq!(
         card.attribute,
-        ["Data"],
-        "BT6-084 is a Data attribute Digimon"
+        ["Data", "Virus"],
+        "official Q1470 always adds Virus to the printed Data attribute"
     );
+    assert_eq!(card.form.as_deref(), Some("Champion"));
+    assert_eq!(card.also_treated_as, ["Sistermon Noir"]);
+}
+
+#[test]
+fn bt6_084_official_identity_rule_is_visible_to_runtime_queries() {
+    let mut runner = sistermon_runner();
+    let handle = runner.place_on_field(0, "BT6-084", None);
+    let source = runner.game.players[0].battle_area[handle.index as usize].top_card();
+    assert!(source.contains_card_name("Sistermon Ciel", &runner.game.card_data));
+    assert!(source.contains_card_name("Sistermon Noir", &runner.game.card_data));
+    assert!(!source.contains_card_name("Sistermon Blanc", &runner.game.card_data));
+    for expected in ["Puppet", "Champion", "Data", "Virus"] {
+        assert!(source.traits(&runner.game.card_data).iter().any(|t| t == expected),
+            "runtime traits must include {expected}");
+    }
 }
 
 #[test]

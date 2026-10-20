@@ -21,7 +21,8 @@
     "Champion"
   ],
   "attribute_eng": [
-    "Data"
+    "Data",
+    "Virus"
   ],
   "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its name or [Royal Knight] trait among them to your hand. Trash the rest.\r\n[All Turns] All of your Digimon with [Huckmon] in their names or [Royal Knight] trait gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).",
   "inherited_effect_description_eng": "Card Effect(s) [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its name or [Royal Knight] trait among them to your hand. Trash the rest.\r\n[All Turns] All of your Digimon with [Huckmon] in their names or [Royal Knight] trait gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).",
