@@ -113,10 +113,19 @@ effects:
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
     optional: true
-    # DCGO filter: HasGreymonName || ContainsCardName("Omnimon") ||
-    # HasGarurumonName, on a Digimon card. HasGreymonName excludes
-    # DoruGreymon / BurningGreymon / DexDoruGreymon; HasGarurumonName excludes
-    # KendoGarurumon (CardSource.cs:1597-1629).
+    # Name exclusions — Bandai's Language Standardization Rules (2026-05-29,
+    # docs/digimon-rules/language-standardization.md): BurningGreymon /
+    # DoruGreymon / DexDoruGreymon are not treated as having [Greymon] in their
+    # names, and KendoGarurumon is not treated as having [Garurumon], in any
+    # language. The original printing spelled the Greymon half out as
+    # "(other than [DoruGreymon], [BurningGreymon], or [DexDoruGreymon])"; the
+    # newest printing (a block-02 reprint with modernised text; rule 2-1 says
+    # the newest card's text governs) drops the parenthetical, and the rule
+    # now carries it. DCGO agrees:
+    # HasGreymonName || ContainsCardName("Omnimon") || HasGarurumonName
+    # (CardSource.cs:1603-1635). The engine's `name_contains` is still a
+    # literal substring, so the exclusion is spelled out here; this `none_of`
+    # becomes redundant once the engine applies the standardization table.
     # DCGO also requires the target card IsExistOnHand ("a Digimon card in
     # your hand") — the subject-free `cost_target_from_hand: true` leaf
     # (G-DSL-COST-TARGET-FROM-HAND) keeps an effect-driven digivolve from
