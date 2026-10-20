@@ -894,20 +894,9 @@ impl<'a> EffectContext<'a> {
         if self.source_card_trash_blocked(target, card) {
             return false;
         }
-        let removed = self.game.player_mut(target.player).battle_area[target.index as usize]
-            .card_sources
-            .remove(index);
-        // Host = the permanent's top card. The below-top source was already
-        // removed above; the perm still exists with its top intact (a Tamer
-        // always retains its own card as the top), so the host is unchanged by
-        // the helper's push-to-trash. Direct index is infallible by
-        // construction (validated present at the top of this function).
-        let host_card = self.game.player(target.player).battle_area[target.index as usize]
-            .top_card()
-            .handle();
-        self.game
-            .trash_source_and_fire(removed.owner, target, removed, host_card);
-        true
+        // Host = the permanent's top card, read after the removal (a Tamer always
+        // retains its own card as the top). `index` was validated present above.
+        self.game.trash_source_at_index_and_fire(target, index)
     }
 
     /// Trash one bottom face-down digivolution card from under each entry of

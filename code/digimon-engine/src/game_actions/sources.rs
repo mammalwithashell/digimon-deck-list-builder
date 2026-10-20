@@ -22,6 +22,38 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
+    /// Remove the digivolution source at `source_index` from `target`'s stack
+    /// and trash it to its own owner's trash, firing
+    /// `OnDigivolutionCardTrashed` once for it with the standard effect cause.
+    ///
+    /// The single Tier-2 "remove one below-top source and trash+fire" operation
+    /// for the facade's `trash_bottom_face_down_source`. The host card is read
+    /// AFTER the removal (the permanent keeps its top, so it is unchanged by the
+    /// removal). The caller validated `target` / `source_index` and the trash
+    /// protections; returns `false` (no mutation) if either is stale.
+    pub(crate) fn trash_source_at_index_and_fire(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+    ) -> bool {
+        let Some(permanent) = self
+            .player_mut(target.player)
+            .battle_area
+            .get_mut(target.index as usize)
+        else {
+            return false;
+        };
+        // Never the top card: the permanent must keep its own top (a source is
+        // always below it).
+        if source_index + 1 >= permanent.card_sources.len() {
+            return false;
+        }
+        let removed = permanent.card_sources.remove(source_index);
+        let host_card = permanent.top_card().handle();
+        self.trash_source_and_fire(removed.owner, target, removed, host_card);
+        true
+    }
+
     pub(crate) fn commit_digixros_material_sources(
         &mut self,
         mut target: PermanentHandle,
