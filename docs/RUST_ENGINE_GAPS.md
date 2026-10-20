@@ -5979,6 +5979,14 @@ no dedicated clause test in `dna_result_new_card.rs`.
 - **Fix shape:** gate the printed-effect offer on `pending_attack.is_none()` (defer it the way the keyword offers defer, or decide — ruling needed — whether a printed "may attack" effect that activates mid-attack is lost instead of deferred); restore the tag unconditionally on refusal; pin both with a conformance test in `ch11_14_attack_procedure` (AD1-004 or BT25-086 after an `<Execute>` attack).
 - **Blocks training:** no — the refused pick wastes an action but changes no outcome the rules give (the attack could not legally happen then); filed from the final whole-branch re-review (final-fix-rereview.md).
 
+### A security-check trigger context carries no identity or snapshot of the checking Digimon  [G-ENGINE-SECURITY-CHECK-CONTEXT-NO-ATTACKER-SNAPSHOT] — OPEN (2026-10-20, non-blocking)
+
+- **Rule:** §15-4-4-5 with the campaign's departed-referent reading (owner sign-off item 4; §15-8-3-8, §15-8-3-9-4): a pending effect's trigger qualifier is re-read when it would activate -- live while the event's referent is on the field, from the referent's last-known information once it has left.
+- **Ours:** main's Security-check capture (433bd379c, merged in e724c083c) captures the check's observers at the reveal. Their trigger contexts (`effect_queue.rs` ~L2259-2283: `OnSecurityCheck` / `OnCheckFaceUpSecurity`) set `target_permanent` / `event_host_permanent` to the checking Digimon but not `event_permanent`, so no `event_permanent_identity` / `event_snapshot` is taken for it (`effect_queue.rs` ~L2761-2795 snapshot only `event_permanent`). If a `[Security]` body removes the checker before a captured observer activates, `shift_effect_queue_after_battle_area_remove` (`combat/mod.rs` ~L4250-4290) nulls the captured handles and an attacker-reading qualifier on a non-checker observer ("When one of your [X] Digimon checks security") reads the referent as absent, not from its snapshot.
+- **Reach:** no production card today. The two production users of these timings (BT16-033, BT20-055) read "this Digimon" (the checker is the source), and a departed source already cancels the entry (`security_check_source_invalidated`). Pre-existing on both parents; main's capture-at-reveal widens the window.
+- **Fix shape:** seed the checker's `event_permanent_identity` + `event_snapshot` into these contexts (or set `event_permanent: Some(attacker)` after confirming every `event_target_*` reader still resolves the same referent), with a witness in `ch11_14_attack_procedure`: a "your Digimon with N DP or more checks" observer, `[Security]` deletes the checker, the observer reads the snapshot.
+- **Blocks training:** no. Filed from the main-merge review (M1, `main-merge-review-findings.md`).
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.
