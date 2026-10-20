@@ -574,6 +574,7 @@ pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool 
         CompiledStep::EffectInitiatedDigivolve { .. }
             | CompiledStep::PaySourcePrefix { .. }
             | CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+            | CompiledStep::TrashBottomFaceDownSourcesUnderTamers { .. }
             | CompiledStep::TrashLinkCardOfOwnDigimon { .. }
             | CompiledStep::SelectHand { .. }
             | CompiledStep::SelectTrash { .. }
@@ -1308,6 +1309,25 @@ mod tests {
         }])];
 
         assert!(steps_provide_resource_flow(&steps));
+    }
+
+    /// Both face-down-under-Tamer trash costs park a Tamer pick, so a
+    /// cost-reduction `pay_cost` built on either is interactive
+    /// (`G-COST-REDUCTION-INTERACTIVE-PAY-COST`).
+    #[test]
+    fn face_down_under_tamer_trash_costs_install_a_selection() {
+        assert!(body_first_step_installs_selection(&[
+            CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+                of: CompiledPlayerRef::You,
+                optional: false,
+            }
+        ]));
+        assert!(body_first_step_installs_selection(&[
+            CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+                of: CompiledPlayerRef::You,
+                count: 2,
+            }
+        ]));
     }
 
     #[test]
