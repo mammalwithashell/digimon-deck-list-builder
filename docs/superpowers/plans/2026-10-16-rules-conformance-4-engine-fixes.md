@@ -800,4 +800,25 @@ Two are campaign regressions (Tasks 37, 38 — introduced by Tasks 18 and 6), tw
 - [ ] **Step 4: Sidecar:** `15-5-2` → proven (new entry; it has none today); regenerate; `--check`. Gap → RESOLVED.
 - [ ] **Step 5: Commit** — `engine: one multi-card cost trash is one event, each observer triggers once (§15-5-2; G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS)`.
 
+### Task 41: direct effect-queue drains inside a still-resolving effect wait for that effect (pre-existing; filed by the Task 39 re-review)
+
+**Gaps:** `G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH` (OPEN; re-assessed **Blocks training: yes** by Task 39 round 2 — digivolve and returned-to-deck-bottom sites) and `G-ENGINE-EFFECT-BATTLE-DRAIN-RUNS-TRIGGERS-MID-EFFECT` (OPEN; effect-initiated battles; reachability by reading, confirm with a test first). **Rules:** §15-4-3-2 (triggers before one effect resolves are simultaneous), §15-8-3-2 (a trigger raised during an effect waits for that effect), §15-4-3-3 / §15-4-3-5-1 (ordering). One mechanism, three sites: a step inside a resolving effect calls `drain_effect_queue()` directly, so triggers raised so far run mid-effect and the effect's later triggers form a second pool. Task 39 already holds the `play_token` and Option placement/trash/Link observer drains (`release_event_window_triggers`, the `draining_deferred` guard on the fallback flushes) — extend the SAME mechanism, no second queue.
+
+**Witnesses (from the Task 39 re-review; make each a RED test first):**
+- Digivolve site (`effect_context/action/digivolve.rs:56,64`): BT17-097 Return to the Primogenitor's `<Delay>` replacement with Imperialdramon (BT12-031 or BT16-027) in hand — the Imperialdramon [When Digivolving] resolves before the rest of the deleting effect (`lower_replacement.rs:2268-2271`).
+- Returned-to-deck-bottom site (`game_actions/mod.rs:2474`): Zenith BT18-092 with Vemmon BT18-065 attacking and BT26-015 on the field — BT18-065's observer resolves after the first returned card, before the second return and the `<De-Digivolve>`; the BT26-015 deck-add reaction is held, so the pool splits. BT21-060 / P-094 Destromon reach it the same way.
+- Effect-battle drains (`resume_pending_battle_resolutions`, `combat/mod.rs:4930,4946`): EX13-077 Omnimon: Merciful Mode choosing "return 5 to deck bottom" then "battle" with BT26-015 out. Confirm reachability with the test before changing combat code; if the attack-wait in `combat/mod.rs:768-770` already covers it, record that and close the entry as not-reachable.
+- Not in scope (assessed unreachable by Task 39 round 2): the `[Counter]` drain and `activate_delayed_option_main`. Reachability not assessed (list in the report, test one if cheap): Delay/Training disposal (`game_actions/mod.rs:1817,1899`), Link attach (`misc.rs:1536`), arts-digivolve (`mod.rs:1338,1345`), linked-card trash during deletion (`combat/deletion.rs:743`).
+
+**Files:**
+- Modify: `code/digimon-engine/src/effect_queue.rs` (the deferral/release mechanism from Task 39), `code/digimon-engine/src/effect_context/action/digivolve.rs`, `code/digimon-engine/src/game_actions/mod.rs` (returned-to-deck-bottom), `code/digimon-engine/src/combat/mod.rs` only if the effect-battle witness is RED.
+- Tests: `tests/rules_conformance/ch15_04_effect_states.rs` — one conformance test per site (one pool after the whole effect; nothing resolves mid-effect; §15-4-3-2, §15-8-3-2); real-card pins in `tests/cards_behavioral/bt18/bt18_092.rs` (Zenith + Vemmon + BT26-015) and the BT17-097 line; clone-while-parked at the resulting pool.
+- Keep green: `--test rules_conformance`, `--test timing_dispatch`, `--test archetypes`, `--test combat`, `--test clone_fuzz --features dsl-yaml-loader`, lib, dcgo-harness tests, replay goldens (`cargo run --bin replay_corpus -- verify ...`; attribute before any bless), `exam_sim_all.py` (re-lower moved lines with the citation, never by weakening), then the FULL `cards_behavioral`.
+
+- [ ] **Step 1: Witness tests (three sites); run → the reachable ones FAIL.**
+- [ ] **Step 2: Implement** — hold the direct drains while an effect resolves (extend Task 39's mechanism); combat only if its witness is RED.
+- [ ] **Step 3: Run → PASS**; regression list; exam-sim; goldens; full `cards_behavioral`.
+- [ ] **Step 4: Sidecar:** `15-8-3-2` / `15-4-3-2` add the tests; regenerate; `--check`. Gap entries → RESOLVED (or the effect-battle one → not-reachable with the reason).
+- [ ] **Step 5: Commit** — `engine: direct effect-queue drains inside a resolving effect wait for it (§15-4-3-2, §15-8-3-2; G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH, G-ENGINE-EFFECT-BATTLE-DRAIN-RUNS-TRIGGERS-MID-EFFECT)`.
+
 **Phase H in Task 23's closure:** the digest's residuals list drops the two exam divergences once Tasks 37/38 land; the "Blocking gaps closed" list adds all four ids; the exam-sim line in the digest/PR body is re-measured on the final head.
