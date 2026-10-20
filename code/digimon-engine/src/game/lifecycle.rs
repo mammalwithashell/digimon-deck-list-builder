@@ -280,6 +280,7 @@ impl Game {
         self.abort_would_digivolve_declaration();
         self.abort_effect_digivolve_scopes();
         self.pending_security_moves.clear();
+        self.security_placement_receipts.clear();
         self.current_deletion_receipt = None;
         self.winner = winner;
         self.terminal_outcome_reason = Some(reason);

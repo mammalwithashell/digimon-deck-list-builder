@@ -1346,7 +1346,22 @@ pub(crate) fn run_resume(
         }
         ResumeFrame::OptionalReplacement(mut state) => {
             let outer_conts = std::mem::take(&mut state.outer_conts);
+            let base = game.parked_replacement.len();
             crate::replacement::run_optional_replacement_step(game, state, action_id, is_pass);
+            // An accepted replacement whose body parked commits later, when
+            // its parked window drains. A tail composed behind this prompt
+            // belongs after that commit (e.g. BT24-040's finalize after the
+            // cost body's leave window), not between the body and the commit.
+            if game.pending_selection.is_some() && !outer_conts.is_empty() {
+                if let Some(parked) = game
+                    .parked_replacement
+                    .get_mut(base)
+                    .filter(|p| p.window.is_some())
+                {
+                    parked.outer_conts.extend(outer_conts);
+                    return;
+                }
+            }
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::DelayCancelAfterSelection {

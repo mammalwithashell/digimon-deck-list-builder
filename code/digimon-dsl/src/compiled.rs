@@ -483,6 +483,9 @@ pub struct CompiledPredicate {
     /// Direction-specific legality; see PredicateSpec::can_unsuspend.
     #[serde(default)]
     pub can_unsuspend: Option<bool>,
+    /// See `PredicateSpec::owner_can_add_security` (BT24-040).
+    #[serde(default)]
+    pub owner_can_add_security: Option<bool>,
     /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
     #[serde(default)]
     pub can_attack: Option<CompiledCanAttack>,
@@ -3087,11 +3090,13 @@ pub enum CompiledStep {
     /// Engine-only: after a "by placing X as the bottom security card, it
     /// doesn't leave" payment (`PlacePermanentBottomSecurityAndCancelReplacement`),
     /// cancel the current replacement only if card `card` actually reached
-    /// `player`'s security stack (§15-7-1 / §15-7-2). Runs behind any prompt
-    /// the placement parked on (the placed Digimon's own would-leave shield).
+    /// `player`'s security stack (§15-7-1 / §15-7-2), or was processed under
+    /// Digi-Egg / token rules (§15-1-9) — read from the open
+    /// `Game::security_placement_receipts` entry for `card`. Runs behind any
+    /// prompt the placement parked on (the placed Digimon's own would-leave
+    /// shield).
     SecurityPlacementCancelFinalize {
         card: u16,
-        player: u8,
     },
     /// Engine-only paid prevention, matched to the carrier's actual physical deletion.
     PaidDeletionPreventionFinalize {

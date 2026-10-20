@@ -287,6 +287,14 @@ pub struct PredicateSpec {
     /// Unlike can_change_orientation, this never consults CannotSuspend.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_unsuspend: Option<bool>,
+    /// Permanent-subject leaf: the OWNER of the permanent's top card can have
+    /// security cards added by effects (no `CannotAddSecurityByEffect` on that
+    /// player). Use it to filter out a cost body that can't be placed in its
+    /// owner's security (§3-1-3-8): choosing it would make the optional
+    /// processing condition impossible, so it can't be chosen (§15-7-4).
+    /// Driver BT24-040 Venusmon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner_can_add_security: Option<bool>,
     /// Permanent-subject leaf: the permanent can attack right now via an
     /// effect-granted attack â€” i.e. the engine would offer at least one legal
     /// attack target for `may_attack_now` with the same `targets` /

@@ -118,6 +118,13 @@ impl Game {
                 &self.pending_security_moves,
             );
         }
+        if !self.security_placement_receipts.is_empty() {
+            debug_field(
+                &mut h,
+                "security_placement_receipts",
+                &self.security_placement_receipts,
+            );
+        }
         if !self.field_source_receipts.is_empty() {
             debug_field(&mut h, "field_source_receipts", &self.field_source_receipts);
         }

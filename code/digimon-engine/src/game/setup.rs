@@ -252,6 +252,7 @@ impl Game {
             pending_would_link_resume: None,
             pending_field_top_source_moves: Vec::new(),
             pending_security_moves: Vec::new(),
+            security_placement_receipts: Vec::new(),
             pending_option_link_host: None,
             pending_digimon_link: None,
             pending_link_host: None,
@@ -445,6 +446,7 @@ impl Game {
         self.pending_field_top_source_moves.clear();
         self.field_source_receipts.clear();
         self.pending_security_moves.clear();
+        self.security_placement_receipts.clear();
         self.pending_option_link_host = None;
         self.pending_digimon_link = None;
         self.pending_link_host = None;

@@ -4140,6 +4140,15 @@ impl Game {
             }
         }
         self.fire_on_leave_field(target, snapshot);
+        // The placement was processed — into security, or under Digi-Egg /
+        // token rules — which meets a "by placing it" condition (§15-1-9).
+        if let Some(receipt) = self
+            .security_placement_receipts
+            .iter_mut()
+            .rfind(|(card, _)| *card == top_handle.0)
+        {
+            receipt.1 = true;
+        }
         if !egg && !token {
             self.fire_on_place_security(player_id, observer_player, top_handle);
         }

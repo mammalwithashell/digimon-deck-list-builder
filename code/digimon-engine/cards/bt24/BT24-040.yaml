@@ -90,10 +90,20 @@ effects:
     # (`PlacePermanentInSecurityAndProcessAccordingToResult` ->
     # `IPutSecurityPermanent` -> `CardObjectController.AddSecurityCard` ->
     # `cardSource.Owner.SecurityCards`), so the ruling, §3-1-3-8 and DCGO
-    # agree: `to_owner: true`. The leave is cancelled only if the card actually
-    # reached security (§15-7-1); the chosen Digimon's own would-leave shield
-    # (e.g. its controller's <Guard>) may stop it, and then the [TS] Digimon
-    # leaves (§15-7-2).
+    # agree: `to_owner: true`. The leave is cancelled only if the placement
+    # was processed (§15-7-1): a token or Digi-Egg cost body meets the
+    # condition without entering security (§15-1-9: "will be met even if the
+    # card isn't actually placed in that area due to Digi-Egg card or token
+    # rules"; DCGO `IPutSecurityPermanent` sets IsPlacedSecurity before its
+    # token branch). The chosen Digimon's own would-leave shield (e.g. its
+    # controller's <Guard>) may stop it, and then the [TS] Digimon leaves
+    # (§15-7-2).
+    # `owner_can_add_security: true`: a Digimon whose owner can't add security
+    # by effects can't be placed there, so it can't be chosen (§15-7-4, Ver.
+    # 4.3); with no other payable body the replacement isn't offered.
+    # dcgo_quirk: DCGO still offers and selects it (`CanPlaceToSecurityCondition`
+    # has no owner check) and `IPutSecurityPermanent` then fails on
+    # `TopCard.Owner.CanAddSecurity`; the PDF governs.
     process:
       - select_any_permanent:
           bind_as: cost_body
@@ -101,6 +111,7 @@ effects:
             all_of:
               - kind: digimon
               - materials_count_lte: 0
+              - owner_can_add_security: true
               - not_in_binding: replacement_subject
           prompt: "Place another sourceless Digimon as bottom security"
       - place_on_security:

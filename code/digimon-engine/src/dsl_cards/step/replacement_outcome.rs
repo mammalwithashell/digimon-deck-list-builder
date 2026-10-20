@@ -108,35 +108,32 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 } else {
                     crate::dsl_cards::step::resolve_player(ctx, *of)
                 };
-                let placed = ctx.place_sourceless_permanent_bottom_security(player, handle);
-                if placed || ctx.game.pending_selection.is_some() {
-                    // "By placing X ..., they don't leave": the leave is
-                    // cancelled only if X actually reached security
-                    // (§15-7-1; §15-7-2 when it didn't). X's own would-leave
-                    // shield (e.g. its controller's <Guard>) may have parked
-                    // the placement — the finalize step waits behind it.
-                    let finalize = [CompiledStep::SecurityPlacementCancelFinalize {
-                        card: card.0,
-                        player,
-                    }];
-                    super::run_steps_with_runtime(
-                        &finalize,
-                        ctx,
-                        &mut Bindings::new(),
-                        &super::StepRuntime::default(),
-                    );
-                }
+                // "By placing X ..., they don't leave": the leave is
+                // cancelled only if X's placement was processed (§15-1-9:
+                // a token / Digi-Egg meets it without entering security;
+                // §15-7-1, and §15-7-2 when it wasn't). X's own would-leave
+                // shield (e.g. its controller's <Guard>) may park the
+                // placement — the finalize step waits behind it.
+                ctx.game.security_placement_receipts.push((card.0, false));
+                ctx.place_sourceless_permanent_bottom_security(player, handle);
+                let finalize = [CompiledStep::SecurityPlacementCancelFinalize { card: card.0 }];
+                super::run_steps_with_runtime(
+                    &finalize,
+                    ctx,
+                    &mut Bindings::new(),
+                    &super::StepRuntime::default(),
+                );
             }
             true
         }
-        CompiledStep::SecurityPlacementCancelFinalize { card, player } => {
-            if ctx
+        CompiledStep::SecurityPlacementCancelFinalize { card } => {
+            let processed = ctx
                 .game
-                .player(*player)
-                .security
+                .security_placement_receipts
                 .iter()
-                .any(|c| c.handle().0 == *card)
-            {
+                .rposition(|(c, _)| c == card)
+                .map(|i| ctx.game.security_placement_receipts.remove(i).1);
+            if processed == Some(true) {
                 set_outcome(ctx, ReplacementOutcome::Cancelled);
             }
             true

@@ -1087,6 +1087,7 @@ fn compile_predicate(
         is_unsuspended: p.is_unsuspended,
         can_change_orientation: p.can_change_orientation,
         can_unsuspend: p.can_unsuspend,
+        owner_can_add_security: p.owner_can_add_security,
         can_attack: p.can_attack.map(|c| crate::compiled::CompiledCanAttack {
             targets: compile_attack_target_spec(c.targets),
             without_suspending: c.without_suspending,

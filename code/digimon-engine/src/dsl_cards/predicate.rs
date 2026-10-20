@@ -4357,6 +4357,15 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    if let Some(want) = pred.owner_can_add_security {
+        let can = !rctx.game.modifiers.player_has(
+            perm.top_card().owner,
+            crate::enums::ModifierType::CannotAddSecurityByEffect,
+        );
+        if can != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.can_change_orientation {
         // DCGO `CanChangeOrientation`: IsSuspended ? CanUnsuspend : CanSuspend.
         let can = if perm.is_suspended {
@@ -4929,6 +4938,7 @@ fn eval_breeding_permanent_fields(
         && pred.is_unsuspended.is_none()
         && pred.can_change_orientation.is_none()
         && pred.can_unsuspend.is_none()
+        && pred.owner_can_add_security.is_none()
         && pred.can_attack.is_none()
 }
 
