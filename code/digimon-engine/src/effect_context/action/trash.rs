@@ -851,15 +851,20 @@ impl<'a> EffectContext<'a> {
         trashed
     }
 
-    /// Trash the bottom-most face-down digivolution source from `target`,
-    /// fire `OnDigivolutionCardTrashed`, and drain the observer queue. Returns
-    /// `true` iff a face-down source was found at `card_sources[0]` and
-    /// trashed; returns `false` with no mutation otherwise (no face-down
-    /// bottom source, or `target` missing).
+    /// Trash "the bottom face-down card" from under `target` -- its LOWEST
+    /// face-down card (`Permanent::face_down_source_indices().next()`),
+    /// whether or not face-up cards sit below it -- and fire
+    /// `OnDigivolutionCardTrashed`. Returns `true` iff such a card existed and
+    /// was trashed; returns `false` with no mutation otherwise (no face-down
+    /// card under the top card, the card is protected from this effect's
+    /// trash, or `target` missing).
     ///
     /// This is the cost-form trash primitive for ST-23 BEATBREAK and ST-24
     /// DATA SQUAD cards whose printed text reads "by trashing the bottom
-    /// face-down card from under any of your Tamers, ...".
+    /// face-down card from under any of your Tamers, ...". The card text and
+    /// DCGO (`BT26_005.cs` `DigivolutionCards.LastOrDefault(IsFlipped)`) read
+    /// "bottom face-down card" as the lowest face-down one; the rules manual
+    /// has no narrower definition.
     ///
     /// The trashed source routes to the source's own `owner` trash, matching
     /// the standard `OnDigivolutionCardTrashed` ownership semantics (mirrors
@@ -873,38 +878,25 @@ impl<'a> EffectContext<'a> {
     /// ST24-01 Koromon, ST24-06 RizeGreymon, ST24-10 Lilamon, ST24-11 Rosemon,
     /// ST24-12 Falcomon.
     pub fn trash_bottom_face_down_source(&mut self, target: PermanentHandle) -> bool {
-        if let Some(card) = self
+        let Some((index, card)) = self
             .game
             .player(target.player)
             .battle_area
             .get(target.index as usize)
-            .and_then(|p| p.card_sources.first())
-        {
-            if self.source_card_trash_blocked(target, card.handle()) {
-                return false;
-            }
-        }
-
-        // Inspect `card_sources[0]`: it must exist AND be face-down. Reject
-        // before any mutation otherwise (missing target, empty stack, or a
-        // face-up bottom source — e.g. an un-stashed Tamer whose only source
-        // is its own face-up card).
-        let removed = {
-            let permanent = match self
-                .game
-                .player_mut(target.player)
-                .battle_area
-                .get_mut(target.index as usize)
-            {
-                Some(p) => p,
-                None => return false,
-            };
-            match permanent.card_sources.first() {
-                Some(bottom) if bottom.face_down => {}
-                _ => return false,
-            }
-            permanent.card_sources.remove(0)
+            .and_then(|p| {
+                p.face_down_source_indices()
+                    .next()
+                    .map(|i| (i, p.card_sources[i].handle()))
+            })
+        else {
+            return false;
         };
+        if self.source_card_trash_blocked(target, card) {
+            return false;
+        }
+        let removed = self.game.player_mut(target.player).battle_area[target.index as usize]
+            .card_sources
+            .remove(index);
         // Host = the permanent's top card. The below-top source was already
         // removed above; the perm still exists with its top intact (a Tamer
         // always retains its own card as the top), so the host is unchanged by
@@ -919,7 +911,7 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Trash one bottom face-down digivolution card from under each entry of
-    /// `targets` (a Tamer listed twice gives up its bottom two) as ONE
+    /// `targets` (a Tamer listed twice gives up its two lowest) as ONE
     /// source-trash event: the cards of one "by trashing N bottom face-down
     /// cards from under any of your Tamers" condition (§15-7-1) are trashed
     /// at the same time, so each `OnDigivolutionCardTrashed` observer
@@ -929,9 +921,13 @@ impl<'a> EffectContext<'a> {
     /// of them ("under your Tamers") once. The event's members are every
     /// trashed card (`coalesce_source_trash_event`).
     ///
+    /// Each pick takes the lowest face-down card left under that Tamer
+    /// (`trash_bottom_face_down_source`), so a Tamer listed twice gives up its
+    /// two lowest face-down cards; face-up cards stay.
+    ///
     /// The payment is all or nothing: every pick is checked first (each
-    /// listed Tamer still has that many face-down cards at the bottom of its
-    /// stack, none protected from this effect's trash), and on any failure
+    /// listed Tamer still has that many face-down cards under it, none
+    /// protected from this effect's trash), and on any failure
     /// nothing moves and `false` is returned. Returns `true` once every card
     /// is trashed. A trash failing after the check passed is unreachable (see
     /// the loop); it would stop at that card, `debug_assert!` and return
@@ -957,18 +953,17 @@ impl<'a> EffectContext<'a> {
             else {
                 return false;
             };
-            // The top card stays (a Tamer keeps its own card on top).
-            if permanent.card_sources.len() <= n
-                || !permanent.card_sources.iter().take(n).all(|s| s.face_down)
-            {
+            // The `n` lowest face-down cards under the top card are the ones
+            // the loop below trashes, one `trash_bottom_face_down_source` at
+            // a time (each takes the lowest one left).
+            let cards: Vec<CardHandle> = permanent
+                .face_down_source_indices()
+                .take(n)
+                .map(|i| permanent.card_sources[i].handle())
+                .collect();
+            if cards.len() < n {
                 return false;
             }
-            let cards: Vec<CardHandle> = permanent
-                .card_sources
-                .iter()
-                .take(n)
-                .map(|s| s.handle())
-                .collect();
             if cards
                 .into_iter()
                 .any(|card| self.source_card_trash_blocked(target, card))
@@ -977,7 +972,8 @@ impl<'a> EffectContext<'a> {
             }
         }
         // Unreachable failure: the check above validated exactly the cards
-        // the loop removes (each Tamer's bottom `n`, in order), and nothing
+        // the loop removes (each Tamer's `n` lowest face-down cards, in
+        // order), and nothing
         // resolves inside the event -- its observers only enqueue (the scope
         // is a deferred-drain scope, §15-8-3-2) -- so no effect can move a
         // Tamer, flip a card or protect one between the check and the last

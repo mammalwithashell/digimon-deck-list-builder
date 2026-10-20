@@ -249,8 +249,9 @@ pub enum StepSpec {
     /// multi-Tamer sibling of `TrashBottomFaceDownSourceUnderTamer`. Pays a
     /// `count`-total bottom-face-down trash cost distributed across the
     /// controller's Tamers: each card is one real `select_own_permanent` pick
-    /// over `{ kind: tamer, has_face_down_source: true }` (a Tamer stays
-    /// eligible while it has more bottom face-down cards than picks) — so "2
+    /// over your Tamers (a Tamer stays eligible while it has more face-down
+    /// cards under it than picks; each pick takes its lowest face-down card,
+    /// face-up cards below it stay) — so "2
     /// from one Tamer" and "1 from each of two Tamers" are both reachable,
     /// every pick surfaced (no auto-resolve). After the last pick the chosen
     /// cards are trashed together as ONE event, so each "when effects trash

@@ -492,9 +492,9 @@ pub(crate) fn run_resume(
                             let trashed = ctx.trash_bottom_face_down_source(h);
                             debug_assert!(
                                 trashed,
-                                "trash_bottom_face_down_source_under_tamer: eligibility \
-                                 filter (has_face_down_source) offered a Tamer whose bottom \
-                                 source is not face-down — filter and action have desynced"
+                                "trash_bottom_face_down_source_under_tamer: the pick \
+                                 offered a Tamer with no face-down card it can trash \
+                                 (face_down_cards_under) — filter and action have desynced"
                             );
                             if trashed {
                                 run_tail_preserving_trigger_context(
@@ -3917,18 +3917,18 @@ pub fn try_install(
             selection_result(ctx)
         }
         CompiledStep::TrashBottomFaceDownSourceUnderTamer { of, optional } => {
-            // Bundled activation cost: "pick one of `of`'s Tamers that carries
-            // a face-down stash → trash its bottom face-down source". Pre-filter
-            // the controller's permanents with the fixed predicate
-            // `{ kind: tamer, has_face_down_source: true }`.
+            // Bundled activation cost: "pick one of `of`'s Tamers with a
+            // face-down card under it → trash its bottom (lowest) face-down
+            // card". Payable iff the shared count
+            // (`face_down_sources_under_tamers`, the §15-7-4 guard's own
+            // count) is ≥1; the pick offers `{ kind: tamer }` permanents with
+            // `face_down_cards_under` ≥1.
             let player = resolve_player(ctx, *of);
             let filter = CompiledPredicate {
                 kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
-                has_face_down_source: Some(true),
                 ..CompiledPredicate::default()
             };
-            let candidates = collect_matching_permanents(ctx, player, &filter, Some(&bindings));
-            if candidates.is_empty() {
+            if face_down_sources_under_tamers(&ctx.as_read(), player) == 0 {
                 // The cost is unpayable: no Tamer has a face-down stash. Abort
                 // the clause — the dispatcher must stop and the tail (the rest
                 // of the process) must NOT run. `TailAlreadyRan` here means
@@ -6187,16 +6187,16 @@ fn install_select_own_permanent(
 /// eligible Tamer pays the cost. Whether to activate/decline at all is the
 /// clause's own `optional`, governed one level up.
 ///
-/// The callback trashes the picked Tamer's bottom face-down source via
-/// `EffectContext::trash_bottom_face_down_source`; the captured tail runs ONLY
-/// if that trash succeeded. The eligibility filter (`has_face_down_source`)
-/// matches a Tamer if ANY source is face-down, but `trash_bottom_face_down_source`
-/// only succeeds when `card_sources[0]` (the BOTTOM) is face-down. In the
-/// current ST-23/ST-24 pool these always agree (stashes insert at index 0), but
-/// this substrate is reusable: guarding the tail on the trash's `bool` keeps a
-/// future filter/action desync from running the effect without paying the cost
-/// (a no-approximations violation). The `debug_assert!` makes such a desync
-/// fail loudly in dev/test; production degrades gracefully by skipping the tail.
+/// A Tamer is offered when it has a face-down card under it
+/// (`face_down_cards_under` ≥1); the callback trashes its bottom face-down
+/// card -- the LOWEST one, face-up cards below it stay -- via
+/// `EffectContext::trash_bottom_face_down_source`, which reads the same
+/// `Permanent::face_down_source_indices`, so the pick and the trash agree by
+/// construction. The captured tail runs ONLY if that trash succeeded (it
+/// fails only for a trash-protected card): guarding the tail on the trash's
+/// `bool` keeps the effect from running without paying the cost (a
+/// no-approximations violation). The `debug_assert!` makes such a failure
+/// loud in dev/test; production degrades gracefully by skipping the tail.
 fn install_trash_bottom_face_down_source_under_tamer(
     ctx: &mut EffectContext<'_>,
     filter: CompiledPredicate,
@@ -6236,15 +6236,15 @@ fn install_trash_bottom_face_down_source_under_tamer(
                 &read_ctx,
                 PredicateSubject::Permanent(handle),
                 Some(&filter_bindings),
-            )
+            ) && face_down_cards_under(game, handle) > 0
         },
         move |cb_ctx, handle: PermanentHandle| {
             let trashed = cb_ctx.trash_bottom_face_down_source(handle);
             debug_assert!(
                 trashed,
-                "trash_bottom_face_down_source_under_tamer: eligibility filter \
-                 (has_face_down_source) offered a Tamer whose bottom source is not \
-                 face-down — filter and action have desynced"
+                "trash_bottom_face_down_source_under_tamer: the pick offered a Tamer \
+                 with no face-down card it can trash (face_down_cards_under) — filter \
+                 and action have desynced"
             );
             // No-approximations: the tail (the effect) runs ONLY if the cost was
             // actually paid. A `false` return means nothing was trashed, so the
@@ -6865,24 +6865,24 @@ fn total_face_down_sources_under_tamers(
     face_down_sources_under_tamers(&ctx.as_read(), player)
 }
 
-/// Bottom face-down cards across `player`'s Tamers that carry a face-down
-/// stash (`{ kind: tamer, has_face_down_source: true }`, the fixed filter of
-/// the `trash_bottom_face_down_source(s)_under_tamer(s)` costs): per Tamer,
-/// the unbroken run of face-down cards from the bottom of its stack
-/// (`bottom_face_down_run`), i.e. exactly the cards those costs can trash and
-/// the multi-count pick can offer. A face-down card above a face-up bottom
-/// card is not counted. The ONE count shared by the multi-count step's
-/// unpayable abort, the read-only payability guard
+/// Face-down cards under `player`'s Tamers (`{ kind: tamer }`): per Tamer
+/// `face_down_cards_under`, i.e. every card the
+/// `trash_bottom_face_down_source(s)_under_tamer(s)` costs can trash. "The
+/// bottom face-down card" is the LOWEST face-down card under a Tamer, whether
+/// or not face-up cards sit below it (card text of BT26-005 / BT25-035; DCGO
+/// `BT26_005.cs` `LastOrDefault(IsFlipped)`; the rules manual is silent), so a
+/// face-down card above a face-up one counts. The ONE count shared by both
+/// steps' unpayable aborts, the read-only payability guard
 /// (`dsl_cards::lower_triggered::CostGuard::FaceDownUnderTamers`, §15-7-4)
-/// and the `face_down_sources_under_tamers_gte` predicate, so the guard and
-/// the pick can't drift.
+/// and the `face_down_sources_under_tamers_gte` predicate; the picks and the
+/// trash read the same `Permanent::face_down_source_indices`, so the guard,
+/// the pick and the trash agree by construction.
 pub(crate) fn face_down_sources_under_tamers(
     read: &EffectReadContext<'_>,
     player: PlayerId,
 ) -> usize {
     let filter = CompiledPredicate {
         kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
-        has_face_down_source: Some(true),
         ..CompiledPredicate::default()
     };
     (0..read.game.player(player).battle_area.len())
@@ -6893,17 +6893,18 @@ pub(crate) fn face_down_sources_under_tamers(
         .filter(|handle| {
             eval_predicate_with_bindings(&filter, read, PredicateSubject::Permanent(*handle), None)
         })
-        .map(|handle| bottom_face_down_run(read.game, handle))
+        .map(|handle| face_down_cards_under(read.game, handle))
         .sum()
 }
 
 /// Install the next Tamer pick for the multi-count
 /// `trash_bottom_face_down_sources_under_tamers` cost. `remaining` is the
 /// number of cards still to choose; `picked` holds the Tamers already chosen
-/// (a Tamer chosen twice gives up its bottom two cards). Choosing WHICH Tamers
+/// (a Tamer chosen twice gives up its two lowest face-down cards). Choosing WHICH Tamers
 /// pay is a real decision, so every card is one surfaced Tamer pick (no
-/// auto-selection): a Tamer is offered while it has more face-down cards at
-/// the bottom of its stack than it has already been chosen for, so "2 from
+/// auto-selection): a Tamer is offered while it has more face-down cards
+/// under it (`face_down_cards_under`) than it has already been chosen for, and
+/// each pick takes its lowest face-down card left, so "2 from
 /// one Tamer" and "1 from each of two Tamers" are both reachable.
 ///
 /// Nothing is trashed until the last pick: the condition's cards are then
@@ -6928,7 +6929,6 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
 ) {
     let filter = CompiledPredicate {
         kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
-        has_face_down_source: Some(true),
         ..CompiledPredicate::default()
     };
     let source_card = ctx.source_card;
@@ -6963,7 +6963,7 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
                 &read_ctx,
                 PredicateSubject::Permanent(handle),
                 Some(&filter_bindings),
-            ) && bottom_face_down_run(game, handle)
+            ) && face_down_cards_under(game, handle)
                 > picked_for_filter.iter().filter(|h| **h == handle).count()
         },
         move |cb_ctx, handle: PermanentHandle| {
@@ -7062,15 +7062,16 @@ pub(crate) fn advance_trash_n_bottom_face_down_pick(
     }
 }
 
-/// Face-down cards at the bottom of `handle`'s stack, counted up to the first
-/// face-up card: how many bottom face-down cards the cost can take from it
-/// (the per-Tamer unit of `face_down_sources_under_tamers` and the
-/// multi-count pick's eligibility).
-pub(crate) fn bottom_face_down_run(game: &crate::game::Game, handle: PermanentHandle) -> usize {
+/// Face-down cards under `handle`'s top card
+/// (`Permanent::face_down_source_indices`): how many bottom face-down cards
+/// the face-down-under-Tamer costs can take from it, lowest first. The
+/// per-Tamer unit of `face_down_sources_under_tamers` and of both steps' Tamer
+/// picks.
+pub(crate) fn face_down_cards_under(game: &crate::game::Game, handle: PermanentHandle) -> usize {
     game.player(handle.player)
         .battle_area
         .get(handle.index as usize)
-        .map(|perm| perm.card_sources.iter().take_while(|s| s.face_down).count())
+        .map(|perm| perm.face_down_source_indices().count())
         .unwrap_or(0)
 }
 

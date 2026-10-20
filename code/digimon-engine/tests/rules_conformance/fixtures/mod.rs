@@ -96,6 +96,7 @@ const CH15_07: &[&str] = &[
     include_str!("ch15_07/MAIN_TRASH_SEC_DRAW.yaml"),
     include_str!("ch15_07/OD_RETURN_KIMERA_MACHINE_PLAY_MILLENNIUM.yaml"),
     include_str!("ch15_07/OD_TRASH_HAND_MEM.yaml"),
+    include_str!("ch15_07/OP_TRASH1_UNDER_MEM.yaml"),
     include_str!("ch15_07/OP_TRASH2_UNDER_MEM.yaml"),
     include_str!("ch15_07/WA_BORROW_OP.yaml"),
     include_str!("ch15_07/WA_BORROW_OP_THEN_MEM.yaml"),
