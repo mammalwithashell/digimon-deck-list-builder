@@ -4137,14 +4137,16 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved). The triggers raised by every event of ONE effect's resolution (a source trash, then a hand trash) pend in one pool when that effect finishes (the batch-window observers are released into the same trigger batch, Game::release_event_window_triggers); a trigger activated from that pool is a resolution of its own, so what it raises pends as a new, derived pool (G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS resolved).",
+      "note": "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved). The triggers raised by every event of ONE effect's resolution (a source trash, then a hand trash) pend in one pool when that effect finishes (the batch-window observers are released into the same trigger batch, Game::release_event_window_triggers); a trigger activated from that pool is a resolution of its own, so what it raises pends as a new, derived pool (G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS resolved). A return of digivolution cards to the bottom of the deck and a battle performed by an effect raise their triggers inside that effect; they pend in ONE pool with its deck-add trigger when it finishes (G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH, G-ENGINE-EFFECT-BATTLE-DRAIN-RUNS-TRIGGERS-MID-EFFECT resolved).",
       "status": "proven",
       "tests": [
         "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool",
         "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first",
         "ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool",
         "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool",
-        "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes"
+        "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes",
+        "ch15_04_effect_states::returned_to_deck_bottom_triggers_wait_for_the_effect_and_pool_with_it",
+        "ch15_04_effect_states::effect_battle_triggers_wait_for_the_effect_and_pool_with_it"
       ],
       "text": "If multiple effects are triggered before a single rule or effect is resolved, they all trigger simultaneously. If effects trigger simultaneously, the effects will be pending activation and activate 1 at a time. (For details, refer to 15-4-4 \"Pending Activation\")15-4- 4"
     },
@@ -4402,10 +4404,11 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "One 'by trashing 2 bottom face-down cards from under any of your Tamers' condition (BT25-035 shape) trashes its cards as ONE source-trash event after the last Tamer pick: 2 cards from one Tamer -> that Tamer's 'under this Tamer' observer (ST23-13 shape) and the 'under your Tamers' observer each trigger once; 1 card from each of two Tamers -> each Tamer's own observer once, the global one once. Previously each per-card Tamer pick trashed its card as its own event, so every observer triggered once per card (G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS, resolved 2026-10-19). The rule's own security-stack example is not separately pinned here.",
+      "note": "One 'by trashing 2 bottom face-down cards from under any of your Tamers' condition (BT25-035 shape) trashes its cards as ONE source-trash event after the last Tamer pick: 2 cards from one Tamer -> that Tamer's 'under this Tamer' observer (ST23-13 shape) and the 'under your Tamers' observer each trigger once; 1 card from each of two Tamers -> each Tamer's own observer once, the global one once. Previously each per-card Tamer pick trashed its card as its own event, so every observer triggered once per card (G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS, resolved 2026-10-19). The rule's own security-stack example is not separately pinned here. One return of 2 digivolution cards to the bottom of the deck is one event: a 'when digivolution cards are returned to the bottom of a deck' observer triggers once (the return shares the source-trash event scope; DCGO ReturnToLibraryBottomDigivolutionCardsClass stacks one trigger for the list).",
       "status": "proven",
       "tests": [
-        "ch15_04_effect_states::one_multi_card_cost_trash_triggers_each_observer_once"
+        "ch15_04_effect_states::one_multi_card_cost_trash_triggers_each_observer_once",
+        "ch15_04_effect_states::returned_to_deck_bottom_triggers_wait_for_the_effect_and_pool_with_it"
       ],
       "text": "A triggering from 1 trigger condition is considered to only trigger once, even if it occurred multiple times at the same time. (Example: An effect that reads \"[Opponent's Turn] When a card is removed from your security stack, <De-Digivolve 1> 1 of your opponent's Digimon\" will only trigger once, even if 2 or more cards are trashed from your security stack at the same time.)"
     },
@@ -4746,13 +4749,16 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: the observer waits for the trashing effect's 'Then, gain 1 memory' whether the cause is an Option [Main] or an [On Play] trigger. fire_digivolution_card_trashed no longer drains inline; source-trash observers are enqueued inside a deferred-drain event scope (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved). With that trigger pending, the same effect plays from the trash the very card its cost just trashed from under the Tamer (official Q&A Q6958): the card is placed face-up in the trash (3-6-3) and face-up on the field when played (3-4-2), so the rule check no longer trashes it as a face-down card (17-1-3-2-4) (G-ENGINE-PLAY-FROM-TRASH-OF-JUST-TRASHED-SOURCE-NOT-PLAYED resolved).",
+      "note": "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: the observer waits for the trashing effect's 'Then, gain 1 memory' whether the cause is an Option [Main] or an [On Play] trigger. fire_digivolution_card_trashed no longer drains inline; source-trash observers are enqueued inside a deferred-drain event scope (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved). With that trigger pending, the same effect plays from the trash the very card its cost just trashed from under the Tamer (official Q&A Q6958): the card is placed face-up in the trash (3-6-3) and face-up on the field when played (3-4-2), so the rule check no longer trashes it as a face-down card (17-1-3-2-4) (G-ENGINE-PLAY-FROM-TRASH-OF-JUST-TRASHED-SOURCE-NOT-PLAYED resolved). The direct drains that still ran triggers inside a resolving effect now enqueue only (maybe_drain_effect_queue): a return of digivolution cards to the deck bottom (Zenith BT18-092 shape), the [When Digivolving] of a Digimon an immediate replacement digivolves during the deleting effect (Return to the Primogenitor BT17-097 shape: it activates after that effect's 'Then, gain 1 memory'), and a battle an effect performs (Omnimon: Merciful Mode EX13-077 shape) (G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH, G-ENGINE-EFFECT-BATTLE-DRAIN-RUNS-TRIGGERS-MID-EFFECT resolved).",
       "status": "proven",
       "tests": [
         "ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish",
         "ch15_08_effect_categories::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends",
         "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes",
-        "ch15_04_effect_states::window_triggers_wait_through_a_direct_drain_inside_a_resumed_effect"
+        "ch15_04_effect_states::window_triggers_wait_through_a_direct_drain_inside_a_resumed_effect",
+        "ch15_04_effect_states::returned_to_deck_bottom_triggers_wait_for_the_effect_and_pool_with_it",
+        "ch15_04_effect_states::replacement_digivolve_triggers_wait_for_the_deleting_effect",
+        "ch15_04_effect_states::effect_battle_triggers_wait_for_the_effect_and_pool_with_it"
       ],
       "text": "Trigger-type effects can't activate during the processing for a rule or effect."
     },

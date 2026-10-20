@@ -2447,10 +2447,8 @@ impl Game {
     /// Sibling of [`Self::fire_digivolution_card_trashed`], for the RETURN of a
     /// digivolution source to the BOTTOM of a player's deck. Fires
     /// `OnDigivolutionCardReturnedToDeckBottom` carrying the former host
-    /// (`host` / `host_card`) and the returned `card`, then drains synchronously,
-    /// once per source (a multi-source return, e.g. BT21-062's "return 4
-    /// [Vemmon]", fires the observer once per source so a `once_per_turn`
-    /// inherited clause consumes its single use and stops).
+    /// (`host` / `host_card`) and the returned `card`, one call per returned
+    /// source.
     /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
     /// Like the trash sibling it never drains while an effect is resolving
     /// (§15-8-3-2: its observers wait for that effect and pend with the rest
