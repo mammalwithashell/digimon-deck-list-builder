@@ -851,15 +851,20 @@ impl<'a> EffectContext<'a> {
         trashed
     }
 
-    /// Trash the bottom-most face-down digivolution source from `target`,
-    /// fire `OnDigivolutionCardTrashed`, and drain the observer queue. Returns
-    /// `true` iff a face-down source was found at `card_sources[0]` and
-    /// trashed; returns `false` with no mutation otherwise (no face-down
-    /// bottom source, or `target` missing).
+    /// Trash "the bottom face-down card" from under `target` -- its LOWEST
+    /// face-down card (`Permanent::face_down_source_indices().next()`),
+    /// whether or not face-up cards sit below it -- and fire
+    /// `OnDigivolutionCardTrashed`. Returns `true` iff such a card existed and
+    /// was trashed; returns `false` with no mutation otherwise (no face-down
+    /// card under the top card, the card is protected from this effect's
+    /// trash, or `target` missing).
     ///
     /// This is the cost-form trash primitive for ST-23 BEATBREAK and ST-24
     /// DATA SQUAD cards whose printed text reads "by trashing the bottom
-    /// face-down card from under any of your Tamers, ...".
+    /// face-down card from under any of your Tamers, ...". The card text and
+    /// DCGO (`BT26_005.cs` `DigivolutionCards.LastOrDefault(IsFlipped)`) read
+    /// "bottom face-down card" as the lowest face-down one; the rules manual
+    /// has no narrower definition.
     ///
     /// The trashed source routes to the source's own `owner` trash, matching
     /// the standard `OnDigivolutionCardTrashed` ownership semantics (mirrors
@@ -873,38 +878,25 @@ impl<'a> EffectContext<'a> {
     /// ST24-01 Koromon, ST24-06 RizeGreymon, ST24-10 Lilamon, ST24-11 Rosemon,
     /// ST24-12 Falcomon.
     pub fn trash_bottom_face_down_source(&mut self, target: PermanentHandle) -> bool {
-        if let Some(card) = self
+        let Some((index, card)) = self
             .game
             .player(target.player)
             .battle_area
             .get(target.index as usize)
-            .and_then(|p| p.card_sources.first())
-        {
-            if self.source_card_trash_blocked(target, card.handle()) {
-                return false;
-            }
-        }
-
-        // Inspect `card_sources[0]`: it must exist AND be face-down. Reject
-        // before any mutation otherwise (missing target, empty stack, or a
-        // face-up bottom source — e.g. an un-stashed Tamer whose only source
-        // is its own face-up card).
-        let removed = {
-            let permanent = match self
-                .game
-                .player_mut(target.player)
-                .battle_area
-                .get_mut(target.index as usize)
-            {
-                Some(p) => p,
-                None => return false,
-            };
-            match permanent.card_sources.first() {
-                Some(bottom) if bottom.face_down => {}
-                _ => return false,
-            }
-            permanent.card_sources.remove(0)
+            .and_then(|p| {
+                p.face_down_source_indices()
+                    .next()
+                    .map(|i| (i, p.card_sources[i].handle()))
+            })
+        else {
+            return false;
         };
+        if self.source_card_trash_blocked(target, card) {
+            return false;
+        }
+        let removed = self.game.player_mut(target.player).battle_area[target.index as usize]
+            .card_sources
+            .remove(index);
         // Host = the permanent's top card. The below-top source was already
         // removed above; the perm still exists with its top intact (a Tamer
         // always retains its own card as the top), so the host is unchanged by
@@ -916,6 +908,93 @@ impl<'a> EffectContext<'a> {
         self.game
             .trash_source_and_fire(removed.owner, target, removed, host_card);
         true
+    }
+
+    /// Trash one bottom face-down digivolution card from under each entry of
+    /// `targets` (a Tamer listed twice gives up its two lowest) as ONE
+    /// source-trash event: the cards of one "by trashing N bottom face-down
+    /// cards from under any of your Tamers" condition (§15-7-1) are trashed
+    /// at the same time, so each `OnDigivolutionCardTrashed` observer
+    /// triggers once for the whole payment, whichever Tamers the cards came
+    /// from (§15-5-2). An observer scoped to one Tamer ("under this Tamer",
+    /// ST23-13) triggers once if any card left that Tamer; one scoped to all
+    /// of them ("under your Tamers") once. The event's members are every
+    /// trashed card (`coalesce_source_trash_event`).
+    ///
+    /// Each pick takes the lowest face-down card left under that Tamer
+    /// (`trash_bottom_face_down_source`), so a Tamer listed twice gives up its
+    /// two lowest face-down cards; face-up cards stay.
+    ///
+    /// The payment is all or nothing: every pick is checked first (each
+    /// listed Tamer still has that many face-down cards under it, none
+    /// protected from this effect's trash), and on any failure
+    /// nothing moves and `false` is returned. Returns `true` once every card
+    /// is trashed. A trash failing after the check passed is unreachable (see
+    /// the loop); it would stop at that card, `debug_assert!` and return
+    /// `false`.
+    ///
+    /// Used by `trash_bottom_face_down_sources_under_tamers` (BT25-035
+    /// Cougarmon, BT26-070, BT26-082, EX13-071, ST24-06, ST24-10).
+    /// G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+    pub fn trash_bottom_face_down_sources(&mut self, targets: &[PermanentHandle]) -> bool {
+        let mut per_target: Vec<(PermanentHandle, usize)> = Vec::new();
+        for &target in targets {
+            match per_target.iter_mut().find(|(h, _)| *h == target) {
+                Some((_, n)) => *n += 1,
+                None => per_target.push((target, 1)),
+            }
+        }
+        for &(target, n) in &per_target {
+            let Some(permanent) = self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+            else {
+                return false;
+            };
+            // The `n` lowest face-down cards under the top card are the ones
+            // the loop below trashes, one `trash_bottom_face_down_source` at
+            // a time (each takes the lowest one left).
+            let cards: Vec<CardHandle> = permanent
+                .face_down_source_indices()
+                .take(n)
+                .map(|i| permanent.card_sources[i].handle())
+                .collect();
+            if cards.len() < n {
+                return false;
+            }
+            if cards
+                .into_iter()
+                .any(|card| self.source_card_trash_blocked(target, card))
+            {
+                return false;
+            }
+        }
+        // Unreachable failure: the check above validated exactly the cards
+        // the loop removes (each Tamer's `n` lowest face-down cards, in
+        // order), and nothing
+        // resolves inside the event -- its observers only enqueue (the scope
+        // is a deferred-drain scope, §15-8-3-2) -- so no effect can move a
+        // Tamer, flip a card or protect one between the check and the last
+        // trash. Should that ever break, stop at the first failure (loudly in
+        // dev/test) instead of trashing the rest of a payment that already
+        // failed.
+        let event = self.game.begin_source_trash_event();
+        let mut paid = true;
+        for &target in targets {
+            if !self.trash_bottom_face_down_source(target) {
+                debug_assert!(
+                    false,
+                    "trash_bottom_face_down_sources: the trash from {target:?} failed after \
+                     the payment check passed ({targets:?})"
+                );
+                paid = false;
+                break;
+            }
+        }
+        self.game.end_source_trash_event(event);
+        paid
     }
 
     /// Force `opponent`'s hand size down to `target_count` by surfacing a

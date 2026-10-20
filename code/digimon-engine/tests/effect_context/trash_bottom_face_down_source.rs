@@ -182,8 +182,11 @@ fn trash_bottom_face_down_source_pops_and_routes_to_owner_trash() {
     );
 }
 
-/// 2. A face-UP bottom source is NOT eligible — the helper returns false and
-///    leaves the stack untouched.
+/// 2. A Tamer whose only card under it is face-UP has no face-down card — the
+///    helper returns false and leaves the stack untouched. (A face-down card
+///    ABOVE a face-up one is trashed: "the bottom face-down card" is the
+///    lowest face-down card -- `rules_conformance::ch15_07_optional_conditions::
+///    face_down_under_tamers_condition_takes_the_lowest_face_down_cards`.)
 #[test]
 fn trash_bottom_face_down_source_no_face_down_returns_false() {
     let mut r = DebugRunner::builder()

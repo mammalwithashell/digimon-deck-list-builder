@@ -430,6 +430,116 @@ fn unpayable_optional_condition_cannot_be_chosen() {
     );
 }
 
+/// P0's `PLAIN_TAMER`s, one per entry of `tamers`, each with the cards listed
+/// under it (bottom first; `true` = face-down), and `player` (an [On Play]
+/// "By trashing ... face-down card(s) from under any of your Tamers, gain 1
+/// memory." Digimon) played from the hand.
+fn face_down_under_tamers_board(player: &str, tamers: &[&[bool]]) -> DebugRunner {
+    let mut r = fixtures::builder(&[fixtures::ch15_07_cards(), fixtures::ch15_08_cards()])
+        .hand(0, &[player])
+        .deck(0, &[FILL; 4])
+        .memory(5)
+        .start();
+    for cards in tamers {
+        let tamer = r.place_on_field(0, "PLAIN_TAMER", Some(0));
+        // `attach_face_down` inserts at the bottom: attach top-down.
+        for &face_down in cards.iter().rev() {
+            attach_face_down(&mut r, tamer, FILL);
+            r.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down =
+                face_down;
+        }
+    }
+    r.play(0, 0);
+    r
+}
+
+/// The cards still under each of P0's first `n` permanents (the Tamers),
+/// bottom first, as face-down flags.
+fn under_tamers(r: &DebugRunner, n: usize) -> Vec<Vec<bool>> {
+    r.game.players[0]
+        .battle_area
+        .iter()
+        .take(n)
+        .map(|perm| {
+            let under = perm.card_sources.len() - 1;
+            perm.card_sources[..under].iter().map(|s| s.face_down).collect()
+        })
+        .collect()
+}
+
+/// §15-7-4 (as above), for "by trashing the bottom face-down card(s) from
+/// under any of your Tamers". The PDF does not define "the bottom face-down
+/// card"; the card text and DCGO do: it is the LOWEST face-down card under
+/// that Tamer, whether or not face-up cards sit below it (Pinamon BT26-005,
+/// Cougarmon BT25-035; DCGO `BT26_005.cs` trashes
+/// `DigivolutionCards.LastOrDefault(IsFlipped)` and offers any Tamer with a
+/// face-down card). A face-up card can sit under a Tamer below its face-down
+/// ones (`place_selected_card_under_tamer` with the default face, BT19-001).
+/// So the condition is payable from every face-down card under your Tamers,
+/// and paying it trashes the lowest face-down card, leaving face-up cards in
+/// place.
+///
+/// - 2 cards (`OP_TRASH2_UNDER_MEM`): Tamer A holds a face-down card over a
+///   face-up bottom card, Tamer B one face-down card. The condition is
+///   offered; paying it from both Tamers trashes the two face-down cards and
+///   leaves A's face-up card. Not offered: A holds only a face-up card, so
+///   there is 1 face-down card for a 2-card condition.
+/// - 1 card (`OP_TRASH1_UNDER_MEM`, the BT26-005 shape): the Tamer holds a
+///   face-down card over a face-up bottom card. The condition is offered and
+///   trashes the face-down card. Not offered: the Tamer holds only a face-up
+///   card.
+#[test]
+fn face_down_under_tamers_condition_takes_the_lowest_face_down_cards() {
+    cite!(
+        "15-7-4",
+        "210ce11e09b84d8a05b2b4861fcbff3ad5d398894a7da5879d8c869dc6446b14"
+    );
+    // 2 cards: a face-down card above a face-up bottom card is eligible.
+    let mut r = face_down_under_tamers_board("OP_TRASH2_UNDER_MEM", &[&[false, true], &[true]]);
+    let mem = r.memory();
+    assert_optional_decision(&r, 0, "2 face-down cards under the Tamers: offered");
+    accept(&mut r, 0);
+    pick_field(&mut r, 0);
+    pick_field(&mut r, 1);
+    assert_eq!(
+        under_tamers(&r, 2),
+        vec![vec![false], vec![]],
+        "both face-down cards were trashed; the face-up card stays under Tamer A"
+    );
+    assert_eq!(r.memory(), mem + 1, "the processing after the condition ran");
+
+    // 2 cards, only 1 face-down card: not offered.
+    let r = face_down_under_tamers_board("OP_TRASH2_UNDER_MEM", &[&[false], &[true]]);
+    assert!(
+        r.pending_selection().is_none(),
+        "1 face-down card for a 2-card condition: nothing is offered: {:?}",
+        r.pending_selection()
+    );
+    assert_eq!(under_tamers(&r, 2), vec![vec![false], vec![true]], "nothing was trashed");
+
+    // 1 card (BT26-005 shape): the face-down card above a face-up bottom card.
+    let mut r = face_down_under_tamers_board("OP_TRASH1_UNDER_MEM", &[&[false, true]]);
+    let mem = r.memory();
+    assert_optional_decision(&r, 0, "1 face-down card under the Tamer: offered");
+    accept(&mut r, 0);
+    pick_field(&mut r, 0);
+    assert_eq!(
+        under_tamers(&r, 1),
+        vec![vec![false]],
+        "the face-down card was trashed; the face-up card below it stays"
+    );
+    assert_eq!(r.memory(), mem + 1, "the processing after the condition ran");
+
+    // 1 card, no face-down card: not offered.
+    let r = face_down_under_tamers_board("OP_TRASH1_UNDER_MEM", &[&[false]]);
+    assert!(
+        r.pending_selection().is_none(),
+        "no face-down card: nothing is offered: {:?}",
+        r.pending_selection()
+    );
+    assert_eq!(under_tamers(&r, 1), vec![vec![false]], "nothing was trashed");
+}
+
 // ─── §15-7-5 ────────────────────────────────────────────────────────────────
 
 /// §15-7-5 "A player can choose to execute the content of optional processing

@@ -574,6 +574,7 @@ pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool 
         CompiledStep::EffectInitiatedDigivolve { .. }
             | CompiledStep::PaySourcePrefix { .. }
             | CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+            | CompiledStep::TrashBottomFaceDownSourcesUnderTamers { .. }
             | CompiledStep::TrashLinkCardOfOwnDigimon { .. }
             | CompiledStep::SelectHand { .. }
             | CompiledStep::SelectTrash { .. }
@@ -718,8 +719,14 @@ pub enum CostGuard {
         filter: CompiledPredicate,
         trash_cost: bool,
     },
-    /// "By trashing N bottom face-down cards from under your Tamers": N
-    /// face-down digivolution cards across your Tamers.
+    /// "By trashing the bottom face-down card / N bottom face-down cards from
+    /// under your Tamers": N face-down cards under your Tamers. "The bottom
+    /// face-down card" is a Tamer's LOWEST face-down card, whether or not
+    /// face-up cards sit below it (card text BT26-005 / BT25-035; DCGO
+    /// `BT26_005.cs` `LastOrDefault(IsFlipped)`; the rules manual is silent),
+    /// so every face-down card counts. Read through
+    /// `step::selections::face_down_sources_under_tamers`, the same count the
+    /// steps' Tamer picks and the trash use.
     FaceDownUnderTamers { n: usize },
     /// "By trashing 1 [X] from your hand / your Digimon's digivolution cards"
     /// (BT25-083 "1 Option card from any of your Digimon's digivolution
@@ -762,7 +769,7 @@ pub enum CostPickZone {
 ///   picks consumed by `return_trash_list_to_deck_bottom`.
 /// - `select_own_sources { target: source }` ⇒ `min` matching sources.
 /// - `trash_bottom_face_down_source(s)_under_tamer(s)` ⇒ that many face-down
-///   cards under your Tamers.
+///   cards under your Tamers (any face-down card; the trash takes the lowest).
 /// - `select_union_zone { of: you }` (`cost: true` or mandatory; material
 ///   carrier unpinned or `source`) whose pick `trash_union_bound` trashes next
 ///   ⇒ the pick has a trashable card.
@@ -1308,6 +1315,25 @@ mod tests {
         }])];
 
         assert!(steps_provide_resource_flow(&steps));
+    }
+
+    /// Both face-down-under-Tamer trash costs park a Tamer pick, so a
+    /// cost-reduction `pay_cost` built on either is interactive
+    /// (`G-COST-REDUCTION-INTERACTIVE-PAY-COST`).
+    #[test]
+    fn face_down_under_tamer_trash_costs_install_a_selection() {
+        assert!(body_first_step_installs_selection(&[
+            CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+                of: CompiledPlayerRef::You,
+                optional: false,
+            }
+        ]));
+        assert!(body_first_step_installs_selection(&[
+            CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+                of: CompiledPlayerRef::You,
+                count: 2,
+            }
+        ]));
     }
 
     #[test]

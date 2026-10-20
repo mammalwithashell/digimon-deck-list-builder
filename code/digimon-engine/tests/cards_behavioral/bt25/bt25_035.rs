@@ -35,10 +35,11 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::{CardData, EvoCost};
-use digimon_engine::card_source::CardSource;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::SelectionKind;
 
 use crate::dsl_card_data::{card_data_from_compiled, compiled};
 
@@ -610,7 +611,7 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
         .unwrap();
     runner.execute_action(0, pick).expect("choose GD5");
 
-    // First Tamer pick → resolve it (trashes 1, re-parks the second pick).
+    // First Tamer pick → resolve it (records it, re-parks the second pick).
     let v1 = runner
         .pending_selection_view()
         .expect("first Tamer pick installs");
@@ -632,10 +633,14 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
         runner.game.pending_selection_resume.is_some(),
         "the multi-pick trash must be resume-driven between picks (clone-safe)"
     );
+    // RE-PINNED 2026-10-19 (§15-5-2; G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-
+    // INTO-PER-CARD-TRIGGER-EVENTS): the 2 cards of the one condition are
+    // trashed together after the last pick (one event), so nothing has left
+    // a Tamer yet. This used to assert 1 card already trashed.
     assert_eq!(
         face_down_source_count(&runner, 0),
-        1,
-        "exactly one face-down source trashed after the first pick"
+        2,
+        "nothing is trashed until the last Tamer pick (one event, §15-5-2)"
     );
     assert_eq!(
         runner.game.player(0).battle_area[cougar.index as usize]
@@ -655,6 +660,12 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
         .copied()
         .find(|&id| id != PASS)
         .unwrap();
+    assert_eq!(
+        v2.valid_action_ids.iter().filter(|&&id| id != PASS).count(),
+        1,
+        "the first Tamer's only face-down card is already chosen: only the other Tamer is offered"
+    );
+    assert_ne!(t2, t1, "the second pick is the other Tamer");
     let mut clone = runner.game.clone();
     clone
         .resolve_selection(0, t2)
@@ -678,6 +689,11 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
             .card_id(&runner.game.card_data),
         CARD_ID,
         "original is still mid-cost (Cougarmon) after the clone resolves"
+    );
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        2,
+        "the clone's payment trashed nothing on the original"
     );
 
     // REPLAYS IDENTICALLY: resolving the same pick on the original reaches the
@@ -730,4 +746,122 @@ fn bt25_035_then_clause_no_glowing_dawn_in_hand_clean_noop() {
         2,
         "no digivolve ⇒ no face-down sources trashed"
     );
+}
+
+/// Cougarmon on the field, GD5 in hand, and one Tomoro Tenma & Kyo Sawashiro
+/// (ST23-13: "[Your Turn] When effects trash cards from under this Tamer, by
+/// suspending this Tamer, 1 of your [Glowing Dawn] trait Digimon gets +3000 DP
+/// until your opponent's turn ends.") per entry of `tamers_fd`, each carrying
+/// that many face-down cards. Runs the clause through the hand pick and the
+/// Tamer picks (`picks` index the eligible Tamers offered at each pick), then
+/// returns the ST23-13 cards in the first pending pool after the effect (one
+/// entry per pending ST23-13 trigger) and declines them all.
+fn st23_13_offers_after_cost(tamers_fd: &[usize], picks: &[usize]) -> Vec<CardHandle> {
+    let mut builder = DebugRunner::builder()
+        .add_card(cougarmon())
+        .add_card(card_data_from_compiled("ST23-13"))
+        .add_card(make_filler("FILLER"))
+        .add_card(gd_lv5("GD5"));
+    builder = builder
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(10);
+    let mut runner = builder.start();
+    runner.set_first_player(0);
+    let cougar = runner.place_stack(0, &["FILLER", CARD_ID]);
+    for &n in tamers_fd {
+        let mut names: Vec<&str> = vec!["FILLER"; n];
+        names.push("ST23-13");
+        let t = runner.place_stack(0, &names);
+        for i in 0..n {
+            runner.game.players[0].battle_area[t.index as usize].card_sources[i].face_down = true;
+        }
+    }
+    push_to_hand(&mut runner, 0, "GD5");
+
+    runner.fire_on_play(0, cougar.index as usize);
+    let view = runner.pending_selection_view().expect("hand pick installs");
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .unwrap();
+    runner.execute_action(0, pick).expect("choose GD5");
+    for &p in picks {
+        let v = runner.pending_selection_view().expect("a Tamer pick installs");
+        assert_eq!(v.kind, SelectionKind::OwnField, "a Tamer pick: {v:?}");
+        let tamer_picks: Vec<u16> = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&id| id != PASS)
+            .collect();
+        runner.execute_action(0, tamer_picks[p]).expect("pick a Tamer");
+    }
+
+    // The first pending pool after the effect: ST23-13's branches in it.
+    let mut offered: Option<Vec<CardHandle>> = None;
+    for _ in 0..16 {
+        let Some(v) = runner.pending_selection_view() else {
+            break;
+        };
+        if v.kind == SelectionKind::TriggerOrder {
+            let choices = v.effect_choices.as_ref().expect("branches");
+            if offered.is_none() {
+                offered = Some(
+                    choices
+                        .iter()
+                        .filter_map(|c| c.source_card)
+                        .filter(|&h| runner.game.card(h).card_id == "ST23-13")
+                        .collect(),
+                );
+            }
+            // Every pending ST23-13 is optional (the pool's PASS declines
+            // them all).
+            assert!(v.is_optional, "declinable pool: {v:?}");
+            runner.execute_action(v.selecting_player, PASS).expect("decline all");
+            continue;
+        }
+        panic!("only the ST23-13 pool is left after the effect: {v:?}");
+    }
+    assert!(runner.pending_selection().is_none(), "the pool settled");
+    assert_eq!(
+        runner.game.player(0).battle_area[cougar.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "GD5",
+        "the cost was paid and Cougarmon digivolved"
+    );
+    offered.expect("ST23-13 pended after the effect")
+}
+
+/// §15-5-2: the 2 cards of "by trashing 2 bottom face-down cards from under
+/// any of your Tamers" are trashed at the same time, so ST23-13 ("When effects
+/// trash cards from under this Tamer") triggers ONCE when both come from under
+/// it. DCGO asks one Tamer selection and stacks one `OnDigivolutionCardDiscarded`
+/// (BT25_035.cs `TrashDigivolutionCardsFromTopOrBottom(trashCount: 2)`).
+/// G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+#[test]
+fn bt25_035_trash_2_from_one_st23_13_triggers_it_once() {
+    let offered = st23_13_offers_after_cost(&[2], &[0, 0]);
+    assert_eq!(
+        offered.len(),
+        1,
+        "ST23-13 is offered once for the one 2-card trash: {offered:?}"
+    );
+}
+
+/// §15-5-2 per observer: 1 card from under each of two ST23-13s — each Tamer's
+/// own "under this Tamer" trigger condition was met once, so each is offered
+/// exactly once.
+#[test]
+fn bt25_035_trash_1_from_each_of_two_st23_13s_triggers_each_once() {
+    let offered = st23_13_offers_after_cost(&[1, 1], &[0, 0]);
+    assert_eq!(
+        offered.len(),
+        2,
+        "two offers in total, one per Tamer: {offered:?}"
+    );
+    assert_ne!(offered[0], offered[1], "each ST23-13 is offered once: {offered:?}");
 }

@@ -248,11 +248,14 @@ pub enum StepSpec {
     /// G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER (2026-06-15) — the multi-count /
     /// multi-Tamer sibling of `TrashBottomFaceDownSourceUnderTamer`. Pays a
     /// `count`-total bottom-face-down trash cost distributed across the
-    /// controller's Tamers: each pick installs a real `select_own_permanent`
-    /// over `{ kind: tamer, has_face_down_source: true }` and trashes that
-    /// Tamer's bottom face-down source, re-evaluating eligibility before the
-    /// next pick — so "2 from one Tamer" and "1 from each of two Tamers" are
-    /// both reachable, every pick surfaced (no auto-resolve). When fewer than
+    /// controller's Tamers: each card is one real `select_own_permanent` pick
+    /// over your Tamers (a Tamer stays eligible while it has more face-down
+    /// cards under it than picks; each pick takes its lowest face-down card,
+    /// face-up cards below it stay) — so "2
+    /// from one Tamer" and "1 from each of two Tamers" are both reachable,
+    /// every pick surfaced (no auto-resolve). After the last pick the chosen
+    /// cards are trashed together as ONE event, so each "when effects trash
+    /// cards from under ..." observer triggers once (§15-5-2). When fewer than
     /// `count` face-down sources exist across all Tamers the cost is unpayable
     /// and the clause's remaining steps are skipped (`TailAlreadyRan`). Drives
     /// BT25-035 Cougarmon's "by trashing 2 bottom face-down cards from under any

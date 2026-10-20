@@ -186,6 +186,24 @@ impl Permanent {
             .expect("Permanent must have at least one card")
     }
 
+    /// Indices into `card_sources` of the face-down cards UNDER the top card,
+    /// lowest first. The one notion behind every "by trashing the bottom
+    /// face-down card(s) from under your Tamers" cost: its eligible cards are
+    /// these, and "the bottom face-down card" is the first -- the LOWEST
+    /// face-down card, whether or not face-up cards sit below it (card text of
+    /// BT26-005 / BT25-035; DCGO `BT26_005.cs`
+    /// `DigivolutionCards.LastOrDefault(IsFlipped)`; the rules manual has no
+    /// narrower definition). The payability check, the Tamer picks and the
+    /// trash all read it.
+    pub fn face_down_source_indices(&self) -> impl Iterator<Item = usize> + '_ {
+        let under = self.card_sources.len().saturating_sub(1);
+        self.card_sources[..under]
+            .iter()
+            .enumerate()
+            .filter(|(_, source)| source.face_down)
+            .map(|(index, _)| index)
+    }
+
     /// Mutable reference to top card.
     pub fn top_card_mut(&mut self) -> &mut CardSource {
         self.card_sources

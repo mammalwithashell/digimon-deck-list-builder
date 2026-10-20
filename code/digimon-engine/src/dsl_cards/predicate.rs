@@ -485,17 +485,13 @@ fn eval_predicate_ref(
         }
     }
     if let Some(floor) = pred.face_down_sources_under_tamers_gte {
-        // G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER: total face-down digivolution
-        // sources across the observer's battle-area Tamers. Gates BT25-035's
-        // optional free-digivolve on the trash-2 cost actually being payable.
-        let total: usize = rctx
-            .game
-            .player(rctx.player)
-            .battle_area
-            .iter()
-            .filter(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
-            .map(|perm| perm.card_sources.iter().filter(|s| s.face_down).count())
-            .sum();
+        // G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER: face-down digivolution
+        // cards under the observer's battle-area Tamers.
+        // Gates BT25-035's optional free-digivolve on the trash-2 cost
+        // actually being payable -- the same count as the cost's §15-7-4 guard
+        // and its Tamer picks.
+        let total =
+            crate::dsl_cards::step::selections::face_down_sources_under_tamers(rctx, rctx.player);
         if total < usize::from(floor) {
             return false;
         }
