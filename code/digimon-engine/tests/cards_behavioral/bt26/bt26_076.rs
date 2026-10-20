@@ -173,10 +173,20 @@ fn bt26_076_self_caused_tamer_trash_waits_for_opponent_discard() {
     // The deferred queue and parked VM must survive cloning for search.
     r.game = r.game.clone();
     pick_hand(&mut r, 1, "JUNK");
+    // The Tamer trash and the hand trash each trigger the [Your Turn]
+    // reaction (§15-4-2-4); both entries pend in ONE pool once the
+    // [When Digivolving] has finished (§15-4-3-2).
+    assert_eq!(
+        trigger_order_cards(&r),
+        vec!["BT26-076", "BT26-076"],
+        "both reactions pend together"
+    );
+    choose_trigger(&mut r, "BT26-076"); // order one of the two entries first
     r.accept_optional_trigger()
-        .expect("reactive digivolve offered");
-    pick_first(&mut r, 0); // RAVE
-    let _ = r.auto_resolve();
+        .expect("its optional digivolve: yes");
+    pick_first(&mut r, 0); // RAVE from the trash
+    let _ = r.auto_resolve(); // the other entry: [Once Per Turn] already used
+    assert!(r.game.pending_selection.is_none());
     assert_eq!(r.hand_size(1), 0);
     assert_eq!(field_ids(&r, 0).last().map(String::as_str), Some("RAVE"));
 }
