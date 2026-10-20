@@ -293,6 +293,10 @@ pub fn lower_for_kind_with_clause_index(
         // qualifiers, decided at that capture together with any authored
         // `trigger_if:` (`Game::discard_entries_not_triggered`); every other
         // clause condition stays a processing-time check (§15-8-3-9).
+        // The gate terms are COPIED, not moved: they stay in `condition` too,
+        // so the activation-time check reads them twice (the qualifier is
+        // ANDed into `condition` by `EffectBuilder::build`). Deliberate and
+        // harmless -- the copy exists only for the capture-time decision.
         let security_check_gate = if matches!(
             engine_timing,
             EffectTiming::OnSecurityCheck | EffectTiming::OnCheckFaceUpSecurity

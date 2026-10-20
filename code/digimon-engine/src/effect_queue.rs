@@ -4334,6 +4334,10 @@ impl Game {
     /// Kept as is: keyword bodies (`<Piercing>`'s gate mixes its trigger
     /// condition with activation conditions -- DCGO `CanActivatePierce`),
     /// granted bodies and pending processing (none carries a qualifier).
+    /// That includes a granted body captured by a security check (main's
+    /// former `trigger_eligibility` was read on every captured entry that
+    /// carried one): no granted DSL body with an `on_security_check` gate
+    /// exists today -- route granted bodies through here before adding one.
     /// Entries pushed directly onto `effect_queue` (not through
     /// `enqueue_triggered*`: `enqueue_self_trashed_from_hand`, the arts-card
     /// [When Digivolving] and Option [Main] paths, pending processing, the
