@@ -1422,6 +1422,9 @@ impl Game {
         // so the trigger's source is gone when activation is attempted).
         // Outermost entries only; nested drains are mid-effect (Q6/Q13/Q14).
         if self.effect_drain_depth == 1 && self.pending_selection.is_none() && !self.game_over {
+            // §15-4-3-3: the finished effect's window triggers are released
+            // first, so the rule check's own triggers pend with them.
+            self.release_event_window_triggers();
             self.run_state_based_rules_check();
         }
         self.drain_effect_queue_inner();
@@ -1429,6 +1432,12 @@ impl Game {
         // infinite-loop draw, a §1-2-6 win/lose effect, a deck-out -- and no
         // flush or rules processing runs after it.
         if self.effect_drain_depth == 1 && !self.game_over {
+            // Fallback flushes. The windows are normally released at the top
+            // of the drain loop as soon as the effect that opened them has
+            // finished (`release_event_window_triggers`, §15-4-3-2); these
+            // catch a window still open when the queue empties. Never inside
+            // a deferred-drain scope (`draining_deferred == 0`): an effect is
+            // still resolving there, and its windows wait for it (§15-8-3-2).
             // Flush the OnDiscardHand batch window (G-ENGINE-ON-DISCARD-HAND):
             // the causing effect body has finished, so the whole discard batch
             // is known. Fire the trigger ONCE per affected owner (DCGO
@@ -1437,7 +1446,7 @@ impl Game {
             // a selection (a park means the effect body is not finished — the
             // resuming drain flushes it). Loop-guarded because an OnDiscardHand
             // observer can itself trash a hand (a nested batch).
-            if self.pending_selection.is_none() && !self.game_over {
+            if self.pending_selection.is_none() && !self.game_over && self.draining_deferred == 0 {
                 let mut discard_guard: u16 = 0;
                 while self.pending_hand_discard.is_some()
                     && self.pending_selection.is_none()
@@ -1462,7 +1471,7 @@ impl Game {
             // `FireOnAddLibraryAnyone` once per added list), then drain.
             // Every later block re-checks for the §18-3-2 draw: a pass above
             // may have ended the game in it, and nothing runs after that.
-            if self.pending_selection.is_none() && !self.game_over {
+            if self.pending_selection.is_none() && !self.game_over && self.draining_deferred == 0 {
                 let mut deck_guard: u16 = 0;
                 while self.pending_deck_add.is_some()
                     && self.pending_selection.is_none()
@@ -1487,7 +1496,7 @@ impl Game {
             // ONCE per host (DCGO `AddDigivolutionCards*` once per list;
             // rule 15-5-2), then drain the observers. Loop-guarded because an
             // observer can itself place sources (a nested batch).
-            if self.pending_selection.is_none() && !self.game_over {
+            if self.pending_selection.is_none() && !self.game_over && self.draining_deferred == 0 {
                 let mut added_guard: u16 = 0;
                 while !self.pending_added_sources.is_empty()
                     && self.pending_selection.is_none()
@@ -1566,6 +1575,55 @@ impl Game {
         }
     }
 
+    /// Release point of one resolution's triggers (§15-4-3-2 "If multiple
+    /// effects are triggered before a single rule or effect is resolved, they
+    /// all trigger simultaneously"; §15-4-3-5-1 the turn player orders them).
+    ///
+    /// Called at the top of each `drain_effect_queue_inner` iteration, i.e.
+    /// when the drain is about to choose the next pending effect because the
+    /// effect, action or rule process before it has FINISHED. Most events
+    /// enqueue their observers directly while that processing runs (a source
+    /// trash, a deletion, a play, ...) and the deferred-drain scope holds them
+    /// (§15-8-3-2). The batch-window events -- an effect trashing from a hand
+    /// (`OnDiscardHand`), adding to a deck (`OnAddToDeck`), placing
+    /// digivolution cards (`OnAddDigivolutionCards`) -- only record a window
+    /// and enqueue on flush. Flushing them HERE, before the batch stamp below,
+    /// puts every trigger the one resolution raised into ONE batch, so they
+    /// are offered as one pool. They used to flush only once the whole queue
+    /// had emptied, so e.g. Crowmon (BT26-076)'s [When Digivolving] offered
+    /// its Tamer-trash observers and its hand-trash observers as two
+    /// successive pools. A trigger activated from the pool is a resolution of
+    /// its own: its windows flush when IT finishes, into a newer (derived,
+    /// §15-4-5-2) batch, never into the outer pool.
+    ///
+    /// Also called right before each rule check of the outermost drain
+    /// (`rules_check_between_queued_effects` and the wrapper's pre-inner
+    /// check): the rule check runs its own nested drain, and its triggers
+    /// trigger simultaneously with the finished effect's (§15-4-3-3).
+    ///
+    /// Only at the outermost drain (`effect_drain_depth == 1`), with no
+    /// deferred-drain scope open (`draining_deferred == 0`) and nothing
+    /// parked. A drain entered while an effect is still resolving (a direct
+    /// `drain_effect_queue()` from a step of a resumed body, with the
+    /// selection-resolution scope open) leaves the windows open; so does the
+    /// post-queue fallback flush in `drain_effect_queue`, which has the same
+    /// `draining_deferred == 0` guard. The windows are released by the drain
+    /// that runs when that scope closes, i.e. when the effect has finished.
+    /// Enqueue-only; trigger qualifiers are decided at the flush, as before.
+    /// G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS.
+    fn release_event_window_triggers(&mut self) {
+        if self.effect_drain_depth != 1
+            || self.draining_deferred != 0
+            || self.pending_selection.is_some()
+            || self.game_over
+        {
+            return;
+        }
+        self.flush_pending_hand_discard();
+        self.flush_pending_deck_add();
+        self.flush_pending_added_sources();
+    }
+
     /// State-based ≤0-DP rules-check run BETWEEN top-level queued effects (after
     /// each `run_queued_effect`). Q24: a Digimon driven to ≤0 DP by one effect is
     /// deleted by the rules-check before the next queued trigger resolves. Runs
@@ -1574,6 +1632,11 @@ impl Game {
     /// sub-steps of one resolving effect (Q6/Q13/Q14).
     fn rules_check_between_queued_effects(&mut self) {
         if self.effect_drain_depth == 1 && self.pending_selection.is_none() {
+            // §15-4-3-3: a rule check's triggers trigger simultaneously with
+            // the others at that timing -- release the finished effect's
+            // window triggers BEFORE the rule check's nested drain stamps its
+            // batch, so they share one pool.
+            self.release_event_window_triggers();
             self.run_state_based_rules_check();
         }
     }
@@ -1627,6 +1690,11 @@ impl Game {
                     return;
                 }
             }
+            // §15-4-3-2: the effect (or action / rule process) that ran
+            // before this iteration has finished; release the observers its
+            // batch-window events left pending, so they are stamped into the
+            // SAME trigger batch as its directly-enqueued ones below.
+            self.release_event_window_triggers();
             if self.effect_queue.is_empty() {
                 // Track H §3 Phase 4i superseded the prior inline-fire
                 // flush: granted-triggered-effect entries now ride the
@@ -1713,6 +1781,17 @@ impl Game {
                     // `drain_effect_queue`.)
                     if self.draining_deferred <= self.option_body_outer_deferred {
                         self.complete_option_body_if_done();
+                    }
+                    if self.draining_deferred > 0 && !self.option_body_pending {
+                        // An Option used by an effect that is still resolving
+                        // (an effect-driven use; the baseline depth is > 0):
+                        // its `[Main]` body is part of that effect's
+                        // resolution and has finished, but the effect has
+                        // not. Nothing pending activates and no rule check
+                        // runs until it has (§15-8-3-2, §17-1-2-2); the
+                        // scope's own drain then offers the Option's triggers
+                        // with the rest of that effect's (§15-4-3-2).
+                        return;
                     }
                     self.rules_check_between_queued_effects();
                     continue;

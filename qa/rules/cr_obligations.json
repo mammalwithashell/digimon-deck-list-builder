@@ -4095,9 +4095,12 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An observer whose condition is met again before it activates triggers again: one effect's source trash and hand trash give the same Tamer observer two pending entries in one pool, and a third hand trash a third entry; each activates once per fulfilment.",
+      "status": "proven",
+      "tests": [
+        "ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool",
+        "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool"
+      ],
       "text": "If an already triggered effect's trigger conditions are met again before it activates, that effect will be triggered again."
     },
     "15-4-3": {
@@ -4134,11 +4137,14 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved).",
+      "note": "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved). The triggers raised by every event of ONE effect's resolution (a source trash, then a hand trash) pend in one pool when that effect finishes (the batch-window observers are released into the same trigger batch, Game::release_event_window_triggers); a trigger activated from that pool is a resolution of its own, so what it raises pends as a new, derived pool (G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS resolved).",
       "status": "proven",
       "tests": [
         "ch15_04_effect_states::when_attacking_and_alliance_share_one_pool",
-        "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"
+        "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first",
+        "ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool",
+        "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool",
+        "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes"
       ],
       "text": "If multiple effects are triggered before a single rule or effect is resolved, they all trigger simultaneously. If effects trigger simultaneously, the effects will be pending activation and activate 1 at a time. (For details, refer to 15-4-4 \"Pending Activation\")15-4- 4"
     },
@@ -4153,7 +4159,9 @@
       "note": "The rule's example: an '[Opponent's Turn] -3000 DP' aura leaves a 3000 DP Digimon at 0 DP when its controller's turn starts; its [On Deletion] and a [Start of Your Turn] effect are offered in ONE TriggerOrder, nothing activated before the choice.",
       "status": "proven",
       "tests": [
-        "ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers"
+        "ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers",
+        "ch15_04_effect_states::rule_check_triggers_pend_with_the_finished_effects_triggers",
+        "ch15_04_effect_states::rule_check_after_a_queued_effect_pools_with_its_window_triggers"
       ],
       "text": "When an effect is triggered by a rule check, it triggers simultaneously with other effects that triggered at that timing. (Example: An [On Deletion] effect on a Digimon that was deleted by its DP becoming 0 at the start of your turn will trigger simultaneously with [Start of Your Turn] effects.)"
     },
@@ -4196,7 +4204,8 @@
       "tests": [
         "ch15_04_effect_states::turn_player_orders_first_then_non_turn_player",
         "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first",
-        "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"
+        "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool",
+        "ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool"
       ],
       "text": "The turn player chooses 1 of their effects to activate from among the effects that triggered simultaneously. This step is repeated until there are no more pending activation effects for the turn player."
     },
@@ -4339,7 +4348,8 @@
       "note": null,
       "status": "proven",
       "tests": [
-        "ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings"
+        "ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings",
+        "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool"
       ],
       "text": "A derived triggering effect will activate before previously triggered effects that are pending activation."
     },
@@ -4740,7 +4750,9 @@
       "status": "proven",
       "tests": [
         "ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish",
-        "ch15_08_effect_categories::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends"
+        "ch15_08_effect_categories::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends",
+        "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes",
+        "ch15_04_effect_states::window_triggers_wait_through_a_direct_drain_inside_a_resumed_effect"
       ],
       "text": "Trigger-type effects can't activate during the processing for a rule or effect."
     },
@@ -15322,9 +15334,9 @@
         "total": 10
       },
       "15": {
-        "gap": 135,
+        "gap": 134,
         "not_testable": 66,
-        "proven": 43,
+        "proven": 44,
         "total": 244
       },
       "16": {
@@ -15394,15 +15406,15 @@
         "total": 13
       }
     },
-    "gap": 591,
+    "gap": 590,
     "mechanics": {
       "gap_blocking": 0,
-      "gap_nonblocking": 319,
+      "gap_nonblocking": 318,
       "not_testable": 152,
-      "proven": 244
+      "proven": 245
     },
     "not-testable": 246,
-    "proven": 282
+    "proven": 283
   },
   "version": 1
 }

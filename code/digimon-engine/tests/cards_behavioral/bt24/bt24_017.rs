@@ -101,9 +101,10 @@ fn push_to_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .expect("card in card_data");
     let idx = runner.game.next_card_index();
-    runner.game.players[p as usize]
-        .trash
-        .push(digimon_engine::card_source::CardSource::new(
+    runner
+        .game
+        .player_mut(p)
+        .put_in_trash(digimon_engine::card_source::CardSource::new(
             data_idx, p, idx,
         ));
 }
@@ -1063,5 +1064,72 @@ fn bt24_017_standard_alt_path_accepts_right_color_base() {
     assert!(
         bt24_017_color_gate_try(digimon_engine::enums::CardColor::Red),
         "a red level-5 base digivolves into BT24-017 via the Red Lv.5 alt path"
+    );
+}
+
+/// §15-8-3-2 "Trigger-type effects can't activate during the processing for a
+/// rule or effect" / §15-4-3-2: BT24-017's [When Digivolving] returns 2 cards
+/// to the opponent's deck (a deck add, triggering Butenmon BT26-015's "[Your
+/// Turn][OPT] When your effects add to decks") and then plays the Tokens and
+/// applies its DP gain. BT26-015 waits until the WHOLE effect has finished --
+/// its prompt comes after both Tokens and the +2000-per-Digimon boost -- and
+/// is not run from the Token play's drain in the middle of the effect.
+/// G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS (fix round 1, I1).
+#[test]
+fn bt24_017_deck_add_observer_waits_for_the_whole_effect() {
+    let mut opp_digimon = make_test_card("OPP-D", "OppD");
+    opp_digimon.dp = Some(4000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("YAML loads")
+        .dsl_card("BT26-015")
+        .expect("BT26-015")
+        .add_card(opp_digimon)
+        .add_card(make_test_card("TRASH-A", "TrashA"))
+        .add_card(make_test_card("TRASH-B", "TrashB"))
+        .memory(20)
+        .start();
+
+    let bt24_handle = place_bt24_on_field(&mut runner, 0);
+    runner.place_on_field(0, "BT26-015", None);
+    runner.place_on_field(1, "OPP-D", None);
+    push_to_trash(&mut runner, 1, "TRASH-A");
+    push_to_trash(&mut runner, 1, "TRASH-B");
+
+    trigger_when_digivolving(&mut runner, bt24_handle);
+    resolve_first(&mut runner); // delete OPP-D
+    accept_return_two_cost(&mut runner);
+    resolve_first(&mut runner); // first trash pick
+    resolve_first(&mut runner); // second trash pick (the effect resumes)
+
+    assert_eq!(
+        token_count(&runner, 1),
+        2,
+        "both Tokens were played before anything activated"
+    );
+    assert_eq!(
+        runner.effective_dp(bt24_handle),
+        Some(11000 + 4000),
+        "the +2000-per-Digimon boost applied before anything activated"
+    );
+    let sel = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("BT26-015's deck-add reaction is offered after the effect");
+    assert_eq!(sel.selecting_player, 0, "{sel:?}");
+    assert_eq!(
+        runner
+            .game
+            .card_data_for_handle(sel.source_card)
+            .map(|c| c.card_id.as_str()),
+        Some("BT26-015"),
+        "the pending prompt is BT26-015's deck-add reaction: {sel:?}"
+    );
+    assert!(
+        sel.prompt.starts_with("1 of your Digimon may get +3000 DP"),
+        "BT26-015's own prompt: {:?}",
+        sel.prompt
     );
 }

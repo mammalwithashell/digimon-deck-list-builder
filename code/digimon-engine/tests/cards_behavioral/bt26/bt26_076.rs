@@ -16,6 +16,7 @@
 use super::support::*;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, EffectTiming};
+use digimon_engine::selection::SelectionKind;
 
 const CARD_ID: &str = "BT26-076";
 
@@ -172,12 +173,104 @@ fn bt26_076_self_caused_tamer_trash_waits_for_opponent_discard() {
     // The deferred queue and parked VM must survive cloning for search.
     r.game = r.game.clone();
     pick_hand(&mut r, 1, "JUNK");
+    // The Tamer trash and the hand trash each trigger the [Your Turn]
+    // reaction (§15-4-2-4); both entries pend in ONE pool once the
+    // [When Digivolving] has finished (§15-4-3-2).
+    assert_eq!(
+        trigger_order_cards(&r),
+        vec!["BT26-076", "BT26-076"],
+        "both reactions pend together"
+    );
+    choose_trigger(&mut r, "BT26-076"); // order one of the two entries first
     r.accept_optional_trigger()
-        .expect("reactive digivolve offered");
-    pick_first(&mut r, 0); // RAVE
-    let _ = r.auto_resolve();
+        .expect("its optional digivolve: yes");
+    pick_first(&mut r, 0); // RAVE from the trash
+    let _ = r.auto_resolve(); // the other entry: [Once Per Turn] already used
+    assert!(r.game.pending_selection.is_none());
     assert_eq!(r.hand_size(1), 0);
     assert_eq!(field_ids(&r, 0).last().map(String::as_str), Some("RAVE"));
+}
+
+/// Card ids of the pending `TriggerOrder` branches (labels are
+/// `"<card_id> slot <n> (...)"`), sorted.
+fn trigger_order_cards(r: &DebugRunner) -> Vec<String> {
+    let sel = r.pending_selection().expect("a TriggerOrder prompt");
+    assert_eq!(sel.kind, SelectionKind::TriggerOrder, "{sel:?}");
+    let mut cards: Vec<String> = sel
+        .effect_choices
+        .as_ref()
+        .expect("TriggerOrder branches")
+        .iter()
+        .map(|c| c.label.split(" slot ").next().unwrap_or(&c.label).to_string())
+        .collect();
+    cards.sort();
+    cards
+}
+
+/// Resolve the pending `TriggerOrder` by picking a `card_id` branch.
+fn choose_trigger(r: &mut DebugRunner, card_id: &str) {
+    let (player, action) = {
+        let sel = r.pending_selection().expect("a TriggerOrder prompt");
+        assert_eq!(sel.kind, SelectionKind::TriggerOrder, "{sel:?}");
+        let choice = sel
+            .effect_choices
+            .as_ref()
+            .expect("TriggerOrder branches")
+            .iter()
+            .find(|c| c.label.starts_with(&format!("{card_id} ")))
+            .unwrap_or_else(|| panic!("no {card_id} branch: {sel:?}"));
+        (sel.selecting_player, choice.action_id)
+    };
+    r.execute_action(player, action).unwrap();
+}
+
+/// §15-4-3-2 "If multiple effects are triggered before a single rule or effect
+/// is resolved, they all trigger simultaneously"; §15-4-3-5-1 the turn player
+/// orders them. Crowmon's [When Digivolving] trashes Keenan Crier
+/// (BT26-094)'s face-down card (event 1) and makes the opponent trash a hand
+/// card (event 2); Keenan's reaction and Crowmon's own [Your Turn] reaction
+/// each trigger on each event (§15-4-2-4) -- four triggers of ONE effect's
+/// resolution, offered as ONE pool (DCGO measured one 4-entry
+/// `MultipleSkills`: the BT26-076-effect2 oracle abort,
+/// `qa/qa-reports/exam-verdicts/BT26-076.json`). Both Crowmon entries are
+/// offered; its [Once Per Turn] is checked at activation (DCGO
+/// `timesPerTurn`). G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS.
+///
+/// The parked 4-entry `TriggerOrder` clones faithfully for search: two clones
+/// resolve it in different orders (Crowmon first / Keenan first) and both
+/// complete to the same board.
+#[test]
+fn bt26_076_tamer_trash_and_hand_trash_triggers_pend_in_one_pool() {
+    let mut r = setup();
+    let keenan = tamer_with_face_down(&mut r, 0, "BT26-094", 1);
+    let crow = r.place_on_field(0, CARD_ID, Some(0));
+    push_trash(&mut r, 0, "RAVE");
+    push_hand(&mut r, 1, "JUNK");
+    fire(&mut r, EffectTiming::WhenDigivolving, crow);
+    pick_first(&mut r, 0); // Keenan (cost) — no delete target exists
+    pick_hand(&mut r, 1, "JUNK");
+    assert_eq!(
+        trigger_order_cards(&r),
+        vec!["BT26-076", "BT26-076", "BT26-094", "BT26-094"],
+        "both events' triggers pend in one pool"
+    );
+
+    for first in ["BT26-076", "BT26-094"] {
+        let mut c = DebugRunner::wrap(r.game.clone());
+        choose_trigger(&mut c, first);
+        drain_first(&mut c);
+        assert!(c.game.pending_selection.is_none(), "{first} first: settled");
+        assert_eq!(
+            field_ids(&c, 0).last().map(String::as_str),
+            Some("RAVE"),
+            "{first} first: Crowmon digivolved once"
+        );
+        assert!(
+            c.game.players[0].battle_area[keenan.index as usize].is_suspended,
+            "{first} first: Keenan activated (suspended)"
+        );
+        assert_eq!(c.memory(), 5 - 3, "{first} first: one digivolve paid");
+    }
 }
 
 #[test]

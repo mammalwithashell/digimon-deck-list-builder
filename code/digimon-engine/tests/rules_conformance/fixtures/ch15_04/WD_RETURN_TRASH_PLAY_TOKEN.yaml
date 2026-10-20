@@ -1,0 +1,37 @@
+# WD_RETURN_TRASH_PLAY_TOKEN -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [When Digivolving] Return 1 card from your trash to the bottom of your
+#   deck. Then, play 1 [Familiar] Token.
+# The shape of BT24-017 / EX11-012's "by returning 2 cards from their trash
+# to the bottom of the deck, they play 2 [Petrification] Tokens": a deck add
+# (a batch-window event) and then a token play (whose observers used to be
+# drained inline), both inside ONE effect whose body resumes after the trash
+# pick (the §15-4-3-2 / §15-8-3-2 resumed-effect pool test).
+card: WD_RETURN_TRASH_PLAY_TOKEN
+name: Petrimon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Return 1 card from your trash to the bottom of your deck. Then, play 1 [Familiar] Token."
+    process:
+      - as_selecting_player:
+          of: you
+          body:
+            - select_count_capped_multi:
+                of: you
+                zone: trash
+                min: 1
+                max: 1
+                filter: {}
+                bind_as: returned_cards
+                optional_zero: false
+                prompt: "Return 1 card from your trash to the bottom of your deck"
+            - return_trash_list_to_deck_bottom:
+                of: you
+                cards: returned_cards
+            - play_token:
+                controller: you
+                token_name: familiar

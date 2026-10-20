@@ -62,17 +62,21 @@
   status: proven
   tests: ["ch15_04_effect_states::pending_effects_activate_one_at_a_time"]
   note: "Same sentence as 15-4-2-3, restated for pending activation."
+"15-4-2-4":
+  status: proven
+  tests: ["ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool", "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool"]
+  note: "An observer whose condition is met again before it activates triggers again: one effect's source trash and hand trash give the same Tamer observer two pending entries in one pool, and a third hand trash a third entry; each activates once per fulfilment."
 "15-4-3-2":
   status: proven
-  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"]
-  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
+  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first", "ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool", "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool", "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes"]
+  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved). The triggers raised by every event of ONE effect's resolution (a source trash, then a hand trash) pend in one pool when that effect finishes (the batch-window observers are released into the same trigger batch, Game::release_event_window_triggers); a trigger activated from that pool is a resolution of its own, so what it raises pends as a new, derived pool (G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS resolved)."
 "16-24-2":
   status: proven
   tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch16_attack_keywords::alliance_kind_matches_rule"]
   note: "<Alliance> is a [When Attacking] trigger-type body (keyword_to_auto_effect) pending with the attack declaration's other triggers; its ally pick is the body."
 "15-4-3-5-1":
   status: proven
-  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first", "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"]
+  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first", "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool", "ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool"]
   note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. After a battle the turn player's battle-result triggers ('wins a battle', <Piercing>) activate before the non-turn player's [On Deletion] (official Q&A Q3931; G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
 "15-4-3-5-2":
   status: proven
@@ -98,7 +102,7 @@
   note: "Same Q1009 witness as 15-8-3-9-2: the second copy's only processing condition is unmet at activation, so it can't be activated."
 "15-4-5-2":
   status: proven
-  tests: ["ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings"]
+  tests: ["ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings", "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool"]
 "15-4-5-3":
   status: proven
   tests: ["ch15_04_effect_states::non_turn_player_derived_trigger_precedes_turn_player_pending"]
@@ -114,7 +118,7 @@
   note: "'When any of your [TS] trait Digimon win a battle, gain 1 memory' triggered by a [TS] winner activates although the loser's [On Deletion] deleted the winner first; control with a winner without [TS] does not (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX). Converse: with a winner without [TS] the effect never triggers, even when a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER). Every observer timing: 'When your opponent plays a Digimon with 4000 DP or less' (trigger_if:) never triggers on a 6000 DP play, though the played Digimon's own [On Play] lowers it to 4000 DP before the observer would activate; control with a 1000 DP play activates (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)."
 "15-8-3-2":
   status: proven
-  tests: ["ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish", "ch15_08_effect_categories::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends"]
+  tests: ["ch15_08_effect_categories::trigger_type_waits_for_causing_effect_to_finish", "ch15_08_effect_categories::play_from_trash_of_card_just_trashed_while_source_trash_trigger_pends", "ch15_04_effect_states::triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes", "ch15_04_effect_states::window_triggers_wait_through_a_direct_drain_inside_a_resumed_effect"]
   note: "Owner ruling 2026-10-10 #1. 'Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory.' with an 'effects trash cards from under your Tamers' observer: the observer waits for the trashing effect's 'Then, gain 1 memory' whether the cause is an Option [Main] or an [On Play] trigger. fire_digivolution_card_trashed no longer drains inline; source-trash observers are enqueued inside a deferred-drain event scope (G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS resolved). With that trigger pending, the same effect plays from the trash the very card its cost just trashed from under the Tamer (official Q&A Q6958): the card is placed face-up in the trash (3-6-3) and face-up on the field when played (3-4-2), so the rule check no longer trashes it as a face-down card (17-1-3-2-4) (G-ENGINE-PLAY-FROM-TRASH-OF-JUST-TRASHED-SOURCE-NOT-PLAYED resolved)."
 "15-8-3-4":
   status: proven
@@ -277,7 +281,7 @@
   note: "A linked card with no [Link] (so no <Link> note names its category) is trashed by the same per-host link step. The witness is really a 17-1-3-2-6 board (a Tamer card with no link requirement); the category-restricting <Link> note model is not built: no card's <Link> note restricts categories in the engine, so any card with a link requirement passes the category half."
 "15-4-3-3":
   status: proven
-  tests: ["ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers"]
+  tests: ["ch17_rule_checks::rule_check_deletion_trigger_is_simultaneous_with_timing_triggers", "ch15_04_effect_states::rule_check_triggers_pend_with_the_finished_effects_triggers", "ch15_04_effect_states::rule_check_after_a_queued_effect_pools_with_its_window_triggers"]
   note: "The rule's example: an '[Opponent's Turn] -3000 DP' aura leaves a 3000 DP Digimon at 0 DP when its controller's turn starts; its [On Deletion] and a [Start of Your Turn] effect are offered in ONE TriggerOrder, nothing activated before the choice."
 
 # ── ch18 Pending / Overwrite Processing, Infinite Loops (§18), §9-1-4/5, §16-7-4..6 — tests/rules_conformance/ch18_pending_overwrite.rs ──

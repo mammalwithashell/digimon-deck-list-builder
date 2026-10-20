@@ -1013,3 +1013,478 @@ fn one_multi_card_cost_trash_triggers_each_observer_once() {
         "around a face-up card: each observer activates once"
     );
 }
+
+// ─── §15-4-3-2 across the events of one effect ──────────────────────────────
+
+/// Resolve the using effect's own prompts (the Tamer pick, P1's hand pick)
+/// until the first `TriggerOrder` is offered or nothing is pending.
+fn resolve_until_trigger_order(r: &mut DebugRunner) {
+    for _ in 0..8 {
+        let Some(sel) = r.pending_selection() else {
+            return;
+        };
+        if sel.kind == SelectionKind::TriggerOrder {
+            return;
+        }
+        if sel.selecting_player == 1 {
+            pick_hand_card(r, 1, FILL);
+        } else {
+            step_prompt(r);
+        }
+    }
+    panic!("the effect's own prompts did not settle");
+}
+
+/// §15-4-3-2 "If multiple effects are triggered before a single rule or effect
+/// is resolved, they all trigger simultaneously. If effects trigger
+/// simultaneously, the effects will be pending activation and activate 1 at a
+/// time."
+/// §15-4-3-5-1 "The turn player chooses 1 of their effects to activate from
+/// among the effects that triggered simultaneously. This step is repeated
+/// until there are no more pending activation effects for the turn player."
+///
+/// P0 uses `MAIN_TRASH_UNDER_OPP_DISCARD` ("[Main] Trash the bottom face-down
+/// card from under 1 of your Tamers. Then, your opponent trashes 1 card in
+/// their hand."): ONE effect, TWO events. P0's `TAMER_TWO_EVENT_OBS_MEM`
+/// ("When your opponent's hand is trashed from or effects trash cards from
+/// under this Tamer, gain 1 memory", Keenan Crier BT26-094's shape) and
+/// `OPT_TWO_EVENT_OBS_DRAW` ("[Once Per Turn] When your opponent's hand is
+/// trashed from or effects trash cards from under your Tamers, <Draw 1>",
+/// Crowmon BT26-076's shape) each trigger on each event (§15-4-2-4: met again
+/// before it activates, triggered again) -- four triggers, all before the one
+/// effect has resolved, so they trigger simultaneously: ONE pool of four the
+/// turn player orders, not one pool per event. (DCGO: one 4-entry
+/// `MultipleSkills` for Crowmon + Keenan, `qa/qa-reports/exam-verdicts/BT26-076.json`.)
+///
+/// Both [Once Per Turn] entries are offered: the limit is checked when an
+/// effect activates (DCGO `ActivateClass` `timesPerTurn`), so the pool holds
+/// both, and once one has activated the other can no longer activate and is
+/// not offered again.
+#[test]
+fn triggers_from_two_events_of_one_effect_pend_in_one_pool() {
+    cite!(
+        "15-4-3-2",
+        "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57"
+    );
+    cite!(
+        "15-4-2-4",
+        "dea76fe97f7debaf2f9af69a29d70795982cfed0f27ca910ae763c21b4515663"
+    );
+    cite!(
+        "15-4-3-5-1",
+        "d89bb63cefda9cf4c0485d6d3b9c0c7f799c40b360e7255e3e91e64c3cfd0616"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .hand(0, &["MAIN_TRASH_UNDER_OPP_DISCARD"])
+        .hand(1, &[FILL])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    let tamer = r.place_on_field(0, "TAMER_TWO_EVENT_OBS_MEM", Some(0));
+    attach_face_down(&mut r, tamer, FILL);
+    r.place_on_field(0, "OPT_TWO_EVENT_OBS_DRAW", Some(0));
+    let cp = r.event_checkpoint();
+
+    use_option(&mut r, 0, "MAIN_TRASH_UNDER_OPP_DISCARD");
+    let hand0 = r.hand_size(0);
+    resolve_until_trigger_order(&mut r);
+
+    assert!(
+        hand_ids(&r, 1).is_empty(),
+        "both events happened: P1 trashed its hand card before anything activated"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty() && r.hand_size(0) == hand0,
+        "nothing activated before the pool was offered"
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&[
+            "OPT_TWO_EVENT_OBS_DRAW",
+            "OPT_TWO_EVENT_OBS_DRAW",
+            "TAMER_TWO_EVENT_OBS_MEM",
+            "TAMER_TWO_EVENT_OBS_MEM"
+        ]),
+        "the triggers from both events pend in ONE pool"
+    );
+
+    choose(&mut r, "OPT_TWO_EVENT_OBS_DRAW");
+    assert_eq!(
+        r.hand_size(0),
+        hand0 + 1,
+        "the chosen [Once Per Turn] entry activated"
+    );
+    let rest = order_choices(&r, 0);
+    assert_eq!(
+        rest.iter().map(|l| branch_card(l)).collect::<Vec<_>>(),
+        vec!["TAMER_TWO_EVENT_OBS_MEM", "TAMER_TWO_EVENT_OBS_MEM"],
+        "the other [Once Per Turn] entry can no longer activate; both Tamer entries are still pending: {rest:?}"
+    );
+    choose(&mut r, "TAMER_TWO_EVENT_OBS_MEM");
+    resolve_prompts(&mut r);
+
+    assert_eq!(r.hand_size(0), hand0 + 1, "<Draw 1> activated once");
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![
+            (0, "TAMER_TWO_EVENT_OBS_MEM".to_string()),
+            (0, "TAMER_TWO_EVENT_OBS_MEM".to_string()),
+        ],
+        "the Tamer's effect activated once per event"
+    );
+}
+
+/// §15-4-3-2 applies per resolving effect: an effect activated FROM the pool
+/// is itself "a single rule or effect", so the triggers raised while IT
+/// resolves trigger simultaneously with each other -- a new pool -- not with
+/// the entries still pending from the first one; and being derived they
+/// activate before those (§15-4-5-2 "A derived triggering effect will activate
+/// before previously triggered effects that are pending activation.").
+///
+/// As above with `OPT_OBS_OPP_DISCARD` ("[Once Per Turn] When effects trash
+/// cards from under your Tamers, your opponent trashes 1 card in their hand")
+/// in place of the drawing observer: the pool is [`OPT_OBS_OPP_DISCARD`, the
+/// Tamer twice]. Activating `OPT_OBS_OPP_DISCARD` trashes P1's second hand
+/// card, which triggers the Tamer a third time. That trigger is alone in its
+/// own pool and activates at once; only then are the two earlier Tamer
+/// entries offered again.
+#[test]
+fn triggers_raised_by_a_pooled_effect_pend_as_a_new_pool() {
+    cite!(
+        "15-4-3-2",
+        "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57"
+    );
+    cite!(
+        "15-4-2-4",
+        "dea76fe97f7debaf2f9af69a29d70795982cfed0f27ca910ae763c21b4515663"
+    );
+    cite!(
+        "15-4-5-2",
+        "4673e5ae035f311cbd55487d1113223036236e4b3a0313d40fd3071df6a86fd5"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .hand(0, &["MAIN_TRASH_UNDER_OPP_DISCARD"])
+        .hand(1, &[FILL, FILL])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    let tamer = r.place_on_field(0, "TAMER_TWO_EVENT_OBS_MEM", Some(0));
+    attach_face_down(&mut r, tamer, FILL);
+    r.place_on_field(0, "OPT_OBS_OPP_DISCARD", Some(0));
+    let cp = r.event_checkpoint();
+
+    use_option(&mut r, 0, "MAIN_TRASH_UNDER_OPP_DISCARD");
+    resolve_until_trigger_order(&mut r);
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&[
+            "OPT_OBS_OPP_DISCARD",
+            "TAMER_TWO_EVENT_OBS_MEM",
+            "TAMER_TWO_EVENT_OBS_MEM"
+        ]),
+        "the first effect's two events: one pool"
+    );
+
+    choose(&mut r, "OPT_OBS_OPP_DISCARD");
+    pick_hand_card(&mut r, 1, FILL);
+    assert!(hand_ids(&r, 1).is_empty(), "P1 trashed its second card");
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(0, "TAMER_TWO_EVENT_OBS_MEM".to_string())],
+        "the derived trigger activated first, alone in its own pool"
+    );
+    let rest = order_choices(&r, 0);
+    assert_eq!(
+        rest.iter().map(|l| branch_card(l)).collect::<Vec<_>>(),
+        vec!["TAMER_TWO_EVENT_OBS_MEM", "TAMER_TWO_EVENT_OBS_MEM"],
+        "the first pool's two Tamer entries are still pending, not merged with the derived one: {rest:?}"
+    );
+    choose(&mut r, "TAMER_TWO_EVENT_OBS_MEM");
+    resolve_prompts(&mut r);
+    assert_eq!(
+        memory_sources(&r, cp).len(),
+        3,
+        "the Tamer's effect activated once per event"
+    );
+}
+
+/// Put `card_id` on top of `player`'s trash.
+fn push_trash_card(r: &mut DebugRunner, player: u8, card_id: &str) {
+    let data_index = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("unknown card_id {card_id}"));
+    let index = r.game.next_card_index();
+    let card = digimon_engine::card_source::CardSource::new(data_index, player, index);
+    r.game.player_mut(player).put_in_trash(card);
+}
+
+/// Answer the pending prompt with its first legal non-PASS option.
+fn pick_first_option(r: &mut DebugRunner) {
+    let sel = r.pending_selection().expect("a pending prompt");
+    let player = sel.selecting_player;
+    let action = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .unwrap_or_else(|| panic!("no non-PASS option: {sel:?}"));
+    r.execute_action(player, action)
+        .unwrap_or_else(|e| panic!("pick rejected: {e:?}"));
+}
+
+/// §15-4-3-2 (as above) with §15-8-3-2 "Trigger-type effects can't activate
+/// during the processing for a rule or effect": the effect is still being
+/// processed after it resumed from a decision, so nothing it triggers
+/// activates in the middle of it, and every trigger of its events pends in
+/// ONE pool when it has finished.
+///
+/// `WD_RETURN_TRASH_PLAY_TOKEN` ("[When Digivolving] Return 1 card from your
+/// trash to the bottom of your deck. Then, play 1 [Familiar] Token.", the
+/// shape of BT24-017 / EX11-012's "by returning 2 cards from their trash to
+/// the bottom of the deck, they play 2 [Petrification] Tokens") resumes from
+/// its trash pick, adds the card to the deck (triggering
+/// `OBS_OWN_DECK_ADD_MEM`, "When your effects add cards to a deck", Butenmon
+/// BT26-015's shape) and then plays the Token (triggering `OBS_PLAY_LE4K`,
+/// "When one of your Digimon with 4000 DP or less is played"). Neither
+/// activates during the effect; they are offered together afterwards.
+#[test]
+fn triggers_of_a_resumed_effect_pend_in_one_pool_when_it_finishes() {
+    cite!(
+        "15-4-3-2",
+        "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57"
+    );
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_PLAY_LE4K", Some(0));
+    r.place_on_field(0, "OBS_OWN_DECK_ADD_MEM", Some(0));
+    push_trash_card(&mut r, 0, FILL);
+    push_trash_card(&mut r, 0, FILL);
+    let carrier = r.place_on_field(0, "WD_RETURN_TRASH_PLAY_TOKEN", Some(0));
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+    pick_first_option(&mut r); // the trash card to return (the effect resumes)
+
+    assert_eq!(
+        r.game.player(0).trash.len(),
+        1,
+        "the effect returned 1 trash card to the deck"
+    );
+    assert!(
+        field_top_ids(&r, 0).iter().any(|id| id == "TOKEN_FAMILIAR"),
+        "the effect played the Token: {:?}",
+        field_top_ids(&r, 0)
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "nothing activated during the effect: {:?}",
+        memory_sources(&r, cp)
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&["OBS_OWN_DECK_ADD_MEM", "OBS_PLAY_LE4K"]),
+        "the deck-add and Token-play triggers pend in ONE pool"
+    );
+    choose(&mut r, "OBS_PLAY_LE4K");
+    resolve_prompts(&mut r);
+    let mut gains: Vec<String> = memory_sources(&r, cp)
+        .into_iter()
+        .map(|(_, id)| id)
+        .collect();
+    gains.sort();
+    assert_eq!(gains, owned(&["OBS_OWN_DECK_ADD_MEM", "OBS_PLAY_LE4K"]));
+}
+
+/// §15-4-3-3 "When an effect is triggered by a rule check, it triggers
+/// simultaneously with other effects that triggered at that timing."
+///
+/// `MAIN_OPP_DISCARD_MINUS3000` ("[Main] Your opponent trashes 1 card in their
+/// hand. Then, 1 of your opponent's Digimon gets -3000 DP for the turn.")
+/// leaves P1's 1000 DP Digimon at 0 DP; the rule check after the effect
+/// deletes it (§17-1-2-2). The hand trash triggered `TAMER_TWO_EVENT_OBS_MEM`
+/// ("When your opponent's hand is trashed from ..., gain 1 memory") and the
+/// rule-check deletion triggers `OBS_OPP_DEL_MEM` ("When one of your
+/// opponent's Digimon is deleted, gain 1 memory"): ONE pool, not the rule
+/// check's trigger first and the effect's after.
+#[test]
+fn rule_check_triggers_pend_with_the_finished_effects_triggers() {
+    cite!(
+        "15-4-3-3",
+        "efae2fbeb8e4b5a4143c869cd417e1b33da48f07c2603d922ab1acc947401e3f"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .hand(0, &["MAIN_OPP_DISCARD_MINUS3000"])
+        .hand(1, &[FILL])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "TAMER_TWO_EVENT_OBS_MEM", Some(0));
+    r.place_on_field(0, "OBS_OPP_DEL_MEM", Some(0));
+    r.place_on_field(1, FILL, Some(0));
+    let cp = r.event_checkpoint();
+
+    use_option(&mut r, 0, "MAIN_OPP_DISCARD_MINUS3000");
+    resolve_until_trigger_order(&mut r);
+
+    assert!(hand_ids(&r, 1).is_empty(), "P1 trashed its hand card");
+    assert!(
+        field_top_ids(&r, 1).is_empty(),
+        "the 0 DP Digimon was deleted by the rule check"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "nothing activated before the pool: {:?}",
+        memory_sources(&r, cp)
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&["OBS_OPP_DEL_MEM", "TAMER_TWO_EVENT_OBS_MEM"]),
+        "the rule check's trigger pends with the effect's"
+    );
+    choose(&mut r, "TAMER_TWO_EVENT_OBS_MEM");
+    resolve_prompts(&mut r);
+    assert_eq!(memory_sources(&r, cp).len(), 2);
+}
+
+/// §15-8-3-2 "Trigger-type effects can't activate during the processing for a
+/// rule or effect", also when a step of the effect drains the effect queue
+/// itself.
+///
+/// `WD_RETURN_SOURCE_THEN_MEM` ("[When Digivolving] Return 1 of this
+/// Digimon's digivolution cards to the bottom of the deck. Then, gain 1
+/// memory.") resumes after its source pick; returning the source drains the
+/// queue directly (its return-to-deck-bottom observers) while the effect is
+/// still resolving, and the return is a deck add for `OBS_OWN_DECK_ADD_MEM`
+/// ("When your effects add cards to a deck, gain 1 memory"). That observer
+/// activates only after the effect's own "gain 1 memory".
+#[test]
+fn window_triggers_wait_through_a_direct_drain_inside_a_resumed_effect() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_OWN_DECK_ADD_MEM", Some(0));
+    let carrier = r.place_stack(0, &[FILL, FILL, "WD_RETURN_SOURCE_THEN_MEM"]);
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+    for _ in 0..4 {
+        if r.pending_selection().is_none() {
+            break;
+        }
+        pick_first_option(&mut r); // the source to return (the effect resumes)
+    }
+
+    assert!(r.pending_selection().is_none(), "{:?}", r.pending_selection());
+    assert_eq!(
+        r.game.player(0).battle_area[carrier.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "1 digivolution card was returned"
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![
+            (0, "WD_RETURN_SOURCE_THEN_MEM".to_string()),
+            (0, "OBS_OWN_DECK_ADD_MEM".to_string()),
+        ],
+        "the deck-add observer activated after the whole effect, not at the return's drain"
+    );
+}
+
+/// §15-4-3-3 (as above), for the rule check that runs between two queued
+/// effects. `WD_RETURN_ALL_TRASH_SELF_MINUS` ("[When Digivolving] Return all
+/// cards in your trash to the bottom of your deck. Then, this Digimon gets
+/// -1000 DP for the turn. [On Deletion] Gain 1 memory.") resolves without a
+/// decision and leaves itself at 0 DP; the rule check right after it deletes
+/// it. Its [On Deletion] and the deck add's `OBS_OWN_DECK_ADD_MEM` pend in
+/// ONE pool.
+#[test]
+fn rule_check_after_a_queued_effect_pools_with_its_window_triggers() {
+    cite!(
+        "15-4-3-3",
+        "efae2fbeb8e4b5a4143c869cd417e1b33da48f07c2603d922ab1acc947401e3f"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_OWN_DECK_ADD_MEM", Some(0));
+    push_trash_card(&mut r, 0, FILL);
+    let carrier = r.place_on_field(0, "WD_RETURN_ALL_TRASH_SELF_MINUS", Some(0));
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+
+    assert!(r.game.player(0).trash.iter().all(|c| c
+        .card_id(&r.game.card_data)
+        != FILL), "the trash card was returned to the deck");
+    assert!(
+        !field_top_ids(&r, 0).contains(&"WD_RETURN_ALL_TRASH_SELF_MINUS".to_string()),
+        "the 0 DP Digimon was deleted by the rule check"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "nothing activated before the pool: {:?}",
+        memory_sources(&r, cp)
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&["OBS_OWN_DECK_ADD_MEM", "WD_RETURN_ALL_TRASH_SELF_MINUS"]),
+        "the rule check's [On Deletion] pends with the effect's deck-add trigger"
+    );
+    choose(&mut r, "OBS_OWN_DECK_ADD_MEM");
+    resolve_prompts(&mut r);
+    assert_eq!(memory_sources(&r, cp).len(), 2);
+}

@@ -1,0 +1,22 @@
+# TAMER_TWO_EVENT_OBS_MEM -- Tamer, red, play cost 2.
+#   [All Turns] When your opponent's hand is trashed from or effects trash
+#   cards from under this Tamer, gain 1 memory.
+# The trigger shape of Keenan Crier (BT26-094): one effect, two trigger
+# conditions, so a source trash and a hand trash each trigger it (§15-4-2-4).
+card: TAMER_TWO_EVENT_OBS_MEM
+name: Twofold Witness
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: [on_discard_hand, on_digivolution_card_trashed]
+    timing_conditions:
+      - when: on_discard_hand
+        condition:
+          event_discard_player: opponent
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_permanent_is_source: true
+    summary: "[All Turns] When your opponent's hand is trashed from or effects trash cards from under this Tamer, gain 1 memory."
+    process:
+      - gain_memory: 1

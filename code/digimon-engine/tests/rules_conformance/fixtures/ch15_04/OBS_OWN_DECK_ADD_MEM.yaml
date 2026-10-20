@@ -1,0 +1,16 @@
+# OBS_OWN_DECK_ADD_MEM -- Tamer, red, play cost 2.
+#   [All Turns] When your effects add cards to a deck, gain 1 memory.
+# The trigger shape of Butenmon (BT26-015)'s "When your effects add to decks"
+# (`on_add_to_deck`, a batch-window event).
+card: OBS_OWN_DECK_ADD_MEM
+name: Deck Witness
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: on_add_to_deck
+    trigger_if:
+      event_caused_by_own_effect: true
+    summary: "[All Turns] When your effects add cards to a deck, gain 1 memory."
+    process:
+      - gain_memory: 1
