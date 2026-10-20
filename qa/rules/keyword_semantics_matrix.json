@@ -152,7 +152,7 @@
       "display": "<De-Digivolve x>",
       "kind": "mandatory",
       "type_when": "On effect (targets opp Digimon)",
-      "semantics": "Trash up to x from top of an opponent's Digimon (stops at no digivolution cards / Lv.3); **trashing mandatory, can't choose 0**; can't reduce Lv.3 or lower",
+      "semantics": "The player **declares a number from 1 up to x** (4.3, §16-12-1; an action-space decision, `DeDigivolveCount`), then that many cards are trashed from the top of an opponent's Digimon (stops at no digivolution cards / Lv.3); **trashing mandatory, can't choose 0**; can't reduce Lv.3 or lower",
       "rule": "16-12",
       "source": "rules",
       "optionality": "mandatory",
