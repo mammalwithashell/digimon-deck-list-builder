@@ -739,3 +739,263 @@ fn overclock_does_not_offer_a_cost_that_cannot_be_deleted() {
     let _ = r.auto_resolve_declining_end_of_turn_attacks();
     assert_eq!(r.game.turn_player(), 1 - tp, "the turn passed");
 }
+
+// ─── Parked <Overclock> attacks queue; one attack at a time (§11-2-4) ─────────
+
+/// P0: two <Overclock> carriers `OCA` / `OCB` and their costs `SACA` /
+/// `SACB` (each a 2-card stack; `with_armor_purge` lists which of them carry
+/// <Armor Purge>, so their deletion parks an optional replacement). P1 has
+/// three 1000-DP security Digimon. P0 ends the turn and activates `OCA`'s
+/// <Overclock> first. Returns the runner, the event checkpoint and P1's
+/// security count.
+fn two_overclocks_board(with_armor_purge: &[&str]) -> (DebugRunner, usize, usize) {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OCA", 7000))
+        .add_card(make_digimon("OCB", 7000))
+        .add_card(make_digimon("SACA", 3000))
+        .add_card(make_digimon("SACB", 3000))
+        .add_card(make_digimon("BASE", 2000))
+        .add_card(make_digimon("SECD", 1000))
+        .security(1, &["SECD", "SECD", "SECD"])
+        .start();
+    let tp = r.game.turn_player();
+    let oca = r.place_on_field(tp, "OCA", Some(0));
+    let ocb = r.place_on_field(tp, "OCB", Some(0));
+    for sac in ["SACA", "SACB"] {
+        let h = r.place_stack(tp, &["BASE", sac]);
+        if with_armor_purge.contains(&sac) {
+            r.game
+                .modifiers
+                .grant_keyword(h, Keyword::ArmorPurge, Expiry::EndOfTurn, tp);
+        }
+    }
+    for oc in [oca, ocb] {
+        r.game
+            .modifiers
+            .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    }
+    let security_before = r.game.player(1 - tp).security.len();
+    let cp = r.event_checkpoint();
+    r.game.end_turn();
+    let order = r.pending_selection().expect("the end-of-turn pool's TriggerOrder");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+    let pick = order
+        .effect_choices
+        .as_ref()
+        .and_then(|cs| cs.iter().find(|c| c.label.starts_with("OCA")))
+        .map(|c| c.action_id)
+        .expect("OCA's <Overclock> in the TriggerOrder");
+    r.game.resolve_selection(tp, pick).expect("activate OCA's <Overclock> first");
+    (r, cp, security_before)
+}
+
+/// The battle-area slot of `tp`'s permanent whose top card is `id`.
+fn slot_of(r: &DebugRunner, tp: digimon_engine::enums::PlayerId, id: &str) -> Option<u16> {
+    r.game
+        .player(tp)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == id)
+        .map(|i| i as u16)
+}
+
+/// The top card id of the permanent the pending decision belongs to.
+fn pending_source_id(r: &DebugRunner) -> Option<String> {
+    let h = r.pending_selection()?.source_permanent?;
+    r.game
+        .player(h.player)
+        .battle_area
+        .get(h.index as usize)
+        .map(|p| p.top_card().card_id(&r.game.card_data).to_string())
+}
+
+/// Answer every decision until none is pending: each <Overclock> pays its own
+/// cost (`OCA` -> `SACA`, `OCB` -> `SACB`), every <Armor Purge> is declined
+/// (the cost is deleted), anything else takes its first choice.
+fn drive_overclocks_paying_their_costs(r: &mut DebugRunner) {
+    for _ in 0..40 {
+        let Some(sel) = r.pending_selection() else {
+            return;
+        };
+        let player = sel.selecting_player;
+        let kind = sel.kind;
+        let first = sel.valid_action_ids.first().copied();
+        let action = if r.pending_is_end_of_turn_keyword_decision() {
+            let cost = if pending_source_id(r).as_deref() == Some("OCA") {
+                "SACA"
+            } else {
+                "SACB"
+            };
+            encode_attack(0, slot_of(r, player, cost).expect("the cost is still on the field"))
+        } else if kind == SelectionKind::Replacement {
+            PASS
+        } else {
+            first.unwrap_or(PASS)
+        };
+        r.game.resolve_selection(player, action).expect("answer the decision");
+    }
+    panic!("decisions did not settle: {:?}", r.pending_selection());
+}
+
+/// The attacker card id of every attack declared since `cp`, in order.
+fn attackers_since(r: &DebugRunner, cp: usize) -> Vec<String> {
+    r.events_since(cp)
+        .iter()
+        .filter_map(|e| match e {
+            digimon_engine::events::GameEvent::Attack { attacker_card_id, .. } => {
+                Some(attacker_card_id.clone())
+            }
+            _ => None,
+        })
+        .collect()
+}
+
+/// Both <Overclock> costs park (<Armor Purge>, declined). Each cost was
+/// deleted, so each attack is mandatory (§16-34-3, §15-7-1): both attacks
+/// happen, one at a time (§11-2-4), in the order the <Overclock> effects
+/// activated -- `OCB`'s processing waits until `OCA`'s attack has ended. The
+/// former single parked-attack slot let `OCB`'s park overwrite `OCA`'s paid
+/// attack.
+#[test]
+fn two_overclock_costs_that_park_both_attack_in_activation_order() {
+    let (mut r, cp, security_before) = two_overclocks_board(&["SACA", "SACB"]);
+    let tp = r.turn_player();
+    drive_overclocks_paying_their_costs(&mut r);
+    assert_eq!(attackers_since(&r, cp), vec!["OCA", "OCB"]);
+    assert_eq!(slot_of(&r, tp, "SACA"), None, "SACA was deleted");
+    assert_eq!(slot_of(&r, tp, "SACB"), None, "SACB was deleted");
+    assert_eq!(
+        r.game.player(1 - tp).security.len(),
+        security_before - 2,
+        "both attacks checked a security card"
+    );
+    assert!(r.game.pending_attack.is_none());
+    assert_eq!(r.game.turn_player(), 1 - tp, "the turn passed");
+}
+
+/// Only `OCA`'s cost parks; `OCB`'s does not. `OCA`'s paid attack must not be
+/// declared over `OCB`'s attack in progress (§11-2-4 "A new attack
+/// declaration can't be made during an attack"), and `OCB`'s attack must not
+/// be lost: `OCA` attacks first (it activated first), `OCB` after it, and both
+/// attacks end (no Digimon is left attacking, each checked a security card).
+#[test]
+fn a_parked_overclock_attack_never_overwrites_another_attack() {
+    let (mut r, cp, security_before) = two_overclocks_board(&["SACA"]);
+    let tp = r.turn_player();
+    drive_overclocks_paying_their_costs(&mut r);
+    assert_eq!(attackers_since(&r, cp), vec!["OCA", "OCB"]);
+    assert!(
+        r.game.player(tp).battle_area.iter().all(|p| !p.is_attacking),
+        "every attack reached its end"
+    );
+    assert_eq!(
+        r.game.player(1 - tp).security.len(),
+        security_before - 2,
+        "both attacks checked a security card"
+    );
+    assert!(r.game.pending_attack.is_none());
+    assert_eq!(r.game.turn_player(), 1 - tp, "the turn passed");
+}
+
+/// The parked <Overclock> attacks are plain data (`Game: Clone`, rule 28):
+/// clone while `OCA`'s cost deletion is parked and again while `OCB`'s is.
+/// Each clone finishes the end of turn exactly as the original does (same
+/// attacks in the same order, same security), and resolving a clone leaves
+/// the original parked where it was.
+#[test]
+fn parked_overclock_attacks_clone_while_queued() {
+    let (mut r, cp, security_before) = two_overclocks_board(&["SACA", "SACB"]);
+    let tp = r.turn_player();
+    let pay = encode_attack(0, slot_of(&r, tp, "SACA").unwrap());
+    r.game.resolve_selection(tp, pay).expect("OCA pays SACA");
+    assert_eq!(
+        r.pending_selection().map(|s| s.kind),
+        Some(SelectionKind::Replacement),
+        "SACA's <Armor Purge> parks inside the cost's deletion"
+    );
+
+    let original = r.game.clone();
+    drive_overclocks_paying_their_costs(&mut r);
+    assert_eq!(attackers_since(&r, cp), vec!["OCA", "OCB"]);
+    let finished_security = r.game.player(1 - tp).security.len();
+    assert_eq!(finished_security, security_before - 2);
+
+    r.game = original;
+    assert_eq!(
+        r.pending_selection().map(|s| s.kind),
+        Some(SelectionKind::Replacement),
+        "resolving the clone left the original at SACA's <Armor Purge>"
+    );
+    assert_eq!(r.game.player(1 - tp).security.len(), security_before);
+    r.game
+        .resolve_selection(tp, PASS)
+        .expect("decline SACA's <Armor Purge>");
+    // Run until OCB's cost deletion parks in turn, then clone there.
+    for _ in 0..20 {
+        let sel = r.pending_selection().expect("a decision before OCB's park");
+        if sel.kind == SelectionKind::Replacement {
+            break;
+        }
+        let player = sel.selecting_player;
+        let first = sel.valid_action_ids.first().copied();
+        let action = if r.pending_is_end_of_turn_keyword_decision() {
+            encode_attack(0, slot_of(&r, player, "SACB").unwrap())
+        } else {
+            first.unwrap_or(PASS)
+        };
+        r.game.resolve_selection(player, action).unwrap();
+    }
+    assert_eq!(attackers_since(&r, cp), vec!["OCA"], "OCA attacked before OCB's park");
+    let second_park = r.game.clone();
+    drive_overclocks_paying_their_costs(&mut r);
+    assert_eq!(attackers_since(&r, cp), vec!["OCA", "OCB"]);
+    assert_eq!(r.game.player(1 - tp).security.len(), finished_security);
+
+    r.game = second_park;
+    assert_eq!(
+        r.pending_selection().map(|s| s.kind),
+        Some(SelectionKind::Replacement),
+        "the original is still at SACB's <Armor Purge>"
+    );
+    drive_overclocks_paying_their_costs(&mut r);
+    assert_eq!(attackers_since(&r, cp), vec!["OCA", "OCB"]);
+    assert_eq!(r.game.player(1 - tp).security.len(), finished_security);
+}
+
+/// §11-2-4 (Ver. 4.3) "A new attack declaration can't be made during an
+/// attack." With an attack in progress (parked at P1's block timing), an
+/// <Overclock> attack declaration is refused and the attack in progress is
+/// untouched.
+#[test]
+fn no_attack_is_declared_while_another_attack_is_in_progress() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", 7000))
+        .add_card(make_digimon("OC", 7000))
+        .add_card(make_digimon("BLK", 1000))
+        .start();
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let atk = r.place_on_field(tp, "ATK", Some(0));
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let blk = r.place_on_field(opp, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::EndOfTurn, opp);
+    r.game.current_phase = GamePhase::Main;
+
+    let first = r.game.attack_player(atk, opp, /* vortex = */ false);
+    assert_eq!(first, AttackResult::InProgress, "parked at the block timing");
+    assert_eq!(r.game.pending_attack.as_ref().map(|pa| pa.attacker), Some(atk));
+
+    let second = r.game.begin_attack_overclock(oc, AttackTarget::Player(opp));
+    assert_eq!(second, AttackResult::Invalid, "§11-2-4: refused");
+    assert_eq!(
+        r.game.pending_attack.as_ref().map(|pa| pa.attacker),
+        Some(atk),
+        "the attack in progress is untouched"
+    );
+    assert!(
+        !r.game.player(tp).battle_area[oc.index as usize].is_attacking,
+        "OC is not attacking"
+    );
+}

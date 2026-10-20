@@ -389,11 +389,21 @@ impl Game {
             "current_deletion_event_cause_override",
             &self.current_deletion_event_cause_override,
         );
-        debug_field(
-            &mut h,
-            "pending_overclock_attack",
-            &self.pending_overclock_attack,
-        );
+        // Hashed as the former single slot (`Option<tuple>`) while at most one
+        // attack is queued, so recorded digests are unchanged; a deeper queue
+        // (impossible before the FIFO) hashes the whole list.
+        match self.parked_overclock_attacks.as_slice() {
+            [] => debug_field(
+                &mut h,
+                "pending_overclock_attack",
+                &None::<(crate::enums::PlayerId, crate::card_source::CardHandle, crate::enums::PlayerId, u64, u64)>,
+            ),
+            [one] => debug_field(&mut h, "pending_overclock_attack", &Some(one.digest_tuple())),
+            many => {
+                let tuples: Vec<_> = many.iter().map(|p| p.digest_tuple()).collect();
+                debug_field(&mut h, "pending_overclock_attack", &tuples);
+            }
+        }
         let mut declined_overclock: Vec<u16> = self
             .declined_overclock_this_eot
             .iter()

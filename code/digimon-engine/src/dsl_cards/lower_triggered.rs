@@ -688,7 +688,7 @@ pub(crate) fn first_step_candidate_guard(
 /// `card.Owner.HandCards.Count() >= 2`).
 ///
 /// Plain data (clone-safe, `Game: Clone`), evaluated read-only by
-/// [`crate::game::Game::cost_guard_holds`]. The engine-side interim for the
+/// [`crate::game::Game::cost_guard_holds_at`]. The engine-side interim for the
 /// DSL `by:` block (`G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK`), which will
 /// mark the condition explicitly instead of recognising its shape.
 /// `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`.
@@ -1162,35 +1162,8 @@ fn picks_have_distinct_cards(candidates: &[Vec<usize>], card_count: usize) -> bo
 }
 
 impl crate::game::Game {
-    /// Can `controller` execute the optional processing condition `guard` of
-    /// an effect whose source card is `source` right now (§15-7-4,
-    /// §15-8-4-4-1)? The source permanent is the one holding `source` (as its
-    /// top or a digivolution card), if any. See [`CostGuard`].
-    ///
-    /// The interface Task 9 (`install_single_trigger_optional_gate`, the
-    /// refired-effect gate, G-ENGINE-REFIRED-EFFECT-SKIPS-OPTIONAL-DECISION)
-    /// consumes; today's sites know the source permanent and call
-    /// [`Self::cost_guard_holds_at`].
-    #[allow(dead_code)]
-    pub(crate) fn cost_guard_holds(
-        &self,
-        guard: &CostGuard,
-        source: CardHandle,
-        controller: crate::enums::PlayerId,
-    ) -> bool {
-        let source_permanent = self.players.iter().enumerate().find_map(|(player, p)| {
-            p.battle_area
-                .iter()
-                .position(|perm| perm.card_sources.iter().any(|c| c.handle() == source))
-                .map(|index| crate::permanent::PermanentHandle {
-                    player: player as crate::enums::PlayerId,
-                    index: index as u8,
-                })
-        });
-        self.cost_guard_holds_at(guard, source, source_permanent, controller)
-    }
-
-    /// [`Self::cost_guard_holds`] for a caller that already knows the
+    /// Whether the optional processing condition `guard` can be executed
+    /// now (§15-7-4, §15-8-4-4-1), for a caller that already knows the
     /// effect's source permanent (a queued effect, a `[Main]` mask scan).
     pub(crate) fn cost_guard_holds_at(
         &self,

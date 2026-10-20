@@ -521,7 +521,7 @@ pub struct Effect {
     /// effect whose guard fails installs no "you may" prompt and does not run
     /// (as if declined); §15-8-4-4-1: a `[Main]` field ability whose guard
     /// fails is not declarable (masked). Evaluated by
-    /// `Game::cost_guard_holds`. Plain data — clone-safe.
+    /// `Game::cost_guard_holds_at`. Plain data — clone-safe.
     /// `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`.
     pub optional_condition_guard: Option<Arc<crate::dsl_cards::lower_triggered::CostGuard>>,
 

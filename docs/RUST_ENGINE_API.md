@@ -3368,7 +3368,7 @@ Effect::new(card, EffectTiming::OnAllyAttack)
 2. **Attacker-side substitution (`WhenWouldAttack` with `Substituted`) is a `debug_assert`**, not a printed mechanic. No card moves the attacker slot via a replacement; the variant is kept for shape symmetry with `WhenWouldBeAttackTarget`.
 3. **One `<Raid>` switch per attack, at the declaration.** A target removed afterwards is not retargeted: the attack fails (§11-2-6), `AttackResult::Unsuccessful`, no damage, no security check.
 4. *(Removed 2026-10-17.)* The post-Block Raid retarget rider and its suspended-Digimon fallback were deleted (§11-2-6, §16-23-2).
-5. **Native `<Raid>` parsing is still modifier-only.** Phase 3 parsed `<Collision>`, `<Piercing>`, `<Reboot>` off the card face; `<Raid>` is still mask-layer-only (same pre-existing gap, not introduced by Phase 9). Printed Raid cards require a modifier emission to honor the `<Raid>` switch in v1.
+5. *(Superseded 2026-10-17.)* `<Raid>` is no longer mask-layer-only: it pends in the declaration's trigger pool through `keyword_trigger_dispatched_from_registry` (see the trigger-pool section below) and offers its once-at-declaration optional switch from there (§16-23-2).
 6. **Piercing on direct-player-attack does NOT fire.** Piercing is a post-Digimon-battle rule only. An attack declared against the opposing player (not a Digimon) that lands zero damage is not a Piercing trigger.
 7. **`ACTION_SPACE_SIZE` unchanged at 2168.** All Phase 9 interrupts reuse existing action ranges: Counter window Option plays route through the Phase 8 `PLAY_HAND` range, Raid retargets reuse the target-selection range, Counter passes reuse the `SEL_REPLACEMENT_PASS` bit. No tensor or mask growth.
 
@@ -4695,9 +4695,15 @@ uses the same predicate path.
 
 If deleting the Overclock cost parks a decision -- a replacement decision
 such as `<Armor Purge>`'s yes/no prompt, or an observer selection -- the
-attack is paused (`pending_overclock_attack` holds the cost stack's identity
-and the receipt; plain data, clone-safe) and `resume_pending_overclock_attack`
-runs at the `resolve_selection` tail once those selections finish. The resume
+attack is queued (`parked_overclock_attacks`, a FIFO of `ParkedOverclockAttack`:
+the cost stack's identity and the receipt; plain data, clone-safe) and
+`resume_pending_overclock_attack` declares the queue's front once nothing is
+pending and no attack is in progress -- at the `resolve_selection` tail, and
+through `resume_pending_end_turn` when an attack ends. One attack at a time
+(§11-2-4: `begin_attack_open` refuses a declaration while `pending_attack` is
+set); while an Overclock attack is queued, a later end-of-turn attack
+keyword's processing waits in `deferred_end_of_turn_attack_offers`, so two
+parked costs attack in activation order and none overwrites another. The resume
 re-checks the deletion receipt before declaring: `<Armor Purge>` accepted
 means no deletion and no attack; declined means the deletion committed under
 the receipt and the attack follows. (Open, non-blocking: the parked attack is

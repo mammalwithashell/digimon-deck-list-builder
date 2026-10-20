@@ -155,9 +155,44 @@ pub(crate) struct EndTurnResume {
     pub(crate) memory_before_end_effects: i16,
 }
 
+/// An `<Overclock>` attack whose cost deletion parked a decision (an
+/// optional replacement such as <Armor Purge>, or a deletion trigger), queued
+/// in [`Game::parked_overclock_attacks`]. It is declared once the decision has
+/// resolved and no attack is in progress, and only if the cost's deletion
+/// happened: `cost_receipt` (a `deletion_receipts` id) must hold the cost
+/// Digimon's stack `cost_identity` (§16-34-3, §15-7-1, §15-8-5-2). The
+/// attacker is re-found by its top card (`source_card`), never by the old
+/// slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ParkedOverclockAttack {
+    pub(crate) player: PlayerId,
+    /// The `<Overclock>` carrier's top card.
+    pub(crate) source_card: CardHandle,
+    /// The player the attack is declared on.
+    pub(crate) opponent: PlayerId,
+    /// `capture_digivolve_host_identity` of the cost Digimon.
+    pub(crate) cost_identity: u64,
+    pub(crate) cost_receipt: u64,
+}
+
+impl ParkedOverclockAttack {
+    /// The tuple the former single slot (`pending_overclock_attack:
+    /// Option<(..)>`) hashed; the verification digest keeps that shape.
+    pub(crate) fn digest_tuple(&self) -> (PlayerId, CardHandle, PlayerId, u64, u64) {
+        (
+            self.player,
+            self.source_card,
+            self.opponent,
+            self.cost_identity,
+            self.cost_receipt,
+        )
+    }
+}
+
 /// An end-of-turn attack keyword's processing (`<Engage>`, `<Execute>`,
 /// `<Vortex>`, `<Overclock>`) whose trigger activated in the `[End of Your
-/// Turn]` pool while another attack was already declared and not yet ended.
+/// Turn]` pool while another attack was already declared and not yet ended
+/// (or an `<Overclock>` attack was queued, [`ParkedOverclockAttack`]).
 /// Only one attack is in progress at a time (§11-1-4: the declared attack's
 /// timings follow once the pool has resolved), so its offer waits until that
 /// attack has ended (`Game::resume_pending_end_turn`). The carrier is kept by
@@ -509,7 +544,7 @@ pub struct Game {
     /// Counter for assigning unique card instance indices.
     next_card_index: u16,
     /// Players still owing a mulligan decision, in order. Empty once mulligan
-    /// is finalized. Driven by `accept_mulligan`; see Â§1.6 in RUST_PYTHON_PARITY.
+    /// is finalized. Driven by `accept_mulligan`; see §1.6 in RUST_PYTHON_PARITY.
     pub mulligan_pending: Vec<PlayerId>,
     /// Whether each player has already re-drawn during mulligan. Indexed by
     /// `PlayerId`. Used by the action mask to suppress the re-draw bit once
@@ -546,7 +581,7 @@ pub struct Game {
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).
     pub effect_queue: EffectQueue,
-    /// Track H Â§3 â€” pending granted-triggered-effect fires queued by
+    /// Track H §3 â€” pending granted-triggered-effect fires queued by
     /// `enqueue_from_permanent` and `enqueue_from_breeding_permanent`.
     /// `drain_effect_queue` flushes this queue AFTER its main loop
     /// settles (printed observers fire first, granted bodies second â€”
@@ -557,7 +592,7 @@ pub struct Game {
         crate::permanent::PermanentHandle,
         crate::enums::EffectTiming,
     )>,
-    /// Track H Â§3 Phase 4i â€” registry of granted-triggered-effect
+    /// Track H §3 Phase 4i â€” registry of granted-triggered-effect
     /// bodies indexed by id. Bodies are allocated an id at install
     /// time (`grant_triggered_effect`) and referenced from
     /// `QueuedEffect::granted_effect_id` so the drainer can fetch and
@@ -640,7 +675,7 @@ pub struct Game {
     /// paused inside a security check â€” a `pending_selection` installed by
     /// a `SecuritySkill` process pauses resolution here; resumption is
     /// driven by `Game::advance_security_resolution`, called from
-    /// `resolve_generic_selection`. See RUST_PYTHON_PARITY Â§2.5j.
+    /// `resolve_generic_selection`. See RUST_PYTHON_PARITY §2.5j.
     pub security_resolution: Option<SecurityResolutionState>,
     /// Resolutions in the current chain: incremented per drain step, reset to
     /// 0 when the queue empties, and restarted (to 1, keeping the "inside a
@@ -666,7 +701,7 @@ pub struct Game {
     /// `is_optional` (DSL choose-one, `<Ascension>` Yes/No); consumed when the
     /// next decision resolves. See `game::infinite_loop::OptionalDecisionMark`.
     pub(crate) optional_decision_mark: Option<infinite_loop::OptionalDecisionMark>,
-    /// Last Â§15-4-5 trigger-batch id handed out by the drainer (see
+    /// Last §15-4-5 trigger-batch id handed out by the drainer (see
     /// `QueuedEffect::trigger_batch`). Monotonic within a game.
     pub(crate) trigger_batch_seq: u32,
 
@@ -757,9 +792,9 @@ pub struct Game {
     pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
     pub(crate) pending_field_top_source_moves: Vec<PendingFieldTopSourceMove>,
     pub(crate) pending_security_moves: Vec<PendingSecurityMove>,
-    /// The host chosen for a from-hand Plug-In Option's Â§6-5-1-4 link
-    /// declaration, pinned between the host pick (Â§10-1-3-1) and the plug-in
-    /// (Â§10-1-3-3) so `dispose_option`'s `Link` arm attaches to it instead of
+    /// The host chosen for a from-hand Plug-In Option's §6-5-1-4 link
+    /// declaration, pinned between the host pick (§10-1-3-1) and the plug-in
+    /// (§10-1-3-3) so `dispose_option`'s `Link` arm attaches to it instead of
     /// asking a second time. Set by
     /// `run_option_hand_link_host_selection_step`, consumed by
     /// `dispose_option`. `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`.
@@ -909,7 +944,7 @@ pub struct Game {
     /// reducer/replacement re-entries). `None` means "no pending choice".
     pub(crate) pending_digivolve_route_choice: Option<crate::dna_digivolve::DigivolveRouteMatch>,
 
-    /// Spec Â§7.5 once-per-event guard. Records `(timing, subject)` pairs that
+    /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
     /// have already fired within the current `try_replace` call chain so a
     /// redirected route does not re-fire the same timing for the same subject
     /// (e.g. `WhenWouldLeaveBattleArea` super-timing double-fire when a
@@ -928,7 +963,7 @@ pub struct Game {
         crate::replacement::ReplacementSubject,
     )>,
 
-    /// Spec Â§7.5 continuation marker. Set by the optional-replacement callback
+    /// Spec §7.5 continuation marker. Set by the optional-replacement callback
     /// (accept/decline) just before invoking `commit_deferred_outcome`, cleared
     /// after the commit returns. While true, `try_replace_impl` treats a
     /// depth==0 entry as a continuation of the original call chain and does
@@ -943,7 +978,7 @@ pub struct Game {
     /// outcome â€” cancel / redirect / substitute / custom). Only meaningful
     /// while `in_replacement_commit` is set.
     ///
-    /// `try_replace_impl` consults it to pick the Â§7.5 guard strictness: a
+    /// `try_replace_impl` consults it to pick the §7.5 guard strictness: a
     /// FIRED commit blocks ANY prior-fired subject regardless of timing (the
     /// v1 double-prompt protection for redirect routes â€” pinned by
     /// `dispatcher_guard.rs::commit_continuation_broadening_blocks_different_timing_v1_known_limitation`),
@@ -960,7 +995,7 @@ pub struct Game {
     /// The exact `(timing, subject)` window a callback-commit continuation is
     /// currently committing, or `None` outside a commit.
     ///
-    /// The Â§7.5 once-per-event guard normally remembers an offered window in
+    /// The §7.5 once-per-event guard normally remembers an offered window in
     /// `replacement_fired`, but that set is cleared on any dispatcher entry at
     /// `depth == 0` â€” and an OPTIONAL replacement unwinds its fire-site when
     /// the selection installs, so the event's OWN later work re-enters at
@@ -1003,7 +1038,7 @@ pub struct Game {
     /// snapshot cause first (`observed_deletion_cause`, rule 25), since this
     /// slot is already restored when the `[On Deletion]` bundle is deferred.
     ///
-    /// `None` outside an OnDeletion observer body. Phase B Â§B5.
+    /// `None` outside an OnDeletion observer body. Phase B §B5.
     #[doc(hidden)]
     pub(crate) current_deletion_cause: Option<crate::replacement::ReplacementCause>,
 
@@ -1014,20 +1049,26 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) current_deletion_event_cause_override: Option<crate::trigger_context::EventCause>,
 
-    /// Paused Overclock attack after the sacrifice deletion installed one or
-    /// more selections (a replacement decision such as <Armor Purge>, or an
-    /// observer). Once those selections finish, the attack is declared only
-    /// if the cost's deletion actually happened -- read from the deletion
-    /// receipt (the last field, a `deletion_receipts` id) -- and the source
-    /// card is re-resolved by handle/token instead of trusting the old slot.
-    /// The penultimate field is the cost Digimon's stack identity
-    /// (`capture_digivolve_host_identity`). §16-34-3, §15-7-1, §15-8-5-2.
+    /// `<Overclock>` attacks whose cost deletion parked a decision (a
+    /// replacement such as <Armor Purge>, or a deletion trigger), in the order
+    /// the costs were paid (FIFO; see [`ParkedOverclockAttack`]). The front
+    /// entry is declared once nothing is pending and no attack is in progress
+    /// (§11-2-4: "A new attack declaration can't be made during an attack"),
+    /// and only if its cost was actually deleted (§16-34-3, §15-7-1,
+    /// §15-8-5-2): `Game::resume_pending_overclock_attack`, from the
+    /// `resolve_selection` tail and when an attack ends (through
+    /// `resume_pending_end_turn`). While one is queued, a later end-of-turn
+    /// attack keyword's processing waits behind it
+    /// (`deferred_end_of_turn_attack_offers`). Plain data: survives
+    /// `Game::clone`.
     #[doc(hidden)]
-    pub(crate) pending_overclock_attack: Option<(PlayerId, CardHandle, PlayerId, u64, u64)>,
+    pub(crate) parked_overclock_attacks: Vec<ParkedOverclockAttack>,
     /// Overclock source cards whose optional cost was declined this end of
     /// turn. <Overclock> is a trigger that activates once per end of turn
-    /// (§16-34-2), so nothing re-offers it; the set is kept (cleared on
-    /// rotation) because the verification digest reads it.
+    /// (§16-34-2), so nothing re-offers it and no engine path reads the set.
+    /// It is kept (cleared on rotation) because the verification digest
+    /// hashes it: dropping it would change the digest of every recorded game
+    /// in which an <Overclock> was declined (replay goldens).
     #[doc(hidden)]
     pub(crate) declined_overclock_this_eot: HashSet<CardHandle>,
 
@@ -1055,7 +1096,7 @@ pub struct Game {
     /// see `parked_replacement_floor`.
     ///
     /// **Coexistence with `dsl_outer_tail`** (Phase 2d): independent slots for
-    /// independent concerns. Phase C Â§4.1.
+    /// independent concerns. Phase C §4.1.
     #[doc(hidden)]
     pub(crate) parked_replacement: Vec<crate::replacement::ParkedReplacement>,
 
@@ -1077,7 +1118,7 @@ pub struct Game {
     /// resolving through `play_option_from_hand`. Consumed by
     /// `play_option_core` to fire CounterEffect timing on the played
     /// card's effects BEFORE `OptionMain`. Cleared when the Counter
-    /// resolver finishes the Option play. Spec Â§5.2.
+    /// resolver finishes the Option play. Spec §5.2.
     #[doc(hidden)]
     pub(crate) in_counter_window: bool,
 
@@ -1253,12 +1294,12 @@ pub struct Game {
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
     /// Stable key `(owner, bottom_card_index)` of a turn-scheduled `<Delay>`
-    /// Option whose Â§16-17-2 cost the controller just DECLINED.
+    /// Option whose §16-17-2 cost the controller just DECLINED.
     ///
     /// The turn scan (`resolve_delayed_options_matching`) trashes the Option
     /// after running its body, because the trash IS the Delay's cost. When the
     /// cost is declined the body never ran, so the trash must not happen either
-    /// (Â§15-7-2) â€” this key tells the two delete sites to reschedule the Option
+    /// (§15-7-2) â€” this key tells the two delete sites to reschedule the Option
     /// to its next window instead of deleting it. Cleared as soon as it is
     /// consumed; only ever holds one key because exactly one Delay is resolved
     /// at a time.
@@ -1436,7 +1477,7 @@ pub struct Game {
     pub(crate) card_id_index: std::sync::Arc<std::collections::HashMap<String, usize>>,
 }
 
-// Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md Â§3).
+// Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
 mod handles;
 pub mod infinite_loop;
 mod lifecycle;
@@ -2753,12 +2794,12 @@ impl Game {
     ///   user-action path; passes the printed cost minus
     ///   `BeforePayCost` reductions and never bypasses.
     ///
-    /// Â§8-2-3-3 â€” "places the Digimon for the DNA digivolution on top of the
+    /// §8-2-3-3 â€” "places the Digimon for the DNA digivolution on top of the
     /// stack, draws 1 card, and the DNA digivolution process is resolved" â€”
     /// so `hand_owner` ALWAYS draws 1 after the merge and before triggers
     /// fire, however the DNA digivolution was initiated. This used to be
     /// gated behind a `grant_digivolve_bonus` flag that the effect-initiated
-    /// callers passed as `false`; since Â§8-2-2-4 makes every DNA digivolution
+    /// callers passed as `false`; since §8-2-2-4 makes every DNA digivolution
     /// effect-driven, that silently skipped the draw for most real DNA lines.
     ///
     /// `effect_initiated`: marks the global `OnDigivolve` payload so observers
@@ -2960,7 +3001,7 @@ impl Game {
             memory_paid: cost as i16,
         });
 
-        // Â§8-2-3-3: the DNA digivolution procedure draws 1 card.
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card.
         // Opaque-aware: routes through draw_one_for_player so opaque
         // opponents pull from their RevealSource rather than from the
         // (empty in opaque mode) deck Vec. Errors are logged-and-
@@ -3102,7 +3143,7 @@ impl Game {
             memory_paid: cost as i16,
         });
 
-        // Â§8-2-3-3: the DNA digivolution procedure draws 1 card. Same rule as
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card. Same rule as
         // `dna_digivolve_inner`; these partner variants (hand partner / trash
         // partner) are DNA digivolutions too, so they draw identically.
         if let Err(e) = self.draw_one_for_player(hand_owner) {
@@ -3234,7 +3275,7 @@ impl Game {
             memory_paid: cost as i16,
         });
 
-        // Â§8-2-3-3: the DNA digivolution procedure draws 1 card. Same rule as
+        // §8-2-3-3: the DNA digivolution procedure draws 1 card. Same rule as
         // `dna_digivolve_inner`; these partner variants (hand partner / trash
         // partner) are DNA digivolutions too, so they draw identically.
         if let Err(e) = self.draw_one_for_player(hand_owner) {
@@ -3778,7 +3819,7 @@ impl Game {
         (total, found)
     }
 
-    // â”€â”€â”€ Effect-listing API (Â§4.5c) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // â”€â”€â”€ Effect-listing API (§4.5c) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     /// Enumerate a card's effects by asking the registry for its impl.
     /// Returns `None` when no impl is registered so hot-path callers (the
@@ -4010,7 +4051,7 @@ impl Game {
         // conditionally granted trigger keyword installed NO body anywhere:
         // granted <Execute> never fired at end of turn and the printed "may
         // attack" choice never reached the action space (rule-17 violation â€”
-        // Â§16-38-2/-3, Â§15-9-2-2).
+        // §16-38-2/-3, §15-9-2-2).
         if let Some(es) = registry_effects.as_ref() {
             for grant in es {
                 let Some(kw) = grant.granted_keyword else {
@@ -4159,7 +4200,7 @@ impl Game {
         None
     }
 
-    // â”€â”€â”€ Tensor support: per-source DP + OPT helpers (Â§3.1 / Â§3.2) â”€â”€â”€
+    // â”€â”€â”€ Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) â”€â”€â”€
 
     /// Shared implementation: `(total_opt_effects, used_opt_effects)` across
     /// every source in the permanent's stack with the inherited/top filter.

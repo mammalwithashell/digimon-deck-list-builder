@@ -534,17 +534,16 @@ impl Game {
         let TargetConstraint::Forced(target) = target_constraint else {
             return AttackResult::Invalid;
         };
-        // §11-6-2: while the End of Attack timing's pool is resolving
-        // (`AttackState::EndOfAttackDrain`, parked or inline) the previous
-        // attack has not ended. A new declaration would overwrite its
-        // `pending_attack`, so its end (is_attacking clear, end-of-attack
-        // expiry) would never run. No card declares an attack from an End of
-        // Attack effect today; refuse rather than corrupt the attack in
-        // progress (G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE).
-        if matches!(
-            self.pending_attack.as_ref().map(|pa| pa.state),
-            Some(AttackState::EndOfAttackDrain(_))
-        ) {
+        // §11-2-4 (Ver. 4.3) "A new attack declaration can't be made during
+        // an attack." An attack is in progress from its declaration until it
+        // has ended -- including while its End of Attack timing's pool is
+        // resolving (§11-6-2, `AttackState::EndOfAttackDrain`; G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE).
+        // A new declaration would overwrite its `pending_attack`, so its end
+        // (is_attacking clear, end-of-attack expiry, End of Attack timing)
+        // would never run. Refuse it; an end-of-turn attack keyword's offer or
+        // a paid `<Overclock>` attack waits for the attack to end instead
+        // (`deferred_end_of_turn_attack_offers`, `parked_overclock_attacks`).
+        if self.pending_attack.is_some() {
             return AttackResult::Invalid;
         }
         let vortex = matches!(initiator, AttackInitiator::Vortex);
@@ -1433,11 +1432,9 @@ impl Game {
     /// does NOT need the keyword (judge-quiz Q24). A `CannotSuspend` ally
     /// can't pay the suspension (prohibition precedence 15-1-3).
     pub(crate) fn alliance_ally_candidates(&self, attacker: PermanentHandle) -> Vec<u8> {
-        if !self
-            .pending_attack
-            .as_ref()
-            .is_some_and(|pa| pa.attacker == attacker)
-        {
+        // The attacker by stack identity (as `raid_switch_options`), never a
+        // Digimon that compacted into the attacker's slot.
+        if self.live_attack_attacker() != Some(attacker) {
             return Vec::new();
         }
         let Some(player) = self.players.get(attacker.player as usize) else {

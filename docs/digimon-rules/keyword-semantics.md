@@ -36,7 +36,7 @@ does not exclude a carrier that is still in play awaiting that deletion.
 | `<Jamming>` | Persistent | Battle vs Security Digimon | Not deleted as a result of a battle with a Security Digimon | 16-9 |
 | `<Digisorption -x>` | Opt-cost→Mand | Immediate; digivolving into this card from hand | *By suspending 1 of your Digimon* (optional), reduce the digivolve cost by x (then mandatory); floors at 0; multiple can stack | 16-10 |
 | `<Reboot>` | Mandatory | Opponent's unsuspend phase | Unsuspend this Digimon during the opponent's unsuspend phase; mandatory; once even with multiples | 16-11 |
-| `<De-Digivolve x>` | Mandatory | On effect (targets opp Digimon) | Trash up to x from top of an opponent's Digimon (stops at no digivolution cards / Lv.3); **trashing mandatory, can't choose 0**; can't reduce Lv.3 or lower | 16-12 |
+| `<De-Digivolve x>` | Mandatory | On effect (targets opp Digimon) | The player **declares a number from 1 up to x** (4.3, §16-12-1; an action-space decision, `DeDigivolveCount`), then that many cards are trashed from the top of an opponent's Digimon (stops at no digivolution cards / Lv.3); **trashing mandatory, can't choose 0**; can't reduce Lv.3 or lower | 16-12 |
 | `<Retaliation>` | Mandatory | Trigger; this deleted in battle | When deleted in battle, delete the Digimon it battled; mandatory | 16-13 |
 | `<Digi-Burst X>` | Optional | On specified timing | Trash X of this Digimon's digivolution cards to activate the linked effect; optional | 16-14 |
 | `<Rush>` | Persistent | — | Can attack the same turn it was played | 16-15 |

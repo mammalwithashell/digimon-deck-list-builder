@@ -451,6 +451,7 @@ impl Game {
         // `resume_pending_end_turn` continues it.
         if self.pending_selection.is_some()
             || self.pending_attack.is_some()
+            || !self.parked_overclock_attacks.is_empty()
             || !self.deferred_end_of_turn_attack_offers.is_empty()
         {
             self.pending_end_turn_resume = Some(EndTurnResume {
@@ -650,9 +651,10 @@ impl Game {
             return;
         }
         // An attack declared inside the `[End of Your Turn]` pool: the end of
-        // turn continues where the pool left it (a waiting keyword offer, then
-        // the swing-back check and the rotation).
-        if self.pending_end_turn_resume.is_some() {
+        // turn continues where the pool left it (a queued <Overclock> attack,
+        // a waiting keyword offer, then the swing-back check and the
+        // rotation).
+        if self.pending_end_turn_resume.is_some() || !self.parked_overclock_attacks.is_empty() {
             self.resume_pending_end_turn();
             return;
         }
@@ -725,10 +727,17 @@ impl Game {
     /// waits for the attack to end (§6-6-2). Only one attack is in progress at
     /// a time: a keyword whose trigger activated while an attack was in
     /// progress offers its own attack now, after that attack has ended, in
-    /// activation order (`deferred_end_of_turn_attack_offers`). Once every
-    /// offer is made (declined, or its attack ended) the end of turn goes on:
-    /// the §6-6-4 swing-back check, then the rotation.
+    /// activation order (`deferred_end_of_turn_attack_offers`); a paid
+    /// `<Overclock>` attack queued behind its cost's parked deletion
+    /// (`parked_overclock_attacks`) activated before any of them and is
+    /// declared first. Once every offer is made (declined, or its attack
+    /// ended) the end of turn goes on: the §6-6-4 swing-back check, then the
+    /// rotation.
     pub(crate) fn resume_pending_end_turn(&mut self) {
+        if self.pending_selection.is_some() || self.pending_attack.is_some() {
+            return;
+        }
+        self.resume_pending_overclock_attack();
         if self.pending_selection.is_some() || self.pending_attack.is_some() {
             return;
         }
@@ -1194,24 +1203,23 @@ impl Game {
         );
         self.current_deletion_event_cause_override = previous_cause;
 
-        if self.pending_selection.is_some() {
+        let parked = crate::game::ParkedOverclockAttack {
+            player: state.player,
+            source_card: state.source_card,
+            opponent: state.opponent,
+            cost_identity,
+            cost_receipt: receipt,
+        };
+        if self.pending_selection.is_some() || self.pending_attack.is_some() {
             // A decision parked inside the deletion (an optional replacement
-            // such as <Armor Purge>, or a deletion trigger): the attack waits
-            // for it and re-checks the receipt (`resume_pending_overclock_attack`).
-            // A second <Overclock> parking before the first resumed overwrites
-            // the single slot (the open §11-1-4 ordering half of
-            // G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL); close the
-            // overwritten entry's receipt so it does not linger.
-            if let Some((.., stale_receipt)) = self.pending_overclock_attack {
-                self.deletion_receipts.retain(|(id, _)| *id != stale_receipt);
-            }
-            self.pending_overclock_attack = Some((
-                state.player,
-                state.source_card,
-                state.opponent,
-                cost_identity,
-                receipt,
-            ));
+            // such as <Armor Purge>, or a deletion trigger), or an attack is
+            // in progress (§11-2-4): the attack is queued behind them and
+            // re-checks the receipt when it is declared
+            // (`resume_pending_overclock_attack`). Queued, never overwritten:
+            // each paid cost keeps its mandatory attack (§16-34-3). The pool's
+            // other entries still resolve before it (the open §11-1-4
+            // ordering half of G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL).
+            self.parked_overclock_attacks.push(parked);
             return;
         }
 
@@ -1220,17 +1228,29 @@ impl Game {
         }
     }
 
+    /// Declare the queued `<Overclock>` attacks (`parked_overclock_attacks`)
+    /// in order, one at a time: nothing happens while a decision is pending
+    /// or an attack is in progress (§11-2-4), and each entry attacks only if
+    /// its cost was deleted (§16-34-3, §15-7-1, §15-8-5-2) and its carrier is
+    /// still on the field. Stops at the first entry whose attack is now in
+    /// progress (or parked a decision); the rest wait for that attack to end
+    /// (`resume_pending_end_turn`). Called from the `resolve_selection` tail
+    /// and `resume_pending_end_turn`.
     pub(crate) fn resume_pending_overclock_attack(&mut self) {
-        if self.pending_selection.is_some() {
-            return;
-        }
-        let Some((player, source_card, opponent, cost_identity, receipt)) =
-            self.pending_overclock_attack.take()
-        else {
-            return;
-        };
-        if self.take_deletion_receipt_matching(receipt, player, cost_identity, None) {
-            self.resume_overclock_attack(player, source_card, opponent);
+        while !self.game_over
+            && self.pending_selection.is_none()
+            && self.pending_attack.is_none()
+            && !self.parked_overclock_attacks.is_empty()
+        {
+            let parked = self.parked_overclock_attacks.remove(0);
+            if self.take_deletion_receipt_matching(
+                parked.cost_receipt,
+                parked.player,
+                parked.cost_identity,
+                None,
+            ) {
+                self.resume_overclock_attack(parked.player, parked.source_card, parked.opponent);
+            }
         }
     }
 

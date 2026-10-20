@@ -1915,8 +1915,8 @@ impl Game {
     /// Outcome routing (per Phase 7 spec §7.6):
     /// - `None` — commit the original event: trash the card (§9-1-5) through
     ///   `Game::trash_card`, which logs the `GameEvent::Trash`
-    ///   (G-ENGINE-OPTION-TRASH-NO-EVENT). The hand / deck redirects log no
-    ///   event: `GameEvent` has no hand- or deck-move variant.
+    ///   (G-ENGINE-OPTION-TRASH-NO-EVENT). The hand / deck redirects log
+    ///   `GameEvent::CardToHand` / `GameEvent::CardToDeck`.
     /// - `Cancelled` / `CustomHandled` — return the Option to the owner's
     ///   hand (cancel restores the original zone for Card subjects).
     /// - `Redirected(Deck)` — insert at the bottom of the owner's deck.

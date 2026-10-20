@@ -100,6 +100,9 @@ jobs:
 
       # Lowering, the normalized projection, the differ, the verdict store and
       # the drafter are pure Rust over fixtures — the only thing that needs
-      # Unity to test is Unity.
+      # Unity to test is Unity. Runs even when the exam step above is red (it
+      # is independent of the scenario corpus), so a red exam never hides the
+      # harness's own tests.
       - name: Differ unit + golden tests
+        if: ${{ !cancelled() }}
         run: cargo test -p dcgo-harness

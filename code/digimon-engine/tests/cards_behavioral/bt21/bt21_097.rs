@@ -40,10 +40,9 @@
 //!   main-phase activation action may be exposed)
 //! - Scheduled <Delay>: fires at the end of the owner's NEXT turn (first
 //!   legal window per rule 16-17-3), self-trash + optional "you may link 1
-//!   card from hand to own Digimon free". The mandatory-scan residual
-//!   (decline cannot keep the Option parked) is the OPEN engine gap
-//!   G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN — pinned by an `#[ignore]`d
-//!   faithful test below.
+//!   card from hand to own Digimon free". Declining keeps the Option parked
+//!   (G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN, resolved in 73733429d) —
+//!   pinned by the faithful test below.
 //! - Inherited [Security] places self in battle area (behavioral, via a real
 //!   security check)
 
@@ -757,12 +756,11 @@ fn bt21_097_delay_link_can_be_declined() {
 
 /// FAITHFUL (§16-17-2, DCGO OnEndTurn isOptional: true): declining the
 /// <Delay> at the owner's turn end must keep the Option parked in the battle
-/// area, re-offerable at a later owner turn end. Blocked on the OPEN engine
-/// gap G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN (the scheduled scan fires
-/// mandatorily and trashes the Option); un-ignore when the scan routes
-/// through the outer accept/decline prompt.
+/// area, re-offerable at a later owner turn end. Was blocked on
+/// G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN (the scheduled scan fired
+/// mandatorily and trashed the Option), resolved in 73733429d (the scan now
+/// routes through the outer accept/decline prompt).
 #[test]
-#[ignore = "G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN — scheduled <Delay> scan is mandatory; decline cannot keep the Option parked yet"]
 fn bt21_097_declining_delay_keeps_option_parked_for_a_later_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
