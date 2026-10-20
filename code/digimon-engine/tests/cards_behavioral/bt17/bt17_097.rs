@@ -897,3 +897,124 @@ fn bt17_097_security_auto_collapses_zone_when_only_hand_eligible() {
         "BT17-097 left the defender's security stack after the security check"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// §15-8-3-2 — the digivolved Digimon's [When Digivolving] waits for the
+// deleting effect
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// P1's deleting effect for the §15-8-3-2 pin: more processing follows the
+/// deletion.
+const DELETER_YAML: &str = r#"
+card: BT17097-DELETER
+name: Deleter
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 of your opponent's Digimon. Then, gain 1 memory."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }
+      - gain_memory: 1
+"#;
+
+/// §15-8-3-2 "Trigger-type effects can't activate during the processing for a
+/// rule or effect".
+///
+/// P1's effect "Delete 1 of your opponent's Digimon. Then, gain 1 memory."
+/// would delete P0's [Free] Digimon; Return to the Primogenitor's <Delay>
+/// digivolves it into Imperialdramon: Fighter Mode (BT16-027) from the hand
+/// instead. That digivolution happens during P1's effect, so BT16-027's
+/// "[When Digivolving] Return 1 of your opponent's Digimon with as many or
+/// fewer digivolution cards as this Digimon to the bottom of the deck."
+/// activates only after the rest of P1's effect ("Then, gain 1 memory") --
+/// never inside it, where it could change what the rest of that effect sees.
+/// G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH.
+#[test]
+fn bt17_097_digivolved_when_digivolving_waits_for_the_deleting_effect() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_097_YAML)
+        .expect("BT17-097 YAML parses")
+        .from_dsl_yaml(DELETER_YAML)
+        .expect("deleter YAML parses")
+        .dsl_card("BT16-027")
+        .expect("BT16-027 in embedded DSL pack")
+        .add_card(make_free_digimon("BT17097-FREE"))
+        .add_card(make_filler("FILL"))
+        .memory(0)
+        .hand(0, &["BT16-027"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+    let free = runner.place_on_field(0, "BT17097-FREE", Some(0));
+    let _delay = place_as_delay(&mut runner, 0);
+    let deleter = runner.place_on_field(1, "BT17097-DELETER", Some(0));
+    let cp = runner.event_checkpoint();
+    let memory_gains = |r: &DebugRunner| -> Vec<(u8, String)> {
+        r.events_since(cp)
+            .iter()
+            .filter_map(|e| match e {
+                digimon_engine::events::GameEvent::MemoryChange {
+                    player,
+                    source_card_id: Some(id),
+                    ..
+                } => Some((*player, id.clone())),
+                _ => None,
+            })
+            .collect()
+    };
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(deleter));
+    runner.game.drain_effect_queue();
+    // P1 picks the Digimon to delete; P0's Delay prompt for the hand card.
+    let victim = runner.pending_selection_view().expect("P1's deletion target");
+    runner
+        .execute_action(victim.selecting_player, victim.valid_action_ids[0])
+        .expect("deletion target");
+    let pick = runner
+        .pending_selection_view()
+        .expect("the Delay replacement's hand pick");
+    assert_eq!(pick.selecting_player, 0, "{pick:?}");
+    runner
+        .execute_action(0, HAND_EFFECT_START)
+        .expect("digivolve into BT16-027");
+
+    assert_eq!(
+        runner.game.player(0).battle_area[free.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT16-027",
+        "the deletion was replaced by the digivolution"
+    );
+    let sel = runner
+        .pending_selection()
+        .expect("BT16-027's [When Digivolving] target pick");
+    assert_eq!(
+        runner
+            .game
+            .card_data_for_handle(sel.source_card)
+            .map(|c| c.card_id.clone())
+            .as_deref(),
+        Some("BT16-027"),
+        "{sel:?}"
+    );
+    assert_eq!(
+        memory_gains(&runner),
+        vec![(1, "BT17097-DELETER".to_string())],
+        "the rest of P1's effect finished before BT16-027's [When Digivolving] activated"
+    );
+    runner.auto_resolve().expect("BT16-027 returns P1's Digimon");
+    assert!(
+        runner.game.player(1).battle_area.is_empty(),
+        "BT16-027's [When Digivolving] returned P1's Digimon to the deck"
+    );
+}

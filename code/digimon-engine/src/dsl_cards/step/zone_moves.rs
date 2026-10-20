@@ -485,6 +485,9 @@ pub fn try_run(
             let to_bottom =
                 super::map_stack_position(*position) == crate::enums::StackPosition::Bottom;
             if let Some(source_refs) = bindings.get_source_refs(source_refs) {
+                // The selected cards are returned at the same time: one event
+                // (§15-5-2), whose observers wait for the effect (§15-8-3-2).
+                let event = ctx.game.begin_source_trash_event();
                 for source_ref in source_refs {
                     ctx.return_card_source_to_deck(
                         source_ref.permanent,
@@ -492,6 +495,7 @@ pub fn try_run(
                         to_bottom,
                     );
                 }
+                ctx.game.end_source_trash_event(event);
             }
             true
         }
@@ -519,9 +523,13 @@ pub fn try_run(
                                 .collect()
                         })
                         .unwrap_or_default();
+                    // Every digivolution card is returned at the same time:
+                    // one event (§15-5-2).
+                    let event = ctx.game.begin_source_trash_event();
                     for card in sources {
                         ctx.return_card_source_to_deck(h, card, to_bottom);
                     }
+                    ctx.game.end_source_trash_event(event);
                 }
             }
             true

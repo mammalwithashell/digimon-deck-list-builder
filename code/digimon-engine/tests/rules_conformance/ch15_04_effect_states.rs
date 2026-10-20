@@ -1488,3 +1488,222 @@ fn rule_check_after_a_queued_effect_pools_with_its_window_triggers() {
     resolve_prompts(&mut r);
     assert_eq!(memory_sources(&r, cp).len(), 2);
 }
+
+// ─── §15-8-3-2 / §15-4-3-2: direct drains inside a resolving effect ─────────
+
+/// Answer prompts with their first legal option until the next decision is a
+/// `TriggerOrder` or nothing is pending.
+fn pick_until_trigger_order(r: &mut DebugRunner) {
+    for _ in 0..8 {
+        match r.pending_selection() {
+            None => return,
+            Some(sel) if sel.kind == SelectionKind::TriggerOrder => return,
+            Some(_) => pick_first_option(r),
+        }
+    }
+    panic!("prompts did not reach a TriggerOrder: {:?}", r.pending_selection());
+}
+
+/// §15-8-3-2 "Trigger-type effects can't activate during the processing for a
+/// rule or effect"; §15-4-3-2 "If multiple effects are triggered before a
+/// single rule or effect is resolved, they all trigger simultaneously";
+/// §15-5-2 "A triggering from 1 trigger condition is considered to only
+/// trigger once, even if it occurred multiple times at the same time".
+///
+/// `WD_RETURN_2_SOURCES_THEN_MEM` ("[When Digivolving] Return 2 of this
+/// Digimon's digivolution cards to the bottom of the deck. Then, gain 1
+/// memory.", Zenith BT18-092's return) resumes after its source pick. The ONE
+/// return of 2 cards triggers `OBS_SRC_RET_BOTTOM_MEM` ("When digivolution
+/// cards are returned to the bottom of a deck, gain 1 memory", Vemmon
+/// BT18-065's trigger) once, and is a deck add for `OBS_OWN_DECK_ADD_MEM`
+/// (Butenmon BT26-015's "When your effects add to decks"). Neither activates
+/// before the effect's own "gain 1 memory"; they pend in ONE pool.
+#[test]
+fn returned_to_deck_bottom_triggers_wait_for_the_effect_and_pool_with_it() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    cite!(
+        "15-4-3-2",
+        "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57"
+    );
+    cite!(
+        "15-5-2",
+        "316122b26772b466e8ad851c4b88b40688944039549ecbf4591f5b20c7b33b51"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_SRC_RET_BOTTOM_MEM", Some(0));
+    r.place_on_field(0, "OBS_OWN_DECK_ADD_MEM", Some(0));
+    let carrier = r.place_stack(0, &[FILL, FILL, "WD_RETURN_2_SOURCES_THEN_MEM"]);
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+    pick_until_trigger_order(&mut r); // the 2 sources to return (the effect resumes)
+
+    assert_eq!(
+        r.game.player(0).battle_area[carrier.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "both digivolution cards were returned"
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(0, "WD_RETURN_2_SOURCES_THEN_MEM".to_string())],
+        "only the effect's own memory gain happened before the pool"
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&["OBS_OWN_DECK_ADD_MEM", "OBS_SRC_RET_BOTTOM_MEM"]),
+        "one return of 2 cards triggers the observer once, in ONE pool with the deck add"
+    );
+    choose(&mut r, "OBS_SRC_RET_BOTTOM_MEM");
+    resolve_prompts(&mut r);
+    let mut gains: Vec<String> = memory_sources(&r, cp)
+        .into_iter()
+        .map(|(_, id)| id)
+        .collect();
+    gains.sort();
+    assert_eq!(
+        gains,
+        owned(&[
+            "OBS_OWN_DECK_ADD_MEM",
+            "OBS_SRC_RET_BOTTOM_MEM",
+            "WD_RETURN_2_SOURCES_THEN_MEM"
+        ])
+    );
+}
+
+/// §15-8-3-2 (as above), for a Digimon digivolved by an immediate replacement
+/// inside the deleting effect. P1's `WD_DEL_OPP_THEN_MEM` ("[When Digivolving]
+/// Delete 1 of your opponent's Digimon. Then, gain 1 memory.") deletes P0's
+/// Digimon; P0's `DELAY_SHIFT_GUARD` (Return to the Primogenitor BT17-097's
+/// <Delay>: "By digivolving that Digimon into a Digimon card with [Shiftmon]
+/// in its name in the hand without paying the cost, prevent that deletion")
+/// digivolves it into `SHIFT_WD_MEM` ("[When Digivolving] Gain 1 memory.").
+/// That [When Digivolving] is triggered during the deleting effect's
+/// processing, so it activates only after the rest of that effect ("Then,
+/// gain 1 memory").
+#[test]
+fn replacement_digivolve_triggers_wait_for_the_deleting_effect() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .hand(0, &["SHIFT_WD_MEM"])
+        .memory(0)
+        .start();
+    let guarded = r.place_on_field(0, FILL, Some(0));
+    let guard = r.place_on_field(0, "DELAY_SHIFT_GUARD", Some(0));
+    let turn = r.game.turn_count;
+    r.game.player_mut(0).battle_area[guard.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: turn + 1,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: turn,
+        };
+    let deleter = r.place_on_field(1, "WD_DEL_OPP_THEN_MEM", Some(0));
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(deleter),
+    );
+    r.game.drain_effect_queue();
+    resolve_prompts(&mut r); // P1's deletion target, then P0's [Shiftmon] pick
+
+    assert_eq!(
+        r.game.player(0).battle_area[guarded.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "SHIFT_WD_MEM",
+        "the replacement digivolved the Digimon instead of deleting it"
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![
+            (1, "WD_DEL_OPP_THEN_MEM".to_string()),
+            (0, "SHIFT_WD_MEM".to_string()),
+        ],
+        "the [When Digivolving] activated after the whole deleting effect, not inside it"
+    );
+}
+
+/// §15-8-3-2 and §15-4-3-2 (as above), for a battle an effect performs.
+/// `WD_RETURN_TRASH_THEN_BATTLE` ("[When Digivolving] Return 1 card from your
+/// trash to the bottom of your deck. Then, this Digimon may battle 1 of your
+/// opponent's Digimon.", Omnimon: Merciful Mode EX13-077's two options) adds
+/// to the deck (`OBS_OWN_DECK_ADD_MEM`) and then deletes P1's Digimon in the
+/// battle (`OBS_OPP_DEL_MEM`, "When one of your opponent's Digimon is
+/// deleted, gain 1 memory"). The battle is part of the effect's processing:
+/// its deletion trigger does not activate inside it, and pends in ONE pool
+/// with the deck add's.
+#[test]
+fn effect_battle_triggers_wait_for_the_effect_and_pool_with_it() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    cite!(
+        "15-4-3-2",
+        "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_OPP_DEL_MEM", Some(0));
+    r.place_on_field(0, "OBS_OWN_DECK_ADD_MEM", Some(0));
+    push_trash_card(&mut r, 0, FILL);
+    let carrier = r.place_on_field(0, "WD_RETURN_TRASH_THEN_BATTLE", Some(0));
+    r.place_on_field(1, FILL, Some(0));
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+    pick_until_trigger_order(&mut r); // the trash card, then the battle target
+
+    assert!(
+        r.game.player(1).battle_area.is_empty(),
+        "the battle deleted P1's Digimon"
+    );
+    assert!(
+        memory_sources(&r, cp).is_empty(),
+        "nothing activated during the effect: {:?}",
+        memory_sources(&r, cp)
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&["OBS_OPP_DEL_MEM", "OBS_OWN_DECK_ADD_MEM"]),
+        "the battle's deletion trigger pends in ONE pool with the deck add's"
+    );
+    choose(&mut r, "OBS_OPP_DEL_MEM");
+    resolve_prompts(&mut r);
+    assert_eq!(memory_sources(&r, cp).len(), 2);
+}

@@ -49,19 +49,25 @@ impl<'a> EffectContext<'a> {
         let card = self.game.player_mut(self.player).hand.remove(hand_index);
         self.game.digivolve_permanent_in_place(target, card);
 
+        // This digivolution is the processing of an immediate replacement
+        // inside the effect or rule process that tried to delete the Digimon
+        // (Return to the Primogenitor BT17-097's <Delay>). Its
+        // [When Digivolving] and "when digivolves" triggers wait for that
+        // processing to finish (§15-8-3-2) and then pend with everything else
+        // it triggered (§15-4-3-2): enqueue both, and drain only when no
+        // effect is resolving around us.
+        // G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH.
         self.game.enqueue_triggered(
             EffectTiming::WhenDigivolving,
             crate::selection::TriggerSource::Permanent(target),
         );
-        self.game.drain_effect_queue();
-
         for pid in 0..self.game.players.len() {
             self.game.enqueue_triggered(
                 EffectTiming::OnDigivolve,
                 crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
             );
         }
-        self.game.drain_effect_queue();
+        self.game.maybe_drain_effect_queue();
         true
     }
 

@@ -4927,7 +4927,24 @@ impl Game {
             // Normally enqueued (and drained) by the battle deletion's flush;
             // a no-op then.
             self.enqueue_pending_battle_result_triggers();
-            self.drain_effect_queue();
+            // A battle an effect performs (EX13-077 "This Digimon may battle
+            // 1 of your opponent's Digimon") is part of that effect's
+            // processing: its triggers -- and the end-of-battle ones below --
+            // wait for the effect to finish (§15-8-3-2) and pend with the rest
+            // of what it triggered (§15-4-3-2). DCGO agrees: `IBattle` with
+            // `IsWithoutAttack` stacks them and skips `AutoProcessCheck`. An
+            // attack's battle resolves them before the attack continues
+            // (§14-2-4), so it keeps the direct drain.
+            // G-ENGINE-EFFECT-BATTLE-DRAIN-RUNS-TRIGGERS-MID-EFFECT.
+            let is_attack = self
+                .pending_battle_resolutions
+                .last()
+                .is_some_and(|state| state.is_attack);
+            if is_attack {
+                self.drain_effect_queue();
+            } else {
+                self.maybe_drain_effect_queue();
+            }
             if self.pending_selection.is_some() {
                 return;
             }
@@ -4943,7 +4960,11 @@ impl Game {
             // §18-1-2: pending processing due at the end of the battle pools
             // with the end-of-battle effects.
             self.enqueue_scheduled_for_timing(EffectTiming::EndOfBattle);
-            self.drain_effect_queue();
+            if state.is_attack {
+                self.drain_effect_queue();
+            } else {
+                self.maybe_drain_effect_queue();
+            }
         }
     }
 

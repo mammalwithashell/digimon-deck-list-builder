@@ -4008,22 +4008,44 @@ impl Game {
                 .as_ref()
                 .is_some_and(|c| c.in_source_trash_event)
         };
-        let mut cards: Vec<CardHandle> = Vec::new();
-        for qe in self.effect_queue.iter().filter(|qe| stamped(qe)) {
-            if let Some(card) = qe.trigger_context.as_ref().and_then(|c| c.event_source_card) {
-                if !cards.contains(&card) {
-                    cards.push(card);
-                }
-            }
-        }
-        if cards.len() >= 2 {
-            for qe in self.effect_queue.iter_mut().filter(|qe| stamped(qe)) {
-                if let Some(context) = qe.trigger_context.as_mut() {
-                    for set in context.moved_card_sets.iter_mut() {
-                        set.cards = cards.clone();
+        // The same scope also coalesces digivolution cards returned to the
+        // bottom of a deck by one step (`fire_digivolution_card_returned_to_deck_bottom`,
+        // §15-5-2). Each timing is its own event: its members are the cards
+        // of that timing only.
+        let mut any_collapse = false;
+        for timing in [
+            EffectTiming::OnDigivolutionCardTrashed,
+            EffectTiming::OnDigivolutionCardReturnedToDeckBottom,
+        ] {
+            let mut cards: Vec<CardHandle> = Vec::new();
+            for qe in self
+                .effect_queue
+                .iter()
+                .filter(|qe| stamped(qe) && qe.timing == timing)
+            {
+                if let Some(card) = qe.trigger_context.as_ref().and_then(|c| c.event_source_card) {
+                    if !cards.contains(&card) {
+                        cards.push(card);
                     }
                 }
             }
+            if cards.len() >= 2 {
+                any_collapse = true;
+                for qe in self
+                    .effect_queue
+                    .iter_mut()
+                    .filter(|qe| stamped(qe) && qe.timing == timing)
+                {
+                    if let Some(context) = qe.trigger_context.as_mut() {
+                        for set in context.moved_card_sets.iter_mut() {
+                            set.cards = cards.clone();
+                        }
+                    }
+                }
+            }
+        }
+        if any_collapse {
+            // Grouping keys on the timing too, so the two events never merge.
             self.collapse_event_batch(0, true, true);
         }
         // The stamp only scopes this event: clear it (members included) so a

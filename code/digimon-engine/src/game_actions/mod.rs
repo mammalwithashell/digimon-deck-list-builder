@@ -2318,6 +2318,12 @@ impl Game {
     /// separate triggers (§15-4-2-4; ruling #5). The scope is also a
     /// deferred-drain scope, so nothing pending activates mid-event
     /// (§15-8-3-2). Scopes nest; only the outermost one coalesces.
+    ///
+    /// Digivolution cards RETURNED to the bottom of a deck by one step use the
+    /// same scope: each `OnDigivolutionCardReturnedToDeckBottom` observer
+    /// triggers once for the whole return (§15-5-2; DCGO
+    /// `ReturnToLibraryBottomDigivolutionCardsClass` stacks one trigger for
+    /// the returned list). The two timings coalesce separately.
     pub(crate) fn begin_source_trash_event(&mut self) -> SourceTrashEvent {
         self.enter_deferred_drain();
         let outermost = !self.source_trash_event_open;
@@ -2446,8 +2452,12 @@ impl Game {
     /// [Vemmon]", fires the observer once per source so a `once_per_turn`
     /// inherited clause consumes its single use and stops).
     /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
-    /// Unlike the trash sibling, which no longer drains inline and fires once
-    /// per event (§15-8-3-2, §15-5-2), this still drains mid-effect:
+    /// Like the trash sibling it never drains while an effect is resolving
+    /// (§15-8-3-2: its observers wait for that effect and pend with the rest
+    /// of what it triggered, §15-4-3-2), and inside an open source event
+    /// (`begin_source_trash_event`, opened by a step returning several cards)
+    /// its entries are stamped so the event's close coalesces them: one
+    /// return of N cards triggers each observer once (§15-5-2).
     /// G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH.
     pub(crate) fn fire_digivolution_card_returned_to_deck_bottom(
         &mut self,
@@ -2461,6 +2471,9 @@ impl Game {
         // left the stack, so refresh materialized declaratives before
         // observers (and any pre-tick read) run.
         self.tick_declarative_effects();
+        // Enqueueing is pure (no drain), so the new entries are exactly
+        // `start..`; stamp them for the open event's coalescing.
+        let start = self.effect_queue.len();
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDigivolutionCardReturnedToDeckBottom,
             crate::selection::TriggerSource::SourceReturnedToDeckBottom {
@@ -2471,7 +2484,17 @@ impl Game {
                 cause,
             },
         );
-        self.drain_effect_queue();
+        if self.source_trash_event_open {
+            for qe in self.effect_queue.range_mut(start..) {
+                if qe.timing == crate::enums::EffectTiming::OnDigivolutionCardReturnedToDeckBottom
+                {
+                    if let Some(context) = qe.trigger_context.as_mut() {
+                        context.in_source_trash_event = true;
+                    }
+                }
+            }
+        }
+        self.maybe_drain_effect_queue();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }

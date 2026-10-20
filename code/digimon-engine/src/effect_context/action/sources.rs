@@ -1045,11 +1045,15 @@ impl<'a> EffectContext<'a> {
         to_bottom: bool,
     ) -> bool {
         let mut all_ok = true;
+        // The selected cards are returned at the same time: one event
+        // (§15-5-2), whose observers wait for the effect (§15-8-3-2).
+        let event = self.game.begin_source_trash_event();
         for source_ref in selected {
             if !self.return_card_source_to_deck(source_ref.permanent, source_ref.card, to_bottom) {
                 all_ok = false;
             }
         }
+        self.game.end_source_trash_event(event);
         all_ok
     }
 }
