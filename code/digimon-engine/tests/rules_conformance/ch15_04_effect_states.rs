@@ -1707,3 +1707,146 @@ fn effect_battle_triggers_wait_for_the_effect_and_pool_with_it() {
     resolve_prompts(&mut r);
     assert_eq!(memory_sources(&r, cp).len(), 2);
 }
+
+/// §15-4-3-2 (as above), for the two triggers of the digivolution the
+/// replacement performs: the new card's [When Digivolving] (`SHIFT_WD_MEM`)
+/// and a "when a Digimon digivolves" observer (`OBS_DIGIVOLVE_MEM`) trigger
+/// simultaneously, so after the deleting effect has finished they are ONE
+/// pool, not the [When Digivolving] first and the observer after it.
+#[test]
+fn replacement_digivolve_triggers_pend_in_one_pool() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    cite!(
+        "15-4-3-2",
+        "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .hand(0, &["SHIFT_WD_MEM"])
+        .memory(0)
+        .start();
+    r.place_on_field(0, "OBS_DIGIVOLVE_MEM", Some(0));
+    let guarded = r.place_on_field(0, FILL, Some(0));
+    let guard = r.place_on_field(0, "DELAY_SHIFT_GUARD", Some(0));
+    let turn = r.game.turn_count;
+    r.game.player_mut(0).battle_area[guard.index as usize].option_state =
+        digimon_engine::permanent::OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: turn + 1,
+            trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: turn,
+        };
+    let deleter = r.place_on_field(1, "WD_DEL_OPP_THEN_MEM", Some(0));
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(deleter),
+    );
+    r.game.drain_effect_queue();
+    pick_until_trigger_order(&mut r); // P1's deletion target, then P0's [Shiftmon] pick
+
+    assert_eq!(
+        r.game.player(0).battle_area[guarded.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "SHIFT_WD_MEM",
+        "the replacement digivolved the Digimon instead of deleting it"
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(1, "WD_DEL_OPP_THEN_MEM".to_string())],
+        "only the deleting effect's own memory gain happened before the pool"
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&["OBS_DIGIVOLVE_MEM", "SHIFT_WD_MEM"]),
+        "the digivolution's two triggers pend in ONE pool"
+    );
+}
+
+/// §15-8-3-2 "Trigger-type effects can't activate during the processing for a
+/// rule or effect"; §15-4-3-2 "If multiple effects are triggered before a
+/// single rule or effect is resolved, they all trigger simultaneously".
+///
+/// `WD_DIGIVOLVE_HAND_THEN_MEM` ("[When Digivolving] This Digimon may
+/// digivolve into a [Climbmon] in the hand without paying the cost. Then, gain
+/// 1 memory.", DemiMeramon EX13-004's "may digivolve into a [Witchelny]-text
+/// card ... If this effect digivolved, trash your top security card")
+/// digivolves into `CLIMB_WD_MEM` ("[When Digivolving] Gain 1 memory.") with
+/// `OBS_DIGIVOLVE_MEM` ("When a Digimon digivolves, gain 1 memory.") out. The
+/// digivolution is part of the effect's processing: neither trigger activates
+/// before the effect's own "Then, gain 1 memory", and they pend in ONE pool.
+#[test]
+fn effect_digivolve_triggers_wait_for_the_digivolving_effect_and_pool() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    cite!(
+        "15-4-3-2",
+        "9806b36822f7fbe00db55ccc91fbb1cd9e2988f7064073bf57491efb6f425b57"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .hand(0, &["CLIMB_WD_MEM"])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_DIGIVOLVE_MEM", Some(0));
+    let carrier = r.place_on_field(0, "WD_DIGIVOLVE_HAND_THEN_MEM", Some(0));
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+    pick_until_trigger_order(&mut r); // the [Climbmon] in the hand
+
+    assert_eq!(
+        r.game.player(0).battle_area[carrier.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "CLIMB_WD_MEM",
+        "the effect digivolved the Digimon"
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![(0, "WD_DIGIVOLVE_HAND_THEN_MEM".to_string())],
+        "only the digivolving effect's own memory gain happened before the pool"
+    );
+    let mut pool: Vec<String> = order_choices(&r, 0)
+        .iter()
+        .map(|l| branch_card(l).to_string())
+        .collect();
+    pool.sort();
+    assert_eq!(
+        pool,
+        owned(&["CLIMB_WD_MEM", "OBS_DIGIVOLVE_MEM"]),
+        "the [When Digivolving] and the digivolve observer pend in ONE pool after the effect"
+    );
+    choose(&mut r, "CLIMB_WD_MEM");
+    resolve_prompts(&mut r);
+    let mut gains: Vec<String> = memory_sources(&r, cp)
+        .into_iter()
+        .map(|(_, id)| id)
+        .collect();
+    gains.sort();
+    assert_eq!(
+        gains,
+        owned(&[
+            "CLIMB_WD_MEM",
+            "OBS_DIGIVOLVE_MEM",
+            "WD_DIGIVOLVE_HAND_THEN_MEM"
+        ])
+    );
+}

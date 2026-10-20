@@ -1,0 +1,37 @@
+# WD_DIGIVOLVE_HAND_THEN_MEM -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [When Digivolving] This Digimon may digivolve into a [Climbmon] in the
+#   hand without paying the cost. Then, gain 1 memory.
+# The shape of DemiMeramon (EX13-004)'s inherited "This Digimon may digivolve
+# into a [Witchelny]-text card in the hand ... If this effect digivolved,
+# trash your top security card": an effect-initiated digivolve followed by
+# more of the same effect. The new card's [When Digivolving] and the "when a
+# Digimon digivolves" observers wait for that effect (§15-8-3-2) and pend in
+# ONE pool (§15-4-3-2).
+card: WD_DIGIVOLVE_HAND_THEN_MEM
+name: Kindlemon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] This Digimon may digivolve into a [Climbmon] in the hand without paying the cost. Then, gain 1 memory."
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Climbmon
+          prompt: "This Digimon may digivolve into a [Climbmon] in the hand without paying the cost"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evo
+                cost: free
+      - gain_memory: 1

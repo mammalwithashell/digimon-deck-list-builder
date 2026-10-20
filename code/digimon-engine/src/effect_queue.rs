@@ -2073,7 +2073,15 @@ impl Game {
         // Every queued effect captured its origin. Restore the caller before
         // draining so nested events do not inherit a temporary DNA scope.
         self.current_dna_origin = previous_dna_origin;
-        self.drain_effect_queue();
+        // A digivolution an effect performs (DemiMeramon EX13-004's "may
+        // digivolve into ... If this effect digivolved, trash your top
+        // security card") is part of that effect's processing: its triggers
+        // wait for the effect to finish (§15-8-3-2) and pend with the rest of
+        // what it triggered (§15-4-3-2). DCGO's `DigivolveIntoHandOrTrashCard`
+        // only stacks them (`StackSkillInfos`) and runs the effect's tail
+        // first. A player's digivolve action has no effect around it, so it
+        // drains here as before. G-ENGINE-EFFECT-DIGIVOLVE-WD-DRAINS-MID-BODY.
+        self.maybe_drain_effect_queue();
     }
 
     // ─── Internal helpers ───────────────────────────────────────────

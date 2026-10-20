@@ -64,11 +64,13 @@ const CH11_14: &[&str] = &[
 /// §15-4 "Effect States" chapter cards (`ch15_04_effect_states.rs`).
 const CH15_04: &[&str] = &[
     include_str!("ch15_04/BIG_LV6.yaml"),
+    include_str!("ch15_04/CLIMB_WD_MEM.yaml"),
     include_str!("ch15_04/DELAY_SHIFT_GUARD.yaml"),
     include_str!("ch15_04/HYBRID_LV5.yaml"),
     include_str!("ch15_04/MAIN_OPP_DISCARD_MINUS3000.yaml"),
     include_str!("ch15_04/MAIN_TRASH2_UNDER_MEM.yaml"),
     include_str!("ch15_04/MAIN_TRASH_UNDER_OPP_DISCARD.yaml"),
+    include_str!("ch15_04/OBS_DIGIVOLVE_MEM.yaml"),
     include_str!("ch15_04/OBS_OPP_DEL_MEM.yaml"),
     include_str!("ch15_04/OBS_OWN_DECK_ADD_MEM.yaml"),
     include_str!("ch15_04/OBS_PLAY_LE4K.yaml"),
@@ -91,6 +93,7 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/WA_MEM_INH.yaml"),
     include_str!("ch15_04/WD_DEL_OPP_THEN_MEM.yaml"),
     include_str!("ch15_04/WD_DEL_RET.yaml"),
+    include_str!("ch15_04/WD_DIGIVOLVE_HAND_THEN_MEM.yaml"),
     include_str!("ch15_04/WD_RETURN_2_SOURCES_THEN_MEM.yaml"),
     include_str!("ch15_04/WD_RETURN_ALL_TRASH_SELF_MINUS.yaml"),
     include_str!("ch15_04/WD_RETURN_SOURCE_THEN_MEM.yaml"),
