@@ -1,0 +1,37 @@
+{
+  "at": "2026-10-13T05:25:46.836004+00:00",
+  "status": "APPROVED_PAIRED_MAIN_PROOF_ONLY_NOT_COMPOSITION",
+  "freeze_sha256": "9864d55421e7e73eca0ea03652961a1d40507b348b471664a4d1028c657e1b2a",
+  "owned_pins": 34,
+  "dependency_pins": 44,
+  "original_full_containers": 9,
+  "original_observations": 14,
+  "original_main_sections": 7,
+  "printed_runtime_claim_fields": 15,
+  "owner_tests": 48,
+  "independent_tests": 9,
+  "direct_original_record_equality": true,
+  "raw_record_refusal_reds_retained": 4,
+  "images_visually_reviewed": [
+    "EX1-066",
+    "EX1-066_P1"
+  ],
+  "image_finding": "Both actual primary and P1 images show the approved corrected main text, including plural remaining cards and empty breeding space; security unchanged. Same-card image hashes/printing associations independently checked.",
+  "sidecar_sha256": "e26dd5b427ed1b898f35b24a9908fdc4f524ba8d8bbe99b866808c0c2c75b99c",
+  "proof_sha256": "210aef744bb1594e113d9344d9ef487409e14e23a089d5984eea59c05ece25a3",
+  "original_sidecar_retained": true,
+  "unclaimed_runtime_fields": [
+    "card_index",
+    "card_name_jpn",
+    "index",
+    "norm_id",
+    "rarity",
+    "xros_req"
+  ],
+  "limits": [
+    "Proof only; full-container extraction remains an external prerequisite.",
+    "All unknown structural text, ordinary/Rule/condition composition, registry and remaining consumed fields remain unverified.",
+    "No whole-card/source-book integration, denominator, oracle or training admission."
+  ],
+  "reviewer": "Codex root independent reviewer"
+}

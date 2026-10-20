@@ -26,6 +26,7 @@ class SimExecutor:
     def run(self, ctx, item: ItemRecord) -> StageOutcome:
         paths = list(item.data.get("scenario_paths") or [])
         books: dict[str, str] = {}
+        input_pins = {}
         notes: dict[str, list] = {}
         failures: dict[str, list] = {}
         contradicted: dict[str, list] = {}
@@ -63,7 +64,10 @@ class SimExecutor:
                 continue
             first_failure = None
             for book in candidates:
+                pin = harness.exam_input_pin(ctx, path, book)
                 rc, out, err = harness.run(ctx, harness.sim_argv(ctx, path, book), harness.SIM_TIMEOUT_S)
+                if harness.exam_input_pin(ctx, path, book) != pin:
+                    raise base.StageDeferred("scenario or deck book changed during SIM; result refused")
                 report = harness.parse_sim_output(rc, out, err)
                 if report.summary is None:
                     # No exam summary: the harness itself did not run (missing
@@ -76,6 +80,7 @@ class SimExecutor:
                     # is a finding for the oracle and triage, not the author's
                     # failure (Q2304 burnt six attempts on one): it proceeds.
                     books[path] = book
+                    input_pins[path] = pin
                     notes[path] = report.notes
                     if report.ruling_contradicted:
                         contradicted[path] = report.ruling_lines()
@@ -106,6 +111,7 @@ class SimExecutor:
         return base.outcome("ORACLE", item=item,
                             data={"deck_books": books, "sim_notes": notes, "sim_failure": None,
                                   "oracle_retry_paths": None, "oracle_results": None,
+                                  "oracle_input_pins": input_pins,
                                   "ruling_contradicted": contradicted or None,
                                   "ruling_block_written": written or None},
                             reason=reason)

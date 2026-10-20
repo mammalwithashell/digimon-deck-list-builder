@@ -1,0 +1,101 @@
+[
+  {
+    "payload": [
+      "digimon-clause-semantics",
+      1,
+      "EX12-062",
+      "inherited",
+      0,
+      [
+        "timing",
+        [
+          "When Attacking",
+          "Once Per Turn"
+        ],
+        null,
+        ""
+      ],
+      [
+        [
+          "timing",
+          [
+            "When Attacking",
+            "Once Per Turn"
+          ],
+          null,
+          ""
+        ],
+        [
+          "keyword",
+          [],
+          null,
+          "＜Draw＞ \"1\"\nnext\nline"
+        ]
+      ]
+    ],
+    "sha256": "421b2c553920bde42c1f5939bcb1b6bcc553f0bb7a9c48bbe1933c9bbcd985fc"
+  },
+  {
+    "payload": [
+      "digimon-clause-semantics",
+      1,
+      "EX12-062",
+      "inherited",
+      1,
+      [
+        "keyword",
+        [],
+        null,
+        "＜Draw＞ \"1\"\nnext\nline"
+      ],
+      [
+        [
+          "timing",
+          [
+            "When Attacking",
+            "Once Per Turn"
+          ],
+          null,
+          ""
+        ],
+        [
+          "keyword",
+          [],
+          null,
+          "＜Draw＞ \"1\"\nnext\nline"
+        ]
+      ]
+    ],
+    "sha256": "e58a002248c127e69d496e3f21c8a24a9fd43c9393e3fb69319573810e493e7d"
+  },
+  {
+    "payload": [
+      "digimon-interaction-semantics",
+      1,
+      "probe:EX12-062#inherited#1:opt",
+      [
+        "EX12-062"
+      ],
+      "probe",
+      "negative",
+      "opt",
+      "families@1",
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "sha256": "ff86d470485a5efc9913688566be2a8ad38ee3bb880e0aee98301ca5188c6bab"
+  },
+  {
+    "payload": [
+      "digimon-qa-semantics",
+      1,
+      "Q1",
+      [
+        "BT1-001",
+        "EX12-062"
+      ],
+      "positive",
+      "Question?\nAnswer ＜yes＞."
+    ],
+    "sha256": "7f180b3c748bd66e515b6d6ddffa9b5e962437d8994940deef3c0fa0e64e03ec"
+  }
+]

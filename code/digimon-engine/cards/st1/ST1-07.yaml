@@ -2,10 +2,12 @@ card: ST1-07
 name: Greymon
 kind: digimon
 level: 4
+form: Champion
 color: [red]
 cost: 5
 dp: 4000
 traits: [Dinosaur]
+attribute: Vaccine
 
 alt_paths:
   - kind: digivolve

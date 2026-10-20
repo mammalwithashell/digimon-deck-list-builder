@@ -1,0 +1,60 @@
+# Official observation 44e13d06610c9c88cb50eab5a05fe70efab899048c0bee628b4ded65330e2da0
+# and BT11-112 card image. Q2142 permits the suspend cost even without a
+# When Digivolving effect to activate. Q2143 (evolution before this trigger
+# resolves) depends on the engine's live event-carrier identity resolution.
+card: BT11-112
+name: Rina Shinomiya
+kind: tamer
+color: [blue]
+cost: 3
+effects:
+  - when: on_play
+    summary: "1 of your Veemon/Veedramon-name Digimon gains Blocker and Evade until the end of your opponent's turn"
+    process:
+      - select_own_permanent:
+          bind_as: recipient
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Veemon
+                  - name_contains: Veedramon
+          prompt: "Choose 1 of your Veemon/Veedramon-name Digimon to gain Blocker and Evade"
+      - grant_keyword:
+          target: recipient
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: recipient
+          keyword: Evade
+          expiry: end_of_opponents_turn
+  - when: on_suspend
+    optional: true
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_card_name_contains: Veedramon
+        - source_is_unsuspended: true
+        - any_permanent: { of: you, is_source: true, can_change_orientation: true }
+    summary: "When your Veedramon-name Digimon suspends, by suspending this Tamer, activate 1 of that Digimon's When Digivolving effects"
+    process:
+      - activation_cost: { suspend_self: true }
+      - refire_effect:
+          source: event_target
+          timing: when_digivolving
+          target_attribution: true
+  - when: on_unsuspend
+    active_when: { your_turn: true }
+    once_per_turn: true
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [blue]
+    summary: "[Your Turn][Once Per Turn] When one of your blue Digimon becomes unsuspended, gain 1 memory"
+    process:
+      - gain_memory: 1
+  - when: on_security
+    process:
+      - play_from_security: {}

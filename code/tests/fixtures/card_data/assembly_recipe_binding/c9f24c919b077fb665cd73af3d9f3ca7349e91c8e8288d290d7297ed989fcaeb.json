@@ -1,0 +1,107 @@
+{
+  "extracted": {
+    "canonical_fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Purple",
+        "Green"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Titamon + SkullBaluchimon",
+      "dp": 14000,
+      "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)\r\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\r\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.",
+      "evo_costs": [],
+      "form_eng": [],
+      "inherited_effect_description_eng": "",
+      "level": 7,
+      "play_cost": 14,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Shaman",
+        "Olympos XII",
+        "Titan",
+        "TS"
+      ]
+    },
+    "card_id": "BT24-081",
+    "derived_diagnostics": [
+      {
+        "authoritative": false,
+        "candidate": {
+          "color": "Purple",
+          "cost": 4,
+          "level": 6,
+          "ordinal": 1
+        },
+        "derived": true,
+        "field_path": "evolution_routes",
+        "reason": "digimoncard.io omitted explicit evolution route components"
+      }
+    ],
+    "explicit_evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "dp": 14000,
+        "effect_text": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)\r\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\r\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 7,
+        "play_cost": 14,
+        "security_text": ""
+      }
+    ],
+    "source_record": {
+      "alt_effect": "Assembly Requirements [Assembly -6] [Titamon] x [SkullBaluchimon] \r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+      "artist": null,
+      "attribute": "Virus",
+      "color": "Purple",
+      "color2": "Green",
+      "date_added": "2025-12-12 01:00:31",
+      "digi_type": "Shaman",
+      "digi_type2": "Olympos XII",
+      "digi_type3": "Titan",
+      "digi_type4": "TS",
+      "dp": 14000,
+      "evolution_color": null,
+      "evolution_cost": 4,
+      "evolution_level": null,
+      "form": null,
+      "id": "BT24-081",
+      "level": 7,
+      "link_dp": null,
+      "link_requirements": "",
+      "main_effect": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)\r\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\r\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.",
+      "name": "Titamon + SkullBaluchimon",
+      "play_cost": 14,
+      "pretty_url": "BT24-081-titamon-skullbaluchimon",
+      "rarity": "SR",
+      "series": "Digimon Card Game",
+      "set_name": [
+        "BT-24: BOOSTER TIME STRANGER"
+      ],
+      "source_effect": "",
+      "stage": null,
+      "tcgplayer_id": 668613,
+      "tcgplayer_name": "Titamon + SkullBaluchimon (Alternate Art)",
+      "type": "Digimon",
+      "xros_req": "Assembly Requirements [Assembly -6] [Titamon] x [SkullBaluchimon] \r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    },
+    "structural_diagnostics": []
+  },
+  "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+  "observation_id": "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+  "parser_version": "digimoncard-io-json-v1",
+  "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+  "schema_version": 1,
+  "source": "digimoncard_io",
+  "source_record_key": "BT24-081",
+  "source_schema_version": "digimoncard-io-public-api-v1",
+  "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+}

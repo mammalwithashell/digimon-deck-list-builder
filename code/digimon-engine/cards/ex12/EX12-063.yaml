@@ -2,6 +2,7 @@ card: EX12-063
 name: Karakurumon
 kind: digimon
 level: 5
+form: Ultimate
 color: [purple, green]
 cost: 7
 dp: 7000
@@ -29,7 +30,6 @@ alt_paths:
     materials:
       - filter:
           all_of:
-            - kind: digimon
             - level_lte: 4
             - any_of:
                 - trait_has: Puppet

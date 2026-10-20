@@ -2,6 +2,7 @@ card: EX12-036
 name: Ryugumon
 kind: digimon
 level: 6
+form: Mega
 color: [blue, yellow]
 cost: 12
 dp: 12000

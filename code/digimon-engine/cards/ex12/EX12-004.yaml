@@ -2,6 +2,7 @@ card: EX12-004
 name: Onibimon
 kind: digi_egg
 level: 2
+form: In-Training
 color: [purple]
 cost: 0
 traits: [Ghost, Shambala, TB]

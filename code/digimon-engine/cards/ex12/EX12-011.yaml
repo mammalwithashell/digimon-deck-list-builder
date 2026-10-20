@@ -2,6 +2,7 @@ card: EX12-011
 name: Seasarmon
 kind: digimon
 level: 4
+form: Champion
 color: [red]
 cost: 5
 dp: 5000

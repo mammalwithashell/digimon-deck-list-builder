@@ -1,0 +1,22 @@
+{
+  "registry.json.gz": {
+    "original": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-focused-review-r4-20261012\\data\\card_registry.json",
+    "sha256": "8b514f43afd27d2cd7d8cd74d1557b4ddda100280887547a5b050cf94153932d"
+  },
+  "selections.json.gz": {
+    "original": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-focused-review-r4-20261012\\data\\card_compatibility_selections.json",
+    "sha256": "158fd2fe7c9cc83238d49af2e66e60b3e895501891b8cac9ffdb12c45a8bf83a"
+  },
+  "sidecar-APPROVED.json": {
+    "original": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\paired-main-proof-phase1-r1-20261013\\sidecar-APPROVED.json",
+    "sha256": "e26dd5b427ed1b898f35b24a9908fdc4f524ba8d8bbe99b866808c0c2c75b99c"
+  },
+  "root-independent-review.json": {
+    "original": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\paired-main-proof-phase1-r1-20261013\\root-independent-review.json",
+    "sha256": "cdf591ab73a86337d6216dda318a2dd70416cefe2484caa73955d0b52021d11a"
+  },
+  "53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.webp": {
+    "original": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-focused-review-r4-20261012\\data\\card_correction_evidence\\53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.webp",
+    "sha256": "53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0"
+  }
+}

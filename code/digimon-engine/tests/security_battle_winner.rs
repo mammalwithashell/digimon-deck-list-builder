@@ -362,3 +362,46 @@ fn scheduled_battle_effects_wait_for_ordinary_choice_and_resume_once_after_clone
     }
     assert_eq!(seen.lock().unwrap().len(), 1);
 }
+
+// Integration regression: captured check observers from the campaign precede
+// main's security battle completion, including a parked end-of-battle choice.
+struct OrderedSecurityObserver(Arc<Mutex<Vec<&'static str>>>);
+impl CardEffect for OrderedSecurityObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let checks = self.0.clone();
+        let battles = self.0.clone();
+        vec![
+            Effect::on_security_check(card)
+                .process(move |_| checks.lock().unwrap().push("check"))
+                .build(),
+            Effect::end_of_battle(card)
+                .optional()
+                .needs_outer_optional_prompt()
+                .process(move |ctx| {
+                    assert!(ctx.game.pending_security.is_some());
+                    assert!(ctx.game.players[1].trash.is_empty());
+                    battles.lock().unwrap().push("battle");
+                })
+                .build(),
+        ]
+    }
+}
+
+#[test]
+fn captured_check_then_optional_security_battle_finishes_once() {
+    for decline in [false, true] {
+        let (mut r, atk, _) = setup(12000, CardKind::Digimon, false, 1);
+        let trace = Arc::new(Mutex::new(Vec::new()));
+        r.register_effect("OBS", Arc::new(OrderedSecurityObserver(trace.clone())));
+        r.attack_player(atk, 1, false);
+        assert_eq!(*trace.lock().unwrap(), vec!["check"]);
+        assert!(r.game.pending_security.is_some());
+        choose(&mut r, decline);
+        r.auto_resolve().unwrap();
+        let expected = if decline { vec!["check"] } else { vec!["check", "battle"] };
+        assert_eq!(*trace.lock().unwrap(), expected);
+        assert_eq!(r.trash_size(1), 1);
+        assert!(r.game.pending_security.is_none());
+        assert!(r.pending_selection_view().is_none());
+    }
+}

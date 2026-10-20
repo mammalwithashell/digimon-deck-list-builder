@@ -70,6 +70,9 @@ impl Default for OptionState {
 /// A card (or digivolution stack) on the field.
 #[derive(Clone)]
 pub struct Permanent {
+    /// Monotonic face incarnation within this carrier. A temporary
+    /// digivolution must not revive an older pending face effect when undone.
+    pub(crate) face_generation: u64,
     /// Opaque optional harness marker; omitted from Debug and replay hashes.
     pub(crate) native_play_incarnation: Option<std::sync::Arc<()>>,
     /// Stable identity for battle/replacement and queued observer events. Stack edits retain it;
@@ -125,6 +128,7 @@ impl Permanent {
     /// Create a new permanent with a single card (played from hand or hatched).
     pub fn new(card: CardSource, turn: u16) -> Self {
         Self {
+            face_generation: 0,
             battle_identity: None,
             native_play_incarnation: None,
             card_sources: vec![card],
@@ -538,6 +542,7 @@ impl Permanent {
 
     /// Digivolve: push a new card on top of the stack.
     pub fn digivolve(&mut self, card: CardSource, turn: u16) {
+        self.face_generation = self.face_generation.saturating_add(1);
         self.card_sources.push(card);
         self.turn_digivolved = turn;
     }

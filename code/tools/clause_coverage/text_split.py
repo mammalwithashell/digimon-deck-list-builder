@@ -33,9 +33,9 @@ import re
 from dataclasses import dataclass, field
 
 # The timing-marker vocabulary. Sourced from the task's enumerated list
-# verbatim, PLUS one directly-observed addition not in that list:
-# "Start of Your Main Phase" (EX12-021's real printed text — see the
-# README). Both square-bracket AND angle-bracket spellings match these
+# verbatim, plus directly observed phase/turn boundaries (the real-card
+# regressions preserve their printed sections). Both square-bracket AND
+# angle-bracket spellings match these
 # names; angle-bracket printing is how the official DB renders a handful of
 # these (Use Req., Delay, and the alt-digivolve-mechanism markers).
 TIMING_MARKER_NAMES: frozenset[str] = frozenset(
@@ -52,6 +52,13 @@ TIMING_MARKER_NAMES: frozenset[str] = frozenset(
         "Security",
         "End of Attack",
         "Start of Your Turn",
+        # Printed turn boundaries must not be swallowed by the previous
+        # effect. The usual positional rule still keeps inline references
+        # such as "activate this card's [End of Your Turn] effect" intact.
+        "Start of Opponent's Turn",
+        "End of Your Turn",
+        "End of Opponent's Turn",
+        "End of All Turns",
         "Once Per Turn",
         "Delay",
         "Rule",
@@ -69,6 +76,7 @@ TIMING_MARKER_NAMES: frozenset[str] = frozenset(
         # kind of bracketed timing marker (a main-phase-scoped variant of
         # "Start of Your Turn").
         "Start of Your Main Phase",
+        "Start of Opponent's Main Phase",
     }
 )
 

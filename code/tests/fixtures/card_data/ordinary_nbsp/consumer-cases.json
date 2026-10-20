@@ -1,0 +1,70 @@
+[
+  {
+    "approval_id": null,
+    "approval_kind": null,
+    "approved": false,
+    "card_id": "BT1-011",
+    "field_path": "effect_description_eng",
+    "new_digest": "1117d9cc3c0b4ef3313103347a014eb817b0fa46a02481a34e90006e70367ef6",
+    "new_value": "[On Play] Return 1 Digimon card with [Agumon] in its name from your recycle bin to your hand.",
+    "old_digest": "92d621c4a93d1efac364ed1aa5834f421ffd72d7cf5c25bba8978328946b1419",
+    "old_value": "[On Play] Return 1 Digimon card with [Agumon] in its name from your recycle bin to your hand.",
+    "provenance_observation_ids": [
+      "2bbfa977807c54fb82e2ab2c948b63a516497e1d22c359047a5342d6343bcc82",
+      "46d0b5445a98e1b86111f13a593984ff8cda35cbc4f125774d39a0057df6528f",
+      "5624213d127b2ef9e8b120fbcaa211cd78170a1a2432619b3311c4870b63da41",
+      "bbd29e2c4cf2e113ea37d0926b5ac6fbca500bd21412451dde1c3c7c03e4270f"
+    ]
+  },
+  {
+    "approval_id": null,
+    "approval_kind": null,
+    "approved": false,
+    "card_id": "BT7-059",
+    "field_path": "inherited_effect_description_eng",
+    "new_digest": "d09a8ec9931b022d8face424f8f69c5deac8e724abbe146a7216ad77539c22c1",
+    "new_value": "[Your Turn] While this Digimon has [Knightmon] or [Bagramon] in its name, it gets +2000 DP.",
+    "old_digest": "5883b652341aa61b2ad8a4f27ff5d81c6e32dbd380ddf9b3a30481a0210b531d",
+    "old_value": "[Your Turn] While this Digimon has [Knightmon] or [Bagramon] in its name, it gets +2000 DP.",
+    "provenance_observation_ids": [
+      "3a70d2aa44c5913b12b385d163cf37d75bda484ab8bd02879a3e76cdc7836f18",
+      "668f30e0125aff2d4359acb085800c91f7c591cc75575116f871b01641fbe4bd"
+    ]
+  },
+  {
+    "approval_id": null,
+    "approval_kind": null,
+    "approved": false,
+    "card_id": "BT9-001",
+    "field_path": "inherited_effect_description_eng",
+    "new_digest": "526c2dd1b610344f3d02f15504a03c6c6e2fb7b418990ed85359168976a43d2e",
+    "new_value": "[Your Turn] While this Digimon has [Agumon] or [Greymon] in its name, it gets +1000 DP.",
+    "old_digest": "a5792410cad4cee9c6614e5f380dc40934af989c3161f5845dbe50b5874969a6",
+    "old_value": "[Your Turn] While this Digimon has [Agumon] or [Greymon] in its name, it gets +1000 DP.",
+    "provenance_observation_ids": [
+      "217d84905be10694f55cb973a6625a5ca8706360d4d617ea0ef63134427de69d",
+      "4dc3280b6afbb4461c67bb2ffc22aafac62cc6b1e46d45f9cc1e48346da30a6b",
+      "72120c5dfc47e9bed0046073735eb9631b189894619b6e616015bc4332ea6577",
+      "baed18cae65325bd9854b42061dc2f886271f415dbeff7a3827fcab3ad08c74e",
+      "bb474d8627c4c9f7762b0443d3cecdc78afe21fbd2d857d46b82d3953bf80591"
+    ]
+  },
+  {
+    "approval_id": null,
+    "approval_kind": null,
+    "approved": false,
+    "card_id": "BT11-020",
+    "field_path": "effect_description_eng",
+    "new_digest": "017638a28f9f2672bd5219bc9a56036b7485045de794c74f02088716b7f4bde2",
+    "new_value": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Gaogamon] in its name and 1 blue Tamer card among them to your hand. Trash the rest.",
+    "old_digest": "2f504505cc7ba2ee3814b3dc4815c3a18a779f2515692e9c61fcda6ef50904e5",
+    "old_value": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Gaogamon] in its name and 1 blue Tamer card among them to your hand. Trash the rest.",
+    "provenance_observation_ids": [
+      "291b6386b9e8f1c6552305953ae0bea85163f4a37d9508af93f4fb19a7d3a5e2",
+      "69caae797c1bfb196d70f0f8ecfc25fcdbcb2d27def4781c89cef467f7023849",
+      "8cd8e745a43fca797270c9a3dc40296180535b16474671a886ecdacf14f2da6f",
+      "90531328e88f225976c8fa6ec014d7e07a05ffb0ca7b6b2c6b99b77f7cddfc3b",
+      "9e6755307d0e8d431b5e04655a36084ee86964d0609efaf57beefc6194bfb2b3"
+    ]
+  }
+]

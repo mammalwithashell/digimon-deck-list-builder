@@ -1,0 +1,141 @@
+{
+  "card_id": "BT15-021",
+  "category": "exact_body_section_header_only",
+  "has_required_canonical_conflict": false,
+  "diff": {
+    "approval_id": null,
+    "approval_kind": null,
+    "approved": false,
+    "card_id": "BT15-021",
+    "field_path": "xros_req",
+    "new_digest": "2acc2d41da88c65cce2e43126320fc075e3ef53efe6088c4f5ebaf85eb6c802f",
+    "new_value": "[Special Digivolution Condition] [Digivolve] [Gomamon]: Cost 0",
+    "old_digest": "f7d04a23188c46c8381d1d29af1bd34ebeb62034304b59efd72b0be363f1cdf9",
+    "old_value": "[Digivolve] [Gomamon]: Cost 0",
+    "provenance_observation_ids": [
+      "bd5461e2bb32ed32a640f7c94014ebf3f6b70bcc73aaae7503e1c7b62d6263f4"
+    ]
+  },
+  "source_units": [
+    {
+      "kind": "official-section",
+      "field": "xros_req",
+      "observation_id": "bd5461e2bb32ed32a640f7c94014ebf3f6b70bcc73aaae7503e1c7b62d6263f4",
+      "section_index": 0,
+      "label": "Special Digivolution Condition",
+      "condition_type": "special_digivolution_condition",
+      "text": "[Digivolve] [Gomamon]: Cost 0"
+    }
+  ],
+  "observations": {
+    "bd5461e2bb32ed32a640f7c94014ebf3f6b70bcc73aaae7503e1c7b62d6263f4": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT15-021",
+        "card_type": "Digimon",
+        "colors": [
+          "Blue"
+        ],
+        "dp": 1000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "dp": 1000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Gomamon (X Antibody)",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Gomamon]: Cost 0"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Sea Beast], [Plesiosaur], [Beastkin] or [X Antibody] trait among them to the hand. Return the rest to the bottom of the deck."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon can't attack until the end of their turn."
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Gomamon (X Antibody)",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522020",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT15-021.png?260529",
+          "printing_id": "BT15-021"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, it can't.\nIf the number of digivolution cards under the target opponent's Digimon is less than or equal to those of the Digimon with this card in its digivolution cards at the timing when this effect activates, the target Digimon can't attack until the effect ends at the end of your opponent's turn, even if the number of its digivolution cards later increases.",
+            "date": "Mar. 28, 2024",
+            "number": "Q2505",
+            "question": "If the digivolution cards under the target opponent's Digimon increase to become more than those under this Digimon after this card's inherited effect activates, can my opponent's Digimon now attack?"
+          }
+        ],
+        "rarity": "U",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Gomamon]: Cost 0"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Gomamon]: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Sea Beast], [Plesiosaur], [Beastkin] or [X Antibody] trait among them to the hand. Return the rest to the bottom of the deck."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon can't attack until the end of their turn."
+          }
+        ],
+        "type": "Sea Beast/X Antibody"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "bd5461e2bb32ed32a640f7c94014ebf3f6b70bcc73aaae7503e1c7b62d6263f4",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "ce40568a71924f547bb75554f5c131bc87e27afff7aff0a37d5ea0e93400e128",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522020:BT15-021:BT15-021",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522020"
+    }
+  },
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT15-021.webp",
+    "sha256": "86651a4f84dbe442ce5a2e96b1795b74f9251c51371c4506349c21100f00e5cc",
+    "observed": "Printed named Digivolve cost matches official condition."
+  },
+  "scope": "Parser hint regression only; runtime field remains unapproved."
+}

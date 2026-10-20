@@ -405,3 +405,176 @@ fn assembly_play_decline_gate_plays_at_full_cost() {
         "declining Assembly pays the full printed cost (8), not the reduced 5"
     );
 }
+
+// Bounded Assembly cardinality regressions. Synthetic materials isolate the
+// count/name decision; they do not approve material identities or card effects.
+// Official general_rule.pdf p15: 7-3-2-4/5 exact count, 7-3-2-7/9 optional zero.
+mod counted_assembly_regressions {
+    use digimon_engine::action::{build_action_mask, PASS, PLAY_HAND_START, TRASH_EFFECT_START};
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+    use digimon_engine::enums::{CardKind, GamePhase};
+    use digimon_engine::selection::SelectionKind;
+
+    const EX12_076: &str = include_str!("../../cards/ex12/EX12-076.yaml");
+    const TWO_THEN_ONE: &str = r#"
+card: T-ASM-EXACT
+name: Counted Assembly Test
+kind: digimon
+level: 7
+color: [red]
+cost: 8
+dp: 15000
+alt_paths:
+  - kind: assembly
+    materials:
+      - filter: { trait_has: Hybrid }
+        repeat: { min: 2, max: 2 }
+        distinct_by: name
+        zones: [trash]
+        stack_under: true
+      - filter: { trait_has: Shambala }
+        zones: [trash]
+        stack_under: true
+    cost: 3
+"#;
+
+    fn fixture(seat: u8, yaml: &str, target: &str, traits: &[&str]) -> DebugRunner {
+        let mut builder = DebugRunner::builder().from_dsl_yaml(yaml).unwrap().hand(seat, &[target]);
+        for (i, trait_name) in traits.iter().enumerate() {
+            let mut card = make_test_card(&format!("MAT-{i}"), &format!("Material {i}"));
+            card.card_kind = CardKind::Digimon;
+            card.traits = vec![(*trait_name).into()];
+            builder = builder.add_card(card);
+        }
+        let mut r = builder.start();
+        r.skip_mulligan();
+        r.game.turn_player_idx = seat as usize;
+        r.game.memory_pair = (seat, 1 - seat);
+        r.game.current_phase = GamePhase::Main;
+        r.game.set_memory(10);
+        for i in 0..traits.len() {
+            let id = format!("MAT-{i}");
+            let data_index = r.game.card_data.iter().position(|d| d.card_id == id).unwrap();
+            let card_index = r.game.next_card_index();
+            r.game.players[seat as usize].trash.push(CardSource::new(data_index, seat, card_index));
+        }
+        r
+    }
+
+    fn ex12(seat: u8) -> DebugRunner {
+        fixture(seat, EX12_076, "EX12-076", &["Hybrid", "Shambala", "Hybrid", "Shambala", "Hybrid", "Shambala", "Hybrid", "Shambala"])
+    }
+
+    fn legal(r: &mut DebugRunner, seat: u8, action: u16) {
+        assert_eq!(build_action_mask(&r.game, seat)[action as usize], 1.0, "chosen action must be legal");
+        r.game.decode_action(action, seat);
+    }
+
+    fn unchanged_pending(r: &DebugRunner, seat: u8, picked: u8, count: u8, trash: usize) {
+        let pending = r.game.pending_selection.as_ref().expect("counted selection remains pending");
+        assert_eq!(build_action_mask(&r.game, seat)[PASS as usize], 0.0);
+        assert!(!pending.is_optional, "a nonzero incomplete prefix cannot finish");
+        assert!(matches!(pending.kind, SelectionKind::CountCappedMultiSelect { min, max, picked: p, .. } if min == count && max == count && p == picked));
+        assert_eq!(build_action_mask(&r.game, 1 - seat)[PASS as usize], 0.0);
+        assert_eq!(r.game.memory, 10);
+        assert!(r.game.players[seat as usize].battle_area.is_empty());
+        assert_eq!(r.game.players[seat as usize].hand.len(), 1);
+        assert_eq!(r.game.players[seat as usize].trash.len(), trash);
+    }
+
+    fn prefix(seat: u8, count: u8) {
+        let mut r = ex12(seat);
+        legal(&mut r, seat, PLAY_HAND_START);
+        for i in 0..count { legal(&mut r, seat, TRASH_EFFECT_START + u16::from(i)); }
+        unchanged_pending(&r, seat, count, 8, 8);
+        assert!(r.game.resolve_selection(seat, PASS).is_err(), "resolver rejects an incomplete finish too");
+        unchanged_pending(&r, seat, count, 8, 8);
+    }
+
+    macro_rules! prefix_case { ($name:ident, $seat:expr, $n:expr) => { #[test] fn $name() { prefix($seat, $n); } }; }
+    prefix_case!(ex12_prefix_1_seat0, 0, 1); prefix_case!(ex12_prefix_1_seat1, 1, 1);
+    prefix_case!(ex12_prefix_2_seat0, 0, 2); prefix_case!(ex12_prefix_2_seat1, 1, 2);
+    prefix_case!(ex12_prefix_3_seat0, 0, 3); prefix_case!(ex12_prefix_3_seat1, 1, 3);
+    prefix_case!(ex12_prefix_4_seat0, 0, 4); prefix_case!(ex12_prefix_4_seat1, 1, 4);
+    prefix_case!(ex12_prefix_5_seat0, 0, 5); prefix_case!(ex12_prefix_5_seat1, 1, 5);
+    prefix_case!(ex12_prefix_6_seat0, 0, 6); prefix_case!(ex12_prefix_6_seat1, 1, 6);
+    prefix_case!(ex12_prefix_7_seat0, 0, 7); prefix_case!(ex12_prefix_7_seat1, 1, 7);
+
+    fn decline(seat: u8) {
+        let mut r = ex12(seat);
+        legal(&mut r, seat, PLAY_HAND_START);
+        legal(&mut r, seat, PASS);
+        assert!(r.game.pending_selection.is_none());
+        assert_eq!(r.game.players[seat as usize].battle_area[0].card_sources.len(), 1);
+        assert_eq!(r.game.players[seat as usize].trash.len(), 8);
+        assert_eq!(r.game.turn_player_idx, (1 - seat) as usize);
+        assert_eq!(r.game.memory, 6, "full cost16 paid from10; memory renormalizes on opponent turn");
+    }
+    #[test] fn ex12_zero_decline_seat0() { decline(0); }
+    #[test] fn ex12_zero_decline_seat1() { decline(1); }
+
+    fn complete(seat: u8, callback: bool) {
+        let mut r = ex12(seat);
+        legal(&mut r, seat, PLAY_HAND_START);
+        if callback { r.game.pending_selection_resume = None; }
+        for i in (0..8).rev() {
+            legal(&mut r, seat, TRASH_EFFECT_START + i);
+            if callback && i > 0 { unchanged_pending(&r, seat, (8 - i) as u8, 8, 8); }
+        }
+        let p = &r.game.players[seat as usize];
+        assert_eq!(p.battle_area.len(), 1);
+        assert_eq!(p.battle_area[0].card_sources.len(), 9);
+        assert_eq!(p.battle_area[0].top_card().card_id(&r.game.card_data), "EX12-076");
+        assert_eq!(p.trash.len(), 0);
+        assert_eq!(r.game.memory, 3, "cost16 minus9 pays7 only after all eight materials");
+    }
+    #[test] fn ex12_all_eight_seat0() { complete(0, false); }
+    #[test] fn ex12_all_eight_seat1() { complete(1, false); }
+    #[test] fn ex12_callback_zero_or_eight_seat0() { complete(0, true); }
+    #[test] fn ex12_callback_zero_or_eight_seat1() { complete(1, true); }
+
+    fn cloned(seat: u8) {
+        let mut r = ex12(seat);
+        legal(&mut r, seat, PLAY_HAND_START);
+        for i in 0..3 { legal(&mut r, seat, TRASH_EFFECT_START + i); }
+        let mut clone = r.game.clone();
+        assert_eq!(build_action_mask(&clone, seat)[PASS as usize], 0.0);
+        assert!(clone.resolve_selection(seat, PASS).is_err());
+        for i in 3..8 {
+            assert_eq!(build_action_mask(&clone, seat)[(TRASH_EFFECT_START + i) as usize], 1.0);
+            clone.resolve_selection(seat, TRASH_EFFECT_START + i).unwrap();
+        }
+        assert_eq!(clone.players[seat as usize].battle_area[0].card_sources.len(), 9);
+        assert_eq!(clone.memory, 3);
+        unchanged_pending(&r, seat, 3, 8, 8);
+    }
+    #[test] fn ex12_clone_after_three_seat0() { cloned(0); }
+    #[test] fn ex12_clone_after_three_seat1() { cloned(1); }
+
+    fn multi_element(seat: u8) {
+        let mut r = fixture(seat, TWO_THEN_ONE, "T-ASM-EXACT", &["Hybrid", "Hybrid", "Shambala"]);
+        legal(&mut r, seat, PLAY_HAND_START);
+        assert_eq!(build_action_mask(&r.game, seat)[(TRASH_EFFECT_START + 2) as usize], 0.0);
+        legal(&mut r, seat, TRASH_EFFECT_START);
+        unchanged_pending(&r, seat, 1, 2, 3);
+        legal(&mut r, seat, TRASH_EFFECT_START + 1);
+        unchanged_pending(&r, seat, 0, 1, 3);
+        assert!(r.game.resolve_selection(seat, PASS).is_err(), "later recipe element cannot be skipped");
+        legal(&mut r, seat, TRASH_EFFECT_START + 2);
+        assert_eq!(r.game.players[seat as usize].battle_area[0].card_sources.len(), 4);
+        assert_eq!(r.game.players[seat as usize].trash.len(), 0);
+        assert_eq!(r.game.memory, 5, "complete recipe pays8-3, never a partial recipe");
+    }
+    #[test] fn repeated_first_then_required_second_seat0() { multi_element(0); }
+    #[test] fn repeated_first_then_required_second_seat1() { multi_element(1); }
+
+    fn too_few(seat: u8) {
+        let mut r = fixture(seat, EX12_076, "EX12-076", &["Hybrid"; 7]);
+        r.game.set_memory(0);
+        assert_eq!(build_action_mask(&r.game, seat)[PLAY_HAND_START as usize], 0.0,
+            "seven materials cannot make the reduced play affordable");
+    }
+    #[test] fn insufficient_seven_no_reduction_seat0() { too_few(0); }
+    #[test] fn insufficient_seven_no_reduction_seat1() { too_few(1); }
+}

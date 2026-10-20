@@ -1,0 +1,252 @@
+{
+  "admission": "admitted",
+  "card_id": "BT24-090",
+  "conflicts": [
+    {
+      "candidate_observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "field_path": "effect_description_eng",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    },
+    {
+      "candidate_observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "field_path": "security_effect_description_eng",
+      "kind": "official_secondary",
+      "reason": "official value selected over conflicting secondary observation"
+    }
+  ],
+  "faces": [
+    {
+      "colors": [
+        "Blue",
+        "Yellow"
+      ],
+      "dp": null,
+      "effect_text": "While you have no face-up security cards, you can ignore this card's color requirements.\n[Security] [All Turns] All of your blue or yellow [TS] trait Digimon gain ＜Blocker＞. While you have [Neptunemon] or [Venusmon], all of your blue or yellow [TS] trait Digimon gain ＜Alliance＞.\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 blue or yellow [TS] trait Digimon card from your hand with the play cost reduced by 3.",
+      "face_id": "primary",
+      "inherited_text": "",
+      "kind": "option",
+      "level": null,
+      "play_cost": 3,
+      "security_text": "[Security] You may play 1 level 4 or lower blue or yellow [TS] trait Digimon card from your hand or trash without paying the cost."
+    }
+  ],
+  "fields": {
+    "attribute_eng": [],
+    "card_colors": [
+      "Blue",
+      "Yellow"
+    ],
+    "card_kind": "Option",
+    "card_name_eng": "Abyss Sanctuary: Throne Room",
+    "effect_description_eng": "While you have no face-up security cards, you can ignore this card's color requirements.\n[Security] [All Turns] All of your blue or yellow [TS] trait Digimon gain ＜Blocker＞. While you have [Neptunemon] or [Venusmon], all of your blue or yellow [TS] trait Digimon gain ＜Alliance＞.\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 blue or yellow [TS] trait Digimon card from your hand with the play cost reduced by 3.",
+    "evo_costs": [],
+    "form_eng": [],
+    "inherited_effect_description_eng": "",
+    "level": null,
+    "play_cost": 3,
+    "security_effect_description_eng": "[Security] You may play 1 level 4 or lower blue or yellow [TS] trait Digimon card from your hand or trash without paying the cost.",
+    "type_eng": [
+      "Iliad",
+      "TS"
+    ]
+  },
+  "printings": [
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+      ],
+      "printing_id": "BT24-090",
+      "product": null
+    },
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "printing_id": "BT24-090#2",
+      "product": null
+    },
+    {
+      "alternate_art": true,
+      "language": "en",
+      "observation_ids": [
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b"
+      ],
+      "printing_id": "BT24-090_P1",
+      "product": null
+    }
+  ],
+  "provenance": {
+    "attribute_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "card_colors": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "card_kind": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "card_name_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "evo_costs": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "faces": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "form_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "inherited_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "level": {
+      "adjudicated": false,
+      "authority": "secondary",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+    },
+    "play_cost": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "security_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    },
+    "type_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "28deec922e00f5d977e387ab5332b28841cdc985470c6226a3829768822942a5",
+        "89ac03648092aa348e397a69a0dd75ab53ec663b9cdf1430c0f1feb29d400a5b",
+        "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8",
+        "9d8474530dfca97db973a3a6a23b921328d59d6a38f48d6758a73de7aed9bd03"
+      ],
+      "selected_observation_id": "90ca72f156de46041014bc756dcb1349ad0ec58ce2bbc24508ab25e28629b9c8"
+    }
+  },
+  "schema_version": 1,
+  "tombstone_reason": null
+}

@@ -41,6 +41,7 @@ from tools.clause_coverage.card_sources import (  # noqa: E402
     load_overrides_index,
 )
 from tools.clause_coverage.models import Clause  # noqa: E402
+from tools.clause_coverage.semantic_fingerprint import bind_clause_semantics, semantic_digest  # noqa: E402
 
 DEFAULT_OFFICIAL_JSON = DATA_DIR / "card_official.json"
 DEFAULT_IMAGE_CACHE = _PROJECT_ROOT / "qa" / "clause-image-cache.json"
@@ -87,11 +88,15 @@ def build_extract_result(card_ids: list[str], source_desc: str, clauses: list[Cl
     by_zone = Counter(c.zone for c in clauses)
     by_source = Counter(c.source for c in clauses)
     image_required_ids = [c.id for c in clauses if c.source == "image-required"]
+    bound = bind_clause_semantics(c.to_dict() for c in clauses)
     return {
+        "semantic_fingerprint_version": 1,
+        "extraction_revision": semantic_digest(["digimon-clause-extraction", 1, sorted(card_ids),
+                                                [[c["id"], c["semantic_sha256"]] for c in bound]]),
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "source": source_desc,
         "cards": card_ids,
-        "clauses": [c.to_dict() for c in clauses],
+        "clauses": bound,
         "denominator": {
             "total_clauses": len(clauses),
             "total_cards": len(card_ids),

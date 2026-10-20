@@ -1,0 +1,398 @@
+[
+  {
+    "extracted": {
+      "attribute": "Free",
+      "card_id": "EX3-010",
+      "card_type": "Digimon",
+      "colors": [
+        "Red",
+        "Purple"
+      ],
+      "dp": 8000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red",
+            "Black"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red",
+            "Purple"
+          ],
+          "dp": 8000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 5,
+          "name": "Paildramon",
+          "play_cost": 8,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[DNA Digivolve]0 from red Lv.4 + purple Lv.4"
+            },
+            {
+              "label": "Effect",
+              "text": "[When Digivolving] When DNA digivolving, you may play 1 [Dinobeemon] from your trash without paying the cost.\n[On Deletion] You may play 1 [Veemon] from your trash without paying the cost."
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "[Your Turn] While this Digimon has [Imperialdramon] in its name, it gains ＜Security Attack +1＞."
+            }
+          ]
+        }
+      ],
+      "form": "Ultimate",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 5,
+      "name": "Paildramon",
+      "play_cost": 8,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522012",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/EX3-010_P1.png?260529",
+        "printing_id": "EX3-010_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "U",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[DNA Digivolve]0 from red Lv.4 + purple Lv.4"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolve]0 from red Lv.4 + purple Lv.4"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] When DNA digivolving, you may play 1 [Dinobeemon] from your trash without paying the cost.\n[On Deletion] You may play 1 [Veemon] from your trash without paying the cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] While this Digimon has [Imperialdramon] in its name, it gains ＜Security Attack +1＞."
+        }
+      ],
+      "type": "Dragonkin"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "0a41597f3e66bba820abecf8f572907edf6ddaecb875d58fcc3c8ea550da0aeb",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "189e190cfb5f0ec5f1e64f140c9b64a15ac2d7d66b8b8932f82168bf212df75d",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522012:EX3-010:EX3-010_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522012"
+  },
+  {
+    "extracted": {
+      "attribute": "Free",
+      "card_id": "EX3-010",
+      "card_type": "Digimon",
+      "colors": [
+        "Red",
+        "Purple"
+      ],
+      "dp": 8000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red",
+            "Purple"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red",
+            "Purple"
+          ],
+          "dp": 8000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 5,
+          "name": "Paildramon",
+          "play_cost": 8,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0"
+            },
+            {
+              "label": "Effect",
+              "text": "[When Digivolving] If DNA digivolving, you may play 1 [Dinobeemon] from your trash without paying the cost.\n[On Deletion] You may play 1 [Veemon] from your trash without paying the cost."
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "[Your Turn] This Digimon with [Imperialdramon] in its name gains ＜Security A. +1＞."
+            }
+          ]
+        }
+      ],
+      "form": "Ultimate",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 5,
+      "name": "Paildramon",
+      "play_cost": 8,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522903",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/EX3-010_P2.png?260529",
+        "printing_id": "EX3-010_P2"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "U",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] If DNA digivolving, you may play 1 [Dinobeemon] from your trash without paying the cost.\n[On Deletion] You may play 1 [Veemon] from your trash without paying the cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] This Digimon with [Imperialdramon] in its name gains ＜Security A. +1＞."
+        }
+      ],
+      "type": "Dragonkin"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "72848178a43c20841c1dc7a59f07439df03e4cbbe598cf373cf6a0e43c471a2e",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "b1d4abd15735a65817368737e389619990b4c076ead2752fd2d4a468bdbd40b7",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522903:EX3-010:EX3-010_P2",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522903"
+  },
+  {
+    "extracted": {
+      "attribute": "Free",
+      "card_id": "EX3-010",
+      "card_type": "Digimon",
+      "colors": [
+        "Red",
+        "Purple"
+      ],
+      "dp": 8000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red",
+            "Purple"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red",
+            "Purple"
+          ],
+          "dp": 8000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 5,
+          "name": "Paildramon",
+          "play_cost": 8,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0"
+            },
+            {
+              "label": "Effect",
+              "text": "[When Digivolving] If DNA digivolving, you may play 1 [Dinobeemon] from your trash without paying the cost.\n[On Deletion] You may play 1 [Veemon] from your trash without paying the cost."
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "[Your Turn] This Digimon with [Imperialdramon] in its name gains ＜Security A. +1＞."
+            }
+          ]
+        }
+      ],
+      "form": "Ultimate",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 5,
+      "name": "Paildramon",
+      "play_cost": 8,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522903",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/EX3-010_P3.png?260529",
+        "printing_id": "EX3-010_P3"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "U",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolve] red Lv.4 + purple Lv.4: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] If DNA digivolving, you may play 1 [Dinobeemon] from your trash without paying the cost.\n[On Deletion] You may play 1 [Veemon] from your trash without paying the cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] This Digimon with [Imperialdramon] in its name gains ＜Security A. +1＞."
+        }
+      ],
+      "type": "Dragonkin"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "e094e2253320845976f12fb9d86f6a963b919c94829cd7d17da2f886fd0598b7",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "b1d4abd15735a65817368737e389619990b4c076ead2752fd2d4a468bdbd40b7",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522903:EX3-010:EX3-010_P3",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522903"
+  },
+  {
+    "extracted": {
+      "attribute": "Free",
+      "card_id": "EX3-010",
+      "card_type": "Digimon",
+      "colors": [
+        "Red",
+        "Purple"
+      ],
+      "dp": 8000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red",
+            "Purple"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red",
+            "Purple"
+          ],
+          "dp": 8000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 5,
+          "name": "Paildramon",
+          "play_cost": 8,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[DNA Digivolve]0 from red Lv.4 + purple Lv.4"
+            },
+            {
+              "label": "Effect",
+              "text": "[When Digivolving] When DNA digivolving, you may play 1 [Dinobeemon] from your trash without paying the cost.\n[On Deletion] You may play 1 [Veemon] from your trash without paying the cost."
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "[Your Turn] While this Digimon has [Imperialdramon] in its name, it gains ＜Security Attack +1＞."
+            }
+          ]
+        }
+      ],
+      "form": "Ultimate",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 5,
+      "name": "Paildramon",
+      "play_cost": 8,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522012",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/EX3-010.png?260529",
+        "printing_id": "EX3-010"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "U",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[DNA Digivolve]0 from red Lv.4 + purple Lv.4"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolve]0 from red Lv.4 + purple Lv.4"
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] When DNA digivolving, you may play 1 [Dinobeemon] from your trash without paying the cost.\n[On Deletion] You may play 1 [Veemon] from your trash without paying the cost."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] While this Digimon has [Imperialdramon] in its name, it gains ＜Security Attack +1＞."
+        }
+      ],
+      "type": "Dragonkin"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "e74ff1f1cdca2a41815bb652167779f7b7201740b44ae6069c0a4790078e05eb",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "189e190cfb5f0ec5f1e64f140c9b64a15ac2d7d66b8b8932f82168bf212df75d",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522012:EX3-010:EX3-010",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522012"
+  }
+]

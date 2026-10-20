@@ -27,3 +27,441 @@ qa/qa-reports/exam-log.jsonl merge=union
 qa/card-loop/attempts.jsonl merge=union text eol=lf
 qa/card-loop/corrections.jsonl merge=union text eol=lf
 qa/card-loop/audits.jsonl merge=union text eol=lf
+
+# Reviewed source-composition dependency hashes bind exact LF bytes. Windows
+# checkouts must preserve those bytes without replacing historical review pins.
+code/tools/card_data/adjudications.py text eol=lf
+code/tools/card_data/compatibility_corrections.py text eol=lf
+code/tools/card_data/errors.py text eol=lf
+code/tools/card_data/serialization.py text eol=lf
+code/tools/card_data/source_manifest.py text eol=lf
+code/tools/clause_coverage/dual_source_units.py text eol=lf
+# Exact checker bytes for the reviewed Dual association proof.
+code/tools/clause_coverage/dual_kind_association.py -text
+code/tests/tools/test_dual_kind_association.py -text
+
+# Exact checker bytes for the reviewed runtime projection proof.
+code/tools/clause_coverage/runtime_projection_proof.py -text
+code/tests/tools/test_runtime_projection_proof.py -text
+
+# Preserve exact source-composition checker bytes across worktrees.
+code/tools/clause_coverage/source_units.py -text
+code/tools/clause_coverage/source_binding.py -text
+code/tools/clause_coverage/rule_card_composition.py -text
+
+# Exact Dual whole-card checker and test bytes.
+code/tools/clause_coverage/dual_card_composition.py -text
+code/tests/tools/test_dual_card_composition.py -text
+code/tests/fixtures/card_data/dual_card_composition/.gitattributes -text
+
+# Exact runtime snapshot/wrapper checker, tests and fixture attributes.
+code/tools/clause_coverage/runtime_snapshot.py -text
+code/tools/clause_coverage/runtime_rule_composition.py -text
+code/tests/tools/test_runtime_snapshot.py -text
+code/tests/tools/test_runtime_rule_composition.py -text
+code/tests/tools/test_runtime_rule_actual_snapshot.py -text
+code/tests/fixtures/card_data/runtime_snapshot/.gitattributes -text
+
+/code/tools/clause_coverage/corrected_rule_card_composition.py -text
+
+/code/tests/tools/test_corrected_rule_card_composition.py -text
+
+# Preserve reviewed empty-condition proof and fixture bytes.
+/code/tools/clause_coverage/runtime_projection_proof.py -text
+/code/tools/clause_coverage/runtime_rule_composition.py -text
+/code/tools/clause_coverage/runtime_empty_condition.py -text
+/code/tests/tools/test_runtime_empty_condition.py -text
+/code/tests/tools/test_runtime_empty_refactor_parity.py -text
+/code/tests/fixtures/card_data/runtime_empty_condition/.gitattributes -text
+/code/tests/fixtures/card_data/runtime_empty_condition/4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.html.gz -text
+/code/tests/fixtures/card_data/runtime_empty_condition/7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz -text
+/code/tests/fixtures/card_data/runtime_empty_condition/BT26-104-observations.json.gz -text
+/code/tests/fixtures/card_data/runtime_empty_condition/EX12-031-observations.json.gz -text
+/code/tests/fixtures/card_data/runtime_empty_condition/metadata.json -text
+/code/tests/fixtures/card_data/runtime_empty_condition/runtime_projection_before.py.txt -text
+/code/tests/fixtures/card_data/runtime_empty_condition/runtime_rule_before.py.txt -text
+
+# Preserve reviewed ordinary NBSP checker and fixture bytes.
+/code/tools/card_data/ordinary_nbsp_proof.py -text
+/code/tests/tools/test_card_data_ordinary_nbsp_proof.py -text
+/code/digimon-engine/tests/ordinary_nbsp_source_contract.rs -text
+/code/tests/fixtures/card_data/ordinary_nbsp/02790c33595a26eb1dc744958ac6f166442c39c456b87711272d2db12b57e286.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/210042873f5b10e6b75098a6df6a3a31fb56cda99ecb0f0eddc69013a1552719.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/aggregate.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/BT1-011.webp -text
+/code/tests/fixtures/card_data/ordinary_nbsp/BT11-020.webp -text
+/code/tests/fixtures/card_data/ordinary_nbsp/BT7-059.webp -text
+/code/tests/fixtures/card_data/ordinary_nbsp/BT9-001.webp -text
+/code/tests/fixtures/card_data/ordinary_nbsp/canonical.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/consumer-cases.json -text
+/code/tests/fixtures/card_data/ordinary_nbsp/corrections.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/d19a21154e21453304021f71a7d07712673ffbf63948c98fe7bc7b3ebd0d0136.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/ed7cadc42886414f353a641ef80e46f73707b6d30b821fee7e65d54e7f04ccd9.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/ledger.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/provenance.json -text
+/code/tests/fixtures/card_data/ordinary_nbsp/report.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/secondary.json.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp/snapshot.json.gz -text
+
+# Preserve reviewed diagnostic source inventory code bytes.
+/code/tools/clause_coverage/diagnostic_source_book.py -text
+/code/tests/tools/test_diagnostic_source_book.py -text
+
+# Keep this policy file LF and source-proof fixtures byte exact.
+/.gitattributes text eol=lf
+/code/tests/fixtures/card_data/diagnostic_source_book/.gitattributes -text
+/code/tests/fixtures/card_data/diagnostic_source_book/04144361acfe97857e3d5f23041dc956ee81981156807f405fc953177144f90c.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/117ed7833602d5889e6ab19d7b034e7233e6d1b2589526b2a17eefaac808139e.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/158fd2fe7c9cc83238d49af2e66e60b3e895501891b8cac9ffdb12c45a8bf83a.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/18ac2bb5d15c86421b719a8ff6e0f4fb8f64acfd6863d5d5b7a1d5eb5b776fc6.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/1af47c5bf1e78f2ccbea652c3537903f6d1038a811aa6baa0a7e54527652f69b.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/3dc8b8761d5b817fb1c1c04809063cd3eeb05e16a4324768c6e5effc370d0e1c.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/475d5f541f2ce84f97049373e2fdafee5606537ad671aba2b5f0b46aa5a6af47.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/5016aaf5f6ce69ea9acd8642797bf65e12040a4072a97f9c920fc49540404c38.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/5a016b1f36857f488f3f7cd7ece2b720d0da51d0a88b7df0b089c7b9fd2a0a07.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/5b4ddcec0caa1363de5687098f415dc43702a4e7442071f576da6ea2c523ef63.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/5caec536c19df5650a5d3dbb70bc5dcc85901004ce1e5acd400fa1ec8b99e9e0.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/6102887019bdcf8af5905ee89c9c9dfafb1890513997f0ac2a849eae0945a637.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/7e02b717edd68149f3d1ebba3f006b144cf7f9ffe78d50c2307cbbeae3ee8f86.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/86cebfc129559f3619fa7e1395e28bfb2004aba1369f4c5280b912506eecc4ba.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/8b514f43afd27d2cd7d8cd74d1557b4ddda100280887547a5b050cf94153932d.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/923df174478db3640e7cabd0d01151b97b579b6b9838ed68c57e9eb13525be91.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/a242b1d01ee3c00b6206de7d3860556ee85bddd396a4de99be7b23628164416e.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/archive.json -text
+/code/tests/fixtures/card_data/diagnostic_source_book/b4bf8217956e8941126154d109085235c0a16c39336c1d4a4d86aa82b0418f83.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/bc0c3b4d2e6384e479003ff1d946fbdb6606a4c2020784dfc504a53db0a53df7.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/c75e3cb2891e5952c51be99d86ea0e9db2ba265358678358057714064c7ab5e7.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/c7d760d9b0528fab6ba04da177954b52d56cdac20f6bcf53ea361db83320c1f1.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/cf580fd55b3c8a68eed3acc54bebbc39808f66e99432b540ff6ef7660a7f56de.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/ef589f9c318174a5799730c663c30481a68af8c5018f44b670672d5853c6132c.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/extraction.json -text
+/code/tests/fixtures/card_data/diagnostic_source_book/fd17c7aecab7ee3cd64137f7361961eca1c0574ad4f0a4ca20e83d803f0d5309.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/fe1f313900386f2d8dcde21df7be97b4f19e25a227b708b879acc36fe39ef1a5.gz -text
+/code/tests/fixtures/card_data/diagnostic_source_book/inputs.json -text
+
+# Preserve reviewed BT26-100 correction evidence and regressions.
+/code/tests/tools/test_bt26_kind_corrections.py -text
+/code/tests/fixtures/card_data/bt26_kind_correction/.gitattributes -text
+/code/tests/fixtures/card_data/bt26_kind_correction/BT26-100.webp -text
+/code/tests/fixtures/card_data/bt26_kind_correction/canonical.json -text
+/code/tests/fixtures/card_data/bt26_kind_correction/metadata.json -text
+/code/tests/fixtures/card_data/bt26_kind_correction/observations.json -text
+/code/tests/fixtures/card_data/bt26_kind_correction/prior-corrections.json -text
+/code/tests/fixtures/card_data/bt26_kind_correction/proposed-corrections.json -text
+
+# Preserve prior-correction accounting proof bytes.
+/code/tests/tools/test_card_data_ordinary_nbsp_corrections.py -text
+/code/tests/fixtures/card_data/ordinary_nbsp_correction/7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.html.gz -text
+/code/tests/fixtures/card_data/ordinary_nbsp_correction/EX12-031.json.gz -text
+/code/tools/card_data/corrections.py -text
+/code/tests/tools/test_card_data_face_correction_wire_schema.py -text
+/code/tools/clause_coverage/source_book_v2.py -text
+/code/tests/tools/test_source_book_v2.py -text
+/code/tests/fixtures/card_data/source_book_v2/.gitattributes -text
+/code/tests/fixtures/card_data/source_book_v2/fresh-four-inputs.json -text
+/code/tests/fixtures/card_data/source_book_v2/historical-BT24-101-row.json.gz -text
+/code/tests/fixtures/card_data/source_book_v2/historical-four-diagnostic.json.gz -text
+/code/tests/fixtures/card_data/source_book_v2/provenance.json -text
+/code/tests/fixtures/card_data/source_book_v2/reviewed-correction-sidecar-wire-hardening.json -text
+/code/tests/fixtures/card_data/source_book_v2/semantic_vectors_v2.json -text
+/code/tests/fixtures/card_data/source_book_v2/sidecar-root-rebind-review.json -text
+code/tools/dcgo-harness/src/exam/mod.rs -text
+code/tests/tools/test_review_source_book_v2.py -text
+code/tests/fixtures/card_data/source_book_v2_rust/.gitattributes -text
+code/tools/dcgo-harness/src/exam/source_book_v2.rs -text
+code/tools/dcgo-harness/src/exam/source_book_v2_tests.rs -text
+code/tools/clause_coverage/review_source_book_v2.py -text
+
+# Preserve independently reviewed Link adapter bytes.
+/code/tools/clause_coverage/link_source_units.py -text
+/code/tests/tools/test_link_source_units.py -text
+/code/tests/fixtures/card_data/link_source_units/.gitattributes -text
+
+# Preserve reviewed clean Dual association bytes.
+/code/tools/clause_coverage/clean_dual_association.py -text
+/code/tests/tools/test_clean_dual_association.py -text
+/code/tests/fixtures/card_data/clean_dual_association/.gitattributes -text
+
+# Preserve reviewed focused closure input and producer bytes.
+/code/tools/card_data/focused_closure.py -text
+/code/tests/tools/test_focused_closure.py -text
+/code/tests/fixtures/card_data/focused_closure/.gitattributes -text
+
+# Preserve reviewed isolated integration contract bytes.
+/openspec/changes/add-isolated-focused-runtime-snapshots/proposal.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/design.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/integration-contract.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/integration-contract.json -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/specs/canonical-card-data-pipeline/spec.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/specs/card-data-validation-gates/spec.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/specs/legacy-free-training-runtime/spec.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/tasks.md -text
+/openspec/changes/add-isolated-focused-runtime-snapshots/progress.md -text
+
+# Preserve reviewed Link YAML binding bytes.
+/code/tools/clause_coverage/link_yaml_binding.py -text
+/code/tests/tools/test_link_yaml_binding.py -text
+/code/tests/fixtures/card_data/link_yaml_binding/.gitattributes -text
+
+# Preserve reviewed clean Dual composition bytes.
+/code/tools/clause_coverage/dual_card_composition.py -text
+/code/tests/tools/test_clean_dual_composition.py -text
+/code/tests/fixtures/card_data/clean_dual_composition/.gitattributes -text
+
+# Preserve reviewed trait-field-binding bytes.
+/code/tools/clause_coverage/source_binding.py -text
+/code/tests/tools/test_trait_field_source_binding.py -text
+/code/tests/fixtures/card_data/trait_field_source_binding/.gitattributes -text
+
+# Preserve reviewed link-native-compilation bytes.
+/code/digimon-dsl/tests/focused_link_compilation.rs -text
+
+# Preserve reviewed whole Link composition bytes.
+/code/tools/clause_coverage/link_card_composition.py -text
+/code/tests/tools/test_link_card_composition.py -text
+/code/tests/fixtures/card_data/link_card_composition/.gitattributes -text
+
+# Preserve reviewed Assembly recipe correspondence bytes.
+/code/tools/clause_coverage/assembly_recipe_binding.py -text
+/code/tests/tools/test_assembly_recipe_binding.py -text
+/code/tests/fixtures/card_data/assembly_recipe_binding/.gitattributes -text
+
+# Preserve reviewed native implementation inventory bytes.
+/code/digimon-dsl/src/bin/implementation_inventory.rs -text
+/code/digimon-dsl/src/bin/implementation_inventory/core.rs -text
+/code/digimon-dsl/tests/implementation_inventory.rs -text
+
+# Preserve reviewed native Assembly metadata regression.
+/code/digimon-dsl/tests/focused_assembly_compilation.rs -text
+
+# Preserve reviewed diagnostic Link and clean Dual dispatch bytes.
+/code/tools/clause_coverage/diagnostic_source_book.py -text
+/code/tests/tools/test_diagnostic_source_book.py -text
+/code/tests/tools/test_diagnostic_link_dual_dispatch.py -text
+
+# Preserve reviewed original observation-byte regression fixtures.
+/code/tests/fixtures/card_data/clean_dual_original_bytes/0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/association-proof.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/association-review.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/independent-review.json -text
+/code/tests/fixtures/card_data/clean_dual_original_bytes/pins.json -text
+/code/tests/tools/test_clean_dual_original_bytes.py -text
+
+# Preserve reviewed whole-card Assembly composition bytes.
+/code/tests/tools/test_assembly_card_composition.py -text
+/code/tools/clause_coverage/assembly_card_composition.py -text
+
+# Preserve independently reviewed native reference visitor bytes.
+/code/digimon-dsl/src/bin/implementation_inventory/references.rs -text
+/code/digimon-dsl/src/bin/implementation_inventory/reference_predicates.rs -text
+/code/digimon-dsl/src/bin/implementation_inventory/reference_steps.rs -text
+/code/digimon-dsl/src/bin/implementation_inventory/reference_formulas.rs -text
+/code/digimon-dsl/tests/implementation_references.rs -text
+
+# Preserve reviewed Assembly diagnostic dispatch regression bytes.
+/code/tests/tools/test_diagnostic_assembly_dispatch.py -text
+
+# Preserve reviewed campaign process preflight bytes.
+/code/tools/card_loop/supervision.py -text
+/code/tests/tools/test_campaign_process_preflight.py -text
+
+# Preserve independently reviewed typed reference role regression.
+/code/digimon-dsl/tests/implementation_reference_roles.rs -text
+
+# Preserve reviewed paired-main correction proof bytes.
+/code/tools/clause_coverage/paired_main_correction_units.py -text
+/code/tests/tools/test_paired_main_correction_units.py -text
+/code/tests/tools/review_paired_main_correction_root.py -text
+
+# Preserve independently reviewed strict equals correspondence bytes.
+/code/digimon-dsl/src/bin/implementation_inventory/equals_witness.rs -text
+/code/digimon-dsl/tests/implementation_equals_witness.rs -text
+/code/digimon-dsl/tests/review_equals_independent.rs -text
+
+# Preserve reviewed current canonical Link selection regression bytes.
+/code/tests/tools/test_link_current_review.py -text
+/code/tests/tools/review_link_current_independent.py -text
+
+# Preserve reviewed paired-main whole-card composition bytes.
+/code/tools/clause_coverage/source_units.py -text
+/code/tools/clause_coverage/paired_main_card_composition.py -text
+/code/tests/tools/test_paired_main_card_composition.py -text
+/code/tests/tools/review_paired_main_composition_root.py -text
+
+# Preserve reviewed named material native correspondence bytes.
+/code/digimon-engine/tests/support/named_material_kind_witness.rs -text
+/code/digimon-engine/tests/named_material_kind_witness.rs -text
+/code/digimon-engine/tests/review_named_material_independent.rs -text
+
+# Preserve reviewed paired-main diagnostic boundary tests.
+/code/tests/tools/test_diagnostic_paired_main_dispatch.py -text
+/code/tests/tools/review_paired_main_dispatch_independent.py -text
+
+# Preserve reviewed source-book v2 route evidence and independent controls.
+/code/tests/fixtures/card_data/source_book_v2_composition_routes/origin.json -text
+/code/tests/tools/review_v2_routes_independent.py -text
+/code/tools/dcgo-harness/tests/review_v2_routes_independent.rs -text
+/code/tests/tools/test_source_book_v2_composition_routes.py -text
+/code/tools/dcgo-harness/src/exam/source_book_v2_composition_routes_tests.rs -text
+
+# Preserve independently reviewed metadata cache repair and regression bytes.
+/code/digimon-engine/src/card_data.rs -text
+/code/digimon-engine/src/card_store.rs -text
+/code/digimon-engine/tests/card_store_content_cache.rs -text
+/code/digimon-engine/tests/review_card_store_content_cache.rs -text
+
+# Preserve reviewed five-card native definitions and witness bytes.
+/code/digimon-engine/tests/cards_behavioral/bt1/mod.rs -text
+/code/digimon-engine/cards/bt1/bt1_009.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt1/bt1_009.rs -text
+/code/digimon-engine/cards/bt1/bt1_014.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt1/bt1_014.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt3/mod.rs -text
+/code/digimon-engine/cards/bt3/bt3_007.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt3/bt3_007.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt4/mod.rs -text
+/code/digimon-engine/cards/bt4/bt4_010.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt4/bt4_010.rs -text
+/code/digimon-engine/cards/bt4/bt4_014.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt4/bt4_014.rs -text
+/code/digimon-engine/tests/fixtures/focused_five_vanilla_r4.json -text
+/code/digimon-engine/tests/fixtures/focused_five_vanilla_r4.provenance.json -text
+/code/digimon-engine/tests/review_five_vanilla_batch1.rs -text
+/code/digimon-engine/tests/review_five_vanilla_batch2.rs -text
+/qa/impact/dsl_impact_index.json -text
+/qa/qa-reports/validated_cards_dsl.json -text
+/qa/archetype-qa/dsl/focused-missing-definitions-20261013.md -text
+
+# Preserve reviewed remaining-effect definitions and witness bytes.
+/code/digimon-engine/cards/bt4/bt4_018.yaml -text
+/code/digimon-engine/cards/bt6/bt6_068.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt4/bt4_018.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt6/bt6_068.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt6/mod.rs -text
+/code/digimon-engine/tests/fixtures/focused_remaining_effects_r4.json -text
+/code/digimon-engine/tests/fixtures/focused_remaining_effects_r4.provenance.json -text
+/code/digimon-engine/tests/review_remaining_effects_registry.rs -text
+
+# Preserve independently reviewed Aquatic metadata and diagnostic bytes.
+/code/digimon-engine/cards/ex12/EX12-026.yaml -text
+/code/digimon-engine/tests/cards_behavioral/ex12/ex12_026.rs -text
+/code/digimon-engine/cards/ex12/EX12-031.yaml -text
+/code/digimon-engine/tests/cards_behavioral/ex12/ex12_031.rs -text
+
+# Preserve independently reviewed EventTarget identity repair bytes.
+/code/digimon-engine/src/dsl_cards/binding_ref.rs -text
+/code/digimon-engine/tests/event_target_identity.rs -text
+/code/digimon-engine/tests/review_event_target_identity.rs -text
+
+# Preserve independently reviewed Security timing source and tests.
+/code/digimon-engine/src/combat/mod.rs -text
+/code/digimon-engine/src/digixros.rs -text
+/code/digimon-engine/src/dsl_cards/lower_triggered.rs -text
+/code/digimon-engine/src/effect.rs -text
+/code/digimon-engine/src/effect_queue.rs -text
+/code/digimon-engine/src/game/mod.rs -text
+/code/digimon-engine/src/game/triggers.rs -text
+/code/digimon-engine/src/game_actions/misc.rs -text
+/code/digimon-engine/src/game_actions/mod.rs -text
+/code/digimon-engine/src/permanent.rs -text
+/code/digimon-engine/src/selection.rs -text
+/code/digimon-engine/src/trigger_context.rs -text
+/code/digimon-engine/tests/security_check_timing.rs -text
+/code/digimon-engine/tests/security_resolution_regressions.rs -text
+
+# Preserve reviewed Harpymon native implementation and evidence tracker bytes.
+/code/digimon-engine/cards/bt16/BT16-033.yaml -text
+/code/digimon-engine/tests/cards_behavioral/bt16/bt16_033.rs -text
+/code/digimon-engine/tests/cards_behavioral/bt16/mod.rs -text
+
+# Preserve independently reviewed native diagnostic source bytes.
+/code/digimon-engine/examples/native_conversion_diagnostic.rs -text
+/code/digimon-engine/examples/native_conversion_diagnostic/controls.rs -text
+code/digimon-engine/cards/bt24/BT24-081.yaml -text
+code/digimon-engine/cards/ex12/EX12-046.yaml -text
+code/digimon-engine/cards/ex12/EX12-063.yaml -text
+code/digimon-engine/tests/cards_behavioral/assembly_material_predicates.rs -text
+code/digimon-engine/tests/cards_behavioral/main.rs -text
+code/digimon-engine/tests/dsl/assembly_play.rs -text
+code/digimon-engine/cards/bt24/BT24-041.yaml -text
+code/digimon-engine/cards/bt24/BT24-085.yaml -text
+code/digimon-engine/cards/bt25/BT25-078.yaml -text
+code/digimon-engine/cards/ex12/EX12-070.yaml -text
+code/digimon-engine/cards/ex12/EX12-071.yaml -text
+code/digimon-engine/tests/cards_behavioral/printed_metadata_routes.rs -text
+code/digimon-engine/tests/fixtures/focused_five_metadata_v6.json -text
+code/digimon-engine/cards/bt21/BT21-007.yaml -text
+code/digimon-engine/cards/bt24/BT24-018.yaml -text
+code/digimon-engine/cards/bt24/BT24-031.yaml -text
+code/digimon-engine/cards/bt24/BT24-101.yaml -text
+code/digimon-engine/cards/bt25/BT25-025.yaml -text
+code/digimon-engine/cards/bt25/BT25-033.yaml -text
+code/digimon-engine/cards/st1/ST1-07.yaml -text
+code/digimon-engine/tests/cards_behavioral/printed_attribute_filters.rs -text
+code/digimon-engine/tests/fixtures/focused_seven_attributes_v6.json -text
+code/digimon-engine/tests/cards_behavioral/bt24/bt24_041.rs -text
+code/digimon-engine/cards/bt15/BT15-037.yaml -text
+code/digimon-engine/cards/bt24/BT24-034.yaml -text
+code/digimon-engine/cards/bt25/BT25-022.yaml -text
+code/digimon-engine/cards/bt25/BT25-030.yaml -text
+code/digimon-engine/cards/bt25/BT25-044.yaml -text
+code/digimon-engine/cards/bt25/BT25-058.yaml -text
+code/digimon-engine/cards/bt25/BT25-082.yaml -text
+code/digimon-engine/cards/bt25/BT25-083.yaml -text
+code/digimon-engine/cards/bt25/BT25-085.yaml -text
+code/digimon-engine/cards/ex12/EX12-004.yaml -text
+code/digimon-engine/cards/ex12/EX12-009.yaml -text
+code/digimon-engine/cards/ex12/EX12-011.yaml -text
+code/digimon-engine/cards/ex12/EX12-020.yaml -text
+code/digimon-engine/cards/ex12/EX12-026.yaml -text
+code/digimon-engine/cards/ex12/EX12-031.yaml -text
+code/digimon-engine/cards/ex12/EX12-036.yaml -text
+code/digimon-engine/cards/ex12/EX12-047.yaml -text
+code/digimon-engine/cards/ex12/EX12-061.yaml -text
+code/digimon-engine/cards/ex12/EX12-062.yaml -text
+code/digimon-engine/cards/ex12/EX12-065.yaml -text
+code/digimon-engine/cards/ex12/EX12-076.yaml -text
+code/digimon-engine/cards/ex7/EX7-073.yaml -text
+code/digimon-engine/cards/p/P-194.yaml -text
+code/digimon-engine/cards/p/P-198.yaml -text
+code/digimon-engine/cards/p/P-213.yaml -text
+code/digimon-engine/tests/cards_behavioral/printed_form_filters.rs -text
+code/digimon-engine/tests/fixtures/focused_printed_forms_v6.json -text
+code/digimon-engine/tests/cards_behavioral/bt25/bt25_078.rs -text
+code/digimon-engine/tests/cards_behavioral/gazimon_repeated_triggers.rs -text
+code/digimon-engine/tests/cards_behavioral/gazimon_optional_scope.rs -text
+code/digimon-engine/tests/cards_behavioral/reveal_optional_pick_continuation.rs -text
+code/digimon-engine/src/dsl_cards/step/selections.rs -text
+code/digimon-engine/tests/cards_behavioral/gazimon_alt_paths.rs -text
+code/digimon-engine/tests/fixtures/gazimon_alt_runtime.json -text
+code/digimon-engine/tests/dsl/assembly_material_equivalence.rs -text
+code/digimon-engine/tests/dsl/main.rs -text
+code/digimon-engine/tests/fixtures/ex12_076_assembly_equivalence/original.yaml -text
+/code/digimon-engine/tests/cards_behavioral/native_four_field_consumers.rs -text
+/code/digimon-engine/tests/fixtures/native_four_field_consumers_v6.json -text
+
+code/digimon-engine/src/card_store/diagnostic_wire.rs -text
+code/digimon-engine/src/card_store/scoped_diagnostic.rs -text
+code/digimon-engine/tests/focused_card_store.rs -text
+code/tools/dcgo-harness/src/exam/oracle.rs -text
+code/tools/dcgo-harness/src/main.rs -text
+code/tools/dcgo-harness/src/mcp/handlers.rs -text
+/code/digimon-dsl/tests/implementation_inventory_cli.rs -text
+/code/digimon-dsl/tests/implementation_current_equals_witness.rs -text
+/code/digimon-dsl/tests/fixtures/current_equals_witness/three_cards.json -text

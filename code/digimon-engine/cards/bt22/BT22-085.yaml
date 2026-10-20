@@ -1,0 +1,56 @@
+# Official observation: 13c5a285c0146161b7ba5f4c7b0cb8711c32a9339814a3ddb7f08e07c5df15f3.
+# Printed text and CS trait checked against the BT22-085 card image.
+card: BT22-085
+name: Rina Shinomiya
+kind: tamer
+color: [blue]
+cost: 4
+traits: [CS]
+effects:
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - when: on_play
+    summary: "[On Play] 1 of your Veedramon Digimon gets +3000 DP until your opponent's turn ends"
+    process:
+      - select_own_permanent:
+          bind_as: boosted
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Veedramon
+          prompt: "Choose 1 of your Digimon with Veedramon in its name"
+      - add_dp_modifier:
+          target: boosted
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  - when: on_ally_attack
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_name_contains: Veedramon
+    summary: "[Your Turn] When your Veedramon Digimon attacks, return this Tamer to hand to grant that Digimon Jamming for the turn"
+    process:
+      - return_to_hand: { target: source }
+      # The return is a cost: a prevented return never grants Jamming.
+      # event_target resolves the attacking card after the source leaves,
+      # including when removal shifts the attacker's battle-area index.
+      - if:
+          condition: { effect_returned_any_card: true }
+          then:
+            - grant_keyword:
+                target: event_target
+                keyword: Jamming
+                expiry: end_of_turn
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

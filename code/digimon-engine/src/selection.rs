@@ -956,6 +956,8 @@ pub enum OptionResolutionPhase {
 /// `pending_selection` installed inside a `SecuritySkill` process can pause
 /// the flow and resume from the same phase after the selection resolves.
 ///
+/// Official rule 13-1-7 and Q6813: immediate Security, then captured
+/// simultaneous check/removal observers, then security battle and disposal.
 /// The security battle and all of its triggered/scheduled processing finish
 /// before check disposal or the next check (general_rule.pdf 13-1-7 / 14-2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -975,8 +977,8 @@ pub enum SecurityPhase {
     /// Scheduled battle effects wait for ordinary battle observers and have
     /// their own one-shot enqueue guard across parked choices.
     EndOfSecurityBattleScheduledDrain,
-    /// Enqueue + drain `OnSecurityCheck` observer effects over the defender's
-    /// battle area.
+    /// Drain the occurrence-captured check/removal batch and derived effects,
+    /// before the security DP battle. No rescan occurs here.
     OnSecurityCheckDrain,
     /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
     /// finally removed from the security stack.

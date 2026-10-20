@@ -1,0 +1,14 @@
+{
+  "EX12-046-qa-Q6813.yaml": {
+    "source": "C:\\Users\\james\\.codex\\worktrees\\focus-toho\\qa\\dcgo-exams\\EX12\\EX12-046-qa-Q6813.yaml",
+    "sha256": "b0777b9dbbacf2b8ab7b22d2ae04d9c8fd96b4ead9049b2fdb8f530e58532ad1"
+  },
+  "toho_pool.json": {
+    "source": "C:\\Users\\james\\.codex\\worktrees\\focus-toho\\qa\\dcgo-exams\\EX12\\toho_pool.json",
+    "sha256": "8e620483e15be594b022417ee27287e76d289760c56fb3a91ba80d71a1fa4cf7"
+  },
+  "starter_decks.json": {
+    "source": "C:\\Users\\james\\.codex\\worktrees\\focus-toho\\data\\starter_decks.json",
+    "sha256": "1e72679d5b9efc5a2f6110b5bf4227072521098f947f59c40af06071054d1d5b"
+  }
+}

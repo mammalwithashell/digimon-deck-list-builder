@@ -1,0 +1,86 @@
+{
+  "card_ids": [
+    "BT1-011",
+    "BT11-020",
+    "BT7-059",
+    "BT9-001"
+  ],
+  "images": [
+    {
+      "card_id": "BT1-011",
+      "file": "BT1-011.webp",
+      "sha256": "9c500a9f42671ffd2ec42f62cfcaf95a6f25bb1ebe77ff26ab66b944d4b4a5b7",
+      "visually_inspected": true
+    },
+    {
+      "card_id": "BT11-020",
+      "file": "BT11-020.webp",
+      "sha256": "910fa22390bd6a5cfab37941dd89b247009d155be6f53f194dd4a8e57954be47",
+      "visually_inspected": true
+    },
+    {
+      "card_id": "BT7-059",
+      "file": "BT7-059.webp",
+      "sha256": "c4f022e36305200192c101da3e56e4ac5d0e109dd9b5ed74ed31eab06877c263",
+      "visually_inspected": true
+    },
+    {
+      "card_id": "BT9-001",
+      "file": "BT9-001.webp",
+      "sha256": "e20dbafe6210ad7efb7a01b70e8946a7bc907f8cd364e2937d2e07e585da934b",
+      "visually_inspected": true
+    }
+  ],
+  "original_inputs": {
+    "canonical": {
+      "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\cards_canonical.json",
+      "sha256": "a242b1d01ee3c00b6206de7d3860556ee85bddd396a4de99be7b23628164416e"
+    },
+    "corrections": {
+      "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_corrections.json",
+      "sha256": "2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf"
+    },
+    "ledger": {
+      "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_migration_adjudications.json",
+      "sha256": "fe1f313900386f2d8dcde21df7be97b4f19e25a227b708b879acc36fe39ef1a5"
+    },
+    "report": {
+      "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\qa\\qa-reports\\official-canonical-candidate.json",
+      "sha256": "96c431ebfaace897601a7e7bce22ecdcc0b68be321a75db52e5b918296874241"
+    },
+    "snapshot": {
+      "path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\review-official-v5-offline-20261012\\official-v5-snapshot.json",
+      "sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed"
+    }
+  },
+  "original_runtime_inventory_count": 10698,
+  "pages": [
+    {
+      "file": "ed7cadc42886414f353a641ef80e46f73707b6d30b821fee7e65d54e7f04ccd9.html.gz",
+      "raw_sha256": "ed7cadc42886414f353a641ef80e46f73707b6d30b821fee7e65d54e7f04ccd9",
+      "url": "https://world.digimoncard.com/cards/?search=true&category=522013"
+    },
+    {
+      "file": "210042873f5b10e6b75098a6df6a3a31fb56cda99ecb0f0eddc69013a1552719.html.gz",
+      "raw_sha256": "210042873f5b10e6b75098a6df6a3a31fb56cda99ecb0f0eddc69013a1552719",
+      "url": "https://world.digimoncard.com/cards/?search=true&category=522010"
+    },
+    {
+      "file": "02790c33595a26eb1dc744958ac6f166442c39c456b87711272d2db12b57e286.html.gz",
+      "raw_sha256": "02790c33595a26eb1dc744958ac6f166442c39c456b87711272d2db12b57e286",
+      "url": "https://world.digimoncard.com/cards/?search=true&category=522007"
+    },
+    {
+      "file": "b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1.html.gz",
+      "raw_sha256": "b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1",
+      "url": "https://world.digimoncard.com/cards/?search=true&category=522001"
+    },
+    {
+      "file": "d19a21154e21453304021f71a7d07712673ffbf63948c98fe7bc7b3ebd0d0136.html.gz",
+      "raw_sha256": "d19a21154e21453304021f71a7d07712673ffbf63948c98fe7bc7b3ebd0d0136",
+      "url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+    }
+  ],
+  "scope": "Test-only four-card projection; not a full-pool proof or approval. Original observation payloads/raw pages unchanged. Both full production lanes are projected to the four fixture cards and aggregate rebuilt for tests only; runtime old/new revisions and reviewed rows unchanged. No production source approval.",
+  "test_only_aggregate_revision": "181937cdec20616769fca2cb0849f43e606c8e265285553fbd7161673df4edd2"
+}

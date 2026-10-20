@@ -1,0 +1,1031 @@
+{
+  "scope": "Pure whole-card source composition fixture, no publication or verdict approval",
+  "card_id": "BT24-101",
+  "card": {
+    "admission": "admitted",
+    "card_id": "BT24-101",
+    "conflicts": [
+      {
+        "candidate_observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "field_path": "effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "field_path": "evo_costs",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "field_path": "form_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 13000,
+        "effect_text": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards\n[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 ≪Deck≫＞.\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 6,
+        "play_cost": 12,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Vaccine"
+      ],
+      "card_colors": [
+        "Yellow"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Jupitermon",
+      "dp": 13000,
+      "effect_description_eng": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 ≪Deck≫＞.\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Yellow"
+          ],
+          "cost": 5,
+          "from_level": 5,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Mega"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 6,
+      "play_cost": 12,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Shaman",
+        "Olympos XII",
+        "Iliad",
+        "TS"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "printing_id": "BT24-101",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e"
+        ],
+        "printing_id": "BT24-101#2",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7"
+        ],
+        "printing_id": "BT24-101#3",
+        "product": null
+      },
+      {
+        "alternate_art": true,
+        "language": "en",
+        "observation_ids": [
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f"
+        ],
+        "printing_id": "BT24-101_P1",
+        "product": null
+      },
+      {
+        "alternate_art": true,
+        "language": "en",
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a"
+        ],
+        "printing_id": "BT24-101_P2",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+          "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+          "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+          "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+          "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+          "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+        ],
+        "selected_observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": {
+    "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Jupitermon",
+          "dp": 13000,
+          "effect_description_eng": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": 6,
+          "play_cost": 12,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Olympos XII",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT24-101",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Yellow",
+              "cost": 5,
+              "level": 5,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 13000,
+            "effect_text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "digimon",
+            "level": 6,
+            "play_cost": 12,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.5 w/[TS] trait: Cost 3 \r\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-12-14 01:04:26",
+          "digi_type": "Shaman",
+          "digi_type2": "Olympos XII",
+          "digi_type3": "Iliad",
+          "digi_type4": "TS",
+          "dp": 13000,
+          "evolution_color": null,
+          "evolution_cost": 5,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT24-101",
+          "level": 6,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+          "name": "Jupitermon",
+          "play_cost": 12,
+          "pretty_url": "BT24-101-jupitermon",
+          "rarity": "SEC",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-24: BOOSTER TIME STRANGER"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 668675,
+          "tcgplayer_name": "Jupitermon",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.5 w/[TS] trait: Cost 3 \r\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "32b198604985eff6695572f7f609e8874ba03728f6f4e8a43d920c73ab7ebfff",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT24-101",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT24-101",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 13000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 5,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 13000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "Jupitermon",
+            "play_cost": 12,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 ≪Deck≫＞.\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave."
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 6,
+        "name": "Jupitermon",
+        "play_cost": 12,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522033",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT24-101.png?260529",
+          "printing_id": "BT24-101"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "It can digivolve for digivolution cost of 0.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5714",
+            "question": "I have 0 security cards.\nWhat is the digivolution cost if I use this card's 3rd digivolution requirement to digivolve from a level 5 card with [Aegiochusmon] in its name?"
+          },
+          {
+            "answer": "Yes, you can.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5715",
+            "question": "Can I use this card's [On Play] [When Digivolving] to reduce the DP of 1 of my opponent's Digimon even when I have 0 security cards and therefore can't trash one?"
+          },
+          {
+            "answer": "No, it isn't deleted yet.\nOnce all of the processing for the activated effect has resolved, a rule check will occur, then all of the Digimon with 0 DP are deleted at the same time.",
+            "date": "May. 8, 2026",
+            "number": "Q5716",
+            "question": "This card's effect caused the DP of my opponent's Digimon to become 0.\nAt such times, is the Digimon with a DP of zero deleted?"
+          },
+          {
+            "answer": "[Security] effects take precedence for activation.\nUpon a security check, a [Security] effect will immediately activate without pending activation.\nFor other triggered effects, the turn player activates their effects first.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5717",
+            "question": "In what order do a [Security] effect, \"when [...] performs a security check\" effect, and \"when a card is removed from [...] security stack\" effect activate when they trigger simultaneously upon a security check?"
+          },
+          {
+            "answer": "This effect triggers and can be activated when a Digimon or Tamer specified by it leaves the battle area under the specified conditions.\nWhen activated, all Digimon and Tamers matching its trigger conditions are prevented from leaving.",
+            "date": "Sep. 18, 2026",
+            "number": "Q5718",
+            "question": "What does this card's second [All Turns] effect do, exactly?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 ≪Deck≫＞.\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave."
+          }
+        ],
+        "type": "Shaman/Olympos XII/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "bb4cb07f32293a613ddb659048de13244d01fe45aa5bf2a33b0d86d30dd10c85",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522033:BT24-101:BT24-101",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522033"
+    },
+    "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Jupitermon",
+          "dp": 13000,
+          "effect_description_eng": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": 6,
+          "play_cost": 12,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Olympos XII",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT24-101",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Yellow",
+              "cost": 5,
+              "level": 5,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 13000,
+            "effect_text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "digimon",
+            "level": 6,
+            "play_cost": 12,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.5 w/[TS] trait: Cost 3 \r\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-12-14 01:04:26",
+          "digi_type": "Shaman",
+          "digi_type2": "Olympos XII",
+          "digi_type3": "Iliad",
+          "digi_type4": "TS",
+          "dp": 13000,
+          "evolution_color": null,
+          "evolution_cost": 5,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT24-101",
+          "level": 6,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+          "name": "Jupitermon",
+          "play_cost": 12,
+          "pretty_url": "BT24-101-jupitermon",
+          "rarity": "SEC",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-24: BOOSTER TIME STRANGER"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 674538,
+          "tcgplayer_name": "Jupitermon (Rare Pull)",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.5 w/[TS] trait: Cost 3 \r\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "4f24c1e2fc5d76aecdacbcbcf51a283b52eac94a9ed427ee1d1366c79d003c3e",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT24-101#2",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Vaccine"
+          ],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Jupitermon",
+          "dp": 13000,
+          "effect_description_eng": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "",
+          "level": 6,
+          "play_cost": 12,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Shaman",
+            "Olympos XII",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT24-101",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Yellow",
+              "cost": 5,
+              "level": 5,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 13000,
+            "effect_text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+            "face_id": "primary",
+            "inherited_text": "",
+            "kind": "digimon",
+            "level": 6,
+            "play_cost": 12,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.5 w/[TS] trait: Cost 3 \r\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards",
+          "artist": null,
+          "attribute": "Vaccine",
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-12-14 01:04:26",
+          "digi_type": "Shaman",
+          "digi_type2": "Olympos XII",
+          "digi_type3": "Iliad",
+          "digi_type4": "TS",
+          "dp": 13000,
+          "evolution_color": null,
+          "evolution_cost": 5,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT24-101",
+          "level": 6,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\r\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave.",
+          "name": "Jupitermon",
+          "play_cost": 12,
+          "pretty_url": "BT24-101-jupitermon",
+          "rarity": "SEC",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-24: BOOSTER TIME STRANGER"
+          ],
+          "source_effect": "",
+          "stage": null,
+          "tcgplayer_id": 668676,
+          "tcgplayer_name": "Jupitermon (Alternate Art)",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.5 w/[TS] trait: Cost 3 \r\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "9694661d46ea4efb2e71de786bbecbfafbd58e18e9167a0267bb6cb83db9cae7",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT24-101#3",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT24-101",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 13000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 5,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 13000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "Jupitermon",
+            "play_cost": 12,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 ≪Deck≫＞.\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave."
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 6,
+        "name": "Jupitermon",
+        "play_cost": 12,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522033",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT24-101_P1.png?260529",
+          "printing_id": "BT24-101_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "It can digivolve for digivolution cost of 0.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5714",
+            "question": "I have 0 security cards.\nWhat is the digivolution cost if I use this card's 3rd digivolution requirement to digivolve from a level 5 card with [Aegiochusmon] in its name?"
+          },
+          {
+            "answer": "Yes, you can.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5715",
+            "question": "Can I use this card's [On Play] [When Digivolving] to reduce the DP of 1 of my opponent's Digimon even when I have 0 security cards and therefore can't trash one?"
+          },
+          {
+            "answer": "No, it isn't deleted yet.\nOnce all of the processing for the activated effect has resolved, a rule check will occur, then all of the Digimon with 0 DP are deleted at the same time.",
+            "date": "May. 8, 2026",
+            "number": "Q5716",
+            "question": "This card's effect caused the DP of my opponent's Digimon to become 0.\nAt such times, is the Digimon with a DP of zero deleted?"
+          },
+          {
+            "answer": "[Security] effects take precedence for activation.\nUpon a security check, a [Security] effect will immediately activate without pending activation.\nFor other triggered effects, the turn player activates their effects first.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5717",
+            "question": "In what order do a [Security] effect, \"when [...] performs a security check\" effect, and \"when a card is removed from [...] security stack\" effect activate when they trigger simultaneously upon a security check?"
+          },
+          {
+            "answer": "This effect triggers and can be activated when a Digimon or Tamer specified by it leaves the battle area under the specified conditions.\nWhen activated, all Digimon and Tamers matching its trigger conditions are prevented from leaving.",
+            "date": "Sep. 18, 2026",
+            "number": "Q5718",
+            "question": "What does this card's second [All Turns] effect do, exactly?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 ≪Deck≫＞.\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave."
+          }
+        ],
+        "type": "Shaman/Olympos XII/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "4249ae47954fc634f2908d48b71deda77b0b2f5567b14531a075cafe246edc7f",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522033:BT24-101:BT24-101_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522033"
+    },
+    "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a": {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT24-101",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 13000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 5,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 13000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "Jupitermon",
+            "play_cost": 12,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 ≪Deck≫＞.\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave."
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 6,
+        "name": "Jupitermon",
+        "play_cost": 12,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522033",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT24-101_P2.png?260529",
+          "printing_id": "BT24-101_P2"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "It can digivolve for digivolution cost of 0.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5714",
+            "question": "I have 0 security cards.\nWhat is the digivolution cost if I use this card's 3rd digivolution requirement to digivolve from a level 5 card with [Aegiochusmon] in its name?"
+          },
+          {
+            "answer": "Yes, you can.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5715",
+            "question": "Can I use this card's [On Play] [When Digivolving] to reduce the DP of 1 of my opponent's Digimon even when I have 0 security cards and therefore can't trash one?"
+          },
+          {
+            "answer": "No, it isn't deleted yet.\nOnce all of the processing for the activated effect has resolved, a rule check will occur, then all of the Digimon with 0 DP are deleted at the same time.",
+            "date": "May. 8, 2026",
+            "number": "Q5716",
+            "question": "This card's effect caused the DP of my opponent's Digimon to become 0.\nAt such times, is the Digimon with a DP of zero deleted?"
+          },
+          {
+            "answer": "[Security] effects take precedence for activation.\nUpon a security check, a [Security] effect will immediately activate without pending activation.\nFor other triggered effects, the turn player activates their effects first.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5717",
+            "question": "In what order do a [Security] effect, \"when [...] performs a security check\" effect, and \"when a card is removed from [...] security stack\" effect activate when they trigger simultaneously upon a security check?"
+          },
+          {
+            "answer": "This effect triggers and can be activated when a Digimon or Tamer specified by it leaves the battle area under the specified conditions.\nWhen activated, all Digimon and Tamers matching its trigger conditions are prevented from leaving.",
+            "date": "Sep. 18, 2026",
+            "number": "Q5718",
+            "question": "What does this card's second [All Turns] effect do, exactly?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Trash your top security card and 1 of your opponent's Digimon gets -13000 DP until their turn ends. Then, if you have 1 or fewer security cards, ＜Recovery +2 ≪Deck≫＞.\n[All Turns] [Once Per Turn] When your security stack is removed from, trash your opponent's top security card.\n[All Turns] [Once Per Turn] When any of your [TS] trait Digimon or Tamers would leave the battle area, by trashing your top security card, they don't leave."
+          }
+        ],
+        "type": "Shaman/Olympos XII/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "2bcdc6d9c9214bba3f56078831ff3bd32ebb51be7d653d9364edf960bc0fb40a",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522033:BT24-101:BT24-101_P2",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522033"
+    }
+  },
+  "xros_req": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[TS] trait: Cost 5\n[Digivolve] Lv.5 w/[Aegiochusmon] in name: Cost 1 for each of your security cards",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "raw_files": {
+    "https://world.digimoncard.com/cards/?search=true&category=522033": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a.html.gz"
+  },
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT24-101.webp",
+    "sha256": "2d5ac000393107705697cc60c3b1ecb245989b3c4bee267667766343ca66099d",
+    "observed": "Ordinary boxes and separate special condition text inspected; full text retained from official observation."
+  }
+}

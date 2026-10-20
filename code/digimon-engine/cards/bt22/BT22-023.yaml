@@ -1,0 +1,61 @@
+# Official Bandai observation cdec439c233bac96c78d708af732ea0f60199daa6d50d0971212f8413264b73b;
+# visually checked against BT22-023. All player choices remain selections.
+card: BT22-023
+name: AeroVeedramon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+traits: [Holy Dragon, CS]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: CS }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "Return 1 opposing level 4 or lower Digimon to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: returned
+          filter: { kind: digimon, level_lte: 4 }
+          prompt: "Return 1 opposing level 4 or lower Digimon to the bottom of the deck"
+      - return_to_deck: { target: returned, position: bottom }
+
+  - when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    summary: "[End of Your Turn][Once Per Turn] 1 of your blue Digimon or Tamers may unsuspend"
+    process:
+      - select_own_permanent:
+          bind_as: refreshed
+          optional: true
+          filter:
+            all_of:
+              - color_is: blue
+              - can_unsuspend: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "Unsuspend 1 of your blue Digimon or Tamers"
+      - unsuspend: { target: refreshed }
+
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    optional: true
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - source_name_contains: Veedramon
+        - any_field_permanent: { of: you, kind: tamer, color_is: blue }
+    summary: "[All Turns][Once Per Turn] When this Veedramon-named Digimon suspends, if you have a blue Tamer, it may unsuspend"
+    process:
+      - unsuspend: { target: source }

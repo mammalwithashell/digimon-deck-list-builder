@@ -7,6 +7,7 @@ card: BT25-022
 name: Lunamon
 kind: digimon
 level: 3
+form: Rookie
 color: [blue]
 cost: 3
 dp: 2000
