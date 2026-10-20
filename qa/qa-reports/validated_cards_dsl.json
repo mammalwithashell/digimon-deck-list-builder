@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-14",
+  "last_updated": "2026-10-19",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14682,6 +14682,102 @@
       ],
       "notes": "Printed memory-before-recovery order, mandatory own-turn self security-check trigger without OPT, exact Hawkmon special route, Armor Purge. All 12 required native matrix rows pass in both seats, including Q2629 and actual Q6813 masked setup. Empty actor trash explicitly requires no derived Kaguyamon prompt.",
       "audit_note": "Independent SPEC and root QUALITY approved at YAML b9e480df/test 230521a6. Full final matrix 15 passed/0 failed/0 ignored, actual exit0; availability RED and invalid fixtures retained. DCGO reference order differs and live oracle remains unmeasured. Source/native-pack/full-denominator/oracle/training gates remain open; no admission."
+    },
+    "BT11-023": {
+      "card_name": "Veemon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_023.rs",
+      "test_count": 8,
+      "notes": "Official observation/image reviewed; independent static review passed. Focused behavioral tests pass in exact-deck run/followup. DCGO unmeasured."
+    },
+    "BT12-029": {
+      "card_name": "UlforceVeedramon (X Antibody)",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_029.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; independent static review passed. Focused behavioral tests pass in exact-deck run/followup. DCGO unmeasured."
+    },
+    "BT11-112": {
+      "card_name": "Rina Shinomiya",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-112.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_112.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; independent static review passed. Focused behavioral tests pass in exact-deck run/followup. DCGO unmeasured. Q2143 evolution-before-refire and explicit keyword expiry boundary remain unverified by this set; no demonstrated defect claimed."
+    },
+    "BT22-085": {
+      "card_name": "Rina Shinomiya",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-085.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_085.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; independent static review passed. Focused behavioral tests pass in exact-deck run/followup. DCGO unmeasured."
+    },
+    "BT22-019": {
+      "card_name": "Veemon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_019.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT22-022": {
+      "card_name": "Veedramon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_022.rs",
+      "test_count": 9,
+      "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT22-023": {
+      "card_name": "AeroVeedramon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_023.rs",
+      "test_count": 8,
+      "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "P-138": {
+      "card_name": "Veedramon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/p/P-138.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_138.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
     }
   }
 }
