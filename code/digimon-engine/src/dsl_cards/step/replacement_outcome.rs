@@ -92,23 +92,52 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::Permanent(handle)) =
                 resolve_binding_ref(target, ctx, bindings)
             {
-                // `to_owner`: the placed card's OWNER's security (§3-1-3-8 —
-                // BT24-040 names no stack; owner ruling 2026-10-20).
-                let owner = ctx
+                let Some((owner, card)) = ctx
                     .game
                     .player(handle.player)
                     .battle_area
                     .get(handle.index as usize)
-                    .map(|p| p.top_card().owner);
-                let player = match (*to_owner, owner) {
-                    (true, Some(owner)) => owner,
-                    _ => crate::dsl_cards::step::resolve_player(ctx, *of),
+                    .map(|p| (p.top_card().owner, p.top_card().handle()))
+                else {
+                    return true;
                 };
-                if ctx.place_sourceless_permanent_bottom_security_and_cancel_current_replacement(
-                    player, handle,
-                ) {
-                    set_outcome(ctx, ReplacementOutcome::Cancelled);
+                // `to_owner`: the placed card's OWNER's security (§3-1-3-8 —
+                // BT24-040 names no stack; owner ruling 2026-10-20).
+                let player = if *to_owner {
+                    owner
+                } else {
+                    crate::dsl_cards::step::resolve_player(ctx, *of)
+                };
+                let placed = ctx.place_sourceless_permanent_bottom_security(player, handle);
+                if placed || ctx.game.pending_selection.is_some() {
+                    // "By placing X ..., they don't leave": the leave is
+                    // cancelled only if X actually reached security
+                    // (§15-7-1; §15-7-2 when it didn't). X's own would-leave
+                    // shield (e.g. its controller's <Guard>) may have parked
+                    // the placement — the finalize step waits behind it.
+                    let finalize = [CompiledStep::SecurityPlacementCancelFinalize {
+                        card: card.0,
+                        player,
+                    }];
+                    super::run_steps_with_runtime(
+                        &finalize,
+                        ctx,
+                        &mut Bindings::new(),
+                        &super::StepRuntime::default(),
+                    );
                 }
+            }
+            true
+        }
+        CompiledStep::SecurityPlacementCancelFinalize { card, player } => {
+            if ctx
+                .game
+                .player(*player)
+                .security
+                .iter()
+                .any(|c| c.handle().0 == *card)
+            {
+                set_outcome(ctx, ReplacementOutcome::Cancelled);
             }
             true
         }

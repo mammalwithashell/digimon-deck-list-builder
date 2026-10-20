@@ -3610,92 +3610,50 @@ impl Game {
         true
     }
 
+    /// Place a battle-area Digimon with no digivolution cards at the bottom of
+    /// `player_id`'s security stack (BT24-040 Venusmon's leave-replacement
+    /// cost; EX8-028). Routed through the resumable
+    /// [`Self::place_permanent_on_security`]: the chosen Digimon's own
+    /// would-leave / would-place replacements (e.g. its controller's <Guard>,
+    /// §16-45) may park a prompt; the move is remembered in
+    /// `pending_security_moves` and completes when that prompt resolves
+    /// without replacing it (`resume_security_move`). Returns `true` only when
+    /// the placement completed synchronously; a parked placement returns
+    /// `false` with `pending_selection` set. The leave cause is keyed on the
+    /// leaving Digimon's controller (`run_permanent_on_security`), not on the
+    /// destination stack.
+    ///
+    /// Gates: the acting player's AND the destination player's
+    /// `CannotAddSecurityByEffect` (DCGO `IPutSecurityPermanent` checks
+    /// `EffectSourceCard.Owner.CanAddSecurity` and
+    /// `TopCard.Owner.CanAddSecurity`).
     pub(crate) fn place_sourceless_permanent_on_security_bottom(
         &mut self,
         player_id: PlayerId,
         target: PermanentHandle,
         observer_player: PlayerId,
     ) -> bool {
-        use crate::enums::{EffectTiming, Zone};
-        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-
-        if self
-            .modifiers
-            .player_has(observer_player, ModifierType::CannotAddSecurityByEffect)
-        {
+        if [observer_player, player_id].into_iter().any(|p| {
+            self.modifiers
+                .player_has(p, ModifierType::CannotAddSecurityByEffect)
+        }) {
             return false;
         }
-
-        let Some(permanent) = self
+        let sourceless = self
             .player(target.player)
             .battle_area
             .get(target.index as usize)
-        else {
-            return false;
-        };
-        if permanent.card_sources.len() != 1 {
+            .is_some_and(|p| p.card_sources.len() == 1);
+        if !sourceless {
             return false;
         }
-
-        let source_card = permanent.top_card().handle();
-        let cause = self.infer_effect_cause(player_id);
-        let leave_subject = ReplacementSubject::Permanent(target);
-        let leave_outcome = self.try_replace(
-            EffectTiming::WhenWouldLeaveBattleArea,
-            leave_subject,
-            cause,
-            Some(Zone::Security),
-        );
-        if self.pending_selection.is_some() || !matches!(leave_outcome, ReplacementOutcome::None) {
-            return false;
-        }
-
-        let place_subject = ReplacementSubject::Card(source_card, Zone::BattleArea);
-        let place_outcome = self.try_replace(
-            EffectTiming::WhenWouldPlaceInSecurity,
-            place_subject,
-            cause,
-            Some(Zone::Security),
-        );
-        if self.pending_selection.is_some() || !matches!(place_outcome, ReplacementOutcome::None) {
-            return false;
-        }
-
-        let mut permanent = self
-            .player_mut(target.player)
-            .battle_area
-            .remove(target.index as usize);
-        let Some(card) = permanent.card_sources.pop() else {
-            return false;
-        };
-
-        self.clear_permanent_full(target);
-        self.modifiers.expire_player_on_permanent_leave(target);
-        // Re-key the modifier registry and the in-flight attack's handles
-        // after the `remove()` shift (EX8-028 pays a battle-area Digimon
-        // into security MID-ATTACK).
-        self.modifiers
-            .shift_after_battle_area_remove(target.player, target.index);
-        self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
-        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
-
-        let had_linked = !permanent.linked_cards.is_empty();
-        for linked in permanent.linked_cards {
-            self.player_mut(target.player).put_in_trash(linked);
-        }
-        if had_linked {
-            self.enqueue_triggered(
-                EffectTiming::OnLinkedCardTrashed,
-                TriggerSource::PlayerBattleArea(observer_player),
-            );
-            self.drain_effect_queue();
-        }
-
-        self.player_mut(player_id).insert_in_security(0, card);
-        self.fire_on_place_security(player_id, observer_player, source_card);
-        self.mark_until_condition_dirty();
-        self.reevaluate_until_condition_modifiers_if_dirty();
-        true
+        self.place_permanent_on_security(
+            player_id,
+            target,
+            crate::enums::StackPosition::Bottom,
+            false,
+            observer_player,
+        )
     }
 
     pub(crate) fn fire_on_place_security(

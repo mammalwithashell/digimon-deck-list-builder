@@ -3084,6 +3084,15 @@ pub enum CompiledStep {
     DeleteReceiptFinalize {
         receipt: u64,
     },
+    /// Engine-only: after a "by placing X as the bottom security card, it
+    /// doesn't leave" payment (`PlacePermanentBottomSecurityAndCancelReplacement`),
+    /// cancel the current replacement only if card `card` actually reached
+    /// `player`'s security stack (§15-7-1 / §15-7-2). Runs behind any prompt
+    /// the placement parked on (the placed Digimon's own would-leave shield).
+    SecurityPlacementCancelFinalize {
+        card: u16,
+        player: u8,
+    },
     /// Engine-only paid prevention, matched to the carrier's actual physical deletion.
     PaidDeletionPreventionFinalize {
         receipt: u64,

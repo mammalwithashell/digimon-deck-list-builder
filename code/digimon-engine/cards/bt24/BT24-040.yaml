@@ -82,11 +82,18 @@ effects:
     # Destination (OWNER RULING 2026-10-20, binding): the printed text names no
     # player's security stack, so the chosen Digimon goes to the bottom of ITS
     # OWNER's security (§3-1-3-8) — your own sourceless Digimon recovers you;
-    # an opponent's goes to the bottom of the OPPONENT's security. Q5781
-    # confirms "other Digimon" may be either player's (and, with several
-    # Digimon leaving at once, any Digimon other than the one protected). DCGO
-    # `PlacePermanentInSecurityAndProcessAccordingToResult` and the printed
-    # text do not name the destination; the ruling settles it: `to_owner: true`.
+    # an opponent's goes to the bottom of the OPPONENT's security. Either
+    # player's Digimon may be chosen: the printed "1 other Digimon" is
+    # unqualified and DCGO `CanPlaceToSecurityCondition` has no owner filter;
+    # Q5781 defines "other" (other than the Digimon that would leave, also when
+    # several leave at once). DCGO places into the owner's stack too
+    # (`PlacePermanentInSecurityAndProcessAccordingToResult` ->
+    # `IPutSecurityPermanent` -> `CardObjectController.AddSecurityCard` ->
+    # `cardSource.Owner.SecurityCards`), so the ruling, §3-1-3-8 and DCGO
+    # agree: `to_owner: true`. The leave is cancelled only if the card actually
+    # reached security (§15-7-1); the chosen Digimon's own would-leave shield
+    # (e.g. its controller's <Guard>) may stop it, and then the [TS] Digimon
+    # leaves (§15-7-2).
     process:
       - select_any_permanent:
           bind_as: cost_body

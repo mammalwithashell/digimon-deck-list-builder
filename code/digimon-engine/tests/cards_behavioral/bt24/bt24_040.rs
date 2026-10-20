@@ -10,9 +10,10 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::space::{encode_attack, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, Expiry, ModifierType};
+use digimon_engine::enums::{CardKind, EffectTiming, Expiry, Keyword, ModifierType};
 use digimon_engine::modifiers::PlayerModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::TriggerSource;
 
 #[test]
@@ -191,8 +192,9 @@ fn bt24_040_protects_ts_digimon_from_non_own_effect_by_placing_other_sourceless_
 
 /// OWNER RULING (2026-10-20, binding): "placing 1 other Digimon ... as the
 /// bottom security card" names no stack, so the chosen Digimon goes to the
-/// bottom of ITS OWNER's security stack. Q5781 confirms "other Digimon" may be
-/// either player's; choosing the opponent's sourceless Digimon therefore sends
+/// bottom of ITS OWNER's security stack. "1 other Digimon" is unqualified
+/// (DCGO offers either player's; Q5781 defines "other" as other than the
+/// Digimon that would leave); choosing the opponent's sourceless Digimon sends
 /// it to the bottom of the OPPONENT's security (their count +1, yours
 /// unchanged) while your [TS] Digimon still stays.
 #[test]
@@ -228,7 +230,7 @@ fn bt24_040_protection_paid_with_opponent_digimon_places_it_in_opponent_security
     assert!(
         view.valid_action_ids
             .contains(&encode_any_permanent(opponent_cost_body)),
-        "opponent sourceless Digimon must be a legal cost body (Q5781)"
+        "opponent sourceless Digimon must be a legal cost body (unqualified \"other Digimon\")"
     );
     choose_any_permanent(
         &mut runner,
@@ -297,6 +299,235 @@ fn bt24_040_opponent_cost_body_is_checked_from_opponent_security_into_owner_tras
         !trash_contains(&runner, 0, "OPP-COST-BODY"),
         "the opponent's card never reaches your trash"
     );
+}
+
+/// The cost body's own would-leave shield. Venusmon's controller pays with the
+/// opponent's sourceless Digimon; leaving by Venusmon's effect is leaving "by
+/// an opponent's effect" from the OPPONENT's side, so the opponent's <Guard>
+/// (§16-45-1/-2, optional §16-45-3) may protect it. The payment parks behind
+/// the opponent's prompt and RESUMES after it:
+/// - declined: the placement completes, so the optional processing condition
+///   was executed and "they don't leave" follows (§15-7-1);
+/// - accepted: the chosen Digimon never leaves, the condition was not executed,
+///   so the processing after it can't be (§15-7-2) — the [TS] Digimon leaves.
+fn guard_board() -> (DebugRunner, PermanentHandle, PermanentHandle) {
+    let mut guard = make_trait_digimon("OPP-GUARD", 4, 5000, &[]);
+    guard.keywords = vec![Keyword::Guard];
+    let mut runner = protection_runner()
+        .add_card(make_test_card("OPP-COST-BODY", "Opponent Cost Body"))
+        .add_card(make_trait_digimon("TS-TARGET-B", 5, 7000, &["TS"]))
+        .add_card(guard)
+        .start();
+    runner.place_on_field(0, "BT24-040", Some(0));
+    let target = runner.place_on_field(0, "TS-TARGET", Some(0));
+    runner.place_on_field(1, "OPP-GUARD", Some(0));
+    let opponent_cost_body = runner.place_on_field(1, "OPP-COST-BODY", Some(0));
+
+    runner.game.return_to_hand_from_effect(target, 1);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept Venusmon's replacement");
+    choose_any_permanent(
+        &mut runner,
+        opponent_cost_body,
+        "pay with the opponent's sourceless Digimon",
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("the opponent is offered <Guard> for the chosen Digimon");
+    assert_eq!(view.selecting_player, 1, "<Guard> is the opponent's choice");
+    assert!(
+        runner.pending_is_optional(),
+        "<Guard> is optional (§16-45-3)"
+    );
+    assert!(
+        permanent_exists(&runner, 1, "OPP-COST-BODY"),
+        "the chosen Digimon has not left while <Guard> is being decided"
+    );
+    (runner, target, opponent_cost_body)
+}
+
+fn assert_guard_declined_outcome(runner: &DebugRunner) {
+    assert!(
+        permanent_exists(runner, 0, "TS-TARGET"),
+        "the cost was paid, so the [TS] Digimon doesn't leave (§15-7-1)"
+    );
+    assert!(!hand_contains(runner, 0, "TS-TARGET"));
+    assert!(!permanent_exists(runner, 1, "OPP-COST-BODY"));
+    assert_eq!(
+        security_ids(runner, 1),
+        vec!["OPP-COST-BODY"],
+        "the declined shield lets the chosen Digimon reach its owner's security"
+    );
+    assert_eq!(runner.security_count(0), 0);
+    assert!(
+        permanent_exists(runner, 1, "OPP-GUARD"),
+        "<Guard> was not paid"
+    );
+}
+
+fn assert_guard_accepted_outcome(runner: &DebugRunner) {
+    assert!(
+        trash_contains(runner, 1, "OPP-GUARD"),
+        "<Guard> deletes its own Digimon to keep the chosen Digimon"
+    );
+    assert!(
+        permanent_exists(runner, 1, "OPP-COST-BODY"),
+        "the chosen Digimon doesn't leave"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "nothing reached the opponent's security"
+    );
+    assert_eq!(runner.security_count(0), 0);
+    assert!(
+        !permanent_exists(runner, 0, "TS-TARGET") && hand_contains(runner, 0, "TS-TARGET"),
+        "the optional processing condition was not executed, so the [TS] Digimon \
+         leaves (§15-7-2)"
+    );
+}
+
+#[test]
+fn bt24_040_opponent_declines_guard_on_cost_body_so_payment_completes_and_ts_stays() {
+    let (mut runner, _, _) = guard_board();
+    runner.execute_action(1, PASS).expect("decline <Guard>");
+    runner.auto_resolve().expect("finish the replacement");
+    assert!(runner.pending_selection().is_none());
+    assert_guard_declined_outcome(&runner);
+}
+
+#[test]
+fn bt24_040_opponent_accepts_guard_on_cost_body_so_cost_is_unpaid_and_ts_leaves() {
+    let (mut runner, _, _) = guard_board();
+    runner
+        .execute_action(1, REPLACEMENT_ACCEPT)
+        .expect("accept <Guard>");
+    runner.auto_resolve().expect("finish the replacement");
+    assert!(runner.pending_selection().is_none());
+    assert_guard_accepted_outcome(&runner);
+
+    // Venusmon was activated (the cost body was chosen), so its [Once Per
+    // Turn] is spent even though the payment failed.
+    let target_b = runner.place_on_field(0, "TS-TARGET-B", Some(0));
+    runner.place_on_field(0, "COST-BODY", Some(0));
+    runner.game.return_to_hand_from_effect(target_b, 1);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the [Once Per Turn] was spent by the activation"
+    );
+    assert!(hand_contains(&runner, 0, "TS-TARGET-B"));
+}
+
+#[test]
+fn bt24_040_clone_parked_at_the_cost_body_guard_prompt_resolves_both_branches() {
+    let (mut runner, _, _) = guard_board();
+    let mut declined = DebugRunner::wrap(runner.game.clone());
+    let mut accepted = DebugRunner::wrap(runner.game.clone());
+
+    declined
+        .execute_action(1, PASS)
+        .expect("decline <Guard> on the clone");
+    declined.auto_resolve().expect("finish the declined clone");
+    assert_guard_declined_outcome(&declined);
+
+    accepted
+        .execute_action(1, REPLACEMENT_ACCEPT)
+        .expect("accept <Guard> on the clone");
+    accepted.auto_resolve().expect("finish the accepted clone");
+    assert_guard_accepted_outcome(&accepted);
+
+    runner
+        .execute_action(1, PASS)
+        .expect("decline <Guard> on the original");
+    runner.auto_resolve().expect("finish the original");
+    assert_guard_declined_outcome(&runner);
+}
+
+/// DCGO `IPutSecurityPermanent` also requires the DESTINATION owner to be
+/// able to add security (`TopCard.Owner.CanAddSecurity`). When the opponent
+/// can't add security by effects, placing their Digimon fails, the optional
+/// processing condition is not executed, and the [TS] Digimon leaves
+/// (§15-7-2).
+#[test]
+fn bt24_040_opponent_cost_body_cannot_be_placed_when_opponent_cannot_add_security() {
+    let mut runner = protection_runner()
+        .add_card(make_test_card("OPP-COST-BODY", "Opponent Cost Body"))
+        .start();
+    runner.place_on_field(0, "BT24-040", Some(0));
+    let target = runner.place_on_field(0, "TS-TARGET", Some(0));
+    let opponent_cost_body = runner.place_on_field(1, "OPP-COST-BODY", Some(0));
+    runner.game.modifiers.add_player_modifier(
+        1,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotAddSecurityByEffect,
+            1,
+            Expiry::EndOfTurn,
+            None,
+            1,
+        ),
+    );
+
+    runner.game.return_to_hand_from_effect(target, 1);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept Venusmon's replacement");
+    choose_any_permanent(
+        &mut runner,
+        opponent_cost_body,
+        "pick the opponent's sourceless Digimon",
+    );
+    runner.auto_resolve().expect("finish the replacement");
+
+    assert!(permanent_exists(&runner, 1, "OPP-COST-BODY"));
+    assert_eq!(runner.security_count(1), 0);
+    assert!(
+        hand_contains(&runner, 0, "TS-TARGET"),
+        "the placement failed, so the [TS] Digimon leaves (§15-7-2)"
+    );
+}
+
+/// The cost body's leave cause is decided from its CONTROLLER's side, not
+/// from the destination stack's. Here the chosen Digimon is owned by the
+/// opponent (so it goes to the opponent's security, §3-1-3-8) but controlled
+/// by Venusmon's player: it leaves by its controller's own effect, so its
+/// controller's <Guard> ("by an opponent's effect", §16-45-1) is not offered.
+#[test]
+fn bt24_040_cost_body_leave_cause_is_keyed_on_its_controller_not_its_owner() {
+    let mut guard = make_trait_digimon("OWN-GUARD", 4, 5000, &[]);
+    guard.keywords = vec![Keyword::Guard];
+    let mut runner = protection_runner()
+        .add_card(make_test_card("OPP-COST-BODY", "Opponent Cost Body"))
+        .add_card(guard)
+        .start();
+    runner.place_on_field(0, "BT24-040", Some(0));
+    let target = runner.place_on_field(0, "TS-TARGET", Some(0));
+    runner.place_on_field(0, "OWN-GUARD", Some(0));
+    let borrowed = runner.place_on_field(1, "OPP-COST-BODY", Some(0));
+    let borrowed = runner.transfer_control(borrowed, 0);
+
+    // Battle deletion: "other than by your effects" for Venusmon, but not "by
+    // an opponent's effect", so <Guard> stays out of the [TS] Digimon's window.
+    runner
+        .game
+        .delete_permanent_with_cause(target, ReplacementCause::Battle);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept Venusmon's replacement");
+    choose_any_permanent(&mut runner, borrowed, "pay with the borrowed Digimon");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "the borrowed Digimon leaves by its controller's own effect: <Guard> is not offered"
+    );
+    assert!(permanent_exists(&runner, 0, "TS-TARGET"));
+    assert!(permanent_exists(&runner, 0, "OWN-GUARD"));
+    assert_eq!(
+        security_ids(&runner, 1),
+        vec!["OPP-COST-BODY"],
+        "the borrowed Digimon goes to its owner's security"
+    );
+    assert_eq!(runner.security_count(0), 0);
 }
 
 #[test]
