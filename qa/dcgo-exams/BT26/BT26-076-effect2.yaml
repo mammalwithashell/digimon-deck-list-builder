@@ -84,7 +84,9 @@ steps:
   # exactly that (the BT26-076-effect2 oracle abort: a 4-entry MultipleSkills
   # [BT26-076, BT26-094, BT26-076, BT26-094]). Crowmon's two entries are the
   # same [Once Per Turn] effect; `ordinal: 0` picks the first in each engine's
-  # own list (the Tamer-trash event's, first in both stacks).
+  # own list (the Tamer-trash event's, first in both stacks). PROVISIONAL (no
+  # oracle run yet): which DCGO entry `ordinal: 0` names is assumed; DCGO's
+  # abort lists the two Crowmon entries without their events.
   - actor: 0
     do: {select: {cards: [BT26-076], ordinal: 0}}
     expect: {prompt: MultipleSkills, candidates: [BT26-094, BT26-094, BT26-076, BT26-076]}
@@ -105,13 +107,18 @@ steps:
   # any of your Tamers, ..."): a derived trigger, so it activates before the
   # pool's remaining Keenan entries (§15-4-5-2). Keenan holds 1 face-down card,
   # so the trash branch is not offered; don't pay (DCGO BT26_082.cs value 3).
+  # PROVISIONAL (no oracle run yet): the `choice:` / `value: 3` / generic_int
+  # rows are read off BT26_082.cs:91-99 (SetIntSelection {1 delete, [2 trash
+  # 2], 3 don't pay}), not measured.
   - actor: 0
     do: {select: {choice: "Don't pay the cost", sim_only: true}}
   - actor: 0
     do: {select: {value: 3, dcgo_only: true}}
     expect: {prompt: generic_int}
   # Keenan reacts to the Tamer-source trash and the hand trash -- both entries
-  # are still in the ONE pool; decline both.
+  # are still in the ONE pool; decline both. PROVISIONAL (no oracle run yet):
+  # the [094,094] MultipleSkills pick and the two OptionalSkill declines are
+  # assumed for DCGO, not measured.
   - actor: 0
     do: {select: {cards: [BT26-094], ordinal: 0}}
     expect: {prompt: MultipleSkills, candidates: [BT26-094, BT26-094]}
