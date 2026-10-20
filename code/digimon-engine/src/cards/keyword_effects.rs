@@ -1140,10 +1140,10 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     move |game, src| !game.source_card_trash_blocked(subject, src.handle(), controller),
                     move |ctx, picks| {
                         // One event for the N cards (§15-5-2).
-                        let event = ctx.game.begin_source_trash_event();
+                        let event = ctx.game.begin_source_move_event();
                         let paid = picks.into_iter().filter(|handle| ctx.trash_card_source(subject, *handle)).count();
                         if paid == n as usize { ctx.cancel_leave(); }
-                        ctx.game.end_source_trash_event(event);
+                        ctx.game.end_source_move_event(event);
                     },
                 );
                 park_keyword_count_capped_frame(

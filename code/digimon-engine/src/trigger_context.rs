@@ -164,10 +164,10 @@ pub struct BattleCombatantSnapshot {
 pub struct TriggerContext {
     /// Physical members of one simultaneous play event. Each member has no nested group.
     pub simultaneous_play_members: Vec<TriggerContext>,
-    /// Transient stamp: this entry was enqueued by the source-trash event that
-    /// is still open (`Game::source_trash_event_open`). Cleared when the event
+    /// Transient stamp: this entry was enqueued by the source-move event that
+    /// is still open (`Game::source_move_event_open`). Cleared when the event
     /// closes and its entries are coalesced; never set between steps.
-    pub(crate) in_source_trash_event: bool,
+    pub(crate) in_source_move_event: bool,
     /// Captured physical eligible subjects for one paid deletion-prevention effect.
     pub replacement_deletion_members: Vec<(PlayerId, u16, u64)>,
     /// Immutable effect lookup retained while its physical payer leaves.
@@ -460,7 +460,7 @@ impl std::fmt::Debug for TriggerContext {
         if let Some(value)=&self.replacement_paid_prevention { d.field("replacement_paid_prevention", value); }
         if let Some(value)=&self.replacement_deletion_cause { d.field("replacement_deletion_cause", value); }
         if !self.simultaneous_play_members.is_empty() { d.field("simultaneous_play_members", &self.simultaneous_play_members); }
-        if self.in_source_trash_event { d.field("in_source_trash_event", &self.in_source_trash_event); }
+        if self.in_source_move_event { d.field("in_source_move_event", &self.in_source_move_event); }
         d.finish()
     }
 }

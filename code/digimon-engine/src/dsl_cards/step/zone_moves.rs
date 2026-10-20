@@ -290,12 +290,12 @@ pub fn try_run(
             }
             // The selected cards are trashed at the same time: one event
             // (§15-5-2).
-            let event = ctx.game.begin_source_trash_event();
+            let event = ctx.game.begin_source_move_event();
             let paid: Vec<_> = selected
                 .into_iter()
                 .filter(|source| ctx.trash_card_source(source.permanent, source.card))
                 .collect();
-            ctx.game.end_source_trash_event(event);
+            ctx.game.end_source_move_event(event);
             ctx.cost_unpayable = paid.len() < required;
             // Publish actual removals for per-card effects, formulas, and
             // outer continuations. The binding never claims a refused trash.
@@ -307,7 +307,7 @@ pub fn try_run(
             if let Some(source_refs) = bindings.get_source_refs(source_refs) {
                 // The selected cards are trashed at the same time: one event
                 // (§15-5-2).
-                let event = ctx.game.begin_source_trash_event();
+                let event = ctx.game.begin_source_move_event();
                 for source_ref in source_refs {
                     // Soft-fail bool discarded per
                     // `fix-trash-card-source-stale-handle`: any pick that
@@ -319,7 +319,7 @@ pub fn try_run(
                     // trash-survivors shape.
                     let _ = ctx.trash_card_source(source_ref.permanent, source_ref.card);
                 }
-                ctx.game.end_source_trash_event(event);
+                ctx.game.end_source_move_event(event);
             }
             true
         }
@@ -338,11 +338,11 @@ pub fn try_run(
                 return true;
             };
             // One effect step: one event (§15-5-2).
-            let event = ctx.game.begin_source_trash_event();
+            let event = ctx.game.begin_source_move_event();
             for card in resolved_cards(resolved) {
                 let _ = ctx.trash_card_source(carrier, card);
             }
-            ctx.game.end_source_trash_event(event);
+            ctx.game.end_source_move_event(event);
             true
         }
 
@@ -487,7 +487,7 @@ pub fn try_run(
             if let Some(source_refs) = bindings.get_source_refs(source_refs) {
                 // The selected cards are returned at the same time: one event
                 // (§15-5-2), whose observers wait for the effect (§15-8-3-2).
-                let event = ctx.game.begin_source_trash_event();
+                let event = ctx.game.begin_source_move_event();
                 for source_ref in source_refs {
                     ctx.return_card_source_to_deck(
                         source_ref.permanent,
@@ -495,7 +495,7 @@ pub fn try_run(
                         to_bottom,
                     );
                 }
-                ctx.game.end_source_trash_event(event);
+                ctx.game.end_source_move_event(event);
             }
             true
         }
@@ -525,11 +525,11 @@ pub fn try_run(
                         .unwrap_or_default();
                     // Every digivolution card is returned at the same time:
                     // one event (§15-5-2).
-                    let event = ctx.game.begin_source_trash_event();
+                    let event = ctx.game.begin_source_move_event();
                     for card in sources {
                         ctx.return_card_source_to_deck(h, card, to_bottom);
                     }
-                    ctx.game.end_source_trash_event(event);
+                    ctx.game.end_source_move_event(event);
                 }
             }
             true

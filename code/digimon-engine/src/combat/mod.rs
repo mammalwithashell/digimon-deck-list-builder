@@ -4914,7 +4914,13 @@ impl Game {
     /// loser's `[On Deletion]` and the `BattleResult` effects, one pool (see
     /// `enqueue_pending_battle_result_triggers`) -- all resolve before the
     /// end of the battle timing (`EndOfBattle`), which pools with the pending
-    /// processing due at the end of the battle (§18-1-1 / §18-1-2).
+    /// processing due at the end of the battle (§18-1-1 / §18-1-2). That
+    /// sequencing holds for an attack's battle. A battle an effect performs is
+    /// part of that effect's processing (§15-8-3-2): its battle-triggered
+    /// effects, its end-of-battle effects and the pending processing all wait
+    /// for the effect to finish and then pend in ONE pool with whatever else
+    /// it triggered (§15-4-3-2; DCGO `IBattle(..., IsWithoutAttack: true)`
+    /// stacks them and skips `AutoProcessCheck`).
     pub(crate) fn resume_pending_battle_resolutions(&mut self) {
         while self.pending_selection.is_none() && self.pending_deletion_batch_rest.is_empty() {
             if !self

@@ -418,9 +418,11 @@ pub(crate) struct TrashedSource {
     pub card: CardHandle,
 }
 
-/// Token for an open source-trash event (`Game::begin_source_trash_event`).
+/// Token for an open source-move event (`Game::begin_source_move_event`): one
+/// step trashing digivolution cards, or returning them to the bottom of a
+/// deck (renamed from `SourceTrashEvent` when returns joined the scope).
 #[must_use]
-pub(crate) struct SourceTrashEvent {
+pub(crate) struct SourceMoveEvent {
     outermost: bool,
 }
 
@@ -2286,7 +2288,7 @@ impl Game {
 
     /// Fire `OnDigivolutionCardTrashed` for ONE card trashed from `host`'s
     /// digivolution cards. A lone call is its own trashing event; inside an
-    /// open [`Self::begin_source_trash_event`] scope it joins that event.
+    /// open [`Self::begin_source_move_event`] scope it joins that event.
     ///
     /// Never drains inline: "trigger-type effects can't activate during the
     /// processing for a rule or effect" (§15-8-3-2). Inside a resolving
@@ -2304,13 +2306,13 @@ impl Game {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     ) {
-        let event = self.begin_source_trash_event();
+        let event = self.begin_source_move_event();
         self.enqueue_digivolution_card_trashed(player, host, host_card, card, cause);
-        self.end_source_trash_event(event);
+        self.end_source_move_event(event);
     }
 
-    /// Open one source-trash EVENT: every digivolution card trashed until the
-    /// matching [`Self::end_source_trash_event`] is trashed "at the same
+    /// Open one source-move EVENT: every digivolution card trashed until the
+    /// matching [`Self::end_source_move_event`] is trashed "at the same
     /// time" by one effect step (one `<Digi-Burst>` / cost payment / "trash N
     /// digivolution cards"), so each `OnDigivolutionCardTrashed` observer
     /// triggers ONCE for the whole event, however many of its cards meet the
@@ -2324,21 +2326,21 @@ impl Game {
     /// triggers once for the whole return (§15-5-2; DCGO
     /// `ReturnToLibraryBottomDigivolutionCardsClass` stacks one trigger for
     /// the returned list). The two timings coalesce separately.
-    pub(crate) fn begin_source_trash_event(&mut self) -> SourceTrashEvent {
+    pub(crate) fn begin_source_move_event(&mut self) -> SourceMoveEvent {
         self.enter_deferred_drain();
-        let outermost = !self.source_trash_event_open;
-        self.source_trash_event_open = true;
-        SourceTrashEvent { outermost }
+        let outermost = !self.source_move_event_open;
+        self.source_move_event_open = true;
+        SourceMoveEvent { outermost }
     }
 
-    /// Close a scope from [`Self::begin_source_trash_event`]: the outermost
+    /// Close a scope from [`Self::begin_source_move_event`]: the outermost
     /// close coalesces the event's observers (one trigger per observer, all
     /// trashed cards retained as the event's members), then the queue drains
     /// only if no effect is still resolving around the event (§15-8-3-2).
-    pub(crate) fn end_source_trash_event(&mut self, event: SourceTrashEvent) {
+    pub(crate) fn end_source_move_event(&mut self, event: SourceMoveEvent) {
         if event.outermost {
-            self.source_trash_event_open = false;
-            self.coalesce_source_trash_event();
+            self.source_move_event_open = false;
+            self.coalesce_source_move_event();
         }
         self.exit_deferred_drain_and_flush();
         self.mark_until_condition_dirty();
@@ -2357,14 +2359,14 @@ impl Game {
     ) {
         // Inside an open event the outermost close coalesces everything;
         // otherwise these cards are an event of their own.
-        let outermost = !self.source_trash_event_open;
-        self.source_trash_event_open = true;
+        let outermost = !self.source_move_event_open;
+        self.source_move_event_open = true;
         for t in trashed {
             self.enqueue_digivolution_card_trashed(t.player, t.host, t.host_card, t.card, cause);
         }
         if outermost {
-            self.source_trash_event_open = false;
-            self.coalesce_source_trash_event();
+            self.source_move_event_open = false;
+            self.coalesce_source_move_event();
         }
     }
 
@@ -2433,11 +2435,11 @@ impl Game {
                 cause,
             },
         );
-        if self.source_trash_event_open {
+        if self.source_move_event_open {
             for qe in self.effect_queue.range_mut(start..) {
                 if qe.timing == crate::enums::EffectTiming::OnDigivolutionCardTrashed {
                     if let Some(context) = qe.trigger_context.as_mut() {
-                        context.in_source_trash_event = true;
+                        context.in_source_move_event = true;
                     }
                 }
             }
@@ -2453,7 +2455,7 @@ impl Game {
     /// Like the trash sibling it never drains while an effect is resolving
     /// (§15-8-3-2: its observers wait for that effect and pend with the rest
     /// of what it triggered, §15-4-3-2), and inside an open source event
-    /// (`begin_source_trash_event`, opened by a step returning several cards)
+    /// (`begin_source_move_event`, opened by a step returning several cards)
     /// its entries are stamped so the event's close coalesces them: one
     /// return of N cards triggers each observer once (§15-5-2).
     /// G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH.
@@ -2482,12 +2484,12 @@ impl Game {
                 cause,
             },
         );
-        if self.source_trash_event_open {
+        if self.source_move_event_open {
             for qe in self.effect_queue.range_mut(start..) {
                 if qe.timing == crate::enums::EffectTiming::OnDigivolutionCardReturnedToDeckBottom
                 {
                     if let Some(context) = qe.trigger_context.as_mut() {
-                        context.in_source_trash_event = true;
+                        context.in_source_move_event = true;
                     }
                 }
             }
