@@ -667,6 +667,68 @@ fn check_triggered_effects_resolve_before_security_battle() {
     );
 }
 
+// ─── §15-4-4-5 on a security check ──────────────────────────────────────────
+
+/// §15-4-4-5 "When a card with an effect that's pending activation no longer
+/// meets the trigger conditions of that effect before it activates, the
+/// effect can no longer be activated." -- on the security-check path, where
+/// the check's other triggers are captured at the reveal (§13-1-8-2, Q6813)
+/// and the `[Security]` effect activates first (§15-16-10-2).
+///
+/// P0's `LV5_PLAIN` (7000 DP) attacks; P0's Tamer `SEC_CHECK_OBS_GE6K_MEM`
+/// ("[Your Turn] When one of your Digimon with 6000 DP or more checks
+/// security, gain 1 memory") triggers on the check: its qualifier is decided
+/// at the reveal, where the checker has 7000 DP.
+/// - Control: the checked card is `SEC_MEM_OPT` ("[Security] Gain 1 memory",
+///   no DP change): the Tamer's pending effect still meets its trigger
+///   condition and activates.
+/// - Lapse: the checked card is `SEC_MINUS3000` ("[Security] 1 of your
+///   opponent's Digimon gets -3000 DP for the turn"): the checker is at 4000
+///   DP when the Tamer's effect would activate, so it no longer meets its
+///   trigger condition and cannot activate. It triggered (it was captured at
+///   the reveal); it is the activation-time re-check that stops it.
+///
+/// Contrast §15-4-2-4 ("If an already triggered effect's trigger conditions
+/// are met again before it activates, that effect will be triggered again"):
+/// a trigger condition is a fact about an event, decided when that event
+/// happens; a later check is a new event, decided on its own.
+#[test]
+fn security_check_trigger_whose_condition_lapsed_before_activation_cannot_activate() {
+    cite!(
+        "15-4-4-5",
+        "71bf5b7f1273d0267e98f23107451b614fc0644a66410a19605e28c4c4274329"
+    );
+    let attack = |security_top: &str| {
+        let mut r = board(&[FILL, FILL, security_top]);
+        let attacker = r.place_on_field(0, "LV5_PLAIN", Some(0));
+        r.place_on_field(0, "SEC_CHECK_OBS_GE6K_MEM", Some(0));
+        let cp = r.event_checkpoint();
+        r.attack_player(attacker, 1, false);
+        resolve_prompts(&mut r);
+        (r, cp, attacker)
+    };
+
+    let (r, cp, _) = attack("SEC_MEM_OPT");
+    assert_eq!(revealed(&r, cp, 1), owned(&["SEC_MEM_OPT"]));
+    assert!(
+        resolved(&r, cp, "SEC_CHECK_OBS_GE6K_MEM"),
+        "control: the checker still has 7000 DP when the Tamer's effect activates"
+    );
+
+    let (r, cp, attacker) = attack("SEC_MINUS3000");
+    assert_eq!(revealed(&r, cp, 1), owned(&["SEC_MINUS3000"]));
+    assert_eq!(
+        r.effective_dp(attacker),
+        Some(4000),
+        "the [Security] effect resolved first and took 3000 DP off the checker"
+    );
+    assert!(
+        !resolved(&r, cp, "SEC_CHECK_OBS_GE6K_MEM"),
+        "the checker no longer has 6000 DP or more: the pending effect cannot activate"
+    );
+    assert!(r.pending_selection().is_none(), "{:?}", r.pending_selection());
+}
+
 // ─── §15-16-10-2 ────────────────────────────────────────────────────────────
 
 /// §15-16-10-2 "A triggered [Security] effect will immediately activate

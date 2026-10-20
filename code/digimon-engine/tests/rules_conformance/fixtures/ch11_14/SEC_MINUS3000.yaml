@@ -1,0 +1,27 @@
+# SEC_MINUS3000 -- Option, red, use cost 1.
+#   [Main] 1 of your opponent's Digimon gets -3000 DP for the turn.
+#   [Security] 1 of your opponent's Digimon gets -3000 DP for the turn.
+# A [Security] effect (immediate, §15-16-10-2) that changes the checking
+# Digimon's DP while the check's other triggers are pending.
+card: SEC_MINUS3000
+name: Sapping Snare
+kind: option
+color: [red]
+cost: 1
+effects:
+  - when: main_from_hand
+    summary: "[Main] 1 of your opponent's Digimon gets -3000 DP for the turn."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP for the turn"
+      - add_dp_modifier: { target: victim, value: -3000, expiry: end_of_turn }
+  - when: on_security
+    summary: "[Security] 1 of your opponent's Digimon gets -3000 DP for the turn."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP for the turn"
+      - add_dp_modifier: { target: victim, value: -3000, expiry: end_of_turn }

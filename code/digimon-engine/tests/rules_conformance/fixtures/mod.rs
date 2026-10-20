@@ -54,9 +54,11 @@ const CH11_14: &[&str] = &[
     include_str!("ch11_14/JAMMING.yaml"),
     include_str!("ch11_14/PIERCING_X2.yaml"),
     include_str!("ch11_14/SA_PLUS1.yaml"),
+    include_str!("ch11_14/SEC_CHECK_OBS_GE6K_MEM.yaml"),
     include_str!("ch11_14/SEC_CHECK_OBS_MEM.yaml"),
     include_str!("ch11_14/SEC_CHECK_OBS_MINUS_DP.yaml"),
     include_str!("ch11_14/SEC_MEM_OPT.yaml"),
+    include_str!("ch11_14/SEC_MINUS3000.yaml"),
     include_str!("ch11_14/WA_DEL_SELF.yaml"),
     include_str!("ch11_14/WA_DP_UP_EOA_MAY.yaml"),
 ];
