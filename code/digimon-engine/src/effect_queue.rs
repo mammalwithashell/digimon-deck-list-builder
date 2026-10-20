@@ -4083,7 +4083,7 @@ impl Game {
             EffectTiming,
         );
         let len = self.effect_queue.len();
-        // A source-trash event also separates entries by WHERE they are
+        // A source-move event (trash or deck-bottom return) also separates entries by WHERE they are
         // pending: a digivolution card's inherited effect enqueued from its
         // host's scan (pending on the host, `source_permanent: Some`) and the
         // same card's own "when this card is trashed" entry once it is in the
@@ -4109,7 +4109,7 @@ impl Game {
         // Group batch entries by identity, preserving queue order.
         let mut groups: Vec<(Key, Vec<usize>)> = Vec::new();
         for i in first_index..len {
-            // A source-trash event collapses only the entries it stamped,
+            // A source-move event collapses only the entries it stamped,
             // wherever they sit in the queue.
             if source_move_event
                 && !self.effect_queue[i]
