@@ -16,8 +16,17 @@ use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::card_data::CardData;
 
+#[cfg(feature = "dsl-yaml-loader")]
+use crate::enums::Keyword as DiagnosticKeyword;
+#[cfg(feature = "dsl-yaml-loader")]
+mod diagnostic_wire;
+#[cfg(feature = "dsl-yaml-loader")]
+mod scoped_diagnostic;
+#[cfg(feature = "dsl-yaml-loader")]
+pub use scoped_diagnostic::ScopedDiagnosticStore;
+
 /// The immutable, enriched card store derived from `all_card_data`. Memoized and
-/// shared; built once per distinct DB fingerprint.
+/// shared; reused only for identical original metadata inputs.
 pub struct SharedCardStore {
     /// Enriched flat store: the DB's cards (in `all_card_data` iteration order)
     /// followed by the absorbed global token rows. Indexed by `data_index`.
@@ -62,29 +71,29 @@ impl std::fmt::Debug for CardStore {
     }
 }
 
-fn cache() -> &'static Mutex<HashMap<u64, Arc<SharedCardStore>>> {
-    static C: OnceLock<Mutex<HashMap<u64, Arc<SharedCardStore>>>> = OnceLock::new();
+struct CachedStore {
+    // Compare the original input, not the DSL-enriched output. Deriving
+    // CardData equality keeps new metadata fields part of cache identity.
+    input: HashMap<String, CardData>,
+    store: Arc<SharedCardStore>,
+}
+
+type StoreCache = HashMap<u64, Vec<CachedStore>>;
+
+fn cache() -> &'static Mutex<StoreCache> {
+    static C: OnceLock<Mutex<StoreCache>> = OnceLock::new();
     C.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
-/// Order-independent content fingerprint of `all_card_data`. A wrapping-sum of
-/// per-card hashes is commutative (so `HashMap` iteration order is irrelevant) and
-/// hashes card *content* (not just ids), so an override change re-keys. O(cards)
-/// (~300–500 µs) — ~30× cheaper than the ~14 ms build it elides.
+/// Cheap order-independent bucket selector, deliberately not an identity proof.
+/// Different inputs can share this fingerprint. Every hit also compares the
+/// complete original metadata before any cached store can be returned.
 fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut sum: u64 = all_card_data.len() as u64;
     for (id, d) in all_card_data {
         let mut h = std::collections::hash_map::DefaultHasher::new();
-        // Hash the FULL discriminating content (values, not lengths). Two card
-        // sets that differ in ANY behavioral field must produce different
-        // fingerprints — e.g. test cards built by `make_digimon_dp("WEAK", c, dp)`
-        // share id/name/text but differ in `dp`, so `dp` (and every other field)
-        // MUST be hashed, or a cache hit would serve the wrong card's stats.
-        // String/Vec hashing reads bytes in place (no allocation); only the few
-        // non-`Hash` structural fields go through one `Debug` per card.
-        // VALUE fields hashed fully (cheap, fixed-size or short): these are what
-        // distinguishes test-card variations (e.g. `make_digimon_dp` varies `dp`).
+        // Common fixed-size variations select different buckets cheaply.
         id.hash(&mut h);
         d.card_kind.hash(&mut h);
         d.level.hash(&mut h);
@@ -117,8 +126,7 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
         // The effect-initiated DNA verbs (G-ENGINE-DNA-PRINTED-COST /
         // -RECIPE-ENFORCEMENT) read `dna_costs[].memory_cost` and each
         // requirement's level + colors at resolution time, so two synthetic DBs
-        // that differ ONLY in a DNA cost's amount or recipe (a common test
-        // shape) MUST re-key — otherwise a cache hit serves the wrong DNA cost.
+        // that differ in a DNA cost's amount or recipe select separate buckets.
         // `dna_costs` is tiny (≤2 entries), so folding the fields is cheap.
         // (`DnaCost`/`DnaRequirement` don't derive `Hash`, so project the fields.)
         d.dna_costs.len().hash(&mut h);
@@ -164,23 +172,51 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
     sum
 }
 
+fn cached_store(
+    cache: &StoreCache,
+    fp: u64,
+    input: &HashMap<String, CardData>,
+) -> Option<Arc<SharedCardStore>> {
+    cache
+        .get(&fp)?
+        .iter()
+        .find(|entry| {
+            entry.input.len() == input.len()
+                && entry.input.iter().all(|(id, original)| {
+                    input.get(id).is_some_and(|current| {
+                        original == current
+                // Preserve the float's representation too (notably -0.0).
+                && original.norm_id.to_bits() == current.norm_id.to_bits()
+                    })
+                })
+        })
+        .map(|entry| Arc::clone(&entry.store))
+}
+
 /// Memoized accessor: returns the shared enriched store for `all_card_data`,
-/// building (and caching) it on the first call for a given DB fingerprint.
+/// reusing only an exact original metadata match within a fingerprint bucket.
 pub fn shared_card_store(all_card_data: &HashMap<String, CardData>) -> Arc<SharedCardStore> {
     let fp = fingerprint(all_card_data);
-    if let Some(existing) = cache().lock().unwrap().get(&fp).cloned() {
+    if let Some(existing) = cached_store(&cache().lock().unwrap(), fp, all_card_data) {
         return existing;
     }
     let built = Arc::new(build_shared_card_store(all_card_data));
     let mut cache = cache().lock().unwrap();
-    if cache.len() >= CACHE_SOFT_CAP {
+    // Another caller may have populated this exact input while we built it.
+    if let Some(existing) = cached_store(&cache, fp, all_card_data) {
+        return existing;
+    }
+    if cache.values().map(Vec::len).sum::<usize>() >= CACHE_SOFT_CAP {
         evict_unused(&mut cache);
     }
-    cache.insert(fp, built.clone());
+    cache.entry(fp).or_default().push(CachedStore {
+        input: all_card_data.clone(),
+        store: built.clone(),
+    });
     built
 }
 
-/// Past this many distinct DB fingerprints, an insert first drops every entry no
+/// Past this many distinct DB inputs, an insert first drops every entry no
 /// live `Game` still holds. Production keys one stable DB, so it never gets here;
 /// test suites key one store per distinct card set, and without eviction the map
 /// grew ~2 MB per test until a full `cards_behavioral` run was OOM-killed.
@@ -189,8 +225,11 @@ const CACHE_SOFT_CAP: usize = 16;
 /// Drop entries whose only owner is the cache. The build is deterministic
 /// (sorted `data_index`), so a later miss rebuilds an identical store — eviction
 /// is behavior-neutral; games already holding an `Arc` keep theirs.
-fn evict_unused(cache: &mut HashMap<u64, Arc<SharedCardStore>>) {
-    cache.retain(|_, store| Arc::strong_count(store) > 1);
+fn evict_unused(cache: &mut StoreCache) {
+    cache.retain(|_, entries| {
+        entries.retain(|entry| Arc::strong_count(&entry.store) > 1);
+        !entries.is_empty()
+    });
 }
 
 /// The reference build — the exact clone+enrich+index+token-absorb sequence
@@ -276,16 +315,34 @@ mod tests {
     #[test]
     fn evict_unused_keeps_only_stores_a_game_still_holds() {
         let held = empty_store();
-        let mut cache: HashMap<u64, Arc<SharedCardStore>> = HashMap::new();
-        cache.insert(1, held.clone());
+        let mut cache = StoreCache::new();
+        cache.insert(
+            1,
+            vec![CachedStore {
+                input: HashMap::new(),
+                store: held.clone(),
+            }],
+        );
         for fp in 2..=20 {
-            cache.insert(fp, empty_store());
+            cache.insert(
+                fp,
+                vec![CachedStore {
+                    input: HashMap::new(),
+                    store: empty_store(),
+                }],
+            );
         }
+        // Collisions share a bucket, but each original input is evicted alone.
+        cache.get_mut(&1).unwrap().push(CachedStore {
+            input: HashMap::new(),
+            store: empty_store(),
+        });
 
         evict_unused(&mut cache);
 
         assert_eq!(cache.len(), 1, "only the held store survives");
-        assert!(Arc::ptr_eq(&cache[&1], &held));
+        assert_eq!(cache[&1].len(), 1);
+        assert!(Arc::ptr_eq(&cache[&1][0].store, &held));
     }
 
     #[test]

@@ -48,7 +48,7 @@ from pathlib import Path
 from typing import Sequence
 
 from tools.clause_coverage import archetype as archetype_mod
-from tools.clause_coverage.exam_binding import bind
+from tools.clause_coverage.exam_binding import DEFAULT_INTERACTION_DENOMINATOR, bind
 
 
 def _has_yaml(cards_dir: Path, card_id: str) -> bool:
@@ -78,6 +78,7 @@ def build_plan_for_pool(
     scenarios_dir: Path | str,
     verdicts_path: Path | str,
     ranking: Sequence[str] | None = None,
+    interaction_denominator: Path | str | None = DEFAULT_INTERACTION_DENOMINATOR,
     label: str | None = None,
     limit: int | None = None,
 ) -> dict:
@@ -102,7 +103,8 @@ def build_plan_for_pool(
         implement.sort(key=lambda c: rank.get(c, unranked))
     examinable = [c for c in card_pool if c in with_spec]
 
-    binding = bind(card_pool, scenarios_dir, verdicts_path)
+    binding = bind(card_pool, scenarios_dir, verdicts_path,
+                   interaction_denominator=interaction_denominator)
 
     exam: list[dict] = []
     skipped: list[dict] = []
@@ -154,6 +156,7 @@ def build_plan_for_pool(
         "elided": exam_total - len(exam),
         "skipped": skipped,
         "denominator": binding.get("denominator", {}),
+        "current_source_clauses": binding.get("current_source_clauses", []),
     }
 
 

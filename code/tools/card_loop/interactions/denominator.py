@@ -56,6 +56,7 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 from tools.card_loop.interactions import PROBE_PREFIX, QA_PREFIX
+from tools.clause_coverage.semantic_fingerprint import bind_clause_semantics, semantic_digest, normalize
 from tools.card_loop.interactions.probes import (
     FAMILY_VERSIONS,
     NEGATIVE,
@@ -203,7 +204,7 @@ def extract_clauses(card_ids: Iterable[str], *, cards_json: Path | None = None,
             official_index=official_index, image_cache=image_cache, dcgo_root=None,
         ):
             out.append(c.to_dict())
-    return out
+    return bind_clause_semantics(out)
 
 
 def all_card_ids(cards_json: Path | None, card_qa: Mapping) -> list[str]:
@@ -250,6 +251,10 @@ def _qa_interactions(card_qa: Mapping, universe: set[str]) -> dict[str, dict]:
             "gating": True,
             "text_sha256": ruling_sha256(rulings[q]),
         }
+        payload = normalize(["digimon-qa-semantics", 1, q, sorted(card_ids), POSITIVE,
+                             f"{rulings[q].get('question', '')}\n{rulings[q].get('answer', '')}"])
+        out[QA_PREFIX + q].update(semantic_fingerprint_version=1,
+                                 semantic_sha256=semantic_digest(payload), semantic_payload=payload)
     return out
 
 
@@ -265,8 +270,9 @@ def build_denominator(
     """The artifact for `card_ids` (pure function of its arguments)."""
     universe = sorted(set(card_ids), key=natural_key)
     universe_set = set(universe)
-    clauses = [c for c in clauses if c.get("card_id") in universe_set]
+    clauses = bind_clause_semantics(c for c in clauses if c.get("card_id") in universe_set)
     text_by_clause = {c["id"]: c.get("text", "") for c in clauses}
+    semantic_by_clause = {c["id"]: c["semantic_sha256"] for c in clauses}
 
     interactions: dict[str, dict] = _qa_interactions(card_qa, universe_set)
     for p in generate_probes(clauses, registry):
@@ -281,6 +287,10 @@ def build_denominator(
             "text_sha256": sha256_text(text_by_clause.get(p.clause_id, "")),
             "why": p.why,
         }
+        payload = ["digimon-interaction-semantics", 1, p.id, [p.card_id], "probe",
+                   p.kind, p.family, p.family_version, semantic_by_clause[p.clause_id]]
+        interactions[p.id].update(semantic_fingerprint_version=1,
+                                 semantic_sha256=semantic_digest(payload), semantic_payload=payload)
 
     cards: dict[str, list[str]] = {c: [] for c in universe}
     for iid, rec in interactions.items():
@@ -296,6 +306,10 @@ def build_denominator(
     gating = [r for r in interactions.values() if r["gating"]]
     return {
         "version": ARTIFACT_VERSION,
+        "semantic_fingerprint_version": 1,
+        "denominator_sha256": hashlib.sha256(json.dumps(
+            {"cards": cards, "interactions": interactions}, ensure_ascii=False,
+            sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest(),
         "families": {
             v: {
                 "promoted": bool(promoted.get(v, False)),

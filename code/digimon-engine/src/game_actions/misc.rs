@@ -1387,6 +1387,9 @@ impl Game {
                             .position(|candidate| candidate.top_card().handle() == card)
                     })?;
                 let mut removed = self.player_mut(player).battle_area.remove(idx);
+                if self.security_resolution.is_some() {
+                    self.shift_effect_queue_after_battle_area_remove(player, idx as u8);
+                }
                 let top = removed.card_sources.pop()?;
                 if !removed.card_sources.is_empty() {
                     self.player_mut(player).trash.extend(removed.card_sources);

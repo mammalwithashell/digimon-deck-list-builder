@@ -16,6 +16,7 @@ implementer comes from the run's card item, else the attempt ledger.
 from __future__ import annotations
 
 import yaml
+import json
 
 from ..driver_contracts import ItemRecord, MergeRequest, StageOutcome
 from . import base, prompts
@@ -49,7 +50,13 @@ def _previous(item: ItemRecord) -> str:
 
 
 def _clause_lines(records) -> str:
-    return "\n".join(f"- `{c['id']}` ({c.get('label', '')}): {c.get('text', '')}" for c in records) or "- (none)"
+    return "\n".join(f"- `{c['id']}` ({c.get('label', '')}): {_semantic_text(c)}" for c in records) or "- (none)"
+
+
+def _semantic_text(row) -> str:
+    return (f"{row.get('text', '')}\n"
+            f"Timing: {json.dumps(row.get('timings'))}; keyword: {json.dumps(row.get('keyword'))}; "
+            f"complete zone semantics: {json.dumps(row.get('semantic_payload'), ensure_ascii=False)}")
 
 
 class AuthoringExecutor:
@@ -76,7 +83,7 @@ class AuthoringExecutor:
         def render(attempt_id: str) -> str:
             return prompts.render(
                 "author_clause", clause_id=clause, card_id=card, card_name=base.card_name(ctx, card),
-                clause_label=rec.get("label") or "", clause_text=rec.get("text") or "",
+                clause_label=rec.get("label") or "", clause_text=_semantic_text(rec),
                 scenario_path=path, scenario_dir=base.scenario_dir(card),
                 notes_files=base.bullet_list(notes), bundle_path=base.bundle_path(card),
                 dcgo_script=script or f"(no DCGO script found for {card})",

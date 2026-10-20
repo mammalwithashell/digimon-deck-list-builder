@@ -98,7 +98,7 @@ class LedgerPaths:
             cards_dir=repo / "code" / "digimon-engine" / "cards",
             scenarios_dir=repo / "qa" / "dcgo-exams",
             verdicts_dir=repo / "qa" / "qa-reports" / "exam-verdicts",
-            denominator_path=repo / "data" / "interaction_denominator.json",
+            denominator_path=repo / getattr(config, "interaction_denominator", "data/interaction_denominator.json"),
             escalations_dir=esc if esc.is_absolute() else repo / esc,
         )
 
@@ -247,7 +247,8 @@ def build_items(plan: Mapping, paths: LedgerPaths, *,
 
     exam_plan = build_plan_for_pool(pool, sorted(core), cards_dir=paths.cards_dir,
                                     scenarios_dir=paths.scenarios_dir,
-                                    verdicts_path=paths.verdicts_dir, ranking=ranking)
+                                    verdicts_path=paths.verdicts_dir, ranking=ranking,
+                                    interaction_denominator=paths.denominator_path)
     implement = list(exam_plan["implement"])
     to_implement = set(implement)
     store = load_verdict_store(paths.verdicts_dir)
@@ -266,7 +267,8 @@ def build_items(plan: Mapping, paths: LedgerPaths, *,
         clause_rows.append((e["card_id"], e["clause_id"],
                             "confirmed" if e.get("reason") == "confirmed" else "unavailable"))
     if implement:
-        bound = bind(implement, paths.scenarios_dir, paths.verdicts_dir)
+        bound = bind(implement, paths.scenarios_dir, paths.verdicts_dir,
+                     current_clauses=exam_plan["current_source_clauses"])
         for card in implement:
             for c in bound["cards"].get(card, {}).get("clauses", []):
                 clause_rows.append((card, c["clause_id"], c.get("verdict") or "unmeasured"))
@@ -281,7 +283,8 @@ def build_items(plan: Mapping, paths: LedgerPaths, *,
                         requires=(f"card:{card}",) if card in to_implement else ())
         seeds.append(ItemSeed(item, meta, origin, {"card_ids": [card]}))
 
-    bound_i = bind_interactions(pool, paths.denominator_path, paths.verdicts_dir, gating_only=True)
+    bound_i = bind_interactions(pool, paths.denominator_path, paths.verdicts_dir, gating_only=True,
+                                current_clauses=exam_plan["current_source_clauses"])
     raw_i = load_interaction_verdicts(paths.verdicts_dir)
     cards_of: dict[str, list[str]] = {}
     row_of: dict[str, dict] = {}

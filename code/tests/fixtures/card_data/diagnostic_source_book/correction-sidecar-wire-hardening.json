@@ -1,0 +1,54 @@
+{
+  "card_id": "EX12-031",
+  "correction_id": "focused-ex12-031-inherited-decode-source-zone-20261011",
+  "correction_row_sha256": "aa087674e234340c751598bc8f3ad20957eb2a3167d98977fc5b763e23b72cef",
+  "dependency_sha256": {
+    "tools.card_data.adjudications": "7e5cf2e23a8d27c8efdd20fdd7380ca9c2b1877e67c636eeeadb44758f9ab0c6",
+    "tools.card_data.compatibility_corrections": "7422d38d75562d7b44f004bdc81333ef9aebab169c79b67040c5eee3af51db8f",
+    "tools.card_data.compatibility_selections": "83172c5b2f13b933c5465e585005bfad9f70a1e8d26f7d5526dc64af3e1f7ed2",
+    "tools.card_data.complete_candidate": "e43db847a705b33340508558fd540a6a75afcd1aa9ec61bf1edea207b8d5f9b3",
+    "tools.card_data.corrections": "bdc9a8677d62620e5c1caa275c138889e6c8220695970a69ba47ec8c3f5eb894",
+    "tools.card_data.errors": "f173df85f14c0d57db8572869c9fe552c5dc76b7ac8bea9399bc16a1c8b62fab",
+    "tools.card_data.generate": "06e8aa70e7e88fc717bc0026991158b9e0b844fc74a006c9df54ff81730d96de",
+    "tools.card_data.models": "d47e33decd8b558236b12ab6e5a82a81da6e18317f7eba4ce4025fee1e21460d",
+    "tools.card_data.normalization": "ba1a27a1581861c01718aa26e379e2f2d23b2387e911b2d0a9b444f2a7503961",
+    "tools.card_data.serialization": "2914ac386d48acccfe5767d88134a623690e4b9059aca035208585a1dab9f595",
+    "tools.card_data.source_manifest": "2463e7cf8e95034b04a7e36b6f261205d433cb19a7a6440a87b1b9ddd3fb43f6",
+    "tools.clause_coverage.canonical_correction_units": "47e1cdba13884ed57807ac65d375889a03fcbf5e167a1f6843323e1194ce4749",
+    "tools.clause_coverage.source_units": "e03de3b88dbe0128ab3ee1362fbaa701448f75265904ce4b073923d209f24671"
+  },
+  "evidence_observation_ids": [
+    "1b91ca068b70824224190013ec76d1027415c7617f6d2cce129bab176f86bee7",
+    "88940a47a03d7bb14e5cecd366f9c8fa48b8d0b308522b34da64eae9d684819d"
+  ],
+  "field_path": "inherited_effect_description_eng",
+  "image": {
+    "artifact_name": "e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167.webp",
+    "official_observation_id": "88940a47a03d7bb14e5cecd366f9c8fa48b8d0b308522b34da64eae9d684819d",
+    "printing_id": "EX12-031",
+    "sha256": "e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167"
+  },
+  "input_sha256": {
+    "adjudication_ledger": "fe1f313900386f2d8dcde21df7be97b4f19e25a227b708b879acc36fe39ef1a5",
+    "aggregate": "5a016b1f36857f488f3f7cd7ece2b720d0da51d0a88b7df0b089c7b9fd2a0a07",
+    "canonical_card": "c96af40275ad280af70e226d82c730a60b296f6421c6f7e6bae3a7e3910088c9",
+    "correction_document": "2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf",
+    "observations": {
+      "1b91ca068b70824224190013ec76d1027415c7617f6d2cce129bab176f86bee7": "475d5f541f2ce84f97049373e2fdafee5606537ad671aba2b5f0b46aa5a6af47",
+      "39595eca6f9b2fd4e1d5c50a2c6d90a09528cf88df859cba700c430f3f17a974": "86cebfc129559f3619fa7e1395e28bfb2004aba1369f4c5280b912506eecc4ba",
+      "88940a47a03d7bb14e5cecd366f9c8fa48b8d0b308522b34da64eae9d684819d": "c75e3cb2891e5952c51be99d86ea0e9db2ba265358678358057714064c7ab5e7",
+      "94f2cca3363105fbb1489153c2eb0752519d11159cd2d08bae01e177780f915b": "117ed7833602d5889e6ab19d7b034e7233e6d1b2589526b2a17eefaac808139e"
+    },
+    "raw_pages": {
+      "https://world.digimoncard.com/cards/?search=true&category=522037": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2"
+    },
+    "runtime_card": "f83a2e7cf6f490c17140ee3e545df9e8c143dd16a315d901ea5f70795d429222",
+    "scopes": {
+      "digimoncard_io": "1af47c5bf1e78f2ccbea652c3537903f6d1038a811aa6baa0a7e54527652f69b",
+      "official": "5016aaf5f6ce69ea9acd8642797bf65e12040a4072a97f9c920fc49540404c38"
+    }
+  },
+  "kind": "reviewed-inherited-field-image-v1",
+  "schema_version": 1,
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+}

@@ -1,0 +1,17 @@
+card: BT4-018
+name: Spinomon
+kind: digimon
+level: 6
+color: [red]
+cost: 10
+dp: 10000
+traits: [Dinosaur]
+form: Mega
+attribute: Virus
+
+effects:
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 3000
+    summary: "[Your Turn] This Digimon gets +3000 DP."

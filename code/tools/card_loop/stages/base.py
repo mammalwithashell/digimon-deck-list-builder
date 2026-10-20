@@ -413,6 +413,8 @@ def clause_text_json(ctx) -> str:
 
 def clauses_for(ctx, card_ids: Sequence[str]) -> list[dict]:
     """Extracted clause records (`tools.clause_coverage`) for `card_ids`."""
+    from ..source_snapshot import validate_snapshot
+    validate_snapshot(ctx, required_cards=card_ids)
     src = _sources(ctx)
     if src is not None and getattr(src, "clauses", None):
         return list(src.clauses(list(card_ids)))
@@ -420,6 +422,16 @@ def clauses_for(ctx, card_ids: Sequence[str]) -> list[dict]:
     p = repo_path(ctx, clause_text_json(ctx))
     known: dict = {}
     if p.is_file():
+        from tools.clause_coverage.book import validate_book
+        from tools.clause_coverage.extract import run as extract_current
+        def fresh(ids, description):
+            return extract_current(ids, description,
+                cards_json_path=repo_path(ctx, "data/cards.json"),
+                overrides_path=repo_path(ctx, "data/card_overrides.json"),
+                official_json_path=repo_path(ctx, "data/card_official.json"))
+        findings = validate_book(p, card_ids=list(card_ids), extract=fresh)
+        if findings:
+            raise StageDeferred(f"clause source binding is stale or incomplete: {json.dumps(findings)[:1000]}")
         known = _clause_text_file(str(p), p.stat().st_mtime)
     missing = []
     for cid in card_ids:
@@ -433,9 +445,8 @@ def clauses_for(ctx, card_ids: Sequence[str]) -> list[dict]:
     return out
 
 
-@lru_cache(maxsize=512)
 def _extracted(card_id: str) -> tuple:
-    """`tools.clause_coverage` extraction from committed card data, per card, cached."""
+    """Fresh complete-zone extraction; never bind a cached body to current data."""
     from ..interactions.denominator import extract_clauses
 
     return tuple(extract_clauses([card_id]))
@@ -459,15 +470,24 @@ def card_qa(ctx) -> Mapping:
 
 
 def denominator(ctx) -> Mapping:
+    from ..source_snapshot import validate_snapshot
+    validate_snapshot(ctx)
     src = _sources(ctx)
     if src is not None and getattr(src, "denominator", None):
         return src.denominator()
-    p = repo_path(ctx, "data/interaction_denominator.json")
+    p = repo_path(ctx, interaction_denominator(ctx))
     if not p.is_file():
+        if interaction_denominator(ctx) != "data/interaction_denominator.json":
+            raise StageDeferred(f"configured interaction denominator missing: {p}")
         return {}
     from ..interactions.denominator import load_denominator
 
     return _cached_json_loader(str(p), load_denominator)
+
+
+def interaction_denominator(ctx) -> str:
+    return str(getattr(getattr(ctx, "config", None), "interaction_denominator", None)
+               or "data/interaction_denominator.json")
 
 
 _LOADED: dict = {}

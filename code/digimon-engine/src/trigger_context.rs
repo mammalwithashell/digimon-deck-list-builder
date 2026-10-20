@@ -162,6 +162,11 @@ pub struct BattleCombatantSnapshot {
 
 #[derive(Clone, PartialEq, Eq, Default)]
 pub struct TriggerContext {
+    /// This entry was captured at an actual security check, before Security
+    /// processing. Leaving its source area permanently cancels activation.
+    pub captured_security_check: bool,
+    pub security_check_source_invalidated: bool,
+    pub security_check_face_generation: Option<u64>,
     /// Physical members of one simultaneous play event. Each member has no nested group.
     pub simultaneous_play_members: Vec<TriggerContext>,
     /// Captured physical eligible subjects for one paid deletion-prevention effect.

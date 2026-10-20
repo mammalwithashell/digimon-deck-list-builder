@@ -1,0 +1,18 @@
+{
+  "candidates": [
+    {
+      "card_ids": [
+        "BT25-058"
+      ],
+      "citation": "qa:Q6345",
+      "dcgo_observed": "ours contradicts ruling qa:Q6345 (ours vs DCGO: agree); CLEAN (compared 15 of 15 ours / 15 dcgo steps)",
+      "expected": "the publisher's answer to qa:Q6345",
+      "interaction_id": "qa:Q6345",
+      "outcome": "ours_wrong",
+      "reason": "both engines contradict the ruling; our fix restores it, DCGO keeps it",
+      "scenario_path": "qa/dcgo-exams/BT25/BT25-058-qa-Q6345.yaml",
+      "source": "qa"
+    }
+  ],
+  "version": 1
+}

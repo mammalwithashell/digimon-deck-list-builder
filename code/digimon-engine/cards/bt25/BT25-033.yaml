@@ -58,10 +58,12 @@ card: BT25-033
 name: Aegiomon
 kind: digimon
 level: 4
+form: Champion
 color: [yellow]
 cost: 5
 dp: 5000
 traits: [Shaman, Iliad, TS]
+attribute: Vaccine
 
 alt_paths:
   - kind: digivolve

@@ -337,6 +337,9 @@ pub struct Effect {
 
     // Behavior
     pub condition: Option<ConditionFn>,
+    /// Event/source gates tested at occurrence capture, separately from live
+    /// processing conditions. Currently consumed by native security checks.
+    pub trigger_eligibility: Option<ConditionFn>,
     /// Context-aware candidate filter for `WhenWouldBe*` replacement timings.
     /// Evaluated in `replacement::collect_candidates` AFTER `condition`,
     /// with replacement cause/source/subject context attached to the read
@@ -906,6 +909,7 @@ impl EffectBuilder {
                 shared_opt_group: None,
                 clause_group: None,
                 condition: None,
+                trigger_eligibility: None,
                 replacement_condition: None,
                 process: None,
                 cost_reduction_fn: None,
@@ -1126,6 +1130,14 @@ impl EffectBuilder {
         f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     ) -> Self {
         self.inner.condition = Some(Arc::new(f));
+        self
+    }
+
+    pub fn trigger_eligibility(
+        mut self,
+        f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
+    ) -> Self {
+        self.inner.trigger_eligibility = Some(Arc::new(f));
         self
     }
 

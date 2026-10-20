@@ -488,6 +488,9 @@ fn lint_interaction(
         ));
         return;
     };
+    if let Err(reason) = book.semantic_sha(&id) {
+        out.push(Finding::new("interaction-source-binding", reason, "verdicts"));
+    }
     if !card.is_empty() && !entry.card_ids.iter().any(|c| c == card) {
         out.push(Finding::new(
             "interaction-card-mismatch",
@@ -635,7 +638,7 @@ steps:
                      "text_sha256": "c"}}}"#;
 
     fn book() -> InteractionBook {
-        InteractionBook::from_json(BOOK, "fixture-denominator").unwrap()
+        InteractionBook::from_json(&crate::exam::semantic_fingerprint::fresh_interaction_json(BOOK), "fixture-denominator").unwrap()
     }
 
     fn lint(extra: &str) -> Vec<Finding> {

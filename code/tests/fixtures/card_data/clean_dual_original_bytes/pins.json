@@ -1,0 +1,15 @@
+{
+  "files": {
+    "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac.json": "cb41758f890ee67601c39f7be82500bb772515e3b6f9536f0093c9be418426e4",
+    "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e.json": "7d871dcd258c979e3e785e7c0a2e8ff864046ca14ef59815104220a46313445a",
+    "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e.json": "6ecf05bcf5aff21998b0446fd23ae6ae4fb5f217a2d46e6da3ffd5417da55c7a",
+    "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765.json": "d74f2c45302780844c533d617696318d69c35c5c53f379844cd4ab925d9144be",
+    "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3.json": "28c00f33a315c8919d08041348dcfa66f16f7560fea96e868222d9f5aa31a0e3",
+    "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b.json": "88d76e9694c7ef67229d35890478e87cc58ddf966327f698a3fb778a086b6cf1",
+    "association-proof.json": "0d43d5b62111b03dd4aba4fc15150889db1876bbbbd21f9565153ac954bf7d0a",
+    "association-review.json": "5dbdd4799af2cd44640b61b08ca2567d1327998d398d8b75ca9b9f58d4f723db",
+    "independent-review.json": "33107770beb311d3cd89fc5341f7d5f563f06ab14de70c0fe1d39f61222e29a8"
+  },
+  "provenance": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\clean-dual-original-observation-byte-rebind-20261012",
+  "scope": "Six original observation file bytes; no normalized reserialization. Original historical fixtures retained."
+}

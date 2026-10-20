@@ -1,0 +1,85 @@
+{
+  "original_observation": {
+    "extracted": {
+      "attribute": "",
+      "card_id": "BT10-001",
+      "card_type": "Digi-Egg",
+      "colors": [
+        "Red"
+      ],
+      "dp": null,
+      "evolution_routes": [],
+      "faces": [
+        {
+          "colors": [
+            "Red"
+          ],
+          "dp": null,
+          "face_id": "primary",
+          "kind": "digi_egg",
+          "level": 2,
+          "name": "DemiMeramon",
+          "play_cost": null,
+          "text_sections": [
+            {
+              "label": "Inherited Effect",
+              "text": "[Your Turn] While a non-red card is in this Digimon's digivolution cards, this Digimon gets +1000 DP."
+            }
+          ]
+        }
+      ],
+      "form": "In-Training",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 2,
+      "name": "DemiMeramon",
+      "play_cost": null,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522011",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT10-001.png?260529",
+        "printing_id": "BT10-001"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "No, it doesn't.\nA red 2-color card isn't considered a \"non-red card.\"",
+          "date": "Mar. 28, 2024",
+          "number": "Q1929",
+          "question": "Does this card's inherited effect give this card +1000 DP when it has a red 2-color card as a digivolution card?"
+        }
+      ],
+      "rarity": "U",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] While a non-red card is in this Digimon's digivolution cards, this Digimon gets +1000 DP."
+        }
+      ],
+      "type": "Flame"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "7804d59c9e8a9b6904b5402f4c2d23ebd9aa17d6c3975dd422edb1e8d3c1c625",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "8456f58ecc89895235347925425e28c72c6453b6bd0b98f9a5073a1e86914df7",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522011:BT10-001:BT10-001",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522011"
+  },
+  "fixture_sha256": "3854ed469df7ac0f4c4cffa1ea529cfb7552f17bd83a515e14cb584d8c9f4b19",
+  "source_raw_path": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\official-fetch-cache\\1609f23859f175d2b0ddb25ebed9a3c2d3a09b2fbbec762fbbb38fadeef426e9.html",
+  "source_byte_range": [
+    35257,
+    39485
+  ],
+  "note": "Exact raw page substring. Tests create a distinct synthetic complete scope bound to these fixture bytes; original observation remains unchanged."
+}

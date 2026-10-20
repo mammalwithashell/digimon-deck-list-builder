@@ -2,10 +2,11 @@ card: EX12-031
 name: MarineBullmon
 kind: digimon
 level: 5
+form: Ultimate
 color: [blue, yellow]
 cost: 7
 dp: 7000
-traits: [Mollusk, Shambala, TB]
+traits: [Mollusk, Shambala, TB, Aquatic]
 attribute: Data
 
 alt_paths:
@@ -27,10 +28,10 @@ alt_paths:
     materials:
       - filter:
           all_of:
-            - kind: digimon
             - level_lte: 4
             - any_of:
-                - trait_has: Aquatic
+                - trait_contains: Aqua
+                - trait_contains: "Sea Animal"
                 - trait_has: TB
         zones: [trash]
         stack_under: true
@@ -43,7 +44,6 @@ effects:
         filter:
           of: you
           zone: [hand]
-          kind: digimon
           level_lte: 6
           any_of:
             - trait_contains: Aqua
@@ -59,7 +59,6 @@ effects:
           cost: true
           filter:
             all_of:
-              - kind: digimon
               - level_lte: 6
               - any_of:
                   - trait_contains: Aqua

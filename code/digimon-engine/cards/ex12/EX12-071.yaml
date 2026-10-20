@@ -1,7 +1,7 @@
 card: EX12-071
 name: Saneiketsu Invitation
 kind: option
-color: [black, blue]
+color: [black, blue, red]
 cost: 3
 traits: [Shambala, SW]
 

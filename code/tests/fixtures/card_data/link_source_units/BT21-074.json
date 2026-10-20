@@ -1,0 +1,129 @@
+{
+  "extracted": {
+    "attribute": "Navi",
+    "card_id": "BT21-074",
+    "card_type": "Digimon",
+    "colors": [
+      "Purple",
+      "Black"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Purple",
+          "Black"
+        ],
+        "cost": 4,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple",
+          "Black"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "Satellamon",
+        "play_cost": 7,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card, until your opponent's turn ends, their effects can't return that Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects.\n[When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+          },
+          {
+            "label": "Special Rule",
+            "text": "+4000 DP"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] Delete 1 of your opponent's level 4 or lower Digimon."
+          }
+        ]
+      }
+    ],
+    "form": "Ult./Appmon",
+    "grade_evolution_routes": [
+      {
+        "colors": [
+          "Multicolor"
+        ],
+        "cost": 4,
+        "from_grade": "Super",
+        "slot": 2
+      }
+    ],
+    "layout": "single",
+    "level": 5,
+    "name": "Satellamon",
+    "play_cost": 7,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522028",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT21-074.png?260529",
+      "printing_id": "BT21-074"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements.\nFor example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+        "date": "Jun. 13, 2025",
+        "number": "Q4584",
+        "question": "What does a card with \"X in its text\" refer to?"
+      },
+      {
+        "answer": "The BT21-054 [Shotmon] linked with this card is trashed upon the rule check timing.\nRelated Cards",
+        "date": "Apr. 4, 2025",
+        "number": "Q4585",
+        "question": "This card with BT21-054 [Shotmon] as a link card is in the battle area.\nWhat happens if this card digivolves into EX7-048 [Gundramon] and no longer meets BT21-054 [Shotmon]'s link requirements?"
+      }
+    ],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "forms": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card, until your opponent's turn ends, their effects can't return that Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects.\n[When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+      },
+      {
+        "label": "Special Rule",
+        "text": "+4000 DP"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] Delete 1 of your opponent's level 4 or lower Digimon."
+      }
+    ],
+    "type": "GPS"
+  },
+  "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+  "observation_id": "02dc72438a59418a1094cccdf305c465906440f46ecfc3442793cc9a225202e9",
+  "parser_version": "official-html-v5",
+  "raw_payload_digest": "59226d6e3d8cc446a3668e4b7885b4808f277a6a0eab8345b9001f1fce3b1dc8",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522028:BT21-074:BT21-074",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522028"
+}

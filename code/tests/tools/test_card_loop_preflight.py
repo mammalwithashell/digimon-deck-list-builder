@@ -375,7 +375,14 @@ def test_real_dcgo_resolves_keyword_only_and_shared_class_cards():
     assert res["BT14-009"].path.endswith("/BT9_033.cs")
     assert res["BT25-003"].path.endswith("/BT25_002.cs")
     assert res["BT12-036"].path is None                      # cross-set namespace
-    assert res["EX13-001"].path is None                      # no CardBaseEntity asset
+    # EX13 assets were added after the original live-checkout snapshot. Keep
+    # testing resolution on both checkout versions; missing-asset rejection
+    # is also covered by the deterministic asset_dcgo fixture above.
+    ex13_asset = next((Path(root) / "Assets" / "CardBaseEntity" / "EX13").rglob("EX13_001.asset"), None)
+    if ex13_asset is None:
+        assert res["EX13-001"].path is None
+    else:
+        assert res["EX13-001"].path.endswith("/EX13_001.cs")
 
 
 # --------------------------------------------------------------------------

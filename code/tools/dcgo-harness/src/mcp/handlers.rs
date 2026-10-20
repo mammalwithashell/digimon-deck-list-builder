@@ -3,7 +3,9 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::exam::verdict::{sha256_hex, ClauseTextBook, Verdict, VerdictStore};
+use crate::exam::verdict::{ClauseTextBook, Verdict, VerdictStore};
+#[cfg(test)]
+use crate::exam::verdict::sha256_hex;
 use crate::mcp::tools;
 
 /// Where the ledger lives under `root` (or the repo default when root is None).
@@ -35,7 +37,7 @@ fn clause_text_json_path(params: &serde_json::Value) -> PathBuf {
 }
 
 /// Load the clause-text book at `path` and seed `store`'s drift-detection
-/// state from it (`VerdictStore::set_current_text_sha` for every clause the
+/// state from it (`VerdictStore::set_current_semantic_sha_v1` for every clause the
 /// book carries), so `store.summary()` / `store.is_invalidated()` see the
 /// SAME text an agent would see today, not whatever text was current when the
 /// verdict was recorded.
@@ -55,8 +57,8 @@ fn load_clause_book(path: &Path, store: &mut VerdictStore) -> Result<ClauseTextB
         )
     })?;
     for id in book.clause_ids() {
-        if let Some(ct) = book.get(&id) {
-            store.set_current_text_sha(&id, &sha256_hex(&ct.text));
+        if let Ok(sha) = book.semantic_sha(&id) {
+            store.set_current_semantic_sha_v1(&id, &sha);
         }
     }
     Ok(book)
@@ -212,6 +214,10 @@ pub fn exam_status(
                 // because stored text_sha256 no longer matches the clause's
                 // CURRENT text (see `exam::verdict`'s module docs on drift).
                 "invalidated_by_text_drift": sum.invalidated,
+                "invalidated_by_semantic_binding": sum.invalidated,
+                "stored_records": store.iter().filter(|(_, row)| cards.contains(&row.card_id))
+                    .map(|(id, row)| (id.clone(), serde_json::to_value(row).unwrap()))
+                    .collect::<std::collections::BTreeMap<_, _>>(),
                 "denominator_source": format!("clause-text book: {}", book_path.display()),
                 "extracted_now": extracted,
             }))
@@ -235,12 +241,15 @@ pub fn exam_status(
                     continue;
                 }
                 total += 1;
-                *counts.get_mut(cv.verdict.as_str()).expect("five classes") += 1;
+                *counts.get_mut("unmeasured").expect("five classes") += 1;
             }
             Ok(serde_json::json!({
                 "cards": cards,
                 "total_clauses": total,
                 "by_verdict": counts,
+                "stored_records": store.iter().filter(|(_, row)| cards.contains(&row.card_id))
+                    .map(|(id, row)| (id.clone(), serde_json::to_value(row).unwrap()))
+                    .collect::<std::collections::BTreeMap<_, _>>(),
                 "denominator_source": "stored rows only -- NOT the printed denominator",
                 "note": format!(
                     "no clause-text book was available, so this counts only clauses \
@@ -296,6 +305,8 @@ pub fn exam_plan(
                             "card_id": clause_card_id(id),
                             "label": label,
                             "verdict": verdict.as_str(),
+                            "stored_record": store.get(id),
+                            "invalidated": store.is_invalidated(id),
                             "reason": reason,
                         }));
                     }
@@ -317,16 +328,15 @@ pub fn exam_plan(
                     if !cards.contains(&cv.card_id) {
                         continue;
                     }
-                    if matches!(cv.verdict, Verdict::Confirmed | Verdict::Unavailable) {
-                        continue;
-                    }
                     total += 1;
                     if outstanding.len() < limit {
                         outstanding.push(serde_json::json!({
                             "clause_id": cv.clause_id,
                             "card_id": cv.card_id,
                             "label": cv.label,
-                            "verdict": cv.verdict.as_str(),
+                            "verdict": "unmeasured",
+                            "stored_record": cv,
+                            "invalidated": true,
                             "reason": cv.reason,
                         }));
                     }
@@ -600,6 +610,7 @@ fn oracle_run(
         interaction_denominator: &denominator,
         backfill: true,
         timeout: std::time::Duration::from_secs(tools::usize_arg(params, "timeout_seconds", 300) as u64),
+        job_timeout: 180,
         poll: std::time::Duration::from_secs(1),
     };
     crate::exam::oracle::run_oracle_exam(scenario, &opts)
@@ -850,6 +861,7 @@ mod tests {
                 .map(|(_, _, t)| *t)
                 .unwrap_or_default();
             store.record(ClauseVerdict {
+                extra: Default::default(),
                 clause_id: id.to_string(),
                 card_id: card.to_string(),
                 verdict: *v,
@@ -864,13 +876,11 @@ mod tests {
                 recorded_at: "2026-08-27T00:00:00+00:00".to_string(),
             });
         }
-        store.save_dir(&dir.join("exam-verdicts")).unwrap();
-
         let clauses: Vec<serde_json::Value> = book_clauses
             .iter()
             .map(|(id, label, text)| {
                 json!({
-                    "id": id, "card_id": card, "zone": "effect", "label": label,
+                    "id": id, "card_id": card, "zone": id.split('#').nth(1).unwrap(), "label": label,
                     "kind": "timing", "timings": [], "keyword": null, "text": text,
                     "source": "cards_json",
                 })
@@ -879,9 +889,17 @@ mod tests {
         let book_path = dir.join("clause-text.json");
         std::fs::write(
             &book_path,
-            serde_json::to_string(&json!({"clauses": clauses})).unwrap(),
+            crate::exam::semantic_fingerprint::fresh_clause_json(&json!({"clauses": clauses}).to_string()),
         )
         .unwrap();
+        let current = ClauseTextBook::load(&book_path).unwrap();
+        for (id, _) in stored {
+            let mut row = store.get(id).unwrap().clone();
+            row.extra.insert("semantic_fingerprint_version".into(), json!(1));
+            row.extra.insert("semantic_sha256".into(), json!(current.semantic_sha(id).unwrap()));
+            store.record(row);
+        }
+        store.save_dir(&dir.join("exam-verdicts")).unwrap();
         book_path
     }
 
@@ -956,7 +974,9 @@ mod tests {
         let out = exam_status(&params, Some(&dir)).expect("status must still answer");
 
         assert_eq!(out["total_clauses"], json!(1), "falls back to the one stored row");
-        assert_eq!(out["by_verdict"]["confirmed"], json!(1));
+        assert_eq!(out["by_verdict"]["confirmed"], json!(0));
+        assert_eq!(out["by_verdict"]["unmeasured"], json!(1));
+        assert_eq!(out["stored_records"]["EX12-004#effect#0"]["verdict"], "confirmed");
         let source = out["denominator_source"].as_str().unwrap_or_default();
         assert!(
             !source.contains("clause-text book"),
@@ -1127,7 +1147,7 @@ mod tests {
     #[test]
     fn drifted_clause_text_invalidates_a_stored_confirmed_verdict() {
         // FIX 2: a stored verdict's text_sha256 is checked against the BOOK's
-        // current text (via VerdictStore::set_current_text_sha, wired in
+        // current text (via VerdictStore::set_current_semantic_sha_v1, wired in
         // load_clause_book). A clause whose printed text changed since the
         // verdict was recorded must re-enter the plan as unmeasured, not keep
         // vouching for text nobody re-examined.
@@ -1138,6 +1158,7 @@ mod tests {
         use crate::exam::verdict::ClauseVerdict;
         let mut store = VerdictStore::default();
         store.record(ClauseVerdict {
+            extra: Default::default(),
             clause_id: "EX12-004#effect#0".to_string(),
             card_id: "EX12-004".to_string(),
             verdict: Verdict::Confirmed,

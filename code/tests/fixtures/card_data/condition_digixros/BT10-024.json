@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture, not source or family approval. Original full snapshot required for A2 validation.",
+  "card_id": "BT10-024",
+  "inventory_sha256": "069f01875a24480557622af63b2392b5edd3b519da57be63840dad569c7806e8",
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "4b39b6a5c63509bb0a35b22f928c87e2f913d7e52160387be73df35f41cf42a7",
+    "section_index": 1,
+    "label": "Special Play Condition",
+    "condition_type": "special_play_condition",
+    "text": "DigiXros -2: [Greymon] × [MailBirdramon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Virus",
+      "card_id": "BT10-024",
+      "card_type": "Digimon",
+      "colors": [
+        "Blue"
+      ],
+      "dp": 8000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "dp": 8000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 5,
+          "name": "MetalGreymon",
+          "play_cost": 7,
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "＜Material Save 2＞ (When this Digimon would be deleted, you may place 2 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\n[On Play] This Digimon gains ＜Rush＞ for the turn. Then, if DigiXrosing, 3 of your opponent's Digimon with digivolution cards less than or equal to this Digimon's digivolution cards can't attack or block until the end of your opponent's turn."
+            },
+            {
+              "label": "Special Play Condition",
+              "text": "DigiXros -2: [Greymon] × [MailBirdramon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+            }
+          ]
+        }
+      ],
+      "form": "Ultimate",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 5,
+      "name": "MetalGreymon",
+      "play_cost": 7,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522011",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT10-024_P1.png?260529",
+        "printing_id": "BT10-024_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "Yes, it can.",
+          "date": "Mar. 28, 2024",
+          "number": "Q1949",
+          "question": "Can this card's [On Play] effect target the opponent's Digimon that don't have digivolution cards?"
+        },
+        {
+          "answer": "No. As long as the number of digivolution cards that Digimon had was less than or equal to this Digimon's at the time this effect was activated, this effect stays and it can't attack or block?even if it later gains more digivolution cards.",
+          "date": "Mar. 28, 2024",
+          "number": "Q1950",
+          "question": "An opponent's Digimon was targeted by this card's [On Play] effect, and after that it gained more digivolution cards than this Digimon has, can it now attack and block again?"
+        }
+      ],
+      "rarity": "SR",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Material Save 2＞ (When this Digimon would be deleted, you may place 2 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\n[On Play] This Digimon gains ＜Rush＞ for the turn. Then, if DigiXrosing, 3 of your opponent's Digimon with digivolution cards less than or equal to this Digimon's digivolution cards can't attack or block until the end of your opponent's turn."
+        },
+        {
+          "label": "Special Play Condition",
+          "text": "DigiXros -2: [Greymon] × [MailBirdramon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+        }
+      ],
+      "type": "Cyborg/Blue Flare"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "4b39b6a5c63509bb0a35b22f928c87e2f913d7e52160387be73df35f41cf42a7",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "8456f58ecc89895235347925425e28c72c6453b6bd0b98f9a5073a1e86914df7",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522011:BT10-024:BT10-024_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522011"
+  }
+}

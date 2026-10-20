@@ -130,6 +130,67 @@ fn permanent_activation_blocked_for_timing(
 }
 
 impl Game {
+    /// Stamp before entering Security: otherwise its derived events would be
+    /// incorrectly merged with the older reveal/removal occurrence.
+    pub(crate) fn stamp_unstamped_trigger_batch(&mut self) {
+        if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
+            self.trigger_batch_seq = self.trigger_batch_seq.wrapping_add(1).max(1);
+            let batch = self.trigger_batch_seq;
+            for qe in &mut self.effect_queue {
+                if qe.trigger_batch == 0 {
+                    qe.trigger_batch = batch;
+                }
+            }
+        }
+    }
+
+    /// Freeze event eligibility for the entries just collected, without
+    /// evaluating their processing condition. Only actual security-check
+    /// capture uses this optional callback; other timing contracts are intact.
+    pub(crate) fn freeze_security_check_entries(&mut self, start: usize) {
+        let mut rejected = Vec::new();
+        for index in start..self.effect_queue.len() {
+            let qe = self.effect_queue[index].clone();
+            let eligible = self.effects_for_queued(&qe).and_then(|effects| {
+                effects
+                    .get(qe.effect_slot as usize)
+                    .and_then(|effect| effect.trigger_eligibility.clone())
+            });
+            if let Some(eligible) = eligible {
+                let guard = TriggerContextGuard::install(self, qe.trigger_context.clone());
+                let ctx = EffectContext::new_with_source_kind(
+                    &mut *guard.game,
+                    qe.source_card,
+                    qe.source_permanent,
+                    qe.source_kind,
+                    qe.controller,
+                );
+                if !eligible(&ctx.as_read()) {
+                    rejected.push(index);
+                }
+            }
+        }
+        for index in rejected.into_iter().rev() {
+            self.effect_queue.remove(index);
+        }
+        for qe in self.effect_queue.iter_mut().skip(start) {
+            let ctx = qe.trigger_context.get_or_insert_with(Default::default);
+            ctx.captured_security_check = true;
+            // Inherited entries remain live through ordinary digivolution;
+            // face entries cannot regain a lost incarnation.
+            if !qe.allow_below_top_liveness && qe.granted_effect_id.is_none() {
+                ctx.security_check_face_generation = qe.source_permanent.and_then(|h| {
+                    self.players[h.player as usize]
+                        .battle_area
+                        .get(h.index as usize)
+                        .filter(|perm| perm.top_card().handle() == qe.source_card)
+                        .map(|perm| perm.face_generation)
+                });
+            }
+        }
+        self.stamp_unstamped_trigger_batch();
+    }
+
     /// Merge snapshot grants with source-independent duration grants. The latter
     /// are evaluated in the original grantor's context, against the current board.
     fn granted_entries_for_carrier(
@@ -424,22 +485,19 @@ impl Game {
                 let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_stack_card(timing, player, card, Some(trigger_context));
             }
-            TriggerSource::OnSecurityCheck { defender, .. } => {
-                // Observer timing: scan every permanent in the defender's
-                // battle area for `OnSecurityCheck`-timed effects. Attacker
-                // + revealed card metadata are carried through
-                // `game.security_resolution` for the drained effects to
-                // read via `EffectContext::attacker` / `security_digimon`
-                // / the defender's `last_security_reveal` snapshot.
-                let count = self.player(defender).battle_area.len();
-                for i in 0..count {
-                    let handle = PermanentHandle {
-                        player: defender,
-                        index: i as u8,
-                    };
-                    let trigger_context =
-                        self.trigger_context_for_source(&source, Some(handle), timing);
-                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+            TriggerSource::OnSecurityCheck { .. } => {
+                // A general check observer can belong to either player.
+                // Source/self and turn gates belong to the effect, not this scan.
+                for player in 0..self.players.len() {
+                    for i in 0..self.players[player].battle_area.len() {
+                        let handle = PermanentHandle {
+                            player: player as PlayerId,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
                 }
             }
             TriggerSource::OnCheckFaceUpSecurity { attacker, .. } => {
@@ -1321,6 +1379,32 @@ impl Game {
         }
     }
 
+    /// Shared decline gate for a lone optional activation cost, including the
+    /// immediate Security barrier. Keep the queued event context installed
+    /// while evaluating its live processing condition.
+    fn queued_effect_needs_pre_cost_prompt(&mut self, qe: &QueuedEffect) -> bool {
+        if !qe.is_optional {
+            return false;
+        }
+        let Some(effects) = self.effects_for_queued(qe) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        if effect.activation_cost_fn.is_none() {
+            return false;
+        }
+        // Preserve main's grouped play and DNA-origin condition contexts in
+        // the shared Security/non-Security activation-cost gate.
+        if qe.trigger_context.as_ref().is_some_and(|context| {
+            !context.simultaneous_play_members.is_empty()
+        }) {
+            return !self.matching_simultaneous_play_contexts(qe).is_empty();
+        }
+        self.queued_single_effect_condition_passes(qe)
+    }
+
     /// State-based ≤0-DP rules-check run BETWEEN top-level queued effects (after
     /// each `run_queued_effect`). Q24: a Digimon driven to ≤0 DP by one effect is
     /// deleted by the rules-check before the next queued trigger resolves. Runs
@@ -1341,6 +1425,51 @@ impl Game {
     fn drain_effect_queue_inner(&mut self) {
         loop {
             if self.pending_selection.is_some() {
+                return;
+            }
+            // Security is immediate (Q6813). Captured observers and derived
+            // triggers wait until every body on the current revealed card has
+            // completed, including parked choices. Run one body per iteration;
+            // never continue a multi-Security fast path past a pending prompt.
+            if let Some(state) = self
+                .security_resolution
+                .as_ref()
+                .filter(|state| state.phase == crate::selection::SecurityPhase::SecuritySkillDrain)
+            {
+                if self.draining_deferred > 0 {
+                    return;
+                }
+                let card = state.revealed_card;
+                if let Some(index) = self.effect_queue.iter().position(|qe| {
+                    qe.timing == EffectTiming::SecuritySkill && qe.source_card == card
+                }) {
+                    // Immediate Security bodies still obey activation gates.
+                    // This path bypasses the ordinary trigger-bundle filter;
+                    // apply its eligibility checks before offering or running
+                    // the body, including mandatory clauses with a cost gate.
+                    if self.queued_effect_opt_exhausted(index)
+                        || !self.queued_effect_condition_passes(index)
+                        || !self.queued_effect_index_is_live(index)
+                    {
+                        self.effect_queue.remove(index);
+                        continue;
+                    }
+                    let candidate = self.effect_queue[index].clone();
+                    if self.queued_effect_needs_pre_cost_prompt(&candidate) {
+                        self.install_trigger_order_selection(candidate.controller, &[index], true);
+                        return;
+                    }
+                    let qe = self.effect_queue.remove(index).unwrap();
+                    if qe.is_optional && self.queued_effect_wants_outer_optional_prompt(&qe) {
+                        self.install_outer_optional_trigger_selection(qe);
+                        return;
+                    }
+                    self.enter_deferred_drain();
+                    self.run_queued_effect(qe);
+                    self.draining_deferred = self.draining_deferred.saturating_sub(1);
+                    self.rules_check_between_queued_effects();
+                    continue;
+                }
                 return;
             }
             // 9-1-5 / 18-1-2: a used Option whose `[Main]` body has just
@@ -1446,15 +1575,7 @@ impl Game {
             // emptied. DCGO: `MultipleSkills.cs` resolves newly triggered
             // effects in a nested `TriggeredSkillProcess` before returning to
             // the still-pending list. G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST.
-            if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
-                self.trigger_batch_seq = self.trigger_batch_seq.wrapping_add(1).max(1);
-                let batch = self.trigger_batch_seq;
-                for qe in self.effect_queue.iter_mut() {
-                    if qe.trigger_batch == 0 {
-                        qe.trigger_batch = batch;
-                    }
-                }
-            }
+            self.stamp_unstamped_trigger_batch();
             let top_batch = self
                 .effect_queue
                 .iter()
@@ -1574,50 +1695,8 @@ impl Game {
                 // optionality is exposed by the body's first actionable
                 // pending selection; auto-fire is intentional there so we
                 // don't prompt when filters produce no legal follow-up.
-                let needs_pre_cost_prompt = {
-                    let (
-                        is_optional,
-                        card_id,
-                        source_card,
-                        source_permanent,
-                        source_kind,
-                        controller,
-                        effect_slot,
-                        trigger_context,
-                    ) = {
-                        let qe = &self.effect_queue[idx];
-                        (
-                            qe.is_optional,
-                            qe.card_id.clone(),
-                            qe.source_card,
-                            qe.source_permanent,
-                            self.queued_effect_activation_kind(qe),
-                            qe.controller,
-                            qe.effect_slot as usize,
-                            qe.trigger_context.clone(),
-                        )
-                    };
-                    if is_optional {
-                        if let Some(effects) = self.effects_for_card(&card_id, source_card) {
-                            if let Some(eff) = effects.get(effect_slot) {
-                                // Only install a pre-cost prompt when the
-                                // effect has an activation_cost AND the
-                                // condition (if any) currently passes. If the
-                                // condition would suppress the effect anyway,
-                                // auto-fire so it silently skips — no prompt.
-                                let has_cost = eff.activation_cost_fn.is_some();
-                                let condition_passes = has_cost && self.queued_effect_condition_passes(idx);
-                                has_cost && condition_passes
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                };
+                let candidate = self.effect_queue[idx].clone();
+                let needs_pre_cost_prompt = self.queued_effect_needs_pre_cost_prompt(&candidate);
                 if needs_pre_cost_prompt {
                     self.install_trigger_order_selection(chooser, &bundle, true);
                     return;
@@ -1845,6 +1924,8 @@ impl Game {
                 target_permanent: Some(attacker),
                 target_card: Some(revealed_card),
                 event_card: Some(revealed_card),
+                event_host_permanent: Some(attacker),
+                event_host_card: self.top_card_handle(attacker),
                 source_player: Some(defender),
                 was_security_skill: false,
                 ..TriggerContext::default()
@@ -1857,6 +1938,8 @@ impl Game {
                 target_permanent: Some(attacker),
                 target_card: Some(revealed_card),
                 event_card: Some(revealed_card),
+                event_host_permanent: Some(attacker),
+                event_host_card: self.top_card_handle(attacker),
                 source_player: Some(defender),
                 was_security_skill: false,
                 ..TriggerContext::default()
@@ -3383,6 +3466,13 @@ impl Game {
         let Some(qe) = self.effect_queue.get(i) else {
             return false;
         };
+        if qe
+            .trigger_context
+            .as_ref()
+            .is_some_and(|ctx| ctx.security_check_source_invalidated)
+        {
+            return false;
+        }
         if qe.granted_effect_id.is_some() {
             return true;
         }
@@ -3643,6 +3733,13 @@ impl Game {
     }
 
     fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
+        if qe
+            .trigger_context
+            .as_ref()
+            .is_some_and(|ctx| ctx.security_check_source_invalidated)
+        {
+            return;
+        }
         // Track H §3 Phase 4i — granted-triggered-effect branch.
         // Granted bodies are inline closures with no Effect metadata
         // (no condition, pay_cost, optional, max_per_turn). We fetch
@@ -4053,6 +4150,30 @@ impl Game {
         qe: &QueuedEffect,
         effect: &crate::effect::Effect,
     ) -> bool {
+        if qe
+            .trigger_context
+            .as_ref()
+            .is_some_and(|ctx| ctx.security_check_source_invalidated)
+        {
+            return false;
+        }
+        if let Some(generation) = qe
+            .trigger_context
+            .as_ref()
+            .and_then(|ctx| ctx.security_check_face_generation)
+        {
+            if !qe
+                .source_permanent
+                .and_then(|h| {
+                    self.players[h.player as usize]
+                        .battle_area
+                        .get(h.index as usize)
+                })
+                .is_some_and(|perm| perm.face_generation == generation)
+            {
+                return false;
+            }
+        }
         // Source permanent may have been deleted by a prior effect in this
         // batch or by a parked pay-cost selection callback. Skip silently —
         // matches Python behavior.

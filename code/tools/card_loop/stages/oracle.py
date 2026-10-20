@@ -35,6 +35,7 @@ unmeasured to ORACLE; all confirmed -> CONFIRMED.
 """
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Mapping
 
 from .. import corrections as corr
@@ -71,15 +72,34 @@ class OracleExecutor:
         retry = item.data.get("oracle_retry_paths")
         todo = [p for p in paths if p in retry] if retry else paths
         results = dict(item.data.get("oracle_results") or {}) if retry else {}
-        books = item.data.get("deck_books") or {}
+        books = dict(item.data.get("deck_books") or {})
+        pins = dict(item.data.get("oracle_input_pins") or {})
+        for path in todo:
+            if books.get(path) is None:
+                candidates = harness.deck_books_for(ctx.repo, path)
+                books[path] = candidates[0] if candidates else None
+        if any(path not in pins for path in todo):
+            return base.outcome("SIM", item=item,
+                                reason="legacy oracle inputs lack SIM byte pins; run fresh SIM",
+                                data={"oracle_input_pins": None})
         clause_text = base.clause_text_json(ctx)
         for path in todo:
-            book = books.get(path)
-            if book is None:
-                cands = harness.deck_books_for(ctx.repo, path)
-                book = cands[0] if cands else None
-            argv = harness.oracle_argv(ctx, path, book, clause_text_json=clause_text)
-            rc, out, err = harness.run(ctx, argv, harness.oracle_timeout(ctx) + 180)
+            book = books[path]
+            try:
+                if (Path(ctx.run_dir) / "STOP").exists():
+                    raise base.StageDeferred("STOP received; drain active oracle work")
+                if harness.exam_input_pin(ctx, path, book) != pins[path]:
+                    raise base.StageDeferred("oracle input changed after validation; fresh SIM required")
+                argv = harness.oracle_argv(ctx, path, book, clause_text_json=clause_text)
+                rc, out, err = harness.run(ctx, argv, harness.oracle_timeout(ctx) + 180)
+            except base.StageDeferred as error:
+                # Keep completed jobs and pins so resume neither replays them
+                # nor silently accepts changed bytes as a new baseline.
+                remaining = todo[todo.index(path):]
+                outcome = base.outcome("ORACLE", item=item, reason=str(error), data={
+                    "oracle_results": results, "oracle_retry_paths": remaining,
+                    "oracle_input_pins": pins})
+                raise base.StageDeferred(str(error), outcome) from error
             rows = harness.parse_oracle_output(rc, out, err)
             if not rows:
                 tail = (err or out or "").strip().splitlines()[-3:]
@@ -98,7 +118,9 @@ class OracleExecutor:
             results[path] = row
 
         routed = {p: self._classify(ctx, item, p, results[p]) for p in paths if p in results}
-        return self._decide(ctx, item, paths, results, routed)
+        outcome = self._decide(ctx, item, paths, results, routed)
+        outcome.data["oracle_input_pins"] = pins
+        return outcome
 
     # ------------------------------------------------------------------ the player
 

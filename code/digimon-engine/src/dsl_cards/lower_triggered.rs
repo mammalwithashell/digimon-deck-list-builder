@@ -283,6 +283,27 @@ pub fn lower_for_kind_with_clause_index(
             }
         }
 
+        // Security checks capture eligible entries at reveal, before Security
+        // can change state. Only turn and attacker-self trigger gates are
+        // separated here; ordinary clause conditions remain processing-time
+        // checks. This does not reinterpret unrelated DSL timings or predicates.
+        if matches!(
+            engine_timing,
+            EffectTiming::OnSecurityCheck | EffectTiming::OnCheckFaceUpSecurity
+        ) {
+            let mut gate = digimon_dsl::compiled::CompiledPredicate::default();
+            if let Some(aw) = &active_when {
+                gate.your_turn = aw.your_turn;
+                gate.opponents_turn = aw.opponents_turn;
+            }
+            if let Some(cc) = &condition {
+                gate.event_target_is_source = cc.event_target_is_source;
+            }
+            builder = builder.trigger_eligibility(move |rctx| {
+                eval_predicate(&gate, rctx, predicate_subject_for_source(rctx))
+            });
+        }
+
         if active_when.is_some()
             || condition.is_some()
             || timing_condition.is_some()

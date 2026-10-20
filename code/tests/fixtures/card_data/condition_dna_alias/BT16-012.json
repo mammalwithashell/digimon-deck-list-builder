@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture only; does not replace full A2 source binding.",
+  "card_id": "BT16-012",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "b26a7421784b3afa425b75691c2ead6bbbd743b05cf20e4c1577e3b6fe8f3a28",
+    "section_index": 0,
+    "label": "Special Digivolution Condition",
+    "condition_type": "special_digivolution_condition",
+    "text": "[DNA Digivolution] Red Lv.4 + yellow Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Free",
+      "card_id": "BT16-012",
+      "card_type": "Digimon",
+      "colors": [
+        "Red",
+        "Yellow"
+      ],
+      "dp": 8000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red",
+            "Yellow"
+          ],
+          "cost": 4,
+          "from_level": 4,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red",
+            "Yellow"
+          ],
+          "dp": 8000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 5,
+          "name": "Silphymon",
+          "play_cost": 8,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[DNA Digivolution] Red Lv.4 + yellow Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+            },
+            {
+              "label": "Effect",
+              "text": "＜Partition (red Lv.4 & yellow Lv.4)＞\n[When Digivolving] If DNA digivolving, 1 of your opponent's Digimon gets -7000 DP until the end of their turn.\n[When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less."
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "＜Partition (red Lv.4 & yellow Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your effects or a battle, you may play 1 each of the specified cards without paying the costs.)"
+            }
+          ]
+        }
+      ],
+      "form": "Ultimate",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 5,
+      "name": "Silphymon",
+      "play_cost": 8,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522021",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT16-012_P1.png?260529",
+        "printing_id": "BT16-012_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "SR",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[DNA Digivolution] Red Lv.4 + yellow Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolution] Red Lv.4 + yellow Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Partition (red Lv.4 & yellow Lv.4)＞\n[When Digivolving] If DNA digivolving, 1 of your opponent's Digimon gets -7000 DP until the end of their turn.\n[When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Partition (red Lv.4 & yellow Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your effects or a battle, you may play 1 each of the specified cards without paying the costs.)"
+        }
+      ],
+      "type": "Beastkin"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "b26a7421784b3afa425b75691c2ead6bbbd743b05cf20e4c1577e3b6fe8f3a28",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "168de3c3df77098473652d37a0aaecdf2c6c44557b7871a9ef5ff81cc011fb81",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522021:BT16-012:BT16-012_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522021"
+  },
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT16-012.webp",
+    "sha256": "90bdc6995ec18e9dfc22885d1a4678290cd68f559707d2ece85629bac2e636d3",
+    "observed": "Printed DNA Digivolution condition independently visible; all body text retained from official observation."
+  }
+}

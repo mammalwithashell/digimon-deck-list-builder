@@ -4383,9 +4383,10 @@ fn install_assembly_element(
         eval_predicate(&filter_pred, &rctx, PredicateSubject::Card(cs.handle()))
     };
 
-    // Element 0 is the optional "use assembly?" gate (declineable at zero
-    // picks); subsequent elements require their exact count.
-    let min = if is_first { 0 } else { count };
+    // Every element requires its exact printed count. The first element may
+    // decline at zero via is_optional_zero below; after a pick it cannot end
+    // early (Assembly rules 7-3-2-4/5, optional zero 7-3-2-7/9).
+    let min = count;
     let max = count;
     let prompt = format!(
         "Assembly: select {} card(s) from trash to place under (No Selection to skip).",

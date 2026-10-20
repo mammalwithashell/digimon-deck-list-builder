@@ -23,6 +23,15 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod app_fuse_primitive;
+mod assembly_material_predicates;
+mod printed_metadata_routes;
+mod printed_attribute_filters;
+mod printed_form_filters;
+mod native_four_field_consumers;
+mod gazimon_repeated_triggers;
+mod gazimon_optional_scope;
+mod gazimon_alt_paths;
+mod reveal_optional_pick_continuation;
 mod de_digivolve;
 #[path = "../support/dsl_card_data.rs"]
 mod dsl_card_data;

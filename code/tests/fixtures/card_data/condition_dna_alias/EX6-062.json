@@ -1,0 +1,137 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture only; does not replace full A2 source binding.",
+  "card_id": "EX6-062",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "6dc78c2b69dafe1156114acd9ef95e0e0edc6f3c2c84e06f44e5372ba5ec059a",
+    "section_index": 0,
+    "label": "Special Digivolution Condition",
+    "condition_type": "special_digivolution_condition",
+    "text": "[DNA Digivolution] Yellow/black Lv.6 + green/purple Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Unknown",
+      "card_id": "EX6-062",
+      "card_type": "Digimon",
+      "colors": [
+        "White"
+      ],
+      "dp": 16000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Yellow",
+            "Green",
+            "Black"
+          ],
+          "cost": 7,
+          "from_level": 6,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "White"
+          ],
+          "dp": 16000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 7,
+          "name": "UltimateChaosmon",
+          "play_cost": 16,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[DNA Digivolution] Yellow/black Lv.6 + green/purple Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+            },
+            {
+              "label": "Effect",
+              "text": "＜Partition (yellow/black Lv.6 & green/purple Lv.6)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your effects or a battle, you may play 1 each of the specified cards without paying the costs.)\n[When Digivolving] If DNA digivolving, you may place up to 2 level 6 cards from your trash as this Digimon's bottom digivolution cards. Then, for each of this Digimon's level 6 digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck.\n[Your Turn] This Digimon with 4 or more level 6 digivolution cards gains ＜Security A. +3＞ and ＜Piercing＞."
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "-"
+            }
+          ]
+        }
+      ],
+      "form": "Mega",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 7,
+      "name": "UltimateChaosmon",
+      "play_cost": 16,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522022",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/EX6-062.png?260529",
+        "printing_id": "EX6-062"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "No, you can't.\nThis card's DNA digivolution can only be performed using a combination of 1 level 6 yellow or black Digimon and 1 level 6 green or purple Digimon.",
+          "date": "Mar. 28, 2024",
+          "number": "Q3806",
+          "question": "When DNA digivolving into this card, can I DNA digivolve using a level 6 yellow Digimon and a level 6 black Digimon, or using a level 6 green Digimon and a level 6 purple Digimon?"
+        },
+        {
+          "answer": "No, you can't.\nThis card's effect can only play a combination of 1 level 6 yellow or black Digimon and 1 level 6 green or purple Digimon.",
+          "date": "Mar. 28, 2024",
+          "number": "Q3807",
+          "question": "Can I use this card's effect to play a level 6 yellow Digimon and a level 6 black Digimon or a level 6 green Digimon and a level 6 purple Digimon from digivolution cards?"
+        },
+        {
+          "answer": "Yes, you can process it.\nEven if this Digimon didn't DNA digivolve, this card's [When Digivolving] effect will return 1 of your opponent's Digimon to the bottom of the deck for each of this card's level 6 digivolution cards.",
+          "date": "Jun. 13, 2025",
+          "number": "Q4736",
+          "question": "Can I process the part of the effect after \"then\" in this card's [When Digivolving] effect even if the \"if\" condition in the 1st process isn't met?"
+        }
+      ],
+      "rarity": "SR",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[DNA Digivolution] Yellow/black Lv.6 + green/purple Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[DNA Digivolution] Yellow/black Lv.6 + green/purple Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Partition (yellow/black Lv.6 & green/purple Lv.6)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your effects or a battle, you may play 1 each of the specified cards without paying the costs.)\n[When Digivolving] If DNA digivolving, you may place up to 2 level 6 cards from your trash as this Digimon's bottom digivolution cards. Then, for each of this Digimon's level 6 digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck.\n[Your Turn] This Digimon with 4 or more level 6 digivolution cards gains ＜Security A. +3＞ and ＜Piercing＞."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "-"
+        }
+      ],
+      "type": "Unique"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "6dc78c2b69dafe1156114acd9ef95e0e0edc6f3c2c84e06f44e5372ba5ec059a",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "a51895464f94ca88a90c5d31cc1477054aae068ae902c64fd44189001097ad40",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522022:EX6-062:EX6-062",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522022"
+  },
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX6-062.webp",
+    "sha256": "86144d0a91d198d39cbb2b1b03e395fa39874574d8b9e3f3a33a1b148f1274b2",
+    "observed": "Printed DNA Digivolution condition independently visible; all body text retained from official observation."
+  }
+}

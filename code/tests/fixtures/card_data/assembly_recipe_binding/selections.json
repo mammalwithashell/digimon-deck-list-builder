@@ -1,0 +1,1689 @@
+{
+  "schema_version": 1,
+  "selections": [
+    {
+      "candidate_set_digest": "a3d976318b9c63e2be48400939697f4ba82df56c70999cd60f70cfb968be0475",
+      "candidate_values": {
+        "012adbe1a3d0e20a33399e01e66358cadb43b32cb5e09875cb0a07c9e21bb264": "[Special Play Condition] DigiXros -2: [Greymon] × [MailBirdramon]\nWhen this would be played, you may place specified cards from the hand/battle area under it. Each one reduces the play cost.",
+        "4b39b6a5c63509bb0a35b22f928c87e2f913d7e52160387be73df35f41cf42a7": "[Special Play Condition] DigiXros -2: [Greymon] × [MailBirdramon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+        "fa1d863ccbaf2b9386f844c74e0f2b4d4b37236e398ea4a1b10e805c929bfd10": "[Special Play Condition] DigiXros -2: [Greymon] × [MailBirdramon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+      },
+      "card_id": "BT10-024",
+      "field_path": "xros_req",
+      "reason": "Viewed image prints DigiXros -2 Greymon x MailBirdramon and hand/battle-area reminder. Select complete original official condition text retaining both specified cards and reduction. Alternate reminder wording remains evidence; no approval of Material Save or On Play fields. Review proposal condition-source-choice-batch6-root-review-20261012.json SHA256 4e8614423115b63325f864c9f7e3ed819b1f2c60d6886c98b2c004c6adee30f3; independent review condition-source-root-batch6-independent-evidence-20261012.json SHA256 2ddd8ad002bf6f893d5d6894ccb67280333524d0f47b6905e06d7ca63818ded5. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "4b39b6a5c63509bb0a35b22f928c87e2f913d7e52160387be73df35f41cf42a7",
+      "selected_value": "[Special Play Condition] DigiXros -2: [Greymon] × [MailBirdramon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+      "selected_value_digest": "8730d90104ef02ac3bc8ee11132eeaa73c020460851426a1835512f632735dbf",
+      "selection_id": "condition-bt10-024-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "4c89dd818145dad3517a5c1cc4882dd69ade29d02558f62ea03dee9da4e58817",
+      "candidate_values": {
+        "02d009558d5a8f5fb72ab080c1becdb3ff74d01ec4529b82152212b2aa74bdba": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]",
+        "292bb433fa4814a85a0246599920753a76d57b974c78192d4c210a01695aa391": "[Special Digivolution Condition] [Digivolve] [Gammamon]: Cost 2"
+      },
+      "card_id": "BT10-050",
+      "field_path": "xros_req",
+      "reason": "Viewed image prints digivolve 2 from Gammamon. Select exact original official named-card route. Alternate Cost-format wording preserved; no Piercing or adjacent data approval. Review proposal condition-source-choice-batch6-root-review-20261012.json SHA256 4e8614423115b63325f864c9f7e3ed819b1f2c60d6886c98b2c004c6adee30f3; independent review condition-source-root-batch6-independent-evidence-20261012.json SHA256 2ddd8ad002bf6f893d5d6894ccb67280333524d0f47b6905e06d7ca63818ded5. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "02d009558d5a8f5fb72ab080c1becdb3ff74d01ec4529b82152212b2aa74bdba",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]",
+      "selected_value_digest": "8518f910c0eddcfdda2d746a4fc76a25e2850ad57eb70885ad51af93d31059d5",
+      "selection_id": "condition-bt10-050-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "944eed0866eb4dbe473987ba0ad7daade0cb0164dacf783a47bec1175260a6b7",
+      "candidate_values": {
+        "6ccf0200fa1521309d797ff2140cd75a328c6706c03f442bf4e08b3e5f0ddb74": "[Special Play Condition] DigiXros -2: [SkullKnightmon] × [DeadlyAxemon]",
+        "77107e869102c892aec3e627458973405c569930761a6294728295ba01cc0f05": "[Special Play Condition] DigiXros -2: [SkullKnightmon] × [DeadlyAxemon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+      },
+      "card_id": "BT10-066",
+      "field_path": "xros_req",
+      "reason": "Image prints DigiXros -2 SkullKnightmon x DeadlyAxemon and complete reminder allowing specified cards from hand/battle area. Select complete observed text; shorter alternate omits printed reminder. Review proposal condition-source-choice-batch7-independent-review-20261012.json SHA256 c750514bcafb92b5a7d95a1f2c598eb85d18f7b4bb4ce67698c0a14b1fc42e34; independent review condition-source-batch7-root-independent-review-20261012.json SHA256 d1bbbc380957114ab24bab5ddbdcf53ba66d528cea6a4d54ba37c0fd1b7c1a5e. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "77107e869102c892aec3e627458973405c569930761a6294728295ba01cc0f05",
+      "selected_value": "[Special Play Condition] DigiXros -2: [SkullKnightmon] × [DeadlyAxemon] When you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+      "selected_value_digest": "f5933051be3ccbd1b0d21aca2a9a6e45c58b714718a8cfa8bcf96d95fca99e01",
+      "selection_id": "condition-bt10-066-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "bba222d21aefdd003b6e64452a7d1fe224f6318178a558026c8f834eec267c70",
+      "candidate_values": {
+        "364e4cfb606f65a385f12c642b62584815a9b46dbc86b040a59fd2da95616d4a": "[Special Digivolution Condition] [Digivolve] [Omnimon]: Cost 3",
+        "b2e5f3958859c46ef524784b95f9464957d7442e76c3a7ac5fd6e281723ade78": "[Special Digivolution Condition] [Digivolve] 3 from [Omnimon]",
+        "c5de944d6497b6444c4c471bbbc99f641a95b357f4c63e6e96b34b6fdda5008b": "[Special Digivolution Condition] [Digivolve] 3 from [Omnimon]"
+      },
+      "card_id": "BT10-086",
+      "field_path": "xros_req",
+      "reason": "Viewed errata image prints Digivolve3 from Omnimon. Cost reduction with XAntibody in sources is a separate main paragraph, not part of this condition selection. No approval of main text or old errata timing. Review proposal condition-source-choice-batch7-independent-review-20261012.json SHA256 c750514bcafb92b5a7d95a1f2c598eb85d18f7b4bb4ce67698c0a14b1fc42e34; independent review condition-source-batch7-root-independent-review-20261012.json SHA256 d1bbbc380957114ab24bab5ddbdcf53ba66d528cea6a4d54ba37c0fd1b7c1a5e. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "b2e5f3958859c46ef524784b95f9464957d7442e76c3a7ac5fd6e281723ade78",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from [Omnimon]",
+      "selected_value_digest": "846aef02d6dbfc951f00f97393a65485db4c4274656ff4476328cec8bc087efe",
+      "selection_id": "condition-bt10-086-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "edf1593921570b0f8587704ba147354b8656ff6eeaae884b06b462167cfefd38",
+      "candidate_values": {
+        "08afc670f780a439d65726a97720f88b79a769917c46815d550a1433bfe35349": "[Special Digivolution Condition] [Digivolve] 5 from Lv.6 w/[Royal Knight] in traits",
+        "a59a16ce1810e71981e89e3b3c1278d3c3f70ad28860a4eeef04467ec634b2ef": "[Special Digivolution Condition] [Digivolve] 5 from Lv.6 w/[Royal Knight] in traits",
+        "e0f30633079ed44bc0aae70c16067331cbf6f98e790a58076984d1f94b6943c2": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[Royal Knight] trait: Cost 5"
+      },
+      "card_id": "BT10-112",
+      "field_path": "xros_req",
+      "reason": "Image special route requires Lv6 with Royal Knight in traits, cost5. Select exact corresponding observed older wording; both level and trait restriction retained, ordinary red/black Lv6 routes separate. Review proposal condition-source-choice-batch7-independent-review-20261012.json SHA256 c750514bcafb92b5a7d95a1f2c598eb85d18f7b4bb4ce67698c0a14b1fc42e34; independent review condition-source-batch7-root-independent-review-20261012.json SHA256 d1bbbc380957114ab24bab5ddbdcf53ba66d528cea6a4d54ba37c0fd1b7c1a5e. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "08afc670f780a439d65726a97720f88b79a769917c46815d550a1433bfe35349",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 5 from Lv.6 w/[Royal Knight] in traits",
+      "selected_value_digest": "f39b9fa49700a7aed1740fb72c860ee634166e716a66045817b8bd8c0ed45528",
+      "selection_id": "condition-bt10-112-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "6577c1c6d9d773a74568f01316c247cd44d7228ecf666359d167c1aa8ae1ff18",
+      "candidate_values": {
+        "11127870aaf9778225133f5c1388c93d21101d824890f05954cdedcf947ec7d8": "[Special Play Condition] DigiXros -2: [Shoutmon] × [Ballistamon] × [Dorulumon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+        "f3a53e7cc28f577ea18fb988e348d1c19096eb76d5941cc6a31b185979d39400": "[Special Digivolution Condition] [Digivolve] 1 from [BurningGreymon]"
+      },
+      "card_id": "BT11-012",
+      "field_path": "xros_req",
+      "reason": "Viewed BT11-012 image prints Shoutmon X3 and DigiXros -2 Shoutmon/Ballistamon/Dorulumon. Alternate HTML names Agunimon and describes BurningGreymon, directly contradicting the image and original-print official record. Canonical name/traits/other text conflicts stay unresolved. Review proposal condition-source-choice-batch1-root-review-20261012.json SHA256 fc099bb01a6b1dbf2b1face7a63db7726537bc48dbd10333c5a69e95f6944474; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "11127870aaf9778225133f5c1388c93d21101d824890f05954cdedcf947ec7d8",
+      "selected_value": "[Special Play Condition] DigiXros -2: [Shoutmon] × [Ballistamon] × [Dorulumon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+      "selected_value_digest": "8157757c98bc8bdb12b6a95134b73f719f3667f6b2cc7db4af3d45030a52779c",
+      "selection_id": "condition-bt11-012-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "1d191519f8a1dbbded9796ce0ef3c7a53f8816bd74b860a99c52c48d5c5b8735",
+      "candidate_values": {
+        "17dfaa2604e804bea394a1044347cc5382da976de50f4c043219bcde58b55d35": "[Special Digivolution Condition] [Digivolve] [MetalGreymon]: Cost 2",
+        "4c8bd9bd11c09724fbeb7cdfd8707b7083df470b21e0fb2cce08aeebfaf73239": "[Special Digivolution Condition] [Digivolve] [MetalGreymon]: Cost 2",
+        "a0bbdc919d51128c93ab4a5016651ec801ed318ffd8ecd286d89168a246af83c": "[Special Digivolution Condition] [Digivolve] 2 from [MetalGreymon]",
+        "cceb8b0e254f904e672162d3d9b83a73a666174d0d037af29a36cb495f51595e": "[Special Digivolution Condition] [Digivolve] [MetalGreymon]: Cost 2"
+      },
+      "card_id": "BT11-031",
+      "field_path": "xros_req",
+      "reason": "Image prints Digivolve2 from MetalGreymon. Select observed wording matching image; alternative Cost2 wording has same named requirement, but this is explicit per-card review only. Review proposal condition-source-choice-batch7-independent-review-20261012.json SHA256 c750514bcafb92b5a7d95a1f2c598eb85d18f7b4bb4ce67698c0a14b1fc42e34; independent review condition-source-batch7-root-independent-review-20261012.json SHA256 d1bbbc380957114ab24bab5ddbdcf53ba66d528cea6a4d54ba37c0fd1b7c1a5e. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "a0bbdc919d51128c93ab4a5016651ec801ed318ffd8ecd286d89168a246af83c",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [MetalGreymon]",
+      "selected_value_digest": "accb5ca9a85fa29da580d16990dfcef09a46e9cd6ee85dd8a389a3a424a49fb4",
+      "selection_id": "condition-bt11-031-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "343dd8f9217bff4b950e4be604044cbabad3ff9f2c45eb369fdcb91f650998ef",
+      "candidate_values": {
+        "02fe890d1d1092ca205b65aea0376577d34d4a764fa7a457a1a4d393cdbe0d23": "[Special Digivolution Condition] [Digivolve] [Greymon]: Cost 0",
+        "05df02871b3671f0fbd4463bbfc04b1eef5929a2b6a9a6dc99b65d0f22758039": "[Special Digivolution Condition] [Digivolve] 0 from [Greymon]"
+      },
+      "card_id": "BT11-064",
+      "field_path": "xros_req",
+      "reason": "Image prints Digivolve0 from Greymon. Select exact observed original route; per-color reduction when evolving FROM this card remains separate main effect. Review proposal condition-source-choice-batch8-independent-review-20261012.json SHA256 6e12595e81077351c1e6ffe8787d5aa561ff7998fbad6ce0adfa64b2440fcfba; independent review condition-source-batch8-root-independent-review-20261012.json SHA256 4481a290a27842317138feccf1a20ef43796d8661b1a4390b9aa8968bfc0680c. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "05df02871b3671f0fbd4463bbfc04b1eef5929a2b6a9a6dc99b65d0f22758039",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [Greymon]",
+      "selected_value_digest": "cc921a37591ca45023e81778eb61a4424b3b6777f3e45c98dd83eecbbb4ba598",
+      "selection_id": "condition-bt11-064-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "4692f854366c0599606cdd6301760a3263aa6a6e67ae7d224bdc31f26b7dca92",
+      "candidate_values": {
+        "0f75e31fa520d9e0be0a070247b4a9833c0db8bcc550b58578cdba0a9bc1c5de": "[Special Digivolution Condition] [Digivolve] [MetalGreymon]: Cost 1",
+        "adbc3577916b1820fa97a16a22261a4277bff943b27fd3664601e5935cc29f22": "[Special Digivolution Condition] [Digivolve] 1 from [MetalGreymon]"
+      },
+      "card_id": "BT11-069",
+      "field_path": "xros_req",
+      "reason": "Image prints Digivolve1 from MetalGreymon. Select exact observed original route, without changing evolution-trigger/main/inherited fields. Review proposal condition-source-choice-batch8-independent-review-20261012.json SHA256 6e12595e81077351c1e6ffe8787d5aa561ff7998fbad6ce0adfa64b2440fcfba; independent review condition-source-batch8-root-independent-review-20261012.json SHA256 4481a290a27842317138feccf1a20ef43796d8661b1a4390b9aa8968bfc0680c. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "adbc3577916b1820fa97a16a22261a4277bff943b27fd3664601e5935cc29f22",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 1 from [MetalGreymon]",
+      "selected_value_digest": "ea35a5ae1e158eeb300b1f711506db2390de45efc45e4a9188519931a93f0e68",
+      "selection_id": "condition-bt11-069-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "f4a0943d7c6c80d0525fc2912e31b8476a1205af0a97476411b6b4c2038a53ec",
+      "candidate_values": {
+        "4354453ab0b3f3cdcf80d44f29bf7343e23891a139303a234bb67c0230771753": "[Special Play Condition] DigiXros -3: 1 Digimon card w/[Xros Heart] in traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+        "87e5800b8eabc91910342fe033e1c7dd7ff760eea977353786ce950bdac285d0": "[Special Play Condition] DigiXros -3: 1 Digimon card w/[Xros Heart] trait\nWhen this would be played, you may place specified cards from the hand/battle area under it. Each one reduces the play cost.",
+        "d3e66a7fb740dc6776e2d80a83c93f03822d8dc8a44bb58c601f20fb0bdc9bb6": "[Special Play Condition] DigiXros -3: 1 Digimon card w/[Xros Heart] in traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+      },
+      "card_id": "BT11-086",
+      "field_path": "xros_req",
+      "reason": "Image prints DigiXros-3 with1Digimon card with XrosHeart in traits and reminder hand/battle materials, each reduces cost. Select complete exact original text. The separate main permission to also use trash remains a separate main effect, not removed or manufactured in this condition field. Review proposal condition-source-choice-batch8-independent-review-20261012.json SHA256 6e12595e81077351c1e6ffe8787d5aa561ff7998fbad6ce0adfa64b2440fcfba; independent review condition-source-batch8-root-independent-review-20261012.json SHA256 4481a290a27842317138feccf1a20ef43796d8661b1a4390b9aa8968bfc0680c. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "4354453ab0b3f3cdcf80d44f29bf7343e23891a139303a234bb67c0230771753",
+      "selected_value": "[Special Play Condition] DigiXros -3: 1 Digimon card w/[Xros Heart] in traits\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+      "selected_value_digest": "dd0387c30639bbb543d4d654a3b468a9fa61f239994da8fa58807d13fd52b1c0",
+      "selection_id": "condition-bt11-086-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "d7b60738a4fd568595cfd1c0350addfe31b737c24cce14f35aac2a98c4058a6d",
+      "candidate_values": {
+        "3c3842b96e2e206a39def31d1f845651384bc8b7b092ad30741a47308ea89565": "[Special Digivolution Condition] [Digivolve] 1 from [BurningGreymon]",
+        "57e7381cdb22a6c91128c5e966a0f0e202334b32cc9bba75bb931d1c8cd78d82": "[Special Digivolution Condition] [Digivolve] [BurningGreymon]: Cost 1\n[Special Play Condition] DigiXros -2: [Shoutmon] × [Ballistamon] × [Dorulumon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+        "c88b44556d2b9f8ef903b921a416636169ce1dc2111c1cc592dfb46bd50908a4": "[Special Play Condition] DigiXros -2: [Shoutmon] × [Ballistamon] × [Dorulumon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+      },
+      "card_id": "BT12-012",
+      "field_path": "xros_req",
+      "reason": "Viewed BT12-012 image prints Agunimon, digivolve 1 from BurningGreymon, no DigiXros. Original-print official condition is exact. Alternate P1 is Shoutmon X3 text and P2 appends foreign DigiXros condition; exclude those values for this field only. Review proposal condition-source-choice-batch1-root-review-20261012.json SHA256 fc099bb01a6b1dbf2b1face7a63db7726537bc48dbd10333c5a69e95f6944474; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "3c3842b96e2e206a39def31d1f845651384bc8b7b092ad30741a47308ea89565",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 1 from [BurningGreymon]",
+      "selected_value_digest": "fe5e7b80149e6578b26cc080776142bd6d4066661a3f9135e067d5bd4fb47198",
+      "selection_id": "condition-bt12-012-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "ed45b158f1b054132a18d85453bb61f2ca1fbf19ec8886efbfc53b6dfcfa5f0b",
+      "candidate_values": {
+        "1c2c5025e5d15c16747fd8d53e9e1f98df310e19bc02211c96eac5f9b6d0d989": "[Special Digivolution Condition] [Digivolve] [Agunimon]: Cost 1",
+        "af8f04ed74eb03e812cc7cdc852b103fb3fcc1817e85115e337a33e4e37b5042": "[Special Digivolution Condition] [Digivolve] 1 from [Agunimon]"
+      },
+      "card_id": "BT12-013",
+      "field_path": "xros_req",
+      "reason": "Image prints Digivolve1 from Agunimon. Select exact observed original route. Its separate main permission to evolve onto Takuya as level3red for2 is outside this condition selection; no approval of losing that main permission. Review proposal condition-source-choice-batch8-independent-review-20261012.json SHA256 6e12595e81077351c1e6ffe8787d5aa561ff7998fbad6ce0adfa64b2440fcfba; independent review condition-source-batch8-root-independent-review-20261012.json SHA256 4481a290a27842317138feccf1a20ef43796d8661b1a4390b9aa8968bfc0680c. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "af8f04ed74eb03e812cc7cdc852b103fb3fcc1817e85115e337a33e4e37b5042",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 1 from [Agunimon]",
+      "selected_value_digest": "82ba2b277778fa8baae64bfc93b5b412806db6429698a7bb2c405e00f136a5d8",
+      "selection_id": "condition-bt12-013-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "dd4c6b2b685ad21ba9baba0bd8a5601ad5224bf2668ca16d3ea4b983e576b122",
+      "candidate_values": {
+        "a5d576e58e249d8feea4219f1fdde2e32ae2a587bc43c409b83bd036b921d128": "[Special Digivolution Condition] [Digivolve] 3 from [Paildramon] or [Dinobeemon]",
+        "cdfd657887efccda6c8fd6916bcf6c160de78a54f92a0f5896acb92da7bd5882": "[Special Digivolution Condition] [Digivolve] [Paildramon]/[Dinobeemon]: Cost 3"
+      },
+      "card_id": "BT12-030",
+      "field_path": "xros_req",
+      "reason": "Image route is cost3 from Paildramon OR Dinobeemon; both alternatives retained in selected original observed wording. Its EndOfAttack evolution effect remains main text. Review proposal condition-source-choice-batch9-independent-review-20261012.json SHA256 bc9ac4101058dce927f02ae5a20d969f0c4b07ed4ebbe68d9d35e506b5c15133; independent review condition-source-batch9-root-independent-review-20261012.json SHA256 70eb8fc33001a83fb75e1c50c81ff1eec7b6d4254c503be4e67e653a45fe585e. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "a5d576e58e249d8feea4219f1fdde2e32ae2a587bc43c409b83bd036b921d128",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from [Paildramon] or [Dinobeemon]",
+      "selected_value_digest": "c549cf224e6cc0bb82bd237280856045c2f53ac12a101d0f92368ceef354dfeb",
+      "selection_id": "condition-bt12-030-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "77a5a276d29e4e4b6b9554f7acb5da4d503a7cbedaf6d168dbef1e4033f89a7e",
+      "candidate_values": {
+        "2ae68bfdcf51bae2ea68489d7465dd5901a633f84251172460218358e7db10b6": "[Special Digivolution Condition] [Digivolve] [Imperialdramon: Dragon Mode]: Cost 2",
+        "40acb38ac86d5c3ad3d772ccd83b48e08e05f2331895a0cd0a1a6f1525eb9d32": "[Special Digivolution Condition] [Digivolve] 2 from [Imperialdramon: Dragon Mode]",
+        "82dbf02ae8e9fffbaa9de6b696ae0653b350ff562237c6084d8ec8824441b635": "[Special Digivolution Condition] [Digivolve] [Imperialdramon: Dragon Mode]: Cost 2",
+        "a6d097807594c1a974c84f8da1ef2ea93d783af1edeb62273151725df7931c11": "[Special Digivolution Condition] [Digivolve] [Imperialdramon: Dragon Mode]: Cost 2",
+        "a8607f899b2676fa9b6a7df0e04ff1be10af7ff27f3a5d3c23353416c65c6ddf": "[Special Digivolution Condition] [Digivolve] 2 from [Imperialdramon: Dragon Mode]",
+        "d8af1745f03135dbd2ba9118cef58289b7c999d509119aa135de63af88b9df45": "[Special Digivolution Condition] [Digivolve] [Imperialdramon: Dragon Mode]: Cost 2"
+      },
+      "card_id": "BT12-031",
+      "field_path": "xros_req",
+      "reason": "Image route is cost2 from Imperialdramon: Dragon Mode. Select exact original observed named route; no main or ordinary colored-route approval. Review proposal condition-source-choice-batch9-independent-review-20261012.json SHA256 bc9ac4101058dce927f02ae5a20d969f0c4b07ed4ebbe68d9d35e506b5c15133; independent review condition-source-batch9-root-independent-review-20261012.json SHA256 70eb8fc33001a83fb75e1c50c81ff1eec7b6d4254c503be4e67e653a45fe585e. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "40acb38ac86d5c3ad3d772ccd83b48e08e05f2331895a0cd0a1a6f1525eb9d32",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [Imperialdramon: Dragon Mode]",
+      "selected_value_digest": "e885550b6b62c80d15586c978bff255d0f04519fb990c7e9c8b9f2da322de741",
+      "selection_id": "condition-bt12-031-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "7def858f576e9f1dd7225b6e6da2371a11181f9cb75700dc12530650a8c6c112",
+      "candidate_values": {
+        "2e6372cac6ee47cf1a2ffb515d8b5139a74eecf7ff9a436deb9a7ea761e7d082": "[Special Digivolution Condition] [Digivolve] 0 from Koromon",
+        "5c58ec8e75bef3e6d3e6c715bc2306f9563597f452e8b59adf32d77f5c16d974": "[Special Digivolution Condition] [Digivolve] 0 from Koromon",
+        "5d8cb21016073ce89c75420d1ffbda7a14a198125d49fa81fb612fa96ae2172c": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0",
+        "8ee609d232d471830019e10eeb4ea9df68803d55a1611572cf1b9bc7bc759dd3": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0"
+      },
+      "card_id": "BT12-034",
+      "field_path": "xros_req",
+      "reason": "Image prints Digivolve0 from Koromon without square brackets. Select exact observed original condition, distinct from ordinary yellow/red Lv2 cost1 routes. No blanket bracket-removal equivalence. Review proposal condition-source-choice-batch9-independent-review-20261012.json SHA256 bc9ac4101058dce927f02ae5a20d969f0c4b07ed4ebbe68d9d35e506b5c15133; independent review condition-source-batch9-root-independent-review-20261012.json SHA256 70eb8fc33001a83fb75e1c50c81ff1eec7b6d4254c503be4e67e653a45fe585e. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "2e6372cac6ee47cf1a2ffb515d8b5139a74eecf7ff9a436deb9a7ea761e7d082",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from Koromon",
+      "selected_value_digest": "2e7599cc25d6d5c4233775739a059243be781e091b0dd31ac53c57b91a6edb49",
+      "selection_id": "condition-bt12-034-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "575b41de13ce67991908173313632497a37ee9d2e8d1fe0312c63d728693f4e2",
+      "candidate_values": {
+        "8a4ddd54f2e47de3cfaa4e6600764f90ff23bf43af899f3c7bb066c50f5dfe96": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait",
+        "da23e920da5b9ca28bfdde6ab06ead5ac81b97a8a4e8dbdc78497d35fe661dff": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2",
+        "e2b717d835cabffa656fb5f1df5f282cf52bd77786fb3ad41fb40fc454528879": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait",
+        "fc80bae170dee431e059ae5fdf9728cf6516d7344e009455662aa0ee7ba4f2e4": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2"
+      },
+      "card_id": "BT12-038",
+      "field_path": "xros_req",
+      "reason": "Image requires all three predicates: Lv3, Agumon in name, Dinosaur trait; cost2. Select exact original observation preserving AND, not either condition. Ordinary colored Lv3 cost3 routes remain separate. Review proposal condition-source-choice-batch9-independent-review-20261012.json SHA256 bc9ac4101058dce927f02ae5a20d969f0c4b07ed4ebbe68d9d35e506b5c15133; independent review condition-source-batch9-root-independent-review-20261012.json SHA256 70eb8fc33001a83fb75e1c50c81ff1eec7b6d4254c503be4e67e653a45fe585e. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "8a4ddd54f2e47de3cfaa4e6600764f90ff23bf43af899f3c7bb066c50f5dfe96",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait",
+      "selected_value_digest": "31be4fcfb461dd9ef28201ef7accc53b4bca77f6635b95d64135dad043ae6cef",
+      "selection_id": "condition-bt12-038-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "b762bfcf7a944dc67c02ce2f09bc1ae000984988768ea4b6adb43ac3e9e0ca08",
+      "candidate_values": {
+        "0c889c91487a5deb8c9ed8fdd5debfa1f0749055e6b6a9da9c63cfcf71dc1ecf": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name",
+        "39ff884da615056dab5540571145ee0614be318ae4eec26a39a27a50397c24cf": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+        "540417d42b713fd4dfa32939892b3659e3121dcac7dbe18f816f2300003322a1": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+        "a9d70f952edff5467aa54a27a856eb7635d74db2f0c751a7a7973f2eb67abc26": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+        "bb74f7bd848657dd4655a7e0ab178ccb16e593d71dee9aae2da5b8744e779e92": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+        "be31daa7b7803c515b1afa52dbe77c0bb8f1c4b6c1fa547b2c502bb5b1800bb0": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name",
+        "c8f75d6396de9dd3327f89a6fe8174e5d08a982dec54cb585b2f65c1354a2e9c": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3"
+      },
+      "card_id": "BT12-043",
+      "field_path": "xros_req",
+      "reason": "Image prints cost3 from Lv5 with RizeGreymon in name. Select exact original observation preserving both level and name-substring predicates. Main and ordinary colored routes remain separate. Review proposal condition-source-choice-batch10-independent-review-20261012.json SHA256 98273f98b45b0ef39c36220f30709bd55de17b6189129de9384f4baba1ddbf23; independent review condition-source-choice-batch10-second-independent-review-20261012.json SHA256 673cc8998b0f1af0485f09bfe1e68e7d943dcf4db52471ba74e1eab3b2c3a8cd. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "0c889c91487a5deb8c9ed8fdd5debfa1f0749055e6b6a9da9c63cfcf71dc1ecf",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name",
+      "selected_value_digest": "3b0b98c3451a54ffa9dc2cbbff66bc83638ba76b0447479815a5dece763cca9a",
+      "selection_id": "condition-bt12-043-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "d7bbff26819543b08199ab515f2d2223e739f4c90dca76ec74608f1f5f0c6bbf",
+      "candidate_values": {
+        "0c4d4b9571b4d3b48a84a0cbbc4f0a28729c4f300675ec24e181e60bfd20b323": "[Special Digivolution Condition] [Digivolve] 9 from Lv.5 w/＜Save＞ in text",
+        "49ecbf65b0964f99f80f0f8a850976060fd79a7c430ec4097df0bb8472546ddc": "[Special Digivolution Condition] [Digivolve] Lv.5 w/＜Save＞ in text: Cost 9",
+        "9477277ef3d2550f0685a3fbb15caf779f95ff8c944a126e57dd8b594730a89b": "[Special Digivolution Condition] [Digivolve] Lv.5 w/＜Save＞ in text: Cost 9",
+        "a323fec07cc807678c7cfd0f819b738da456b575395c539f16ce9fcd09a861ba": "[Special Digivolution Condition] [Digivolve] 9 from Lv.5 w/＜Save＞ in text"
+      },
+      "card_id": "BT12-057",
+      "field_path": "xros_req",
+      "reason": "Image prints cost9 from Lv5 with Save keyword in text. Select original observed condition preserving unusual Lv5-to-Lv7 route and9 cost; do not substitute ordinary Lv6cost6. Review proposal condition-source-choice-batch10-independent-review-20261012.json SHA256 98273f98b45b0ef39c36220f30709bd55de17b6189129de9384f4baba1ddbf23; independent review condition-source-choice-batch10-second-independent-review-20261012.json SHA256 673cc8998b0f1af0485f09bfe1e68e7d943dcf4db52471ba74e1eab3b2c3a8cd. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "0c4d4b9571b4d3b48a84a0cbbc4f0a28729c4f300675ec24e181e60bfd20b323",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 9 from Lv.5 w/＜Save＞ in text",
+      "selected_value_digest": "4e966e83ce1a37fd07778389a23b4f652cc90d7e23ea0b48ef2566cfd3da47e2",
+      "selection_id": "condition-bt12-057-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "e3d8d75444a27ce5157523d77740ce4686c1dec0f531a486962f9c5470cd0a5b",
+      "candidate_values": {
+        "629832f97f64a377ddfe565a61fc28938612ef49f6e848a427aecf90ee8dd617": "",
+        "7d94bfdf6d3db9252b2d8e21aa2872871dbef45ab01295cc7d9e149a170c50d8": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+        "bd816df26086a94e543c15d1e7dcc392c788e7a60704b64e44697335bc4379e5": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0"
+      },
+      "card_id": "BT12-059",
+      "field_path": "xros_req",
+      "reason": "Image prints cost0 from Koromon, distinct from ordinary black Lv2cost1. Select matching observed original route; reject empty observation omission. Review proposal condition-source-choice-batch10-independent-review-20261012.json SHA256 98273f98b45b0ef39c36220f30709bd55de17b6189129de9384f4baba1ddbf23; independent review condition-source-choice-batch10-second-independent-review-20261012.json SHA256 673cc8998b0f1af0485f09bfe1e68e7d943dcf4db52471ba74e1eab3b2c3a8cd. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "7d94bfdf6d3db9252b2d8e21aa2872871dbef45ab01295cc7d9e149a170c50d8",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+      "selected_value_digest": "c4ea19ed1fb78e16c896b2fc688978ba848f71c1e91f59e35bd27b2070013d2f",
+      "selection_id": "condition-bt12-059-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "790037e149828a37ab335ca3db13013725337e39fb9301028915b2205facd449",
+      "candidate_values": {
+        "01b2707ad1cea21c18cef1468494a74fdd24da1b5ab9aada92cfb7af54d1db18": "",
+        "86d146fd1a60f00be5ece6013f5782cc76f6003d56944c88c7d5333f8d7d7d98": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name"
+      },
+      "card_id": "BT12-062",
+      "field_path": "xros_req",
+      "reason": "Image prints cost2 from Lv3 with Agumon in name. Select only complete official condition; reject empty alternative. Unlike BT12-038 there is no Dinosaur trait restriction. Review proposal condition-source-choice-batch10-independent-review-20261012.json SHA256 98273f98b45b0ef39c36220f30709bd55de17b6189129de9384f4baba1ddbf23; independent review condition-source-choice-batch10-second-independent-review-20261012.json SHA256 673cc8998b0f1af0485f09bfe1e68e7d943dcf4db52471ba74e1eab3b2c3a8cd. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "86d146fd1a60f00be5ece6013f5782cc76f6003d56944c88c7d5333f8d7d7d98",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name",
+      "selected_value_digest": "f1c0db4a61009417b214af0cdeee604c23e8ff0f448c692651ff6037b714e9c7",
+      "selection_id": "condition-bt12-062-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "4e999add95ce9cef03132b9f33a6f2e8866e3c4421b8c548c4aa635382159c61",
+      "candidate_values": {
+        "2d5fc3a1c2418d694e68568455d0c08714ffa558462c72ebc8599766c4a45be7": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[MetalGreymon] in name: Cost 3",
+        "383f1ccfda098aa71db25c03461e267ecff63f53a5ecdd48e661ea586777f9d2": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[MetalGreymon] in name",
+        "3c43c9956a1b0c9bf1e1125b60492873c1f27a67fd81372eb76cd10973a9362d": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[MetalGreymon] in name: Cost 3",
+        "e6711d42acef2b80f2c49c3d7795149923e3ac51ba9aa9520e7e2210f102ba79": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[MetalGreymon] in name: Cost 3",
+        "f633c9d37b1bf24a5dc82609e865740e37e7309a156989a8da62be712dea0fef": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[MetalGreymon] in name"
+      },
+      "card_id": "BT12-070",
+      "field_path": "xros_req",
+      "reason": "Image cost3 route requires Lv5 AND MetalGreymon in name. Original observed wording selected; no omission of level or substitution of exact-name constraint. Review proposal condition-source-choice-batch11-independent-review-20261012.json SHA256 c890d4348b4a6a8563aee3099b378dc183ebb17abf616d6fc37de81f48f6c3cf; independent review condition-source-choice-batch11-second-independent-review-20261012.json SHA256 e0f70abf3384e912f8e0cdae012a1640be40bf1b2156eab336a3d5d60081cb5d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "383f1ccfda098aa71db25c03461e267ecff63f53a5ecdd48e661ea586777f9d2",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[MetalGreymon] in name",
+      "selected_value_digest": "b3a6d34d352234425e7a43a15ec7ac209b2d44e29457018f9320057c48c81af8",
+      "selection_id": "condition-bt12-070-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "cdd13967c157b1e2ab9905866cbb5f1cd70e3fa210dfee2db4ff83305d7e1ba0",
+      "candidate_values": {
+        "7251979f7790100724bdaeaddcad8a854abee3f935a53d3de210ecb20f6d005b": "[Special Digivolution Condition] [Digivolve] [Machinedramon]/[Chaosdramon]: Cost 2",
+        "7c22dfdb1746b975d365a5f5a71f4d2c9c8f02a3d2c875ab1f97f142fe29c2b9": "[Special Digivolution Condition] [Digivolve] 2 from [Machinedramon] or [Chaosdramon]",
+        "ab3441fc9206afdd9d5d374d07bfb15fcdb71d349956c70b8a011e311ef71cc4": "[Special Digivolution Condition] [Digivolve] [Machinedramon]/[Chaosdramon]: Cost 2"
+      },
+      "card_id": "BT12-072",
+      "field_path": "xros_req",
+      "reason": "Image cost2 route permits Machinedramon OR Chaosdramon, both retained in selected original observation. Main ability copying effects is separate. Review proposal condition-source-choice-batch11-independent-review-20261012.json SHA256 c890d4348b4a6a8563aee3099b378dc183ebb17abf616d6fc37de81f48f6c3cf; independent review condition-source-choice-batch11-second-independent-review-20261012.json SHA256 e0f70abf3384e912f8e0cdae012a1640be40bf1b2156eab336a3d5d60081cb5d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "7c22dfdb1746b975d365a5f5a71f4d2c9c8f02a3d2c875ab1f97f142fe29c2b9",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [Machinedramon] or [Chaosdramon]",
+      "selected_value_digest": "2487ecdaa5e769f9f25691c66f7900f3adbff6cfa98980dc071cbf8ffabac0d3",
+      "selection_id": "condition-bt12-072-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "81ae81266391a797b0e516d9292fa4b3e392cb78cd17eab4988c1bf654810395",
+      "candidate_values": {
+        "4853fa593803ff30c462dd3e5cf153e1b8ad0f0971cbbf182e101e2b3e5cb148": "[Special Digivolution Condition] [Digivolve] 0 from Lv.2 w/＜Save＞ in text\n[Special Play Condition] DigiXros -2: 1 Digimon card w/＜Save＞ in text\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+        "a2f6c372cbea2b799f6e69ab278ccadea7145b9aa0b9638c7e17b8439f786ed8": "[Special Digivolution Condition] [Digivolve] Lv.2 w/＜Save＞ in text: Cost 0\n[Special Play Condition] DigiXros -2: 1 Digimon card w/＜Save＞ in text\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost."
+      },
+      "card_id": "BT12-074",
+      "field_path": "xros_req",
+      "reason": "Image has BOTH cost0 from Lv2 with Save in text AND DigiXros-2 one Digimon with Save in text plus hand/battle reminder. Select entire original observed combined value, never partial route. Review proposal condition-source-choice-batch11-independent-review-20261012.json SHA256 c890d4348b4a6a8563aee3099b378dc183ebb17abf616d6fc37de81f48f6c3cf; independent review condition-source-choice-batch11-second-independent-review-20261012.json SHA256 e0f70abf3384e912f8e0cdae012a1640be40bf1b2156eab336a3d5d60081cb5d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "4853fa593803ff30c462dd3e5cf153e1b8ad0f0971cbbf182e101e2b3e5cb148",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from Lv.2 w/＜Save＞ in text\n[Special Play Condition] DigiXros -2: 1 Digimon card w/＜Save＞ in text\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the play cost.",
+      "selected_value_digest": "d1c56356e596e52489989ef257b1a1942bdd56991ec862e74f7df4d8604542d8",
+      "selection_id": "condition-bt12-074-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "04e34ccc2ad12b465ad3633bc1d33eb86f308e833932c861bbe623263b57868b",
+      "candidate_values": {
+        "3e90daf2711b466fdf936e96cf7eb5f0d1ca25dfd57402af922297412ccadb40": "[Special Digivolution Condition] [Digivolve] [Beelzemon]: Cost 1",
+        "47eca41ec9f0ef37b4b87679c5b83e043b34f5b6eb42d342c1302c9f643e81dd": "[Special Digivolution Condition] [Digivolve] [Beelzemon]: Cost 1",
+        "91fdfd0244cd19e9b88d63f85c7e7efefa851be2948128cc3692ea76592fab07": "[Special Digivolution Condition] [Digivolve] 1 from [Beelzemon]",
+        "af6f4b78d801f11eb53dac9e515f84587f2b28ddf43db4c17499fd32313c32c9": "[Special Digivolution Condition] [Digivolve] 1 from [Beelzemon]"
+      },
+      "card_id": "BT12-085",
+      "field_path": "xros_req",
+      "reason": "Image prints cost1 from Beelzemon. Select original observed named route, separately from ordinary purple Lv5cost4 and main effects. Review proposal condition-source-choice-batch11-independent-review-20261012.json SHA256 c890d4348b4a6a8563aee3099b378dc183ebb17abf616d6fc37de81f48f6c3cf; independent review condition-source-choice-batch11-second-independent-review-20261012.json SHA256 e0f70abf3384e912f8e0cdae012a1640be40bf1b2156eab336a3d5d60081cb5d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "91fdfd0244cd19e9b88d63f85c7e7efefa851be2948128cc3692ea76592fab07",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 1 from [Beelzemon]",
+      "selected_value_digest": "b79aae3340949316a4af288468a67856fad82316d9088f9a8e8713ebab605f3a",
+      "selection_id": "condition-bt12-085-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "dc0f7f63d4162ef03002b7348c9d21c99281e27f070fc29a75400da4f3fd4a16",
+      "candidate_values": {
+        "01a8946bb8f77f350994f2abffa770c36d5d078b43c4bdff64ebeab14e2d5ba1": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0",
+        "a61a732d630cbcc65096bd107a43b9403819b03a4d5cdcc60138f5ec8e4b8aff": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+        "fa42fbc427d08c57d1b2568528bef2c53ae7a69a8987a330b014b1d2a804cd90": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0"
+      },
+      "card_id": "BT13-008",
+      "field_path": "xros_req",
+      "reason": "Image prints cost0 from Koromon. Select original observed named route; ordinary red/yellow Lv2cost1 routes and main Tamer transformation remain separate. Review proposal condition-source-choice-batch12-independent-review-20261012.json SHA256 898baa828ba134bf1e4dcfb76c49c8866d77d8208daf5239308bd41adcf3c617; independent review condition-source-choice-batch12-second-independent-review-20261012.json SHA256 73ec2f1510278590213ad8fbc2bb7e0ea179b094afb51e43f76169cd09465bb5. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "a61a732d630cbcc65096bd107a43b9403819b03a4d5cdcc60138f5ec8e4b8aff",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+      "selected_value_digest": "c4ea19ed1fb78e16c896b2fc688978ba848f71c1e91f59e35bd27b2070013d2f",
+      "selection_id": "condition-bt13-008-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "c266f9ef071b2aad9efc3eec91edc51607da24759a55eb85f40deda92c59eca2",
+      "candidate_values": {
+        "245321f07b9c963d7e5733e003d5b74999425105007cb1eb7af8e927888bf589": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2",
+        "457dba2721bba90c16059fc989f5a11ecf564aae3e40891f4e96e721cf62cb70": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2",
+        "6601fc70d49bee2de2d2c9b5bbe34f0fa2d179527855b61145641c3b528aa845": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait"
+      },
+      "card_id": "BT13-012",
+      "field_path": "xros_req",
+      "reason": "Image route cost2 requires Lv3 AND Agumon in name AND Dinosaur trait. Select original observed all-predicate route, no broader matching assumption. Review proposal condition-source-choice-batch12-independent-review-20261012.json SHA256 898baa828ba134bf1e4dcfb76c49c8866d77d8208daf5239308bd41adcf3c617; independent review condition-source-choice-batch12-second-independent-review-20261012.json SHA256 73ec2f1510278590213ad8fbc2bb7e0ea179b094afb51e43f76169cd09465bb5. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "6601fc70d49bee2de2d2c9b5bbe34f0fa2d179527855b61145641c3b528aa845",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait",
+      "selected_value_digest": "31be4fcfb461dd9ef28201ef7accc53b4bca77f6635b95d64135dad043ae6cef",
+      "selection_id": "condition-bt13-012-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "0e26475128da0e09083ddc5cd5ee1e956747183263d8ba7978162ca6f4d50744",
+      "candidate_values": {
+        "24498ff06bb1aae3fafed087be8e97b1246a73759bbe55d52c72fdff359d74f3": "[Special Digivolution Condition] [Digivolve] [GeoGreymon]: Cost 3",
+        "57ae9d6edebaeedef16829c7ca267112e8bea814e5a710374a46b0a689526d4f": "[Special Digivolution Condition] [Digivolve] [GeoGreymon]: Cost 3",
+        "6bd09b07b1f010c608ceb46917c5be4b17440a6aa3ed341cc3cddbaf2d433bba": "[Special Digivolution Condition] [Digivolve] [GeoGreymon]: Cost 3",
+        "cdcf4559a31d95ec54e1f1bec8adf10870232f80ce77a0fd1dd90a691d69be7b": "[Special Digivolution Condition] [Digivolve] 3 from [GeoGreymon]"
+      },
+      "card_id": "BT13-015",
+      "field_path": "xros_req",
+      "reason": "Image prints cost3 from GeoGreymon. Select original observed exact named-card route, distinct from ordinary red/yellow Lv4cost4. Review proposal condition-source-choice-batch12-independent-review-20261012.json SHA256 898baa828ba134bf1e4dcfb76c49c8866d77d8208daf5239308bd41adcf3c617; independent review condition-source-choice-batch12-second-independent-review-20261012.json SHA256 73ec2f1510278590213ad8fbc2bb7e0ea179b094afb51e43f76169cd09465bb5. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "cdcf4559a31d95ec54e1f1bec8adf10870232f80ce77a0fd1dd90a691d69be7b",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from [GeoGreymon]",
+      "selected_value_digest": "c19c3b90fa1761e47697f0d39a5fecbb49524a1b0dd8eaa35a7b4dc9c8259aaf",
+      "selection_id": "condition-bt13-015-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "e0b640f7dd2ae625292ae60ca3624ac58fa3b7ea3b54b13767d5263965652f95",
+      "candidate_values": {
+        "39efa5917ec475cc57d73f9d6e097544b8feaa07a122a58e358004e9586a1e42": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+        "70989bf3a29ed277f85e062f244201fc7a017b288b26a8d4fe0fd858ae5f3cdb": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name",
+        "7106f9ee1b4a1825157add589b7479a2461da07333231b0c1b1ce50742f27f55": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3",
+        "d790f1e4d91a73c92f2a80a39a99b20e9d96e59b94df47102e2a9e3b6cc76c8b": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3"
+      },
+      "card_id": "BT13-018",
+      "field_path": "xros_req",
+      "reason": "Image route cost3 requires Lv5 and RizeGreymon in name. Select original observed route preserving both predicates; Tamer animation/main effects outside selection. Review proposal condition-source-choice-batch12-independent-review-20261012.json SHA256 898baa828ba134bf1e4dcfb76c49c8866d77d8208daf5239308bd41adcf3c617; independent review condition-source-choice-batch12-second-independent-review-20261012.json SHA256 73ec2f1510278590213ad8fbc2bb7e0ea179b094afb51e43f76169cd09465bb5. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "70989bf3a29ed277f85e062f244201fc7a017b288b26a8d4fe0fd858ae5f3cdb",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name",
+      "selected_value_digest": "3b0b98c3451a54ffa9dc2cbbff66bc83638ba76b0447479815a5dece763cca9a",
+      "selection_id": "condition-bt13-018-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "4b1b28f1ec1cf7a0576564f06014e7d50459fd784fa934e6fb581c331b1c1e65",
+      "candidate_values": {
+        "3ae7ca021b801544aa2c90d0def766d2905c0bea7a146e216eaf6584fe7d0351": "[Special Digivolution Condition] [Burst Digivolve] [ShineGreymon]: Cost 0 by returning 1 [Marcus Damon] to hand.\nAt the end of the burst digivolution turn, trash this Digimon’s top stacked card.",
+        "7eec14371d00319e088eff85220f3796383ee695e38682d68305135ee8bad2f6": "[Special Digivolution Condition] [Burst Digivolve] [ShineGreymon]: Cost 0 by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon's top stacked card",
+        "807018b58141fcfbdd35cc4a75f74c56414665d0670ec6a6f67868ad45965263": "[Special Digivolution Condition] [Burst Digivolve] [ShineGreymon]: Cost 0 by returning 1 [Marcus Damon] to hand.\nAt the end of the burst digivolution turn, trash this Digimon’s top stacked card.",
+        "ae4736da125e813a65bd46251f558b2a320b76d6128143e23c9b4b30241ce994": "[Special Digivolution Condition] [Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon’s top card",
+        "b2b48d2bbe8e563d467d7310efea04c0e3df84cf9c30cbbc37419ccaac750f01": "[Special Digivolution Condition] [Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon’s top card",
+        "f6a8d2cd798bb47e52756df323cd3629dcb65371f8baf99696ac6cd0349daa26": "[Special Digivolution Condition] [Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon’s top card"
+      },
+      "card_id": "BT13-020",
+      "field_path": "xros_req",
+      "reason": "Actual image prints Burst Digivolve 0 from ShineGreymon by returning1Marcus Damon tohand, followed by end-of-burst-turn trash-top-card condition. Select the complete original observed two-line condition matching this image; preserve alternative top-stacked wording as evidence. No adjacent main-effect or timing approval. Review proposal condition-source-choice-batch13-root-review-20261012.json SHA256 eadd3b90af019fe5687acd1fb7d618dbb66622825b7e6242140bb7362b0d9769; independent review condition-source-root-batch13-independent-evidence-20261012.json SHA256 e2636af39212686c40aa788e227668c854a5e6e6574dd702e89992d1ec2e86d4. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "ae4736da125e813a65bd46251f558b2a320b76d6128143e23c9b4b30241ce994",
+      "selected_value": "[Special Digivolution Condition] [Burst Digivolve] 0 from [ShineGreymon] by returning 1 [Marcus Damon] to hand\nAt the end of the burst digivolution turn, trash this Digimon’s top card",
+      "selected_value_digest": "f29ae571488d62a962593d071e8423f2436e6d05f073ab5de3bafcf4ef682c04",
+      "selection_id": "condition-bt13-020-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "c57bb166f0639427db1a5158ff0341eb1486ef99dc8f610bdf9567f42587adbd",
+      "candidate_values": {
+        "34a2918a3cb57d2f5489e4d9246ff6fd53b5c7fda6ca39714b015e1eeb933ec0": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3",
+        "7c17474e8b9b26110db1073953d36d415bba0bf39af0467e4dd34309b99a05a7": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+        "9617040afbef231c60817991eac07f14d3c3a56be823c7a1a2556281765a3d81": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+        "f3f7f034cb3173caa80b68286c2ea0b40fa8ec8a1c3821453bb99e7b8dbe59d4": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3",
+        "f4a9a0ffe0e563831543e38d33f59ea0ba3adc090ba49ccdcbc985d29cb46173": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3"
+      },
+      "card_id": "BT13-040",
+      "field_path": "xros_req",
+      "reason": "Actual image prints Digivolve3 from Veemon. Select complete original observed named route; ordinary colored Lv3 cost4 and leave-battle-area main effect remain separate. Review proposal condition-source-choice-batch13-root-review-20261012.json SHA256 eadd3b90af019fe5687acd1fb7d618dbb66622825b7e6242140bb7362b0d9769; independent review condition-source-root-batch13-independent-evidence-20261012.json SHA256 e2636af39212686c40aa788e227668c854a5e6e6574dd702e89992d1ec2e86d4. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "7c17474e8b9b26110db1073953d36d415bba0bf39af0467e4dd34309b99a05a7",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+      "selected_value_digest": "c03a3869d98066949702f233e62ba7db9f427866c9843dbe991e30dc71102446",
+      "selection_id": "condition-bt13-040-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "c2c9131177c95d9230d68820946265fe518309d7d2d5f58f03d22fcc7e94f287",
+      "candidate_values": {
+        "4c99d9348da2c67c3cbf92c95079c829926df7851f2d135b2f1239899bccfb2e": "[Special Digivolution Condition] [Digivolve] [Belphemon: Rage Mode]: Cost 1",
+        "a270522b390c07d71e31130236b5d18ebc840001e25d44eabfae1459ef85a9b0": "[Special Digivolution Condition] [Digivolve] 1 from [Belphemon: Rage Mode]",
+        "c44f6467fb109e12119cfcf15b7c89cea1306b260b2eef11f5a77803bdf98f19": "[Special Digivolution Condition] [Digivolve] [Belphemon: Rage Mode]: Cost 1",
+        "dd50cd483a634658b6b2d15d8c72a6909f315da6fecae0985d2bfda9fb8fc6d7": "[Special Digivolution Condition] [Digivolve] [Belphemon: Rage Mode]: Cost 1"
+      },
+      "card_id": "BT13-088",
+      "field_path": "xros_req",
+      "reason": "Actual image prints Digivolve1 from Belphemon: Rage Mode. Select original observed named route; preserve other Cost-format observations. No adjacent ability approval. Review proposal condition-source-choice-batch13-root-review-20261012.json SHA256 eadd3b90af019fe5687acd1fb7d618dbb66622825b7e6242140bb7362b0d9769; independent review condition-source-root-batch13-independent-evidence-20261012.json SHA256 e2636af39212686c40aa788e227668c854a5e6e6574dd702e89992d1ec2e86d4. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "a270522b390c07d71e31130236b5d18ebc840001e25d44eabfae1459ef85a9b0",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 1 from [Belphemon: Rage Mode]",
+      "selected_value_digest": "ebb1aff6fe2585623da06c589370c9e5126ece6753d7d7a3cb179bd9d66e5754",
+      "selection_id": "condition-bt13-088-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "db83704947361afccefcea70e449ce68d2f80b796f39d81065773d90e95c3271",
+      "candidate_values": {
+        "0557830b31373c11e4228d4f3aa9393760384eda785c605084cb96635cac5769": "[Special Digivolution Condition] [Digivolve] [Seraphimon]: Cost 1",
+        "239124a90f8563a84a7c3da16bcf86525d25aecd5c642b57b5a25d921b33a483": "",
+        "2ef408b61f59f10735ad58c0518a697a7ab9697d287329456a66241fdc68e4d4": "",
+        "5dc6695a4423179d156a44335cf4affac2c7646c02d21799600d98ac42f42c88": "[Special Digivolution Condition] [Digivolve] [Seraphimon]: Cost 1",
+        "971baf19cd3d28d7e58ac85ab63505542a7a99f67f9221966d204e1736f736f7": "[Special Digivolution Condition] [Digivolve] [Seraphimon]: Cost 1",
+        "a9db11112cff2ab29aedd03e3aabf78353d5869e17f30a7ad52991d1ee31b2b5": ""
+      },
+      "card_id": "BT14-081",
+      "field_path": "xros_req",
+      "reason": "Actual Fenriloogamon image has no special named digivolution route: only ordinary purple Lv5 cost4. Original/P1 official condition is empty. Alternate P2/P3/P4 carry a foreign Seraphimon cost1 route and ShadowSeraphimon-style effects, contradicting image. Choose observed empty condition only; reject the foreign route, keep all adjacent main/security conflicts unresolved. Review proposal condition-source-choice-batch13-root-review-20261012.json SHA256 eadd3b90af019fe5687acd1fb7d618dbb66622825b7e6242140bb7362b0d9769; independent review condition-source-root-batch13-independent-evidence-20261012.json SHA256 e2636af39212686c40aa788e227668c854a5e6e6574dd702e89992d1ec2e86d4. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "239124a90f8563a84a7c3da16bcf86525d25aecd5c642b57b5a25d921b33a483",
+      "selected_value": "",
+      "selected_value_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184",
+      "selection_id": "condition-bt14-081-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "e4b7a6bf60db913f83fe24e3dfaaf4d74e8938ddd47140d9f4f703eadcc21530",
+      "candidate_values": {
+        "1fd4124730f083bd2199334c774d033f6739e9b04e013f7c23f716e7aaafde89": "",
+        "3bf789227faf6da93f3ea6591eea6ec16eaf770483062557cb63734bb5d74c48": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4",
+        "3ee3a85b6fea64f652e2f80f4dfd4583beb560f80d9156cb44c34c7fe8d79850": "",
+        "bb647af5c86b3b4d7f3d257726c07747e68e055c682c5860e10fb6ece1fefe55": ""
+      },
+      "card_id": "BT15-067",
+      "field_path": "xros_req",
+      "reason": "Image special route is cost4 Lv5 with XAntibody OR DigiPolice trait. Select sole complete observed condition; reject three empty alternatives. Ordinary green/black route remains separate. Review proposal condition-source-choice-batch14-independent-review-20261012.json SHA256 32f5d26339048ab0fd386c76058d8171e505e966c748aeedc8d7a79821da4542; independent review condition-source-choice-batch14-second-independent-review-20261012.json SHA256 34e6c60573ebb5f7a7b7fad4f812d5784693109ce2553dff904c03c4561456f8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "3bf789227faf6da93f3ea6591eea6ec16eaf770483062557cb63734bb5d74c48",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4",
+      "selected_value_digest": "9710cf213c10e9fc394664214db0893a7c5003191a945e508016ca4e35830590",
+      "selection_id": "condition-bt15-067-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "4280913e7faa4e114f752408d32fc489c3c40cae6cf84de10d13ea5befc6811b",
+      "candidate_values": {
+        "2edd1a3366cb589369054a035d2c742c303b0394474691f95ed54c065c3c3b31": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name: Cost 4",
+        "60a6f0bb4f842e38178de42a4912af3d6a930a04764f4377b0894ad32cc64668": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name: Cost 4",
+        "a1d988df38c83e915394ff0eea0bf93b2678df09dca790141f7f993153761a69": "[Special Digivolution Condition] [Digivolve] Lv.5 w/Garurumon] in name: Cost 4",
+        "b1c7cde0d4bbb4929e140ddb956b6d3b5ac7ee328371f436f751e4310b6ec84e": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name: Cost 4",
+        "ba4ac1991e4af513509493da6087615dbc2ccf397485b80fd85e3dc375d330dd": "[Special Digivolution Condition] [Digivolve] Lv.5 w/Garurumon] in name: Cost 4"
+      },
+      "card_id": "BT15-101",
+      "field_path": "xros_req",
+      "reason": "Image requires Lv5 with Garurumon in name, cost4. Select complete bracketed observation; malformed missing opening bracket values are preserved as rejected evidence. The Gabumon alternate evolution permission in main text remains outside this field. Review proposal condition-source-choice-batch14-independent-review-20261012.json SHA256 32f5d26339048ab0fd386c76058d8171e505e966c748aeedc8d7a79821da4542; independent review condition-source-choice-batch14-second-independent-review-20261012.json SHA256 34e6c60573ebb5f7a7b7fad4f812d5784693109ce2553dff904c03c4561456f8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "2edd1a3366cb589369054a035d2c742c303b0394474691f95ed54c065c3c3b31",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name: Cost 4",
+      "selected_value_digest": "48fff81cce928a9b0511a6a04cbbe5664e6f1c9c7f670785ccc46443eafcabb6",
+      "selection_id": "condition-bt15-101-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "1610de9c66e3e6fb3cb5c9697b340bdea028286faf8d96376052b0dbd2ca591f",
+      "candidate_values": {
+        "771f4f35c08ea10812a9312fc8babecff5bfdf22ee62428efb2d5341b9ee5fa7": "[Special Digivolution Condition] [DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "bb6f103d1ccf8923bf7df0b0854ff6b1e0a615953aa64408284fde203ac481bb": "[Special Digivolution Condition] [DNA Digivolve] Blue Lv.4 + green Lv.4: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+        "c257fc2a7aaba3582a82323355cf690d046a542aaa20b5258c15a3b96a93a495": "[Special Digivolution Condition] [DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "c3753d9110d79dc8c1fb3844e90ff51e46e4db335d3df6f21113a0503f2efcdf": "[Special Digivolution Condition] [DNA Digivolve] Blue Lv.4 + green Lv.4: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended."
+      },
+      "card_id": "BT16-025",
+      "field_path": "xros_req",
+      "reason": "Image DNA route requires blueLv4 plus greenLv4 cost0 and unsuspended stacked-result reminder. Select entire original observed value including reminder. No Partition/main/inherited approval. Review proposal condition-source-choice-batch14-independent-review-20261012.json SHA256 32f5d26339048ab0fd386c76058d8171e505e966c748aeedc8d7a79821da4542; independent review condition-source-choice-batch14-second-independent-review-20261012.json SHA256 34e6c60573ebb5f7a7b7fad4f812d5784693109ce2553dff904c03c4561456f8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "771f4f35c08ea10812a9312fc8babecff5bfdf22ee62428efb2d5341b9ee5fa7",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolution] Blue Lv.4 + green Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+      "selected_value_digest": "576803dcdd251d1d76eb997de4cdb42468989ab727e58e6dc7ed5bca1228de41",
+      "selection_id": "condition-bt16-025-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "08a83ea7d2864f1926bd97c15f6b41f22e44dd5122a15833d9549e49b9f3945c",
+      "candidate_values": {
+        "01d39d5088c69049aaaebfe418fcd897478d4adcc8afb865f34be080b38639a0": "[Special Digivolution Condition] [DNA Digivolution] Purple Lv.4 + red Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "b3d21515aabfbf624d53ce9473a4688ab387b7b26f59cbeadb15345a792c933f": "[Special Digivolution Condition] [DNA Digivolve] Purple Lv.4 + red Lv.4: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended.",
+        "fb657fc0aa0b32975e5715648427aa546bdcda5269f1f80e66aa07763c6f0bd9": "[Special Digivolution Condition] [DNA Digivolution] Purple Lv.4 + red Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      },
+      "card_id": "BT16-077",
+      "field_path": "xros_req",
+      "reason": "Viewed Errata image DNA route purpleLv4 plus redLv4 cost0 with unsuspended stacking reminder. Select corresponding complete observation; main errata text and Raid/Partition remain outside this choice. Review proposal condition-source-choice-batch14-independent-review-20261012.json SHA256 32f5d26339048ab0fd386c76058d8171e505e966c748aeedc8d7a79821da4542; independent review condition-source-choice-batch14-second-independent-review-20261012.json SHA256 34e6c60573ebb5f7a7b7fad4f812d5784693109ce2553dff904c03c4561456f8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "01d39d5088c69049aaaebfe418fcd897478d4adcc8afb865f34be080b38639a0",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolution] Purple Lv.4 + red Lv.4: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+      "selected_value_digest": "6cdb307c5a47b77671d9898e047820eb3362c27244b269f334d4120d6abe57f9",
+      "selection_id": "condition-bt16-077-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "ed917bf49fbfd5cbc58cf96131062ccf80fc0b08e549a4d22e9cff3ab72f8837",
+      "candidate_values": {
+        "2a9074706430b7297e69cd82b33f74057810e169d3c821b12e4ba2bfe376284d": "[Special Digivolution Condition] [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+        "36ea2ed16d97c0e66b106ed3aa54e293b0634883c1837b45d549040a17af7665": "[Special Digivolution Condition] [DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+        "67321a4c8da7d5efb9511243d8f6ee37df8fa06c23828cde57164669b23c218c": "[Special Digivolution Condition] [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+        "7a0afeb3ce60f5e5a02742871e008ec9b0ea411d3fe6c0393d229ae79e4771fe": "[Special Digivolution Condition] [DNA Digivolve] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+        "b7dbc3baa64de55755b0af2bab5168a7b1bc7fd3d72319b8488dc799e393e435": "[Special Digivolution Condition] [DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+        "e853f409934589d84700160099a1da636843b77418bb42617679005a2a2af6a5": "[Special Digivolution Condition] [DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0"
+      },
+      "card_id": "BT17-078",
+      "field_path": "xros_req",
+      "reason": "Image DNA Digivolution requires Lv6 Greymon in name PLUS Lv6 Garurumon in name, cost0. Select full observed original label/value. Blast DNA using WarGreymon+MetalGarurumon in main is separate and not substituted. Review proposal condition-source-choice-batch15-independent-review-20261012.json SHA256 a318a4b8886cc83a62532b868a9f6fea40a02373d97af93784aa606fe043f05a; independent review condition-source-choice-batch15-second-independent-review-20261012.json SHA256 d7622fe25b99efb05229a22f787e8997ffae9eee07cf1b1e8c77153b4e8ec145. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "36ea2ed16d97c0e66b106ed3aa54e293b0634883c1837b45d549040a17af7665",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolution] Lv.6 w/[Greymon] in name+Lv.6 w/[Garurumon] in name: Cost 0",
+      "selected_value_digest": "047a0195a32e1ed960fcf002139861bb2deeb67b130d32ebc4400d09235a469f",
+      "selection_id": "condition-bt17-078-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "f0e411365922ecc8b3905bc6f565156ece758037b0c1e9c23daef24ed7e47dc5",
+      "candidate_values": {
+        "15fc8c5607823f31c041961c1f7eca9eac91dc22b0d02b45f42f9cf100cac0c0": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 or more [Hybrid] trait cards under: Cost 6",
+        "28be96ae656d9a43ff14869ed4669b2487f6d79bd048e63eeebb72655b1b2e3a": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 [Hybrid] trait cards under: Cost 6",
+        "5daacd8d954acdf84b85c282df186efb4feab1bf655caed44bd80442046a7a66": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 or more [Hybrid] trait cards under: Cost 6",
+        "bdd3384c70a2a6afa5adc69fe33cf24777ba4a5c55c9b73c0423da9ee4710d60": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 [Hybrid] trait cards under: Cost 6",
+        "dec4486251bf2c7c36692feab5b6596ebd6ba56bd435d84f26f32ac47642f951": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 [Hybrid] trait cards under: Cost 6"
+      },
+      "card_id": "BT18-102",
+      "field_path": "xros_req",
+      "reason": "Viewed original image prints Takuya/Koji with10Hybrid underneath cost6. All five official observations contain Q3055 explicitly permitting more than10. P3/P4 condition wording with10or more expresses that authoritative clarification. Select this observed value; preserve original wording and other incomplete Q3056 QA text as historical evidence. No adjacent Rule/Hybrid runtime approval. Review proposal condition-source-choice-batch2-root-review-20261012.json SHA256 da6a747ee38f6d6931468282b95bd6b10a231bbb1532f266a9b78efb5d230c2b; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "15fc8c5607823f31c041961c1f7eca9eac91dc22b0d02b45f42f9cf100cac0c0",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] [Takuya Kanbara]/[Koji Minamoto] w/10 or more [Hybrid] trait cards under: Cost 6",
+      "selected_value_digest": "6fed7f9970d6e3308febf8d09cf1b612dff9baee69b095aceaf5179c52ddb6d5",
+      "selection_id": "condition-bt18-102-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "9c0095d936c63d2aedc42e43834d551584b5bc05063f74a9d45568e68a976d06",
+      "candidate_values": {
+        "944e737bfd042ac15364a717c160c49c77f5d1061af94a563d892f33d24d6de1": "[Special Play Condition] DigiXros -2: [Shoutmon]×[Ballistamon]×[Dorulumon]×[Starmons] When this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+        "ce659fdb3c20347341a0c9f08d50850c20e7bb08c346ad851c07b8afe07886a7": "[Special Play Condition] DigiXros -2: [Shoutmon]×[Ballistamon]×[Dorulumon]×\n[Starmons] When this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost."
+      },
+      "card_id": "BT19-010",
+      "field_path": "xros_req",
+      "reason": "Image DigiXros-2 requires Shoutmon,Ballistamon,Dorulumon,Starmons and hand/battle reminder. Select observed value with four names contiguous, matching image. Alternate line break remains raw evidence; no automatic whitespace family approval. Review proposal condition-source-choice-batch15-independent-review-20261012.json SHA256 a318a4b8886cc83a62532b868a9f6fea40a02373d97af93784aa606fe043f05a; independent review condition-source-choice-batch15-second-independent-review-20261012.json SHA256 d7622fe25b99efb05229a22f787e8997ffae9eee07cf1b1e8c77153b4e8ec145. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "944e737bfd042ac15364a717c160c49c77f5d1061af94a563d892f33d24d6de1",
+      "selected_value": "[Special Play Condition] DigiXros -2: [Shoutmon]×[Ballistamon]×[Dorulumon]×[Starmons] When this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+      "selected_value_digest": "99c4eb1c580fd400473b02ea449a645279b5cdfb9892b95c57095d740a23cba0",
+      "selection_id": "condition-bt19-010-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "0a54c7ebd32c20f9ff9bfe9c02b45e2c32fdb3bf5cb982ad7990aa65be5085c6",
+      "candidate_values": {
+        "e19301ec373c45b15c9d2668ee331057db9f32a06c509f04f88bc4d859e8291a": "[Special Digivolution Condition] [App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+        "fc4448dd38c218097c6f24d2c02e384b4326ffbc464e27b437ecb66fc8face09": "[Special Digivolution Condition] [App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+      },
+      "card_id": "BT21-018",
+      "field_path": "xros_req",
+      "reason": "Image AppFusion lists Gatchmon & Navimon & Tweetmon cost0 with reminder if2suchcards linked, stack linkcard on top and evolve. Select complete unparenthesized observed wording matching image. No reinterpretation of three-name/two-card rule or adjacent Link cost2/DP3000. Review proposal condition-source-choice-batch15-independent-review-20261012.json SHA256 a318a4b8886cc83a62532b868a9f6fea40a02373d97af93784aa606fe043f05a; independent review condition-source-choice-batch15-second-independent-review-20261012.json SHA256 d7622fe25b99efb05229a22f787e8997ffae9eee07cf1b1e8c77153b4e8ec145. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "e19301ec373c45b15c9d2668ee331057db9f32a06c509f04f88bc4d859e8291a",
+      "selected_value": "[Special Digivolution Condition] [App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+      "selected_value_digest": "19bee08fc94e3560d237079cdb89542158702ca983980c6ae8c6efbe266c7738",
+      "selection_id": "condition-bt21-018-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "bf4e5e10549ced6623ada3afe857899a07948040fe30f14738a39858aad00d79",
+      "candidate_values": {
+        "4232017bc59be0a596f5447692b4cd7db6137caa9beb8933fb764194e058abd6": "[Special Digivolution Condition] [App Fusion] [DoGatchmon] & [Timemon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)",
+        "705df1f2345df04a0024ce714e4b8361248207990cb61465a6e577dedddb3c61": "[Special Digivolution Condition] [App Fusion] [DoGatchmon] & [Timemon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)",
+        "9495166a578ff994f2d1d402e0f0220631e3cdc7bbba926e70fe7f14c8f932bc": "[Special Digivolution Condition] [App Fusion] [DoGatchmon] & [Timemon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+      },
+      "card_id": "BT21-023",
+      "field_path": "xros_req",
+      "reason": "Image AppFusion DoGatchmon & Timemon cost0, with2linked-card stacking reminder. Select complete unparenthesized observed wording matching image; Linkcost3/+4000/main/link effects outside selection. Review proposal condition-source-choice-batch15-independent-review-20261012.json SHA256 a318a4b8886cc83a62532b868a9f6fea40a02373d97af93784aa606fe043f05a; independent review condition-source-choice-batch15-second-independent-review-20261012.json SHA256 d7622fe25b99efb05229a22f787e8997ffae9eee07cf1b1e8c77153b4e8ec145. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "9495166a578ff994f2d1d402e0f0220631e3cdc7bbba926e70fe7f14c8f932bc",
+      "selected_value": "[Special Digivolution Condition] [App Fusion] [DoGatchmon] & [Timemon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve.",
+      "selected_value_digest": "f0a8a0dec02781e6aac5db302cee6997237373d15a524b497dcf45d057904731",
+      "selection_id": "condition-bt21-023-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "83f9d7933a99d00783e82511093faba69516ac9e7b2deb5a82059ad6fe1997f2",
+      "candidate_values": {
+        "7074689c06d5336ce1e2a3a2ccbbc774ef511b2404dd97b2a595bc63d65ed869": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Greymon] in name or w/[CS] trait: Cost 3",
+        "883a41100ea446e906d6145b40bffb3dba2350e338087551496ee3e4dc25c330": "[Special Digivolution Condition] 12000\n[Special Play Condition] {Hand} [Main] If you have [Nokia Shiramine], 1 of your [Agumon] digivolves into this card for a digivolution cost of 6, ignoring digivolution requirements.\n[When Digivolving] Activate 1 of the effects below:\n・1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring digivolution requirements and without paying the cost.\n・Delete 1 of your opponent's Digimon with the lowest DP."
+      },
+      "card_id": "BT22-013",
+      "field_path": "xros_req",
+      "reason": "Viewed BT22-013 image prints digivolve Lv5 Greymon in name or CS trait, cost3. Original-print official condition matches; P1 raw HTML labels 12000 DP as special digivolution and puts Hand/Main effect under special play. Do not promote these misplaced sections or correct other fields with this selection. Review proposal condition-source-choice-batch1-root-review-20261012.json SHA256 fc099bb01a6b1dbf2b1face7a63db7726537bc48dbd10333c5a69e95f6944474; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "7074689c06d5336ce1e2a3a2ccbbc774ef511b2404dd97b2a595bc63d65ed869",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Greymon] in name or w/[CS] trait: Cost 3",
+      "selected_value_digest": "2142f4928ae4660b53bbeefd0a1318326084d4fb786f19ced268a8cfbaf627b0",
+      "selection_id": "condition-bt22-013-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "f3247e0d68ffcf67fd9160e509ef82055a2bbbf6ffb9bde0636d2855761e03f9",
+      "candidate_values": {
+        "52a02fef506f81d120634c6ae4438867c2a8c5fcf8c5e6925248da052f383554": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name or w/[CS] trait: Cost 3",
+        "84c7a2556b536dbe4f8826e30fc7975b7661ccda6e63f8fac66e8ab063323b77": "[Special Digivolution Condition] 12000\n[Special Play Condition] {Hand} [Main] If you have [Nokia Shiramine], 1 of your [Gabumon] digivolves into this card for a digivolution cost of 6, ignoring digivolution requirements.\n[When Digivolving] Activate 1 of the effects below:\n・1 of your [Agumon] may digivolve into [WarGreymon] in the hand, ignoring digivolution requirements and without paying the cost.\n・Return 1 of your opponent's Digimon with the lowest level to the hand."
+      },
+      "card_id": "BT22-026",
+      "field_path": "xros_req",
+      "reason": "Viewed image prints digivolve Lv5 Garurumon inname orCS trait cost3. Primary official record matches; P1 rawHTML mislabels12000DP ascondition and Hand/Main effects asspecialplay. Select primary condition only; adjacent effect conflicts retained. Review proposal condition-source-choice-batch2-root-review-20261012.json SHA256 da6a747ee38f6d6931468282b95bd6b10a231bbb1532f266a9b78efb5d230c2b; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "52a02fef506f81d120634c6ae4438867c2a8c5fcf8c5e6925248da052f383554",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Garurumon] in name or w/[CS] trait: Cost 3",
+      "selected_value_digest": "2edb5a24a21045aa5c512278f707bd532f865901b74d137dda6623e825f91d34",
+      "selection_id": "condition-bt22-026-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "8a35ed7d7012dd95d7067e5af3efaf5059b232a6b98474d50e131a8babd63099",
+      "candidate_values": {
+        "0a265370ac470a7f35f3d62af91c8dc8c8654a2a539ed168d4389d441855ef0c": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+        "42c353faefb46d734c6c3b11dfc5890380923f6da7a9b92ee19b664eda904717": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+        "b06eadfca88e5804d79fe455f79632b051a8bc4ee2881b1dcd9cfaf762bcfeee": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 2",
+        "bafd27abeb13213a74f1b9716130825591399c8f460bdbc7b0d6aa4af401043c": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 2"
+      },
+      "card_id": "BT8-012",
+      "field_path": "xros_req",
+      "reason": "Independently viewed printed special route: digivolve 2 from [Veemon]. Select that exact observed wording matching the image, keeping ordinary colored level routes separate. Other Cost-format wording denotes the same named-card route but is not automatically selected or approved. Review proposal condition-source-choice-batch4-independent-review-20261012.json SHA256 ba2012845f7f849dc9a3c8ac05a234aac71f1988c47ddfcbae9dae0c273129b2; independent review condition-source-batch4-root-independent-review-20261012.json SHA256 3b181d8779fc931042eb432e8269935a5e34b85699e0687b9d21acdb45d17397. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "0a265370ac470a7f35f3d62af91c8dc8c8654a2a539ed168d4389d441855ef0c",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+      "selected_value_digest": "022f545acd2102a1116bca8574bd1dc7354bd5129e506233dbd2ca183189aff2",
+      "selection_id": "condition-bt8-012-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "44f297d2b43020b61fe5316a44c2cf1d63dc642396441b58a710ea40ca1f4032",
+      "candidate_values": {
+        "4fb08f5b839eac97928907e408bbdca36ed399022231f5b45015434a8dd82203": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+        "8d9161eacf1c6d8998c17ef2ba4130531782f0450237dbe161bcd01c988aae7d": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3",
+        "94331eea8cf259a5342002976e18b5474c307a24f4e3cf4c113cc56c71792fee": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 3",
+        "bf133f5e8dba47ce80a6a79768e6566b2ed999078b2c5e48414f9e84f1dfb096": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+        "daf0854e7da8936e906881d728f1b024c4719db4e4dbe66b4b14879d5b0e2b34": ""
+      },
+      "card_id": "BT8-038",
+      "field_path": "xros_req",
+      "reason": "Independently viewed printed special route: digivolve 3 from [Veemon]. Select that exact observed wording matching the image, keeping ordinary colored level routes separate. Other Cost-format wording denotes the same named-card route but is not automatically selected or approved. The empty alternative omits the printed special route and is rejected, not treated as equivalent. Review proposal condition-source-choice-batch4-independent-review-20261012.json SHA256 ba2012845f7f849dc9a3c8ac05a234aac71f1988c47ddfcbae9dae0c273129b2; independent review condition-source-batch4-root-independent-review-20261012.json SHA256 3b181d8779fc931042eb432e8269935a5e34b85699e0687b9d21acdb45d17397. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "4fb08f5b839eac97928907e408bbdca36ed399022231f5b45015434a8dd82203",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from [Veemon]",
+      "selected_value_digest": "c03a3869d98066949702f233e62ba7db9f427866c9843dbe991e30dc71102446",
+      "selection_id": "condition-bt8-038-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "a319fbf1df40db025cf2d1472c24a2d0be92fca5509d94b0ea37361194fccb9d",
+      "candidate_values": {
+        "169c5b8b18bf61879ad316ba50c07637851af83bed2a8545e9a80d177b6c3f93": "[Special Digivolution Condition] [Digivolve] 3 from [Terriermon]",
+        "4956feac629823ea8e91076e3f21a575a82ce2a286cafd0344c66f1ff90b0b2a": "[Special Digivolution Condition] [Digivolve] 3 from [Terriermon]",
+        "74e053f3d9d434029324e1cda57dfd021e32ad1367292a4336dfe06f6a10b52e": "[Special Digivolution Condition] [Digivolve] [Terriermon]: Cost 3"
+      },
+      "card_id": "BT8-039",
+      "field_path": "xros_req",
+      "reason": "Independently viewed printed special route: digivolve 3 from [Terriermon]. Select that exact observed wording matching the image, keeping ordinary colored level routes separate. Other Cost-format wording denotes the same named-card route but is not automatically selected or approved. Review proposal condition-source-choice-batch4-independent-review-20261012.json SHA256 ba2012845f7f849dc9a3c8ac05a234aac71f1988c47ddfcbae9dae0c273129b2; independent review condition-source-batch4-root-independent-review-20261012.json SHA256 3b181d8779fc931042eb432e8269935a5e34b85699e0687b9d21acdb45d17397. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "169c5b8b18bf61879ad316ba50c07637851af83bed2a8545e9a80d177b6c3f93",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from [Terriermon]",
+      "selected_value_digest": "485ace888e20d2f542baadb72dca67b1fb226b547f3b2d684a0f20c3a2145e42",
+      "selection_id": "condition-bt8-039-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "a4e5e6738f9c49484bdd99b0f82d5e3c6c2974d99cd0902bfd03994ffcdb0ce3",
+      "candidate_values": {
+        "01ac4a40be6fed5f248f1a4243ae5249e167ce7f55b517ddec705b151026d6c7": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 2",
+        "3d1559ab7189385a51832a83a51c6659739477df4ba344e55d336c4e012df617": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+        "6a046ec5ebd410b9f1b7350fa3980cec8eb0ef0c43e73aa4956002af536c2607": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+        "7b2b97ee3a449c180833430f17372680f9fdb9508d420c5b986de998a5fdd4ef": "[Special Digivolution Condition] [Digivolve] [Veemon]: Cost 2",
+        "f6f2a23510d4d0eaaa31500e9fb54666f370a394b30d6fda81b9db7e76db76a8": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+        "f891b33adee2da13f280ee142fd3ca5bc85db7ebae423fcda7c2fbf46747366f": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]"
+      },
+      "card_id": "BT8-053",
+      "field_path": "xros_req",
+      "reason": "Independently viewed printed special route: digivolve 2 from [Veemon]. Select that exact observed wording matching the image, keeping ordinary colored level routes separate. Other Cost-format wording denotes the same named-card route but is not automatically selected or approved. Review proposal condition-source-choice-batch4-independent-review-20261012.json SHA256 ba2012845f7f849dc9a3c8ac05a234aac71f1988c47ddfcbae9dae0c273129b2; independent review condition-source-batch4-root-independent-review-20261012.json SHA256 3b181d8779fc931042eb432e8269935a5e34b85699e0687b9d21acdb45d17397. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "3d1559ab7189385a51832a83a51c6659739477df4ba344e55d336c4e012df617",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [Veemon]",
+      "selected_value_digest": "022f545acd2102a1116bca8574bd1dc7354bd5129e506233dbd2ca183189aff2",
+      "selection_id": "condition-bt8-053-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "c39fd7577bd048324d4b55cf788a7738c31190a2aec71168ae335c88c1e85901",
+      "candidate_values": {
+        "023039bc9c3f62ec323e4b277fd84f4d2007923d151a422b45339d7c6255e6c6": "[Special Digivolution Condition] [Digivolve] 2 from [Ophanimon]",
+        "5cb8b8c51f41d7419bfa4197b0fbeb20f398fee35090d81b85f8d552b31a8afb": "[Special Digivolution Condition] [Digivolve] 2 from [Ophanimon]",
+        "8bc6dbe1b9b870115ef3ec1854a74c47e2db013eca7c67b52b7c4c175addc7dd": "[Special Digivolution Condition] [Digivolve] [Ophanimon]: Cost 2"
+      },
+      "card_id": "BT8-082",
+      "field_path": "xros_req",
+      "reason": "Independently viewed printed special route: digivolve 2 from [Ophanimon]. Select this explicit official observation matching the image. The separate ordinary colored level route and main/inherited text are outside this choice. Alternate Cost-format wording retains this named target and cost, but no broad formatting approval is made. Review proposal condition-source-choice-batch5-independent-review-20261012.json SHA256 c687adaa64452ede8ce500536cdc0ad805a554e6211a2550d9d697645e3b37a2; independent review condition-source-batch5-root-independent-review-20261012.json SHA256 7d494813e85187e0ff464af1fb265666a8d592a1b3144b92d411a92c3bf83604. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "023039bc9c3f62ec323e4b277fd84f4d2007923d151a422b45339d7c6255e6c6",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [Ophanimon]",
+      "selected_value_digest": "ea516feb9e318e429948c6ca1c03921427d3506b4ed1a00ecdc4b0972adeac56",
+      "selection_id": "condition-bt8-082-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "f9a5a7bcd729f0533edfe8f93060fd4a847380a08a6a5edda0926dc7a96a2f6b",
+      "candidate_values": {
+        "20ce39c9cb4eb13ea6c79e83a02a2fe287f909978e5ae27824737c511dde3c3b": "[Special Digivolution Condition] [Digivolve] [WarGreymon]: Cost 1",
+        "531d04996cdfbd94c33252a04f549b4bd61cca4580d4e6aaaee5240f13206ebe": "[Special Digivolution Condition] [Digivolve] 1 from [WarGreymon]",
+        "9bfd1bfcbed48cb27dce3493060400673c22cb0d88528e1e276417e1922dc333": "[Special Digivolution Condition] [Digivolve] 1 from [WarGreymon]"
+      },
+      "card_id": "BT9-016",
+      "field_path": "xros_req",
+      "reason": "Independently viewed printed special route: digivolve 1 from [WarGreymon]. Select this explicit official observation matching the image. The separate ordinary colored level route and main/inherited text are outside this choice. Alternate Cost-format wording retains this named target and cost, but no broad formatting approval is made. Review proposal condition-source-choice-batch5-independent-review-20261012.json SHA256 c687adaa64452ede8ce500536cdc0ad805a554e6211a2550d9d697645e3b37a2; independent review condition-source-batch5-root-independent-review-20261012.json SHA256 7d494813e85187e0ff464af1fb265666a8d592a1b3144b92d411a92c3bf83604. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "531d04996cdfbd94c33252a04f549b4bd61cca4580d4e6aaaee5240f13206ebe",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 1 from [WarGreymon]",
+      "selected_value_digest": "5c0c73d9f6fa03f6196d2736f828cbf55c706577dc64aee31540b5ca5d87fcf3",
+      "selection_id": "condition-bt9-016-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "fe2050a9ea8b8d67bb6a5c60ee4207277df086444c06da615a8da11f91f645d4",
+      "candidate_values": {
+        "1609ccc3a4aba371b0ad8657b30dee37e8a1d28d90d0f60a306eab3826d3d763": "[Special Digivolution Condition] [Digivolve] 0 from [Gabumon]",
+        "6a0fb96548b40f159e8ef44464b0777f0ec2aa996057e6e6b15f57a218fd92c4": "[Special Digivolution Condition] Digivolve: 0 from [Gabumon]",
+        "e2c18d886a7d29c69c681f8cafbfdcda5010b230d2dbeb2411471d5af0639c4b": "[Special Digivolution Condition] [Digivolve] 0 from [Gabumon]"
+      },
+      "card_id": "BT9-020",
+      "field_path": "xros_req",
+      "reason": "Independently viewed printed special route: digivolve 0 from [Gabumon]. Select this explicit official observation matching the image. The separate ordinary colored level route and main/inherited text are outside this choice. Raw alternate uses Digivolve: instead of the bracketed label; both retain Gabumon and zero cost. Select the original observed bracketed form, not a blanket punctuation equivalence rule. Review proposal condition-source-choice-batch5-independent-review-20261012.json SHA256 c687adaa64452ede8ce500536cdc0ad805a554e6211a2550d9d697645e3b37a2; independent review condition-source-batch5-root-independent-review-20261012.json SHA256 7d494813e85187e0ff464af1fb265666a8d592a1b3144b92d411a92c3bf83604. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "1609ccc3a4aba371b0ad8657b30dee37e8a1d28d90d0f60a306eab3826d3d763",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [Gabumon]",
+      "selected_value_digest": "93fa23f9d48853eedd4259d1b91bbf403d56b5bbb94987438843791ccbcfb10f",
+      "selection_id": "condition-bt9-020-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "94d06683eb57b9a821f88f57bc9e9b1757ae9e7c7353dd1fdb5bbdc0f650c3d6",
+      "candidate_values": {
+        "3d230e581bc2206c1d6c432b9a869a8787fd92569ae7050706e05b2d892cab68": "[Special Digivolution Condition] [Digivolve] [Gammamon]: Cost 2",
+        "fce18b618c29c315ddefd9570501da11e3b718d8841e0183dd3f40e783c7b69c": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]"
+      },
+      "card_id": "BT9-023",
+      "field_path": "xros_req",
+      "reason": "Independently viewed printed special route: digivolve 2 from [Gammamon]. Select this explicit official observation matching the image. The separate ordinary colored level route and main/inherited text are outside this choice. Alternate Cost-format wording retains this named target and cost, but no broad formatting approval is made. Review proposal condition-source-choice-batch5-independent-review-20261012.json SHA256 c687adaa64452ede8ce500536cdc0ad805a554e6211a2550d9d697645e3b37a2; independent review condition-source-batch5-root-independent-review-20261012.json SHA256 7d494813e85187e0ff464af1fb265666a8d592a1b3144b92d411a92c3bf83604. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "fce18b618c29c315ddefd9570501da11e3b718d8841e0183dd3f40e783c7b69c",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]",
+      "selected_value_digest": "8518f910c0eddcfdda2d746a4fc76a25e2850ad57eb70885ad51af93d31059d5",
+      "selection_id": "condition-bt9-023-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "275c69226d9d81ebc3fe61faf46085a77f074768cf73ec8290146f34b8916f8f",
+      "candidate_values": {
+        "0e0cca22c4dadf2ab91caa718516f59e6fa3bb8973e30e4a6427ec7239fe89e5": "[Special Digivolution Condition] [Digivolve] [WereGarurumon]: Cost 0",
+        "910669ca5113f7cae92dc048bac13fb713bc49a5340db12c3c5dbe37043c3eed": "[Special Digivolution Condition] [Digivolve] 0 from [WereGarurumon]",
+        "cf0a574ba4b25d32dd94f813b56e2c55f220c5f3732f6d6937e65c20b36f5a3f": "[Special Digivolution Condition] [Digivolve] [WereGarurumon]: Cost 0"
+      },
+      "card_id": "BT9-028",
+      "field_path": "xros_req",
+      "reason": "Viewed image prints digivolve 0 from WereGarurumon. Select exact original official named-card route; alternate Cost-format wording retained as evidence. No approval of the When Digivolving effect or other fields. Review proposal condition-source-choice-batch6-root-review-20261012.json SHA256 4e8614423115b63325f864c9f7e3ed819b1f2c60d6886c98b2c004c6adee30f3; independent review condition-source-root-batch6-independent-evidence-20261012.json SHA256 2ddd8ad002bf6f893d5d6894ccb67280333524d0f47b6905e06d7ca63818ded5. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "910669ca5113f7cae92dc048bac13fb713bc49a5340db12c3c5dbe37043c3eed",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [WereGarurumon]",
+      "selected_value_digest": "ac09dd00ba634978ff992a68e013e2148c67f2dd6e6c9c35c8c541e134eada31",
+      "selection_id": "condition-bt9-028-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "d3d10d77c1b4f1dcc989f973c5a293fb091677ceb3aa6af436b1fa8ab5c684ae",
+      "candidate_values": {
+        "46fab5b67192c81364028c8cee95816f6955271b1dc03e0062ebf02aee62d7ea": "[Special Digivolution Condition] [Digivolve] 1 from [RizeGreymon]",
+        "5b8be9bf81f24ac6d10b2f880dc57f20218cc8c951dc93c620854625d649f973": "[Special Digivolution Condition] [Digivolve] [RizeGreymon]: Cost 1",
+        "89c93dd16f74a3aa7d6878f6bedf9f39c9ec5232340b05bcddc186a1c532c7b2": "[Special Digivolution Condition] [Digivolve] 1 from [RizeGreymon]",
+        "ebfef3f3f0f61c7a737280760f1de687b57017d09334834988c58c576c38ecda": "[Special Digivolution Condition] [Digivolve] [RizeGreymon]: Cost 1"
+      },
+      "card_id": "BT9-041",
+      "field_path": "xros_req",
+      "reason": "Viewed image prints digivolve 1 from RizeGreymon. Original/P1 official condition matches image; select that exact observed route. Alternate Cost-format text preserved, no adjacent field approval. Review proposal condition-source-choice-batch6-root-review-20261012.json SHA256 4e8614423115b63325f864c9f7e3ed819b1f2c60d6886c98b2c004c6adee30f3; independent review condition-source-root-batch6-independent-evidence-20261012.json SHA256 2ddd8ad002bf6f893d5d6894ccb67280333524d0f47b6905e06d7ca63818ded5. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "46fab5b67192c81364028c8cee95816f6955271b1dc03e0062ebf02aee62d7ea",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 1 from [RizeGreymon]",
+      "selected_value_digest": "3303976fb9fcba020d018f0505c7cf13fb14a796eb84737e418795cc1a41afb0",
+      "selection_id": "condition-bt9-041-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "2dc8100cef2f01c5aff5c5ee510471e91dca181e39ef80e8e80d9a5cea32332c",
+      "candidate_values": {
+        "237a64723df900ffb0d753ad1166a2c4b6e9419303cb8d1274e1b4d39fc85cbc": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 if name contains [Growlmon]",
+        "6d3eb83872ed0b94fd89fa5f94abd81e2b814bc502f79895515dd889e4c0e914": "[Special Digivolution Condition] [Digivolve]3 from Lv.4 if name contains [Growlmon]",
+        "9f1f5554b7623aeee0b60637a2462da6ce464b64080f4c80efb50e94b411f4f9": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 if name contains [Growlmon]",
+        "ce226a6b9382ca5438fa26dff0085329ff8fcda8b74e1a80e865e4a074e8090c": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 if name contains [Growlmon]"
+      },
+      "card_id": "EX3-062",
+      "field_path": "xros_req",
+      "reason": "Image prints cost3 from Lv4 if name contains Growlmon. Select complete observed spaced wording matching all predicates; alternate missing space after label kept as evidence, not broad equivalence. Review proposal condition-source-choice-batch16-independent-review-20261012.json SHA256 aa91e3e0003fb03b97bf2b45ef6340b6f9b53ad531a691154292e23f728b9976; independent review condition-source-choice-batch16-second-independent-review-20261012.json SHA256 df33076c6770566dbc16e0c7620bf54af5fdbf547426ade4b9237e48464e6e3a. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "237a64723df900ffb0d753ad1166a2c4b6e9419303cb8d1274e1b4d39fc85cbc",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 if name contains [Growlmon]",
+      "selected_value_digest": "a3cc6d85c119267c27c669ef5e82ca2ce1822191eafc7a1e34e2eef004698f53",
+      "selection_id": "condition-ex3-062-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "6a8d17ad18cb24d93281f81f9f3b9b7b1b7d1b56add7b657f1cb3dcea36a71dd",
+      "candidate_values": {
+        "54fce020b84c20f72f1eca32cfaf30ddcd903f0044eb3121a173a6c78ce720d6": "[Special Digivolution Condition] [DNA Digivolve]0 from green Lv.6 + blue Lv.6",
+        "6f9d8225776c731cdd774e814eb6085353edef32cb649b3ad4f6569cc87e3c44": "[Special Digivolution Condition] [DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+        "7b1f72848aa9ed7c6227449810d42fadf1e34d1aa7f53d448a8263fd7314d020": "[Special Digivolution Condition] [DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+        "b73407f0e136eb0a4ea25b18e7eed45a8a68e5c829bcd9393050f6ab5c70bb57": "[Special Digivolution Condition] [DNA Digivolve]0 from green Lv.6 + blue Lv.6"
+      },
+      "card_id": "EX3-074",
+      "field_path": "xros_req",
+      "reason": "Image prints DNA greenLv6+blueLv6 cost0 and unsuspended stacking reminder. Select observed complete alternate value preserving both route and reminder. Reject shorter original condition lacking printed reminder. Review proposal condition-source-choice-batch16-independent-review-20261012.json SHA256 aa91e3e0003fb03b97bf2b45ef6340b6f9b53ad531a691154292e23f728b9976; independent review condition-source-choice-batch16-second-independent-review-20261012.json SHA256 df33076c6770566dbc16e0c7620bf54af5fdbf547426ade4b9237e48464e6e3a. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "6f9d8225776c731cdd774e814eb6085353edef32cb649b3ad4f6569cc87e3c44",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolve] Green Lv.6 + blue Lv.6: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+      "selected_value_digest": "15bff1fbbc2ec9f2271f25f58d5dbea3f1beb33f56a20eba0b575b2bac483f01",
+      "selection_id": "condition-ex3-074-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "da4c8dddf5b55ee315684ad51958a0ba7b572c0cae1448548922649044ab1914",
+      "candidate_values": {
+        "13953861de2151cff730a2bd670da410444cd465a97614ed07485b5fc3290239": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0",
+        "54d44a5e4c0a69ea4281554b75d5e862d4f094a621b79c8db1fc75014d01ee99": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+        "654b85d81720c98eb9359878ec24bd865c18dd687c6768ef9a0686f69714e736": "[Special Digivolution Condition] [Digivolve] [Koromon]: Cost 0"
+      },
+      "card_id": "EX4-005",
+      "field_path": "xros_req",
+      "reason": "Image prints cost0 from Koromon. Select original observed route; ordinary red/yellow Lv2cost1 and main effect remain separate. Review proposal condition-source-choice-batch16-independent-review-20261012.json SHA256 aa91e3e0003fb03b97bf2b45ef6340b6f9b53ad531a691154292e23f728b9976; independent review condition-source-choice-batch16-second-independent-review-20261012.json SHA256 df33076c6770566dbc16e0c7620bf54af5fdbf547426ade4b9237e48464e6e3a. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "54d44a5e4c0a69ea4281554b75d5e862d4f094a621b79c8db1fc75014d01ee99",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [Koromon]",
+      "selected_value_digest": "c4ea19ed1fb78e16c896b2fc688978ba848f71c1e91f59e35bd27b2070013d2f",
+      "selection_id": "condition-ex4-005-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "883c31e3aae754de1657b48b528ae07039b4e1dc8d7b368dcd9ea50d164927bd",
+      "candidate_values": {
+        "8aa13390db6cb969238e5122c1920d080e240c22562dab37970f817bfac26e45": "[Special Digivolution Condition] [Digivolve] [Gigimon]: Cost 0",
+        "e5059615260afae57e0c6a0122ea206ae2c7ad792b600eea354543b3040175e6": "[Special Digivolution Condition] [Digivolve] 0 from [Gigimon]"
+      },
+      "card_id": "EX4-006",
+      "field_path": "xros_req",
+      "reason": "Image prints cost0 from Gigimon. Select exact original observed special route; ordinary red/purple Lv2cost1 separate. Review proposal condition-source-choice-batch17-independent-review-20261012.json SHA256 7cd1b6d84d93c1953ea3be592ffb67f3c67daa99d8dc989f41e298be54df32e9; independent review condition-source-choice-batch17-second-independent-review-20261012.json SHA256 2f80d598f82c9ae131e62559917334218302c088e10f4bca6643795e1f9e5ce8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "e5059615260afae57e0c6a0122ea206ae2c7ad792b600eea354543b3040175e6",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [Gigimon]",
+      "selected_value_digest": "bceca688c88f3bb899ac7a509485d378486f8e1d5cd32d66398ea42a48f2b7cb",
+      "selection_id": "condition-ex4-006-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "a16ab31ad26df979a2817e9f29fe931f1a72dbf4799b8abdd1008f758c6c2c32",
+      "candidate_values": {
+        "799bde03b40e91c2834acca474508190331921289fe738da55e7b6c2e86f150f": "[Special Digivolution Condition] [Digivolve] 0 from [Viximon]",
+        "921b4ce520c5790d8b1e81de5bfaa5e9cc5ed15b5c4aee9824b34499d6e0887b": "[Special Digivolution Condition] [Digivolve] [Viximon]: Cost 0",
+        "e34d35d2668ac68f90787bc89ecd1967149753d5488a32e0981786a42bb81dc6": "[Special Digivolution Condition] [Digivolve] [Viximon]: Cost 0"
+      },
+      "card_id": "EX4-024",
+      "field_path": "xros_req",
+      "reason": "Image prints cost0 from Viximon. Select exact original observed special route; ordinary yellow/blue Lv2cost1 separate. Review proposal condition-source-choice-batch17-independent-review-20261012.json SHA256 7cd1b6d84d93c1953ea3be592ffb67f3c67daa99d8dc989f41e298be54df32e9; independent review condition-source-choice-batch17-second-independent-review-20261012.json SHA256 2f80d598f82c9ae131e62559917334218302c088e10f4bca6643795e1f9e5ce8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "799bde03b40e91c2834acca474508190331921289fe738da55e7b6c2e86f150f",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [Viximon]",
+      "selected_value_digest": "a26e296b67a833dd63d9a1a5ddf3a3e66f353ee1f34bd62c804d2116f97c0cd6",
+      "selection_id": "condition-ex4-024-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "bab4ce630e7c23acdd3d84a83824786d8901f541ccad1f61c0f1f48e7b8ee64a",
+      "candidate_values": {
+        "13591e27de5d5539ec9bf1a1da26d8b1972ec6c921eff5aa9a019cb0b28f2f8f": "[Special Digivolution Condition] [Digivolve] 1 from [Seraphimon]",
+        "29627109a09594b45ee423d4867c0e23d1492d601c8ca675db73897a73cb0531": "[Special Digivolution Condition] [Digivolve] 1 from [Seraphimon]",
+        "442548d72c0e48551897b465f141f47d3ef08d04df8b257d4c02c24b532d66fc": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4",
+        "d17176e446700a43c833c4d16e6b7bba603eccc7708eae74212f79124f44a3d5": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4",
+        "f7b40636ad2401d75b4dc79eb2a107f1b874e0b260452bc8dcf35b7c7024af5b": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[X Antibody]/[DigiPolice] trait: Cost 4"
+      },
+      "card_id": "EX4-050",
+      "field_path": "xros_req",
+      "reason": "Viewed EX4-050 image prints ShadowSeraphimon, digivolve 1 from Seraphimon. Original and P1 official records agree; P2-P4 carry DigiPolice/X Antibody condition and effects inconsistent with image. Other field conflicts stay unresolved. Review proposal condition-source-choice-batch1-root-review-20261012.json SHA256 fc099bb01a6b1dbf2b1face7a63db7726537bc48dbd10333c5a69e95f6944474; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "13591e27de5d5539ec9bf1a1da26d8b1972ec6c921eff5aa9a019cb0b28f2f8f",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 1 from [Seraphimon]",
+      "selected_value_digest": "4109b011bbdb0864dce6d508e70330d304db1bb135ad55f239dca983dcf9812e",
+      "selection_id": "condition-ex4-050-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "f7d40373ef1cdb0c315e6511e2e3bb2bb42e8e76200648bc6c4c189227bcdf07",
+      "candidate_values": {
+        "24a341921c6d06d33aae041ded721616e3488a2caa874c7b23c3eea50119adce": "[Special Digivolution Condition] [Digivolve] Lv.4 2-color w/green: Cost 3",
+        "fd7f062c53508765762851da388f9ae7b81c64334b28aaf3515ed2ed09114f4f": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 2-color w/green"
+      },
+      "card_id": "EX4-057",
+      "field_path": "xros_req",
+      "reason": "Image route cost3 from Lv4 2-color with green. Select original observed value retaining level, exactly2colors, and green-membership conditions. No simplifying to any green card. Review proposal condition-source-choice-batch17-independent-review-20261012.json SHA256 7cd1b6d84d93c1953ea3be592ffb67f3c67daa99d8dc989f41e298be54df32e9; independent review condition-source-choice-batch17-second-independent-review-20261012.json SHA256 2f80d598f82c9ae131e62559917334218302c088e10f4bca6643795e1f9e5ce8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "fd7f062c53508765762851da388f9ae7b81c64334b28aaf3515ed2ed09114f4f",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 2-color w/green",
+      "selected_value_digest": "a5f1d3ba13bdf879cf9832cbb88cd62b939112e8646e741e2642db5d0cf86ee2",
+      "selection_id": "condition-ex4-057-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "16f1f446bd604c7b5de886c3a6caff68dcc2bc929181b581de53e90aaa38d6eb",
+      "candidate_values": {
+        "8c773de42af70bea61bf61825c25721fc459310d00f87a72d26d3440c48346f5": "[Special Digivolution Condition] [Digivolve] Lv.7 w/[Omnimon] in name: Cost 2",
+        "f68a58fd41367224d752d22c1ea5da7a754c300a9d5209d399ec68aed6e598ee": "[Special Digivolution Condition] [Digivolve] 2 from Lv.7 w/[Omnimon] in name",
+        "f759d48e66f3d964d60f9af0857e5121cd4a009add6564c9012c8e394846df1a": "[Special Digivolution Condition] [Digivolve] 2 from Lv.7 w/[Omnimon] in name"
+      },
+      "card_id": "EX4-073",
+      "field_path": "xros_req",
+      "reason": "Image route cost2 from Lv7 with Omnimon in name. Select exact original observed special route; ordinary black Lv6cost5 and main effects remain separate. Review proposal condition-source-choice-batch17-independent-review-20261012.json SHA256 7cd1b6d84d93c1953ea3be592ffb67f3c67daa99d8dc989f41e298be54df32e9; independent review condition-source-choice-batch17-second-independent-review-20261012.json SHA256 2f80d598f82c9ae131e62559917334218302c088e10f4bca6643795e1f9e5ce8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "f68a58fd41367224d752d22c1ea5da7a754c300a9d5209d399ec68aed6e598ee",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from Lv.7 w/[Omnimon] in name",
+      "selected_value_digest": "a6f6468596278b37477e55719a61a673720929df123ed6c36bccb2963d1e5724",
+      "selection_id": "condition-ex4-073-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "36c83c8240a10b4b3449b4420d9db3cb03009566bd14f6b75743ed9a03048fa4",
+      "candidate_values": {
+        "05062ec79e711ccbcbc001321daba1e37417c3ff8b486aed27a42fd6265586af": "[Special Digivolution Condition] [Digivolve] 4 from [ShineGreymon]",
+        "0512fd7def45a869a40b674a0cb18c3751ec5953425b96a5ddf4c466e1232e2d": "[Special Digivolution Condition] [Digivolve] [ShineGreymon]: Cost 4",
+        "3529fb99f6e18a7a55a85d40689a9c16b04dfbec181cf5e6606946ce346ddd07": "[Special Digivolution Condition] [Digivolve] 4 from [ShineGreymon]",
+        "a586b11ddd3a37dc0300bdcb83bb2fbc5f318476aa7c9e86bdf73c1d6cbe814f": "[Special Digivolution Condition] [Digivolve] [ShineGreymon]: Cost 4",
+        "e07ee17155141ae0b3fd8e397490e81d1d51e4590631a07d3e0c7aec217be3f7": "[Special Digivolution Condition] [Digivolve] [ShineGreymon]: Cost 4"
+      },
+      "card_id": "EX4-074",
+      "field_path": "xros_req",
+      "reason": "Image prints cost4 from ShineGreymon. Select exact original observed named route; ordinary red/yellow Lv6cost5 and main effects separate. Review proposal condition-source-choice-batch18-independent-review-20261012.json SHA256 6cd53d70948957938f9f3b228a45c96edaf8180df1d95d83aec2852e77181b52; independent review condition-source-choice-batch18-second-independent-review-20261012.json SHA256 4ffc8e5a9e9f24300f97384c166e26fbe427a79cc2b6fb154ece34e4d66e5bc8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "05062ec79e711ccbcbc001321daba1e37417c3ff8b486aed27a42fd6265586af",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 4 from [ShineGreymon]",
+      "selected_value_digest": "8fc120e5e3b93d02f5d2663a895af6d2b9d33697020872e301dee1e4285124c2",
+      "selection_id": "condition-ex4-074-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "cd7fd7bfea5138bd5008d0997eff208a8d970a3544c1b1736500fd5e0b2890c7",
+      "candidate_values": {
+        "370e26067df3447edd2e332fd3be3830d754ca3b388254f2f797e119dd311774": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon]+[Dianamon]: Cost 0\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "45a0ad42b70a6c982293a878a7ec9897babdd8e91d933813a651aecae7509b9d": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon]+[Dianamon]: Cost 0\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "833daa1034863dade38247456a720c70b2c14f2a432ba1a9f6661ab06c5abcf4": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon]+[Dianamon]: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+        "b87d0127146c4c8d6f83f8ce0a8a4ebfe0be27082d53a06002c800b037270df8": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon] + [Dianamon]: Cost 0 Stack the 2 specified Digimon and digivolve unsuspended."
+      },
+      "card_id": "EX5-073",
+      "field_path": "xros_req",
+      "reason": "Image DNA Apollomon+Dianamon cost0 with explicit unsuspended stacking reminder. Select complete original observed two-line value preserving that reminder and exact names. Review proposal condition-source-choice-batch18-independent-review-20261012.json SHA256 6cd53d70948957938f9f3b228a45c96edaf8180df1d95d83aec2852e77181b52; independent review condition-source-choice-batch18-second-independent-review-20261012.json SHA256 4ffc8e5a9e9f24300f97384c166e26fbe427a79cc2b6fb154ece34e4d66e5bc8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "370e26067df3447edd2e332fd3be3830d754ca3b388254f2f797e119dd311774",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolve] [Apollomon]+[Dianamon]: Cost 0\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+      "selected_value_digest": "ea9c0c14e770df4343b9dc1291d057ced422b72da46cb76a732fdb4dbcc5c1df",
+      "selection_id": "condition-ex5-073-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "1cf95bc6b82212016688fef11f5078c23a17c148d38ba24d2715fbe1abb9c346",
+      "candidate_values": {
+        "1e978745ff866d67010b02d7687f36a5940db9c5e81b1d603bcb78b290456222": "[Special Digivolution Condition] [DNA Digivolution] Yellow Lv.5 + purple Lv.5: Cost 0",
+        "2277c5fa3aee58934009f270da07fc53fcddd93202eb440b7408b3b5032b47ec": "[Special Digivolution Condition] [DNA Digivolve] Yellow Lv.5 + purple Lv.5: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+        "912482a11c6a44b4f9b0f9f3c01c8456f1570d90246421bdfbc0af1abc577c31": "[Special Digivolution Condition] [DNA Digivolution] Yellow Lv.5 + purple Lv.5: Cost 0",
+        "de9353f2810a8af85627912eea0f5498899ef4655a57966fe4272e169cfb81c6": "[Special Digivolution Condition] [DNA Digivolution] Yellow Lv.5 + purple Lv.5: Cost 0"
+      },
+      "card_id": "EX6-029",
+      "field_path": "xros_req",
+      "reason": "Image DNA yellowLv5+purpleLv5 cost0 WITHOUT a general stacking reminder printed in that section. Select exact original observed condition. Separate BlastDNA Angewomon+LadyDevimon hand/counter reminder is not part of this source choice. Review proposal condition-source-choice-batch18-independent-review-20261012.json SHA256 6cd53d70948957938f9f3b228a45c96edaf8180df1d95d83aec2852e77181b52; independent review condition-source-choice-batch18-second-independent-review-20261012.json SHA256 4ffc8e5a9e9f24300f97384c166e26fbe427a79cc2b6fb154ece34e4d66e5bc8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "1e978745ff866d67010b02d7687f36a5940db9c5e81b1d603bcb78b290456222",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolution] Yellow Lv.5 + purple Lv.5: Cost 0",
+      "selected_value_digest": "e5d2a420094fc41e55d5ddc09d8068521ec0de63398fc347fa712ba4f73a04f6",
+      "selection_id": "condition-ex6-029-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "ca843c5a2c834b22492753ae07d73fb6dce99fb907c3285ad89a993a977b869d",
+      "candidate_values": {
+        "40b89c7bd89dcfa9e82397effbc5fe36c8ede2c1a16022df734b774ed0522c2d": "[Special Digivolution Condition] [DNA Digivolve] Blue/purple Lv.6 + black/yellow Lv.6: Cost 0",
+        "4ca1b00df0bb6147456e6ce299d7932d467aff30d89d6a74ca0c59feeeb31c87": "[Special Digivolution Condition] [DNA Digivolve] Blue/purple Lv.6 + black/yellow Lv.6: Cost 0\n[DNA Digivolve] [Plesiomon] + Lv.5 w/[Seadramon] in name: Cost 0",
+        "d5111b21a6a7f44fbc41bbbe4dd80c14ad2ecd71dca83bef26bdad8139bc0d77": "[Special Digivolution Condition] [DNA Digivolve] Blue/purple Lv.6 + black/yellow Lv.6: Cost 0\n[DNA Digivolve] [Plesiomon] + Lv.5 w/[Seadramon] in name: Cost 0"
+      },
+      "card_id": "EX8-029",
+      "field_path": "xros_req",
+      "reason": "Viewed image prints TWO DNA conditions: blue/purpleLv6+black/yellowLv6 cost0, and Plesiomon+Lv5 withSeadramon inname cost0. Primary/P1 official records retain both; P2 omits the second. Select complete primary condition text only. Review proposal condition-source-choice-batch2-root-review-20261012.json SHA256 da6a747ee38f6d6931468282b95bd6b10a231bbb1532f266a9b78efb5d230c2b; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "4ca1b00df0bb6147456e6ce299d7932d467aff30d89d6a74ca0c59feeeb31c87",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolve] Blue/purple Lv.6 + black/yellow Lv.6: Cost 0\n[DNA Digivolve] [Plesiomon] + Lv.5 w/[Seadramon] in name: Cost 0",
+      "selected_value_digest": "024232a5cc2439fb55575c9dd4ef82039535c29344d288986bf0b6510a5fccb7",
+      "selection_id": "condition-ex8-029-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "df1e2818e091c7e290b3c77a6fac36647cc7998e61dea69e1a1fc8cdeb7a707d",
+      "candidate_values": {
+        "24e4acafb73fa2f5c237322ac720567512bfa6caa0f883bdb48366a88abc369d": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[DM] trait: Cost 5\n[DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0",
+        "7334841dd754e466b18adc9fb95de8ad9ceb4cf80e471e38e0cfa01871a077d6": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[DM] trait: Cost 5\n[DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "b47bf17f438b644f3571e818d4feaa5ed5f7d2d20be91712a67753b0e60379e0": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[DM] trait: Cost 5\n[DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0 Digivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      },
+      "card_id": "EX9-021",
+      "field_path": "xros_req",
+      "reason": "Image has two routes: Lv6DMtrait cost5 and DNA blueLv6+redLv6cost0. Select observed two-route value matching image, which has no printed general stacking reminder. No loss of either route or adjacent WhenDigivolving clause. Review proposal condition-source-choice-batch18-independent-review-20261012.json SHA256 6cd53d70948957938f9f3b228a45c96edaf8180df1d95d83aec2852e77181b52; independent review condition-source-choice-batch18-second-independent-review-20261012.json SHA256 4ffc8e5a9e9f24300f97384c166e26fbe427a79cc2b6fb154ece34e4d66e5bc8. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "24e4acafb73fa2f5c237322ac720567512bfa6caa0f883bdb48366a88abc369d",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[DM] trait: Cost 5\n[DNA Digivolve] Blue Lv.6 + red Lv.6: Cost 0",
+      "selected_value_digest": "0be72439a504ed1254ddc3a3b933be31085bba59ed3e700c8023844578636311",
+      "selection_id": "condition-ex9-021-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "64c972212a8333a9d0b4d1354b878890f69e92e6b4155bc1454e4faed9e6dcb3",
+      "candidate_values": {
+        "4f546cfe82ff22e72658b657e50d8e5d4c5f5af094ec936319c6600f4d176bda": "[Special Play Condition] Assembly -3: 4 [Eyesmon: Scatter Mode]\nWhen this would be played, by placing those cards from the trash under it, reduce the play cost.",
+        "5b0e07ad19fd77cbf28776c7dd4633b72ecc07d94dfaa89be31598657328fbe1": "[Special Digivolution Condition] [Digivolve] [Eyesmon: Scatter Mode]: Cost 1\n[Special Play Condition] Assembly -3: 4 [Eyesmon: Scatter Mode]\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+      },
+      "card_id": "EX9-047",
+      "field_path": "xros_req",
+      "reason": "Viewed image prints both digivolve from Eyesmon: Scatter Mode cost1 and Assembly -3 with4Eyesmon: Scatter Mode. Primary official record retains both; alternate omits digivolution requirement. Select complete primary condition text only. Review proposal condition-source-choice-batch2-root-review-20261012.json SHA256 da6a747ee38f6d6931468282b95bd6b10a231bbb1532f266a9b78efb5d230c2b; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "5b0e07ad19fd77cbf28776c7dd4633b72ecc07d94dfaa89be31598657328fbe1",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] [Eyesmon: Scatter Mode]: Cost 1\n[Special Play Condition] Assembly -3: 4 [Eyesmon: Scatter Mode]\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+      "selected_value_digest": "da069cf719188fa75feec61cd26832ba675cf6a1c42dc92e0476a441f91cd23f",
+      "selection_id": "condition-ex9-047-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "4416e2062f40005402d34d287ebf339969957cdc9889a33d79717ab3b4ddfe94",
+      "candidate_values": {
+        "b626a01defa6956ccbc33b6e5345e1703f08e61dfbf26ffa00f0d681cb3ff4ac": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+        "eeb136155c61cc49c2ece8ece19b0e9f32e10f68202892d739a2af8f9ad06cc1": ""
+      },
+      "card_id": "EX9-049",
+      "field_path": "xros_req",
+      "reason": "Viewed EX9-049 actual image visibly prints Digivolve Lv3 withDMtrait cost2 above main effects. Select the official observed condition retaining that exact requirement; empty alternate condition omits printed text. Other effect/Form/trait fields are outside this approval. Review proposal condition-source-choice-batch3-root-review-20261012.json SHA256 122ef9b5e7255f994c7400d3612f9a6c91173e532cca0595905d8bf35442db40; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "b626a01defa6956ccbc33b6e5345e1703f08e61dfbf26ffa00f0d681cb3ff4ac",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+      "selected_value_digest": "11e89825a4254fa6b86e374803c5106d992ea22b3d9c0a046917516ba4c72517",
+      "selection_id": "condition-ex9-049-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "0eed30b3b0d51ffd353e66f69bf1b76495c5c1009983bbb48e640707140557ab",
+      "candidate_values": {
+        "67dd7f14984d54ea2541cc5af4dd3f73e6b8cb301aa74e848eee67a6a11a0bb7": "",
+        "76f788bc31925c1156bf2572367281e823223588a9385510e8baaa086145e97a": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+      },
+      "card_id": "EX9-050",
+      "field_path": "xros_req",
+      "reason": "Viewed EX9-050 actual image visibly prints Digivolve Lv3 withDMtrait cost2 above main effects. Select the official observed condition retaining that exact requirement; empty alternate condition omits printed text. Other effect/Form/trait fields are outside this approval. Review proposal condition-source-choice-batch3-root-review-20261012.json SHA256 122ef9b5e7255f994c7400d3612f9a6c91173e532cca0595905d8bf35442db40; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "76f788bc31925c1156bf2572367281e823223588a9385510e8baaa086145e97a",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+      "selected_value_digest": "11e89825a4254fa6b86e374803c5106d992ea22b3d9c0a046917516ba4c72517",
+      "selection_id": "condition-ex9-050-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "515ee11f7cb3c8e31597c3b6bbb6244bee62d104ab0b60b88b5a132f3243ee9d",
+      "candidate_values": {
+        "d83c4614bdac5b0daf4f1e36b51851e69f954cd948a0a64f1e1d48b42cd37c15": "",
+        "f39cf34658586d25b272920cef89bb0793c2481623069cb44c7e14783050e399": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+      },
+      "card_id": "EX9-051",
+      "field_path": "xros_req",
+      "reason": "Viewed EX9-051 actual image visibly prints Digivolve Lv3 withDMtrait cost2 above main effects. Select the official observed condition retaining that exact requirement; empty alternate condition omits printed text. Other effect/Form/trait fields are outside this approval. Review proposal condition-source-choice-batch3-root-review-20261012.json SHA256 122ef9b5e7255f994c7400d3612f9a6c91173e532cca0595905d8bf35442db40; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "f39cf34658586d25b272920cef89bb0793c2481623069cb44c7e14783050e399",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+      "selected_value_digest": "11e89825a4254fa6b86e374803c5106d992ea22b3d9c0a046917516ba4c72517",
+      "selection_id": "condition-ex9-051-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "af714bfb0d545aa4522d4e5af3c84db4b8ef41dfa5e20530a866b7bd788a1fc5",
+      "candidate_values": {
+        "15320216a43e08fe68993e20e3f67d818b6e3c51023486391433206397472ac6": "",
+        "ec4dd86af55f73b89d8dd7a088c565f07b01f1de32a7c3036232bd306c39c75c": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+      },
+      "card_id": "EX9-052",
+      "field_path": "xros_req",
+      "reason": "Viewed EX9-052 actual image visibly prints Digivolve Lv3 withDMtrait cost2 above main effects. Select the official observed condition retaining that exact requirement; empty alternate condition omits printed text. Other effect/Form/trait fields are outside this approval. Review proposal condition-source-choice-batch3-root-review-20261012.json SHA256 122ef9b5e7255f994c7400d3612f9a6c91173e532cca0595905d8bf35442db40; independent review condition-source-root-batches1-3-independent-evidence-20261012.json SHA256 07b7d33064b2a404c23884085cbdff508788b305b8e4906abef396d00cbb00a1. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "root + review_focused_sources",
+      "schema_version": 1,
+      "selected_observation_id": "ec4dd86af55f73b89d8dd7a088c565f07b01f1de32a7c3036232bd306c39c75c",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+      "selected_value_digest": "11e89825a4254fa6b86e374803c5106d992ea22b3d9c0a046917516ba4c72517",
+      "selection_id": "condition-ex9-052-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "0c3677ab3a74893ee570dce1e1eba477736e16abb6359a0b1f72854aaf57d7af",
+      "candidate_values": {
+        "04cbb78e50ea178e17d49f27c30ab7f48789be4e0949e6f5171e5c2fedc2b41b": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[DM] trait: Cost 0",
+        "701906e294d7f24d367d6853a5fa90e87fcdf34336673522450425ce663dda58": ""
+      },
+      "card_id": "EX9-058",
+      "field_path": "xros_req",
+      "reason": "Image prints Lv2 with DM trait cost0 special route. Select only complete observed value; reject empty alternative. Ordinary purple Lv2cost0 is not equivalent to this color-independent trait route. Review proposal condition-source-choice-batch19-independent-review-20261012.json SHA256 ac2e3fbb3bbd844b5a6f1359972319bfe7b88a1c82e210855ecbac8748f5078b; independent review condition-source-choice-batch19-second-independent-review-20261012.json SHA256 16f5ad04b343bcc093ab55420343739a73dc8462b27ff25f5fff5050cac3498d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "04cbb78e50ea178e17d49f27c30ab7f48789be4e0949e6f5171e5c2fedc2b41b",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[DM] trait: Cost 0",
+      "selected_value_digest": "ab9ed7db80da453f4337f1b0a8a1150459b9cbd5beaa518ce7e150562b265242",
+      "selection_id": "condition-ex9-058-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "d22bbbd308645967dee1da6e23717d7f45a1249e73c7ae948335344913141caf",
+      "candidate_values": {
+        "4763a54d64ccfcdff4b667982f8fb4f9be1eb96f27803ce0ac01d2c0f4f59f02": "",
+        "6a992385caeaca1c78462bd16708e9f5907266c0f91d50c8398bfa2b5abb8536": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+      },
+      "card_id": "EX9-059",
+      "field_path": "xros_req",
+      "reason": "Image prints Lv3 with DM trait cost2 special route. Select complete observed value, reject empty alternative; purple-only ordinary route does not preserve DM route. Review proposal condition-source-choice-batch19-independent-review-20261012.json SHA256 ac2e3fbb3bbd844b5a6f1359972319bfe7b88a1c82e210855ecbac8748f5078b; independent review condition-source-choice-batch19-second-independent-review-20261012.json SHA256 16f5ad04b343bcc093ab55420343739a73dc8462b27ff25f5fff5050cac3498d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "6a992385caeaca1c78462bd16708e9f5907266c0f91d50c8398bfa2b5abb8536",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+      "selected_value_digest": "11e89825a4254fa6b86e374803c5106d992ea22b3d9c0a046917516ba4c72517",
+      "selection_id": "condition-ex9-059-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "934e888c7a9a5cab2f5f5bc0094ec487430868faf329f31143f878eb9e4711ce",
+      "candidate_values": {
+        "337bdf897c8648bd4a4b8aee48cb361b11cb0a97adcb65f019a8a516afacbade": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+        "d2072fc4924cdfa8b46951419ae26eebcf6eaded057646030a5b84f68a237dfc": ""
+      },
+      "card_id": "EX9-060",
+      "field_path": "xros_req",
+      "reason": "Image prints Lv3 with DM trait cost2 special route. Select complete observed value, reject empty alternative; no main Training/Draw or inherited approval. Review proposal condition-source-choice-batch19-independent-review-20261012.json SHA256 ac2e3fbb3bbd844b5a6f1359972319bfe7b88a1c82e210855ecbac8748f5078b; independent review condition-source-choice-batch19-second-independent-review-20261012.json SHA256 16f5ad04b343bcc093ab55420343739a73dc8462b27ff25f5fff5050cac3498d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "337bdf897c8648bd4a4b8aee48cb361b11cb0a97adcb65f019a8a516afacbade",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+      "selected_value_digest": "11e89825a4254fa6b86e374803c5106d992ea22b3d9c0a046917516ba4c72517",
+      "selection_id": "condition-ex9-060-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "c55fd9b378b8ee987ad81983acb36992436f95d01ade70d40f91925ef350fb45",
+      "candidate_values": {
+        "35c3611c41fca51870ce9d94eb70c478734950b457c0cc4a7d9c483fdb670011": "",
+        "94fe1251d432fc7a0684446e3206afc596c63e19d227094d0236747c3e40eea2": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2"
+      },
+      "card_id": "EX9-061",
+      "field_path": "xros_req",
+      "reason": "Image prints Lv3 with DM trait cost2 special route. Select complete observed value, reject empty alternative; ordinary purple route and main deletion condition remain separate. Review proposal condition-source-choice-batch19-independent-review-20261012.json SHA256 ac2e3fbb3bbd844b5a6f1359972319bfe7b88a1c82e210855ecbac8748f5078b; independent review condition-source-choice-batch19-second-independent-review-20261012.json SHA256 16f5ad04b343bcc093ab55420343739a73dc8462b27ff25f5fff5050cac3498d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "94fe1251d432fc7a0684446e3206afc596c63e19d227094d0236747c3e40eea2",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] Lv.3 w/[DM] trait: Cost 2",
+      "selected_value_digest": "11e89825a4254fa6b86e374803c5106d992ea22b3d9c0a046917516ba4c72517",
+      "selection_id": "condition-ex9-061-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "07ae7d2323530beac5d5a73f0574d6c088e940b0cab6b024e7b20aaffde0a561",
+      "candidate_values": {
+        "41dc6cd9ec815bb42611be03af43e48e3bf1cb96abe88a040df9939fd06c4afe": "[Special Digivolution Condition] [Digivolve] 0 from [Bebydomon]",
+        "a7ed31f5ffdf13d4095753f0d0adb22beb4dbc7dd2e1404209d82f30b3132db5": "[Special Digivolution Condition] [Digivolve] [Bebydomon]: Cost 0"
+      },
+      "card_id": "P-092",
+      "field_path": "xros_req",
+      "reason": "Image prints cost0 from Bebydomon. Select exact original observed condition; separate Groundramon-triggered Wingdramon evolution effects are not part of this choice. Review proposal condition-source-choice-batch20-independent-review-20261012.json SHA256 4a6d3933c115c6f2cee88146ea32f50453863db0b650b2ddcdd77bbbc3912798; independent review condition-source-choice-batch20-second-independent-review-20261012.json SHA256 0c2eb4cf44c82d27d5c81b3208c6991300fbde345d592ce0599f2eaad940531d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "41dc6cd9ec815bb42611be03af43e48e3bf1cb96abe88a040df9939fd06c4afe",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 0 from [Bebydomon]",
+      "selected_value_digest": "84eb73978ec31ec641cdf49113fe784a041aa2fe5db7adb950531ab88fc708ec",
+      "selection_id": "condition-p-092-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "8ad626bfaebd2c755c3157c4f130e72908591767e6343c08ed44bb9ea5c5608e",
+      "candidate_values": {
+        "bdce5da9361ec7b7e36ca45220a363a6be409d4258aeed6bd623ae26e073a19d": "[Special Play Condition] DigiXros -1: [Snatchmon] × 4 [Vemmon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the cost.",
+        "cdb71b53528999dbfa269a0d6a2131a606c3b72fe0abf5f4b4434b8410f6426b": "[Special Play Condition] DigiXros -1: [Snatchmon] × 4 [Vemmon]\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the cost."
+      },
+      "card_id": "P-094",
+      "field_path": "xros_req",
+      "reason": "Image DigiXros-1 lists Snatchmon x4Vemmon and full hand/battle reminder. Select original observed wording preserving multiplicity4 and per-placed-card cost reduction. No main effect approval. Review proposal condition-source-choice-batch20-independent-review-20261012.json SHA256 4a6d3933c115c6f2cee88146ea32f50453863db0b650b2ddcdd77bbbc3912798; independent review condition-source-choice-batch20-second-independent-review-20261012.json SHA256 0c2eb4cf44c82d27d5c81b3208c6991300fbde345d592ce0599f2eaad940531d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "bdce5da9361ec7b7e36ca45220a363a6be409d4258aeed6bd623ae26e073a19d",
+      "selected_value": "[Special Play Condition] DigiXros -1: [Snatchmon] × 4 [Vemmon]\nWhen you would play this card, you may place specified cards from your hand/battle area under it. Each placed card reduces the cost.",
+      "selected_value_digest": "23763c9533b1235c6081d72ac34ae96460b16b6322a2f2d0480fddb6c164a280",
+      "selection_id": "condition-p-094-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "4f50445a2e93c144a9dd0ef96dba38a54b0a22c8381b9131aee245407bd431f6",
+      "candidate_values": {
+        "24080368e6314b7df083ce9d26a707a77b49c69d63882c57183ae94ad15d2759": "[Special Digivolution Condition] [Digivolve] [Gammamon]: Cost 2",
+        "cba247674aa4785a9bf4d5f3d44121b501ffe82698c519f02bcb8385d2bbcd98": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]"
+      },
+      "card_id": "RB1-008",
+      "field_path": "xros_req",
+      "reason": "Image prints cost2 from Gammamon. Select original observed named route; ordinary redLv3cost2 is separately colored and not equivalent. Review proposal condition-source-choice-batch20-independent-review-20261012.json SHA256 4a6d3933c115c6f2cee88146ea32f50453863db0b650b2ddcdd77bbbc3912798; independent review condition-source-choice-batch20-second-independent-review-20261012.json SHA256 0c2eb4cf44c82d27d5c81b3208c6991300fbde345d592ce0599f2eaad940531d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "cba247674aa4785a9bf4d5f3d44121b501ffe82698c519f02bcb8385d2bbcd98",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 2 from [Gammamon]",
+      "selected_value_digest": "8518f910c0eddcfdda2d746a4fc76a25e2850ad57eb70885ad51af93d31059d5",
+      "selection_id": "condition-rb1-008-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "2b2a59b1e65a8365179e169d3c8db3f9bc9dc9febf2c9e092b0ce26ab3950fe3",
+      "candidate_values": {
+        "2962cf38e2fea82a94c72b2573ee384f4d6679d930ef1eca4d0eb1ddc1b1badf": "[Special Digivolution Condition] [Digivolve] Lv.4 w/[Gammamon] in name: Cost 3",
+        "693c9aed92501955a4a01f225c85c80acd74a053713b1d35e3eb3f4a14874e03": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 w/[Gammamon] in name"
+      },
+      "card_id": "RB1-009",
+      "field_path": "xros_req",
+      "reason": "Image route cost3 from Lv4 with Gammamon in name. Select original observed route retaining level/name predicates; separate main Gammamon-with-source shortcut must not be lost or folded into this field. Review proposal condition-source-choice-batch20-independent-review-20261012.json SHA256 4a6d3933c115c6f2cee88146ea32f50453863db0b650b2ddcdd77bbbc3912798; independent review condition-source-choice-batch20-second-independent-review-20261012.json SHA256 0c2eb4cf44c82d27d5c81b3208c6991300fbde345d592ce0599f2eaad940531d. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "693c9aed92501955a4a01f225c85c80acd74a053713b1d35e3eb3f4a14874e03",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 w/[Gammamon] in name",
+      "selected_value_digest": "ba4fb1b71374e37e01fbcfc5d895d72598f1947bca8e59cc950a1ceee6059165",
+      "selection_id": "condition-rb1-009-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "44200a023cf00859d835f0a419891111196ec8471a9c790101fb194b3bf98682",
+      "candidate_values": {
+        "631bc41b539b7217a7166affbd9707d145f390b72bda3c5536cb9fa565fc3b27": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 w/[Numemon] in name",
+        "f7358fc2d597587d5b953addb366d6ddfa835fe3a09bf696e3650f9b6a48cc50": "[Special Digivolution Condition] [Digivolve] Lv.4 w/[Numemon] in name: Cost 3"
+      },
+      "card_id": "RB1-018",
+      "field_path": "xros_req",
+      "reason": "Image route cost3 from Lv4 with Numemon in name. Select original observed value preserving level and substring-name condition; ordinary yellowLv4cost4 separate. Review proposal condition-source-choice-batch21-independent-review-20261012.json SHA256 ea05ca54e8a68d3ab7defd65f8f3fbbaf3c9a0308b0d9a6c474497a5dc6736a6; independent review condition-source-choice-batch21-second-independent-review-20261012.json SHA256 26ddf7b5b9c2ebded6874101aee43015f4d17acf17b19f95a630f92c915cadb2. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "631bc41b539b7217a7166affbd9707d145f390b72bda3c5536cb9fa565fc3b27",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 3 from Lv.4 w/[Numemon] in name",
+      "selected_value_digest": "556a2d809c2836fb49e463d48133bde423801b824be1769db5f5e7b7963743e1",
+      "selection_id": "condition-rb1-018-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "162d7010e2e45fd4fdbbb23f74e08dbd02188a2d2db9e521a82eb7ec681489c1",
+      "candidate_values": {
+        "1ebf60c04d858210b4aeb361600ec2d062d81ae9a77ebb279b138b5f29e9814a": "[Special Digivolution Condition] [Digivolve] 4 from Lv.5 w/[Gammamon] in text",
+        "9a521cd34db6c9d0459b29fedb7141725dc7e7e9db5afdb6f79f113a9621f58e": "[Special Digivolution Condition] [Digivolve] 4 from Lv.5 w/[Gammamon] in text",
+        "fd06331d9c180fa6151ccbe5b873c2fd4a02ca26ab972cafbdbb4316e1ca77db": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Gammamon] in text: Cost 4"
+      },
+      "card_id": "RB1-031",
+      "field_path": "xros_req",
+      "reason": "Image route cost4 from Lv5 with Gammamon in TEXT, not only name. Select original observed value retaining text predicate and level; do not narrow to names. Review proposal condition-source-choice-batch21-independent-review-20261012.json SHA256 ea05ca54e8a68d3ab7defd65f8f3fbbaf3c9a0308b0d9a6c474497a5dc6736a6; independent review condition-source-choice-batch21-second-independent-review-20261012.json SHA256 26ddf7b5b9c2ebded6874101aee43015f4d17acf17b19f95a630f92c915cadb2. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "1ebf60c04d858210b4aeb361600ec2d062d81ae9a77ebb279b138b5f29e9814a",
+      "selected_value": "[Special Digivolution Condition] [Digivolve] 4 from Lv.5 w/[Gammamon] in text",
+      "selected_value_digest": "de4d0ec007b964819e1d9ad4fa28cbd97e26662f8c6b6b8c503faffd1ccfaf5d",
+      "selection_id": "condition-rb1-031-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "160db0c17e5b889e544b49fc055e726cfed96e34970a67af67aaed3b87c009e8",
+      "candidate_values": {
+        "4e046b7ffffe95e865771fb73d9b8e863c992bce5bbf2365f5e5167644db11ab": "[Special Digivolution Condition] [DNA Digivolve] 0 from yellow Lv.5 + purple Lv.5\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "92d26514301b84125bd53ed01a74b917eeb139a0a74601107c227fa5020d1846": "[Special Digivolution Condition] [DNA Digivolution] 0 from yellow Lv.5 + purple Lv.5\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "bfa9f08786ea50ba442f57502dd640cb703247b344a521a9c4edf0f2bb315c47": "[Special Digivolution Condition] ＜DNA Digivolve＞yellow Lv.5 + purple Lv.5: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+        "caac4f94c9ada9214a574e41ceb94129e34ba27391ecc0f833373fdcb7689021": "[Special Digivolution Condition] [DNA Digivolve] 0 from yellow Lv.5 + purple Lv.5\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      },
+      "card_id": "ST10-06",
+      "field_path": "xros_req",
+      "reason": "Image DNA Digivolution yellowLv5+purpleLv5 cost0 with full unsuspended stacking reminder. Select complete observed value using printed DNA Digivolution label; no automatic normalization of alternate labels/brackets. Review proposal condition-source-choice-batch21-independent-review-20261012.json SHA256 ea05ca54e8a68d3ab7defd65f8f3fbbaf3c9a0308b0d9a6c474497a5dc6736a6; independent review condition-source-choice-batch21-second-independent-review-20261012.json SHA256 26ddf7b5b9c2ebded6874101aee43015f4d17acf17b19f95a630f92c915cadb2. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "92d26514301b84125bd53ed01a74b917eeb139a0a74601107c227fa5020d1846",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolution] 0 from yellow Lv.5 + purple Lv.5\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+      "selected_value_digest": "5c5af038bf61297c4bf40f51af68255f4e620a4c2a0772f099094e6b3ba64fce",
+      "selection_id": "condition-st10-06-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    },
+    {
+      "candidate_set_digest": "2ff21098c007c54aab8eeac7a429c185d91dc274c61dcf6ab8d60b74f23cbf72",
+      "candidate_values": {
+        "321e9042435322938041395ac44352b5ab447cfca066abab93f78a93b1d8debb": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "366b716ef5abe5b1c9df266e9fcb01a26a847b11893c2e4bfcb94580de91bb6e": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "61ad4b24536a4df82af992f153045212e2c3b8f1c58a66d7aa2cf7d902939a44": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "7084696880568e91653244a5911ddf38f83698eacbeddd7e613e37af8437c8b8": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "bdd16096e7b2c07766e7d234a3d80ad8043ceedc66643955384338fe97b237ce": "[Special Digivolution Condition] [DNA Digivolve] Blue Lv.4 + green Lv.4: Cost 0\nStack the 2 specified Digimon and digivolve unsuspended.",
+        "bf9ed288488a1ea228d9acfec87523a7c18e47a3d7cadf83ef0f70afec90b242": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+        "e4b5c14204f6550b75dd2920ba224c47ae81242ced23ce621ecf3b114b69cec6": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other."
+      },
+      "card_id": "ST9-05",
+      "field_path": "xros_req",
+      "reason": "Image DNA route blueLv4+greenLv4 cost0 and full unsuspended stacking reminder. Select complete original observed route and reminder, preserving material order/colors/levels. Printed label DNA Digivolution corresponds to official DNA Digivolve observation; no consumer equivalence approval. Review proposal condition-source-choice-batch21-independent-review-20261012.json SHA256 ea05ca54e8a68d3ab7defd65f8f3fbbaf3c9a0308b0d9a6c474497a5dc6736a6; independent review condition-source-choice-batch21-second-independent-review-20261012.json SHA256 26ddf7b5b9c2ebded6874101aee43015f4d17acf17b19f95a630f92c915cadb2. Only compatibility condition source choice; no adjacent runtime/canonical approval.",
+      "reviewed_at": "2026-10-12T14:01:36.982701+00:00",
+      "reviewer": "review_focused_sources + review_delay_candidate",
+      "schema_version": 1,
+      "selected_observation_id": "321e9042435322938041395ac44352b5ab447cfca066abab93f78a93b1d8debb",
+      "selected_value": "[Special Digivolution Condition] [DNA Digivolve] 0 from blue Lv.4 + green Lv.4\nDigivolve unsuspended with the 2 specified Digimon stacked on top of each other.",
+      "selected_value_digest": "bbb54dff0538f82ba44b9c9ef1e0b7206fa3a2d1e4ebb8ad08cf48ef33cc77ea",
+      "selection_id": "condition-st9-05-v5-reviewed-20261012",
+      "selection_kind": "official_condition_projection",
+      "source_manifest_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+    }
+  ]
+}

@@ -2,6 +2,7 @@ card: EX12-076
 name: Susanoomon
 kind: digimon
 level: 7
+form: Mega
 color: [yellow, white, red]
 cost: 16
 dp: 16000
@@ -27,7 +28,6 @@ alt_paths:
       - filter:
           any_of:
             - trait_has: Hybrid
-            - form_is: Hybrid
             - trait_has: Shambala
         repeat: { min: 8, max: 8 }
         distinct_by: name

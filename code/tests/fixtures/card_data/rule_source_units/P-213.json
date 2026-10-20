@@ -1,0 +1,113 @@
+{
+  "observations": [
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "P-213",
+        "card_type": "Digimon",
+        "colors": [
+          "Red"
+        ],
+        "dp": 7000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "cost": 3,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Red"
+            ],
+            "dp": 7000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 5,
+            "name": "Aegiochusmon",
+            "play_cost": 7,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Aegiomon]: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Raid＞ ＜Decode《[Aegiomon]》＞\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ and +3000 DP until your opponent’s turn ends. Then, this Digimon may attack.\n[Rule] Trait: Has [Dragonkin] Type."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "＜Decode 《[Aegiomon]》＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)"
+              }
+            ]
+          }
+        ],
+        "form": "Ultimate",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 5,
+        "name": "Aegiochusmon",
+        "play_cost": 7,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522901",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/P-213.png?260529",
+          "printing_id": "P-213"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can process it.\nEven if you don't have 3 or fewer security cards, this card's [When Digivolving] effect allows you to have this Digimon attack.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5763",
+            "question": "Can I process the part of the effect after \"then\" in this card's [When Digivolving] effect even if the \"if\" condition in the 1st process isn't met?"
+          }
+        ],
+        "rarity": "P",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": [
+            "Dragonkin"
+          ]
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Aegiomon]: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Aegiomon]: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Raid＞ ＜Decode《[Aegiomon]》＞\n[When Digivolving] If you have 3 or fewer security cards, this Digimon gains ＜Rush＞ and +3000 DP until your opponent’s turn ends. Then, this Digimon may attack.\n[Rule] Trait: Has [Dragonkin] Type."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Decode 《[Aegiomon]》＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Aegiomon] from its digivolution cards without paying the cost.)"
+          }
+        ],
+        "type": "Shaman/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "d100f6a595808eebfa505ef0a0bef8b4469fc91d80f4693aee11ca1cafe8cace",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "90db2254846cdcb5174b6348164c827def5a0dcf75e56e8b60d6cd3be9eeeb5c",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522901:P-213:P-213",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+    }
+  ],
+  "image_path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\P-213.webp",
+  "image_sha256": "e649bd13e9f3d265dc46e2ce50de065e5564143bb4838df3991e35fdca6a691e",
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "scope": "Actual observation fixtures for pure Rule occurrence diagnostics; not complete source authority"
+}

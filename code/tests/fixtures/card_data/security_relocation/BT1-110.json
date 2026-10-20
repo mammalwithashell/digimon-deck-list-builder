@@ -1,0 +1,89 @@
+{
+  "original_observation": {
+    "extracted": {
+      "attribute": "",
+      "card_id": "BT1-110",
+      "card_type": "Option",
+      "colors": [
+        "Green"
+      ],
+      "dp": null,
+      "evolution_routes": [],
+      "faces": [
+        {
+          "colors": [
+            "Green"
+          ],
+          "dp": null,
+          "face_id": "primary",
+          "kind": "option",
+          "level": null,
+          "name": "Flower Cannon",
+          "play_cost": 2,
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "[Main] Suspend 1 of your opponent's Digimon."
+            },
+            {
+              "label": "Security Effect",
+              "text": "[Security] Suspend all of your opponent's Digimon without ＜Blocker＞."
+            }
+          ]
+        }
+      ],
+      "form": "",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": null,
+      "name": "Flower Cannon",
+      "play_cost": 2,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522001",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT1-110.png?260529",
+        "printing_id": "BT1-110"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "No, if your opponent's Digimon has , it can't be suspended with this card's effect.",
+          "date": "Mar. 28, 2024",
+          "number": "Q981",
+          "question": "My opponent uses an Option card or other effect to give one of their Digimon . Can I use this card's security effect to suspend that Digimon?"
+        }
+      ],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Main] Suspend 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Suspend all of your opponent's Digimon without ＜Blocker＞."
+        }
+      ],
+      "type": ""
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "3ad8fa4498f38f90a53076f6004be1adc1feb218372ebf84a4cfe073a5669f5c",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522001:BT1-110:BT1-110",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522001"
+  },
+  "fixture_sha256": "e73556256f77dd168a65a8bedca4ce623c4ffaaf5b31f8d57e9f7186aa17b93d",
+  "original_page_sha256": "b59da05be7cce0cab2df4ccd420341d2946148dcb0d2178e12f5c4c9170e2ba1",
+  "image_sha256": "82987cb07127a6a2caf080860b9db879bebe6133430484c72c71ffd683b5811a"
+}

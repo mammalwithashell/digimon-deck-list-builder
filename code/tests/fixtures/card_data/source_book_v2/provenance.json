@@ -1,0 +1,11 @@
+{
+  "purpose": "Historical approved diagnostic for pure compiler tests, not current source authority or sidecar approval",
+  "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\diagnostic-source-book-r1-four-card-a-20261012.json.gz",
+  "sha256": "a95baf2d9d8ae4632ac2f4d578b606f3254cf34f9ccd6388fcf1f563faeea4d7",
+  "extra_record": {
+    "card_id": "BT24-101",
+    "source_result_sha256": "ede92e1a067dcdfc893317e5926b1bc46796ff50e94c388b1e5e401d1085fcd9",
+    "record_sha256": "ca6ef78363e882f7f930108d5dc651f4e2b6fbb3d40eb2eec401b6ffdb8e9d33",
+    "purpose": "Pure internal occurrence/projection tests only, not a new approved diagnostic input manifest"
+  }
+}

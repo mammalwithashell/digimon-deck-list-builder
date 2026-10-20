@@ -1,0 +1,394 @@
+{
+  "canonical_card": {
+    "admission": "admitted",
+    "card_id": "BT24-081",
+    "conflicts": [
+      {
+        "candidate_observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "field_path": "effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "field_path": "evo_costs",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "field_path": "form_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "field_path": "type_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "dp": 14000,
+        "effect_text": "＜Rush＞ ＜Piercing＞ ＜Execute＞\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.\n(Rule) Trait: Has [Demon] Type.\n[Special Play Condition] Assembly -6: [Titamon]×[SkullBaluchimon]",
+        "face_id": "primary",
+        "inherited_text": "",
+        "kind": "digimon",
+        "level": 7,
+        "play_cost": 14,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Virus"
+      ],
+      "card_colors": [
+        "Purple",
+        "Green"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Titamon + SkullBaluchimon",
+      "dp": 14000,
+      "effect_description_eng": "＜Rush＞ ＜Piercing＞ ＜Execute＞\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.\n(Rule) Trait: Has [Demon] Type.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Purple",
+            "Green"
+          ],
+          "cost": 4,
+          "from_level": 6,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Mega"
+      ],
+      "inherited_effect_description_eng": "",
+      "level": 7,
+      "play_cost": 14,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Shaman",
+        "Titan",
+        "TS",
+        "Demon"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb"
+        ],
+        "printing_id": "BT24-081",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "printing_id": "BT24-081#2",
+        "product": null
+      },
+      {
+        "alternate_art": true,
+        "language": "en",
+        "observation_ids": [
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c"
+        ],
+        "printing_id": "BT24-081_P1",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555",
+          "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+          "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb",
+          "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09"
+        ],
+        "selected_observation_id": "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": [
+    "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb.json",
+    "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09.json",
+    "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555.json",
+    "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c.json"
+  ],
+  "raw_pages": {
+    "https://world.digimoncard.com/cards/?search=true&category=522033": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a.html.gz"
+  },
+  "runtime_record": {
+    "attribute_eng": [
+      "Virus"
+    ],
+    "card_colors": [
+      6,
+      3
+    ],
+    "card_effect_class_name": "BT24_081",
+    "card_id": "BT24-081",
+    "card_index": 81,
+    "card_kind": 0,
+    "card_name_eng": "Titamon + SkullBaluchimon",
+    "card_name_jpn": "",
+    "digixros_costs": [
+      {
+        "different_card_numbers": false,
+        "different_names": false,
+        "elements": [
+          {
+            "color": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "level_max": null,
+            "name_contains": "Titamon",
+            "trait_alternatives": [],
+            "trait_match": ""
+          },
+          {
+            "color": null,
+            "count": 1,
+            "is_digimon_only": false,
+            "level_max": null,
+            "name_contains": "SkullBaluchimon",
+            "trait_alternatives": [],
+            "trait_match": ""
+          }
+        ],
+        "has_text": "",
+        "max_materials": 2,
+        "reduce_cost_per_card": 6,
+        "source_zones": [
+          "trash"
+        ]
+      }
+    ],
+    "dp": 14000,
+    "effect_description_eng": "＜Rush＞ ＜Piercing＞ ＜Execute＞\r\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\r\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.\r\n(Rule) Trait: Has [Demon] Type.",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 4
+      }
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "index": 2579,
+    "inherited_effect_description_eng": "",
+    "level": 7,
+    "norm_id": 0.12895,
+    "play_cost": 14,
+    "rarity": 3,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Shaman",
+      "Titan",
+      "TS",
+      "Demon"
+    ],
+    "xros_req": "[Special Play Condition] Assembly -6: [Titamon]×[SkullBaluchimon]"
+  }
+}

@@ -2,10 +2,12 @@ card: BT21-007
 name: Agumon
 kind: digimon
 level: 3
+form: Rookie
 color: [red]
 cost: 3
 dp: 1000
 traits: [Reptile]
+attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from: { level_eq: 2 }
