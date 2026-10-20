@@ -170,3 +170,5 @@ mod unsuspend_phase_lock;
 mod validator;
 mod xros_reusable_primitives;
 mod zone_movement_verbs;
+
+mod assembly_material_equivalence;

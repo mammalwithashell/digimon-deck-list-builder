@@ -25,7 +25,7 @@ fn bt24_041_has_printed_metadata_alt_paths_cost_reduction_formula_and_auras() {
     assert_eq!(compiled.level, Some(6));
     assert_eq!(
         compiled.color,
-        vec![CompiledColor::Yellow, CompiledColor::Purple]
+        vec![CompiledColor::Yellow, CompiledColor::Black]
     );
     assert_eq!(compiled.cost, Some(12));
     assert_eq!(compiled.dp, Some(12000));

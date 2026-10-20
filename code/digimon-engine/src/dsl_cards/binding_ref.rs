@@ -108,8 +108,16 @@ pub fn resolve_binding_ref(
                     // `event_host_card` (the host's top card identity) so that
                     // `target: event_target` still resolves to a `Permanent`
                     // handle rather than falling through to a bare `Card`.
-                    if live_event_permanent(ctx, handle, t.event_card)
-                        .or_else(|| live_event_permanent(ctx, handle, t.event_host_card))
+                    // An absent identity is not evidence against a known stale
+                    // one. Use the host when it is the only known identity,
+                    // and only try the Link fallback when that identity exists.
+                    // Contexts with neither identity retain the legacy live-slot
+                    // behavior; they cannot override a supplied card identity.
+                    if live_event_permanent(ctx, handle, t.event_card.or(t.event_host_card))
+                        .or_else(|| {
+                            t.event_host_card
+                                .and_then(|card| live_event_permanent(ctx, handle, Some(card)))
+                        })
                         .is_some()
                     {
                         return Some(ResolvedBinding::Permanent(handle));

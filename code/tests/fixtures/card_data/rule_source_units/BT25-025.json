@@ -1,0 +1,116 @@
+{
+  "observations": [
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT25-025",
+        "card_type": "Digimon",
+        "colors": [
+          "Blue",
+          "Black"
+        ],
+        "dp": 8000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Blue",
+              "Black"
+            ],
+            "cost": 4,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Blue",
+              "Black"
+            ],
+            "dp": 8000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 5,
+            "name": "Aegiochusmon: Blue",
+            "play_cost": 8,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Aegiomon]: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞ ＜Decode ([Aegiomon])＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.\n(Rule) Trait: Has [Cyborg] Type."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend."
+              }
+            ]
+          }
+        ],
+        "form": "Ultimate",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 5,
+        "name": "Aegiochusmon: Blue",
+        "play_cost": 8,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522036",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-025.png?260529",
+          "printing_id": "BT25-025"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "[Security] effects take precedence for activation.\nUpon a check, a [Security] effect will immediately activate without pending activation.\nFor other triggered effects, the turn player activates their effects first.",
+            "date": "May. 8, 2026",
+            "number": "Q6289",
+            "question": "In what order do a [Security] effect, \"when [...] performs a security check\" effect, and \"when a card is removed from [...] security stack\" effect activate when they trigger simultaneously upon a security check?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": [
+            "Cyborg"
+          ]
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Aegiomon]: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Aegiomon]: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞ ＜Decode ([Aegiomon])＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if you have 3 or fewer security cards, 1 of your Digimon unsuspends.\n(Rule) Trait: Has [Cyborg] Type."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend."
+          }
+        ],
+        "type": "Shaman/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "a88611537b946c182304df2447c567e2b6b1cbf37b5439212bf884a0aceee872",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522036:BT25-025:BT25-025",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    }
+  ],
+  "image_path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT25-025.webp",
+  "image_sha256": "892b8d174a093ababb6c06bd1570a78c43b2223ac1b66b0a605b44a63db85f10",
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "scope": "Actual observation fixtures for pure Rule occurrence diagnostics; not complete source authority"
+}

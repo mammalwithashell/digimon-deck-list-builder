@@ -165,6 +165,50 @@ fn permanent_activation_blocked_for_timing(
 }
 
 impl Game {
+    /// Stamp before entering Security: otherwise its derived events would be
+    /// incorrectly merged with the older reveal/removal occurrence.
+    pub(crate) fn stamp_unstamped_trigger_batch(&mut self) {
+        if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
+            self.trigger_batch_seq = self.trigger_batch_seq.wrapping_add(1).max(1);
+            let batch = self.trigger_batch_seq;
+            for qe in &mut self.effect_queue {
+                if qe.trigger_batch == 0 {
+                    qe.trigger_batch = batch;
+                }
+            }
+        }
+    }
+
+    /// Mark the entries one security check just collected (`start..`) as
+    /// captured at the check (§13-1-8-2, Q6813), without evaluating their
+    /// processing condition. Their trigger qualifiers -- for the check
+    /// timings this includes the lowered turn / "this Digimon checks" gates
+    /// (`lower_triggered`) -- were already decided by `enqueue_triggered`
+    /// (`discard_entries_not_triggered`, §15-8-3-1 / §15-8-3-4). A captured
+    /// entry is cancelled for good when its source leaves its area
+    /// (`security_check_source_invalidated`) or, for a face (non-inherited)
+    /// effect, when the face it was captured on is replaced
+    /// (`security_check_face_generation`). The capture is stamped as one
+    /// trigger batch, so it pools as one simultaneous set (§15-4-3-2).
+    pub(crate) fn freeze_security_check_entries(&mut self, start: usize) {
+        for qe in self.effect_queue.iter_mut().skip(start) {
+            let ctx = qe.trigger_context.get_or_insert_with(Default::default);
+            ctx.captured_security_check = true;
+            // Inherited entries remain live through ordinary digivolution;
+            // face entries cannot regain a lost incarnation.
+            if !qe.allow_below_top_liveness && qe.granted_effect_id.is_none() {
+                ctx.security_check_face_generation = qe.source_permanent.and_then(|h| {
+                    self.players[h.player as usize]
+                        .battle_area
+                        .get(h.index as usize)
+                        .filter(|perm| perm.top_card().handle() == qe.source_card)
+                        .map(|perm| perm.face_generation)
+                });
+            }
+        }
+        self.stamp_unstamped_trigger_batch();
+    }
+
     /// Merge snapshot grants with source-independent duration grants. The latter
     /// are evaluated in the original grantor's context, against the current board.
     fn granted_entries_for_carrier(
@@ -1678,6 +1722,67 @@ impl Game {
                 self.effect_queue.clear();
                 return;
             }
+            // §15-16-10-2 / Q6813: a [Security] effect activates immediately,
+            // without pending activation. The check / removal observers
+            // captured at the reveal (and anything the [Security] bodies
+            // derive) wait until every body on the current revealed card has
+            // completed, including parked choices; they resolve in
+            // `SecurityPhase::OnSecurityCheckDrain`. Run one body per
+            // iteration; never continue a multi-Security fast path past a
+            // pending prompt. Inside a deferred-drain scope a body is still
+            // resolving (§15-8-3-2): the scope's own drain re-enters here.
+            if let Some(state) = self
+                .security_resolution
+                .as_ref()
+                .filter(|state| state.phase == crate::selection::SecurityPhase::SecuritySkillDrain)
+            {
+                if self.draining_deferred > 0 {
+                    return;
+                }
+                let card = state.revealed_card;
+                if let Some(index) = self.effect_queue.iter().position(|qe| {
+                    qe.timing == EffectTiming::SecuritySkill && qe.source_card == card
+                }) {
+                    // Immediate Security bodies still obey activation gates.
+                    // This path bypasses the ordinary trigger-bundle filter;
+                    // apply its eligibility checks before offering or running
+                    // the body, including mandatory clauses with a cost gate.
+                    if self.queued_effect_opt_exhausted(index)
+                        || !self.queued_effect_condition_passes(index)
+                        || !self.queued_effect_index_is_live(index)
+                    {
+                        self.effect_queue.remove(index);
+                        continue;
+                    }
+                    // The same "you may" classifier as a lone queued trigger
+                    // (`single_trigger_optional_prompt`, §15-7 / §15-7-4).
+                    let prompt = if self.effect_queue[index].is_optional {
+                        let candidate = self.effect_queue[index].clone();
+                        self.single_trigger_optional_prompt(&candidate)
+                    } else {
+                        None
+                    };
+                    if prompt == Some(SingleTriggerOptionalPrompt::PreCost) {
+                        let controller = self.effect_queue[index].controller;
+                        self.install_trigger_order_selection(controller, &[index], true);
+                        return;
+                    }
+                    let qe = self
+                        .effect_queue
+                        .remove(index)
+                        .expect("index from position() is in-bounds");
+                    if prompt == Some(SingleTriggerOptionalPrompt::Outer) {
+                        self.install_outer_optional_trigger_selection(qe);
+                        return;
+                    }
+                    self.enter_deferred_drain();
+                    self.run_queued_effect(qe);
+                    self.draining_deferred = self.draining_deferred.saturating_sub(1);
+                    self.rules_check_between_queued_effects();
+                    continue;
+                }
+                return;
+            }
             // §9-1-5: a used Option whose `[Main]` body has just finished is
             // disposed before any trigger that body caused resolves. Skipped
             // inside a deferred-drain scope (the body is still running there);
@@ -1821,15 +1926,7 @@ impl Game {
             // emptied. DCGO: `MultipleSkills.cs` resolves newly triggered
             // effects in a nested `TriggeredSkillProcess` before returning to
             // the still-pending list. G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST.
-            if self.effect_queue.iter().any(|qe| qe.trigger_batch == 0) {
-                self.trigger_batch_seq = self.trigger_batch_seq.wrapping_add(1).max(1);
-                let batch = self.trigger_batch_seq;
-                for qe in self.effect_queue.iter_mut() {
-                    if qe.trigger_batch == 0 {
-                        qe.trigger_batch = batch;
-                    }
-                }
-            }
+            self.stamp_unstamped_trigger_batch();
             let top_batch = self
                 .effect_queue
                 .iter()
@@ -2168,6 +2265,8 @@ impl Game {
                 target_permanent: Some(attacker),
                 target_card: Some(revealed_card),
                 event_card: Some(revealed_card),
+                event_host_permanent: Some(attacker),
+                event_host_card: self.top_card_handle(attacker),
                 source_player: Some(defender),
                 was_security_skill: false,
                 ..TriggerContext::default()
@@ -2180,6 +2279,8 @@ impl Game {
                 target_permanent: Some(attacker),
                 target_card: Some(revealed_card),
                 event_card: Some(revealed_card),
+                event_host_permanent: Some(attacker),
+                event_host_card: self.top_card_handle(attacker),
                 source_player: Some(defender),
                 was_security_skill: false,
                 ..TriggerContext::default()
@@ -3814,6 +3915,13 @@ impl Game {
         let Some(qe) = self.effect_queue.get(i) else {
             return false;
         };
+        if qe
+            .trigger_context
+            .as_ref()
+            .is_some_and(|ctx| ctx.security_check_source_invalidated)
+        {
+            return false;
+        }
         if qe.granted_effect_id.is_some() {
             return true;
         }
@@ -4363,6 +4471,15 @@ impl Game {
             crate::scheduled_effects::run_pending_processing(self, payload, qe.source_permanent);
             return;
         }
+        // A captured Security-check observer whose source left its area
+        // after the check can no longer activate (§15-4-4-5).
+        if qe
+            .trigger_context
+            .as_ref()
+            .is_some_and(|ctx| ctx.security_check_source_invalidated)
+        {
+            return;
+        }
         // Track H §3 Phase 4i — granted-triggered-effect branch.
         // Granted bodies are inline closures with no Effect metadata
         // (no condition, pay_cost, optional, max_per_turn). We fetch
@@ -4813,6 +4930,30 @@ impl Game {
         qe: &QueuedEffect,
         effect: &crate::effect::Effect,
     ) -> bool {
+        if qe
+            .trigger_context
+            .as_ref()
+            .is_some_and(|ctx| ctx.security_check_source_invalidated)
+        {
+            return false;
+        }
+        if let Some(generation) = qe
+            .trigger_context
+            .as_ref()
+            .and_then(|ctx| ctx.security_check_face_generation)
+        {
+            if !qe
+                .source_permanent
+                .and_then(|h| {
+                    self.players[h.player as usize]
+                        .battle_area
+                        .get(h.index as usize)
+                })
+                .is_some_and(|perm| perm.face_generation == generation)
+            {
+                return false;
+            }
+        }
         // Source permanent may have been deleted by a prior effect in this
         // batch or by a parked pay-cost selection callback. Skip silently —
         // matches Python behavior.

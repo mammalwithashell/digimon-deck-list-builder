@@ -1,0 +1,176 @@
+{
+  "BT24-041": {
+    "attribute_eng": [
+      "Virus"
+    ],
+    "card_colors": [
+      2,
+      5
+    ],
+    "card_effect_class_name": "BT24_041",
+    "card_id": "BT24-041",
+    "card_index": 41,
+    "card_kind": 0,
+    "card_name_eng": "Minervamon",
+    "card_name_jpn": "",
+    "dp": 12000,
+    "effect_description_eng": "When this card would be played, if you have an [Iliad] trait Digimon or Tamer, reduce the play cost by 5.\r\n[On Play] [When Digivolving] [On Deletion] You may play 1 play cost 5 or lower [Iliad] trait card from your hand without paying the cost. Then, to 1 of your opponent's Digimon, ＜De-Digivolve 1＞ for each of your Digimon.\r\n[Opponent's Turn] All of your [Iliad] trait Digimon gain ＜Reboot＞ and ＜Blocker＞.",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "form_eng": [
+      "Mega"
+    ],
+    "index": 2539,
+    "inherited_effect_description_eng": "",
+    "level": 6,
+    "norm_id": 0.12695,
+    "play_cost": 12,
+    "rarity": 3,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Shaman",
+      "Olympos XII",
+      "Iliad",
+      "TS"
+    ],
+    "xros_req": "[Special Digivolution Condition] [Digivolve] Lv.5 w/[Beastkin]/[Dark Dragon]/[TS] trait: Cost 3"
+  },
+  "BT24-085": {
+    "attribute_eng": [],
+    "card_colors": [
+      3,
+      0
+    ],
+    "card_effect_class_name": "BT24_085",
+    "card_id": "BT24-085",
+    "card_index": 85,
+    "card_kind": 1,
+    "card_name_eng": "Dan Yuki & Kanan Yuki",
+    "card_name_jpn": "",
+    "dp": null,
+    "effect_description_eng": "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory.\r\n[End of Your Turn] By suspending this Tamer, you may use 1 [TS] trait Option card with as high or lower a use cost as your opponent's memory from your hand without paying the cost. Then, 1 of your Digimon with the [TS] trait may attack.",
+    "evo_costs": [],
+    "form_eng": [],
+    "index": 2583,
+    "inherited_effect_description_eng": "",
+    "level": null,
+    "norm_id": 0.12915,
+    "play_cost": 4,
+    "rarity": 3,
+    "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+    "type_eng": [
+      "ADAMAS",
+      "TS"
+    ],
+    "xros_req": ""
+  },
+  "BT25-078": {
+    "attribute_eng": [
+      "Virus"
+    ],
+    "card_colors": [
+      6
+    ],
+    "card_effect_class_name": "BT25_078",
+    "card_id": "BT25-078",
+    "card_index": 78,
+    "card_kind": 0,
+    "card_name_eng": "Gazimon",
+    "card_name_jpn": "",
+    "dp": 1000,
+    "effect_description_eng": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with [Three Musketeers] in its text to the hand, or you may place 1 [Three Musketeers] trait card as this Digimon's bottom digivolution card. Return the rest to the bottom of the deck.",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "index": 4164,
+    "inherited_effect_description_eng": "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)",
+    "level": 3,
+    "norm_id": 0.2082,
+    "play_cost": 3,
+    "rarity": 0,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Mammal",
+      "Iliad",
+      "TS"
+    ],
+    "xros_req": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[Three Musketeers] in text or w/[TS] trait: Cost 0"
+  },
+  "EX12-070": {
+    "attribute_eng": [],
+    "card_colors": [
+      2,
+      3,
+      1
+    ],
+    "card_effect_class_name": "EX12_070",
+    "card_id": "EX12-070",
+    "card_index": 70,
+    "card_kind": 2,
+    "card_name_eng": "Sanmyojin Arrival",
+    "card_name_jpn": "",
+    "dp": null,
+    "effect_description_eng": "＜Use Req. ([TB] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] By trashing 1 [TB] trait card from your hand, ＜Draw 2＞. After, place this card in the battle area.\r\n[All Turns] When any of your level 5 or higher [TB] trait Digimon would leave the battle area, ＜Delay＞.\r\n・You may play 1 [Sanmyojin] trait Digimon card from your hand without paying the cost.",
+    "evo_costs": [],
+    "form_eng": [],
+    "index": 4471,
+    "inherited_effect_description_eng": "",
+    "level": null,
+    "norm_id": 0.22355,
+    "play_cost": 3,
+    "rarity": 0,
+    "security_effect_description_eng": "[Security] Activate this card's [Main] effects.",
+    "type_eng": [
+      "Shambala",
+      "TB"
+    ],
+    "xros_req": ""
+  },
+  "EX12-071": {
+    "attribute_eng": [],
+    "card_colors": [
+      5,
+      1,
+      0
+    ],
+    "card_effect_class_name": "EX12_071",
+    "card_id": "EX12-071",
+    "card_index": 71,
+    "card_kind": 2,
+    "card_name_eng": "Saneiketsu Invitation",
+    "card_name_jpn": "",
+    "dp": null,
+    "effect_description_eng": "＜Use Req. ([SW] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] By trashing 1 [SW] trait card from your hand, ＜Draw 2＞. After, place this card in the battle area.\r\n[All Turns] When any of your [SW] trait Digimon are played, ＜Delay＞.\r\n・1 of your [SW] trait Digimon may digivolve into a [Saneiketsu] trait Digimon card in the hand without paying the cost.",
+    "evo_costs": [],
+    "form_eng": [],
+    "index": 4472,
+    "inherited_effect_description_eng": "",
+    "level": null,
+    "norm_id": 0.2236,
+    "play_cost": 3,
+    "rarity": 0,
+    "security_effect_description_eng": "[Security] Activate this card's [Main] effects.",
+    "type_eng": [
+      "Shambala",
+      "SW"
+    ],
+    "xros_req": ""
+  }
+}

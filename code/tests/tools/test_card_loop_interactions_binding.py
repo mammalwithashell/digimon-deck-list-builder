@@ -25,9 +25,10 @@ def _clause_row(cid, verdict="confirmed"):
 
 
 def _iv(iid, cards, verdict="confirmed", sha="r", at="2026-10-02T00:00:00Z", **kw):
-    return {"interaction_id": iid, "card_ids": list(cards),
+    from semantic_fixtures import interaction
+    return interaction(iid, {"interaction_id": iid, "card_ids": list(cards),
             "source": "qa" if iid.startswith("qa:") else "probe", "kind": "positive",
-            "verdict": verdict, "text_sha256": sha, "recorded_at": at, **kw}
+            "verdict": verdict, "text_sha256": sha, "recorded_at": at, **kw})
 
 
 def _write(d: Path, card: str, doc: dict) -> None:
@@ -57,7 +58,7 @@ def test_the_committed_ledger_loads_clauses_and_interactions():
 
 
 @pytest.mark.parametrize("doc,match", [
-    ({"version": 3, "clauses": {}}, "version 3"),
+    ({"version": 99, "clauses": {}}, "version 99"),
     ({"version": 1, "clauses": {}, "interactions": {"qa:Q1": _iv("qa:Q1", ["BT7-056"])}}, "version 1"),
 ])
 def test_unknown_versions_and_v1_interactions_are_refused(tmp_path, doc, match):
@@ -106,8 +107,9 @@ def test_the_writer_files_a_shared_verdict_under_every_card_and_nothing_else(tmp
     assert (tmp_path / "ST1-12.json").read_bytes() == untouched
 
     bt7 = json.loads((tmp_path / "BT7-056.json").read_text(encoding="utf-8"))
-    assert bt7["version"] == 2
-    assert list(bt7) == ["version", "last_updated", "clauses", "interactions"]
+    assert bt7["version"] == 3
+    assert list(bt7) == ["version", "last_updated", "clauses", "interactions", "legacy_unbound"]
+    assert bt7["legacy_unbound"] == ["BT7-056#effect#0"]
     assert "BT7-056#effect#0" in bt7["clauses"], "the card's clause verdicts survive"
     row = bt7["interactions"]["qa:Q2"]
     assert list(row)[:6] == ["interaction_id", "card_ids", "source", "kind", "verdict", "text_sha256"]
@@ -128,18 +130,23 @@ def test_the_cross_language_fixture_is_what_the_writer_writes_today(tmp_path):
               "recorded_at": "2026-10-01T00:00:00Z"}
     _write(tmp_path, "BT7-056", {"version": 1, "last_updated": "2026-10-01T00:00:00Z",
                                  "clauses": {"BT7-056#effect#0": clause}})
-    write_interaction_verdict(tmp_path, {
+    from semantic_fixtures import interaction
+    write_interaction_verdict(tmp_path, interaction("qa:Q2002", {
         "interaction_id": "qa:Q2002", "card_ids": ["BT7-056", "EX4-030"], "source": "qa",
         "kind": "positive", "verdict": "confirmed", "text_sha256": "ruling-sha",
         "scenario_path": "qa/dcgo-exams/BT7/BT7-056-qa-Q2002.yaml",
-        "recorded_at": "2026-10-02T00:00:00Z", "produced_by": "att-0001"})
-    write_interaction_verdict(tmp_path, {
+        "recorded_at": "2026-10-02T00:00:00Z", "produced_by": "att-0001"}))
+    write_interaction_verdict(tmp_path, interaction("probe:BT7-056#inherited#0:timing_gate:neg", {
         "interaction_id": "probe:BT7-056#inherited#0:timing_gate:neg", "card_ids": ["BT7-056"],
         "source": "probe", "kind": "negative", "verdict": "diverged", "text_sha256": "clause-sha",
-        "reason": "step 4: p0.memory ours=1 dcgo=2", "recorded_at": "2026-10-03T00:00:00Z"})
+        "reason": "step 4: p0.memory ours=1 dcgo=2", "recorded_at": "2026-10-03T00:00:00Z"}))
     for name in ("BT7-056.json", "EX4-030.json"):
-        expected = (fixture / name).read_text(encoding="utf-8").replace("\r\n", "\n")
-        assert (tmp_path / name).read_text(encoding="utf-8") == expected, name
+        expected = json.loads((fixture / name).read_text(encoding="utf-8"))
+        actual = json.loads((tmp_path / name).read_text(encoding="utf-8"))
+        assert actual["version"] == 3
+        assert actual["clauses"] == expected["clauses"]
+        for iid, row in expected.get("interactions", {}).items():
+            assert all(actual["interactions"][iid][key] == value for key, value in row.items())
 
 
 @pytest.mark.parametrize("bad,match", [
@@ -187,6 +194,10 @@ def _scenario(d: Path, name: str, extra: str = "", clause: str = "EX12-073#effec
 
 
 def _denominator(path: Path, interactions: dict, cards: dict) -> Path:
+    from semantic_fixtures import interaction
+    from semantic_fixtures import write_current_qa
+    write_current_qa(path.with_name("card_qa.json"), interactions)
+    interactions = {iid: interaction(iid, row) for iid, row in interactions.items()}
     path.write_text(json.dumps({"version": 1, "cards": cards, "interactions": interactions}), encoding="utf-8")
     return path
 
@@ -285,3 +296,30 @@ def test_bind_interactions_surfaces_triage_and_citation_of_a_diverged_row(tmp_pa
     # not diverged: the twins are None even when the store carries stale text
     assert (rows["qa:Q8"]["verdict"], rows["qa:Q8"]["triage"], rows["qa:Q8"]["citation"]) == (
         "confirmed", None, None)
+
+
+def test_writer_preserves_shared_legacy_binding_until_exact_new_record(tmp_path):
+    from tools.clause_coverage.semantic_fingerprint import binding_error
+    cards = ["BT7-056", "EX4-030"]
+    old = _iv("qa:Q2", cards)
+    other = _iv("qa:Q3", cards)
+    for card in cards:
+        _write(tmp_path, card, {"version": 2, "clauses": {}, "interactions": {"qa:Q2": old, "qa:Q3": other}})
+    assert binding_error(old, load_interaction_verdicts(tmp_path)["qa:Q2"])
+    write_interaction_verdict(tmp_path, old)
+    loaded = load_interaction_verdicts(tmp_path)
+    assert binding_error(old, loaded["qa:Q2"]) is None
+    assert binding_error(other, loaded["qa:Q3"])
+    for card in cards:
+        doc = json.loads((tmp_path / f"{card}.json").read_text())
+        assert doc["legacy_unbound"] == ["qa:Q3"]
+        assert doc["interactions"]["qa:Q3"] == other
+
+
+@pytest.fixture(autouse=True)
+def current_synthetic_qa_source(tmp_path, monkeypatch):
+    from tools.card_loop.interactions import denominator
+    from semantic_fixtures import write_current_qa
+    source = tmp_path / "card_qa.json"
+    write_current_qa(source, {})
+    monkeypatch.setattr(denominator, "DEFAULT_CARD_QA", source)

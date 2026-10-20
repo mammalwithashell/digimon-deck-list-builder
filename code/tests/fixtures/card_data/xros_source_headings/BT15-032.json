@@ -1,0 +1,126 @@
+{
+  "card_id": "BT15-032",
+  "category": "exact_body_section_header_only",
+  "has_required_canonical_conflict": false,
+  "diff": {
+    "approval_id": null,
+    "approval_kind": null,
+    "approved": false,
+    "card_id": "BT15-032",
+    "field_path": "xros_req",
+    "new_digest": "56f93a464734162e87a250852be653bb6c68b625c45012f0f6c436060c2b7571",
+    "new_value": "[Special Digivolution Condition] [Digivolve] [Plesiomon]: Cost 2",
+    "old_digest": "176d5c528447f29ae20d5377520424b73bd6ec873447f1d0a67865890fe93db6",
+    "old_value": "[Digivolve] [Plesiomon]: Cost 2",
+    "provenance_observation_ids": [
+      "47a5049b624c47c260c3baeb37b55975e251e642948108960297d6863787a0e2"
+    ]
+  },
+  "source_units": [
+    {
+      "kind": "official-section",
+      "field": "xros_req",
+      "observation_id": "47a5049b624c47c260c3baeb37b55975e251e642948108960297d6863787a0e2",
+      "section_index": 0,
+      "label": "Special Digivolution Condition",
+      "condition_type": "special_digivolution_condition",
+      "text": "[Digivolve] [Plesiomon]: Cost 2"
+    }
+  ],
+  "observations": {
+    "47a5049b624c47c260c3baeb37b55975e251e642948108960297d6863787a0e2": {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "BT15-032",
+        "card_type": "Digimon",
+        "colors": [
+          "Blue"
+        ],
+        "dp": 13000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "cost": 5,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "dp": 13000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "Plesiomon (X Antibody)",
+            "play_cost": 13,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Plesiomon]: Cost 2"
+              },
+              {
+                "label": "Effect",
+                "text": "[When Digivolving] [When Attacking] [Once Per Turn] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the hand.\n[Opponent's Turn] When an opponent's Digimon with as many or fewer digivolution cards as this Digimon attacks, if [Plesiomon] or [X Antibody] is in this Digimon's digivolution cards, gain 2 memory."
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 6,
+        "name": "Plesiomon (X Antibody)",
+        "play_cost": 13,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522020",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT15-032.png?260529",
+          "printing_id": "BT15-032"
+        },
+        "printing_field_gaps": [],
+        "qa": [],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Plesiomon]: Cost 2"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Plesiomon]: Cost 2"
+          },
+          {
+            "label": "Effect",
+            "text": "[When Digivolving] [When Attacking] [Once Per Turn] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the hand.\n[Opponent's Turn] When an opponent's Digimon with as many or fewer digivolution cards as this Digimon attacks, if [Plesiomon] or [X Antibody] is in this Digimon's digivolution cards, gain 2 memory."
+          }
+        ],
+        "type": "Plesiosaur/X Antibody"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "47a5049b624c47c260c3baeb37b55975e251e642948108960297d6863787a0e2",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "ce40568a71924f547bb75554f5c131bc87e27afff7aff0a37d5ea0e93400e128",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522020:BT15-032:BT15-032",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522020"
+    }
+  },
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT15-032.webp",
+    "sha256": "ef65baa338f9403e0ccb235b9984cf2d4faf5a70e600c9f192c63fb9226c7815",
+    "observed": "Printed named Digivolve cost matches official condition."
+  },
+  "scope": "Parser hint regression only; runtime field remains unapproved."
+}

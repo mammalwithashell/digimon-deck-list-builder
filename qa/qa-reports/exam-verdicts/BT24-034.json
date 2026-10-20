@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T16:35:03.810255400+00:00",
+  "last_updated": "2026-10-10T17:01:31.571969300+00:00",
   "clauses": {
     "BT24-034#effect#0": {
       "clause_id": "BT24-034#effect#0",
@@ -10,7 +10,9 @@
       "text_sha256": "8a568fed876b234a52f453248cc3fc49d43c83f288193821b5479ba8dfadd9ad",
       "scenario_path": "qa/dcgo-exams/BT24/BT24-034-effect0.yaml",
       "reason": "DIVERGED at step 3 (compared 10 of 11 ours / 10 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
-      "recorded_at": "2026-10-05T16:35:01.726836900+00:00"
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "job_id": "exam-BT24-034-effect0",
+      "recorded_at": "2026-10-10T17:01:31.571969300+00:00"
     },
     "BT24-034#effect#1": {
       "clause_id": "BT24-034#effect#1",

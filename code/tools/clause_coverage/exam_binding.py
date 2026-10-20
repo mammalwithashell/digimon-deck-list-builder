@@ -33,9 +33,9 @@ Three failure modes this module refuses to hide
 2. **Verdicts whose clause text drifted.** Clause ids are *positional within a
    zone*, so an override or re-scrape that changes a card's text silently
    re-points every later id at a DIFFERENT clause. A stored verdict carrying a
-   `text_sha256` that no longer matches the current clause text is invalidated:
+   `semantic_sha256` that lacks a recognized version or no longer matches the complete zone is invalidated:
    it reports `unmeasured` and its id is listed in `invalidated_clause_ids`.
-   (Same rule as the Rust `VerdictStore::get_validated`.)
+   (Same rule as the Rust `VerdictStore::get_semantically_validated_v1`.)
 3. **Unrecognized verdict strings.** A stored value outside the five classes
    degrades to `unmeasured` and is surfaced in `unrecognized_verdicts` rather
    than being coerced into something that reads like a pass.
@@ -49,9 +49,8 @@ Verdict-store shape (as written by the Rust `VerdictStore`)::
 
 **Version 2** (card-loop design D8) adds ``"interactions": {"<interaction_id>":
 {"interaction_id", "card_ids", "source", "kind", "verdict", "text_sha256",
-...}}`` beside ``clauses``. Both versions load; a file is written as v2 only
-when its card carries an interaction verdict (`write_interaction_verdict`), so
-the committed v1 files are never rewritten. A shared ruling's verdict is
+...}}`` beside ``clauses``. Versions 1, 2 and 3 load; new writes use v3. Historical records retain their
+stored verdict and metadata but cannot count without recognized semantic binding. A shared ruling's verdict is
 written into EVERY card file it counts for, and two copies that disagree are
 refused on read.
 
@@ -78,6 +77,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from tools.clause_coverage.extract import run as extract_run
+from tools.clause_coverage.semantic_fingerprint import binding_error, interaction_binding_error
 
 #: The five verdict classes. `unmeasured` is the default for every clause.
 VERDICT_CLASSES: tuple[str, ...] = (
@@ -91,7 +91,7 @@ VERDICT_CLASSES: tuple[str, ...] = (
 UNMEASURED = "unmeasured"
 
 #: Verdict-store file versions this reader understands (Rust `SUPPORTED_VERSIONS`).
-SUPPORTED_STORE_VERSIONS: tuple[int, ...] = (1, 2)
+SUPPORTED_STORE_VERSIONS: tuple[int, ...] = (1, 2, 3)
 
 #: Field order the Rust `InteractionVerdict` serializes in; the Python writer
 #: emits the same order so both writers produce the same bytes.
@@ -296,8 +296,13 @@ def load_verdict_store(path: Path | str | None) -> dict:
     return _load_verdict_file(p)
 
 
+class StoredRecord(dict):
+    """Nonserialized container-era binding state; raw evidence remains intact."""
+    legacy_unbound = False
+
+
 def _read_store_file(p: Path) -> dict:
-    """One store file, version-checked. Accepts v1 and v2 (the Rust
+    """One store file, version-checked. Accepts v1, v2 and v3 (the Rust
     `VerdictStore::from_json` rules): an unknown version, or a v1 file carrying
     `interactions`, raises rather than being half-read."""
     with open(p, encoding="utf-8") as f:
@@ -312,6 +317,17 @@ def _read_store_file(p: Path) -> dict:
         )
     if version == 1 and data.get("interactions"):
         raise ValueError(f"verdict file {p} is version 1 but carries `interactions` (that is v2)")
+    legacy = set(data.get("legacy_unbound") or [])
+    if version < 3:
+        legacy.update(data.get("clauses") or {})
+        legacy.update(data.get("interactions") or {})
+    if legacy:
+        data["legacy_unbound"] = sorted(legacy)
+    for field in ("clauses", "interactions"):
+        for ident, row in (data.get(field) or {}).items():
+            wrapped = StoredRecord(row)
+            wrapped.legacy_unbound = ident in legacy
+            data[field][ident] = wrapped
     return data
 
 
@@ -360,7 +376,7 @@ def load_interaction_verdicts(path: Path | str | None) -> dict:
             if embedded and embedded != iid:
                 raise ValueError(f"verdict file {f} key {iid!r} disagrees with its interaction_id {embedded!r}")
             if iid in merged:
-                if merged[iid] != record:
+                if merged[iid] != record or merged[iid].legacy_unbound != record.legacy_unbound:
                     raise ValueError(
                         f"interaction {iid!r} has disagreeing copies in {origin[iid]} and {f}; a "
                         "shared verdict must be written identically into every listed card's file"
@@ -386,7 +402,7 @@ def write_interaction_verdict(verdicts_dir: Path | str, record: dict) -> list[Pa
     ``verdict``, ``text_sha256`` (the denominator's fingerprint; ``""`` for a
     combo) and ``recorded_at``; anything else (``reason``, a triage block,
     ``produced_by``) is carried as-is. Each touched file becomes
-    ``version: 2``; files of cards the interaction does not count for are
+    ``version: 3``; files of cards the interaction does not count for are
     never opened. Returns the paths written, so the caller commits them
     together (design D8).
     """
@@ -401,6 +417,9 @@ def write_interaction_verdict(verdicts_dir: Path | str, record: dict) -> list[Pa
     verdict = str(record.get("verdict", "")).lower()
     if verdict not in VERDICT_CLASSES or verdict == UNMEASURED:
         raise ValueError(f"interaction verdict {verdict!r} is not one of the four recordable classes")
+    if not iid.startswith("combo:"):
+        if error := interaction_binding_error(iid, record, record):
+            raise ValueError(f"interaction source binding refused: {error}")
     row = _ordered_interaction({**record, "card_ids": list(cards), "verdict": verdict})
 
     d = Path(verdicts_dir)
@@ -415,11 +434,14 @@ def write_interaction_verdict(verdicts_dir: Path | str, record: dict) -> list[Pa
         stamps = [r.get("recorded_at") or "" for r in clauses.values()]
         stamps += [r.get("recorded_at") or "" for r in interactions.values()]
         out = {
-            "version": 2,
+            "version": 3,
             "last_updated": max(stamps),
             "clauses": clauses,
             "interactions": {k: interactions[k] for k in sorted(interactions)},
         }
+        legacy = set(data.get("legacy_unbound") or []) - {iid}
+        if legacy:
+            out["legacy_unbound"] = sorted(legacy)
         with open(f, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(json.dumps(out, indent=2, ensure_ascii=False) + "\n")
         written.append(f)
@@ -494,6 +516,7 @@ def bind(
     verdicts_path: Path | str | None,
     *,
     source_desc: str | None = None,
+    current_clauses: list[dict] | None = None,
     interaction_denominator: Path | str | None = DEFAULT_INTERACTION_DENOMINATOR,
     **extract_kwargs,
 ) -> dict:
@@ -514,12 +537,15 @@ def bind(
     seen: set[str] = set()
     ordered_cards = [c for c in card_ids if not (c in seen or seen.add(c))]
 
-    extracted = extract_run(
-        ordered_cards,
-        source_desc or f"exam_binding.bind ({len(ordered_cards)} cards)",
-        **extract_kwargs,
-    )
-    clauses = extracted["clauses"]
+    if current_clauses is None:
+        extracted = extract_run(
+            ordered_cards,
+            source_desc or f"exam_binding.bind ({len(ordered_cards)} cards)",
+            **extract_kwargs,
+        )
+        clauses = extracted["clauses"]
+    else:
+        clauses = [row for row in current_clauses if row["card_id"] in ordered_cards]
     clauses_by_id = {c["id"]: c for c in clauses}
     in_scope = set(ordered_cards)
 
@@ -673,15 +699,13 @@ def bind(
             unrecognized_verdicts.append({"clause_id": clause_id, "stored_verdict": raw_verdict})
             verdict = UNMEASURED
             reason = f"stored verdict {raw_verdict!r} is not one of {list(VERDICT_CLASSES)}"
-        elif verdict != UNMEASURED:
-            stored_sha = entry.get("text_sha256")
-            if stored_sha and stored_sha != clause_text_sha256(clause.get("text", "")):
+        elif raw_verdict is not None:
+            semantic_error = binding_error(clause, entry)
+            if semantic_error:
                 invalidated = True
                 invalidated_clause_ids.append(clause_id)
                 reason = (
-                    f"stored {verdict!r} verdict invalidated: the clause text changed "
-                    "since it was recorded (text_sha256 mismatch), so this positional "
-                    "id may now point at a different clause"
+                    f"stored {verdict!r} verdict invalidated: {semantic_error}"
                 )
                 verdict = UNMEASURED
 
@@ -702,6 +726,8 @@ def bind(
                 "text": clause.get("text", ""),
                 "source": clause.get("source"),
                 "verdict": verdict,
+                "stored_verdict": raw_verdict,
+                "stored_record": dict(entry),
                 "invalidated": invalidated,
                 "reason": reason,
                 "scenarios": scenarios_by_clause.get(clause_id, []),
@@ -736,6 +762,7 @@ def bind(
             "by_verdict": {v: by_verdict[v] for v in VERDICT_CLASSES},
             "by_zone": dict(Counter(c["zone"] for c in clauses)),
         },
+        "current_source_clauses": clauses,
         "unmeasured_clause_ids": unmeasured_clause_ids,
         "invalidated_clause_ids": invalidated_clause_ids,
         "orphan_scenarios": orphan_scenarios,
@@ -766,6 +793,8 @@ def bind_interactions(
     verdicts_path: Path | str | None,
     *,
     gating_only: bool = True,
+    current_clauses: list[dict] | None = None,
+    card_qa_path: Path | str | None = None,
 ) -> dict:
     """Every card's (gating) interactions x the stored interaction verdicts.
 
@@ -789,6 +818,37 @@ def bind_interactions(
     per_card_ids = denominator.get("cards", {})
     store = load_interaction_verdicts(verdicts_path)
 
+    # An internally consistent historical denominator is not current evidence.
+    # Freeze fresh inputs once for this join, retaining every artifact row below.
+    from tools.card_loop.interactions import denominator as source_denominator
+    source_error = None
+    current_by_clause, current_qa = {}, {}
+    try:
+        if current_clauses is None:
+            current_clauses = extract_run(list(dict.fromkeys(card_ids)), "interaction source pairing")["clauses"]
+        from tools.clause_coverage.semantic_fingerprint import bind_clause_semantics
+        current_by_clause = {r["id"]: r for r in bind_clause_semantics(current_clauses)}
+        qa = source_denominator.load_card_qa(card_qa_path or source_denominator.DEFAULT_CARD_QA)
+        current_qa = source_denominator._qa_interactions(qa, set(card_ids))
+    except (OSError, ValueError, KeyError) as error:
+        source_error = f"current interaction source unavailable: {error}"
+
+    def current_source_error(iid, row):
+        if source_error:
+            return source_error
+        if row.get("source") == "probe":
+            clause = current_by_clause.get(row.get("clause_id"))
+            payload = row.get("semantic_payload")
+            if clause is None or not isinstance(payload, list) or len(payload) != 9 or payload[8] != clause["semantic_sha256"]:
+                return "probe denominator differs from current complete clause source"
+        elif row.get("source") == "qa":
+            current = current_qa.get(iid)
+            if current is None or current["semantic_sha256"] != row.get("semantic_sha256"):
+                return "Q&A denominator differs from current answer or card membership"
+        else:
+            return "interaction has no recognized current source"
+        return None
+
     classified: dict[str, dict] = {}
     unrecognized: list[dict] = []
 
@@ -803,16 +863,17 @@ def bind_interactions(
         if raw is not None and verdict not in VERDICT_CLASSES:
             unrecognized.append({"interaction_id": iid, "stored_verdict": raw})
             verdict, reason = UNMEASURED, f"stored verdict {raw!r} is not one of {list(VERDICT_CLASSES)}"
-        elif verdict != UNMEASURED and entry.get("text_sha256") != rows[iid].get("text_sha256"):
+        elif (semantic_error := current_source_error(iid, rows[iid]) or (interaction_binding_error(iid, rows[iid], entry) if raw is not None else None)):
             invalidated, verdict = True, UNMEASURED
-            reason = ("stored verdict invalidated: the ruling / clause text changed since it "
-                      "was recorded (text_sha256 mismatch)")
+            reason = f"stored verdict invalidated: {semantic_error}"
         classified[iid] = {
             "interaction_id": iid,
             "source": rows[iid].get("source"),
             "kind": rows[iid].get("kind"),
             "gating": bool(rows[iid].get("gating")),
             "verdict": verdict,
+            "stored_verdict": raw,
+            "stored_record": dict(entry),
             "invalidated": invalidated,
             "reason": reason,
             # The clause row's twins (`verdict-set --triage/--citation` writes
@@ -831,7 +892,8 @@ def bind_interactions(
         seen.update(ids)
         cards[cid] = {
             "card_id": cid,
-            "in_denominator": cid in per_card_ids,
+            "in_denominator": cid in per_card_ids and source_error is None and all(
+                iid in per_card_ids.get(cid, []) for iid, row in current_qa.items() if cid in row["card_ids"]),
             "total_interactions": len(items),
             "by_verdict": {v: sum(1 for x in items if x["verdict"] == v) for v in VERDICT_CLASSES},
             "interactions": items,

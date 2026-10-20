@@ -1,0 +1,862 @@
+{
+  "scope": "Pure whole-card source composition fixture, no publication or verdict approval",
+  "card_id": "BT24-031",
+  "card": {
+    "admission": "admitted",
+    "card_id": "BT24-031",
+    "conflicts": [
+      {
+        "candidate_observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "field_path": "effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "field_path": "evo_costs",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "field_path": "form_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      },
+      {
+        "candidate_observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "field_path": "inherited_effect_description_eng",
+        "kind": "official_secondary",
+        "reason": "official value selected over conflicting secondary observation"
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 1000,
+        "effect_text": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[TS] trait: Cost 0\n[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+        "face_id": "primary",
+        "inherited_text": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 ≪Deck≫＞.",
+        "kind": "digimon",
+        "level": 3,
+        "play_cost": 3,
+        "security_text": ""
+      }
+    ],
+    "fields": {
+      "attribute_eng": [
+        "Data"
+      ],
+      "card_colors": [
+        "Yellow"
+      ],
+      "card_kind": "Digimon",
+      "card_name_eng": "Elecmon",
+      "dp": 1000,
+      "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+      "evo_costs": [
+        {
+          "colors": [
+            "Yellow"
+          ],
+          "cost": 0,
+          "from_level": 2,
+          "slot": 1
+        }
+      ],
+      "form_eng": [
+        "Rookie"
+      ],
+      "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 ≪Deck≫＞.",
+      "level": 3,
+      "play_cost": 3,
+      "security_effect_description_eng": "",
+      "type_eng": [
+        "Mammal",
+        "Iliad",
+        "TS"
+      ]
+    },
+    "printings": [
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "printing_id": "BT24-031",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834"
+        ],
+        "printing_id": "BT24-031#2",
+        "product": null
+      },
+      {
+        "alternate_art": false,
+        "language": "en",
+        "observation_ids": [
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e"
+        ],
+        "printing_id": "BT24-031#3",
+        "product": null
+      },
+      {
+        "alternate_art": true,
+        "language": "en",
+        "observation_ids": [
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175"
+        ],
+        "printing_id": "BT24-031_P1",
+        "product": null
+      }
+    ],
+    "provenance": {
+      "attribute_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "card_colors": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "card_kind": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "card_name_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "dp": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "evo_costs": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "faces": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "form_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "inherited_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "level": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "play_cost": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "security_effect_description_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      },
+      "type_eng": {
+        "adjudicated": false,
+        "authority": "official",
+        "derived": false,
+        "observation_ids": [
+          "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+          "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+          "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+          "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+          "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+        ],
+        "selected_observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf"
+      }
+    },
+    "schema_version": 1,
+    "tombstone_reason": null
+  },
+  "observations": {
+    "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Data"
+          ],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Elecmon",
+          "dp": 1000,
+          "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+          "level": 3,
+          "play_cost": 3,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Mammal",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT24-031",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Yellow",
+              "cost": 0,
+              "level": 2,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 1000,
+            "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+            "face_id": "primary",
+            "inherited_text": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+            "kind": "digimon",
+            "level": 3,
+            "play_cost": 3,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.2 w/[TS] trait: Cost 0",
+          "artist": null,
+          "attribute": "Data",
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-12-22 01:04:22",
+          "digi_type": "Mammal",
+          "digi_type2": "Iliad",
+          "digi_type3": "TS",
+          "digi_type4": null,
+          "dp": 1000,
+          "evolution_color": null,
+          "evolution_cost": 0,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT24-031",
+          "level": 3,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+          "name": "Elecmon",
+          "play_cost": 3,
+          "pretty_url": "BT24-031-elecmon",
+          "rarity": "R",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-24: BOOSTER TIME STRANGER"
+          ],
+          "source_effect": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+          "stage": null,
+          "tcgplayer_id": 670218,
+          "tcgplayer_name": "Elecmon (Alternate Art)",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT24-031",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf": {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "BT24-031",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 1000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 1000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Elecmon",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 ≪Deck≫＞."
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Elecmon",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522033",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT24-031.png?260529",
+          "printing_id": "BT24-031"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5611",
+            "question": "I have 0 security cards. Can I activate this card's inherited effect and perform without adding a security card to the hand?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 ≪Deck≫＞."
+          }
+        ],
+        "type": "Mammal/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522033:BT24-031:BT24-031",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522033"
+    },
+    "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Data"
+          ],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Elecmon",
+          "dp": 1000,
+          "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+          "level": 3,
+          "play_cost": 3,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Mammal",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT24-031",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Yellow",
+              "cost": 0,
+              "level": 2,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 1000,
+            "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+            "face_id": "primary",
+            "inherited_text": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+            "kind": "digimon",
+            "level": 3,
+            "play_cost": 3,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.2 w/[TS] trait: Cost 0",
+          "artist": null,
+          "attribute": "Data",
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-12-22 01:04:22",
+          "digi_type": "Mammal",
+          "digi_type2": "Iliad",
+          "digi_type3": "TS",
+          "digi_type4": null,
+          "dp": 1000,
+          "evolution_color": null,
+          "evolution_cost": 0,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT24-031",
+          "level": 3,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+          "name": "Elecmon",
+          "play_cost": 3,
+          "pretty_url": "BT24-031-elecmon",
+          "rarity": "R",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-24: BOOSTER TIME STRANGER"
+          ],
+          "source_effect": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+          "stage": null,
+          "tcgplayer_id": 672636,
+          "tcgplayer_name": "Elecmon",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT24-031#2",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e": {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Data"
+          ],
+          "card_colors": [
+            "Yellow"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "Elecmon",
+          "dp": 1000,
+          "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+          "level": 3,
+          "play_cost": 3,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Mammal",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT24-031",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Yellow",
+              "cost": 0,
+              "level": 2,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 1000,
+            "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+            "face_id": "primary",
+            "inherited_text": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+            "kind": "digimon",
+            "level": 3,
+            "play_cost": 3,
+            "security_text": ""
+          }
+        ],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.2 w/[TS] trait: Cost 0",
+          "artist": null,
+          "attribute": "Data",
+          "color": "Yellow",
+          "color2": null,
+          "date_added": "2025-12-22 01:04:22",
+          "digi_type": "Mammal",
+          "digi_type2": "Iliad",
+          "digi_type3": "TS",
+          "digi_type4": null,
+          "dp": 1000,
+          "evolution_color": null,
+          "evolution_cost": 0,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT24-031",
+          "level": 3,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+          "name": "Elecmon",
+          "play_cost": 3,
+          "pretty_url": "BT24-031-elecmon",
+          "rarity": "R",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-24: BOOSTER TIME STRANGER"
+          ],
+          "source_effect": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+          "stage": null,
+          "tcgplayer_id": 670217,
+          "tcgplayer_name": "Elecmon",
+          "type": "Digimon",
+          "xros_req": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+        },
+        "structural_diagnostics": []
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT24-031#3",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175": {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "BT24-031",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 1000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "dp": 1000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Elecmon",
+            "play_cost": 3,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 ≪Deck≫＞."
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Elecmon",
+        "play_cost": 3,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522033",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT24-031_P1.png?260529",
+          "printing_id": "BT24-031_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, you can.",
+            "date": "Dec. 25, 2025",
+            "number": "Q5611",
+            "question": "I have 0 security cards. Can I activate this card's inherited effect and perform without adding a security card to the hand?"
+          }
+        ],
+        "rarity": "R",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 ≪Deck≫＞."
+          }
+        ],
+        "type": "Mammal/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522033:BT24-031:BT24-031_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522033"
+    }
+  },
+  "xros_req": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[TS] trait: Cost 0",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "raw_files": {
+    "https://world.digimoncard.com/cards/?search=true&category=522033": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a.html.gz"
+  },
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT24-031.webp",
+    "sha256": "07f78eafc6a1e7cfb0b34ffe9144c398bd172eec2c713e5b517c12f2b5f92c26",
+    "observed": "Ordinary boxes and separate special condition text inspected; full text retained from official observation."
+  }
+}

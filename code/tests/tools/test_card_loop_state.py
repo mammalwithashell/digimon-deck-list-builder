@@ -25,7 +25,9 @@ RANKING = ["EX12-073", "BT7-056", "BT8-084", "EX12-004"]
 
 
 def _clause_row(clause_id, verdict, **extra):
-    return {"clause_id": clause_id, "card_id": clause_id.split("#")[0], "verdict": verdict,
+    from tools.clause_coverage.extract import run
+    source = next(r for r in run([clause_id.split("#")[0]], "fresh state fixture")["clauses"] if r["id"] == clause_id)
+    return {"semantic_fingerprint_version":1, "semantic_sha256":source["semantic_sha256"], "clause_id": clause_id, "card_id": clause_id.split("#")[0], "verdict": verdict,
             "recorded_at": "2026-10-01T00:00:00Z", **extra}
 
 
@@ -36,7 +38,7 @@ def _interaction(iid, cards, *, gating=True, source=None, sha=None):
 
 
 @pytest.fixture
-def ws(tmp_path):
+def ws(tmp_path, monkeypatch):
     cards = tmp_path / "cards"
     for set_dir, card in (("bt8", "BT8-084"), ("bt7", "BT7-056"), ("ex12", "EX12-004")):
         (cards / set_dir).mkdir(parents=True, exist_ok=True)
@@ -46,7 +48,7 @@ def ws(tmp_path):
     verdicts = tmp_path / "verdicts"
     verdicts.mkdir()
     (verdicts / "BT8-084.json").write_text(json.dumps({
-        "version": 2,
+        "version": 3,
         "clauses": {
             "BT8-084#effect#0": _clause_row("BT8-084#effect#0", "confirmed"),
             "BT8-084#effect#1": _clause_row("BT8-084#effect#1", "diverged", triage="dcgo_quirk",
@@ -63,7 +65,7 @@ def ws(tmp_path):
         },
     }), encoding="utf-8")
     (verdicts / "BT7-056.json").write_text(json.dumps({
-        "version": 1,
+        "version": 3,
         "clauses": {"BT7-056#effect#0": _clause_row("BT7-056#effect#0", "diverged",
                                                     triage="undetermined",
                                                     scenario_path="qa/dcgo-exams/BT7/BT7-056-effect0.yaml")},
@@ -80,6 +82,16 @@ def ws(tmp_path):
         "probe:BT7-056#effect#0:timing_gate:neg": _interaction(
             "probe:BT7-056#effect#0:timing_gate:neg", ["BT7-056"], gating=False),
     }
+    from semantic_fixtures import interaction, write_current_qa
+    from tools.card_loop.interactions import denominator as den_source
+    write_current_qa(tmp_path / "card_qa.json", interactions)
+    monkeypatch.setattr(den_source, "DEFAULT_CARD_QA", tmp_path / "card_qa.json")
+    interactions = {iid: interaction(iid,row) for iid,row in interactions.items()}
+    for path in verdicts.glob("*.json"):
+        doc = json.loads(path.read_text())
+        for iid, row in doc.get("interactions",{}).items():
+            row.update(semantic_fingerprint_version=1, semantic_sha256=interactions[iid]["semantic_sha256"])
+        path.write_text(json.dumps(doc),encoding="utf-8")
     per_card = {c: [] for c in POOL + ["BT9-999"]}
     for iid, row in interactions.items():
         for c in row["card_ids"]:
@@ -260,7 +272,7 @@ def test_resume_prefers_a_committed_adjudication_over_a_stale_event_state(ws):
     s.transition("clause:EX12-073#effect#0", "AUTHORING", reason="x")
     # crash after the oracle stage wrote a confirmed verdict, before its event
     (ws["paths"].verdicts_dir / "EX12-073.json").write_text(json.dumps({
-        "version": 1,
+        "version": 3,
         "clauses": {"EX12-073#effect#0": _clause_row("EX12-073#effect#0", "confirmed")}}),
         encoding="utf-8")
     r = _open(ws)
@@ -345,3 +357,21 @@ def test_snapshot_is_written_with_counts_and_items(ws):
     assert doc["counts"]["total"]["items"] == 16
     assert {i["item"] for i in doc["items"]} == set(s.records)
     assert doc["items"][0]["meta"]["is_core"] is True
+
+def test_current_timing_drift_keeps_state_probe_pending_after_fresh_clause_retests(ws, monkeypatch):
+    from tools.clause_coverage import exam_binding
+    from tools.clause_coverage.semantic_fingerprint import bind_clause_semantics
+    from tools.clause_coverage.extract import run
+    rows = run(POOL, 'fresh state timing regression')['clauses']
+    for row in rows:
+        if row['id'] == 'BT8-084#effect#1': row['timings'] = ['On Play']
+    fresh = bind_clause_semantics(rows)
+    monkeypatch.setattr(exam_binding, 'extract_run', lambda ids, *a, **k: {'clauses':[r for r in fresh if r['card_id'] in ids]})
+    by_id = {r['id']:r for r in fresh}
+    for path in ws['paths'].verdicts_dir.glob('*.json'):
+        doc = json.loads(path.read_text())
+        for cid, row in doc['clauses'].items(): row['semantic_sha256'] = by_id[cid]['semantic_sha256']
+        path.write_text(json.dumps(doc))
+    state = _open(ws)
+    assert state.records['clause:BT8-084#effect#1'].state == 'TERMINAL'
+    assert state.records['interaction:probe:BT8-084#effect#1:optional_decline'].state == 'PENDING'

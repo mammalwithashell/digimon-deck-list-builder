@@ -1,0 +1,492 @@
+{
+  "source_snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "rows": [
+    {
+      "observation": {
+        "extracted": {
+          "attribute": "",
+          "card_id": "BT26-104",
+          "card_type": "Tamer",
+          "colors": [
+            "White"
+          ],
+          "dp": null,
+          "evolution_routes": [],
+          "faces": [
+            {
+              "colors": [
+                "White"
+              ],
+              "dp": null,
+              "face_id": "primary",
+              "kind": "tamer",
+              "level": null,
+              "name": "Kunlun",
+              "play_cost": 5,
+              "text_sections": [
+                {
+                  "label": "Effect",
+                  "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+                },
+                {
+                  "label": "Security Effect",
+                  "text": "[Security] Play this card without paying the cost."
+                }
+              ]
+            }
+          ],
+          "form": "",
+          "grade_evolution_routes": [],
+          "layout": "single",
+          "level": null,
+          "name": "Kunlun",
+          "play_cost": 5,
+          "printing": {
+            "alternate_art": false,
+            "category_id": "522038",
+            "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-104.png?260529",
+            "printing_id": "BT26-104"
+          },
+          "printing_field_gaps": [],
+          "qa": [
+            {
+              "answer": "Yes, you can.\nIn this situation, and this card's [End of Your Turn] effect trigger simultaneously.\nIf you activate before attacking with a Digimon, [EX12-074 Genshi Continent & Ashino Island]'s {Security} [Your Turn] effect becomes a derived triggering effect, allowing the Digimon to digivolve into the specified card. After all processing that results from digivolving is resolved, and before the counter timing, you can activate this card's [End of Your Turn] effect that is pending activation.\nRelated Cards",
+              "date": "Aug. 18, 2026",
+              "number": "Q7190",
+              "question": "At the end of my turn, I attack with a [Shambala] trait Digimon with and digivolve into a [Tentei Hachibushu] trait Digimon with [EX12-074 Genshi Continent & Ashino Island]'s {Security} [Your Turn] effect.\nAt such times, can I activate this card's [End of Your Turn] effect?"
+            }
+          ],
+          "rarity": "SEC",
+          "rule_grants": {
+            "attributes": [],
+            "forms": [],
+            "traits": []
+          },
+          "special_evolution_routes": [],
+          "tamer_evolution_routes": [],
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "[Start of Your Main Phase] Gain 1 memory.\n[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞.\n[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+            },
+            {
+              "label": "Security Effect",
+              "text": "[Security] Play this card without paying the cost."
+            }
+          ],
+          "type": "Shambala/SW/TB/TS"
+        },
+        "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+        "observation_id": "43bb202a97ebaeeed2cec9656f516e5406e2ce1c3c9da5296d426ef88e937546",
+        "parser_version": "official-html-v5",
+        "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+        "schema_version": 1,
+        "source": "official",
+        "source_record_key": "522038:BT26-104:BT26-104",
+        "source_schema_version": "world-card-list-html-v1",
+        "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+      },
+      "image_sha256": "ccc0e2e36c83976992dc395d918fcbda7b94fed41252b405ed890543d6cbc3e0"
+    },
+    {
+      "observation": {
+        "extracted": {
+          "attribute": "",
+          "card_id": "EX5-065",
+          "card_type": "Tamer",
+          "colors": [
+            "Blue"
+          ],
+          "dp": null,
+          "evolution_routes": [],
+          "faces": [
+            {
+              "colors": [
+                "Blue"
+              ],
+              "dp": null,
+              "face_id": "primary",
+              "kind": "tamer",
+              "level": null,
+              "name": "Sayo & Koh",
+              "play_cost": 3,
+              "text_sections": [
+                {
+                  "label": "Effect",
+                  "text": "[Your Turn] When an effect places the top card of one of your Digimon in a Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.\n[Start of Opponent's Turn] By playing 1 card with the same level as one of your [Night Claw] or [Light Fang] trait Digimon from that Digimon's digivolution cards without paying the cost, 2 of your Digimon may DNA digivolve into a Digimon card in your hand. At the end of the turn, return the Digimon played by this effect to the hand."
+                },
+                {
+                  "label": "Security Effect",
+                  "text": "[Security] Play this card without paying the cost."
+                }
+              ]
+            }
+          ],
+          "form": "",
+          "grade_evolution_routes": [],
+          "layout": "single",
+          "level": null,
+          "name": "Sayo & Koh",
+          "play_cost": 3,
+          "printing": {
+            "alternate_art": false,
+            "category_id": "522019",
+            "image_url": "https://world.digimoncard.com/images/cardlist/card/EX5-065.png?260529",
+            "printing_id": "EX5-065"
+          },
+          "printing_field_gaps": [],
+          "qa": [
+            {
+              "answer": "You place the top card of one of your Digimon in the digivolution cards of that Digimon or another of your Digimon.\nThis doesn't include when the top card becomes a digivolution card through digivolution.",
+              "date": "Mar. 28, 2024",
+              "number": "Q3669",
+              "question": "What does \"when an effect places the top card of one of your Digimon in a Digimon's digivolution cards\" in this card's [Your Turn] effect mean, exactly?"
+            },
+            {
+              "answer": "No, it doesn’t.\nThe [On Play] effect will trigger, but it can't activate because the Digimon becomes a digivolution card through DNA digivolution before the effect activates.",
+              "date": "Mar. 28, 2024",
+              "number": "Q3670",
+              "question": "I used this card's [Start of Opponent's Turn] effect to play and DNA digivolve a Digimon. In such cases, does the played Digimon's [On Play] effect activate?"
+            }
+          ],
+          "rarity": "R",
+          "rule_grants": {
+            "attributes": [],
+            "forms": [],
+            "traits": []
+          },
+          "special_evolution_routes": [],
+          "tamer_evolution_routes": [],
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "[Your Turn] When an effect places the top card of one of your Digimon in a Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.\n[Start of Opponent's Turn] By playing 1 card with the same level as one of your [Night Claw] or [Light Fang] trait Digimon from that Digimon's digivolution cards without paying the cost, 2 of your Digimon may DNA digivolve into a Digimon card in your hand. At the end of the turn, return the Digimon played by this effect to the hand."
+            },
+            {
+              "label": "Security Effect",
+              "text": "[Security] Play this card without paying the cost."
+            }
+          ],
+          "type": "Night Claw"
+        },
+        "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+        "observation_id": "eeb801c9de7b27da26d5bcfa00f162368a42d9722c307045e595bad6f05e45e8",
+        "parser_version": "official-html-v5",
+        "raw_payload_digest": "145cad680cce98440a2a96f710a038d4fb053e9d39d970f316e4632f0bd1fda5",
+        "schema_version": 1,
+        "source": "official",
+        "source_record_key": "522019:EX5-065:EX5-065",
+        "source_schema_version": "world-card-list-html-v1",
+        "source_url": "https://world.digimoncard.com/cards/?search=true&category=522019"
+      },
+      "image_sha256": "28ddafafd9bd204cadc72a7110126012e43cc83b58421a6f56d5165a9ac854b4"
+    },
+    {
+      "observation": {
+        "extracted": {
+          "attribute": "",
+          "card_id": "BT14-086",
+          "card_type": "Tamer",
+          "colors": [
+            "Black"
+          ],
+          "dp": null,
+          "evolution_routes": [],
+          "faces": [
+            {
+              "colors": [
+                "Black"
+              ],
+              "dp": null,
+              "face_id": "primary",
+              "kind": "tamer",
+              "level": null,
+              "name": "Satsuki Tamahime",
+              "play_cost": 3,
+              "text_sections": [
+                {
+                  "label": "Effect",
+                  "text": "[Security] Play this card without paying the cost.\n[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\n[Main] ＜Mind Link＞ with 1 of your Digimon with [Numemon] or [Monzaemon] in its name, or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)"
+                },
+                {
+                  "label": "Inherited Effect",
+                  "text": "[All Turns] While this Digimon has [Numemon] or [Monzaemon] in its name, or the [DigiPolice] trait, it gains ＜Jamming＞ and ＜Reboot＞.\n[End of All Turns] You may play 1 [Satsuki Tamahime] from this Digimon's digivolution cards without paying the cost."
+                }
+              ]
+            }
+          ],
+          "form": "",
+          "grade_evolution_routes": [],
+          "layout": "single",
+          "level": null,
+          "name": "Satsuki Tamahime",
+          "play_cost": 3,
+          "printing": {
+            "alternate_art": false,
+            "category_id": "522018",
+            "image_url": "https://world.digimoncard.com/images/cardlist/card/BT14-086.png?260529",
+            "printing_id": "BT14-086"
+          },
+          "printing_field_gaps": [],
+          "qa": [
+            {
+              "answer": "Yes, you can.",
+              "date": "Mar. 28, 2024",
+              "number": "Q2459",
+              "question": "Can I use the [End of All Turns] effect in this card's inherited effect to play this card itself when this card is in a Digimon's digivolution cards?"
+            }
+          ],
+          "rarity": "R",
+          "rule_grants": {
+            "attributes": [],
+            "forms": [],
+            "traits": []
+          },
+          "special_evolution_routes": [],
+          "tamer_evolution_routes": [],
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "[Security] Play this card without paying the cost.\n[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\n[Main] ＜Mind Link＞ with 1 of your Digimon with [Numemon] or [Monzaemon] in its name, or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)"
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "[All Turns] While this Digimon has [Numemon] or [Monzaemon] in its name, or the [DigiPolice] trait, it gains ＜Jamming＞ and ＜Reboot＞.\n[End of All Turns] You may play 1 [Satsuki Tamahime] from this Digimon's digivolution cards without paying the cost."
+            }
+          ],
+          "type": "DigiPolice"
+        },
+        "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+        "observation_id": "becc23f88682d0749573c00c867b42075fc2dd244aabf90768f6be42ee1847cc",
+        "parser_version": "official-html-v5",
+        "raw_payload_digest": "022b8c9e5dc31b04f2c04e544dec6f5760c97c265dc04934f1e1a907e16d6aa8",
+        "schema_version": 1,
+        "source": "official",
+        "source_record_key": "522018:BT14-086:BT14-086",
+        "source_schema_version": "world-card-list-html-v1",
+        "source_url": "https://world.digimoncard.com/cards/?search=true&category=522018"
+      },
+      "image_sha256": "e7c37d3c7bd26795d719d19947d5a2ab25045622b34fc433c055bb0d8509d91e"
+    },
+    {
+      "observation": {
+        "extracted": {
+          "attribute": "Data",
+          "card_id": "BT26-027",
+          "card_type": "Digimon",
+          "colors": [
+            "Yellow",
+            "Green"
+          ],
+          "dp": 5000,
+          "evolution_routes": [
+            {
+              "colors": [
+                "Yellow",
+                "Green"
+              ],
+              "cost": 2,
+              "from_level": 3,
+              "slot": 1
+            }
+          ],
+          "faces": [
+            {
+              "colors": [
+                "Yellow",
+                "Green"
+              ],
+              "dp": 5000,
+              "face_id": "primary",
+              "kind": "digimon",
+              "level": 4,
+              "name": "Petermon",
+              "play_cost": 4,
+              "text_sections": [
+                {
+                  "label": "Special Digivolution Condition",
+                  "text": "[Digivolve] Lv.3 w/[WG] trait: Cost 2"
+                },
+                {
+                  "label": "Effect",
+                  "text": "[Start of Opponent's Main Phase] [On Play] By suspending 1 of your Digimon with the [Vegetation], [Fairy] or [WG] trait, give 1 of your opponent's Digimon ＜Security A. -2＞ until their turn ends."
+                },
+                {
+                  "label": "Inherited Effect",
+                  "text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+                }
+              ]
+            }
+          ],
+          "form": "Champion",
+          "grade_evolution_routes": [],
+          "layout": "single",
+          "level": 4,
+          "name": "Petermon",
+          "play_cost": 4,
+          "printing": {
+            "alternate_art": false,
+            "category_id": "522038",
+            "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-027.png?260529",
+            "printing_id": "BT26-027"
+          },
+          "printing_field_gaps": [],
+          "qa": [],
+          "rarity": "U",
+          "rule_grants": {
+            "attributes": [],
+            "forms": [],
+            "traits": []
+          },
+          "special_evolution_routes": [
+            "[Digivolve] Lv.3 w/[WG] trait: Cost 2"
+          ],
+          "tamer_evolution_routes": [],
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.3 w/[WG] trait: Cost 2"
+            },
+            {
+              "label": "Effect",
+              "text": "[Start of Opponent's Main Phase] [On Play] By suspending 1 of your Digimon with the [Vegetation], [Fairy] or [WG] trait, give 1 of your opponent's Digimon ＜Security A. -2＞ until their turn ends."
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+            }
+          ],
+          "type": "Fairy/WG"
+        },
+        "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+        "observation_id": "14ec18cafba95116cc13a5c3f40ce82ef87eabad43afbb3157720ef98595a93c",
+        "parser_version": "official-html-v5",
+        "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+        "schema_version": 1,
+        "source": "official",
+        "source_record_key": "522038:BT26-027:BT26-027",
+        "source_schema_version": "world-card-list-html-v1",
+        "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+      },
+      "image_sha256": "1c97d02e56b5fadeeeca00552c388fb954c65ba3fd28fafa48bea9582a402bbf"
+    },
+    {
+      "observation": {
+        "extracted": {
+          "attribute": "Vaccine",
+          "card_id": "BT13-077",
+          "card_type": "Digimon",
+          "colors": [
+            "Black"
+          ],
+          "dp": 13000,
+          "evolution_routes": [
+            {
+              "colors": [
+                "Black"
+              ],
+              "cost": 5,
+              "from_level": 5,
+              "slot": 1
+            }
+          ],
+          "faces": [
+            {
+              "colors": [
+                "Black"
+              ],
+              "dp": 13000,
+              "face_id": "primary",
+              "kind": "digimon",
+              "level": 6,
+              "name": "Craniamon",
+              "play_cost": 13,
+              "text_sections": [
+                {
+                  "label": "Effect",
+                  "text": "＜Blocker＞\n[On Play][When Digivolving] Until the end of your opponent's turn, this Digimon isn't affected by the effects of your opponent's Digimon.\n[End of Opponent’s Turn] Choose 1 of your opponent's Digimon. Your opponent attacks with the chosen Digimon."
+                }
+              ]
+            }
+          ],
+          "form": "Mega",
+          "grade_evolution_routes": [],
+          "layout": "single",
+          "level": 6,
+          "name": "Craniamon",
+          "play_cost": 13,
+          "printing": {
+            "alternate_art": false,
+            "category_id": "522016",
+            "image_url": "https://world.digimoncard.com/images/cardlist/card/BT13-077.png?260529",
+            "printing_id": "BT13-077"
+          },
+          "printing_field_gaps": [],
+          "qa": [
+            {
+              "answer": "Yes, it can be blocked.\nis an effect that allows for the Digimon to block, so it isn't affected by \"\"isn't affected by the effects of your opponent's Digimon\"\" effects.",
+              "date": "Mar. 28, 2024",
+              "number": "Q2315",
+              "question": "If this Digimon attacks when this card's [On Play][When Attacking] effect prevents it from being affected by the effects of my opponent's Digimon, can it be blocked by my opponent's Digimon?"
+            },
+            {
+              "answer": "No. The effect reads \"\"You may choose,\"\" so you don't have to choose a Digimon.\nIn such cases, the attack doesn't occur.",
+              "date": "Jun. 21, 2024",
+              "number": "Q2316",
+              "question": "Do I have to choose an opponent's Digimon and have my opponent attack for this card's [End of Opponent’s Turn] effect?"
+            },
+            {
+              "answer": "No, you don't have to choose an opponent's Digimon.",
+              "date": "Jun. 21, 2024",
+              "number": "Q2317",
+              "question": "Do I have to choose an opponent's Digimon for this card's [End of Opponent’s Turn] effect?"
+            },
+            {
+              "answer": "No, they can't attack using a Digimon that can't attack.",
+              "date": "Jun. 21, 2024",
+              "number": "Q2318",
+              "question": "If I choose an opponent's Digimon that can't attack for this card's [End of Opponent’s Turn] effect, does my opponent attack with that Digimon?"
+            },
+            {
+              "answer": "No, your opponent can't attack using that Digimon. A new attack declaration can't be made during an attack.\nIn such cases, even if you choose an opponent's Digimon for this card's [End of Opponent’s Turn] effect when there is already an attacking Digimon, your opponent can't attack with the chosen Digimon.",
+              "date": "Jun. 21, 2024",
+              "number": "Q2319",
+              "question": "An opponent's Digimon is attacking using an effect at the end of their turn.\nIf I choose an opponent's Digimon for this card's [End of Opponent’s Turn] effect, does my opponent attack with that Digimon?"
+            },
+            {
+              "answer": "Yes, you can choose a Digimon that isn't affected by effects for this and have it attack.\nSuch Digimon aren't affected by effects, but they can be chosen.\nIn addition, \"your opponent attacks with the chosen Digimon\" in this card's [End of Opponent’s Turn] effect affects a player, therefore your opponent must attack with the chosen Digimon if it can attack.",
+              "date": "Jun. 21, 2024",
+              "number": "Q2320",
+              "question": "Can I choose a Digimon that isn't affected by effects for this card's [End of Opponent’s Turn] effect and have it attack?"
+            }
+          ],
+          "rarity": "SR",
+          "rule_grants": {
+            "attributes": [],
+            "forms": [],
+            "traits": []
+          },
+          "special_evolution_routes": [],
+          "tamer_evolution_routes": [],
+          "text_sections": [
+            {
+              "label": "Effect",
+              "text": "＜Blocker＞\n[On Play][When Digivolving] Until the end of your opponent's turn, this Digimon isn't affected by the effects of your opponent's Digimon.\n[End of Opponent’s Turn] Choose 1 of your opponent's Digimon. Your opponent attacks with the chosen Digimon."
+            }
+          ],
+          "type": "Holy Warrior/Royal Knight"
+        },
+        "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+        "observation_id": "f0cd1e6fbd7be9eb6b52540c7b43adf1ff31c3ce091582f47be8db2e288745de",
+        "parser_version": "official-html-v5",
+        "raw_payload_digest": "c45b57529e0f401b5468363ae965d41f1061d4ef15bcda0eb1c1c4bf83e2d17a",
+        "schema_version": 1,
+        "source": "official",
+        "source_record_key": "522016:BT13-077:BT13-077",
+        "source_schema_version": "world-card-list-html-v1",
+        "source_url": "https://world.digimoncard.com/cards/?search=true&category=522016"
+      },
+      "image_sha256": "a75c2ce4fa1144e0a6b3d0be038031ac882e56424db569a31217aa6023c49b39"
+    }
+  ]
+}

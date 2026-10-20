@@ -70,6 +70,9 @@ impl Default for OptionState {
 /// A card (or digivolution stack) on the field.
 #[derive(Clone)]
 pub struct Permanent {
+    /// Monotonic face incarnation within this carrier. A temporary
+    /// digivolution must not revive an older pending face effect when undone.
+    pub(crate) face_generation: u64,
     /// Opaque optional harness marker; omitted from Debug and replay hashes.
     pub(crate) native_play_incarnation: Option<std::sync::Arc<()>>,
     /// Stable identity for battle/replacement and queued observer events. Stack edits retain it;
@@ -140,6 +143,7 @@ impl Permanent {
     pub fn new(mut card: CardSource, turn: u16) -> Self {
         card.face_down = false;
         Self {
+            face_generation: 0,
             battle_identity: None,
             native_play_incarnation: None,
             card_sources: vec![card],
@@ -596,7 +600,10 @@ impl Permanent {
     /// digivolution, Blast DNA, Assembly-style merges) goes through here.
     /// Digivolution cards placed UNDER the top keep the face they are placed
     /// with (§4-7-5, §4-7-9): use `push_under` / `push_as_top_source`.
+    /// A new top card is a new face incarnation (`face_generation`), so a
+    /// captured Security-check observer of the previous face cannot revive.
     pub fn push_top(&mut self, mut card: CardSource) {
+        self.face_generation = self.face_generation.saturating_add(1);
         card.face_down = false;
         self.card_sources.push(card);
     }

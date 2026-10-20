@@ -1,0 +1,25 @@
+{
+  "status": "APPROVED_TWO_PATH_SOURCE_CORRECTION_ONLY",
+  "proposal_sha256": "4fc80c26247480ea6d569d67c78dea1b4ba5ae02a10145dbf9cb07ce3f8fc537",
+  "base_sha256": "cc1a0ffd90b519c43ea9d9000b85846359fb2ea50a2d1c472ed950792b2d6a37",
+  "evidence_report_sha256": "4cc95f9463cf265bfa553307ea832c7acca09ff416900e2ab15f82a51adade11",
+  "prior_canonical_count": 10,
+  "prior_compatibility_count": 1,
+  "observations_checked": 14,
+  "fresh_files_checked": 5,
+  "typed_application_equal": true,
+  "changes": [
+    ".faces.0.effect_text",
+    ".fields.effect_description_eng",
+    ".provenance.effect_description_eng.adjudicated",
+    ".provenance.effect_description_eng.authority",
+    ".provenance.effect_description_eng.observation_ids",
+    ".provenance.effect_description_eng.selected_observation_id",
+    ".provenance.faces.0.effect_text"
+  ],
+  "images_independently_viewed": [
+    "primary.png",
+    "primary-p1.png"
+  ],
+  "runtime_adoption": false
+}

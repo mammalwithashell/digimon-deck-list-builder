@@ -391,16 +391,20 @@ def _row(**kw):
     return json.dumps(base)
 
 
-def _oracle_item(**data):
+def _oracle_item(repo, **data):
     d = {"scenario_paths": [SC], "deck_books": {SC: POOL}, "author_attempt": "att-a"}
     d.update(data)
+    from tools.card_loop.stages.harness import exam_input_pin
+    from types import SimpleNamespace
+    d["oracle_input_pins"] = {p: exam_input_pin(SimpleNamespace(repo=repo), p, d["deck_books"].get(p))
+                              for p in d["scenario_paths"]}
     return _item("ORACLE", **d)
 
 
 def test_confirmed_is_adjudicated_with_the_one_call_argv(repo):
     _write_scenario(repo)
     cmds = FakeCommands().on("--oracle", 0, "note: GO\n" + _row() + "\n", "exam --oracle: scenarios 1")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "CONFIRMED" and out.adjudicated
@@ -415,7 +419,7 @@ def test_diverged_carries_the_whole_result(repo):
     row = _row(verdict="diverged", divergence={"step": 2, "field": "p1.field", "ours": "[]", "dcgo": "[x]"},
                first_divergence="step 2: p1.field")
     cmds = FakeCommands().on("--oracle", 1, row + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "DIVERGED"
@@ -429,7 +433,7 @@ def test_unmeasured_retries_the_oracle_and_only_the_unmeasured_paths(repo):
             .on(("--oracle", SC + " "), 0, _row() + "\n")
             .on(("--oracle", "effect0-b"), 1, _row(scenario=sc2, verdict="unmeasured",
                                                    reason="oracle job timed out", job_outcome=None) + "\n"))
-    item = _oracle_item(scenario_paths=[SC, sc2], deck_books={SC: POOL, sc2: POOL})
+    item = _oracle_item(repo, scenario_paths=[SC, sc2], deck_books={SC: POOL, sc2: POOL})
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "ORACLE" and "timed out" in out.reason
@@ -445,14 +449,14 @@ def test_unmeasured_retries_the_oracle_and_only_the_unmeasured_paths(repo):
 def test_no_json_line_is_unmeasured_not_a_crash(repo):
     _write_scenario(repo)
     cmds = FakeCommands().on("--oracle", 2, "", "error: --oracle needs --root")
-    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item())
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item(repo))
     assert out.next_state == "ORACLE" and "--root" in out.reason
 
 
 def test_refused_verdicts_escalate(repo):
     _write_scenario(repo)
     cmds = FakeCommands().on("--oracle", 1, _row(refused=["orphan clause id ST23-04#effect#9"]) + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "ESCALATED" and "orphan" in out.escalation.reason
@@ -474,7 +478,7 @@ def test_missing_decline_goes_to_triage_through_diverged(repo):
     cmds = (FakeCommands()
             .on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=MISMATCH) + "\n")
             .on("--inspect", 0, _inspect()))
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "DIVERGED"
@@ -496,7 +500,7 @@ def test_the_harness_mismatch_step_outranks_the_row_heuristic(repo):
     cmds = (FakeCommands()
             .on("--oracle", 1, row + "\n")
             .on("--inspect", 0, _inspect(step=1)))
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     ev = out.data["prompt_evidence"]
@@ -510,7 +514,7 @@ def test_both_engines_contradicting_the_scenario_goes_back_to_authoring(repo):
     cmds = (FakeCommands()
             .on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=MISMATCH) + "\n")
             .on("--inspect", 0, _inspect("Replacement", True, 2)))
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "AUTHORING"
@@ -552,7 +556,7 @@ def test_a_stalled_player_goes_to_triage_and_the_player_is_restarted(repo):
             .on(("node", "down"), 0, "stopped pid 1")
             .on(("node", "status"), 0, "GO\n  [ok] player: running (pid 2, heartbeat Healthy)\n"))
     launches = []
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0", launches), item)
     _check(item, out)
     assert out.next_state == "DIVERGED"
@@ -574,7 +578,7 @@ def test_a_player_that_did_not_come_back_is_reported_not_claimed(repo):
             .on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None, reason=STALL_REASON, stall=STALL) + "\n")
             .on(("node", "down"), 0, "stopped pid 1")
             .on(("node", "status"), 0, "NO-GO\n  [fail] player: not running\n"))
-    out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0", []), _oracle_item())
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "exam-ST23-04-effect0", []), _oracle_item(repo))
     note = out.data["prompt_evidence"]["player_restart"]
     assert not note.startswith("restarted") and "not running" in note
 
@@ -585,7 +589,7 @@ def test_a_stall_the_player_already_left_behind_does_not_restart_it(repo):
     _write_scenario(repo)
     cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome=None,
                                                  reason=STALL_REASON, stall=STALL) + "\n")
-    out = OracleExecutor().run(_stall_ctx(repo, cmds, "idle"), _oracle_item())
+    out = OracleExecutor().run(_stall_ctx(repo, cmds, "idle"), _oracle_item(repo))
     assert out.next_state == "DIVERGED"
     assert not [c for c in cmds.calls if "node" in c["argv"]]
     assert "idle" in out.data["prompt_evidence"]["player_restart"]
@@ -605,7 +609,7 @@ def test_an_actor_mismatch_names_who_acts_for_triage(repo):
                first_divergence="TRUNCATED, no divergence found (compared 22 of 34 ours / 27 dcgo steps)",
                mismatch={"row": 27, "step": 3, "expected": None, "asked": None})
     cmds = FakeCommands().on("--oracle", 1, row + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "DIVERGED"
@@ -626,7 +630,7 @@ def test_dcgo_offering_other_candidates_is_an_engine_disagreement_for_triage(rep
     # so it was retried three times as "unmeasured" and escalated.
     _write_scenario(repo)
     cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=CANDIDATES) + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "DIVERGED"
@@ -645,7 +649,7 @@ def test_a_scripted_answer_of_the_wrong_shape_goes_back_to_the_author_not_to_a_r
     # on the oracle_retry cap: the step's shape was wrong for DCGO's prompt.
     _write_scenario(repo)
     cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=SHAPE) + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "AUTHORING"
@@ -660,7 +664,7 @@ def test_a_dcgo_stop_the_loop_cannot_parse_goes_to_triage_not_to_a_retry(repo):
     _write_scenario(repo)
     reason = "DCGO job failed: deck codes rejected by the lobby -- stopped before the line finished"
     cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=reason) + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "DIVERGED" and out.data["prompt_route"] == "undetermined"
@@ -680,7 +684,7 @@ def test_a_selection_dcgo_cannot_end_on_is_an_engine_disagreement_for_triage(rep
     row = _row(verdict="unmeasured", job_outcome="failed", reason=INCOMPLETE,
                mismatch={"row": 20, "step": 3, "expected": "SelectCardEffect", "asked": "SelectCardEffect"})
     cmds = FakeCommands().on("--oracle", 1, row + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "DIVERGED"
@@ -700,7 +704,7 @@ def test_a_selection_the_player_saw_stall_goes_to_triage_without_a_restart(repo)
     row = _row(verdict="unmeasured", job_outcome="failed", reason=reason,
                mismatch={"row": 20, "step": 3, "expected": "SelectCardEffect", "asked": "SelectCardEffect"})
     cmds = FakeCommands().on("--oracle", 1, row + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "DIVERGED" and out.data["prompt_route"] == "undetermined"
@@ -714,7 +718,7 @@ def test_a_selection_mismatch_after_a_divergence_is_a_plain_divergence(repo):
     row = _row(verdict="diverged", job_outcome="failed", reason="memory differs; " + INCOMPLETE,
                divergence={"step": 1, "field": "p0.memory", "ours": "1", "dcgo": "2"})
     cmds = FakeCommands().on("--oracle", 1, row + "\n")
-    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item())
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item(repo))
     assert out.next_state == "DIVERGED" and out.data.get("prompt_route") is None
 
 
@@ -722,7 +726,7 @@ def test_the_players_own_timeout_goes_to_triage_not_to_a_retry(repo):
     _write_scenario(repo)
     reason = "DCGO job failed: timeout after 240s -- stopped before the line finished, with no divergence before it"
     cmds = FakeCommands().on("--oracle", 1, _row(verdict="unmeasured", job_outcome="failed", reason=reason) + "\n")
-    item = _oracle_item()
+    item = _oracle_item(repo)
     out = OracleExecutor().run(_ctx(repo, cmds=cmds), item)
     _check(item, out)
     assert out.next_state == "DIVERGED" and out.data["prompt_route"] == "undetermined"
@@ -735,7 +739,7 @@ def test_a_divergence_before_the_mismatch_is_a_plain_divergence(repo):
     row = _row(verdict="diverged", job_outcome="failed", reason="memory differs; " + MISMATCH,
                divergence={"step": 1, "field": "p0.memory", "ours": "1", "dcgo": "2"})
     cmds = FakeCommands().on("--oracle", 1, row + "\n")
-    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item())
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item(repo))
     assert out.next_state == "DIVERGED" and not cmds.argvs("--inspect")
     assert out.data.get("prompt_route") is None
 
@@ -1079,7 +1083,7 @@ def test_structured_legs_attach_the_three_way_outcome(repo):
     # `exam --oracle` prints the two legs as fields; the stage turns them into
     # the D7 outcome so triage and the fork-candidate export never parse `reason`.
     _write_scenario(repo)
-    item = _oracle_item(item="interaction:qa:Q1601")
+    item = _oracle_item(repo, item="interaction:qa:Q1601")
     row = _row(verdict="diverged", ids=["qa:Q1601"], recorded=[],
                reason="ours contradicts ruling qa:Q1601 (ours vs DCGO: agree); clean diff",
                ours_vs_dcgo=True, ours_vs_ruling=False, ruling_q_id="Q1601")
@@ -1095,7 +1099,7 @@ def test_structured_legs_attach_the_three_way_outcome(repo):
 
 def test_confirmed_with_both_legs_records_a_confirmed_three_way(repo):
     _write_scenario(repo)
-    item = _oracle_item(item="interaction:qa:Q1601")
+    item = _oracle_item(repo, item="interaction:qa:Q1601")
     row = _row(ids=["qa:Q1601"], recorded=["qa:Q1601"], ours_vs_dcgo=True, ours_vs_ruling=True,
                ruling_q_id="Q1601")
     cmds = FakeCommands().on("--oracle", 0, row + "\n")
@@ -1109,5 +1113,5 @@ def test_a_result_without_legs_carries_no_three_way(repo):
     # A clause exam, or an unmeasured ruling leg: the outcome is not decided.
     _write_scenario(repo)
     cmds = FakeCommands().on("--oracle", 0, _row() + "\n")
-    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item())
+    out = OracleExecutor().run(_ctx(repo, cmds=cmds), _oracle_item(repo))
     assert out.next_state == "CONFIRMED" and out.data.get("three_way") is None

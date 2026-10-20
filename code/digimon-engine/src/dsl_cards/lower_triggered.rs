@@ -287,6 +287,29 @@ pub fn lower_for_kind_with_clause_index(
             }
         }
 
+        // §13-1-8-2 / Q6813: a security check's observers are captured at
+        // the reveal, before the [Security] effect can change the state. Their
+        // turn gates and "when THIS Digimon checks" self-gate are trigger
+        // qualifiers, decided at that capture together with any authored
+        // `trigger_if:` (`Game::discard_entries_not_triggered`); every other
+        // clause condition stays a processing-time check (§15-8-3-9).
+        let security_check_gate = if matches!(
+            engine_timing,
+            EffectTiming::OnSecurityCheck | EffectTiming::OnCheckFaceUpSecurity
+        ) {
+            let mut gate = digimon_dsl::compiled::CompiledPredicate::default();
+            if let Some(aw) = &active_when {
+                gate.your_turn = aw.your_turn;
+                gate.opponents_turn = aw.opponents_turn;
+            }
+            if let Some(cc) = &condition {
+                gate.event_target_is_source = cc.event_target_is_source;
+            }
+            Some(Arc::new(gate))
+        } else {
+            None
+        };
+
         if active_when.is_some()
             || condition.is_some()
             || timing_condition.is_some()
@@ -338,9 +361,15 @@ pub fn lower_for_kind_with_clause_index(
         // (`Game::discard_entries_not_triggered`, §15-8-3-1 / §15-8-3-4);
         // `EffectBuilder::build` folds it into the activation-time
         // `condition` above (§15-4-4-5).
-        if let Some(p) = trigger_if {
+        if trigger_if.is_some() || security_check_gate.is_some() {
             builder = builder.trigger_qualifier(move |rctx| {
-                eval_predicate(&p, rctx, predicate_subject_for_source(rctx))
+                let subject = predicate_subject_for_source(rctx);
+                trigger_if
+                    .as_ref()
+                    .is_none_or(|p| eval_predicate(p, rctx, subject))
+                    && security_check_gate
+                        .as_ref()
+                        .is_none_or(|p| eval_predicate(p, rctx, subject))
             });
         }
 

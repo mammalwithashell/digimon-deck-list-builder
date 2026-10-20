@@ -9,6 +9,7 @@ card: BT25-030
 name: Elecmon
 kind: digimon
 level: 3
+form: Rookie
 color: [yellow]
 cost: 3
 dp: 2000

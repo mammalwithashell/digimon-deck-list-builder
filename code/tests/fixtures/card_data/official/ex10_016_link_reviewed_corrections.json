@@ -1,0 +1,61 @@
+{
+  "corrections": [
+    {
+      "card_id": "EX10-016",
+      "correction_id": "focused-ex10-016-link-numbers-effect_description_eng-20261012",
+      "evidence_observation_ids": [
+        "2808cb56f5070d281459ec50935bbdd989dc8f538a2a16914feefa11678031e1",
+        "5319cc6c72bcb727a465b4451292b072487f0cc9dfd698ce0e21902475ac6d89"
+      ],
+      "field_path": "effect_description_eng",
+      "reason": "Image-backed sparse exception for the retained labeled Link metadata in effect_description_eng. Both cited official-html-v4 observations incorrectly state Link DP +3000 DP and Appmon Link Cost 2. The actual official image https://world.digimoncard.com/images/cardlist/card/EX10-016.png, archived as link-wording-review-images-20261012/EX10-016.png with SHA-256 d13352ab672540cb8130ce5a0f5f1bdc6c028477466b1028b1c7b9a45ce82319, prints linked bonus +2000 DP and Appmon Link Cost 1. Replace only these two labeled numeric tokens; preserve every other character, main timing/effect, reminder, and any face special digivolution route. Base-card DP 1000/play cost 3 and all raw observations remain unchanged. This does not introduce typed Link fields or approve zone representation or engine behavior.",
+      "reviewed_at": "2026-10-12T12:13:13.875421+00:00",
+      "reviewer": "Codex independent source reviewer /root/review_focused_sources",
+      "schema_version": 1,
+      "value": "[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon.\n[Link DP] +2000 DP\n[Link Condition] ＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+    },
+    {
+      "card_id": "EX10-016",
+      "correction_id": "focused-ex10-016-link-numbers-faces-0-effect_text-20261012",
+      "evidence_observation_ids": [
+        "2808cb56f5070d281459ec50935bbdd989dc8f538a2a16914feefa11678031e1",
+        "5319cc6c72bcb727a465b4451292b072487f0cc9dfd698ce0e21902475ac6d89"
+      ],
+      "field_path": "faces.0.effect_text",
+      "reason": "Image-backed sparse exception for the retained labeled Link metadata in faces.0.effect_text. Both cited official-html-v4 observations incorrectly state Link DP +3000 DP and Appmon Link Cost 2. The actual official image https://world.digimoncard.com/images/cardlist/card/EX10-016.png, archived as link-wording-review-images-20261012/EX10-016.png with SHA-256 d13352ab672540cb8130ce5a0f5f1bdc6c028477466b1028b1c7b9a45ce82319, prints linked bonus +2000 DP and Appmon Link Cost 1. Replace only these two labeled numeric tokens; preserve every other character, main timing/effect, reminder, and any face special digivolution route. Base-card DP 1000/play cost 3 and all raw observations remain unchanged. This does not introduce typed Link fields or approve zone representation or engine behavior.",
+      "reviewed_at": "2026-10-12T12:13:13.875517+00:00",
+      "reviewer": "Codex independent source reviewer /root/review_focused_sources",
+      "schema_version": 1,
+      "value": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[Appmon] trait: Cost 0\n[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon.\n[Link DP] +2000 DP\n[Link Condition] ＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+    },
+    {
+      "card_id": "EX10-016",
+      "correction_id": "focused-ex10-016-link-suspend-two-image-20261012",
+      "evidence_observation_ids": [
+        "2808cb56f5070d281459ec50935bbdd989dc8f538a2a16914feefa11678031e1",
+        "5319cc6c72bcb727a465b4451292b072487f0cc9dfd698ce0e21902475ac6d89"
+      ],
+      "field_path": "link_effect_description_eng",
+      "reason": "Image-backed sparse exception: the inspected official Bandai image https://world.digimoncard.com/images/cardlist/card/EX10-016.png, retained at C:/Users/james/.codex/worktrees/fe80/digimon-deck-list-builder-1/runs/card-loop/meta-six-20261010/link-wording-review-images-20261012/EX10-016.png, SHA-256 d13352ab672540cb8130ce5a0f5f1bdc6c028477466b1028b1c7b9a45ce82319, visibly prints the When Attacking linked effect as suspend 2 of your opponent's Digimon after trashing 1 of this Digimon's link cards. Both cited immutable official-html-v4 observations instead contain the conflicting -6000 DP effect. Correct only link_effect_description_eng; preserve all raw observations and existing timing/cost wording. The image also prints Link Cost 1 and +2000 linked DP whereas these HTML observations say Cost 2 and +3000; those separate unsupported structured fields remain unresolved data gaps and are not approved or invented by this correction.",
+      "reviewed_at": "2026-10-12T02:15:38.709362+00:00",
+      "reviewer": "Codex independent source reviewer /root/review_focused_sources",
+      "schema_version": 1,
+      "value": "[When Attacking] By trashing 1 of this Digimon's link cards, suspend 2 of your opponent's Digimon."
+    },
+    {
+      "card_id": "EX12-031",
+      "correction_id": "focused-ex12-031-inherited-decode-source-zone-20261011",
+      "evidence_observation_ids": [
+        "9f7e2875443223aaf56be59700222b5f058e691e35e3db78cf18a01800fab831",
+        "67d243722894e58f49f5d63d2a12456308782672061438313b92c4b814be0cd6"
+      ],
+      "field_path": "inherited_effect_description_eng",
+      "reason": "Both immutable official category 522037 observations omit the source-zone phrase from their inherited Decode reminder. Inspected actual card image C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-031.webp SHA-256 e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167 explicitly prints from its digivolution cards. Restore only that omitted phrase; preserve the rest of the normalized official field and all raw observations. Image-backed sparse exception resolves the documented observation/image discrepancy, not a new keyword rule or zone expansion.",
+      "reviewed_at": "2026-10-11T22:02:18.258594+00:00",
+      "reviewer": "Codex independent source reviewer /root/review_focused_sources",
+      "schema_version": 1,
+      "value": "＜Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)"
+    }
+  ],
+  "schema_version": 1
+}

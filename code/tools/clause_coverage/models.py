@@ -43,9 +43,16 @@ class Clause:
     text: str
     source: str
     image_path: str | None = None
+    semantic_fingerprint_version: int | None = None
+    semantic_sha256: str | None = None
+    semantic_payload: list | None = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        row = asdict(self)
+        for field in ("semantic_fingerprint_version", "semantic_sha256", "semantic_payload"):
+            if row[field] is None:
+                del row[field]
+        return row
 
 
 def clause_from_dict(data: dict) -> Clause:
@@ -61,4 +68,7 @@ def clause_from_dict(data: dict) -> Clause:
         text=data.get("text", ""),
         source=data["source"],
         image_path=data.get("image_path"),
+        semantic_fingerprint_version=data.get("semantic_fingerprint_version"),
+        semantic_sha256=data.get("semantic_sha256"),
+        semantic_payload=data.get("semantic_payload"),
     )

@@ -132,7 +132,7 @@ pub struct DualOptionFace {
 
 /// Static card metadata loaded from cards.json.
 /// One instance per unique card_id, shared across all game instances.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CardData {
     pub card_id: String,
     pub card_name: String,

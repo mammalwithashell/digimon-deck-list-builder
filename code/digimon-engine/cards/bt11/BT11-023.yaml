@@ -1,0 +1,47 @@
+# Official observation 21ecbd8cdcb75f84d199f40edd966d990583b8479d96941556dbf24dae69f329;
+# image verified. Q2066/Q2067: take every available category, including if only one exists.
+card: BT11-023
+name: Veemon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+form: Rookie
+attribute: Free
+traits: [Mini Dragon]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+effects:
+  - when: on_play
+    summary: "Reveal 3; add a Veedramon Digimon and a blue Tamer; bottom the rest in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: digimon_pick
+              min: 1
+              max: 1
+              filter: { kind: digimon, name_contains: Veedramon }
+            - bind_as: tamer_pick
+              min: 1
+              max: 1
+              filter: { kind: tamer, color_is: blue }
+      - add_to_hand_from_reveal: { of: you, card: digimon_pick }
+      - add_to_hand_from_reveal: { of: you, card: tamer_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      event_target_owner: you
+      event_target_kind: tamer
+      event_card_color_has: [blue]
+    summary: "[Your Turn][Once Per Turn] When you play a blue Tamer, gain 1 memory"
+    process:
+      - gain_memory: 1

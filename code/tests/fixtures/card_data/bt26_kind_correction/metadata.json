@@ -1,0 +1,12 @@
+{
+  "candidate": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012",
+  "image_sha256": "b322655d3ee3e5c2cdf581a534223783191561e2f7c5c9f627882927378d250c",
+  "files": {
+    ".gitattributes": "9a29b056b6730d35ab2dc978c2eef640315d1ca91ecb92c9ab22bb9388b8d6a7",
+    "BT26-100.webp": "b322655d3ee3e5c2cdf581a534223783191561e2f7c5c9f627882927378d250c",
+    "canonical.json": "b1ab3032815677a94f1afa1a96f8190a55f962f0f5268fd233e5f7bbf573e110",
+    "observations.json": "846db2451a26a5af3dc56d1a49a9d4c1aa79f335ab512c81d0fb3abe7d9e008e",
+    "prior-corrections.json": "2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf"
+  },
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8"
+}

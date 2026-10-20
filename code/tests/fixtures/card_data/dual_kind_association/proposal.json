@@ -1,0 +1,79 @@
+{
+  "card_id": "BT26-033",
+  "kind": "dual-image-kind-association-proposal",
+  "observations": [
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "c1ac73e10d8400108c3907a276e91de3eb8876f9a278bd16e3f243d54ce1a8ba",
+      "image_artifact": "BT26-033_P2.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf",
+      "observation_id": "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+      "printing_id": "BT26-033_P2",
+      "raw_kind": "Digimon/Tamer",
+      "raw_sha256": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "sections_sha256": "5c55dc779b1a97814802ea2233093f34ec97a9a18babd0a0772484f3de5c3b84",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-033_P2.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    },
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "c1ac73e10d8400108c3907a276e91de3eb8876f9a278bd16e3f243d54ce1a8ba",
+      "image_artifact": "BT26-033.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2",
+      "observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+      "printing_id": "BT26-033",
+      "raw_kind": "Digimon/Tamer",
+      "raw_sha256": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "sections_sha256": "5c55dc779b1a97814802ea2233093f34ec97a9a18babd0a0772484f3de5c3b84",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-033.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    },
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "c1ac73e10d8400108c3907a276e91de3eb8876f9a278bd16e3f243d54ce1a8ba",
+      "image_artifact": "BT26-033_P1.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5",
+      "observation_id": "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6",
+      "printing_id": "BT26-033_P1",
+      "raw_kind": "Digimon/Tamer",
+      "raw_sha256": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "sections_sha256": "5c55dc779b1a97814802ea2233093f34ec97a9a18babd0a0772484f3de5c3b84",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-033_P1.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    }
+  ],
+  "reason": "All three actual images print DIGIMON / OPTION; raw HTML top-level Digimon/Tamer retained as conflicting evidence. No card_kind or source mutation.",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "status": "PENDING_INDEPENDENT_REVIEW",
+  "version": 1
+}

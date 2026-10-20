@@ -9869,8 +9869,36 @@ fn install_choose_from_reveal(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Declining this optional pick skips its route/binding, then continues
+    // the remaining clause. Preserve the same context in closure and VM paths.
+    if optional && parked {
+        let decline_tail = Arc::clone(&tail_for_resume);
+        let decline_bindings = bindings_for_resume.clone();
+        let decline_runtime = runtime_for_resume.clone();
+        let decline_trigger = trigger_for_resume.clone();
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind_and_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                    override_pin,
+                );
+                let mut b = decline_bindings;
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    decline_trigger,
+                    &decline_tail,
+                    &mut b,
+                    &decline_runtime,
+                );
+            }));
+        }
+    }
     // Park the data frame alongside the closure (coexistence): driven by
-    // run_resume's Reveal{route:Some} arm. No on_decline → decline None.
+    // run_resume's Reveal{route:Some} arm.
     if ctx.game.pending_selection.is_some() {
         ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RunTail {
@@ -9885,12 +9913,19 @@ fn install_choose_from_reveal(
                     route: Some(route_for_resume),
                 },
                 bind_as: bind_as_for_resume,
-                inner_tail: tail_for_resume,
+                inner_tail: Arc::clone(&tail_for_resume),
                 outer_conts: Vec::new(),
                 bindings: bindings_for_resume,
                 runtime: runtime_for_resume,
                 trigger_context: trigger_for_resume,
-                decline: crate::resume::ResumeDecline::None,
+                decline: if optional {
+                    crate::resume::ResumeDecline::RunTail {
+                        tail: tail_for_resume,
+                        aborts_clause: false,
+                    }
+                } else {
+                    crate::resume::ResumeDecline::None
+                },
             }],
         });
     }

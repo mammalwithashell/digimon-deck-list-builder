@@ -1,0 +1,130 @@
+{
+  "actual_observation_count": 6,
+  "decision": "APPROVED",
+  "existing_mismatch_helper_sha256": "0a8583f20808f5a4911c9edea8b296136e471c86bfc7d4fd2867537f53d4aec8",
+  "freeze_sha256": "60bef87b1d429f0d16549f897bddc2b1d88338296fa893cfed2d3f4d44bd86f4",
+  "implementation_changed": false,
+  "independently_verified_raw_boxes": [
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "feb3944be2a9d01b5de31efdfe92709a876f04e833bb77d8c48f5e3336cd9266",
+      "observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+      "printing_id": "BT25-085",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085_P1.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "169b26496e1265cd4c31a4effa3a3a3dada3623f36febf443128eacd121b317c",
+      "observation_id": "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+      "printing_id": "BT25-085_P1",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P1.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085_P2.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "35d440e890e0e0acdd6019b550adfe82c66fa2802bba8cda4a79102854d7c222",
+      "observation_id": "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b",
+      "printing_id": "BT25-085_P2",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P2.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    }
+  ],
+  "limitations": [
+    "Externally reviewed source/proposal pins remain necessary; consistency of fabricated inputs is not authority.",
+    "Image SHA alone cannot authenticate content; exact3image visual review supplied separately here.",
+    "Runtime condition/registry/full composition and book/admission not performed."
+  ],
+  "proof_sha256": "0d43d5b62111b03dd4aba4fc15150889db1876bbbbd21f9565153ac954bf7d0a",
+  "reviewer_note": "Independent repair_delay_cause exact-byte rebind review: six original R3 file hashes independently verified; their parsed JSON bodies equal historical fixture observations. Independently regenerated complete proof equals proposed proof. Only six input_sha256/observations hashes change; full semantic associations, images, raw pages, corrections, dependencies and source inventory unchanged. Original 43-test/visual review evidence is retained, not rerun or rewritten. Additional current review: clean-dual-original-observation-byte-rebind-20261012/independent-review.json SHA256 33107770beb311d3cd89fc5341f7d5f563f06ab14de70c0fe1d39f61222e29a8. Exact proposed document and freeze pins verified. No validator, runtime, behavior or admission approval.",
+  "schema_version": 1,
+  "scope": "Code plus exact BT25-085 clean source/image face association ONLY; no full composition/runtime/registry/condition/behavior/admission",
+  "tests": {
+    "independent_refusals": 8,
+    "owned": 35,
+    "result": "PASS",
+    "seconds": 54.62,
+    "total": 43
+  },
+  "verified_pins": {
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\digimoncard_io\\0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac.json": "cb41758f890ee67601c39f7be82500bb772515e3b6f9536f0093c9be418426e4",
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\digimoncard_io\\4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e.json": "7d871dcd258c979e3e785e7c0a2e8ff864046ca14ef59815104220a46313445a",
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\digimoncard_io\\ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e.json": "6ecf05bcf5aff21998b0446fd23ae6ae4fb5f217a2d46e6da3ffd5417da55c7a",
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\official\\74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765.json": "d74f2c45302780844c533d617696318d69c35c5c53f379844cd4ab925d9144be",
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\official\\ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3.json": "28c00f33a315c8919d08041348dcfa66f16f7560fea96e868222d9f5aa31a0e3",
+    "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\official\\faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b.json": "88d76e9694c7ef67229d35890478e87cc58ddf966327f698a3fb778a086b6cf1",
+    "code/tests/fixtures/card_data/clean_dual_association/.gitattributes": "441bdbe58a08ba7f6a43af3ea8e6f9c01daeba02a93594cc6db9d6b51d8f03bf",
+    "code/tests/fixtures/card_data/clean_dual_association/BT25-085.webp": "feb3944be2a9d01b5de31efdfe92709a876f04e833bb77d8c48f5e3336cd9266",
+    "code/tests/fixtures/card_data/clean_dual_association/BT25-085_P1.webp": "169b26496e1265cd4c31a4effa3a3a3dada3623f36febf443128eacd121b317c",
+    "code/tests/fixtures/card_data/clean_dual_association/BT25-085_P2.webp": "35d440e890e0e0acdd6019b550adfe82c66fa2802bba8cda4a79102854d7c222",
+    "code/tests/fixtures/card_data/clean_dual_association/a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2.html.gz": "8b94abd6ed6f2430f42ba7e398823d2bc0fdd5fcee8afd7d61096347281401f6",
+    "code/tests/fixtures/card_data/clean_dual_association/aggregate.json.gz": "e6082cd39d83075bc636d99e0ad62fc998fb41717ac3b0726ff264c1b3678457",
+    "code/tests/fixtures/card_data/clean_dual_association/corrections.json.gz": "566d85682b4605685d42fe4c4d7b8aa266272acd320cd5c942ada5df6f0c8f96",
+    "code/tests/fixtures/card_data/clean_dual_association/digimoncard_io-scope.json.gz": "b7951d7429d8f95be507cd9177d4acf4d118fd0f340143c4ea124d431f4baf7c",
+    "code/tests/fixtures/card_data/clean_dual_association/inputs.json": "3987c2898671c14de416d84b785f00d670aadba18d45e7220d2ada828ff67c24",
+    "code/tests/fixtures/card_data/clean_dual_association/official-scope.json.gz": "a6e15994af158c8126ce5ea577513721fdec77b779440a60b844f63f11afc5b1",
+    "code/tests/fixtures/card_data/clean_dual_association/proposal.json": "5fe7b643e487281ccddfffc07ac3f3f4d38e11f9e241191d59b2f9d9ec9d1fc1",
+    "code/tests/tools/test_clean_dual_association.py": "8ec5dd309e5302d02454cb44872f544da4ac6ee4f20da47b90404f438a2b569c",
+    "code/tools/card_data/__init__.py": "2286103d2b5282fea23daa54a05730ad2f1e246d4cfa866504553249eed2cf73",
+    "code/tools/card_data/compatibility_conditions.py": "19c7c74c05e5acea7d507312eef76e6515303098c871f9e132c17965980ec60d",
+    "code/tools/card_data/compatibility_corrections.py": "7422d38d75562d7b44f004bdc81333ef9aebab169c79b67040c5eee3af51db8f",
+    "code/tools/card_data/compatibility_selections.py": "83172c5b2f13b933c5465e585005bfad9f70a1e8d26f7d5526dc64af3e1f7ed2",
+    "code/tools/card_data/corrections.py": "bdc9a8677d62620e5c1caa275c138889e6c8220695970a69ba47ec8c3f5eb894",
+    "code/tools/card_data/errors.py": "f173df85f14c0d57db8572869c9fe552c5dc76b7ac8bea9399bc16a1c8b62fab",
+    "code/tools/card_data/models.py": "d47e33decd8b558236b12ab6e5a82a81da6e18317f7eba4ce4025fee1e21460d",
+    "code/tools/card_data/normalization.py": "ba1a27a1581861c01718aa26e379e2f2d23b2387e911b2d0a9b444f2a7503961",
+    "code/tools/card_data/serialization.py": "2914ac386d48acccfe5767d88134a623690e4b9059aca035208585a1dab9f595",
+    "code/tools/card_data/source_manifest.py": "2463e7cf8e95034b04a7e36b6f261205d433cb19a7a6440a87b1b9ddd3fb43f6",
+    "code/tools/card_data/sources/__init__.py": "873b48177ae90edd10fe20172e6b42e89c2b43b1123afbf76e6477b88c520b52",
+    "code/tools/card_data/sources/official.py": "1eff2ce202b8a8214483fe8c748cb0408aad7f3d406e2bfd8e025bd08bb55bca",
+    "code/tools/clause_coverage/__init__.py": "7c322ca3ebbcd20e18b1453e92a81f019deeaa09bd771b6a71fa3da6f28deb82",
+    "code/tools/clause_coverage/clean_dual_association.py": "96336321894baf6bba24ee80f6e1ff17c08db944afb9bd4d9be6a262ee09b5b2",
+    "code/tools/clause_coverage/dual_source_units.py": "10131aeb732a153be0014a7ad290fbc819ae68f9c3112540497c034209981aca"
+  },
+  "visual_review": "All3 images independently viewed. Upper BeelStarmon Digimon/lower Fly Bullet Option faces and printed DIGIMON/OPTION kind agree. P1/P2 sample watermarks retained. No gameplay behavior approval."
+}

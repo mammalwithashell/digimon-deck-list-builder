@@ -1,0 +1,353 @@
+{
+  "observations": [
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "EX12-076",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow",
+          "White",
+          "Red"
+        ],
+        "dp": 16000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green",
+              "White",
+              "Black",
+              "Purple"
+            ],
+            "cost": 6,
+            "from_level": 6,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White",
+              "Red"
+            ],
+            "dp": 16000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 7,
+            "name": "Susanoomon",
+            "play_cost": 16,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 7,
+        "name": "Susanoomon",
+        "play_cost": 16,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-076.png?260529",
+          "printing_id": "EX12-076"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, you cannot.\nAs this card has left the battle area, it doesn't have digivolution cards whose colors could be determined. Thus, the effect cannot be processed.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7194",
+            "question": "When I activate this card's [When Attacking] effect and my opponent's Digimon would leave the battle area due to processing the 1st part, an immediate-type effect such as \"when [...] would leave\" removes this card from the battle area.\nAfter that, can I process the part of the effect following after \"then\" in this card's effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [
+            "Hybrid"
+          ],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          }
+        ],
+        "type": "Shaman/Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "5d704a294bfb93f436d658da6ced15ac899c3cbb1d024d299b71c4bda881a6fd",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-076:EX12-076",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    },
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "EX12-076",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow",
+          "White",
+          "Red"
+        ],
+        "dp": 16000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green",
+              "White",
+              "Black",
+              "Purple"
+            ],
+            "cost": 6,
+            "from_level": 6,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White",
+              "Red"
+            ],
+            "dp": 16000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 7,
+            "name": "Susanoomon",
+            "play_cost": 16,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 7,
+        "name": "Susanoomon",
+        "play_cost": 16,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-076_P2.png?260529",
+          "printing_id": "EX12-076_P2"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, you cannot.\nAs this card has left the battle area, it doesn't have digivolution cards whose colors could be determined. Thus, the effect cannot be processed.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7194",
+            "question": "When I activate this card's [When Attacking] effect and my opponent's Digimon would leave the battle area due to processing the 1st part, an immediate-type effect such as \"when [...] would leave\" removes this card from the battle area.\nAfter that, can I process the part of the effect following after \"then\" in this card's effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [
+            "Hybrid"
+          ],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          }
+        ],
+        "type": "Shaman/Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "7e07754e49e948d83b893e56e6fcdc1391fc0e03474279b32f417f79e07b8061",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-076:EX12-076_P2",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    },
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "EX12-076",
+        "card_type": "Digimon",
+        "colors": [
+          "Yellow",
+          "White",
+          "Red"
+        ],
+        "dp": 16000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green",
+              "White",
+              "Black",
+              "Purple"
+            ],
+            "cost": 6,
+            "from_level": 6,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "White",
+              "Red"
+            ],
+            "dp": 16000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 7,
+            "name": "Susanoomon",
+            "play_cost": 16,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+              },
+              {
+                "label": "Special Play Condition",
+                "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+              }
+            ]
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 7,
+        "name": "Susanoomon",
+        "play_cost": 16,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522037",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/EX12-076_P1.png?260529",
+          "printing_id": "EX12-076_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "No, you cannot.\nAs this card has left the battle area, it doesn't have digivolution cards whose colors could be determined. Thus, the effect cannot be processed.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7194",
+            "question": "When I activate this card's [When Attacking] effect and my opponent's Digimon would leave the battle area due to processing the 1st part, an immediate-type effect such as \"when [...] would leave\" removes this card from the battle area.\nAfter that, can I process the part of the effect following after \"then\" in this card's effect?"
+          }
+        ],
+        "rarity": "SEC",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [
+            "Hybrid"
+          ],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names"
+          }
+        ],
+        "type": "Shaman/Shambala/SW/TB/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "c3df57fc86694827f60065b62ad4b7eeda12859eab69982bc3c5dba82ed28d21",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522037:EX12-076:EX12-076_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522037"
+    }
+  ],
+  "image_path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\EX12-076.webp",
+  "image_sha256": "6349385ba71637fcad8fa4a9d3d572003309ba6a8af50324cc6aaaf1383bc2c4",
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "scope": "Actual observation fixtures for pure Rule occurrence diagnostics; not complete source authority"
+}

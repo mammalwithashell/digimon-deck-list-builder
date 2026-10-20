@@ -2,10 +2,11 @@ card: EX12-026
 name: Shellmon
 kind: digimon
 level: 4
+form: Champion
 color: [blue]
 cost: 5
 dp: 5000
-traits: [Mollusk, Shambala, TB]
+traits: [Mollusk, Shambala, TB, Aquatic]
 attribute: Data
 
 alt_paths:

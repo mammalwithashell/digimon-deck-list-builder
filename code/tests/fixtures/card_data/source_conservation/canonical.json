@@ -1,0 +1,958 @@
+{
+  "cards": {
+    "EX12-046": {
+      "admission": "admitted",
+      "card_id": "EX12-046",
+      "conflicts": [
+        {
+          "candidate_observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "field_path": "effect_description_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "field_path": "evo_costs",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "field_path": "form_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "field_path": "inherited_effect_description_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Yellow",
+            "Red"
+          ],
+          "dp": 7000,
+          "effect_text": "[Special Digivolution Condition] [Digivolve] Lv.4 w/[Shambala] trait: Cost 3\n[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.\n[Special Play Condition] Assembly -2: Lv.4 or lower [TB] trait card",
+          "face_id": "primary",
+          "inherited_text": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+          "kind": "digimon",
+          "level": 5,
+          "play_cost": 7,
+          "security_text": ""
+        }
+      ],
+      "fields": {
+        "attribute_eng": [
+          "Vaccine"
+        ],
+        "card_colors": [
+          "Yellow",
+          "Red"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Shishimamon",
+        "dp": 7000,
+        "effect_description_eng": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends.\n[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "cost": 4,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Ultimate"
+        ],
+        "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+        "level": 5,
+        "play_cost": 7,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Holy Beast",
+          "Shambala",
+          "TB"
+        ]
+      },
+      "printings": [
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "printing_id": "EX12-046",
+          "product": null
+        }
+      ],
+      "provenance": {
+        "attribute_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "card_colors": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "card_kind": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "card_name_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "dp": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "evo_costs": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "faces": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "form_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "inherited_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "level": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "play_cost": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "security_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        },
+        "type_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46",
+            "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+          ],
+          "selected_observation_id": "2852560616c72aa4104029c10a690acec84f5dddcddbd2efe0952f7c734b36ef"
+        }
+      },
+      "schema_version": 1,
+      "tombstone_reason": null
+    },
+    "EX12-063": {
+      "admission": "admitted",
+      "card_id": "EX12-063",
+      "conflicts": [
+        {
+          "candidate_observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "field_path": "effect_description_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "field_path": "evo_costs",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "field_path": "form_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "field_path": "inherited_effect_description_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Purple",
+            "Green"
+          ],
+          "dp": 7000,
+          "effect_text": "[Special Digivolution Condition] [Digivolve] Non-white Lv.4 w/[Puppet]/[Shambala] trait: Cost 3\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.\n[Special Play Condition] Assembly -2: Lv.4 or lower [Puppet]/[TB] trait card",
+          "face_id": "primary",
+          "inherited_text": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+          "kind": "digimon",
+          "level": 5,
+          "play_cost": 7,
+          "security_text": ""
+        }
+      ],
+      "fields": {
+        "attribute_eng": [
+          "Data"
+        ],
+        "card_colors": [
+          "Purple",
+          "Green"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Karakurumon",
+        "dp": 7000,
+        "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\n[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Purple",
+              "Green"
+            ],
+            "cost": 4,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Ultimate"
+        ],
+        "inherited_effect_description_eng": "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost.",
+        "level": 5,
+        "play_cost": 7,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Puppet",
+          "Shambala",
+          "TB"
+        ]
+      },
+      "printings": [
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "printing_id": "EX12-063",
+          "product": null
+        },
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60"
+          ],
+          "printing_id": "EX12-063#2",
+          "product": null
+        },
+        {
+          "alternate_art": true,
+          "language": "en",
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93"
+          ],
+          "printing_id": "EX12-063_P1",
+          "product": null
+        }
+      ],
+      "provenance": {
+        "attribute_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "card_colors": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "card_kind": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "card_name_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "dp": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "evo_costs": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "faces": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "form_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "inherited_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "level": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "play_cost": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "security_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        },
+        "type_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "071afa0074a4a8f9bbf3e1b42ccb9c6c3b1d24bb5bd59a1992ec0dd6ef483b93",
+            "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da",
+            "c057f1c6849ec138f12daecc32a416c49c2e47991360dab78c8dab9e79758a60",
+            "f639bf9a0cd303143dc75a100dbe2cf9b864e04f93553a77ea1a22dcfb253edf"
+          ],
+          "selected_observation_id": "110ca9c3016ccac2f354e46a008cb8e04ebeba30874491d28932c5c39dfe50da"
+        }
+      },
+      "schema_version": 1,
+      "tombstone_reason": null
+    },
+    "EX12-076": {
+      "admission": "admitted",
+      "card_id": "EX12-076",
+      "conflicts": [
+        {
+          "candidate_observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "field_path": "card_colors",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "field_path": "effect_description_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "field_path": "evo_costs",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "field_path": "form_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "field_path": "inherited_effect_description_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        },
+        {
+          "candidate_observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "field_path": "type_eng",
+          "kind": "official_secondary",
+          "reason": "official value selected over conflicting secondary observation"
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Yellow",
+            "White",
+            "Red"
+          ],
+          "dp": 16000,
+          "effect_text": "[Special Digivolution Condition] [Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5\n＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form.\n[Special Play Condition] Assembly -9: 8 [Hybrid]/[Shambala] trait cards w/different names",
+          "face_id": "primary",
+          "inherited_text": "",
+          "kind": "digimon",
+          "level": 7,
+          "play_cost": 16,
+          "security_text": ""
+        }
+      ],
+      "fields": {
+        "attribute_eng": [
+          "Vaccine"
+        ],
+        "card_colors": [
+          "Yellow",
+          "White",
+          "Red"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Susanoomon",
+        "dp": 16000,
+        "effect_description_eng": "＜Rush＞ ＜Raid＞ ＜Blocker＞\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞.\n(Rule) Trait: Has [Hybrid] Form.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green",
+              "White",
+              "Black",
+              "Purple"
+            ],
+            "cost": 6,
+            "from_level": 6,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Mega"
+        ],
+        "inherited_effect_description_eng": "",
+        "level": 7,
+        "play_cost": 16,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Shaman",
+          "Shambala",
+          "SW",
+          "TB",
+          "TS"
+        ]
+      },
+      "printings": [
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb"
+          ],
+          "printing_id": "EX12-076",
+          "product": null
+        },
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774"
+          ],
+          "printing_id": "EX12-076#2",
+          "product": null
+        },
+        {
+          "alternate_art": false,
+          "language": "en",
+          "observation_ids": [
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "printing_id": "EX12-076#3",
+          "product": null
+        },
+        {
+          "alternate_art": true,
+          "language": "en",
+          "observation_ids": [
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00"
+          ],
+          "printing_id": "EX12-076_P1",
+          "product": null
+        },
+        {
+          "alternate_art": true,
+          "language": "en",
+          "observation_ids": [
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13"
+          ],
+          "printing_id": "EX12-076_P2",
+          "product": null
+        }
+      ],
+      "provenance": {
+        "attribute_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "card_colors": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "card_kind": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "card_name_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "dp": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "evo_costs": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "faces": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "form_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "inherited_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "level": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "play_cost": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "security_effect_description_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        },
+        "type_eng": {
+          "adjudicated": false,
+          "authority": "official",
+          "derived": false,
+          "observation_ids": [
+            "50c5a45cb524d7bcffbac9029d87516ad44f1c35852e5015564c8e77e1db5774",
+            "5acfc953e79a7ec4af268c612c4b5756e1848a161e022343161ef4017bfb0c00",
+            "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5",
+            "8f4eb15eb24e2901b0b0badc18e759b4d73f5033514488c068331d7f60eb0f13",
+            "9ee0db3ef6243b6ce4ba5da1dc3837555e5f9f3744c828b2fb90fc2cd94ee2eb",
+            "d4804cf44c0ec0429a15b73accf910d396bc50294c26800a132ecb40d1319678"
+          ],
+          "selected_observation_id": "8a6b3e3ca6cf7dab29517ff995cad1fd067fbb8cdee99915fde5714e8bf086b5"
+        }
+      },
+      "schema_version": 1,
+      "tombstone_reason": null
+    }
+  },
+  "schema_version": 1,
+  "secondary_only_ids": [],
+  "source_manifest_digest": "79749b04096a349827dcd23a880046cf1041dae6e42a1b50010e4b8158e0424a",
+  "source_manifests": {
+    "digimoncard_io": "1af47c5bf1e78f2ccbea652c3537903f6d1038a811aa6baa0a7e54527652f69b",
+    "official": "2f7e368bc1a42c8beaf006fdb5807c50146ef998011caff2a9a49998c14d4119"
+  }
+}

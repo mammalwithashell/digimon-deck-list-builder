@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture; complete A2 binding remains caller prerequisite.",
+  "card_id": "BT21-059",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "d9cd52850947bf595a9f5026c80def4a9debbcdc4b864ddce71b476efff92782",
+    "section_index": 0,
+    "label": "Special Digivolution Condition",
+    "condition_type": "special_digivolution_condition",
+    "text": "[App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Tool",
+      "card_id": "BT21-059",
+      "card_type": "Digimon",
+      "colors": [
+        "Black"
+      ],
+      "dp": 5000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Black"
+          ],
+          "cost": 2,
+          "from_level": 3,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Black"
+          ],
+          "dp": 5000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 4,
+          "name": "Timemon",
+          "play_cost": 5,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+            },
+            {
+              "label": "Effect",
+              "text": "＜Blocker＞\n[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+            },
+            {
+              "label": "Special Rule",
+              "text": "+3000 DP"
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+            }
+          ]
+        }
+      ],
+      "form": "Sup./Appmon",
+      "grade_evolution_routes": [
+        {
+          "colors": [
+            "Multicolor"
+          ],
+          "cost": 2,
+          "from_grade": "Standard",
+          "slot": 2
+        }
+      ],
+      "layout": "single",
+      "level": 4,
+      "name": "Timemon",
+      "play_cost": 5,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522028",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT21-059.png?260529",
+        "printing_id": "BT21-059"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Watchmon] & [Savemon] & [Calendamon]: Cost 0 (If 2 such cards are linked together, stack the link card on top and digivolve.)"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞\n[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Special Rule",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        }
+      ],
+      "type": "Time Slip"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "d9cd52850947bf595a9f5026c80def4a9debbcdc4b864ddce71b476efff92782",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "59226d6e3d8cc446a3668e4b7885b4808f277a6a0eab8345b9001f1fce3b1dc8",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522028:BT21-059:BT21-059",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522028"
+  },
+  "observation_file_sha256": "c303ef143786d27acde0bb7c574f6a21da8f9b23a5b56a5630296588b5f2a172",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT21-059.webp",
+    "sha256": "6054757561ad610a96e539273b5121d60a03125a52e0f8a0d0f17e1a038bc69c",
+    "observed": "Distinct printed App Fusion condition; named alternatives, zero cost and linked-card stacking reminder visually inspected."
+  }
+}

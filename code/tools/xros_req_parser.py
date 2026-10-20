@@ -5,6 +5,9 @@ one of {Digivolve, DNA Digivolve, App Fusion, Burst Digivolve}.
 
 Permissive: any line that doesn't match a known production is returned
 verbatim in `XrosReqParseResult.unparsed_lines` rather than raising.
+The exact inline source heading [Special Digivolution Condition] may precede
+an already supported digivolution production. Unknown bodies keep the heading
+in diagnostics; standalone headings and other source labels remain unparsed.
 """
 from __future__ import annotations
 
@@ -159,13 +162,29 @@ _PRODUCTIONS = (
 )
 
 
+def _try_source_heading(line: str) -> Optional[ParsedAltPath]:
+    heading = "[Special Digivolution Condition]"
+    if not line.startswith(heading):
+        return None
+    body = line[len(heading):].lstrip()
+    # Only existing digivolution markers belong under this source label.
+    # Do not broaden grammar, alias keywords or strip unknown diagnostics.
+    if not any(body.startswith(marker) for marker in _MARKER_TO_KIND):
+        return None
+    for production in _PRODUCTIONS:
+        ap = production(body)
+        if ap is not None:
+            return ap
+    return None
+
+
 def parse(xros_req: str) -> XrosReqParseResult:
     if not xros_req:
         return XrosReqParseResult(parsed=[], unparsed_lines=[])
     parsed: list[ParsedAltPath] = []
     unparsed: list[str] = []
     for line in _split_lines(xros_req):
-        for production in _PRODUCTIONS:
+        for production in (*_PRODUCTIONS, _try_source_heading):
             ap = production(line)
             if ap is not None:
                 parsed.append(ap)

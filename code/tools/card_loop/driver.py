@@ -588,6 +588,11 @@ class Driver:
         return self._stop is not None
 
     def _idle_stop(self) -> Stop:
+        from .revalidation import completion_blocker
+        if getattr(self.config, "source_manifest", None):
+            reason = completion_blocker(self.ctx)
+            if reason:
+                return Stop("blocked", reason)
         open_items = [r for r in self.state.records.values() if not is_terminal(r.kind, r.state)]
         if not open_items:
             return Stop("complete", "every item is in a terminal state")
@@ -850,6 +855,16 @@ class Driver:
         to the whole pool and commit it. A card missing from the book makes
         every oracle verdict for it an orphan refusal. Idempotent; once per session."""
         pool = list((self.plan.get("work_set") or {}).get("pool") or [])
+        if getattr(self.config, "source_manifest", None):
+            from .source_snapshot import validate_snapshot
+            try:
+                validate_snapshot(self.ctx, clause_book=self._clause_text_book(), required_cards=pool)
+            except StageDeferred as error:
+                self._prelude = f"immutable source snapshot validation failed: {error}"
+                self.state.problems.append(self._prelude)
+                return False
+            self._prelude = "ok"
+            return True
         if not pool:
             self._prelude = "ok"
             return True
@@ -862,6 +877,17 @@ class Driver:
         if rc != 0:
             self._prelude = f"`tools.clause_coverage.book add` exited {rc}: {(err or out).strip()[-300:]}"
             self.state.problems.append(f"clause-text book prelude: {self._prelude}")
+            return False
+        # Append-only add never refreshes existing cards. Verify their full
+        # semantics against current source before dispatching any oracle work.
+        check = [sys.executable, "-c", BOOK_BOOTSTRAP, "validate", "--book", book, "--card-ids", *pool]
+        try:
+            check_rc, check_out, check_err = self.ctx.run_command(check, str(self.repo), 1800)
+        except Exception as e:
+            check_rc, check_out, check_err = None, "", f"{type(e).__name__}: {e}"
+        if check_rc != 0:
+            self._prelude = f"clause source binding validation failed: {(check_err or check_out).strip()[-500:]}"
+            self.state.problems.append(self._prelude)
             return False
         self._commit_paths([book], f"card-loop: clause-text book covers run {self.run_id}'s pool",
                            body=f"{len(pool)} pool card(s); added by the driver's run prelude.")
@@ -1020,6 +1046,8 @@ class Driver:
         return dcgo_script_presence(cards, root)
 
     def _on_start(self) -> None:
+        if getattr(self.config, "revalidation_enabled", False) and not self.serial:
+            raise ValueError("revalidation requires the serial driver to avoid duplicate item dispatch")
         self._ensure_run_harness("session start")
         scripts = (self.plan.get("dcgo") or {}).get("scripts") or {}
         missing = [c for c, p in scripts.items() if p is None]
@@ -1086,9 +1114,23 @@ class Driver:
             raise
         return self._finish_run()
 
+    def _revalidation_step(self) -> bool:
+        if not getattr(self.config, "revalidation_enabled", False):
+            return False
+        from .revalidation import advance
+        try:
+            return advance(self.ctx)
+        except StageDeferred as error:
+            message = f"revalidation deferred: {error}"
+            if message not in self.state.problems:
+                self.state.problems.append(message)
+            return False
+
     def _loop_serial(self) -> None:
         while not self._check_stop():
             self._round_start()
+            if self._revalidation_step():
+                continue
             task = next(self._ready_tasks({"worker": 1, "oracle": 1}), None)
             if task is None:
                 if self._stop is None:

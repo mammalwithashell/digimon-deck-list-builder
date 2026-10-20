@@ -1,0 +1,41 @@
+{
+  "BT25-078": {
+    "index": 4164,
+    "norm_id": 0.2082,
+    "card_id": "BT25-078",
+    "card_index": 78,
+    "card_name_eng": "Gazimon",
+    "card_name_jpn": "",
+    "card_effect_class_name": "BT25_078",
+    "play_cost": 3,
+    "dp": 1000,
+    "level": 3,
+    "card_kind": 0,
+    "rarity": 0,
+    "card_colors": [
+      6
+    ],
+    "type_eng": [
+      "Mammal",
+      "Iliad",
+      "TS"
+    ],
+    "form_eng": [
+      "Rookie"
+    ],
+    "attribute_eng": [
+      "Virus"
+    ],
+    "effect_description_eng": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with [Three Musketeers] in its text to the hand, or you may place 1 [Three Musketeers] trait card as this Digimon's bottom digivolution card. Return the rest to the bottom of the deck.",
+    "inherited_effect_description_eng": "\uff1cRetaliation\uff1e (When only this Digimon is deleted in battle, delete the Digimon it battled.)",
+    "security_effect_description_eng": "",
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "xros_req": "[Special Digivolution Condition] [Digivolve] Lv.2 w/[Three Musketeers] in text or w/[TS] trait: Cost 0"
+  }
+}
