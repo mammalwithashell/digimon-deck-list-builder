@@ -3113,8 +3113,7 @@ fn compile_step(
                     message: "include_sources is only valid with disposition: observed".to_string(),
                 });
             }
-            if a.bind_placed_as.is_some() && !(is_permanent && matches!(a.disposition, D::None))
-            {
+            if a.bind_placed_as.is_some() && !(is_permanent && matches!(a.disposition, D::None)) {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.place_on_security"),
@@ -3126,9 +3125,8 @@ fn compile_step(
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.place_on_security"),
-                    message:
-                        "to_owner requires source: permanent with disposition none or cancel"
-                            .to_string(),
+                    message: "to_owner requires source: permanent with disposition none or cancel"
+                        .to_string(),
                 });
             }
             match &a.source {
