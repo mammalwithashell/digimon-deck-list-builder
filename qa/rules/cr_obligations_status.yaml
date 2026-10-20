@@ -64,15 +64,15 @@
   note: "Same sentence as 15-4-2-3, restated for pending activation."
 "15-4-3-2":
   status: proven
-  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first"]
-  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
+  tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first", "ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool", "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool"]
+  note: "<Alliance> and the attacker's [When Attacking] effect pend together in one TriggerOrder before either activates (fire_on_attack enqueues the whole declaration bundle before one drain; G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL resolved). A battle's 'wins a battle' trigger, the deletion observer and the loser's [On Deletion] pend in one pool: the turn player's TriggerOrder offers its battle-result trigger and its deletion observer together (G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved). The triggers raised by every event of ONE effect's resolution (a source trash, then a hand trash) pend in one pool when that effect finishes (the batch-window observers are released into the same trigger batch, Game::release_event_window_triggers); a trigger activated from that pool is a resolution of its own, so what it raises pends as a new, derived pool (G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS resolved)."
 "16-24-2":
   status: proven
   tests: ["ch15_04_effect_states::when_attacking_and_alliance_share_one_pool", "ch16_attack_keywords::alliance_kind_matches_rule"]
   note: "<Alliance> is a [When Attacking] trigger-type body (keyword_to_auto_effect) pending with the attack declaration's other triggers; its ally pick is the body."
 "15-4-3-5-1":
   status: proven
-  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first", "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool"]
+  tests: ["ch15_04_effect_states::turn_player_orders_first_then_non_turn_player", "ch15_04_effect_states::battle_result_trigger_pools_with_the_losers_on_deletion_turn_player_first", "ch15_04_effect_states::piercing_triggers_with_the_battle_deletion_pool", "ch15_04_effect_states::triggers_from_two_events_of_one_effect_pend_in_one_pool"]
   note: "P0 orders only its own simultaneously triggered attack effects and resolves all of them before the non-turn player chooses. After a battle the turn player's battle-result triggers ('wins a battle', <Piercing>) activate before the non-turn player's [On Deletion] (official Q&A Q3931; G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION resolved)."
 "15-4-3-5-2":
   status: proven
@@ -98,7 +98,7 @@
   note: "Same Q1009 witness as 15-8-3-9-2: the second copy's only processing condition is unmet at activation, so it can't be activated."
 "15-4-5-2":
   status: proven
-  tests: ["ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings"]
+  tests: ["ch15_04_effect_states::derived_trigger_resolves_before_pending_siblings", "ch15_04_effect_states::triggers_raised_by_a_pooled_effect_pend_as_a_new_pool"]
 "15-4-5-3":
   status: proven
   tests: ["ch15_04_effect_states::non_turn_player_derived_trigger_precedes_turn_player_pending"]

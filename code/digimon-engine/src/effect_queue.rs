@@ -1429,6 +1429,10 @@ impl Game {
         // infinite-loop draw, a §1-2-6 win/lose effect, a deck-out -- and no
         // flush or rules processing runs after it.
         if self.effect_drain_depth == 1 && !self.game_over {
+            // Fallback flushes. The windows are normally released at the top
+            // of the drain loop as soon as the effect that opened them has
+            // finished (`release_event_window_triggers`, §15-4-3-2); these
+            // catch a window a drain entered inside a deferred scope left open.
             // Flush the OnDiscardHand batch window (G-ENGINE-ON-DISCARD-HAND):
             // the causing effect body has finished, so the whole discard batch
             // is known. Fire the trigger ONCE per affected owner (DCGO
@@ -1566,6 +1570,46 @@ impl Game {
         }
     }
 
+    /// Release point of one resolution's triggers (§15-4-3-2 "If multiple
+    /// effects are triggered before a single rule or effect is resolved, they
+    /// all trigger simultaneously"; §15-4-3-5-1 the turn player orders them).
+    ///
+    /// Called at the top of each `drain_effect_queue_inner` iteration, i.e.
+    /// when the drain is about to choose the next pending effect because the
+    /// effect, action or rule process before it has FINISHED. Most events
+    /// enqueue their observers directly while that processing runs (a source
+    /// trash, a deletion, a play, ...) and the deferred-drain scope holds them
+    /// (§15-8-3-2). The batch-window events -- an effect trashing from a hand
+    /// (`OnDiscardHand`), adding to a deck (`OnAddToDeck`), placing
+    /// digivolution cards (`OnAddDigivolutionCards`) -- only record a window
+    /// and enqueue on flush. Flushing them HERE, before the batch stamp below,
+    /// puts every trigger the one resolution raised into ONE batch, so they
+    /// are offered as one pool. They used to flush only once the whole queue
+    /// had emptied, so e.g. Crowmon (BT26-076)'s [When Digivolving] offered
+    /// its Tamer-trash observers and its hand-trash observers as two
+    /// successive pools. A trigger activated from the pool is a resolution of
+    /// its own: its windows flush when IT finishes, into a newer (derived,
+    /// §15-4-5-2) batch, never into the outer pool.
+    ///
+    /// Only at the outermost drain, with no deferred-drain scope open and
+    /// nothing parked -- the conditions under which the post-queue flush in
+    /// `drain_effect_queue` runs: a nested (mid-effect) drain leaves the
+    /// windows open, because the effect that opened them has not finished.
+    /// Enqueue-only; trigger qualifiers are decided at the flush, as before.
+    /// G-ENGINE-MULTI-EVENT-TRIGGERS-SPLIT-INTO-SUCCESSIVE-POOLS.
+    fn release_event_window_triggers(&mut self) {
+        if self.effect_drain_depth != 1
+            || self.draining_deferred != 0
+            || self.pending_selection.is_some()
+            || self.game_over
+        {
+            return;
+        }
+        self.flush_pending_hand_discard();
+        self.flush_pending_deck_add();
+        self.flush_pending_added_sources();
+    }
+
     /// State-based ≤0-DP rules-check run BETWEEN top-level queued effects (after
     /// each `run_queued_effect`). Q24: a Digimon driven to ≤0 DP by one effect is
     /// deleted by the rules-check before the next queued trigger resolves. Runs
@@ -1627,6 +1671,11 @@ impl Game {
                     return;
                 }
             }
+            // §15-4-3-2: the effect (or action / rule process) that ran
+            // before this iteration has finished; release the observers its
+            // batch-window events left pending, so they are stamped into the
+            // SAME trigger batch as its directly-enqueued ones below.
+            self.release_event_window_triggers();
             if self.effect_queue.is_empty() {
                 // Track H §3 Phase 4i superseded the prior inline-fire
                 // flush: granted-triggered-effect entries now ride the

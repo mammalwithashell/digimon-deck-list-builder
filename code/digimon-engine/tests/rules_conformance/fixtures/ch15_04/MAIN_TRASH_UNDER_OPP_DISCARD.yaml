@@ -1,0 +1,24 @@
+# MAIN_TRASH_UNDER_OPP_DISCARD -- Option, red, use cost 0.
+#   [Main] Trash the bottom face-down card from under 1 of your Tamers. Then,
+#   your opponent trashes 1 card in their hand.
+# One effect, two events: a source trash, then a hand trash (the shape of
+# Crowmon (BT26-076)'s [When Digivolving]; the §15-4-3-2 one-pool test).
+card: MAIN_TRASH_UNDER_OPP_DISCARD
+name: Undertrash Squeeze
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash the bottom face-down card from under 1 of your Tamers. Then, your opponent trashes 1 card in their hand."
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_hand:
+                of: opponent
+                bind_as: discarded
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discarded }
