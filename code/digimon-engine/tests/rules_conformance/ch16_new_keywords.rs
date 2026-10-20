@@ -1603,11 +1603,22 @@ fn dual_use_declares_digimon_or_option_information() {
 ///   information (level 6, §4-6-5-2);
 /// - a legal pick for `HAND_PICK_OPT` ("Trash 1 Option card with the
 ///   [Artsy] trait from your hand").
+///
+/// So one card is treated as being in either category (§4-6-1), and the
+/// Digimon-card pick reads its Digimon information (§4-6-5-2).
 #[test]
 fn dual_traits_belong_to_both_informations() {
     cite!(
         "4-6-5-1",
         "0245d75bdf7a39db36cb72e1051ba741497b46b09ce89da135677d55dfa5a78e"
+    );
+    cite!(
+        "4-6-1",
+        "71e521e2421527fc20a64b564c7792b256d164651256c309effe1e311448eee7"
+    );
+    cite!(
+        "4-6-5-2",
+        "79757dcc3de9dc978264cf27d196ee4386376ad1478c699408b7b64f73194b31"
     );
     cite!(
         "4-6-6-1",

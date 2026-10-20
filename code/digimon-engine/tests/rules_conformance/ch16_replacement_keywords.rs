@@ -745,11 +745,21 @@ const SEC_TOP_BLUE: &[&str] = &[FILL, FILL, "BLUE_LV4"];
 /// - By an effect: P0's `MAIN_DEL1` targets `BARRIER`: no <Barrier>.
 /// - With no security card the condition can't be executed: not offered,
 ///   `BARRIER` is deleted in battle.
+///
+/// §16-25-3 ""By trashing the top card of your security stack" in <Barrier>
+/// is an optional processing condition. If the content of that condition is
+/// executed, the processing for "prevents the deletion" will be mandatory."
+/// (accepted: the top card is trashed and the deletion is prevented; not
+/// executable: not offered).
 #[test]
 fn barrier_trashes_top_security_only_for_battle_deletion() {
     cite!(
         "16-25-1",
         "5fda7eb177e691c2fd8114e6d08765580610062fb1afb946fe0129ec0c8fd5bc"
+    );
+    cite!(
+        "16-25-3",
+        "d05740324cfe6e7edbc153b03e623dc3a61b350e0120701a63c0e0d9d111330d"
     );
     cite!(
         "16-25-2",

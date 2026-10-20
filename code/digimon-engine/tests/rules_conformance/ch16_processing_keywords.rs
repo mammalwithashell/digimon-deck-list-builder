@@ -2275,12 +2275,18 @@ fn mind_link_kind_matches_rule() {
 ///
 /// In P0's main phase the [Main] <Mind Link> and PASS are both legal; P0 ends
 /// the turn without it and `MINDLINK` stays on the field. With no Tamer-less
-/// Digimon (only `[PLAIN_TAMER, LV4_PLAIN]`) it can't be activated.
+/// Digimon (only `[PLAIN_TAMER, LV4_PLAIN]`) it can't be activated: §16-28-1
+/// places the Tamer under "a Digimon with no Tamer cards in its digivolution
+/// cards".
 #[test]
 fn mind_link_timing_matches_rule() {
     cite!(
         "16-28-3",
         "d7fd5721ce3b7c69bff1c61b31052bfab5b629db1f039b4e9e34b72d43a70db1"
+    );
+    cite!(
+        "16-28-1",
+        "80f4ca2834771246050ad8aadd1633987980737deda024e7c737e1e1fc3bfde7"
     );
     let (mut r, tamer, _) = mind_link_board();
     assert!(r.pending_selection().is_none());
