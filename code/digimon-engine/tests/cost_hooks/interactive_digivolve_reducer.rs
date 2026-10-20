@@ -17,11 +17,13 @@
 //!
 //! This fixture's `before_pay_cost` reducer mirrors the real DSL
 //! `trash_bottom_face_down_source_under_tamer` lowering exactly:
-//!   - pre-filter the controller's Tamers carrying a bottom face-down source;
+//!   - pre-filter the controller's Tamers with a face-down card under them
+//!     (`Permanent::face_down_source_indices`; "the bottom face-down card" is
+//!     the LOWEST face-down card, face-up cards below it notwithstanding);
 //!   - if NONE, set `ctx.cost_unpayable = true` and return `false` (unpayable —
 //!     the reduction must NOT be credited);
-//!   - else install a `select_own_permanent` whose callback trashes the bottom
-//!     face-down source; the `pay_cost_fn` returns `false` because it parked.
+//!   - else install a `select_own_permanent` whose callback trashes the lowest
+//!     face-down card; the `pay_cost_fn` returns `false` because it parked.
 //!
 //! The engine must credit the -2 reduction when (and only when) the parked
 //! Tamer pick resolves and the face-down source is actually trashed.
@@ -127,7 +129,8 @@ impl CardEffect for InteractiveDigivolveReducer {
             .pay_cost_interactive(true)
             .pay_cost_fn(|ctx| {
                 // Mirror `trash_bottom_face_down_source_under_tamer`: pre-filter
-                // the controller's Tamers carrying a bottom face-down source.
+                // the controller's Tamers with a face-down card under them ("the
+                // bottom face-down card" is the LOWEST face-down card).
                 let player = ctx.player;
                 let eligible: Vec<PermanentHandle> = ctx.game.players[player as usize]
                     .battle_area
@@ -135,10 +138,10 @@ impl CardEffect for InteractiveDigivolveReducer {
                     .enumerate()
                     .filter(|(_, perm)| {
                         perm.top_card().card_kind(&ctx.game.card_data) == CardKind::Tamer
-                            && perm
-                                .card_sources
-                                .first()
-                                .is_some_and(|src| src.face_down)
+                            // Any face-down card under the Tamer: the production
+                            // step offers it and trashes its LOWEST face-down card
+                            // (`Permanent::face_down_source_indices`).
+                            && perm.face_down_source_indices().next().is_some()
                     })
                     .map(|(idx, _)| PermanentHandle {
                         player,
@@ -161,7 +164,7 @@ impl CardEffect for InteractiveDigivolveReducer {
                         let trashed = cb_ctx.trash_bottom_face_down_source(handle);
                         debug_assert!(
                             trashed,
-                            "eligibility filter offered a Tamer whose bottom source is not face-down"
+                            "eligibility filter offered a Tamer with no face-down card under it"
                         );
                     },
                 );

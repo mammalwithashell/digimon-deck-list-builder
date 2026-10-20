@@ -4051,9 +4051,10 @@ Tamers, …":
 - trash_bottom_face_down_source_under_tamer: { of: you }
 ```
 
-It installs a `select_own_permanent { kind: tamer, has_face_down_source: true }`
-Tamer-pick, then trashes the chosen Tamer's bottom face-down source (firing
-`OnDigivolutionCardTrashed`). When the player controls no eligible Tamer the
+It installs a `select_own_permanent` Tamer-pick over your Tamers with a
+face-down card under them, then trashes the chosen Tamer's bottom face-down
+card -- its LOWEST face-down card, face-up cards below it notwithstanding
+(`Permanent::face_down_source_indices`) -- firing `OnDigivolutionCardTrashed`. When the player controls no eligible Tamer the
 cost is unpayable: the clause's remaining steps are skipped. Used by the
 cost-form trash family (ST23-01/03/04/08/11/12, ST24-01/06/10/11/12).
 
@@ -5043,7 +5044,7 @@ lives in `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`.
 | `security_place_top_stacked_card` | `carrier`, `of`, `position`, `face` | `EffectContext::security_place_top_stacked_card(...)` |
 | `return_all_trash_to_deck_bottom` | `of` | `EffectContext::return_all_trash_to_deck_bottom(player)` |
 | `trash_top_n_digivolution_cards_of_each` | `of`, `n` formula | `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)` |
-| `trash_bottom_face_down_source_under_tamer` | `of` | Installs `select_own_permanent { kind: tamer, has_face_down_source: true }`, then `EffectContext::trash_bottom_face_down_source(pick)`. Skips remaining clause steps (unpayable cost) when no eligible Tamer exists. See "DSL Tamer Face-Down Stash Substrate". |
+| `trash_bottom_face_down_source_under_tamer` | `of` | Installs `select_own_permanent` over your Tamers with a face-down card under them, then `EffectContext::trash_bottom_face_down_source(pick)` (the lowest face-down card; `Permanent::face_down_source_indices`). Skips remaining clause steps (unpayable cost) when no eligible Tamer exists. See "DSL Tamer Face-Down Stash Substrate". |
 | `trash_opponent_hand_to_count` | `opponent`, `target_count` formula | `EffectContext::trash_opponent_hand_to_count(opponent, target_count)` |
 | `search_own_security_stack` | `filter`, `prompt`, optional `bind_as`, `optional`, `on_select`, optional `on_no_match` | `EffectContext::search_own_security_stack(...)`; `bind_as` exposes the selected security card handle to `on_select` |
 
