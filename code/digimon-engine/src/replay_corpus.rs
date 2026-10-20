@@ -507,6 +507,44 @@ struct RetiredReplayFile<'a> {
     recording: &'a VerificationReplayRecording,
 }
 
+/// Re-record ONE generated greedy golden on the current engine from its own
+/// inline deck refs and seed: the same greedy-vs-greedy recording
+/// `generate_greedy_replay_corpus` makes, for a golden whose recorded path an
+/// engine change made illegal (so `bless`, which keeps the recorded actions,
+/// can only retire it). `max_steps` defaults to the original recording's
+/// action count, keeping the golden's length budget. Decklist-ref goldens and
+/// goldens without a seed are refused, never guessed.
+pub fn regenerate_greedy_replay(
+    recording: &VerificationReplayRecording,
+    cards_json_bytes: &[u8],
+    card_data: &HashMap<String, CardData>,
+    max_steps: Option<u32>,
+) -> Result<VerificationReplayRecording, ReplayCorpusError> {
+    let (Some(deck1), Some(deck2)) = (
+        recording.deck_refs.player1.inline_cards(),
+        recording.deck_refs.player2.inline_cards(),
+    ) else {
+        return Err(ReplayCorpusError::Engine(
+            "regenerate needs inline deck refs for both players".to_string(),
+        ));
+    };
+    let Some(seed) = recording.seed else {
+        return Err(ReplayCorpusError::Engine(
+            "regenerate needs the recording's seed".to_string(),
+        ));
+    };
+    let max_steps =
+        max_steps.unwrap_or_else(|| u32::try_from(recording.actions.len()).unwrap_or(u32::MAX));
+    record_greedy_game(
+        deck1.to_vec(),
+        deck2.to_vec(),
+        card_data,
+        seed,
+        max_steps,
+        cards_json_content_hash(cards_json_bytes),
+    )
+}
+
 fn record_greedy_game(
     deck1: Vec<String>,
     deck2: Vec<String>,

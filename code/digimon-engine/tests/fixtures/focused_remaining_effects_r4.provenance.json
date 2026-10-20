@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "scope": "Test-only exact R4 row extraction; no source/runtime admission",
+  "original_runtime_sha256": "ba7d7f85da1553fb35435131181c598ef555acd0f0890d979a74beee7e60398f",
+  "original_runtime_record_count": 4483,
+  "scout_sha256": "70e64e3451d1496086295f33d238734c80e2178992726defe5924bb7cea11912",
+  "fixture_sha256": "f4ae043eb86c828c853eec971f53be86746b4a3269368d0b98afe5efeeea360e",
+  "cards": {
+    "BT4-018": {
+      "index": 373,
+      "norm_id": 0.01865,
+      "card_id": "BT4-018",
+      "card_index": 18,
+      "card_name_eng": "Spinomon",
+      "card_name_jpn": "",
+      "card_effect_class_name": "BT4_018",
+      "play_cost": 10,
+      "dp": 10000,
+      "level": 6,
+      "card_kind": 0,
+      "rarity": 0,
+      "card_colors": [
+        0
+      ],
+      "type_eng": [
+        "Dinosaur"
+      ],
+      "form_eng": [
+        "Mega"
+      ],
+      "attribute_eng": [
+        "Virus"
+      ],
+      "effect_description_eng": "[Your Turn] This Digimon gets +3000 DP.",
+      "inherited_effect_description_eng": "",
+      "security_effect_description_eng": "",
+      "evo_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 2
+        }
+      ],
+      "xros_req": ""
+    },
+    "BT6-068": {
+      "index": 650,
+      "norm_id": 0.0325,
+      "card_id": "BT6-068",
+      "card_index": 68,
+      "card_name_eng": "Impmon",
+      "card_name_jpn": "",
+      "card_effect_class_name": "BT6_068",
+      "play_cost": 3,
+      "dp": 2000,
+      "level": 3,
+      "card_kind": 0,
+      "rarity": 0,
+      "card_colors": [
+        6
+      ],
+      "type_eng": [
+        "Evil"
+      ],
+      "form_eng": [
+        "Rookie"
+      ],
+      "attribute_eng": [
+        "Virus"
+      ],
+      "effect_description_eng": "[On Play] You may trash 1 card in your hand. If you do, return 1 Digimon card with [Seven Great Demon Lords] or [Three Musketeers] in its type from your trash to your hand.",
+      "inherited_effect_description_eng": "",
+      "security_effect_description_eng": "",
+      "evo_costs": [
+        {
+          "card_color": 6,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "xros_req": ""
+    }
+  }
+}

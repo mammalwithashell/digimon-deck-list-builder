@@ -2,10 +2,12 @@ card: BT24-031
 name: Elecmon
 kind: digimon
 level: 3
+form: Rookie
 color: [yellow]
 cost: 3
 dp: 1000
 traits: [Mammal, Iliad, TS]
+attribute: Data
 alt_paths:
   - kind: digivolve
     from:

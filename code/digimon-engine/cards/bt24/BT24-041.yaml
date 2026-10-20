@@ -2,7 +2,8 @@ card: BT24-041
 name: Minervamon
 kind: digimon
 level: 6
-color: [yellow, purple]
+form: Mega
+color: [yellow, black]
 cost: 12
 dp: 12000
 traits: [Shaman, Olympos XII, Iliad, TS]
@@ -10,6 +11,9 @@ attribute: Virus
 alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
     cost: 4
   - kind: digivolve
     from:

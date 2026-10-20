@@ -1,0 +1,91 @@
+{
+  "scope": "Exact original R3 sources, derived per-card extraction, no admission",
+  "files": {
+    "aggregate.json.gz": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\manifest.json",
+      "sha256": "5a016b1f36857f488f3f7cd7ece2b720d0da51d0a88b7df0b089c7b9fd2a0a07",
+      "compressed": true
+    },
+    "corrections.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_corrections.json",
+      "sha256": "2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf",
+      "compressed": false
+    },
+    "selections.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_compatibility_selections.json",
+      "sha256": "158fd2fe7c9cc83238d49af2e66e60b3e895501891b8cac9ffdb12c45a8bf83a",
+      "compressed": false
+    },
+    "c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\digimoncard_io\\c9f24c919b077fb665cd73af3d9f3ca7349e91c8e8288d290d7297ed989fcaeb.json",
+      "sha256": "49513fda50ac1dcbf1a8ce6e3521b740bbeac131c1219012ebb87b9c5a575b2b",
+      "compressed": false
+    },
+    "e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\digimoncard_io\\e5b23a5c992ad7679ef2065b5c349c9233c7165a07ebf0cfc0de522a75e96e09.json",
+      "sha256": "2a5dc48133c2bfa5c269647a021d4ffdba9deddb3975d7a4912028b09c9351ea",
+      "compressed": false
+    },
+    "1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\official\\1e6258d61947bb39163df7451145a418993db8d9ac64ac93615c584f065df555.json",
+      "sha256": "ebd01ba53247c5d403639705907b84c651b23c7bc4adc59c320b453d3457b577",
+      "compressed": false
+    },
+    "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\official\\58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c.json",
+      "sha256": "5fd3ceb8a9890e4eb0a19af0ad2145f1a4f365f2b8a05c59bfedf9ec2daada2e",
+      "compressed": false
+    },
+    "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a.html.gz": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\official-fetch-cache\\0209c832fc2123fc7025c77a5286c1b27d9317ca3e230af402586a352906d91c.html",
+      "sha256": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a",
+      "compressed": true
+    },
+    "BT24-081.yaml": {
+      "source": "D:\\cl-data-repair\\code\\digimon-engine\\cards\\bt24\\BT24-081.yaml",
+      "sha256": "378f8621644a9f692c7d8522aa0c296e205d00e2666b469251689912a59fe371",
+      "compressed": false
+    },
+    "BT24-081.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012::card/BT24-081",
+      "sha256": "d453e133116c07ca34d5ee552597d4284a8af4112d1a68f22dee3cbb364be00f",
+      "compressed": false
+    },
+    "aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\official\\aa145306bf2d31080a877bfc3fc8b3aa2b499d40969b25a4f3fe8192abc7d62c.json",
+      "sha256": "110eba09f7e948dc54f7baa238ec6c9aa10a35fadc0c3a6ea158f58825d6efc3",
+      "compressed": false
+    },
+    "609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012\\data\\card_sources\\observations\\official\\609a80f463fa6206b191bd9bf184bd1f4624d5ab1214e03ef6fe76a3b0cb58ec.json",
+      "sha256": "ba22433c1e7214a7a48484e24e9fc378343d191e9ca11f99308b48e684f5a0d1",
+      "compressed": false
+    },
+    "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.html.gz": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\official-fetch-cache\\ab274510f2c3a7a21b9bbef1888e191dce9c9bc5dddf3ad64a88590dc73f8049.html",
+      "sha256": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "compressed": true
+    },
+    "BT26-073.yaml": {
+      "source": "D:\\cl-data-repair\\code\\digimon-engine\\cards\\bt26\\BT26-073.yaml",
+      "sha256": "4218a30eb9a3ce5aa0533a5b490b079de4249d3a09bfb517e3bbe2ecb0efecf8",
+      "compressed": false
+    },
+    "BT26-073.json": {
+      "source": "C:\\Users\\james\\.codex\\worktrees\\fe80\\digimon-deck-list-builder-1\\runs\\card-loop\\meta-six-20261010\\complete-candidate-official-v5-reviewed-ledger-r3-20261012::card/BT26-073",
+      "sha256": "64e60b1214dc29635c11e4b58478e283ed5352522d647deec74e90eb6173c5ca",
+      "compressed": false
+    }
+  },
+  "cards": {
+    "BT24-081": {
+      "yaml": "BT24-081.yaml",
+      "data": "BT24-081.json"
+    },
+    "BT26-073": {
+      "yaml": "BT26-073.yaml",
+      "data": "BT26-073.json"
+    }
+  },
+  "parent_canonical_sha256": "a242b1d01ee3c00b6206de7d3860556ee85bddd396a4de99be7b23628164416e"
+}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-10",
+  "last_updated": "2026-10-19",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14528,6 +14528,256 @@
       "notes": "6/6 focused behavioral tests passed; independent spec and quality review approved. Authoring status only; full printed-clause oracle and interaction readiness remain separate.",
       "audit_note": "Current full-card audit supersedes historical partial/stub scope. See campaign report for verification results and oracle limitations.",
       "integration_verification": "limited"
+    },
+    "BT1-009": {
+      "card_name": "Monodramon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt1/bt1_009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt1/bt1_009.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent spec and quality approved. Seven per-card tests plus two production-registry probes (full original R4 and portable fixture modes). Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT1-014": {
+      "card_name": "Kokatorimon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt1/bt1_014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt1/bt1_014.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent spec and quality approved. Seven per-card tests plus two production-registry probes (full original R4 and portable fixture modes). Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT3-007": {
+      "card_name": "Agumon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt3/bt3_007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_007.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent spec and quality approved. Seven per-card tests plus two production-registry probes (full original R4 and portable fixture modes). Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT4-010": {
+      "card_name": "Fugamon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt4/bt4_010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_010.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent spec and quality approved. Seven per-card tests plus two production-registry probes (full original R4 and portable fixture modes). Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT4-014": {
+      "card_name": "Vermilimon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt4/bt4_014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_014.rs",
+      "test_count": 7,
+      "patterns": [
+        "native-vanilla-registration",
+        "ordinary-digivolution",
+        "both-seat-action-mask",
+        "battle-security-dp-boundaries"
+      ],
+      "notes": "True no-effect printed card. Exact official observations and image cross-check; minimal native definition. Tests use original R4 metadata, both seats, visible legal base choices, negative color/level, play/evolution cost and draw, battle/security DP boundaries, inherited silence.",
+      "audit_note": "Independent batch2 spec and quality approved. Seven per-card tests plus two production-registry probes in each full original R4 and portable fixture mode, including real BT1-014 and BT4-010 champion bases. Simulator-only evidence: no DCGO oracle, source/runtime admission or training-readiness claim; full-five broader checks pending."
+    },
+    "BT4-018": {
+      "card_name": "Spinomon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt4/bt4_018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_018.rs",
+      "test_count": 9,
+      "patterns": [
+        "your-turn-self-dp-aura",
+        "both-seat-action-mask",
+        "turn-boundary-live-query"
+      ],
+      "notes": "Native self +3000 DP only during its controller turn; ordinary play/evolution masks and battle boundaries, no inherited leak. Actual activation-to-burial and unusual adopted/Succession shapes remain unclaimed.",
+      "audit_note": "Separate fresh independent spec and quality reviews approved. Normal production registry probes pass 2/2 with full original 4483-row R4 and 2/2 portable fixture across this two-card batch. Prior invalid fixture failures retained. Simulator-only: no DCGO/source/runtime/training admission; broader candidate verification pending."
+    },
+    "BT6-068": {
+      "card_name": "Impmon",
+      "validated_date": "2026-10-13",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt6/bt6_068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_068.rs",
+      "test_count": 8,
+      "patterns": [
+        "optional-hand-discard-cost",
+        "mandatory-own-trash-return",
+        "trait-or-filter",
+        "both-seat-action-mask",
+        "clone-resume"
+      ],
+      "notes": "Actual optional discard precedes mandatory Digimon return from own trash by either exact Seven Great Demon Lords or Three Musketeers trait; Q1462 no-target pre-gate, self-discard eligibility, masks/negative targets and clone covered.",
+      "audit_note": "Separate fresh independent spec and quality reviews approved. Normal production registry probes pass 2/2 with full original 4483-row R4 and 2/2 portable fixture across this two-card batch. Prior invalid fixture failures retained. Simulator-only: no DCGO/source/runtime/training admission; broader candidate verification pending."
+    },
+    "BT16-033": {
+      "card_name": "Harpymon",
+      "validated_date": "2026-10-14",
+      "report": "focused-missing-definitions-20261013",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Focused campaign native reference closure",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_033.rs",
+      "test_count": 15,
+      "patterns": [
+        "attacker-security-check-event",
+        "live-security-thresholds",
+        "named-digivolution-route",
+        "both-seat-action-mask",
+        "source-liveness",
+        "clone-resume"
+      ],
+      "notes": "Printed memory-before-recovery order, mandatory own-turn self security-check trigger without OPT, exact Hawkmon special route, Armor Purge. All 12 required native matrix rows pass in both seats, including Q2629 and actual Q6813 masked setup. Empty actor trash explicitly requires no derived Kaguyamon prompt.",
+      "audit_note": "Independent SPEC and root QUALITY approved at YAML b9e480df/test 230521a6. Full final matrix 15 passed/0 failed/0 ignored, actual exit0; availability RED and invalid fixtures retained. DCGO reference order differs and live oracle remains unmeasured. Source/native-pack/full-denominator/oracle/training gates remain open; no admission."
+    },
+    "BT11-023": {
+      "card_name": "Veemon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_023.rs",
+      "test_count": 8,
+      "notes": "Official observation/image reviewed; independent static review passed. Focused behavioral tests pass in exact-deck run/followup. DCGO unmeasured."
+    },
+    "BT12-029": {
+      "card_name": "UlforceVeedramon (X Antibody)",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_029.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; independent static review passed. Focused behavioral tests pass in exact-deck run/followup. DCGO unmeasured."
+    },
+    "BT11-112": {
+      "card_name": "Rina Shinomiya",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-112.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_112.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; independent static review passed. Focused behavioral tests pass in exact-deck run/followup. DCGO unmeasured. Q2143 evolution-before-refire and explicit keyword expiry boundary remain unverified by this set; no demonstrated defect claimed."
+    },
+    "BT22-085": {
+      "card_name": "Rina Shinomiya",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-085.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_085.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; independent static review passed. Focused behavioral tests pass in exact-deck run/followup. DCGO unmeasured."
+    },
+    "BT22-019": {
+      "card_name": "Veemon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_019.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT22-022": {
+      "card_name": "Veedramon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_022.rs",
+      "test_count": 9,
+      "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT22-023": {
+      "card_name": "AeroVeedramon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_023.rs",
+      "test_count": 8,
+      "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "P-138": {
+      "card_name": "Veedramon",
+      "validated_date": "2026-10-19",
+      "report": "ulforce-exact-deck-2026-10-19",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "UlforceVeedramon exact export (19 cards)",
+      "yaml_path": "code/digimon-engine/cards/p/P-138.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_138.rs",
+      "test_count": 6,
+      "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
     }
   }
 }

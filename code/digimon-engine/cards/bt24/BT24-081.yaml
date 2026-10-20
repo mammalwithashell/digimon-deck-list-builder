@@ -52,6 +52,7 @@ card: BT24-081
 name: Titamon + SkullBaluchimon
 kind: digimon
 level: 7
+form: Mega
 color: [purple, green]
 cost: 14
 dp: 14000
@@ -70,8 +71,8 @@ alt_paths:
   # ─── Assembly -6: [Titamon] × [SkullBaluchimon] (from trash, stacked under)
   - kind: assembly
     materials:
-      - { kind: digimon, name_is: "Titamon", zones: [trash], stack_under: true }
-      - { kind: digimon, name_is: "SkullBaluchimon", zones: [trash], stack_under: true }
+      - { name_is: "Titamon", zones: [trash], stack_under: true }
+      - { name_is: "SkullBaluchimon", zones: [trash], stack_under: true }
     cost: 6
 
 effects:

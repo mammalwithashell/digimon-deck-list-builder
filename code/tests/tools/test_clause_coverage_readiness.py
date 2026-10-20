@@ -172,15 +172,16 @@ def test_real_bind_admits_adjudicated_clauses_and_drops_a_text_drifted_card(tmp_
         store.mkdir(exist_ok=True)
         rows = {
             c["id"]: {"clause_id": c["id"], "card_id": card, "verdict": "confirmed",
-                      "text_sha256": sha_for(c)}
+                      "text_sha256": clause_text_sha256(c["text"]),
+                      "semantic_fingerprint_version": 1, "semantic_sha256": sha_for(c)}
             for c in clauses
         }
-        (store / f"{card}.json").write_text(json.dumps({"version": 1, "clauses": rows}),
+        (store / f"{card}.json").write_text(json.dumps({"version": 3, "clauses": rows}),
                                             encoding="utf-8")
         return store
 
     den = _denominator(tmp_path / "d.json", {}, {card: []})
-    ok = write_store(lambda c: clause_text_sha256(c["text"]))
+    ok = write_store(lambda c: c["semantic_sha256"])
     data = build_readiness([card], scenarios_dir=tmp_path / "none", verdicts_dir=ok,
                            denominator_path=den)
     assert data["cards"][card]["status"] == "ready"
@@ -332,6 +333,10 @@ def test_interaction_rules_mirror_the_clause_rules(row, expected):
 
 
 def _denominator(path, interactions, cards):
+    from semantic_fixtures import interaction
+    from semantic_fixtures import write_current_qa
+    write_current_qa(path.with_name("card_qa.json"), interactions)
+    interactions = {iid: interaction(iid, row) for iid, row in interactions.items()}
     path.write_text(json.dumps({"version": 1, "cards": cards, "interactions": interactions}),
                     encoding="utf-8")
     return path
@@ -343,9 +348,10 @@ def _qa(cards, sha="r", gating=True):
 
 
 def _iv(iid, cards, verdict="confirmed", sha="r", **kw):
-    return {"interaction_id": iid, "card_ids": list(cards), "source": iid.split(":")[0],
+    from semantic_fixtures import interaction
+    return interaction(iid, {"interaction_id": iid, "card_ids": list(cards), "source": iid.split(":")[0],
             "kind": "positive", "verdict": verdict, "text_sha256": sha,
-            "recorded_at": "2026-10-06T00:00:00Z", **kw}
+            "recorded_at": "2026-10-06T00:00:00Z", **kw})
 
 
 def _confirmed_bind(clauses_by_card):
@@ -485,3 +491,12 @@ def test_cli_clause_only_is_a_report_view_never_the_checked_artifact(tmp_path, c
     data = json.loads(view.read_text(encoding="utf-8"))
     assert data["gating"] == ["clauses"]
     assert "qa:Q7" not in data["cards"]["EX10-025"]["blocking"]
+
+
+@pytest.fixture(autouse=True)
+def current_synthetic_qa_source(tmp_path, monkeypatch):
+    from tools.card_loop.interactions import denominator
+    from semantic_fixtures import write_current_qa
+    source = tmp_path / "card_qa.json"
+    write_current_qa(source, {})
+    monkeypatch.setattr(denominator, "DEFAULT_CARD_QA", source)

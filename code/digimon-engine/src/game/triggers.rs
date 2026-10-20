@@ -558,6 +558,10 @@ impl Game {
     /// Returns the count of body-registry entries removed (mostly for
     /// tests / instrumentation).
     pub fn clear_permanent_full(&mut self, handle: crate::permanent::PermanentHandle) -> usize {
+        // This is modifier/body-registry cleanup, which some movement facades
+        // perform after surviving queue handles have already been rekeyed.
+        // Source invalidation belongs to the actual removal/rekey lifecycle;
+        // invalidating this old positional handle here would cancel a survivor.
         let body_ids = self
             .modifiers
             .drain_granted_triggered_ids_on_carrier(handle);
@@ -576,6 +580,23 @@ impl Game {
             }
         }
         removed
+    }
+
+    pub(crate) fn invalidate_captured_security_check_source(
+        &mut self,
+        handle: crate::permanent::PermanentHandle,
+    ) {
+        for entry in &mut self.effect_queue {
+            if entry.source_permanent == Some(handle) {
+                if let Some(context) = entry
+                    .trigger_context
+                    .as_mut()
+                    .filter(|context| context.captured_security_check)
+                {
+                    context.security_check_source_invalidated = true;
+                }
+            }
+        }
     }
 
     /// Track H §3 — fire all granted triggered effects on `carrier`

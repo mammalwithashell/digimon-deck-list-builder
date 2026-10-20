@@ -1,0 +1,63 @@
+{
+  "source": "User-provided digimonmeta.com export",
+  "counts": {
+    "EX13-002": 4,
+    "EX13-017": 4,
+    "BT11-023": 4,
+    "BT22-019": 4,
+    "P-138": 4,
+    "EX13-019": 4,
+    "BT22-022": 1,
+    "EX13-022": 4,
+    "BT22-023": 3,
+    "EX13-023": 4,
+    "BT12-029": 2,
+    "EX13-069": 4,
+    "BT11-112": 4,
+    "BT22-085": 1,
+    "P-104": 2,
+    "LM-034": 2,
+    "LM-028": 1,
+    "LM-057": 1,
+    "LM-058": 1
+  },
+  "unique_cards": 19,
+  "egg_count": 4,
+  "main_count": 50,
+  "baseline": "a081bfd44",
+  "status": "complete: exact-deck YAML loadability",
+  "loadability": "PASS: 19/19 embedded YAML and runtime registry entries; 50 main + 4 eggs per player",
+  "oracle_status": "unmeasured: no DCGO comparisons run",
+  "new_yaml_cards": [
+    "BT22-019",
+    "BT22-022",
+    "BT22-023",
+    "P-138",
+    "BT12-029",
+    "BT11-112",
+    "BT22-085"
+  ],
+  "carried_forward_cards": [
+    "BT11-023"
+  ],
+  "evidence": {
+    "initial_red": ".codex/ulforce-exact-red.log",
+    "p138_red": ".codex/p138-red.log",
+    "combined_in_progress": ".codex/ulforce-batches-mixed.log",
+    "exact_deck_and_focused": ".codex/ulforce-exact-final.log",
+    "fixture_followup": ".codex/ulforce-exact-followup.log"
+  },
+  "initial_focused_result": {
+    "passed": 229,
+    "failed": 1,
+    "total": 230,
+    "failure": "Invalid level-0 Tamer fixture; corrected to no level/DP. All six affected-card tests pass on followup."
+  },
+  "followup_result": {
+    "passed": 7,
+    "failed": 0,
+    "scope": "all six BT12-029 tests plus exact 19-card load/registry/deck test"
+  },
+  "unique_focused_checks_with_passing_evidence": 230,
+  "independent_review": "both authoring batches passed static spec and code-quality review"
+}

@@ -55,6 +55,8 @@ pub mod projection;
 pub mod permanent_target;
 pub mod run;
 pub mod scenario;
+pub mod semantic_fingerprint;
+pub mod source_book_v2;
 pub mod validate;
 pub mod verdict;
 

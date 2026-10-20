@@ -2,6 +2,7 @@ card: EX12-047
 name: Amaterasumon
 kind: digimon
 level: 6
+form: Mega
 color: [yellow, red]
 cost: 12
 dp: 12000

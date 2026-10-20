@@ -117,12 +117,12 @@ pub(crate) enum DelayedOptionLifecycleResumeKind {
     /// Standard `<Delay>` activated by a player `[Main]`-phase action
     /// (PUPPETS-G009). The Option's `DelayEffect` body installed a pending
     /// selection; once it resolves, the Option is trashed as the activation
-    /// cost. No turn-keyed scan resumes â€” this kind only carries the deferred
+    /// cost. No turn-keyed scan resumes — this kind only carries the deferred
     /// trash of the activated Option.
     MainPhaseActivation,
     /// The turn-start unsuspend-phase `OnUnsuspend` batch
     /// (G-ENGINE-PHASE-UNSUSPEND-NO-ONUNSUSPEND) parked on an observer's
-    /// selection. No Delay scan resumes â€” once the batch's queue settles the
+    /// selection. No Delay scan resumes — once the batch's queue settles the
     /// turn machine continues into the draw phase
     /// (`continue_begin_turn_after_unsuspend_phase`).
     UnsuspendPhase,
@@ -217,7 +217,7 @@ pub(crate) struct PendingWouldPlayResume {
     pub(crate) effect_initiated: bool,
     /// Controller of the effect that declared this play, retained across replacement parking.
     pub(crate) play_controller: PlayerId,
-    /// PUPPETS-G030 â€” when `true`, the just-played permanent's own `[On Play]`
+    /// PUPPETS-G030 — when `true`, the just-played permanent's own `[On Play]`
     /// effects are NOT enqueued for this play event. Used by BT5-106's
     /// [Security] clause ("Any [On Play] effects on Digimon played with this
     /// effect don't activate."). Scoped strictly to the played permanent and
@@ -243,11 +243,11 @@ pub(crate) struct PreparedSourcePlay {
 pub(crate) struct PendingHandDiscard {
     /// The controller of the effect that opened this window (the "cause").
     pub(crate) cause_controller: PlayerId,
-    /// Distinct trashing players who lost â‰¥1 hand card during this window, in
+    /// Distinct trashing players who lost ≥1 hand card during this window, in
     /// first-seen order. Almost always a single player, but an effect that
     /// trashes from both hands in one body fires one event per affected owner.
     pub(crate) trashed_players: Vec<PlayerId>,
-    /// Every card this window moved handâ†’trash, with its owner, in trash
+    /// Every card this window moved hand→trash, with its owner, in trash
     /// order. Drives the self-scoped "When this card is trashed from the
     /// hand" trigger (BT26-069 Dobermon; DCGO `CanTriggerOnTrashSelfHand`):
     /// on flush, each still-in-trash card's `scope: trash` `on_discard_hand`
@@ -259,18 +259,18 @@ pub(crate) struct PendingHandDiscard {
 /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS). Accumulates every card an effect
 /// placed into that host's digivolution cards within a single effect body so
 /// the trigger fires ONCE per host per batch (rule 15-5-2; DCGO
-/// `AddDigivolutionCardsBottom(list, cardEffect)` fires once per list â€”
+/// `AddDigivolutionCardsBottom(list, cardEffect)` fires once per list —
 /// `<Material Save N>` moves N cards in one call, and this engine's
 /// per-card `place_card_under_permanent_bottom` loop must coalesce to match).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PendingAddedSources {
-    /// The host's STABLE identity â€” its top card at note time. Re-resolved to
+    /// The host's STABLE identity — its top card at note time. Re-resolved to
     /// a positional handle at flush time (battle-area indices shift when a
     /// sibling leaves play mid-body, e.g. the Tamer that `<Mind Link>` folds
     /// under a Digimon); a host that has left play by then fires nothing
     /// (DCGO `Permanent.TopCard != null` gate in `CanTriggerOnAddDigivolutionCard`).
     pub(crate) host_card: crate::card_source::CardHandle,
-    /// The placing effect (controller + source card) â€” DCGO's non-null
+    /// The placing effect (controller + source card) — DCGO's non-null
     /// hashtable `CardEffect`. A window already open for the same host under
     /// a DIFFERENT controller is flushed first so two effects never merge.
     pub(crate) cause: crate::trigger_context::EffectAttribution,
@@ -351,7 +351,7 @@ pub(crate) struct PendingWouldLinkResume {
     pub(crate) card: crate::card_source::CardHandle,
 }
 
-/// Where a player-declared DigiLink Shape-B Digimon-link comes from â€” the two
+/// Where a player-declared DigiLink Shape-B Digimon-link comes from — the two
 /// origins the printed keyword names ("Plug this card from the hand or battle
 /// area sideways into the specified Digimon"). Mirrors the `root` DCGO's
 /// `ILinkCard.LinkCard` derives from the linking card's zone: `None` (a whole
@@ -360,10 +360,10 @@ pub(crate) struct PendingWouldLinkResume {
 /// under-stack / re-link roots stay effect-driven (`link_chosen_card_into_host`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DigimonLinkOrigin {
-    /// An un-linked standing Digimon in the battle area â€” the whole permanent
+    /// An un-linked standing Digimon in the battle area — the whole permanent
     /// is absorbed (under-sources trashed, top card becomes the linked card).
     Standing(PermanentHandle),
-    /// A Digimon card in `player`'s hand â€” it is lifted out of the hand and
+    /// A Digimon card in `player`'s hand — it is lifted out of the hand and
     /// attached as-is; nothing is absorbed and no `[On Play]` fires.
     Hand(PlayerId),
 }
@@ -404,12 +404,12 @@ pub(crate) struct PendingWouldDigivolveResume {
 ///
 /// `impl Game` blocks for this struct are spread across three files for
 /// readability; every method remains `Game::*` in the call surface:
-/// - `game.rs` â€” struct, constructor, mulligan, state queries, memory
+/// - `game.rs` — struct, constructor, mulligan, state queries, memory
 ///   mgmt, tensor/DP/OPT helpers, elimination.
-/// - `game_phases.rs` â€” turn lifecycle: `begin_turn`, `end_turn`,
+/// - `game_phases.rs` — turn lifecycle: `begin_turn`, `end_turn`,
 ///   `rotate_turn_player`, `pass_turn`, `install_overclock_selection`,
 ///   `fire_end_of_your_turn`.
-/// - `game_actions.rs` â€” player mutators: `play_from_hand`,
+/// - `game_actions.rs` — player mutators: `play_from_hand`,
 ///   `digivolve_from_hand`, `move_from_breeding`, `activate_*_main`,
 ///   `initiate_dna_digivolve`.
 /// Per-game memo of `effects_for_card` results, keyed by
@@ -419,7 +419,7 @@ pub(crate) struct PendingWouldDigivolveResume {
 /// so entries are **never invalidated** for a game's lifetime. Stored behind a
 /// `RefCell` so the lazy fill works on the `&self` `effects_for_card` path;
 /// values are `Arc` so `Game` stays `Send` (`RustHeadlessGame` is a
-/// non-`unsendable` `#[pyclass]`) and a cache hit is a refcount bump â€” no vec or
+/// non-`unsendable` `#[pyclass]`) and a cache hit is a refcount bump — no vec or
 /// closure clone. See the `cache-effects-for-card` change.
 ///
 /// `Clone` (make-engine-cloneable): the memo is pure derived data keyed by pure
@@ -468,14 +468,14 @@ pub struct Game {
         std::cell::RefCell<Option<crate::movement_observation::MovementObserver>>,
     pub rules: Rules,
     /// Per-game memo for `effects_for_card` (see `EffectsCache`). Not part of
-    /// the observable game state â€” pure derived data, never snapshotted.
+    /// the observable game state — pure derived data, never snapshotted.
     pub(crate) effects_cache: EffectsCache,
     pub players: Vec<Player>,
     pub turn_count: u16,
     /// Cumulative regular-digivolve count per player. Incremented on every
     /// successful regular digivolve (including via DNA, which also bumps
     /// `n_dna_digivolutions`). Indexed by Rust 0-based PlayerId. Monotonic
-    /// per game â€” never reset, never decremented. Backs the digivolve
+    /// per game — never reset, never decremented. Backs the digivolve
     /// reward-shaping signal in DigimonEnv. See
     /// `docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md`.
     pub n_digivolutions: [u32; 2],
@@ -486,13 +486,13 @@ pub struct Game {
     /// opponent's security stack per attacker player. Incremented once
     /// per qualifying attack (NOT once per security card revealed) in
     /// `resolve_battle_attack_target` when the attack target is
-    /// `AttackTarget::Player`, the attacker's effective level is â‰¥ 5,
+    /// `AttackTarget::Player`, the attacker's effective level is ≥ 5,
     /// and the security loop will actually pop at least one card (i.e.
     /// not Jamming-zeroed). Blocked attacks never reach this site
     /// because blocks redirect the target to a Digimon. Piercing
     /// follow-ups also do NOT count because the originating attack
     /// target was a Digimon (only the `Player` arm increments).
-    /// Indexed by Rust 0-based PlayerId. Monotonic â€” never reset.
+    /// Indexed by Rust 0-based PlayerId. Monotonic — never reset.
     /// Backs the `digivolve_driven_attack` reward signal.
     /// See `openspec/changes/add-gameplay-reward-config/`.
     pub n_digivolve_driven_attacks: [u32; 2],
@@ -528,11 +528,11 @@ pub struct Game {
     /// candidate set every `tick_declarative_effects`; pruned at turn-end. See
     /// `crate::floating_modifier`.
     pub floating_mass_modifiers: Vec<crate::floating_modifier::FloatingMassModifier>,
-    /// Card effect registry â€” maps card_id to effect implementations.
+    /// Card effect registry — maps card_id to effect implementations.
     pub effect_registry: CardEffectRegistry,
     /// Runtime callbacks for DSL `raw_rust` formulas.
     pub formula_extensions: FormulaExtensionRegistry,
-    /// Token metadata registry â€” maps canonical token names (e.g.
+    /// Token metadata registry — maps canonical token names (e.g.
     /// "petrification") to `TokenDef` rows. `Game::new` pre-populates
     /// this via `token_registry::build_registry` and pushes a synthetic
     /// `CardData` row into `card_data` for each registered token so
@@ -566,7 +566,7 @@ pub struct Game {
     /// runs the data-frame VM (`crate::resume::run_resume`) instead of the
     /// legacy `pending_selection.callback`. Set and cleared in lock-step with
     /// `pending_selection`; parallels `dsl_outer_tail` (continuation-as-data).
-    /// Always `None` today â€” populated as cards are ported onto the VM.
+    /// Always `None` today — populated as cards are ported onto the VM.
     pub pending_selection_resume: Option<crate::resume::ResumeStack>,
     /// Resume-side continuation channel (make-engine-cloneable Phase 2,
     /// defunctionalized 2026-07-01). Continuation wrappers (play-cost /
@@ -581,10 +581,10 @@ pub struct Game {
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).
     pub effect_queue: EffectQueue,
-    /// Track H §3 â€” pending granted-triggered-effect fires queued by
+    /// Track H §3 — pending granted-triggered-effect fires queued by
     /// `enqueue_from_permanent` and `enqueue_from_breeding_permanent`.
     /// `drain_effect_queue` flushes this queue AFTER its main loop
-    /// settles (printed observers fire first, granted bodies second â€”
+    /// settles (printed observers fire first, granted bodies second —
     /// matches DCGO's "appended to effect list" semantic for granted
     /// effects). Each granted body runs inline; if it enqueues further
     /// triggered effects, the drain loop re-runs.
@@ -592,7 +592,7 @@ pub struct Game {
         crate::permanent::PermanentHandle,
         crate::enums::EffectTiming,
     )>,
-    /// Track H §3 Phase 4i â€” registry of granted-triggered-effect
+    /// Track H §3 Phase 4i — registry of granted-triggered-effect
     /// bodies indexed by id. Bodies are allocated an id at install
     /// time (`grant_triggered_effect`) and referenced from
     /// `QueuedEffect::granted_effect_id` so the drainer can fetch and
@@ -634,7 +634,7 @@ pub struct Game {
     /// "Leaving / limbo" holding slot for battle-area DigiXros materials whose
     /// `WhenWouldLeaveBattleArea` replacement window parked a `pending_selection`
     /// (e.g. BT17-095's optional `<Delay>` accept). The departing material is
-    /// popped OUT of `battle_area` (so it is no longer any permanent's top card â€”
+    /// popped OUT of `battle_area` (so it is no longer any permanent's top card —
     /// satisfying the "the material has left" precondition) but retained here so
     /// the parked observer's reward (a DNA-evo) can still EXTRACT it into a new
     /// permanent. On finalize, any material still in limbo (the observer declined
@@ -672,7 +672,7 @@ pub struct Game {
     /// Mid-security-check resolution state. Set by `resolve_security_card`
     /// at phase entry, mutated by `drive_security_resolution` as phases
     /// advance, and cleared at `Dispose`. Non-`None` when the engine is
-    /// paused inside a security check â€” a `pending_selection` installed by
+    /// paused inside a security check — a `pending_selection` installed by
     /// a `SecuritySkill` process pauses resolution here; resumption is
     /// driven by `Game::advance_security_resolution`, called from
     /// `resolve_generic_selection`. See RUST_PYTHON_PARITY §2.5j.
@@ -705,17 +705,17 @@ pub struct Game {
     /// `QueuedEffect::trigger_batch`). Monotonic within a game.
     pub(crate) trigger_batch_seq: u32,
 
-    /// Re-entrancy depth for the state-based â‰¤0-DP rules-check
+    /// Re-entrancy depth for the state-based ≤0-DP rules-check
     /// (`run_state_based_rules_check`). `drain_effect_queue` is called
     /// re-entrantly from inside effect bodies (effect_context) and from the
     /// batched-deletion deferred drain. The rules-check runs ONLY at the
-    /// OUTERMOST drain (`effect_drain_depth == 1`) â€” after a top-level
-    /// effect / rule-action has fully finished â€” and is run BETWEEN top-level
+    /// OUTERMOST drain (`effect_drain_depth == 1`) — after a top-level
+    /// effect / rule-action has fully finished — and is run BETWEEN top-level
     /// queued effects (after each `run_queued_effect`) so a Digimon driven to
-    /// â‰¤0 DP by one effect is deleted before the next queued trigger resolves
+    /// ≤0 DP by one effect is deleted before the next queued trigger resolves
     /// (judge Q24). It is never run between the sub-steps of one resolving
     /// effect (the judge rule: "rule checks don't happen until an ongoing
-    /// effect or rule action finishes" â€” Q6/Q13/Q14). Incremented on entry to
+    /// effect or rule action finishes" — Q6/Q13/Q14). Incremented on entry to
     /// `drain_effect_queue`, decremented on exit.
     pub(crate) effect_drain_depth: u16,
 
@@ -734,7 +734,7 @@ pub struct Game {
 
     /// Current nesting depth of `Game::try_replace`. Incremented on entry,
     /// decremented on exit. At `>= MAX_REPLACEMENT_DEPTH`, the dispatcher
-    /// short-circuits to `ReplacementOutcome::None` â€” safety rail against
+    /// short-circuits to `ReplacementOutcome::None` — safety rail against
     /// self-referential replacement chains (e.g. two permanents each
     /// replacing the other's deletion with "cancel").
     #[doc(hidden)]
@@ -775,7 +775,7 @@ pub struct Game {
     /// the played card's handle plus the trash material handles to place at the
     /// bottom of its digivolution stack. Consumed by
     /// `commit_play_from_hand_card_no_replace` AFTER the permanent is created
-    /// but BEFORE its `[On Play]` / `[When Digivolving]` effects fire â€” so a
+    /// but BEFORE its `[On Play]` / `[When Digivolving]` effects fire — so a
     /// card whose play effects read its own digivolution-card count (e.g.
     /// AD1-025 Omnimon's bounce) sees the assembled materials. Set immediately
     /// before the assembly play's `finish_play_from_hand_after_reductions` and
@@ -809,7 +809,7 @@ pub struct Game {
     /// `try_replace`, cleared when the link resolves/aborts. Read by a
     /// host-side reducer effect's `condition` (via `EffectContext::
     /// pending_link_host`) so it can verify "...link to THIS Digimon" before
-    /// offering its optional cost reduction (Gap 5 â€” BT25-004 / BT25-045).
+    /// offering its optional cost reduction (Gap 5 — BT25-004 / BT25-045).
     #[doc(hidden)]
     pub(crate) pending_link_host: Option<PermanentHandle>,
     /// Fire-site continuation for optional `WhenPermanentWouldDigivolve`
@@ -836,7 +836,7 @@ pub struct Game {
 
     /// Reduction (in memory) granted by an already-resolved FIELD-HOSTED
     /// INTERACTIVE digivolve cost reducer (its `pay_cost` installs a selection
-    /// â€” e.g. ST23-03 Cougarmon's "by trashing the bottom face-down card under
+    /// — e.g. ST23-03 Cougarmon's "by trashing the bottom face-down card under
     /// a Tamer, reduce the cost by 2"). Set by the interactive reducer prompt's
     /// parked-selection success continuation
     /// (`try_prompt_interactive_digivolve_cost_reducer`), read by the digivolve
@@ -849,7 +849,7 @@ pub struct Game {
 
     /// Reduction (in memory) granted by an already-resolved FIELD-HOSTED
     /// INTERACTIVE Option-use cost reducer (its `pay_cost` installs a selection
-    /// â€” e.g. BT25-049 Armalizamon's "by trashing the bottom face-down card
+    /// — e.g. BT25-049 Armalizamon's "by trashing the bottom face-down card
     /// under a Tamer, reduce the cost by 3"). Set by the interactive reducer
     /// prompt's parked-selection success continuation
     /// (`try_prompt_interactive_option_use_cost_reducer`), read by
@@ -861,7 +861,7 @@ pub struct Game {
     /// True once `play_option_core` has installed the interactive Option-use
     /// cost-reducer prompt for the in-flight Option play, so the re-entry (after
     /// the accept/decline gate OR the parked Tamer-pick resolves) does NOT
-    /// re-offer the same reducer. A decline-surviving re-entry signal â€” unlike a
+    /// re-offer the same reducer. A decline-surviving re-entry signal — unlike a
     /// `pending_interactive_option_use_reduction == 0` check, a 0-credit DECLINE
     /// (or a 0-amount paid reducer) still clears the prompt, preventing the
     /// accept/decline gate from re-prompting forever. Mirrors the digivolve
@@ -873,7 +873,7 @@ pub struct Game {
     /// by `fire_on_use_option_observers` AFTER the Option's own body has
     /// fully resolved. Lives on `Game` (not on `PendingOption`) because a body
     /// may CLAIM `pending_option` mid-resolution (`place_self_under_permanent`,
-    /// `add_this_option_to_hand`, link plug-ins) â€” the board-wide "when a
+    /// `add_this_option_to_hand`, link plug-ins) — the board-wide "when a
     /// player uses an Option card" observers (BT3-096, BT25-091) must still
     /// fire once the claimed body finishes.
     /// Carries the using player and the used card so the observers'
@@ -935,7 +935,7 @@ pub struct Game {
     pub(crate) preferred_play_cost_effect: Option<crate::game_actions::CostReductionKey>,
     /// The digivolution route (cost + app-fusion-ness) the player CHOSE when a
     /// hand card offered more than one distinct-cost route over the target base
-    /// (rule 17 â€” no auto-selection of the cheapest). Set by the cost-choice
+    /// (rule 17 — no auto-selection of the cheapest). Set by the cost-choice
     /// `EffectChoice` callback, which re-enters `digivolve_from_hand_inner`;
     /// peeked there to pin the printed cost; consumed (`take`) when the
     /// `PendingWouldDigivolveResume` is built. Cleared at the public
@@ -953,7 +953,7 @@ pub struct Game {
     /// `WhenWouldLeaveBattleArea` for the same permanent).
     ///
     /// Cleared at the outermost entry (when `replacement_depth == 0`) of
-    /// `try_replace_impl` â€” unless `in_replacement_commit` is set, in which
+    /// `try_replace_impl` — unless `in_replacement_commit` is set, in which
     /// case we are continuing the original call chain across a callback
     /// resolution boundary and the set must be preserved. See
     /// `replacement::try_replace_impl`.
@@ -967,7 +967,7 @@ pub struct Game {
     /// (accept/decline) just before invoking `commit_deferred_outcome`, cleared
     /// after the commit returns. While true, `try_replace_impl` treats a
     /// depth==0 entry as a continuation of the original call chain and does
-    /// NOT clear `replacement_fired` â€” so the fired-set from the original
+    /// NOT clear `replacement_fired` — so the fired-set from the original
     /// event survives the callback boundary and blocks double-fires during
     /// the commit's zone-mover calls.
     #[doc(hidden)]
@@ -975,18 +975,18 @@ pub struct Game {
 
     /// Companion to `in_replacement_commit`: `true` while the commit being
     /// continued is for a replacement that actually FIRED (a non-`None`
-    /// outcome â€” cancel / redirect / substitute / custom). Only meaningful
+    /// outcome — cancel / redirect / substitute / custom). Only meaningful
     /// while `in_replacement_commit` is set.
     ///
     /// `try_replace_impl` consults it to pick the §7.5 guard strictness: a
     /// FIRED commit blocks ANY prior-fired subject regardless of timing (the
-    /// v1 double-prompt protection for redirect routes â€” pinned by
+    /// v1 double-prompt protection for redirect routes — pinned by
     /// `dispatcher_guard.rs::commit_continuation_broadening_blocks_different_timing_v1_known_limitation`),
     /// while a DECLINED / no-op commit (outcome `None`: the event proceeds
     /// unchanged) blocks only exact `(timing, subject)` re-dispatch so the
     /// remaining not-yet-offered Would* windows still open. Rule 15-8-5-4:
     /// each simultaneous immediate-type effect "can be activated one at a
-    /// time until the cause ... is resolved" â€” only the already ACTIVATED
+    /// time until the cause ... is resolved" — only the already ACTIVATED
     /// one is spent; an offered-and-declined one must not consume the event
     /// (declined `<Decode>` must not eat `<Evade>`).
     #[doc(hidden)]
@@ -997,7 +997,7 @@ pub struct Game {
     ///
     /// The §7.5 once-per-event guard normally remembers an offered window in
     /// `replacement_fired`, but that set is cleared on any dispatcher entry at
-    /// `depth == 0` â€” and an OPTIONAL replacement unwinds its fire-site when
+    /// `depth == 0` — and an OPTIONAL replacement unwinds its fire-site when
     /// the selection installs, so the event's OWN later work re-enters at
     /// depth 0 and can wipe its record. The commit then re-offered the very
     /// window it was committing, the player accepted, and the event never
@@ -1087,12 +1087,12 @@ pub struct Game {
     /// **Stack (G-NESTED-PARKED-REPLACEMENT, 2026-10-01):** a replacement
     /// process can itself cause an event whose replacement window parks
     /// (e.g. `<Guard>` deletes its carrier, whose own `<Decode>` window then
-    /// prompts). Parked replacements are pushed and drained LIFO â€” the inner
+    /// prompts). Parked replacements are pushed and drained LIFO — the inner
     /// event commits before the outer replacement's outcome is committed.
     /// Plain data (clone-safe for `Game: Clone`).
     ///
     /// Outcome writers (`EffectContext::cancel_leave` etc.) address only the
-    /// TOP entry and only when it belongs to the currently-running scope â€”
+    /// TOP entry and only when it belongs to the currently-running scope —
     /// see `parked_replacement_floor`.
     ///
     /// **Coexistence with `dsl_outer_tail`** (Phase 2d): independent slots for
@@ -1114,7 +1114,7 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) dsl_replacement_outcome: Option<crate::replacement::ReplacementOutcome>,
 
-    /// Phase 9 Task 3 â€” set to `true` while a hand Counter Option is
+    /// Phase 9 Task 3 — set to `true` while a hand Counter Option is
     /// resolving through `play_option_from_hand`. Consumed by
     /// `play_option_core` to fire CounterEffect timing on the played
     /// card's effects BEFORE `OptionMain`. Cleared when the Counter
@@ -1125,8 +1125,8 @@ pub struct Game {
     /// Set to `true` while an effect-driven Option USE is resolving from a
     /// triggered/effect body (the unified `play_or_use_from_hand_with_cost`
     /// helper). `play_option_core`'s Main-phase gate is LIFTED while this is
-    /// set, because the effect text ("you may play or use 1 â€¦ card") grants the
-    /// use regardless of phase â€” e.g. BT25-041 fires from `[When Attacking]`,
+    /// set, because the effect text ("you may play or use 1 … card") grants the
+    /// use regardless of phase — e.g. BT25-041 fires from `[When Attacking]`,
     /// which is not the Main phase, yet must still be able to use an Option.
     /// Counter-window Option plays use the separate `in_counter_window` bypass;
     /// this flag is the effect-body analogue. Set/cleared around the
@@ -1142,7 +1142,7 @@ pub struct Game {
     ///
     /// **Single-outstanding (top-level):** at most one batch is open at a
     /// time. A nested `delete_permanents_batch` call from inside an
-    /// OnDeletion handler is bounded by `DeletionBatch::depth` â€” see
+    /// OnDeletion handler is bounded by `DeletionBatch::depth` — see
     /// `deletion_batch.rs` for the rationale.
     ///
     /// See `openspec/specs/permanent-deletion-semantics/spec.md` for the
@@ -1193,7 +1193,7 @@ pub struct Game {
 
     /// The REST of a multi-permanent deletion batch whose replacement stage
     /// parked on one member's optional replacement prompt (e.g. the attacker's
-    /// `<Evade>` in a tie â€” kill list `[defender, attacker]`). The parked
+    /// `<Evade>` in a tie — kill list `[defender, attacker]`). The parked
     /// member is committed by the replacement accept/decline callback; the
     /// other members (identified by their top card, since indices can shift)
     /// are deleted with the same cause once the selection settles
@@ -1202,8 +1202,8 @@ pub struct Game {
     /// (G-ENGINE-BATCH-DELETION-PARK-DROPS-REST, found 2026-10-01 by EX13-076).
     #[doc(hidden)]
     pub(crate) pending_deletion_batch_rest: Vec<PendingDeletionBatchRest>,
-    /// The parked member of that batch (owner, top card) â€” still on the
-    /// battle area at resume time â‡’ its replacement cancelled the leave, so
+    /// The parked member of that batch (owner, top card) — still on the
+    /// battle area at resume time ⇒ its replacement cancelled the leave, so
     /// rest members covered by the SAME replacement activation don't leave
     /// either (one activation covers the whole simultaneous batch, as in
     /// DCGO's list-based `WhenRemoveField`).
@@ -1221,7 +1221,7 @@ pub struct Game {
     ///
     /// **Invariant: at most one outstanding outer continuation at a time.**
     /// `run_steps` MUST `debug_assert!(self.dsl_outer_tail.is_none())` before
-    /// writing â€” overwriting a `Some` value would silently drop a parked
+    /// writing — overwriting a `Some` value would silently drop a parked
     /// outer slice and abort the user's still-pending sequence. Today the
     /// dispatcher guarantees this by never re-entering `run_steps` from
     /// within a selection callback before that callback's drain runs (the
@@ -1243,13 +1243,13 @@ pub struct Game {
     /// cleared-then-consumed by `wrap_pending_selection_with_tail`'s composed
     /// callbacks so a wrapped outer tail sees the picks a nested selection
     /// made after the wrap-time snapshot (a sibling `binding_exists` /
-    /// `binding_absent` would otherwise read a stale absence â€”
+    /// `binding_absent` would otherwise read a stale absence —
     /// G-OPT-REFUND-ON-DECLINE). Never read across resolutions: the wrapper
     /// clears it before the original callback and takes it immediately after.
     #[doc(hidden)]
     pub dsl_resolved_tail_bindings: Option<crate::dsl_cards::bindings::Bindings>,
 
-    /// Cost-pay abort flag â€” set when the player PASSes on a cost-pay
+    /// Cost-pay abort flag — set when the player PASSes on a cost-pay
     /// selection (a `select_hand` / `select_trash` / `select_union_zone`
     /// with `cost: true`). The DSL step runner checks this at the top of
     /// every iteration and short-circuits the rest of the clause body, so a
@@ -1266,13 +1266,13 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) dsl_clause_aborted: bool,
 
-    /// Phase 2f4 Task 1 â€” one-shot delayed-effect queue. Entries are scheduled
+    /// Phase 2f4 Task 1 — one-shot delayed-effect queue. Entries are scheduled
     /// via `EffectContext::schedule_delayed` and moved into the effect queue by
     /// `Game::enqueue_scheduled_for_timing` when their `when:` timing occurs,
     /// joining that timing's printed triggers in one pool (§18-1-2).
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
 
-    /// PUPPETS-G003 â€” provenance-keyed deletions scheduled for this turn's
+    /// PUPPETS-G003 — provenance-keyed deletions scheduled for this turn's
     /// end. An effect that plays a Digimon and must delete *that specific
     /// permanent* at turn end ("At turn end, delete the Digimon this effect
     /// played") pushes one entry here, keyed by a stable `ProvenanceToken`
@@ -1281,7 +1281,7 @@ pub struct Game {
     /// from `fire_end_of_your_turn`; the queue is cleared each turn so a
     /// played permanent that already left is a silent no-op.
     pub scheduled_provenance_deletions: Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
-    /// PUPPETS-G016 â€” provenance-keyed deletions scheduled for the end of the
+    /// PUPPETS-G016 — provenance-keyed deletions scheduled for the end of the
     /// **opponent's** turn. Mirror of `scheduled_provenance_deletions` but
     /// enqueued into `rotate_turn_player`'s `EndOfOpponentsTurn` pool
     /// (`Game::enqueue_provenance_deletions_at_opponents_turn_end`, §18-1-2)
@@ -1299,7 +1299,7 @@ pub struct Game {
     /// The turn scan (`resolve_delayed_options_matching`) trashes the Option
     /// after running its body, because the trash IS the Delay's cost. When the
     /// cost is declined the body never ran, so the trash must not happen either
-    /// (§15-7-2) â€” this key tells the two delete sites to reschedule the Option
+    /// (§15-7-2) — this key tells the two delete sites to reschedule the Option
     /// to its next window instead of deleting it. Cleared as soon as it is
     /// consumed; only ever holds one key because exactly one Delay is resolved
     /// at a time.
@@ -1311,13 +1311,13 @@ pub struct Game {
     /// Continuation for a turn boundary whose §18-1-2 pool parked on a
     /// decision (`resume_pending_turn_boundary`).
     pub(crate) pending_turn_boundary_resume: Option<TurnBoundaryResume>,
-    /// Parked Breeding â†’ Main phase advance. Set by `enter_main_phase` when a
+    /// Parked Breeding → Main phase advance. Set by `enter_main_phase` when a
     /// breeding-action trigger (e.g. an `[When Moving]` selection fired by
     /// `move_from_breeding`) parked a `PendingSelection` before the phase
     /// advance ran. Without this, `enter_main_phase` would set the phase to
     /// Main mid-selection and the selection's `previous_phase = Breeding`
     /// restore would later drop the turn machine back into a phantom second
-    /// Breeding phase (double `StartOfYourMainPhase` â€” user bug 2026-07-09).
+    /// Breeding phase (double `StartOfYourMainPhase` — user bug 2026-07-09).
     /// Re-entered from `resolve_selection` via `resume_pending_enter_main`.
     pub(crate) pending_enter_main_after_selection: bool,
     /// An end-of-turn attack (`<Engage>`, `<Execute>`, `<Vortex>`,
@@ -1340,7 +1340,7 @@ pub struct Game {
     /// Deferred-drain depth counter (post-2026-05-23 architectural change).
     ///
     /// When non-zero, `fire_on_*` observer helpers must NOT inline-drain the
-    /// effect queue â€” they should only enqueue, letting whichever outer
+    /// effect queue — they should only enqueue, letting whichever outer
     /// scope (the select callback or the outer-tail runner that incremented
     /// the counter) flush the queue when it exits.
     ///
@@ -1354,8 +1354,8 @@ pub struct Game {
     /// `dsl_outer_tail` was still occupied by the first.
     ///
     /// Incremented by `enter_deferred_drain()` and decremented by
-    /// `exit_deferred_drain_and_flush()`. The two are intentionally paired â€”
-    /// the latter flushes on the final exit (counter going 1 â†’ 0) so any
+    /// `exit_deferred_drain_and_flush()`. The two are intentionally paired —
+    /// the latter flushes on the final exit (counter going 1 → 0) so any
     /// triggers queued during the deferred scope fire now, at a context
     /// where `dsl_outer_tail` is empty.
     #[doc(hidden)]
@@ -1386,7 +1386,7 @@ pub struct Game {
     /// entry-commit site.
     pub(crate) play_enters_suspended: bool,
     /// Identity of the effect requesting `suppress_on_play` for the next
-    /// play â€” `(controller, source kind)`. The suppression is an EFFECT on
+    /// play — `(controller, source kind)`. The suppression is an EFFECT on
     /// the played Digimon, so `fire_play_event_triggers` consults
     /// `permanent_is_unaffected_by_effect` against this identity before
     /// honoring the skip (judge-quiz Q28: Gankoomon X's protection lets the
@@ -1396,14 +1396,14 @@ pub struct Game {
     /// Transient: `true` while the OnPlay trigger for a just-played permanent
     /// is being dispatched IF that play was effect-driven (`PlaySource::ByEffect`).
     /// Read by the `OnPlay` trigger context so a card's `played_by_effect`
-    /// predicate can gate "if played by an effect, â€¦" (BT25-080 Witchmon main
+    /// predicate can gate "if played by an effect, …" (BT25-080 Witchmon main
     /// clause; G-ENGINE-ON-DISCARD-HAND). Set by `fire_play_event_triggers`
     /// around `fire_on_play`, cleared immediately after. `false` for normal
     /// hand plays and digivolutions. Mirrors DCGO `CardEffectCommons.IsByEffect`.
     pub(crate) pending_play_effect_initiated: bool,
 
     /// Open coalescing window for the `OnDiscardHand` batch trigger
-    /// (G-ENGINE-ON-DISCARD-HAND). While `Some`, effect-caused handâ†’trash calls
+    /// (G-ENGINE-ON-DISCARD-HAND). While `Some`, effect-caused hand→trash calls
     /// append the trashing player; the window is flushed (fires
     /// `OnDiscardHand` once) when the effect body that opened it completes.
     /// `None` outside a discard window. Mirrors DCGO `DiscardHands()` collecting
@@ -1425,7 +1425,7 @@ pub struct Game {
     pub(crate) pending_added_sources: Vec<PendingAddedSources>,
 
     /// The placing effect's carrier for an in-flight effect-driven
-    /// securityâ†’digivolution-source placement (`place_as_source_observed`'s
+    /// security→digivolution-source placement (`place_as_source_observed`'s
     /// Security branch hands the card to `fire_effect_security_removal`,
     /// whose completion in `complete_effect_security_removal` is where the
     /// card actually enters the stack and the `OnAddDigivolutionCards` batch
@@ -1435,16 +1435,16 @@ pub struct Game {
     pub(crate) pending_security_source_cause_card: Option<crate::card_source::CardHandle>,
     /// `true` only around the `OnLoseSecurity` enqueue inside
     /// `fire_effect_security_removal` (every caller of which is an EFFECT
-    /// removal â€” the combat security check enqueues its own drain). Read by
+    /// removal — the combat security check enqueues its own drain). Read by
     /// `trigger_context_for_source` so `event_is_effect_initiated` can tell
     /// "removed from by effects" apart from a security check (BT26-089 Kyo
     /// Sawashiro; DCGO `CardEffectCommons.IsByEffect`).
     /// G-ENGINE-LOSE-SECURITY-BY-EFFECT.
     pub(crate) pending_security_loss_effect_initiated: bool,
-    /// Face-down flag for an in-flight effect-driven securityâ†’digivolution
+    /// Face-down flag for an in-flight effect-driven security→digivolution
     /// source placement (`place_as_source_observed`'s Security branch);
     /// consumed when `complete_effect_security_removal` seats the card
-    /// (BT26-025 Liollmon "place your top security card face down under â€¦").
+    /// (BT26-025 Liollmon "place your top security card face down under …").
     /// G-DSL-SECURITY-TOP-AS-SOURCE.
     pub(crate) pending_security_source_face_down: bool,
 
@@ -1464,14 +1464,14 @@ pub struct Game {
     /// any constraint on snapshotting.
     pub reveal_source: Option<Box<dyn crate::opaque_deck::RevealSource>>,
 
-    /// Cached card-id â†’ data-index lookup, materialized once at
+    /// Cached card-id → data-index lookup, materialized once at
     /// construction time. Used by opaque-mode draws to turn revealed
     /// card-id strings into `CardSource` instances. Empty for non-opaque
     /// games (the standard constructor uses an in-scope `data_index_map`
     /// directly without caching it on the Game).
     pub(crate) opaque_data_index_map: Option<std::collections::HashMap<String, usize>>,
 
-    /// Card-id â†’ `card_data` index, materialized once at construction. O(1)
+    /// Card-id → `card_data` index, materialized once at construction. O(1)
     /// replacement for the per-step `card_data.iter().find(...)` linear scan.
     /// Shared via `Arc` with the card store (see `card_store`).
     pub(crate) card_id_index: std::sync::Arc<std::collections::HashMap<String, usize>>,
@@ -1558,7 +1558,7 @@ impl Game {
     /// redraw `starting_hand` cards via the reveal source.
     ///
     /// This is the opaque counterpart to the standard `redraw_hand`'s
-    /// "drain hand into deck, shuffle, draw N" sequence â€” the conceptual
+    /// "drain hand into deck, shuffle, draw N" sequence — the conceptual
     /// equivalent without an ordered deck to shuffle. Reveals fold into
     /// hand in arrival order; consume errors bubble up. Used only when
     /// `players[pid].opaque_deck_state.is_some()`.
@@ -1601,7 +1601,7 @@ impl Game {
         self.turn_order[self.turn_player_idx]
     }
 
-    // â”€â”€â”€ Mulligan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Mulligan ────────────────────────────────────────────────────
 
     /// Shuffle the player's hand back into the deck and redraw `starting_hand`.
     ///
@@ -1612,7 +1612,7 @@ impl Game {
     fn redraw_hand(&mut self, player: PlayerId) {
         if self.players[player as usize].opaque_deck_state.is_some() {
             // Opaque mode: defer to the opaque-aware helper. Errors are
-            // logged but not propagated â€” the original `redraw_hand`
+            // logged but not propagated — the original `redraw_hand`
             // signature is `-> ()` and lifting that to `Result` is a
             // broader API change. The error case here means the
             // reveal source is misaligned with the engine state, which
@@ -1647,7 +1647,7 @@ impl Game {
     /// are pulled from the reveal source (tagged `RevealKind::Security`),
     /// not from an ordered `deck` Vec. Errors during opaque security
     /// reveal are logged but not propagated for the same reason
-    /// `redraw_hand` does the same â€” the upstream API doesn't yet
+    /// `redraw_hand` does the same — the upstream API doesn't yet
     /// surface a fallible `finalize_mulligan` signature.
     fn finalize_mulligan(&mut self) {
         let security_count = self.rules.security_count;
@@ -1709,7 +1709,7 @@ impl Game {
             .collect()
     }
 
-    // â”€â”€â”€ Pending selection resolution â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Pending selection resolution ───────────────────────────────
 
     /// Resolve a pending selection with `action_id` submitted by `player`.
     ///
@@ -1872,7 +1872,7 @@ impl Game {
             card_id: emitted_card_id,
             card_name: emitted_card_name,
             field_index: field_index as u8,
-            // Effect-initiated free play â€” no memory paid.
+            // Effect-initiated free play — no memory paid.
             cost_paid: 0,
             cost_printed,
             // Generic effect-initiated free play is not a registered
@@ -1880,7 +1880,7 @@ impl Game {
             // CompiledAltPathKind variants.
             via_alt_path: None,
         });
-        // Effect-initiated play (`effect_initiated: true`) â€” helper wraps
+        // Effect-initiated play (`effect_initiated: true`) — helper wraps
         // OnPlay + OnEnterFieldAnyone + OnAllyPlayed in a deferred-drain
         // scope so simultaneous triggers share a TriggerOrder bundle.
         self.fire_play_event_triggers(player_id, field_index, true, false);
@@ -1972,7 +1972,7 @@ impl Game {
                 card_id: emitted_card_id,
                 card_name: emitted_card_name,
                 field_index: field_index as u8,
-                // Effect-initiated multi-source free play â€” no memory paid.
+                // Effect-initiated multi-source free play — no memory paid.
                 cost_paid: 0,
                 cost_printed,
                 via_alt_path: None,
@@ -1984,7 +1984,7 @@ impl Game {
         // own play-event trigger bundle (OnPlay + OnEnterFieldAnyone +
         // OnAllyPlayed) through the helper. The helper's per-call
         // deferred-drain scope opens and closes per entered card, so each
-        // card's triggers form their own TriggerOrder bundle â€” this
+        // card's triggers form their own TriggerOrder bundle — this
         // preserves the "one entry event = one bundle" semantic across
         // multi-source plays.
         //
@@ -2023,7 +2023,7 @@ impl Game {
     /// Effect-initiated SIMULTANEOUS free play of `controller`'s hand / trash
     /// cards (`play_cards_free`, BT26-081 Mervamon "play up to 8 play cost's
     /// total worth of [Iliad] trait cards from your hand or trash without
-    /// paying the costs" â€” DCGO `PlayPermanentCards` over the whole list).
+    /// paying the costs" — DCGO `PlayPermanentCards` over the whole list).
     /// Only Digimon / Tamer cards are played; a card no longer in its zone,
     /// or one an effect forbids playing / without a free field slot, is
     /// skipped. All cards enter before any of their play triggers resolve.
@@ -2158,7 +2158,7 @@ impl Game {
     /// **Optional replacements:** if an optional replacement is in scope,
     /// this function installs a `PendingSelection::Replacement` and returns
     /// `ReplacementOutcome::None`. The caller is expected to re-enter
-    /// `try_replace` â€” or inspect `game.replacement_pending_outcome` â€”
+    /// `try_replace` — or inspect `game.replacement_pending_outcome` —
     /// once `resolve_selection` has fired.
     ///
     /// Visibility note: `#[doc(hidden)] pub` rather than `pub(crate)` so the
@@ -2178,12 +2178,12 @@ impl Game {
 
     /// Infer the `ReplacementCause` for a deletion of `target_handle` given
     /// the current game state. Priority:
-    ///   1. `security_resolution.is_some()` â†’ `SecurityCheck`
-    ///   2. `pending_attack.is_some()` â†’ `Battle`
-    ///   3. `effect_source_player.is_some()` â€” an effect is currently
+    ///   1. `security_resolution.is_some()` → `SecurityCheck`
+    ///   2. `pending_attack.is_some()` → `Battle`
+    ///   3. `effect_source_player.is_some()` — an effect is currently
     ///      running; `Own` if its controller equals the target's
     ///      controller, otherwise `Opponent`.
-    ///   4. Fallback â†’ `OwnEffect`.
+    ///   4. Fallback → `OwnEffect`.
     ///
     /// Consumed by the deletion fire-site in `combat::delete_permanent_with_effects`.
     pub(crate) fn infer_deletion_cause(
@@ -2237,10 +2237,10 @@ impl Game {
     /// live signals are security-resolution and the effect-source player.
     ///
     /// Priority:
-    ///   1. `effect_source_player.is_some()` â€” compare against `target_player`;
-    ///      equal â†’ `OwnEffect`, else `OpponentEffect`.
-    ///   2. `security_resolution.is_some()` â†’ `SecurityCheck`
-    ///   3. Fallback â†’ `OwnEffect`.
+    ///   1. `effect_source_player.is_some()` — compare against `target_player`;
+    ///      equal → `OwnEffect`, else `OpponentEffect`.
+    ///   2. `security_resolution.is_some()` → `SecurityCheck`
+    ///   3. Fallback → `OwnEffect`.
     ///
     /// Security card effects still run as card effects: `run_queued_effect`
     /// sets `effect_source_player` before the effect body mutates state. The
@@ -2314,7 +2314,7 @@ impl Game {
         self.turn_order[next_pos]
     }
 
-    // â”€â”€â”€ Event accumulator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Event accumulator ─────────────────────────────────────────
 
     /// Trash a single card to `player`'s trash zone, emitting a
     /// [`crate::events::GameEvent::Trash`] event.
@@ -2338,7 +2338,7 @@ impl Game {
         card: crate::card_source::CardSource,
     ) {
         if card.is_token {
-            // Tokens are removed from game â€” no trash entry, no event.
+            // Tokens are removed from game — no trash entry, no event.
             return;
         }
         let card_id = card.card_id(&self.card_data).to_string();
@@ -2356,8 +2356,8 @@ impl Game {
     /// Record that an EFFECT (controlled by `cause_controller`) just trashed a
     /// card from `trashing_player`'s hand, opening or extending the
     /// `OnDiscardHand` batch window (G-ENGINE-ON-DISCARD-HAND). Called from
-    /// `EffectContext::trash_from_hand_by_index` â€” the single effect-caused
-    /// handâ†’trash choke point. The trigger is NOT fired here; it fires once when
+    /// `EffectContext::trash_from_hand_by_index` — the single effect-caused
+    /// hand→trash choke point. The trigger is NOT fired here; it fires once when
     /// the window is flushed (`flush_pending_hand_discard`) after the causing
     /// effect body completes, mirroring DCGO `DiscardHands()` collecting the
     /// full discard list before firing `OnDiscardHand`.
@@ -2472,7 +2472,7 @@ impl Game {
     /// `OnAddDigivolutionCards` batch window
     /// (G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS). Call this from EVERY
     /// effect-driven source-placement facade AFTER the `card_sources`
-    /// mutation â€” and from NO rule-driven one: normal / DNA digivolution,
+    /// mutation — and from NO rule-driven one: normal / DNA digivolution,
     /// DigiXros + Assembly material consumption and App Fusion place sources
     /// with a `null` `cardEffect` in DCGO (`CardController.cs:1736`,
     /// `SelectDigiXrosClass.cs:910`, `SelectAssemblyClass.cs:302`,
@@ -2481,7 +2481,7 @@ impl Game {
     ///
     /// The trigger is NOT fired here; it fires once per host when the window
     /// is flushed (`flush_pending_added_sources`) after the placing effect
-    /// body completes â€” DCGO `AddDigivolutionCards*` stacks the skill once
+    /// body completes — DCGO `AddDigivolutionCards*` stacks the skill once
     /// per added LIST (Permanent.cs:1133 / 1237), and rule 15-5-2 makes one
     /// condition met several times at once a single triggering. Tokens
     /// never enter a stack (DCGO skips `IsToken` cards and token hosts), so a
@@ -2567,7 +2567,7 @@ impl Game {
     }
 
     /// Locate the battle-area or breeding permanent whose TOP card is
-    /// `top_card` (stable-identity â†’ positional handle). `None` when no such
+    /// `top_card` (stable-identity → positional handle). `None` when no such
     /// permanent is in play.
     pub(crate) fn permanent_handle_by_top_card(
         &self,
@@ -2607,7 +2607,7 @@ impl Game {
     /// Replaces direct calls to `Player::delete_permanent` from sites
     /// that want event emission. Mirrors `Player::delete_permanent`'s
     /// token-semantic (the whole stack drops on the floor when the top
-    /// card is a token â€” no trash entry, no event) and empty-stack
+    /// card is a token — no trash entry, no event) and empty-stack
     /// tolerance (linked cards still flow to trash).
     pub fn trash_permanent_stack(&mut self, player: crate::enums::PlayerId, field_index: usize) {
         let p = self.player_mut(player);
@@ -2615,13 +2615,17 @@ impl Game {
             return;
         }
         let perm = p.battle_area.remove(field_index);
+        self.invalidate_captured_security_check_source(crate::permanent::PermanentHandle {
+            player,
+            index: field_index as u8,
+        });
 
         // Empty-stack guard (parity with Player::delete_permanent): if the
         // stack was already drained by a mid-deletion effect, only linked
         // cards remain to flow to trash.
         if perm.card_sources.is_empty() {
             for card in perm.linked_cards {
-                // Linked cards on an empty stack are still real cards â€”
+                // Linked cards on an empty stack are still real cards —
                 // emit per-card.
                 let card_id = card.card_id(&self.card_data).to_string();
                 let card_name = card.card_name(&self.card_data).to_string();
@@ -2637,7 +2641,7 @@ impl Game {
             return;
         }
 
-        // Token semantic: drop the entire stack â€” no trash, no event.
+        // Token semantic: drop the entire stack — no trash, no event.
         // Mirrors Player::delete_permanent's token branch + Python
         // `player.py::delete_permanent`.
         if perm.card_sources[0].is_token {
@@ -2672,19 +2676,19 @@ impl Game {
         }
     }
 
-    // â”€â”€â”€ Memory management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Memory management ─────────────────────────────────────────
 
     /// Pay memory cost **without** the floor check. Used by effect-initiated
     /// flows that explicitly opt out of the affordability constraint
     /// (`ignore_requirements: true`). Always mutates and emits the
-    /// `MemoryChange` event â€” even if the resulting memory dips below
+    /// `MemoryChange` event — even if the resulting memory dips below
     /// `rules.memory_range.0`.
     ///
     /// Callers must have already decided that the floor check should be
     /// skipped (typically because a printed effect overrides the normal
     /// rules). For ordinary plays, use `pay_memory` instead.
     ///
-    /// `cost == 0` is a no-op (returns immediately, no event emitted) â€”
+    /// `cost == 0` is a no-op (returns immediately, no event emitted) —
     /// matches `pay_memory`'s zero-cost short-circuit.
     pub(crate) fn pay_memory_unchecked(&mut self, cost: u16) {
         if cost == 0 {
@@ -2707,16 +2711,16 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
-    // â”€â”€â”€ Scenario staging (add-ui-scenario-test-substrate) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Scenario staging (add-ui-scenario-test-substrate) ─────────
     //
     // Direct state setters for building an arbitrary mid-game board for
     // tests / the `/debug` HTTP surface. They are inert setup operations,
-    // NOT card effects or rule actions â€” they bypass the play flow on
+    // NOT card effects or rule actions — they bypass the play flow on
     // purpose. `DebugRunner`'s staging setters delegate here so there is
     // one implementation; `RustDebugGame` (PyO3) calls these on its
     // wrapped `Game`.
 
-    // â”€â”€â”€ Elimination / winner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Elimination / winner ──────────────────────────────────────
 
     /// Handle deck-out for a player.
     pub(crate) fn handle_deckout(&mut self, player_id: PlayerId) {
@@ -2742,7 +2746,7 @@ impl Game {
     }
 
     /// Advance the card-index counter to `value` if it would move forward.
-    /// No-op if `value <= self.next_card_index` â€” the counter must never
+    /// No-op if `value <= self.next_card_index` — the counter must never
     /// regress, since that would re-issue an index already in circulation.
     ///
     /// Used by test harnesses (e.g. `DebugRunner`) that pre-seed cards with
@@ -2784,18 +2788,18 @@ impl Game {
     /// - `cost > 0` and `Game::pay_memory` fails
     ///
     /// The pay-memory-bypass branch (`ignore_requirements && cost > 0`) is
-    /// *not* present here â€” callers that need to bypass the affordability
+    /// *not* present here — callers that need to bypass the affordability
     /// floor must subtract from `self.memory` before calling (see
     /// `Game::pay_memory_unchecked`). The two callers are:
-    /// - `EffectContext::effect_initiated_dna_digivolve` â€” engine-effect
+    /// - `EffectContext::effect_initiated_dna_digivolve` — engine-effect
     ///   wrapper that handles the IR's `(cost, ignore_requirements)` shape
     ///   and invokes the bypass branch when needed.
-    /// - `Game::initiate_dna_digivolve`'s stage-2 selection callback â€” the
+    /// - `Game::initiate_dna_digivolve`'s stage-2 selection callback — the
     ///   user-action path; passes the printed cost minus
     ///   `BeforePayCost` reductions and never bypasses.
     ///
-    /// §8-2-3-3 â€” "places the Digimon for the DNA digivolution on top of the
-    /// stack, draws 1 card, and the DNA digivolution process is resolved" â€”
+    /// §8-2-3-3 — "places the Digimon for the DNA digivolution on top of the
+    /// stack, draws 1 card, and the DNA digivolution process is resolved" —
     /// so `hand_owner` ALWAYS draws 1 after the merge and before triggers
     /// fire, however the DNA digivolution was initiated. This used to be
     /// gated behind a `grant_digivolve_bonus` flag that the effect-initiated
@@ -2981,7 +2985,7 @@ impl Game {
         };
         self.clear_dna_card_overlays(merged_handle);
 
-        // `GameEvent::Digivolve` for the DNA path â€” emit BEFORE trigger
+        // `GameEvent::Digivolve` for the DNA path — emit BEFORE trigger
         // dispatch so reward components observe the digivolve before any
         // downstream effects fire. `was_blast_dna` is conservatively
         // `false` here: distinguishing Blast from standard DNA requires
@@ -3017,12 +3021,12 @@ impl Game {
 
         self.fire_digivolve_event_triggers(merged_handle, event_card, effect_initiated, true);
 
-        // Reward-shaping counters â€” DNA digivolves stack on the regular
+        // Reward-shaping counters — DNA digivolves stack on the regular
         // counter per spec decision 5: a single `digivolve_reward` line in
         // DigimonEnv always fires, plus a separate `dna_digivolve_bonus`
         // line fires only on DNAs. Effect-initiated DNAs (called via
         // `effect_context::EffectContext::initiate_dna_digivolve`) do not
-        // bump â€” only user-action DNAs (via `Game::initiate_dna_digivolve`)
+        // bump — only user-action DNAs (via `Game::initiate_dna_digivolve`)
         // credit, matching the regular-digivolve carve-out. See
         // docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
         if !effect_initiated {
@@ -3035,12 +3039,12 @@ impl Game {
 
     /// DNA digivolve where ONE material lives on the field (`target`) and the
     /// OTHER material is a card in `hand_owner`'s hand (`partner_index`). The
-    /// merged permanent is topped with `result_index` (also a hand card â€”
+    /// merged permanent is topped with `result_index` (also a hand card —
     /// typically the Omnimon-name level-7 result).
     ///
     /// This is the BT17-095-shaped DNA: the printed text "That Digimon and a
     /// card in the hand may DNA digivolve into a Digimon card with [Omnimon]
-    /// in its name in the hand" â€” only one DNA material is a field permanent;
+    /// in its name in the hand" — only one DNA material is a field permanent;
     /// the second is materialised from hand inline. Mirrors DCGO's
     /// `BT17_095.SuccessProcess` which builds a temporary `Permanent` from the
     /// hand-card partner and runs `PlayCardClass.PlayCard` with `SetJogress`.
@@ -3160,7 +3164,7 @@ impl Game {
             .map(|perm| perm.top_card().handle())?;
         self.fire_digivolve_event_triggers(merged_handle, event_card, effect_initiated, true);
 
-        // Reward-shaping counters â€” see `dna_digivolve_inner` for rationale.
+        // Reward-shaping counters — see `dna_digivolve_inner` for rationale.
         // Only user-action DNAs (effect_initiated == false) credit.
         if !effect_initiated {
             self.n_digivolutions[merged_handle.player as usize] += 1;
@@ -3179,14 +3183,14 @@ impl Game {
     ///    trash** may DNA Digivolve into [Millenniummon] **in the hand**."
     ///
     /// DCGO (`BT18_015.cs` / `BT18_073.cs`) materialises the trash material via
-    /// `CardObjectController.CreateNewPermanent` â€” a **pure placement that fires
-    /// NO triggers** (no `[On Play]`, no `OnEnterField`) â€” then jogress-merges
+    /// `CardObjectController.CreateNewPermanent` — a **pure placement that fires
+    /// NO triggers** (no `[On Play]`, no `OnEnterField`) — then jogress-merges
     /// with `PlayCardClass(..., payCost: true, activateETB: true)`.
     ///
     /// We fold the two steps into one atomic merge so the trash material never
     /// exists as an independently-played permanent: it moves straight from
     /// trash into the merged stack. This exactly reproduces DCGO's
-    /// observer-firing surface â€” only the merged TOP's `WhenDigivolving` /
+    /// observer-firing surface — only the merged TOP's `WhenDigivolving` /
     /// `OnDnaDigivolve` / `OnDigivolve` fire (below), never the trash
     /// material's own play triggers.
     ///
@@ -3292,7 +3296,7 @@ impl Game {
             .map(|perm| perm.top_card().handle())?;
         self.fire_digivolve_event_triggers(merged_handle, event_card, effect_initiated, true);
 
-        // Reward-shaping counters â€” see `dna_digivolve_inner` for rationale.
+        // Reward-shaping counters — see `dna_digivolve_inner` for rationale.
         if !effect_initiated {
             self.n_digivolutions[merged_handle.player as usize] += 1;
             self.n_dna_digivolutions[merged_handle.player as usize] += 1;
@@ -3304,10 +3308,10 @@ impl Game {
     /// Q3 (`G-DIGIVOLVE-TARGET-RESTRICTION`): a base permanent carrying one or
     /// more `CanOnlyDigivolveInto` modifiers may digivolve ONLY into a card whose
     /// name matches an allowed name. Returns `true` if `card` would be BLOCKED as
-    /// a digivolve target of `base_handle` â€” i.e. at least one restriction entry
+    /// a digivolve target of `base_handle` — i.e. at least one restriction entry
     /// is present whose allowed name does not match any of `card`'s names. Each
     /// entry is ANDed (the target must satisfy every restriction). Returns
-    /// `false` (not blocked) when no restriction is present â€” the common case, so
+    /// `false` (not blocked) when no restriction is present — the common case, so
     /// existing cards are unaffected. DCGO parity: `CanNotDigivolveStaticSelfEffect`
     /// (EX10-020 `cardCondition: !EqualsCardName("Apocalymon")`).
     pub(crate) fn digivolve_target_blocked_by_restriction(
@@ -3333,7 +3337,7 @@ impl Game {
         false
     }
 
-    // â”€â”€â”€ Unified keyword query (Phase 3 Task 2) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Unified keyword query (Phase 3 Task 2) ──────────────────────
 
     /// Register a source-independent continuous mass modifier (see
     /// `crate::floating_modifier`). Computes the `*NextTurn` skip count at
@@ -3417,7 +3421,7 @@ impl Game {
                 Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
                     ending_player == fm.source_player
                 }
-                // Not turn-end-relative â€” not expired here.
+                // Not turn-end-relative — not expired here.
                 Expiry::Permanent
                 | Expiry::EndOfAttack
                 | Expiry::EndOfBattle
@@ -3430,9 +3434,9 @@ impl Game {
             }
             if fm.pending_skips > 0 {
                 fm.pending_skips -= 1;
-                return true; // `*NextTurn` skip â€” survive this turn-end
+                return true; // `*NextTurn` skip — survive this turn-end
             }
-            false // expired â†’ drop
+            false // expired → drop
         });
         // Refresh materialized state so a `dp_of`/`effective_dp` read taken right
         // after the turn-end (before the next action's tick) reflects the pruned
@@ -3446,7 +3450,7 @@ impl Game {
 
     /// Soft-remove a permanent whose `card_sources` Vec is now empty after
     /// some effect moved its body card(s) elsewhere. This is the DCGO
-    /// `CardObjectController.RemoveField(permanent)` analog â€” distinct from
+    /// `CardObjectController.RemoveField(permanent)` analog — distinct from
     /// `DestroyPermanentsClass.Destroy()` (no OnDeletion, no replacement
     /// window, no trash for the body since it already moved).
     ///
@@ -3454,7 +3458,7 @@ impl Game {
     /// (flow to trash + fire `OnLinkedCardTrashed` observers), the battle_area
     /// slot itself, and shifts modifier indices for surviving permanents.
     ///
-    /// **Caller must already have moved the body card(s)** â€” this function
+    /// **Caller must already have moved the body card(s)** — this function
     /// does not extract or route the body. If `src.card_sources` is non-empty
     /// when called, returns `false` and does nothing (defensive: also handles
     /// the case where the slot is already gone).
@@ -3464,7 +3468,7 @@ impl Game {
     /// `PermanentHandle`s should call [`Self::shift_handle_after_soft_remove`]
     /// to fix up handles after a successful cleanup.
     ///
-    /// See `G-PERMANENT-EMPTY-DURING-BATCH-DELETION` (mis-named â€” actually
+    /// See `G-PERMANENT-EMPTY-DURING-BATCH-DELETION` (mis-named — actually
     /// the digivolve-from-material zombie class) in
     /// `qa/archetype-qa/engine-gaps.md` for the original surfacing.
     pub(crate) fn soft_remove_if_emptied(
@@ -3487,7 +3491,7 @@ impl Game {
         );
         let had_linked = !linked_cards.is_empty();
 
-        // Remove the empty slot BEFORE any drain â€” slot must not be visible
+        // Remove the empty slot BEFORE any drain — slot must not be visible
         // to subsequent trigger iteration.
         self.clear_permanent_full(src);
         self.modifiers.expire_player_on_permanent_leave(src);
@@ -3498,7 +3502,7 @@ impl Game {
         self.shift_pending_attack_after_battle_area_remove(src.player, src.index);
         self.shift_effect_queue_after_battle_area_remove(src.player, src.index);
 
-        // Linked cards lose their host â†’ trash + OnLinkedCardTrashed observer.
+        // Linked cards lose their host → trash + OnLinkedCardTrashed observer.
         // Matches the linked-card flow in `trash_single_for_batch`
         // (combat.rs:3740-3768). Runs after the slot is gone so the observer
         // drain is safe.
@@ -3535,7 +3539,7 @@ impl Game {
 
     /// Returns the `PermanentHandle` of the currently-attacking permanent,
     /// or `None` when no attack is in flight. Reads `pending_attack.attacker`
-    /// â€” the same source the mask and combat-resolution code use.
+    /// — the same source the mask and combat-resolution code use.
     ///
     /// Used by `progress_excludes` to gate opponent-effect mutations on
     /// the Progress carrier specifically while it is the attacker.
@@ -3546,14 +3550,14 @@ impl Game {
     /// "Add N to this Digimon's DP deletion effects' maximums" total for the
     /// battle-area permanent `host`: the sum of every self-scoped
     /// `Effect::dp_delete_effect_max_delta` in `host`'s card stack whose
-    /// scope matches the card's position (inherited â‡” under the top card) and
-    /// whose condition (`active_when`) holds â€” read live, so a card that just
-    /// became a digivolution source counts immediately â€” plus any
+    /// scope matches the card's position (inherited ⇔ under the top card) and
+    /// whose condition (`active_when`) holds — read live, so a card that just
+    /// became a digivolution source counts immediately — plus any
     /// materialized `ModifierType::ChangeDPDeleteEffectMaxDP` entries on
     /// `host` installed by other routes (filtered-target auras, steps).
     ///
     /// Added to the DP cap of every deletion effect whose source permanent is
-    /// `host` (DCGO `Player.MaxDP_DeleteEffect` â†’
+    /// `host` (DCGO `Player.MaxDP_DeleteEffect` →
     /// `ChangeDPDeleteEffectMaxDPClass.ChangeMaxDP`). Non-battle-area handles
     /// (breeding sentinel, stale indices) yield 0.
     /// G-ENGINE-DP-DELETION-MAX-MODIFIER.
@@ -3819,7 +3823,7 @@ impl Game {
         (total, found)
     }
 
-    // â”€â”€â”€ Effect-listing API (§4.5c) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── Effect-listing API (§4.5c) ──────────────────────────────────
 
     /// Enumerate a card's effects by asking the registry for its impl.
     /// Returns `None` when no impl is registered so hot-path callers (the
@@ -3835,8 +3839,8 @@ impl Game {
     /// The inner `Vec` allocation is driven by `CardEffect::effects(handle)`
     /// re-boxing per-instance closures and is unavoidable with the current
     /// trait shape. The helper does not add an extra empty-case allocation.
-    /// Memoized per-card effect derivation â€” the engine's hottest call
-    /// (56â€“72% of bare-engine runtime; ~742â€“1715 calls/step). The registry
+    /// Memoized per-card effect derivation — the engine's hottest call
+    /// (56–72% of bare-engine runtime; ~742–1715 calls/step). The registry
     /// effect list is a pure function of `(card_id, handle, under_top)`, so it
     /// is cached on `Game` for the game's lifetime (see `EffectsCache`) and a
     /// repeat query is a refcount bump rather than a fresh `impl_.effects(handle)`
@@ -3852,7 +3856,7 @@ impl Game {
         // than the &str card_id. A handle maps 1:1 to a card instance, so this is
         // also unique; data_index canonicalizes any duplicate card_id rows.
         let Some(&data_index) = self.card_id_index.get(card_id) else {
-            // Unknown card_id (defensive â€” shouldn't happen): build uncached.
+            // Unknown card_id (defensive — shouldn't happen): build uncached.
             return self
                 .build_effects_for_card(card_id, handle, under_top)
                 .map(std::sync::Arc::new);
@@ -3887,7 +3891,7 @@ impl Game {
 
     /// Owned, un-memoized variant of [`Game::effects_for_card`] for the few
     /// callers that mutate the returned vec (`game_actions/cost.rs`,
-    /// `game_actions/options.rs`). Rebuilds every call â€” acceptable because
+    /// `game_actions/options.rs`). Rebuilds every call — acceptable because
     /// those sites are low-frequency (cost calc, not the per-step hot path).
     pub(crate) fn effects_for_card_owned(
         &self,
@@ -3907,7 +3911,7 @@ impl Game {
         handle: crate::card_source::CardHandle,
         under_top: bool,
     ) -> Option<Vec<crate::effect::Effect>> {
-        // Registry effects come first â€” a hand-authored script owns its
+        // Registry effects come first — a hand-authored script owns its
         // slot order. Phase 7 Task 6 appends keyword-derived auto-install
         // replacements (Barrier / Evade / Fragment(N) / Decode) so cards
         // with those printed keywords get the matching WhenWouldBe* process
@@ -3922,9 +3926,9 @@ impl Game {
         // Look up CardData for this card_id. The vec scan is O(card_data_len)
         // but is only hit once per effect query, and `effects_for_card` is
         // typically called at state-change fire-sites, not in the mask hot
-        // loop â€” so the cost is acceptable for v1.
+        // loop — so the cost is acceptable for v1.
         // One O(1) lookup, reused for both keyword reads (was two O(~4000)
-        // linear scans for the same card â€” the per-step hot path: ~793
+        // linear scans for the same card — the per-step hot path: ~793
         // effects_for_card calls/step, 94% of step time).
         let cd_opt = self.card_data_by_id(card_id);
         // FACE keywords only. `CardData::keywords` is parsed from ALL THREE
@@ -4040,7 +4044,7 @@ impl Game {
         //
         // task_69f10a66 Family 1: CONDITIONAL grants (an `active_when` aura
         // like EX12-004 Onibimon's "[Your Turn] this [TB] Digimon gains
-        // <Execute>") synthesize too â€” `ConditionFn` is `Arc`-shared, so the
+        // <Execute>") synthesize too — `ConditionFn` is `Arc`-shared, so the
         // grant's condition is cloned onto each synthesized auto-effect
         // (AND-composed with any condition the auto-effect already carries,
         // e.g. Armor Purge's stack-size gate). The condition is EVALUATED at
@@ -4050,7 +4054,7 @@ impl Game {
         // its debug differential oracle) remain valid. Without this, a
         // conditionally granted trigger keyword installed NO body anywhere:
         // granted <Execute> never fired at end of turn and the printed "may
-        // attack" choice never reached the action space (rule-17 violation â€”
+        // attack" choice never reached the action space (rule-17 violation —
         // §16-38-2/-3, §15-9-2-2).
         if let Some(es) = registry_effects.as_ref() {
             for grant in es {
@@ -4200,7 +4204,7 @@ impl Game {
         None
     }
 
-    // â”€â”€â”€ Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) â”€â”€â”€
+    // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───
 
     /// Shared implementation: `(total_opt_effects, used_opt_effects)` across
     /// every source in the permanent's stack with the inherited/top filter.
@@ -4281,7 +4285,7 @@ mod reset_for_replay_tests {
     /// fields, reset, and assert every one returns to its `Game::new`
     /// default while the immutable shared state (`card_data`,
     /// `token_registry`) is preserved. If a new mutable field is added to
-    /// `Game` and not reset in `reset_for_replay`, extend this test â€” it is
+    /// `Game` and not reset in `reset_for_replay`, extend this test — it is
     /// the lockstep guard called out in the method's doc comment.
     #[test]
     fn reset_for_replay_restores_defaults() {
@@ -4371,7 +4375,7 @@ mod reset_for_replay_tests {
             g.players
                 .iter()
                 .all(|p| p.hand.is_empty() && p.battle_area.is_empty() && p.deck.is_empty()),
-            "players reset to fresh (empty zones) â€” relay re-lays them"
+            "players reset to fresh (empty zones) — relay re-lays them"
         );
     }
 }
@@ -4429,13 +4433,13 @@ mod current_attacker_tests {
         let progress = r.place_on_field(0, "PROG", None);
         let _opp_perm = r.place_on_field(1, "OPP", None);
 
-        // Case 1: not attacking â†’ never excluded.
+        // Case 1: not attacking → never excluded.
         assert!(
             !r.game.progress_excludes(progress, Some(1)),
             "not-attacking carrier: no exclusion"
         );
 
-        // Case 2: attacking, but effect is own-sourced â†’ no exclusion.
+        // Case 2: attacking, but effect is own-sourced → no exclusion.
         //
         // Simulate an in-flight attack by inserting a PendingAttack.
         use crate::selection::{AttackTarget, PendingAttack};
@@ -4467,7 +4471,7 @@ mod current_attacker_tests {
             "no source player: no exclusion"
         );
 
-        // Case 3: attacking + opponent-sourced â†’ excluded.
+        // Case 3: attacking + opponent-sourced → excluded.
         assert!(
             r.game.progress_excludes(progress, Some(1)),
             "opponent-sourced effect on attacking Progress carrier: excluded"
@@ -4516,14 +4520,14 @@ mod current_attacker_tests {
         let a = r.place_on_field(0, "A", None);
         let _b = r.place_on_field(1, "B", None);
 
-        // No effect resolving â†’ false.
+        // No effect resolving → false.
         assert!(!r.game.opponent_sourced_mutation(a));
 
-        // Own effect resolving â†’ false.
+        // Own effect resolving → false.
         r.game.set_effect_source_player_for_test(Some(0));
         assert!(!r.game.opponent_sourced_mutation(a));
 
-        // Opponent effect resolving â†’ true.
+        // Opponent effect resolving → true.
         r.game.set_effect_source_player_for_test(Some(1));
         assert!(r.game.opponent_sourced_mutation(a));
 
@@ -4589,7 +4593,7 @@ mod resolve_token_as_battle_area_top_tests {
         assert_eq!(
             r.game.resolve_token_as_battle_area_top(token),
             Some(veemon),
-            "played card is the battle-area top â€” resolver yields its handle"
+            "played card is the battle-area top — resolver yields its handle"
         );
     }
 
@@ -4622,7 +4626,7 @@ mod resolve_token_as_battle_area_top_tests {
         assert_eq!(
             r.game.resolve_token_as_battle_area_top(token),
             None,
-            "played Veemon is now a digivolution card under ExVeemon â€” strict resolver fizzles"
+            "played Veemon is now a digivolution card under ExVeemon — strict resolver fizzles"
         );
     }
 
@@ -4644,7 +4648,7 @@ mod resolve_token_as_battle_area_top_tests {
         assert_eq!(
             r.game.resolve_token_as_battle_area_top(token),
             None,
-            "played card is in trash â€” strict resolver fizzles"
+            "played card is in trash — strict resolver fizzles"
         );
     }
 

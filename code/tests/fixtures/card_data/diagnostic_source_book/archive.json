@@ -1,0 +1,177 @@
+{
+  "candidate/data/card_compatibility_selections.json": {
+    "bytes": 174833,
+    "file": "158fd2fe7c9cc83238d49af2e66e60b3e895501891b8cac9ffdb12c45a8bf83a.gz",
+    "sha256": "158fd2fe7c9cc83238d49af2e66e60b3e895501891b8cac9ffdb12c45a8bf83a"
+  },
+  "candidate/data/card_corrections.json": {
+    "bytes": 9240,
+    "file": "2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf.gz",
+    "sha256": "2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf"
+  },
+  "candidate/data/card_migration_adjudications.json": {
+    "bytes": 9200376,
+    "file": "fe1f313900386f2d8dcde21df7be97b4f19e25a227b708b879acc36fe39ef1a5.gz",
+    "sha256": "fe1f313900386f2d8dcde21df7be97b4f19e25a227b708b879acc36fe39ef1a5"
+  },
+  "candidate/data/card_registry.json": {
+    "bytes": 94563,
+    "file": "8b514f43afd27d2cd7d8cd74d1557b4ddda100280887547a5b050cf94153932d.gz",
+    "sha256": "8b514f43afd27d2cd7d8cd74d1557b4ddda100280887547a5b050cf94153932d"
+  },
+  "candidate/data/card_sources/manifest.json": {
+    "bytes": 6161320,
+    "file": "5a016b1f36857f488f3f7cd7ece2b720d0da51d0a88b7df0b089c7b9fd2a0a07.gz",
+    "sha256": "5a016b1f36857f488f3f7cd7ece2b720d0da51d0a88b7df0b089c7b9fd2a0a07"
+  },
+  "candidate/data/card_sources/observations/digimoncard_io/048c3715ae05fd2141cb21f7062dcd5d3c19d1f30b259838503a58f63e826a46.json": {
+    "bytes": 4312,
+    "file": "7e02b717edd68149f3d1ebba3f006b144cf7f9ffe78d50c2307cbbeae3ee8f86.gz",
+    "sha256": "7e02b717edd68149f3d1ebba3f006b144cf7f9ffe78d50c2307cbbeae3ee8f86"
+  },
+  "candidate/data/card_sources/observations/digimoncard_io/19fba7434088412adb76b3b00bc95237e700e7178230e956d87fe7bda7ee8834.json": {
+    "bytes": 3987,
+    "file": "b4bf8217956e8941126154d109085235c0a16c39336c1d4a4d86aa82b0418f83.gz",
+    "sha256": "b4bf8217956e8941126154d109085235c0a16c39336c1d4a4d86aa82b0418f83"
+  },
+  "candidate/data/card_sources/observations/digimoncard_io/26f05e8ace8adc2ec706a385f988fc6d768ebb92bd97bdfd2886ae4909a1f29e.json": {
+    "bytes": 3987,
+    "file": "ef589f9c318174a5799730c663c30481a68af8c5018f44b670672d5853c6132c.gz",
+    "sha256": "ef589f9c318174a5799730c663c30481a68af8c5018f44b670672d5853c6132c"
+  },
+  "candidate/data/card_sources/observations/digimoncard_io/39595eca6f9b2fd4e1d5c50a2c6d90a09528cf88df859cba700c430f3f17a974.json": {
+    "bytes": 5229,
+    "file": "86cebfc129559f3619fa7e1395e28bfb2004aba1369f4c5280b912506eecc4ba.gz",
+    "sha256": "86cebfc129559f3619fa7e1395e28bfb2004aba1369f4c5280b912506eecc4ba"
+  },
+  "candidate/data/card_sources/observations/digimoncard_io/6bc60f290224fc9620309a96a2ceaa81440bf53071ec3bba06b265d20cb5800c.json": {
+    "bytes": 4001,
+    "file": "5caec536c19df5650a5d3dbb70bc5dcc85901004ce1e5acd400fa1ec8b99e9e0.gz",
+    "sha256": "5caec536c19df5650a5d3dbb70bc5dcc85901004ce1e5acd400fa1ec8b99e9e0"
+  },
+  "candidate/data/card_sources/observations/digimoncard_io/94f2cca3363105fbb1489153c2eb0752519d11159cd2d08bae01e177780f915b.json": {
+    "bytes": 5246,
+    "file": "117ed7833602d5889e6ab19d7b034e7233e6d1b2589526b2a17eefaac808139e.gz",
+    "sha256": "117ed7833602d5889e6ab19d7b034e7233e6d1b2589526b2a17eefaac808139e"
+  },
+  "candidate/data/card_sources/observations/official/1b91ca068b70824224190013ec76d1027415c7617f6d2cce129bab176f86bee7.json": {
+    "bytes": 4564,
+    "file": "475d5f541f2ce84f97049373e2fdafee5606537ad671aba2b5f0b46aa5a6af47.gz",
+    "sha256": "475d5f541f2ce84f97049373e2fdafee5606537ad671aba2b5f0b46aa5a6af47"
+  },
+  "candidate/data/card_sources/observations/official/2a89e72f59c3686e4295313aca6cad141cec6ccfbf76eacc1775ae65da0b2c50.json": {
+    "bytes": 4387,
+    "file": "c7d760d9b0528fab6ba04da177954b52d56cdac20f6bcf53ea361db83320c1f1.gz",
+    "sha256": "c7d760d9b0528fab6ba04da177954b52d56cdac20f6bcf53ea361db83320c1f1"
+  },
+  "candidate/data/card_sources/observations/official/433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a.json": {
+    "bytes": 5474,
+    "file": "3dc8b8761d5b817fb1c1c04809063cd3eeb05e16a4324768c6e5effc370d0e1c.gz",
+    "sha256": "3dc8b8761d5b817fb1c1c04809063cd3eeb05e16a4324768c6e5effc370d0e1c"
+  },
+  "candidate/data/card_sources/observations/official/5d47fc454cbc3326879fc531081f67b862e42753a30e0db3873fdd4439c17175.json": {
+    "bytes": 3278,
+    "file": "04144361acfe97857e3d5f23041dc956ee81981156807f405fc953177144f90c.gz",
+    "sha256": "04144361acfe97857e3d5f23041dc956ee81981156807f405fc953177144f90c"
+  },
+  "candidate/data/card_sources/observations/official/86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a.json": {
+    "bytes": 5466,
+    "file": "923df174478db3640e7cabd0d01151b97b579b6b9838ed68c57e9eb13525be91.gz",
+    "sha256": "923df174478db3640e7cabd0d01151b97b579b6b9838ed68c57e9eb13525be91"
+  },
+  "candidate/data/card_sources/observations/official/88940a47a03d7bb14e5cecd366f9c8fa48b8d0b308522b34da64eae9d684819d.json": {
+    "bytes": 4556,
+    "file": "c75e3cb2891e5952c51be99d86ea0e9db2ba265358678358057714064c7ab5e7.gz",
+    "sha256": "c75e3cb2891e5952c51be99d86ea0e9db2ba265358678358057714064c7ab5e7"
+  },
+  "candidate/data/card_sources/observations/official/8e003d0fc9a3f199c757fe37931979b9e31977a4852b06c03326b21d15a1f2cf.json": {
+    "bytes": 3270,
+    "file": "fd17c7aecab7ee3cd64137f7361961eca1c0574ad4f0a4ca20e83d803f0d5309.gz",
+    "sha256": "fd17c7aecab7ee3cd64137f7361961eca1c0574ad4f0a4ca20e83d803f0d5309"
+  },
+  "candidate/data/card_sources/observations/official/99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6.json": {
+    "bytes": 5474,
+    "file": "18ac2bb5d15c86421b719a8ff6e0f4fb8f64acfd6863d5d5b7a1d5eb5b776fc6.gz",
+    "sha256": "18ac2bb5d15c86421b719a8ff6e0f4fb8f64acfd6863d5d5b7a1d5eb5b776fc6"
+  },
+  "candidate/data/card_sources/scopes/digimoncard_io/full-pool.json": {
+    "bytes": 2222075,
+    "file": "1af47c5bf1e78f2ccbea652c3537903f6d1038a811aa6baa0a7e54527652f69b.gz",
+    "sha256": "1af47c5bf1e78f2ccbea652c3537903f6d1038a811aa6baa0a7e54527652f69b"
+  },
+  "candidate/data/card_sources/scopes/official/full-pool.json": {
+    "bytes": 1960232,
+    "file": "5016aaf5f6ce69ea9acd8642797bf65e12040a4072a97f9c920fc49540404c38.gz",
+    "sha256": "5016aaf5f6ce69ea9acd8642797bf65e12040a4072a97f9c920fc49540404c38"
+  },
+  "candidate/data/cards.json": {
+    "bytes": 4945248,
+    "file": "6102887019bdcf8af5905ee89c9c9dfafb1890513997f0ac2a849eae0945a637.gz",
+    "sha256": "6102887019bdcf8af5905ee89c9c9dfafb1890513997f0ac2a849eae0945a637"
+  },
+  "candidate/data/cards_canonical.json": {
+    "bytes": 53792020,
+    "file": "a242b1d01ee3c00b6206de7d3860556ee85bddd396a4de99be7b23628164416e.gz",
+    "sha256": "a242b1d01ee3c00b6206de7d3860556ee85bddd396a4de99be7b23628164416e"
+  },
+  "images/53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.webp": {
+    "bytes": 142392,
+    "file": "53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0.gz",
+    "sha256": "53865c5601afb4e96466c3acf50b8ee4c73930e7b36baca1211e75453494b9c0"
+  },
+  "images/BT26-033.webp": {
+    "bytes": 91712,
+    "file": "944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2.gz",
+    "sha256": "944efce3635ca8a06c58177cc8f5f84a984f2257449afb4cf7b85453b3eb86c2"
+  },
+  "images/BT26-033_P1.webp": {
+    "bytes": 105512,
+    "file": "7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5.gz",
+    "sha256": "7706db30b4d80f2ae429ec5685e0cc2517f99a995104f27ceb8d0629fd2f7ea5"
+  },
+  "images/BT26-033_P2.webp": {
+    "bytes": 105676,
+    "file": "d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf.gz",
+    "sha256": "d91c5848285b0c5671649f5eb21fd66296224041d1a5d4b0b10e326f0bda32bf"
+  },
+  "images/correction.webp": {
+    "bytes": 88678,
+    "file": "e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167.gz",
+    "sha256": "e99dc76323e0652201f5c8282ecbe61ec10659adcd3c4270a1213b9dc09ee167"
+  },
+  "qa/card_qa.json": {
+    "bytes": 3212719,
+    "file": "bc0c3b4d2e6384e479003ff1d946fbdb6606a4c2020784dfc504a53db0a53df7.gz",
+    "sha256": "bc0c3b4d2e6384e479003ff1d946fbdb6606a4c2020784dfc504a53db0a53df7"
+  },
+  "raw/0209c832fc2123fc7025c77a5286c1b27d9317ca3e230af402586a352906d91c.html": {
+    "bytes": 993575,
+    "file": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a.gz",
+    "sha256": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a"
+  },
+  "raw/4fca85cbc69e60754862825003fa7505ab05dd533ee005a31d3263930458b4fb.html": {
+    "bytes": 1265155,
+    "file": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2.gz",
+    "sha256": "7f17095f2e8091ed9dab3815ea6cd1b8b1bbbedbcdcac31b701b787e399fe0e2"
+  },
+  "raw/ab274510f2c3a7a21b9bbef1888e191dce9c9bc5dddf3ad64a88590dc73f8049.html": {
+    "bytes": 1135388,
+    "file": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0.gz",
+    "sha256": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0"
+  },
+  "reviews/correction-sidecar.json": {
+    "bytes": 3781,
+    "file": "cf580fd55b3c8a68eed3acc54bebbc39808f66e99432b540ff6ef7660a7f56de.gz",
+    "sha256": "cf580fd55b3c8a68eed3acc54bebbc39808f66e99432b540ff6ef7660a7f56de"
+  },
+  "reviews/dual-proposal.json": {
+    "bytes": 3402,
+    "file": "19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3.gz",
+    "sha256": "19a5a3bcaad1fd71e136ab527ce59e6172247072d5ff2c59271a1622e9dface3"
+  },
+  "reviews/dual-review.json": {
+    "bytes": 7341,
+    "file": "5b4ddcec0caa1363de5687098f415dc43702a4e7442071f576da6ea2c523ef63.gz",
+    "sha256": "5b4ddcec0caa1363de5687098f415dc43702a4e7442071f576da6ea2c523ef63"
+  }
+}

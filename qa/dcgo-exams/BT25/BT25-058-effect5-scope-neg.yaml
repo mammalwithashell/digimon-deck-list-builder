@@ -1,0 +1,122 @@
+# NEGATIVE scope witness for BT25-058#effect#5 ("When EFFECTS play or digivolve
+# any Digimon"). Extends the oracle-confirmed BT25-058-effect5.yaml prefix
+# (T1-T4 unchanged; p0 never addresses a slot).
+# Two non-effect Digimon entries happen with Callismon already on the battle
+# area, and NEITHER may fire the clause (DCGO: IsByEffect gate in CanUseCondition):
+#   - T4: p1 hand-plays Biyomon (an opponent's Digimon, by hand, not effect).
+#   - T5: p0 DECLINES DemiDevimon's free effect-digivolve, then hand-plays
+#     Dracomon (ST1-04, cost 3: 3 -> 0). A hand play is not "by effect".
+# Expected: no De-Digivolve pick, no battle prompt; Biyomon stays on the field
+# untouched, Callismon unsuspended, nothing in p1's trash. Any extra
+# SelectPermanentEffect on either side is the divergence.
+# Assertions are left for the oracle backfill.
+card: BT25-058
+clause: BT25-058#effect#5
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): DemiDevimon, the Callismon, Devimon, inert filler
+      - P-198
+      - BT25-058
+      - BT2-074
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped
+      - ST1-05
+      - ST1-05
+      - BT1-014
+      - BT1-014
+      - ST1-02
+      # (10+): p0's T3 / T5 turn draws, the T5 digivolve draw
+      - BT4-014
+      - BT4-014
+      - BT4-010
+      - BT4-010
+    rest: tm-callismon
+  p1:
+    stack:
+      # hand (0-4): Phoenixmon (the T2 overshoot), Biyomon (the battle target), filler
+      - ST1-10
+      - ST1-02
+      - ST1-03
+      - ST1-04
+      - BT1-009
+      # security (5-9): never flipped
+      - ST1-05
+      - BT1-014
+      - BT4-010
+      - ST1-04
+      - ST1-02
+      # (10+): p1's turn draws, in order
+      - BT4-014
+      - ST1-08
+      - ST1-10
+      - BT1-014
+    rest: quiet-opponent-tm
+steps:
+  # T1 (p0, memory 0): hard-play DemiDevimon for 3 (0 -> -3). Its trigger is a
+  # [Start of Your Main Phase] effect and the main phase has already started.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: P-198, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (p1, memory 3): hard-play Phoenixmon for 10 (3 -> -7). p0 opens T3 on 7.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-10, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 7): the main phase opens on 7, so DemiDevimon's "4 or
+  # less" trigger stays silent on both sides. Hard-play Callismon for 13
+  # (7 -> -6); #effect#4 [On Play] suspends and locks Phoenixmon.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: BT25-058, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (p1, memory 6): play Biyomon for 2 (6 -> 4), pass out. Phoenixmon
+  # stays suspended through p1's unsuspend phase (the lock).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): decline the hatch, then decline DemiDevimon's optional
+  # free digivolve (our folded declinable select_hand == OptionalSkill on DCGO).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Hand-play Dracomon: a Digimon played, but NOT by an effect.
+  - actor: 0
+    do: { play: { card: ST1-04, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert: []
+covers:
+  - BT25-058#effect#5
+interaction:
+  id: "probe:BT25-058#effect#5:scope:neg"
+  source: probe
+  kind: negative
+meta:
+  produced_by: 20261010T171324363022Z-meta-six-20261010-a-772c0f

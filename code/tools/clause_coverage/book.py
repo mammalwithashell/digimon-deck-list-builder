@@ -38,6 +38,7 @@ from tools.clause_coverage.card_sources import (  # noqa: E402
 )
 from tools.clause_coverage.extract import DEFAULT_OFFICIAL_JSON  # noqa: E402
 from tools.clause_coverage.extract import run as extract_run  # noqa: E402
+from tools.clause_coverage.semantic_fingerprint import bind_clause_semantics, binding_error  # noqa: E402
 
 
 class UnknownCardIds(ValueError):
@@ -139,7 +140,14 @@ def main(argv: list[str] | None = None) -> int:
     add = sub.add_parser("add")
     add.add_argument("--book", type=Path, default=Path("qa/exam-clause-text.json"))
     add.add_argument("--card-ids", nargs="+", required=True)
+    validate = sub.add_parser("validate", help="Read-only check against fresh source extraction")
+    validate.add_argument("--book", type=Path, required=True)
+    validate.add_argument("--card-ids", nargs="+")
     args = parser.parse_args(argv)
+    if args.cmd == "validate":
+        findings = validate_book(args.book, card_ids=args.card_ids)
+        print(json.dumps(findings))
+        return 1 if findings else 0
     try:
         added = merge_into_book(args.book, args.card_ids)
     except UnknownCardIds as e:
@@ -147,6 +155,40 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(json.dumps({"added": added}))
     return 0
+
+
+def validate_book(book_path: Path, *, card_ids=None, extract=extract_run) -> list[dict]:
+    """Validate stored payloads AND compare with fresh sources, without writing.
+
+    Old append-only books remain historical artifacts until replaced by a
+    separately generated, reviewed extraction. A new hash never blesses one.
+    """
+    data = json.loads(book_path.read_text(encoding="utf-8"))
+    ids = list(card_ids or data.get("cards", []))
+    scope = set(ids)
+    rows = [row for row in data.get("clauses", []) if row.get("card_id") in scope]
+    fresh = extract(ids, "read-only book validation")["clauses"]
+    old_by_id = {row["id"]: row for row in rows}
+    fresh_by_id = {row["id"]: row for row in fresh}
+    findings = []
+    try:
+        verified = bind_clause_semantics(rows)
+    except ValueError as error:
+        return [{"kind": "invalid_book", "reason": str(error)}]
+    for row in verified:
+        original = old_by_id[row["id"]]
+        error = binding_error(row, original)
+        if original.get("semantic_payload") != row["semantic_payload"]:
+            error = "stored semantic payload missing or differs from complete zone"
+        if error:
+            findings.append({"clause_id": row["id"], "kind": "invalid_binding", "reason": error})
+    for cid in sorted(set(old_by_id) | set(fresh_by_id)):
+        old, current = old_by_id.get(cid), fresh_by_id.get(cid)
+        if old is None or current is None:
+            findings.append({"clause_id": cid, "kind": "membership_changed"})
+        elif error := binding_error(current, old):
+            findings.append({"clause_id": cid, "kind": "source_changed", "reason": error})
+    return findings
 
 
 if __name__ == "__main__":

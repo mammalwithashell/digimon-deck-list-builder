@@ -1,0 +1,11 @@
+card: BT4-014
+name: Vermilimon
+kind: digimon
+level: 5
+color: [red]
+cost: 5
+dp: 8000
+form: Ultimate
+attribute: Data
+traits: [Ankylosaur]
+effects: []

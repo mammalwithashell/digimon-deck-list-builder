@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from tools.impact_index import build_impact_index, write_index
+from tools.impact_index import DEFAULT_CARDS_DIR, DEFAULT_OUT, build_impact_index, write_index
 
 
 def write_card(root: Path, set_id: str, card_id: str, body: str) -> Path:
@@ -97,3 +97,42 @@ effects:
     parsed = json.loads(raw)
     assert parsed["verbs"]["draw"] == ["BT99-003"]
     assert parsed["timings"]["on_deletion"] == ["BT99-003"]
+
+
+def test_trigger_if_and_source_trash_protection_predicates_are_indexed(tmp_path: Path):
+    # `trigger_if:` (the trigger qualifier) and `source_card_trash_protection:`
+    # are clause-level predicate containers; their keys must reach the index.
+    cards = tmp_path / "cards"
+    write_card(
+        cards,
+        "bt99",
+        "BT99-004",
+        """
+card: BT99-004
+effects:
+  - when: on_any_digimon_played
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_dp_lte: 4000
+    process:
+      - gain_memory: 1
+  - kind: static
+    source_card_trash_protection: { name_is: X Antibody }
+""",
+    )
+
+    index = build_impact_index(cards)
+
+    assert index["predicates"]["event_target_owner"] == ["BT99-004"]
+    assert index["predicates"]["event_target_dp_lte"] == ["BT99-004"]
+    assert index["predicates"]["name_is"] == ["BT99-004"]
+
+
+def test_committed_index_lists_ad1_001_trigger_if_predicate():
+    # AD1-001's `event_target_owner` appears only under `trigger_if:`.
+    index = build_impact_index(DEFAULT_CARDS_DIR)
+    assert "event_target_owner" in index["cards"]["AD1-001"]["predicates"]
+    assert "AD1-001" in index["predicates"]["event_target_owner"]
+    committed = json.loads(DEFAULT_OUT.read_text(encoding="utf-8"))
+    assert "event_target_owner" in committed["cards"]["AD1-001"]["predicates"]

@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use crate::exam::differ::DiffReport;
 use crate::exam::scenario::Scenario;
 use crate::exam::verdict::{
-    record_interaction_verdict, record_scenario_verdict, sha256_hex, ClauseTextBook,
+    record_interaction_verdict, record_scenario_verdict, ClauseTextBook,
     InteractionBook, Verdict, VerdictStore,
 };
 use crate::job::{JobOutcome, JobResult, DIR_DONE, DIR_FAILED, DIR_JOBS};
@@ -421,13 +421,35 @@ impl VerdictRecorder {
         interaction_denominator: &Path,
     ) -> Result<VerdictRecorder, String> {
         let clause_book = ClauseTextBook::load(clause_text_json)?;
+        for id in clause_book.clause_ids() {
+            clause_book.semantic_sha(&id)?;
+        }
         let store = VerdictStore::load_dir(store_dir)?;
         Ok(VerdictRecorder {
             store,
             clause_book,
             interaction_denominator: interaction_denominator.to_path_buf(),
-            interaction_book: None,
+            interaction_book: Some(InteractionBook::load(interaction_denominator)),
         })
+    }
+
+    /// Freeze and validate the exact source books before submitting any work.
+    pub fn preflight_scenario(&mut self, scenario: &Scenario) -> Result<(), String> {
+        if let Some(interaction) = &scenario.interaction {
+            if interaction.id.starts_with("combo:") { return Ok(()); }
+            let path = &self.interaction_denominator;
+            let book = self.interaction_book.get_or_insert_with(|| InteractionBook::load(path))
+                .as_mut().map_err(|e| e.clone())?;
+            book.pair_clause_source(&interaction.id, &self.clause_book)?;
+            let row = book.get(&interaction.id).ok_or("interaction absent from denominator")?;
+            if !row.card_ids.contains(&scenario.card) || row.kind != interaction.kind.as_str() {
+                return Err("interaction source membership/kind mismatch".into());
+            }
+
+        } else {
+            for id in scenario.covered_clauses() { self.clause_book.semantic_sha(&id)?; }
+        }
+        Ok(())
     }
 
     /// Record one event: one entry per id it is filed under, `Ok(id)` when
@@ -441,7 +463,7 @@ impl VerdictRecorder {
                     .interaction_book
                     .get_or_insert_with(|| InteractionBook::load(denominator))
                 {
-                    Ok(ib) => record_interaction_verdict(
+                    Ok(ib) => ib.pair_clause_source(&id, &self.clause_book).and_then(|()| record_interaction_verdict(
                         &mut self.store,
                         ib,
                         &id,
@@ -450,7 +472,7 @@ impl VerdictRecorder {
                         Some(ev.scenario_path.clone()),
                         ev.reason.clone(),
                         recorded_at.to_string(),
-                    ),
+                    )),
                     Err(e) => Err(format!("refusing interaction {id}: {e}")),
                 }
             } else {
@@ -475,8 +497,15 @@ impl VerdictRecorder {
     pub fn save(&mut self, dir: &Path) -> Result<String, String> {
         let all_ids = self.clause_book.clause_ids();
         for id in &all_ids {
-            if let Some(ct) = self.clause_book.get(id) {
-                self.store.set_current_text_sha(id, &sha256_hex(&ct.text));
+            if let Ok(sha) = self.clause_book.semantic_sha(id) {
+                self.store.set_current_semantic_sha_v1(id, &sha);
+            }
+        }
+        if let Some(Ok(book)) = &self.interaction_book {
+            for id in book.ids() {
+                if let Ok(sha) = book.recording_sha(&id) {
+                    self.store.set_current_semantic_sha_v1(&id, &sha);
+                }
             }
         }
         self.store.save_dir(dir)?;
@@ -558,6 +587,8 @@ pub struct OracleExamOptions<'a> {
     /// On `confirmed`, write the observed state into the scenario's `assert:`.
     pub backfill: bool,
     pub timeout: Duration,
+    /// Claimed-job budget, independent of the result-wait timeout.
+    pub job_timeout: u64,
     pub poll: Duration,
 }
 
@@ -701,6 +732,17 @@ pub fn backfill_message(scenario: &Path, dropped: &[String]) -> String {
     m
 }
 
+fn oracle_job_json(job: &mut crate::exam::job_spec::ExamJobSpec, job_timeout: u64) -> Result<String, String> {
+    // Match LoopConfig's positive, signed-32-bit execution-timeout contract.
+    if !(1..=2147483647).contains(&job_timeout) {
+        return Err("job timeout must be within [1, 2147483647] seconds".into());
+    }
+    job.limits.timeout_seconds = job_timeout;
+    serde_json::to_string_pretty(job)
+        .map(|json| json + "\n")
+        .map_err(|e| format!("serializing job {}: {e}", job.job_id))
+}
+
 /// One call: preflight, then [`run_oracle_exam_loaded`] with the card data
 /// and deck book loaded from `opts`.
 pub fn run_oracle_exam(scenario: &Path, opts: &OracleExamOptions) -> Result<OracleExamResult, String> {
@@ -730,6 +772,15 @@ pub fn run_oracle_exam_loaded(
     let text = std::fs::read_to_string(scenario)
         .map_err(|e| format!("reading {}: {e}", scenario.display()))?;
     let s = Scenario::from_yaml(&text)?;
+    let mut recorder = match (opts.verdicts_dir, opts.clause_text_json) {
+        (Some(dir), Some(source)) => {
+            let mut recorder = VerdictRecorder::load(dir, source, opts.interaction_denominator)?;
+            recorder.preflight_scenario(&s)?;
+            Some(recorder)
+        }
+        (Some(_), None) => return Err("recording requires a complete semantic clause book".into()),
+        _ => None,
+    };
     let lowered = crate::exam::run::lower_and_run(
         &s,
         ordered_deck(&s.decks.p0, book)?,
@@ -754,7 +805,7 @@ pub fn run_oracle_exam_loaded(
         .file_stem()
         .and_then(|x| x.to_str())
         .ok_or_else(|| format!("unnamed scenario {}", scenario.display()))?;
-    let job = crate::exam::job_spec::build_exam_job(
+    let mut job = crate::exam::job_spec::build_exam_job(
         stem,
         &s,
         book.resolve(&s.decks.p0.rest)?,
@@ -762,9 +813,7 @@ pub fn run_oracle_exam_loaded(
         &lowered.lowered_steps,
         &lowered.lowered_owners,
     )?;
-    let json = serde_json::to_string_pretty(&job)
-        .map_err(|e| format!("serializing job {}: {e}", job.job_id))?
-        + "\n";
+    let json = oracle_job_json(&mut job, opts.job_timeout)?;
 
     let mut result = OracleExamResult {
         scenario: scenario.display().to_string(),
@@ -888,8 +937,7 @@ pub fn run_oracle_exam_loaded(
         });
     }
 
-    if let (Some(dir), Some(ctj)) = (opts.verdicts_dir, opts.clause_text_json) {
-        let mut recorder = VerdictRecorder::load(dir, ctj, opts.interaction_denominator)?;
+    if let (Some(dir), Some(recorder)) = (opts.verdicts_dir, recorder.as_mut()) {
         let recorded_at = chrono::Utc::now().to_rfc3339();
         let dcgo_build = build_commit(opts.build);
         for r in recorder.record(&event, &recorded_at) {
@@ -1341,8 +1389,47 @@ mod verdict_event_tests {
 
     fn recorder(dir: &std::path::Path) -> VerdictRecorder {
         let book = dir.join("clauses.json");
-        std::fs::write(&book, r#"{"clauses":[{"id":"BT7-056#effect#0","label":"[On Play]","text":"t"}]}"#).unwrap();
+        std::fs::write(&book, crate::exam::semantic_fingerprint::fresh_clause_json(r#"{"clauses":[{"id":"BT7-056#effect#0","label":"[On Play]","text":"t"}]}"#)).unwrap();
         VerdictRecorder::load(&dir.join("store"), &book, &dir.join("no-denominator.json")).unwrap()
+    }
+
+    #[test]
+    fn offline_and_manual_recording_require_and_freeze_the_same_source_pair() {
+        use crate::exam::semantic_fingerprint::{fresh_clause_json, digest};
+        use crate::exam::verdict::set_interaction_verdict;
+        let dir = tempfile::tempdir().unwrap();
+        let cp = dir.path().join("clauses.json");
+        let ip = dir.path().join("interactions.json");
+        let a = fresh_clause_json(r#"{"clauses":[{"id":"BT7-056#effect#0","text":"","kind":"timing","timings":["When Attacking"],"keyword":null}]}"#);
+        let b = a.replace("When Attacking", "On Play");
+        let b = fresh_clause_json(&b);
+        let a_book = ClauseTextBook::from_json(&a,"a").unwrap();
+        let iid = "probe:BT7-056#effect#0:timing_gate:neg";
+        let payload = serde_json::json!(["digimon-interaction-semantics",1,iid,["BT7-056"],"probe","negative","timing_gate","families@1",a_book.semantic_sha("BT7-056#effect#0").unwrap()]);
+        let denominator = serde_json::json!({"version":1,"interactions":{iid:{"source":"probe","card_ids":["BT7-056"],"clause_id":"BT7-056#effect#0","family":"timing_gate","family_version":"families@1","kind":"negative","gating":true,"text_sha256":"","semantic_fingerprint_version":1,"semantic_sha256":digest(&payload).unwrap(),"semantic_payload":payload}}}).to_string();
+        std::fs::write(&cp,&b).unwrap();
+        std::fs::write(&ip,&denominator).unwrap();
+        let scenario = scenario(&format!("interaction: {{ id: '{iid}', source: probe, kind: negative }}\n"));
+        let ev = VerdictEvent::from_diff(&scenario,&clean(),None,"x.yaml".into());
+        let mut rec = VerdictRecorder::load(&dir.path().join("store"),&cp,&ip).unwrap();
+        rec.store.last_updated = "fixed".into();
+        let before = rec.store.to_json().unwrap();
+        let error = rec.preflight_scenario(&scenario).unwrap_err();
+        assert!(error.contains("different source snapshots"), "{error}");
+        assert!(rec.record(&ev,"now")[0].is_err());
+        assert_eq!(rec.store.to_json().unwrap(),before);
+        let mut ib = InteractionBook::load(&ip).unwrap();
+        assert!(ib.pair_clause_source(iid,&ClauseTextBook::load(&cp).unwrap()).is_err());
+        assert!(set_interaction_verdict(&mut rec.store,&ib,iid,&[],Verdict::Confirmed,None,None,"now".into()).is_err());
+        assert_eq!(rec.store.to_json().unwrap(),before);
+        std::fs::write(&cp,&a).unwrap();
+        let mut frozen = VerdictRecorder::load(&dir.path().join("store"),&cp,&ip).unwrap();
+        frozen.preflight_scenario(&scenario).unwrap();
+        std::fs::write(&cp,&b).unwrap();
+        std::fs::write(&ip,"replaced during evaluation").unwrap();
+        assert!(frozen.record(&ev,"now")[0].is_ok());
+        ib.pair_clause_source(iid,&a_book).unwrap();
+        set_interaction_verdict(&mut rec.store,&ib,iid,&[],Verdict::Confirmed,None,None,"now".into()).unwrap();
     }
 
     #[test]
@@ -1459,9 +1546,9 @@ mod oracle_exam_tests {
         let clauses = work.path().join("clauses.json");
         std::fs::write(
             &clauses,
-            r#"{"clauses":[
+            crate::exam::semantic_fingerprint::fresh_clause_json(r#"{"clauses":[
             {"id":"ST23-06#effect#0","label":"[On Play]","text":"a"},
-            {"id":"ST23-04#effect#0","label":"[On Play]","text":"b"}]}"#,
+            {"id":"ST23-04#effect#0","label":"[On Play]","text":"b"}]}"#),
         )
         .unwrap();
         Bench {
@@ -1487,6 +1574,7 @@ mod oracle_exam_tests {
                 interaction_denominator: &self.none,
                 backfill: true,
                 timeout,
+                job_timeout: 180,
                 poll: Duration::from_millis(20),
             }
         }
@@ -1655,5 +1743,74 @@ mod oracle_exam_tests {
         let err = run_oracle_exam(&sc, &b.opts(Duration::from_secs(1))).unwrap_err();
         assert!(err.contains("no live player"), "{err}");
         assert_eq!(std::fs::read_dir(b.root.path().join("jobs")).unwrap().count(), 0);
+    }
+}
+
+#[cfg(test)]
+mod job_timeout_payload_tests {
+    use super::*;
+    use crate::exam::job_spec::{ExamDeckOrder, ExamJobSpec, ScriptedInput};
+    use crate::job::{JobDecks, JobLimits};
+
+    fn fixture() -> ExamJobSpec {
+        ExamJobSpec {
+            job_id: "exam-timeout-contract".into(), policy: "scripted".into(),
+            decks: JobDecks { p0: vec!["BT16-033".into()], p1: vec!["EX12-065".into()] },
+            deck_order: ExamDeckOrder { p0: vec!["BT16-033".into()], p1: vec![] },
+            inputs: vec![ScriptedInput { actor: 1, expect_prompt: Some("main_phase".into()),
+                action_id: Some(0), ..ScriptedInput::default() }],
+            first_player: 0, seed: 71,
+            limits: JobLimits { max_turns: 40, timeout_seconds: 180 },
+        }
+    }
+
+    #[test]
+    fn configured_limit_changes_only_the_job_deadline() {
+        let mut job = fixture();
+        let mut expected = serde_json::to_value(&job).unwrap();
+        expected["limits"]["timeout_seconds"] = serde_json::json!(600);
+        let json = oracle_job_json(&mut job, 600).unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&json).unwrap(), expected);
+        assert_eq!(job_limit_secs(&json), 600, "claim-age reader must consume the configured deadline");
+        assert!(json.ends_with('\n'));
+    }
+
+    #[test]
+    fn default_serialization_is_byte_identical() {
+        let mut job = fixture();
+        let original = serde_json::to_string_pretty(&job).unwrap() + "\n";
+        assert_eq!(oracle_job_json(&mut job, 180).unwrap(), original);
+    }
+
+    #[test]
+    fn smallest_and_largest_configured_deadlines_survive_json() {
+        for value in [1, 2147483647] {
+            let mut job = fixture();
+            assert_eq!(job_limit_secs(&oracle_job_json(&mut job, value).unwrap()), value);
+        }
+    }
+
+    #[test]
+    fn invalid_api_deadlines_refuse_without_mutating_job() {
+        for value in [0, 2147483648, u64::MAX] {
+            let mut job = fixture();
+            let before = serde_json::to_value(&job).unwrap();
+            assert!(oracle_job_json(&mut job, value).unwrap_err().contains("job timeout"));
+            assert_eq!(serde_json::to_value(&job).unwrap(), before);
+        }
+    }
+
+    #[test]
+    fn oracle_wait_is_not_replaced_by_the_job_deadline() {
+        let opts = OracleExamOptions {
+            root: Path::new("unused"), build: None, cards_json: Path::new("unused.json"),
+            decks: None, verdicts_dir: None, clause_text_json: None,
+            interaction_denominator: Path::new("unused.json"), backfill: false,
+            timeout: Duration::from_secs(720), job_timeout: 600, poll: Duration::from_secs(1),
+        };
+        let mut job = fixture();
+        assert_eq!(job_limit_secs(&oracle_job_json(&mut job, opts.job_timeout).unwrap()), 600);
+        assert_eq!(opts.timeout, Duration::from_secs(720));
+        assert_eq!(opts.poll, Duration::from_secs(1));
     }
 }

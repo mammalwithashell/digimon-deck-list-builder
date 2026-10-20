@@ -1,0 +1,351 @@
+[
+  {
+    "extracted": {
+      "attribute": "Social",
+      "card_id": "P-190",
+      "card_type": "Digimon",
+      "colors": [
+        "Blue"
+      ],
+      "dp": 1000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "cost": 0,
+          "from_level": 2,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "dp": 1000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 3,
+          "name": "Tweetmon",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+            },
+            {
+              "label": "Effect",
+              "text": "[On Play] ＜Draw 1＞"
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] ＜Draw 1＞"
+            },
+            {
+              "label": "Link DP",
+              "text": "+2000 DP"
+            },
+            {
+              "label": "Link Condition",
+              "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+            },
+            {
+              "label": "Link Effect",
+              "text": "[When Linking] ＜Draw 1＞"
+            }
+          ]
+        }
+      ],
+      "form": "Stnd./Appmon",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 3,
+      "name": "Tweetmon",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522903",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/P-190_P1.png?260529",
+        "printing_id": "P-190_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "P",
+      "rule_grants": {
+        "attributes": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] ＜Draw 1＞"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] ＜Draw 1＞"
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] ＜Draw 1＞"
+        }
+      ],
+      "type": "Tweet"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "303729b80e3e97cb383cf9103cbfff44b271f707aa77953c3755bdacc2278942",
+    "parser_version": "official-html-v4",
+    "raw_payload_digest": "b1d4abd15735a65817368737e389619990b4c076ead2752fd2d4a468bdbd40b7",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522903:P-190:P-190_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522903"
+  },
+  {
+    "extracted": {
+      "attribute": "Social",
+      "card_id": "P-190",
+      "card_type": "Digimon",
+      "colors": [
+        "Blue"
+      ],
+      "dp": 1000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "cost": 0,
+          "from_level": 2,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "dp": 1000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 3,
+          "name": "Tweetmon",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+            },
+            {
+              "label": "Effect",
+              "text": "[On Play] ＜Draw 1＞"
+            },
+            {
+              "label": "Link DP",
+              "text": "DP+2000"
+            },
+            {
+              "label": "Link Condition",
+              "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+            },
+            {
+              "label": "Link Effect",
+              "text": "[When Linking] ＜Draw 1＞"
+            }
+          ]
+        }
+      ],
+      "form": "Stnd./Appmon",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 3,
+      "name": "Tweetmon",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522203",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/P-190_P2.png?260529",
+        "printing_id": "P-190_P2"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "P",
+      "rule_grants": {
+        "attributes": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] ＜Draw 1＞"
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+2000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] ＜Draw 1＞"
+        }
+      ],
+      "type": "Tweet"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "466dc8cf00b58df9ffe7e0912c85eb8c0261efcef89d2daff721a9f41daa8dec",
+    "parser_version": "official-html-v4",
+    "raw_payload_digest": "93be88410566a924d8e70f3401548eeb6de7b654bd23529b56b69d70ff30d379",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522203:P-190:P-190_P2",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522203"
+  },
+  {
+    "extracted": {
+      "attribute": "Social",
+      "card_id": "P-190",
+      "card_type": "Digimon",
+      "colors": [
+        "Blue"
+      ],
+      "dp": 1000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "cost": 0,
+          "from_level": 2,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Blue"
+          ],
+          "dp": 1000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 3,
+          "name": "Tweetmon",
+          "play_cost": 3,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+            },
+            {
+              "label": "Effect",
+              "text": "[On Play] ＜Draw 1＞"
+            },
+            {
+              "label": "Inherited Effect",
+              "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] ＜Draw 1＞"
+            },
+            {
+              "label": "Link DP",
+              "text": "+2000 DP"
+            },
+            {
+              "label": "Link Condition",
+              "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+            },
+            {
+              "label": "Link Effect",
+              "text": "[When Linking] ＜Draw 1＞"
+            }
+          ]
+        }
+      ],
+      "form": "Stnd./Appmon",
+      "grade_evolution_routes": [],
+      "layout": "single",
+      "level": 3,
+      "name": "Tweetmon",
+      "play_cost": 3,
+      "printing": {
+        "alternate_art": false,
+        "category_id": "522901",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/P-190.png?260529",
+        "printing_id": "P-190"
+      },
+      "printing_field_gaps": [],
+      "qa": [],
+      "rarity": "P",
+      "rule_grants": {
+        "attributes": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] ＜Draw 1＞"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] ＜Draw 1＞"
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] ＜Draw 1＞"
+        }
+      ],
+      "type": "Tweet"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "cd5824a01591de57e5b6e28180c15de2f217f4ca43a6e816f581b3c8c6020942",
+    "parser_version": "official-html-v4",
+    "raw_payload_digest": "90db2254846cdcb5174b6348164c827def5a0dcf75e56e8b60d6cd3be9eeeb5c",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522901:P-190:P-190",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+  }
+]

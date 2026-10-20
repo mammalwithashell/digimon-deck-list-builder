@@ -5,10 +5,11 @@ use std::path::{Path, PathBuf};
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::cards::build_registry;
-use digimon_engine::recorder::cards_json_content_hash;
+use digimon_engine::recorder::{cards_json_content_hash, VerificationReplayRecording};
 use digimon_engine::replay_corpus::{
     bless_replay_corpus_dir, convert_training_recording_artifact, generate_greedy_replay_corpus,
-    verify_replay_corpus_dir, write_replay_corpus_entries, ConversionOutcome, ReplayCorpusConfig,
+    regenerate_greedy_replay, verify_replay_corpus_dir, write_replay_corpus_entries,
+    ConversionOutcome, ReplayCorpusConfig,
     ReplayCorpusEntry, DEFAULT_REPLAY_CORPUS_BASE_SEED, DEFAULT_REPLAY_CORPUS_MAX_STEPS_PER_GAME,
     DEFAULT_TIER2_REPLAY_CORPUS_GAMES,
 };
@@ -56,6 +57,7 @@ fn run() -> Result<(), String> {
         "convert-runs" => convert_runs(&args[1..]),
         "verify" => verify(&args[1..]),
         "bless" => bless(&args[1..]),
+        "regenerate" => regenerate(&args[1..]),
         other => Err(format!("unknown command {other:?}")),
     }
 }
@@ -125,6 +127,56 @@ fn bless(args: &[String]) -> Result<(), String> {
         let source = retired.source_file.unwrap_or_else(|| "unknown".to_string());
         println!("retired {source}: {}", retired.reason);
     }
+    Ok(())
+}
+
+/// Re-record the ONE golden in `--goldens` whose file name contains `--id`
+/// from its inline decks and seed (greedy vs greedy), overwriting it in place.
+fn regenerate(args: &[String]) -> Result<(), String> {
+    let goldens = required_path(args, "--goldens")?;
+    let cards_path = required_path(args, "--cards")?;
+    let id = value_after(args, "--id").ok_or_else(|| "missing --id".to_string())?;
+    let max_steps = match value_after(args, "--max-steps") {
+        Some(raw) => Some(
+            raw.parse::<u32>()
+                .map_err(|err| format!("--max-steps {raw:?}: {err}"))?,
+        ),
+        None => None,
+    };
+
+    let mut matches = Vec::new();
+    for entry in fs::read_dir(&goldens).map_err(|err| format!("read {}: {err}", goldens.display()))? {
+        let path = entry.map_err(|err| err.to_string())?.path();
+        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        if path.is_file() && name.ends_with(".replay.json") && name.contains(id) {
+            matches.push(path);
+        }
+    }
+    let [path] = matches.as_slice() else {
+        return Err(format!(
+            "--id {id:?} must match exactly one golden in {}; matched {}",
+            goldens.display(),
+            matches.len()
+        ));
+    };
+
+    let text = fs::read_to_string(path).map_err(|err| format!("read {}: {err}", path.display()))?;
+    let recording: VerificationReplayRecording =
+        serde_json::from_str(&text).map_err(|err| format!("parse {}: {err}", path.display()))?;
+    let cards_json =
+        fs::read(&cards_path).map_err(|err| format!("read {}: {err}", cards_path.display()))?;
+    let card_data = CardData::load_from_file(&cards_path)?;
+    let regenerated = regenerate_greedy_replay(&recording, &cards_json, &card_data, max_steps)
+        .map_err(|err| err.to_string())?;
+    let out = serde_json::to_string_pretty(&regenerated).map_err(|err| err.to_string())?;
+    fs::write(path, format!("{out}\n")).map_err(|err| format!("write {}: {err}", path.display()))?;
+    println!(
+        "regenerated {} ({} -> {} action(s), seed {:?})",
+        path.display(),
+        recording.actions.len(),
+        regenerated.actions.len(),
+        regenerated.seed
+    );
     Ok(())
 }
 
@@ -276,6 +328,6 @@ fn slug(path: &Path) -> String {
 
 fn usage() {
     eprintln!(
-        "usage:\n  replay_corpus generate --deck-library data/deck_library.json --cards data/cards.json --out qa/replay-goldens [--games N] [--max-steps N] [--seed N]\n  replay_corpus verify --goldens qa/replay-goldens --cards data/cards.json\n  replay_corpus bless --goldens qa/replay-goldens --cards data/cards.json [--retired qa/replay-goldens/retired]\n  replay_corpus convert-runs --runs runs --cards data/cards.json --out qa/replay-goldens [--limit N]"
+        "usage:\n  replay_corpus generate --deck-library data/deck_library.json --cards data/cards.json --out qa/replay-goldens [--games N] [--max-steps N] [--seed N]\n  replay_corpus verify --goldens qa/replay-goldens --cards data/cards.json\n  replay_corpus bless --goldens qa/replay-goldens --cards data/cards.json [--retired qa/replay-goldens/retired]\n  replay_corpus regenerate --goldens qa/replay-goldens --cards data/cards.json --id <file-name substring> [--max-steps N]\n  replay_corpus convert-runs --runs runs --cards data/cards.json --out qa/replay-goldens [--limit N]"
     );
 }

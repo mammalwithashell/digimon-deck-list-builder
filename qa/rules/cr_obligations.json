@@ -4307,11 +4307,12 @@
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it. The activation-time re-check is not where a trigger is decided: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER).",
+      "note": "Trigger-condition qualifier ('When one of your Digimon with 4000 DP or less is played'): a sibling [On Play] raising the played Digimon to 6000 DP first makes the pending observer unable to activate; control ordering activates it. The activation-time re-check is not where a trigger is decided: 'When any of your [TS] trait Digimon win a battle' whose winner had no [TS] never triggers, though a sibling in the battle's pool digivolves the winner into a [TS] Digimon before it would activate (G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER). On the security-check path, where the check's triggers are captured at the reveal (§13-1-8-2, Q6813) and the [Security] effect activates first (§15-16-10-2): a '[Your Turn] When one of your Digimon with 6000 DP or more checks security' Tamer captured at a 7000 DP check cannot activate once the [Security] effect has taken the checker to 4000 DP (ch11_14_attack_procedure::security_check_trigger_whose_condition_lapsed_before_activation_cannot_activate; engine-level companion security_check_timing::security_check_trigger_qualifier_decided_at_capture_rechecked_at_activation). A later check is a new event decided on its own (15-4-2-4).",
       "status": "proven",
       "tests": [
         "ch15_04_effect_states::pending_effect_whose_trigger_condition_lapsed_cannot_activate",
-        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates"
+        "ch15_08_effect_categories::battle_result_trigger_condition_false_at_the_battle_never_activates",
+        "ch11_14_attack_procedure::security_check_trigger_whose_condition_lapsed_before_activation_cannot_activate"
       ],
       "text": "When a card with an effect that's pending activation no longer meets the trigger conditions of that effect before it activates, the effect can no longer be activated."
     },

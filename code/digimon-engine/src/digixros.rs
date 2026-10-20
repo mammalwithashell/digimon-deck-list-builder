@@ -863,6 +863,9 @@ impl Game {
             index: idx as u8,
         };
         let perm = self.player_mut(player).battle_area.remove(idx);
+        if self.security_resolution.is_some() {
+            self.shift_effect_queue_after_battle_area_remove(player, idx as u8);
+        }
         // Removing from `battle_area` shifts every later permanent (same player)
         // down by one, invalidating any captured handle with a higher index — in
         // particular the parked replacement's / pending selection's

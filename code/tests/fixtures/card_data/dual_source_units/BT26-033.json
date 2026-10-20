@@ -1,0 +1,419 @@
+{
+  "snapshot_sha256": "d4462bbbd509cf657f4fbe23ada7068b1fe4ef16c375f65d79e9d52d271889ed",
+  "observations": [
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT26-033",
+        "card_type": "Digimon/Tamer",
+        "colors": [
+          "Yellow",
+          "Red"
+        ],
+        "dp": 13000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "cost": 5,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "dp": 13000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "Jupitermon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Raid＞ ＜Alliance＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5.\n[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave."
+              }
+            ]
+          },
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Wide Plasment",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "For each of your security cards, add 1 to this card's use cost.\n＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete all of your opponent's Digimon with the lowest DP. Then, ＜Recovery +1＞."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 2
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "dual",
+        "level": 6,
+        "name": "Jupitermon",
+        "play_cost": null,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522038",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-033_P2.png?260529",
+          "printing_id": "BT26-033_P2"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, the play cost will be reduced by a total of 10.\nRelated Cards",
+            "date": "Aug. 18, 2026",
+            "number": "Q7004",
+            "question": "If I use this card's [When Digivolving] effect to play [BT25-044 Junomon], can I activate [BT25-044 Junomon]'s 1st effect and reduce the play cost by a total of 10?"
+          },
+          {
+            "answer": "This effect triggers and can be activated when a Digimon or Tamer specified by it leaves the battle area under the specified conditions.\nWhen activated, all Digimon and Tamers matching its trigger conditions are prevented from leaving.",
+            "date": "Sep. 18, 2026",
+            "number": "Q7005",
+            "question": "What does this card's [All Turns] effect do, exactly?"
+          },
+          {
+            "answer": "Yes, it is always active.\nThe use cost is constantly fluctuating, and the card is referenced as an Option card with that cost.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7006",
+            "question": "Is Wide Plasment's first effect always active?"
+          }
+        ],
+        "rarity": "SR",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Raid＞ ＜Alliance＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5.\n[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave."
+          },
+          {
+            "label": "DUAL Effect",
+            "text": "For each of your security cards, add 1 to this card's use cost.\n＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete all of your opponent's Digimon with the lowest DP. Then, ＜Recovery +1＞."
+          },
+          {
+            "label": "DUAL Rule",
+            "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+          }
+        ],
+        "type": "Shaman/Olympos XII/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "433305e113b52f700accd98f8a848c1306475543915e0219c781f813ab20c49a",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522038:BT26-033:BT26-033_P2",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    },
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT26-033",
+        "card_type": "Digimon/Tamer",
+        "colors": [
+          "Yellow",
+          "Red"
+        ],
+        "dp": 13000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "cost": 5,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "dp": 13000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "Jupitermon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Raid＞ ＜Alliance＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5.\n[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave."
+              }
+            ]
+          },
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Wide Plasment",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "For each of your security cards, add 1 to this card's use cost.\n＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete all of your opponent's Digimon with the lowest DP. Then, ＜Recovery +1＞."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 2
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "dual",
+        "level": 6,
+        "name": "Jupitermon",
+        "play_cost": null,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522038",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-033.png?260529",
+          "printing_id": "BT26-033"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, the play cost will be reduced by a total of 10.\nRelated Cards",
+            "date": "Aug. 18, 2026",
+            "number": "Q7004",
+            "question": "If I use this card's [When Digivolving] effect to play [BT25-044 Junomon], can I activate [BT25-044 Junomon]'s 1st effect and reduce the play cost by a total of 10?"
+          },
+          {
+            "answer": "This effect triggers and can be activated when a Digimon or Tamer specified by it leaves the battle area under the specified conditions.\nWhen activated, all Digimon and Tamers matching its trigger conditions are prevented from leaving.",
+            "date": "Sep. 18, 2026",
+            "number": "Q7005",
+            "question": "What does this card's [All Turns] effect do, exactly?"
+          },
+          {
+            "answer": "Yes, it is always active.\nThe use cost is constantly fluctuating, and the card is referenced as an Option card with that cost.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7006",
+            "question": "Is Wide Plasment's first effect always active?"
+          }
+        ],
+        "rarity": "SR",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Raid＞ ＜Alliance＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5.\n[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave."
+          },
+          {
+            "label": "DUAL Effect",
+            "text": "For each of your security cards, add 1 to this card's use cost.\n＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete all of your opponent's Digimon with the lowest DP. Then, ＜Recovery +1＞."
+          },
+          {
+            "label": "DUAL Rule",
+            "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+          }
+        ],
+        "type": "Shaman/Olympos XII/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "86c1281dcb9cd95413cdb7c7f1363bc6acf03acd5faabecc34154c918214991a",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522038:BT26-033:BT26-033",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    },
+    {
+      "extracted": {
+        "attribute": "Vaccine",
+        "card_id": "BT26-033",
+        "card_type": "Digimon/Tamer",
+        "colors": [
+          "Yellow",
+          "Red"
+        ],
+        "dp": 13000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "cost": 5,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "dp": 13000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "Jupitermon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Raid＞ ＜Alliance＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5.\n[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave."
+              }
+            ]
+          },
+          {
+            "colors": [
+              "Yellow",
+              "Red"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Wide Plasment",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "For each of your security cards, add 1 to this card's use cost.\n＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete all of your opponent's Digimon with the lowest DP. Then, ＜Recovery +1＞."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 2
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "dual",
+        "level": 6,
+        "name": "Jupitermon",
+        "play_cost": null,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522038",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT26-033_P1.png?260529",
+          "printing_id": "BT26-033_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "Yes, the play cost will be reduced by a total of 10.\nRelated Cards",
+            "date": "Aug. 18, 2026",
+            "number": "Q7004",
+            "question": "If I use this card's [When Digivolving] effect to play [BT25-044 Junomon], can I activate [BT25-044 Junomon]'s 1st effect and reduce the play cost by a total of 10?"
+          },
+          {
+            "answer": "This effect triggers and can be activated when a Digimon or Tamer specified by it leaves the battle area under the specified conditions.\nWhen activated, all Digimon and Tamers matching its trigger conditions are prevented from leaving.",
+            "date": "Sep. 18, 2026",
+            "number": "Q7005",
+            "question": "What does this card's [All Turns] effect do, exactly?"
+          },
+          {
+            "answer": "Yes, it is always active.\nThe use cost is constantly fluctuating, and the card is referenced as an Option card with that cost.",
+            "date": "Aug. 18, 2026",
+            "number": "Q7006",
+            "question": "Is Wide Plasment's first effect always active?"
+          }
+        ],
+        "rarity": "SR",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[TS] trait: Cost 4"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Raid＞ ＜Alliance＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.)\n[When Digivolving] Add your top security card to the hand. Then, if it's your turn, you may play or use 1 [Iliad] or [TS] trait card from your hand with the cost reduced by 5.\n[All Turns] When any of your [TS] trait Digimon or Tamers would leave the battle area, by placing this Digimon's top stacked card as the bottom security card, they don't leave."
+          },
+          {
+            "label": "DUAL Effect",
+            "text": "For each of your security cards, add 1 to this card's use cost.\n＜Use Req. ([TS] trait)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete all of your opponent's Digimon with the lowest DP. Then, ＜Recovery +1＞."
+          },
+          {
+            "label": "DUAL Rule",
+            "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+          }
+        ],
+        "type": "Shaman/Olympos XII/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "99e0a67c197a1b395cf3dd5db572d42a1a94797fd5acbfe1e82c479c191f85d6",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "4d3d46671b103bd1d416103bcfb5b0f1b69acd0d9c9ea7aa38b3944c769214a0",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522038:BT26-033:BT26-033_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522038"
+    }
+  ]
+}

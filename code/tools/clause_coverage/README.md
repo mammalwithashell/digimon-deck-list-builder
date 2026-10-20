@@ -407,3 +407,56 @@ Exactly the two entry points above. No scenario running, no assertions
 against expected coverage, no DCGO integration/build/launch. Never runs
 `dcgo-harness`, never writes under `D:\` or
 `C:\Users\james\AppData\LocalLow\DCGO\` (recordings are read-only input).
+
+## Versioned semantic exam binding
+
+New extraction rows carry `semantic_fingerprint_version: 1`, `semantic_sha256`,
+and the complete `semantic_payload`. A clause payload is the compact UTF-8 JSON
+array `["digimon-clause-semantics",1,card_id,zone,target_index,span,zone_spans]`.
+A span is `[kind,timings,keyword_or_null,text]`. All spans in the same zone,
+including empty timing spans, participate in extractor/positional order. CRLF
+and bare CR normalize to LF recursively; no other whitespace, marker order,
+case, punctuation or Unicode normalization occurs. Labels and source/image
+paths are provenance and do not affect semantic identity.
+
+A probe binds its identity, sorted card membership, source, kind, family,
+family version and clause semantic hash. Q&A uses a separate tag with Q ID,
+sorted membership, kind and complete normalized question-plus-answer content.
+The denominator digest includes full membership, gating and row contents;
+changing fingerprints never removes interactions or changes promotion policy.
+
+`text_sha256` remains the original body-only diagnostic. Current verdicts need
+recognized semantic metadata. Missing, unknown or mismatched bindings report
+`unmeasured` with the stored verdict and full historical record retained.
+New verdict stores use major version 3, rejected by old v1/v2 readers. Historical
+v1/v2 rows remain readable, but are not automatically upgraded into evidence.
+A top-level `legacy_unbound` ID list persists that boundary through v3 rewrites,
+even if old rows carry accidental matching semantic metadata. Fresh recording
+clears only its own ID; raw historical row fields are retained unchanged.
+A legacy result can only be reconciled separately from archived original source
+and scenario evidence; today's body hash is insufficient.
+
+`book add` retains its append-only behavior. Use `python -m
+tools.clause_coverage.book validate --book PATH --card-ids ID ...` for a read-only
+comparison against fresh current extraction. A stale book needs a fresh,
+side-by-side extraction artifact and review. Driver preflight blocks oracle
+work on validation failure; the Rust recorder checks complete payloads and
+retains the same loaded source books through submission and recording.
+
+
+Interaction readiness must pair an artifact with current source, not merely
+with its own old verdict. `bind_interactions` freezes fresh complete clause
+rows and current Q&A once per join, checks each probe's governing clause hash,
+and checks each Q&A answer plus full card membership. Unavailable current
+source fails closed. Clause binding exports its exact extracted snapshot so
+readiness, candidate collection and state seeding can reuse it; custom data
+paths must also supply the corresponding current Q&A path. Historical rows
+and gating counts remain in the report when invalidated.
+
+Rust probe recording requires a private verified source-pair capability on
+`InteractionBook`, established against a loaded complete `ClauseTextBook`.
+The common record/set boundary refuses an unpaired probe. Direct oracle,
+offline sidecar, and manual setters share that boundary. Offline execution
+preflights source pairs before evaluating any scenario; the recorder freezes
+both books on load, so later file replacement cannot change the evidence
+recorded. Combo provenance remains non-gating and unchanged.

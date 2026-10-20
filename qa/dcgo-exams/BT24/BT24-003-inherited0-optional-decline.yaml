@@ -1,0 +1,90 @@
+# Book: qa/dcgo-exams/BT26/ts_jupitermon_pool.json.
+# Extends BT24-003-inherited0.yaml's hatch / breeding evolution / move prefix.
+# Adversarial witness: decline Tsunomon with TWO legal Shaman cards in hand,
+# then remove security again in the SAME turn and accept its new trigger.
+# The first decline must leave the carrier, hand and memory unchanged; it must
+# not consume the inherited once-per-turn activation.
+# Hard-play one Aegiomon (hand.0 pins one identical opening copy), accept its
+# On Play security cost, and decline the free Tamer. This second removal
+# occurs with memory -1 but before the turn can finish resolving effects.
+# Tsunomon belongs to the OTHER permanent, Elecmon; only that carrier may
+# evolve into the remaining Aegiomon for 2 - 1 = 1 memory. Decline its WD.
+# No attack occurs, so neither Barrier nor Elecmon's inherited effect fires.
+#
+# Probe observations (sim-only, NOT oracle confirmation):
+# Before step 7: Hand optional=true, two BT24-034 candidates, memory 4,
+# security 4, BT25-030 over BT24-003. Step 7 explicitly declines this prompt.
+# Before step 11: our engine has NO pending prompt and has advanced to turn 4,
+# memory -1, security 3, with Elecmon unchanged and BT24-034 still in hand.
+# Steps 11/12/13 intentionally remain ordinary shared selections: the adapter
+# tolerates them as no-live-prompt rows, but DCGO must answer the renewed
+# Tsunomon OptionalSkill, hand pick, then Aegiomon's WD OptionalSkill.
+# The second acceptance uses EXPLICIT gate + pick rows because no live sim
+# prompt exists from which the adapter could infer its optional-gate fold.
+# Expected oracle witness after those answers: evolved carrier, extra draw,
+# memory -2 instead of -1. This is a suspected decline/OPT divergence, not
+# an adjudicated engine defect. Leave assertions for oracle backfill.
+card: BT24-003
+clause: BT24-003#inherited#0
+covers: [BT24-003#inherited#0, BT25-030#effect#0, BT25-030#effect#1, BT24-034#effect#0, BT24-034#effect#2]
+interaction: {id: "probe:BT24-003#inherited#0:optional_decline", source: probe, kind: positive}
+meta: {produced_by: 20261011T031717860321Z-meta-six-20261010-focus-jupiter-a81182}
+seed: 424242
+decks:
+  p0:
+    stack: [BT25-030, BT24-034, BT24-034, BT24-083, BT24-084,
+            BT25-022, BT24-031, BT26-029, BT25-025, BT26-092,
+            BT24-088, BT26-090, BT24-102]
+    rest: ts-jupitermon
+  p1:
+    stack: [ST1-03, ST1-04, BT1-009, BT3-007, ST1-08,
+            BT1-014, BT4-010, BT3-007, BT4-014, BT1-009,
+            ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-030 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { play: { card: BT24-034, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { cards: [BT24-034] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert: []

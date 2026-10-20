@@ -1,0 +1,134 @@
+{
+  "card_id": "BT15-045",
+  "category": "exact_body_section_header_only",
+  "has_required_canonical_conflict": false,
+  "diff": {
+    "approval_id": null,
+    "approval_kind": null,
+    "approved": false,
+    "card_id": "BT15-045",
+    "field_path": "xros_req",
+    "new_digest": "548d6f1e6aacefb018a0839421529882861038f554298b803ff4effb13c67c31",
+    "new_value": "[Special Digivolution Condition] [Digivolve] [Palmon]: Cost 0",
+    "old_digest": "114ead940a3233d894f54bab4584f194edb5b7055f041b02daf00ac967661121",
+    "old_value": "[Digivolve] [Palmon]: Cost 0",
+    "provenance_observation_ids": [
+      "f2f88978fb5de37e5c246c93d31db23bfa586f83c585eb90ddfd89e429338455"
+    ]
+  },
+  "source_units": [
+    {
+      "kind": "official-section",
+      "field": "xros_req",
+      "observation_id": "f2f88978fb5de37e5c246c93d31db23bfa586f83c585eb90ddfd89e429338455",
+      "section_index": 0,
+      "label": "Special Digivolution Condition",
+      "condition_type": "special_digivolution_condition",
+      "text": "[Digivolve] [Palmon]: Cost 0"
+    }
+  ],
+  "observations": {
+    "f2f88978fb5de37e5c246c93d31db23bfa586f83c585eb90ddfd89e429338455": {
+      "extracted": {
+        "attribute": "Data",
+        "card_id": "BT15-045",
+        "card_type": "Digimon",
+        "colors": [
+          "Green"
+        ],
+        "dp": 3000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Green"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Green"
+            ],
+            "dp": 3000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 3,
+            "name": "Palmon (X Antibody)",
+            "play_cost": 4,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] [Palmon]: Cost 0"
+              },
+              {
+                "label": "Effect",
+                "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon."
+              },
+              {
+                "label": "Inherited Effect",
+                "text": "[Your Turn] [Once Per Turn] When one of your green Tamers is played, gain 1 memory."
+              }
+            ]
+          }
+        ],
+        "form": "Rookie",
+        "grade_evolution_routes": [],
+        "layout": "single",
+        "level": 3,
+        "name": "Palmon (X Antibody)",
+        "play_cost": 4,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522020",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT15-045.png?260529",
+          "printing_id": "BT15-045"
+        },
+        "printing_field_gaps": [],
+        "qa": [],
+        "rarity": "C",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] [Palmon]: Cost 0"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Palmon]: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[Your Turn] [Once Per Turn] When one of your green Tamers is played, gain 1 memory."
+          }
+        ],
+        "type": "Vegetation/X Antibody"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "f2f88978fb5de37e5c246c93d31db23bfa586f83c585eb90ddfd89e429338455",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "ce40568a71924f547bb75554f5c131bc87e27afff7aff0a37d5ea0e93400e128",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522020:BT15-045:BT15-045",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522020"
+    }
+  },
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT15-045.webp",
+    "sha256": "39bedd103c06765021aa57b749296bfa58bddb2fc03d7249f423ede5f040ee5b",
+    "observed": "Printed named Digivolve cost matches official condition."
+  },
+  "scope": "Parser hint regression only; runtime field remains unapproved."
+}

@@ -1,0 +1,91 @@
+{
+  "extracted": {
+    "attribute": "Virus",
+    "card_id": "BT24-081",
+    "card_type": "Digimon",
+    "colors": [
+      "Purple",
+      "Green"
+    ],
+    "dp": 14000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "cost": 4,
+        "from_level": 6,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple",
+          "Green"
+        ],
+        "dp": 14000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 7,
+        "name": "Titamon + SkullBaluchimon",
+        "play_cost": 14,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "＜Rush＞ ＜Piercing＞ ＜Execute＞\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.\n(Rule) Trait: Has [Demon] Type."
+          },
+          {
+            "label": "Special Play Condition",
+            "text": "Assembly -6: [Titamon]×[SkullBaluchimon]"
+          }
+        ]
+      }
+    ],
+    "form": "Mega",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 7,
+    "name": "Titamon + SkullBaluchimon",
+    "play_cost": 14,
+    "printing": {
+      "alternate_art": true,
+      "category_id": "522033",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT24-081_P1.png?260529",
+      "printing_id": "BT24-081_P1"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "forms": [],
+      "traits": [
+        "Demon"
+      ]
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "＜Rush＞ ＜Piercing＞ ＜Execute＞\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.\n(Rule) Trait: Has [Demon] Type."
+      },
+      {
+        "label": "Special Play Condition",
+        "text": "Assembly -6: [Titamon]×[SkullBaluchimon]"
+      }
+    ],
+    "type": "Shaman/Titan/TS"
+  },
+  "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+  "observation_id": "58e42ddc99906f4758709751fad05cfb0df01b73de54bcb08200bb18fc40b05c",
+  "parser_version": "official-html-v5",
+  "raw_payload_digest": "1cc8eb8fdcdd98b33022b3cac0e27902abf355884554f0093091c87f2f01c90a",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522033:BT24-081:BT24-081_P1",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522033"
+}

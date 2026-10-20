@@ -5,7 +5,8 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::recorder::{ReplayDeckRef, VerificationReplayRecording};
 use digimon_engine::replay_corpus::{
     bless_replay_corpus_dir, bless_verification_recording, convert_training_recording_artifact,
-    generate_greedy_replay_corpus, verify_replay_corpus_dir, write_replay_corpus_entries,
+    generate_greedy_replay_corpus, regenerate_greedy_replay, verify_replay_corpus_dir,
+    write_replay_corpus_entries,
     BlessOutcome, ConversionOutcome, ReplayCorpusConfig,
 };
 use digimon_engine::runners::replay::ReplaySession;
@@ -395,4 +396,26 @@ fn unsupported_versions_never_retire_or_rewrite_corpus_files() {
         assert!(!retired.join("future.retired.json").exists());
         fs::remove_dir_all(root).unwrap();
     }
+}
+
+#[test]
+fn regenerate_rerecords_one_golden_from_its_inline_decks_and_seed() {
+    let original = generated_recording(12, 40_521_420);
+    let db = test_card_db();
+    // Same decks, seed and length budget: the same greedy game, byte for byte.
+    let again = regenerate_greedy_replay(&original, b"{cards fixture}", &db, None)
+        .expect("inline decks + seed regenerate");
+    assert_eq!(again, original);
+    assert_eq!(again.actions.len(), original.actions.len());
+    // An explicit budget overrides the original action count.
+    let shorter = regenerate_greedy_replay(&original, b"{cards fixture}", &db, Some(4)).unwrap();
+    assert_eq!(shorter.actions.len(), 4.min(original.actions.len()));
+    assert_eq!(shorter.actions[..], original.actions[..shorter.actions.len()]);
+    // Never guessed: a decklist ref or a missing seed is refused.
+    let mut by_id = original.clone();
+    by_id.deck_refs.player1 = ReplayDeckRef::Decklist { id: "starter_a".to_string() };
+    assert!(regenerate_greedy_replay(&by_id, b"{cards fixture}", &db, None).is_err());
+    let mut unseeded = original;
+    unseeded.seed = None;
+    assert!(regenerate_greedy_replay(&unseeded, b"{cards fixture}", &db, None).is_err());
 }

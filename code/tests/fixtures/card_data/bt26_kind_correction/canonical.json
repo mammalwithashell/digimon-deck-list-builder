@@ -1,0 +1,194 @@
+{
+  "admission": "admitted",
+  "card_id": "BT26-100",
+  "conflicts": [
+    {
+      "candidate_observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "field_path": "card_kind",
+      "kind": "official_printing",
+      "reason": "printing observations disagree; deterministic English/errata priority selected"
+    }
+  ],
+  "faces": [
+    {
+      "colors": [
+        "Purple",
+        "Black"
+      ],
+      "dp": null,
+      "effect_text": "While you have no face-up security cards, you can ignore this card's color requirements.\n[Security] [All Turns] All of your [Titan] trait Digimon gain ＜Blocker＞. While you have a Digimon with [Plutomon] or [Titamon] in its name, they also get +3000 DP.\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 level 4 or lower [Titan] trait card from your hand or trash without paying the cost.",
+      "face_id": "primary",
+      "inherited_text": "",
+      "kind": "tamer",
+      "level": null,
+      "play_cost": 3,
+      "security_text": "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost."
+    }
+  ],
+  "fields": {
+    "attribute_eng": [],
+    "card_colors": [
+      "Purple",
+      "Black"
+    ],
+    "card_kind": "Tamer",
+    "card_name_eng": "Dark Field",
+    "effect_description_eng": "While you have no face-up security cards, you can ignore this card's color requirements.\n[Security] [All Turns] All of your [Titan] trait Digimon gain ＜Blocker＞. While you have a Digimon with [Plutomon] or [Titamon] in its name, they also get +3000 DP.\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 level 4 or lower [Titan] trait card from your hand or trash without paying the cost.",
+    "evo_costs": [],
+    "form_eng": [],
+    "inherited_effect_description_eng": "",
+    "play_cost": 3,
+    "security_effect_description_eng": "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost.",
+    "type_eng": [
+      "Titan",
+      "TS"
+    ]
+  },
+  "printings": [
+    {
+      "alternate_art": false,
+      "language": "en",
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+      ],
+      "printing_id": "BT26-100",
+      "product": null
+    },
+    {
+      "alternate_art": true,
+      "language": "en",
+      "observation_ids": [
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "printing_id": "BT26-100_P1",
+      "product": null
+    }
+  ],
+  "provenance": {
+    "attribute_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "card_colors": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "card_kind": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "card_name_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "evo_costs": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "faces": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "form_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "inherited_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "play_cost": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "security_effect_description_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    },
+    "type_eng": {
+      "adjudicated": false,
+      "authority": "official",
+      "derived": false,
+      "observation_ids": [
+        "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36",
+        "a78218742ab846452c3a36b9466c96b3c4923d237e5860ff29e759f1b2a01c62"
+      ],
+      "selected_observation_id": "3edff18034857869aa4e0e99e0b5b9c51d1fdc93841c3f013b3f254ea1cdcb36"
+    }
+  },
+  "schema_version": 1,
+  "tombstone_reason": null
+}

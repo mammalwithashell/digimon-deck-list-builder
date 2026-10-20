@@ -2,6 +2,7 @@ card: EX12-046
 name: Shishimamon
 kind: digimon
 level: 5
+form: Ultimate
 color: [yellow, red]
 cost: 7
 dp: 7000
@@ -22,7 +23,6 @@ alt_paths:
     materials:
       - filter:
           all_of:
-            - kind: digimon
             - level_lte: 4
             - trait_has: TB
         zones: [trash]

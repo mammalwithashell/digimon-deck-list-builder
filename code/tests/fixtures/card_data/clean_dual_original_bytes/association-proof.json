@@ -1,0 +1,2187 @@
+{
+  "approved": false,
+  "associations": [
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "feb3944be2a9d01b5de31efdfe92709a876f04e833bb77d8c48f5e3336cd9266",
+      "observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+      "printing_id": "BT25-085",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085_P1.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "169b26496e1265cd4c31a4effa3a3a3dada3623f36febf443128eacd121b317c",
+      "observation_id": "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+      "printing_id": "BT25-085_P1",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P1.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    {
+      "face_identity": [
+        {
+          "face_id": "primary",
+          "kind": "digimon"
+        },
+        {
+          "face_id": "dual",
+          "kind": "option"
+        }
+      ],
+      "faces_sha256": "2153916c155ef05bee07d559af2cf1a6b2ac71b0cb4fcfec0515b0160a1f2103",
+      "image_artifact": "BT25-085_P2.webp",
+      "image_kind": "Digimon/Option",
+      "image_sha256": "35d440e890e0e0acdd6019b550adfe82c66fa2802bba8cda4a79102854d7c222",
+      "observation_id": "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b",
+      "printing_id": "BT25-085_P2",
+      "raw_kind": "Digimon/Option",
+      "raw_sha256": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "sections_sha256": "010a98f219eebd43fea8a5b3f6cba3d6b53fbc2b5f2c6be9ee468dfd03b40ba8",
+      "source_image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P2.png?260529",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    }
+  ],
+  "authority": "proposed-clean-dual-image-association",
+  "canonical_conflicts": [
+    {
+      "adjudication_id": null,
+      "adjudication_template": null,
+      "alternative_values": [
+        {
+          "observation_ids": [
+            "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+            "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+            "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085#2",
+            "BT25-085#3"
+          ],
+          "value": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "value_digest": "f5d15b7ede9b4893f0f21b873a00ae9d3064bb900116d75e421f922a97b19970"
+        }
+      ],
+      "approval_required": false,
+      "candidate_digest": "fd4195b025c1c7c849cba64fad26b2b4e8d5feef8db579e66db55a8d6fe7a916",
+      "candidate_observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "candidate_values": [
+        {
+          "observation_ids": [
+            "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+            "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+            "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085#2",
+            "BT25-085#3"
+          ],
+          "value": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "value_digest": "f5d15b7ede9b4893f0f21b873a00ae9d3064bb900116d75e421f922a97b19970"
+        },
+        {
+          "observation_ids": [
+            "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+            "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+            "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085_P1",
+            "BT25-085_P2"
+          ],
+          "value": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "value_digest": "03afa66448d43f6212ab0342131056665a14cec459f53fcd2d149df752927fca"
+        }
+      ],
+      "card_id": "BT25-085",
+      "conflict_kind": "official_secondary",
+      "field_path": "effect_description_eng",
+      "new_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "old_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "reason": "official value selected over conflicting secondary observation",
+      "resolution_requirement": "informational",
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+      "selected_value": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+      "selected_value_digest": "03afa66448d43f6212ab0342131056665a14cec459f53fcd2d149df752927fca",
+      "stale_adjudication_ids": [],
+      "status": "informational"
+    },
+    {
+      "adjudication_id": null,
+      "adjudication_template": null,
+      "alternative_values": [
+        {
+          "observation_ids": [
+            "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+            "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+            "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085#2",
+            "BT25-085#3"
+          ],
+          "value": [],
+          "value_digest": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+        }
+      ],
+      "approval_required": false,
+      "candidate_digest": "85b2516b3530caa679f0d4f3ca3005ecf6c4e414eedc783f5464326b9796e4c2",
+      "candidate_observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "candidate_values": [
+        {
+          "observation_ids": [
+            "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+            "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+            "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085#2",
+            "BT25-085#3"
+          ],
+          "value": [],
+          "value_digest": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+        },
+        {
+          "observation_ids": [
+            "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+            "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+            "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085_P1",
+            "BT25-085_P2"
+          ],
+          "value": [
+            {
+              "colors": [
+                "Purple",
+                "Black"
+              ],
+              "cost": 4,
+              "from_level": 5,
+              "slot": 1
+            }
+          ],
+          "value_digest": "7fc6dc1b9a872af1bf61c30719f5475cf643728d52a18149f33bbf5d47153c0a"
+        }
+      ],
+      "card_id": "BT25-085",
+      "conflict_kind": "official_secondary",
+      "field_path": "evo_costs",
+      "new_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "old_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "reason": "official value selected over conflicting secondary observation",
+      "resolution_requirement": "informational",
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+      "selected_value": [
+        {
+          "colors": [
+            "Purple",
+            "Black"
+          ],
+          "cost": 4,
+          "from_level": 5,
+          "slot": 1
+        }
+      ],
+      "selected_value_digest": "7fc6dc1b9a872af1bf61c30719f5475cf643728d52a18149f33bbf5d47153c0a",
+      "stale_adjudication_ids": [],
+      "status": "informational"
+    },
+    {
+      "adjudication_id": null,
+      "adjudication_template": null,
+      "alternative_values": [
+        {
+          "observation_ids": [
+            "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+            "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+            "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085#2",
+            "BT25-085#3"
+          ],
+          "value": [],
+          "value_digest": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+        }
+      ],
+      "approval_required": false,
+      "candidate_digest": "547d200c67f8364d98dab30bf5f63c9daa11580f0e5cca78f52207d7e00c135d",
+      "candidate_observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "candidate_values": [
+        {
+          "observation_ids": [
+            "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+            "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+            "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085_P1",
+            "BT25-085_P2"
+          ],
+          "value": [
+            "Mega"
+          ],
+          "value_digest": "4d94d9c5df1920b6050e3da3561f618abb1ed7de3137d9863882b7aeef4d8839"
+        },
+        {
+          "observation_ids": [
+            "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+            "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+            "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085#2",
+            "BT25-085#3"
+          ],
+          "value": [],
+          "value_digest": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+        }
+      ],
+      "card_id": "BT25-085",
+      "conflict_kind": "official_secondary",
+      "field_path": "form_eng",
+      "new_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "old_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "reason": "official value selected over conflicting secondary observation",
+      "resolution_requirement": "informational",
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+      "selected_value": [
+        "Mega"
+      ],
+      "selected_value_digest": "4d94d9c5df1920b6050e3da3561f618abb1ed7de3137d9863882b7aeef4d8839",
+      "stale_adjudication_ids": [],
+      "status": "informational"
+    },
+    {
+      "adjudication_id": null,
+      "adjudication_template": null,
+      "alternative_values": [
+        {
+          "observation_ids": [
+            "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+            "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+            "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085#2",
+            "BT25-085#3"
+          ],
+          "value": "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "value_digest": "cb07e466e04a670cd1dca65910e6490983939a8a31334513f814171179bc40a6"
+        }
+      ],
+      "approval_required": false,
+      "candidate_digest": "34ac6bfc84b9137788125f048117b51f83f90aac3baf4ad22a961a8c652b5977",
+      "candidate_observation_ids": [
+        "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+        "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+        "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+        "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+      ],
+      "candidate_values": [
+        {
+          "observation_ids": [
+            "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+            "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+            "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085_P1",
+            "BT25-085_P2"
+          ],
+          "value": "",
+          "value_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184"
+        },
+        {
+          "observation_ids": [
+            "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+            "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+            "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e"
+          ],
+          "printing_ids": [
+            "BT25-085",
+            "BT25-085#2",
+            "BT25-085#3"
+          ],
+          "value": "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "value_digest": "cb07e466e04a670cd1dca65910e6490983939a8a31334513f814171179bc40a6"
+        }
+      ],
+      "card_id": "BT25-085",
+      "conflict_kind": "official_secondary",
+      "field_path": "inherited_effect_description_eng",
+      "new_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "old_input_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+      "reason": "official value selected over conflicting secondary observation",
+      "resolution_requirement": "informational",
+      "selected_observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+      "selected_value": "",
+      "selected_value_digest": "bd85bcdb8d4e613a79cb62d0903946ad10c83e63dc75f67614c159c0dbf4d184",
+      "stale_adjudication_ids": [],
+      "status": "informational"
+    }
+  ],
+  "card_id": "BT25-085",
+  "checker_sha256": "96336321894baf6bba24ee80f6e1ff17c08db944afb9bd4d9be6a262ee09b5b2",
+  "dependency_sha256": {
+    "card_data/__init__.py": "2286103d2b5282fea23daa54a05730ad2f1e246d4cfa866504553249eed2cf73",
+    "card_data/compatibility_conditions.py": "19c7c74c05e5acea7d507312eef76e6515303098c871f9e132c17965980ec60d",
+    "card_data/compatibility_corrections.py": "7422d38d75562d7b44f004bdc81333ef9aebab169c79b67040c5eee3af51db8f",
+    "card_data/compatibility_selections.py": "83172c5b2f13b933c5465e585005bfad9f70a1e8d26f7d5526dc64af3e1f7ed2",
+    "card_data/corrections.py": "bdc9a8677d62620e5c1caa275c138889e6c8220695970a69ba47ec8c3f5eb894",
+    "card_data/errors.py": "f173df85f14c0d57db8572869c9fe552c5dc76b7ac8bea9399bc16a1c8b62fab",
+    "card_data/models.py": "d47e33decd8b558236b12ab6e5a82a81da6e18317f7eba4ce4025fee1e21460d",
+    "card_data/normalization.py": "ba1a27a1581861c01718aa26e379e2f2d23b2387e911b2d0a9b444f2a7503961",
+    "card_data/serialization.py": "2914ac386d48acccfe5767d88134a623690e4b9059aca035208585a1dab9f595",
+    "card_data/source_manifest.py": "2463e7cf8e95034b04a7e36b6f261205d433cb19a7a6440a87b1b9ddd3fb43f6",
+    "card_data/sources/__init__.py": "873b48177ae90edd10fe20172e6b42e89c2b43b1123afbf76e6477b88c520b52",
+    "card_data/sources/official.py": "1eff2ce202b8a8214483fe8c748cb0408aad7f3d406e2bfd8e025bd08bb55bca",
+    "clause_coverage/__init__.py": "7c322ca3ebbcd20e18b1453e92a81f019deeaa09bd771b6a71fa3da6f28deb82",
+    "clause_coverage/clean_dual_association.py": "96336321894baf6bba24ee80f6e1ff17c08db944afb9bd4d9be6a262ee09b5b2",
+    "clause_coverage/dual_source_units.py": "10131aeb732a153be0014a7ad290fbc819ae68f9c3112540497c034209981aca"
+  },
+  "gate": "Independent visual review and separate whole runtime/registry/condition composition required; no source correction, composed card or runtime approval.",
+  "input_sha256": {
+    "aggregate": "5a016b1f36857f488f3f7cd7ece2b720d0da51d0a88b7df0b089c7b9fd2a0a07",
+    "correction_document": "2085afe367b7058d5579f2a558d40efc31313c98b38afcf75600033ffa8076cf",
+    "images": {
+      "BT25-085.webp": "feb3944be2a9d01b5de31efdfe92709a876f04e833bb77d8c48f5e3336cd9266",
+      "BT25-085_P1.webp": "169b26496e1265cd4c31a4effa3a3a3dada3623f36febf443128eacd121b317c",
+      "BT25-085_P2.webp": "35d440e890e0e0acdd6019b550adfe82c66fa2802bba8cda4a79102854d7c222"
+    },
+    "observations": {
+      "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac": "cb41758f890ee67601c39f7be82500bb772515e3b6f9536f0093c9be418426e4",
+      "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e": "7d871dcd258c979e3e785e7c0a2e8ff864046ca14ef59815104220a46313445a",
+      "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765": "d74f2c45302780844c533d617696318d69c35c5c53f379844cd4ab925d9144be",
+      "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3": "28c00f33a315c8919d08041348dcfa66f16f7560fea96e868222d9f5aa31a0e3",
+      "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e": "6ecf05bcf5aff21998b0446fd23ae6ae4fb5f217a2d46e6da3ffd5417da55c7a",
+      "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b": "88d76e9694c7ef67229d35890478e87cc58ddf966327f698a3fb778a086b6cf1"
+    },
+    "proposal": "5fe7b643e487281ccddfffc07ac3f3f4d38e11f9e241191d59b2f9d9ec9d1fc1",
+    "raw_pages": {
+      "https://world.digimoncard.com/cards/?search=true&category=522036": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2"
+    },
+    "scopes": {
+      "digimoncard_io": "1af47c5bf1e78f2ccbea652c3537903f6d1038a811aa6baa0a7e54527652f69b",
+      "official": "5016aaf5f6ce69ea9acd8642797bf65e12040a4072a97f9c920fc49540404c38"
+    }
+  },
+  "original_diagnostics": [
+    {
+      "blockers": [],
+      "card_id": "BT25-085",
+      "face_inventory": [
+        {
+          "face_index": 0,
+          "source_face": {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "dp": 12000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "BeelStarmon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+              }
+            ]
+          },
+          "zones": {
+            "arts-reminder": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "condition": {
+              "occurrence_indices": [
+                0
+              ],
+              "presence": "nonempty"
+            },
+            "effect": {
+              "occurrence_indices": [
+                1
+              ],
+              "presence": "nonempty"
+            },
+            "inherited": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "security": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            }
+          }
+        },
+        {
+          "face_index": 1,
+          "source_face": {
+            "colors": [
+              "Purple"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Fly Bullet",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 6
+          },
+          "zones": {
+            "arts-reminder": {
+              "occurrence_indices": [
+                3
+              ],
+              "presence": "nonempty"
+            },
+            "condition": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "effect": {
+              "occurrence_indices": [
+                2
+              ],
+              "presence": "nonempty"
+            },
+            "inherited": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "security": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            }
+          }
+        }
+      ],
+      "global_section_inventory": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "integration_gate": "source authenticity, kind disagreement, canonical/runtime/correction binding and behavior not approved",
+      "kind": "pure-dual-face-occurrence-diagnostic",
+      "occurrences": [
+        {
+          "char_end": 69,
+          "char_start": 0,
+          "container_sha256": "0bb5d6cbcde9651628c5515ba1e2a4f81abe354d8493b6798fb709b93edfac74",
+          "face_id": "primary",
+          "face_index": 0,
+          "face_kind": "digimon",
+          "face_section_index": 0,
+          "label": "Special Digivolution Condition",
+          "occurrence_index": 0,
+          "role": "condition",
+          "section_index": 0,
+          "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3",
+          "utf8_byte_end": 69,
+          "utf8_byte_start": 0,
+          "whole_container": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        {
+          "char_end": 371,
+          "char_start": 0,
+          "container_sha256": "7f764b391c1bf38aa2c9f88e39b4767a9446f1310bae1e7ccf7fb522985a7da0",
+          "face_id": "primary",
+          "face_index": 0,
+          "face_kind": "digimon",
+          "face_section_index": 1,
+          "label": "Effect",
+          "occurrence_index": 1,
+          "role": "effect",
+          "section_index": 1,
+          "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "utf8_byte_end": 375,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+        },
+        {
+          "char_end": 277,
+          "char_start": 0,
+          "container_sha256": "7fbe153375d0344efc29c12268cae0c1c1f63a762a9b6a2b7454411d2278510b",
+          "face_id": "dual",
+          "face_index": 1,
+          "face_kind": "option",
+          "face_section_index": 0,
+          "label": "DUAL Effect",
+          "occurrence_index": 2,
+          "role": "effect",
+          "section_index": 2,
+          "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "utf8_byte_end": 281,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+        },
+        {
+          "char_end": 114,
+          "char_start": 0,
+          "container_sha256": "d15e9f11d5c8a0183a6c54bdeff286e466d1e6909eea168e135fb68e23d61999",
+          "face_id": "dual",
+          "face_index": 1,
+          "face_kind": "option",
+          "face_section_index": 1,
+          "label": "DUAL Rule",
+          "occurrence_index": 3,
+          "role": "arts-reminder",
+          "section_index": 3,
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)",
+          "utf8_byte_end": 118,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "source_observation": {
+        "extracted": {
+          "attribute": "Virus",
+          "card_id": "BT25-085",
+          "card_type": "Digimon/Option",
+          "colors": [
+            "Purple",
+            "Black"
+          ],
+          "dp": 12000,
+          "evolution_routes": [
+            {
+              "colors": [
+                "Purple",
+                "Black"
+              ],
+              "cost": 4,
+              "from_level": 5,
+              "slot": 1
+            }
+          ],
+          "faces": [
+            {
+              "colors": [
+                "Purple",
+                "Black"
+              ],
+              "dp": 12000,
+              "face_id": "primary",
+              "kind": "digimon",
+              "level": 6,
+              "name": "BeelStarmon",
+              "play_cost": null,
+              "text_sections": [
+                {
+                  "label": "Special Digivolution Condition",
+                  "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+                },
+                {
+                  "label": "Effect",
+                  "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+                }
+              ]
+            },
+            {
+              "colors": [
+                "Purple"
+              ],
+              "face_id": "dual",
+              "kind": "option",
+              "name": "Fly Bullet",
+              "text_sections": [
+                {
+                  "label": "DUAL Effect",
+                  "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+                },
+                {
+                  "label": "DUAL Rule",
+                  "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+                }
+              ],
+              "use_cost": 6
+            }
+          ],
+          "form": "Mega",
+          "grade_evolution_routes": [],
+          "layout": "dual",
+          "level": 6,
+          "name": "BeelStarmon",
+          "play_cost": null,
+          "printing": {
+            "alternate_art": false,
+            "category_id": "522036",
+            "image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085.png?260529",
+            "printing_id": "BT25-085"
+          },
+          "printing_field_gaps": [],
+          "qa": [
+            {
+              "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements.\nFor example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+              "date": "May. 8, 2026",
+              "number": "Q6402",
+              "question": "What does a card with \"X in its text\" refer to?"
+            },
+            {
+              "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+              "date": "May. 8, 2026",
+              "number": "Q6403",
+              "question": "This card has multiple effects that trigger when it digivolves or when it attacks. In what order can they be activated?"
+            },
+            {
+              "answer": "Yes, you can.\nThis card is treated as an Option card with the [Three Musketeers] trait.",
+              "date": "May. 8, 2026",
+              "number": "Q6404",
+              "question": "Can I reference this card as an Option card with the traits shown on this card?"
+            },
+            {
+              "answer": "No. Only one [Counter] effect can be activated per an attack.",
+              "date": "Jun. 19, 2026",
+              "number": "Q6716",
+              "question": "After activating this card's [Counter] effect, can I activate another [Counter] effect?"
+            }
+          ],
+          "rarity": "UR",
+          "rule_grants": {
+            "attributes": [],
+            "forms": [],
+            "traits": []
+          },
+          "special_evolution_routes": [
+            "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+          ],
+          "tamer_evolution_routes": [],
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+            },
+            {
+              "label": "Effect",
+              "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+            },
+            {
+              "label": "DUAL Effect",
+              "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+            },
+            {
+              "label": "DUAL Rule",
+              "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+            }
+          ],
+          "type": "Wizard/Three Musketeers/Iliad/TS"
+        },
+        "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+        "observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+        "parser_version": "official-html-v5",
+        "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+        "schema_version": 1,
+        "source": "official",
+        "source_record_key": "522036:BT25-085:BT25-085",
+        "source_schema_version": "world-card-list-html-v1",
+        "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+      },
+      "status": "DERIVED_DUAL_DIAGNOSTIC",
+      "version": 1
+    },
+    {
+      "blockers": [],
+      "card_id": "BT25-085",
+      "face_inventory": [
+        {
+          "face_index": 0,
+          "source_face": {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "dp": 12000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "BeelStarmon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+              }
+            ]
+          },
+          "zones": {
+            "arts-reminder": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "condition": {
+              "occurrence_indices": [
+                0
+              ],
+              "presence": "nonempty"
+            },
+            "effect": {
+              "occurrence_indices": [
+                1
+              ],
+              "presence": "nonempty"
+            },
+            "inherited": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "security": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            }
+          }
+        },
+        {
+          "face_index": 1,
+          "source_face": {
+            "colors": [
+              "Purple"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Fly Bullet",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 6
+          },
+          "zones": {
+            "arts-reminder": {
+              "occurrence_indices": [
+                3
+              ],
+              "presence": "nonempty"
+            },
+            "condition": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "effect": {
+              "occurrence_indices": [
+                2
+              ],
+              "presence": "nonempty"
+            },
+            "inherited": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "security": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            }
+          }
+        }
+      ],
+      "global_section_inventory": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "integration_gate": "source authenticity, kind disagreement, canonical/runtime/correction binding and behavior not approved",
+      "kind": "pure-dual-face-occurrence-diagnostic",
+      "occurrences": [
+        {
+          "char_end": 69,
+          "char_start": 0,
+          "container_sha256": "0bb5d6cbcde9651628c5515ba1e2a4f81abe354d8493b6798fb709b93edfac74",
+          "face_id": "primary",
+          "face_index": 0,
+          "face_kind": "digimon",
+          "face_section_index": 0,
+          "label": "Special Digivolution Condition",
+          "occurrence_index": 0,
+          "role": "condition",
+          "section_index": 0,
+          "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3",
+          "utf8_byte_end": 69,
+          "utf8_byte_start": 0,
+          "whole_container": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        {
+          "char_end": 371,
+          "char_start": 0,
+          "container_sha256": "7f764b391c1bf38aa2c9f88e39b4767a9446f1310bae1e7ccf7fb522985a7da0",
+          "face_id": "primary",
+          "face_index": 0,
+          "face_kind": "digimon",
+          "face_section_index": 1,
+          "label": "Effect",
+          "occurrence_index": 1,
+          "role": "effect",
+          "section_index": 1,
+          "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "utf8_byte_end": 375,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+        },
+        {
+          "char_end": 277,
+          "char_start": 0,
+          "container_sha256": "7fbe153375d0344efc29c12268cae0c1c1f63a762a9b6a2b7454411d2278510b",
+          "face_id": "dual",
+          "face_index": 1,
+          "face_kind": "option",
+          "face_section_index": 0,
+          "label": "DUAL Effect",
+          "occurrence_index": 2,
+          "role": "effect",
+          "section_index": 2,
+          "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "utf8_byte_end": 281,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+        },
+        {
+          "char_end": 114,
+          "char_start": 0,
+          "container_sha256": "d15e9f11d5c8a0183a6c54bdeff286e466d1e6909eea168e135fb68e23d61999",
+          "face_id": "dual",
+          "face_index": 1,
+          "face_kind": "option",
+          "face_section_index": 1,
+          "label": "DUAL Rule",
+          "occurrence_index": 3,
+          "role": "arts-reminder",
+          "section_index": 3,
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)",
+          "utf8_byte_end": 118,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "source_observation": {
+        "extracted": {
+          "attribute": "Virus",
+          "card_id": "BT25-085",
+          "card_type": "Digimon/Option",
+          "colors": [
+            "Purple",
+            "Black"
+          ],
+          "dp": 12000,
+          "evolution_routes": [
+            {
+              "colors": [
+                "Purple",
+                "Black"
+              ],
+              "cost": 4,
+              "from_level": 5,
+              "slot": 1
+            }
+          ],
+          "faces": [
+            {
+              "colors": [
+                "Purple",
+                "Black"
+              ],
+              "dp": 12000,
+              "face_id": "primary",
+              "kind": "digimon",
+              "level": 6,
+              "name": "BeelStarmon",
+              "play_cost": null,
+              "text_sections": [
+                {
+                  "label": "Special Digivolution Condition",
+                  "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+                },
+                {
+                  "label": "Effect",
+                  "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+                }
+              ]
+            },
+            {
+              "colors": [
+                "Purple"
+              ],
+              "face_id": "dual",
+              "kind": "option",
+              "name": "Fly Bullet",
+              "text_sections": [
+                {
+                  "label": "DUAL Effect",
+                  "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+                },
+                {
+                  "label": "DUAL Rule",
+                  "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+                }
+              ],
+              "use_cost": 6
+            }
+          ],
+          "form": "Mega",
+          "grade_evolution_routes": [],
+          "layout": "dual",
+          "level": 6,
+          "name": "BeelStarmon",
+          "play_cost": null,
+          "printing": {
+            "alternate_art": true,
+            "category_id": "522036",
+            "image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P1.png?260529",
+            "printing_id": "BT25-085_P1"
+          },
+          "printing_field_gaps": [],
+          "qa": [
+            {
+              "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements.\nFor example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+              "date": "May. 8, 2026",
+              "number": "Q6402",
+              "question": "What does a card with \"X in its text\" refer to?"
+            },
+            {
+              "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+              "date": "May. 8, 2026",
+              "number": "Q6403",
+              "question": "This card has multiple effects that trigger when it digivolves or when it attacks. In what order can they be activated?"
+            },
+            {
+              "answer": "Yes, you can.\nThis card is treated as an Option card with the [Three Musketeers] trait.",
+              "date": "May. 8, 2026",
+              "number": "Q6404",
+              "question": "Can I reference this card as an Option card with the traits shown on this card?"
+            },
+            {
+              "answer": "No. Only one [Counter] effect can be activated per an attack.",
+              "date": "Jun. 19, 2026",
+              "number": "Q6716",
+              "question": "After activating this card's [Counter] effect, can I activate another [Counter] effect?"
+            }
+          ],
+          "rarity": "UR",
+          "rule_grants": {
+            "attributes": [],
+            "forms": [],
+            "traits": []
+          },
+          "special_evolution_routes": [
+            "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+          ],
+          "tamer_evolution_routes": [],
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+            },
+            {
+              "label": "Effect",
+              "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+            },
+            {
+              "label": "DUAL Effect",
+              "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+            },
+            {
+              "label": "DUAL Rule",
+              "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+            }
+          ],
+          "type": "Wizard/Three Musketeers/Iliad/TS"
+        },
+        "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+        "observation_id": "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+        "parser_version": "official-html-v5",
+        "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+        "schema_version": 1,
+        "source": "official",
+        "source_record_key": "522036:BT25-085:BT25-085_P1",
+        "source_schema_version": "world-card-list-html-v1",
+        "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+      },
+      "status": "DERIVED_DUAL_DIAGNOSTIC",
+      "version": 1
+    },
+    {
+      "blockers": [],
+      "card_id": "BT25-085",
+      "face_inventory": [
+        {
+          "face_index": 0,
+          "source_face": {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "dp": 12000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "BeelStarmon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+              }
+            ]
+          },
+          "zones": {
+            "arts-reminder": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "condition": {
+              "occurrence_indices": [
+                0
+              ],
+              "presence": "nonempty"
+            },
+            "effect": {
+              "occurrence_indices": [
+                1
+              ],
+              "presence": "nonempty"
+            },
+            "inherited": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "security": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            }
+          }
+        },
+        {
+          "face_index": 1,
+          "source_face": {
+            "colors": [
+              "Purple"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Fly Bullet",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 6
+          },
+          "zones": {
+            "arts-reminder": {
+              "occurrence_indices": [
+                3
+              ],
+              "presence": "nonempty"
+            },
+            "condition": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "effect": {
+              "occurrence_indices": [
+                2
+              ],
+              "presence": "nonempty"
+            },
+            "inherited": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            },
+            "security": {
+              "occurrence_indices": [],
+              "presence": "absent-box"
+            }
+          }
+        }
+      ],
+      "global_section_inventory": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "integration_gate": "source authenticity, kind disagreement, canonical/runtime/correction binding and behavior not approved",
+      "kind": "pure-dual-face-occurrence-diagnostic",
+      "occurrences": [
+        {
+          "char_end": 69,
+          "char_start": 0,
+          "container_sha256": "0bb5d6cbcde9651628c5515ba1e2a4f81abe354d8493b6798fb709b93edfac74",
+          "face_id": "primary",
+          "face_index": 0,
+          "face_kind": "digimon",
+          "face_section_index": 0,
+          "label": "Special Digivolution Condition",
+          "occurrence_index": 0,
+          "role": "condition",
+          "section_index": 0,
+          "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3",
+          "utf8_byte_end": 69,
+          "utf8_byte_start": 0,
+          "whole_container": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        {
+          "char_end": 371,
+          "char_start": 0,
+          "container_sha256": "7f764b391c1bf38aa2c9f88e39b4767a9446f1310bae1e7ccf7fb522985a7da0",
+          "face_id": "primary",
+          "face_index": 0,
+          "face_kind": "digimon",
+          "face_section_index": 1,
+          "label": "Effect",
+          "occurrence_index": 1,
+          "role": "effect",
+          "section_index": 1,
+          "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "utf8_byte_end": 375,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+        },
+        {
+          "char_end": 277,
+          "char_start": 0,
+          "container_sha256": "7fbe153375d0344efc29c12268cae0c1c1f63a762a9b6a2b7454411d2278510b",
+          "face_id": "dual",
+          "face_index": 1,
+          "face_kind": "option",
+          "face_section_index": 0,
+          "label": "DUAL Effect",
+          "occurrence_index": 2,
+          "role": "effect",
+          "section_index": 2,
+          "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "utf8_byte_end": 281,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+        },
+        {
+          "char_end": 114,
+          "char_start": 0,
+          "container_sha256": "d15e9f11d5c8a0183a6c54bdeff286e466d1e6909eea168e135fb68e23d61999",
+          "face_id": "dual",
+          "face_index": 1,
+          "face_kind": "option",
+          "face_section_index": 1,
+          "label": "DUAL Rule",
+          "occurrence_index": 3,
+          "role": "arts-reminder",
+          "section_index": 3,
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)",
+          "utf8_byte_end": 118,
+          "utf8_byte_start": 0,
+          "whole_container": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "source_observation": {
+        "extracted": {
+          "attribute": "Virus",
+          "card_id": "BT25-085",
+          "card_type": "Digimon/Option",
+          "colors": [
+            "Purple",
+            "Black"
+          ],
+          "dp": 12000,
+          "evolution_routes": [
+            {
+              "colors": [
+                "Purple",
+                "Black"
+              ],
+              "cost": 4,
+              "from_level": 5,
+              "slot": 1
+            }
+          ],
+          "faces": [
+            {
+              "colors": [
+                "Purple",
+                "Black"
+              ],
+              "dp": 12000,
+              "face_id": "primary",
+              "kind": "digimon",
+              "level": 6,
+              "name": "BeelStarmon",
+              "play_cost": null,
+              "text_sections": [
+                {
+                  "label": "Special Digivolution Condition",
+                  "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+                },
+                {
+                  "label": "Effect",
+                  "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+                }
+              ]
+            },
+            {
+              "colors": [
+                "Purple"
+              ],
+              "face_id": "dual",
+              "kind": "option",
+              "name": "Fly Bullet",
+              "text_sections": [
+                {
+                  "label": "DUAL Effect",
+                  "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+                },
+                {
+                  "label": "DUAL Rule",
+                  "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+                }
+              ],
+              "use_cost": 6
+            }
+          ],
+          "form": "Mega",
+          "grade_evolution_routes": [],
+          "layout": "dual",
+          "level": 6,
+          "name": "BeelStarmon",
+          "play_cost": null,
+          "printing": {
+            "alternate_art": true,
+            "category_id": "522036",
+            "image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P2.png?260529",
+            "printing_id": "BT25-085_P2"
+          },
+          "printing_field_gaps": [],
+          "qa": [
+            {
+              "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements.\nFor example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+              "date": "May. 8, 2026",
+              "number": "Q6402",
+              "question": "What does a card with \"X in its text\" refer to?"
+            },
+            {
+              "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+              "date": "May. 8, 2026",
+              "number": "Q6403",
+              "question": "This card has multiple effects that trigger when it digivolves or when it attacks. In what order can they be activated?"
+            },
+            {
+              "answer": "Yes, you can.\nThis card is treated as an Option card with the [Three Musketeers] trait.",
+              "date": "May. 8, 2026",
+              "number": "Q6404",
+              "question": "Can I reference this card as an Option card with the traits shown on this card?"
+            },
+            {
+              "answer": "No. Only one [Counter] effect can be activated per an attack.",
+              "date": "Jun. 19, 2026",
+              "number": "Q6716",
+              "question": "After activating this card's [Counter] effect, can I activate another [Counter] effect?"
+            }
+          ],
+          "rarity": "UR",
+          "rule_grants": {
+            "attributes": [],
+            "forms": [],
+            "traits": []
+          },
+          "special_evolution_routes": [
+            "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+          ],
+          "tamer_evolution_routes": [],
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+            },
+            {
+              "label": "Effect",
+              "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+            },
+            {
+              "label": "DUAL Effect",
+              "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+            },
+            {
+              "label": "DUAL Rule",
+              "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+            }
+          ],
+          "type": "Wizard/Three Musketeers/Iliad/TS"
+        },
+        "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+        "observation_id": "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b",
+        "parser_version": "official-html-v5",
+        "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+        "schema_version": 1,
+        "source": "official",
+        "source_record_key": "522036:BT25-085:BT25-085_P2",
+        "source_schema_version": "world-card-list-html-v1",
+        "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+      },
+      "status": "DERIVED_DUAL_DIAGNOSTIC",
+      "version": 1
+    }
+  ],
+  "runtime_condition_registry_validation": "NOT_PERFORMED_REQUIRED_BEFORE_COMPOSITION",
+  "source_observations": [
+    {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Virus"
+          ],
+          "card_colors": [
+            "Purple",
+            "Black"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "BeelStarmon",
+          "dp": 12000,
+          "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "level": 6,
+          "play_cost": 6,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Wizard",
+            "Three Musketeers",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT25-085",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Purple",
+              "cost": 4,
+              "level": 5,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3",
+          "artist": null,
+          "attribute": "Virus",
+          "color": "Purple",
+          "color2": "Black",
+          "date_added": "2026-03-09 10:04:16",
+          "digi_type": "Wizard",
+          "digi_type2": "Three Musketeers",
+          "digi_type3": "Iliad",
+          "digi_type4": "TS",
+          "dp": 12000,
+          "evolution_color": null,
+          "evolution_cost": 4,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT25-085",
+          "level": 6,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "name": "BeelStarmon",
+          "play_cost": 6,
+          "pretty_url": "BT25-085-beelstarmon",
+          "rarity": "UR",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-25: BOOSTER DUAL REVOLUTION"
+          ],
+          "source_effect": "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "stage": null,
+          "tcgplayer_id": 692412,
+          "tcgplayer_name": "BeelStarmon // Fly Bullet (SP)",
+          "type": "Dual",
+          "xros_req": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        "structural_diagnostics": [
+          {
+            "authoritative": false,
+            "derived": false,
+            "field_path": "faces.1.colors",
+            "reason": "digimoncard.io omitted the explicit Option-face color"
+          }
+        ]
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "0b7c1db66a575b98ec1eb655595ee71405db6d533f24170fa5db1747f2cddfac",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT25-085",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Virus"
+          ],
+          "card_colors": [
+            "Purple",
+            "Black"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "BeelStarmon",
+          "dp": 12000,
+          "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "level": 6,
+          "play_cost": 6,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Wizard",
+            "Three Musketeers",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT25-085",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Purple",
+              "cost": 4,
+              "level": 5,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3",
+          "artist": null,
+          "attribute": "Virus",
+          "color": "Purple",
+          "color2": "Black",
+          "date_added": "2026-03-09 10:04:16",
+          "digi_type": "Wizard",
+          "digi_type2": "Three Musketeers",
+          "digi_type3": "Iliad",
+          "digi_type4": "TS",
+          "dp": 12000,
+          "evolution_color": null,
+          "evolution_cost": 4,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT25-085",
+          "level": 6,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "name": "BeelStarmon",
+          "play_cost": 6,
+          "pretty_url": "BT25-085-beelstarmon",
+          "rarity": "UR",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-25: BOOSTER DUAL REVOLUTION"
+          ],
+          "source_effect": "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "stage": null,
+          "tcgplayer_id": 684114,
+          "tcgplayer_name": "BeelStarmon // Fly Bullet",
+          "type": "Dual",
+          "xros_req": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        "structural_diagnostics": [
+          {
+            "authoritative": false,
+            "derived": false,
+            "field_path": "faces.1.colors",
+            "reason": "digimoncard.io omitted the explicit Option-face color"
+          }
+        ]
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "4522605b59da6b0a577edbac782814d5ab1e52dc1c2bea3a20b99330ff620c8e",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT25-085#3",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    {
+      "extracted": {
+        "attribute": "Virus",
+        "card_id": "BT25-085",
+        "card_type": "Digimon/Option",
+        "colors": [
+          "Purple",
+          "Black"
+        ],
+        "dp": 12000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "cost": 4,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "dp": 12000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "BeelStarmon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+              }
+            ]
+          },
+          {
+            "colors": [
+              "Purple"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Fly Bullet",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 6
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "dual",
+        "level": 6,
+        "name": "BeelStarmon",
+        "play_cost": null,
+        "printing": {
+          "alternate_art": false,
+          "category_id": "522036",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085.png?260529",
+          "printing_id": "BT25-085"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements.\nFor example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+            "date": "May. 8, 2026",
+            "number": "Q6402",
+            "question": "What does a card with \"X in its text\" refer to?"
+          },
+          {
+            "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+            "date": "May. 8, 2026",
+            "number": "Q6403",
+            "question": "This card has multiple effects that trigger when it digivolves or when it attacks. In what order can they be activated?"
+          },
+          {
+            "answer": "Yes, you can.\nThis card is treated as an Option card with the [Three Musketeers] trait.",
+            "date": "May. 8, 2026",
+            "number": "Q6404",
+            "question": "Can I reference this card as an Option card with the traits shown on this card?"
+          },
+          {
+            "answer": "No. Only one [Counter] effect can be activated per an attack.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6716",
+            "question": "After activating this card's [Counter] effect, can I activate another [Counter] effect?"
+          }
+        ],
+        "rarity": "UR",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+          },
+          {
+            "label": "DUAL Effect",
+            "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+          },
+          {
+            "label": "DUAL Rule",
+            "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+          }
+        ],
+        "type": "Wizard/Three Musketeers/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "74fbd7f6fa71c654be2664c033c40f33b3fd1efa7e4a2b46cae1f13e241b4765",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522036:BT25-085:BT25-085",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    {
+      "extracted": {
+        "attribute": "Virus",
+        "card_id": "BT25-085",
+        "card_type": "Digimon/Option",
+        "colors": [
+          "Purple",
+          "Black"
+        ],
+        "dp": 12000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "cost": 4,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "dp": 12000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "BeelStarmon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+              }
+            ]
+          },
+          {
+            "colors": [
+              "Purple"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Fly Bullet",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 6
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "dual",
+        "level": 6,
+        "name": "BeelStarmon",
+        "play_cost": null,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522036",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P1.png?260529",
+          "printing_id": "BT25-085_P1"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements.\nFor example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+            "date": "May. 8, 2026",
+            "number": "Q6402",
+            "question": "What does a card with \"X in its text\" refer to?"
+          },
+          {
+            "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+            "date": "May. 8, 2026",
+            "number": "Q6403",
+            "question": "This card has multiple effects that trigger when it digivolves or when it attacks. In what order can they be activated?"
+          },
+          {
+            "answer": "Yes, you can.\nThis card is treated as an Option card with the [Three Musketeers] trait.",
+            "date": "May. 8, 2026",
+            "number": "Q6404",
+            "question": "Can I reference this card as an Option card with the traits shown on this card?"
+          },
+          {
+            "answer": "No. Only one [Counter] effect can be activated per an attack.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6716",
+            "question": "After activating this card's [Counter] effect, can I activate another [Counter] effect?"
+          }
+        ],
+        "rarity": "UR",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+          },
+          {
+            "label": "DUAL Effect",
+            "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+          },
+          {
+            "label": "DUAL Rule",
+            "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+          }
+        ],
+        "type": "Wizard/Three Musketeers/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "ad7cbd0fcff8f3cfbc3f506a1c5dd30c7a695d0dd459373db31357d17a447aa3",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522036:BT25-085:BT25-085_P1",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    },
+    {
+      "extracted": {
+        "canonical_fields": {
+          "attribute_eng": [
+            "Virus"
+          ],
+          "card_colors": [
+            "Purple",
+            "Black"
+          ],
+          "card_kind": "Digimon",
+          "card_name_eng": "BeelStarmon",
+          "dp": 12000,
+          "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "evo_costs": [],
+          "form_eng": [],
+          "inherited_effect_description_eng": "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "level": 6,
+          "play_cost": 6,
+          "security_effect_description_eng": "",
+          "type_eng": [
+            "Wizard",
+            "Three Musketeers",
+            "Iliad",
+            "TS"
+          ]
+        },
+        "card_id": "BT25-085",
+        "derived_diagnostics": [
+          {
+            "authoritative": false,
+            "candidate": {
+              "color": "Purple",
+              "cost": 4,
+              "level": 5,
+              "ordinal": 1
+            },
+            "derived": true,
+            "field_path": "evolution_routes",
+            "reason": "digimoncard.io omitted explicit evolution route components"
+          }
+        ],
+        "explicit_evolution_routes": [],
+        "faces": [],
+        "source_record": {
+          "alt_effect": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3",
+          "artist": null,
+          "attribute": "Virus",
+          "color": "Purple",
+          "color2": "Black",
+          "date_added": "2026-03-09 10:04:16",
+          "digi_type": "Wizard",
+          "digi_type2": "Three Musketeers",
+          "digi_type3": "Iliad",
+          "digi_type4": "TS",
+          "dp": 12000,
+          "evolution_color": null,
+          "evolution_cost": 4,
+          "evolution_level": null,
+          "form": null,
+          "id": "BT25-085",
+          "level": 6,
+          "link_dp": null,
+          "link_requirements": "",
+          "main_effect": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.",
+          "name": "BeelStarmon",
+          "play_cost": 6,
+          "pretty_url": "BT25-085-beelstarmon",
+          "rarity": "UR",
+          "series": "Digimon Card Game",
+          "set_name": [
+            "BT-25: BOOSTER DUAL REVOLUTION"
+          ],
+          "source_effect": "[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 card from your hand or trash as any of your Digimon's bottom digivolution card.",
+          "stage": null,
+          "tcgplayer_id": 692142,
+          "tcgplayer_name": "BeelStarmon // Fly Bullet (Alternate Art)",
+          "type": "Dual",
+          "xros_req": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        },
+        "structural_diagnostics": [
+          {
+            "authoritative": false,
+            "derived": false,
+            "field_path": "faces.1.colors",
+            "reason": "digimoncard.io omitted the explicit Option-face color"
+          }
+        ]
+      },
+      "first_acquired_at": "2026-07-14T00:59:56.894800Z",
+      "observation_id": "ef734f826eaee6984ffd2557c163154c3098fe251417c95e9a822f15c662176e",
+      "parser_version": "digimoncard-io-json-v1",
+      "raw_payload_digest": "2d18a92afcfbe5058647ca65a6dc2576d7139a4075c139bdc5987b566e8c6d3c",
+      "schema_version": 1,
+      "source": "digimoncard_io",
+      "source_record_key": "BT25-085#2",
+      "source_schema_version": "digimoncard-io-public-api-v1",
+      "source_url": "https://digimoncard.io/api-public/search?series=Digimon+Card+Game&sort=code&sortdirection=asc&limit=10000"
+    },
+    {
+      "extracted": {
+        "attribute": "Virus",
+        "card_id": "BT25-085",
+        "card_type": "Digimon/Option",
+        "colors": [
+          "Purple",
+          "Black"
+        ],
+        "dp": 12000,
+        "evolution_routes": [
+          {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "cost": 4,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "faces": [
+          {
+            "colors": [
+              "Purple",
+              "Black"
+            ],
+            "dp": 12000,
+            "face_id": "primary",
+            "kind": "digimon",
+            "level": 6,
+            "name": "BeelStarmon",
+            "play_cost": null,
+            "text_sections": [
+              {
+                "label": "Special Digivolution Condition",
+                "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+              },
+              {
+                "label": "Effect",
+                "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+              }
+            ]
+          },
+          {
+            "colors": [
+              "Purple"
+            ],
+            "face_id": "dual",
+            "kind": "option",
+            "name": "Fly Bullet",
+            "text_sections": [
+              {
+                "label": "DUAL Effect",
+                "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+              },
+              {
+                "label": "DUAL Rule",
+                "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+              }
+            ],
+            "use_cost": 6
+          }
+        ],
+        "form": "Mega",
+        "grade_evolution_routes": [],
+        "layout": "dual",
+        "level": 6,
+        "name": "BeelStarmon",
+        "play_cost": null,
+        "printing": {
+          "alternate_art": true,
+          "category_id": "522036",
+          "image_url": "https://world.digimoncard.com/images/cardlist/card/BT25-085_P2.png?260529",
+          "printing_id": "BT25-085_P2"
+        },
+        "printing_field_gaps": [],
+        "qa": [
+          {
+            "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements.\nFor example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+            "date": "May. 8, 2026",
+            "number": "Q6402",
+            "question": "What does a card with \"X in its text\" refer to?"
+          },
+          {
+            "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+            "date": "May. 8, 2026",
+            "number": "Q6403",
+            "question": "This card has multiple effects that trigger when it digivolves or when it attacks. In what order can they be activated?"
+          },
+          {
+            "answer": "Yes, you can.\nThis card is treated as an Option card with the [Three Musketeers] trait.",
+            "date": "May. 8, 2026",
+            "number": "Q6404",
+            "question": "Can I reference this card as an Option card with the traits shown on this card?"
+          },
+          {
+            "answer": "No. Only one [Counter] effect can be activated per an attack.",
+            "date": "Jun. 19, 2026",
+            "number": "Q6716",
+            "question": "After activating this card's [Counter] effect, can I activate another [Counter] effect?"
+          }
+        ],
+        "rarity": "UR",
+        "rule_grants": {
+          "attributes": [],
+          "forms": [],
+          "traits": []
+        },
+        "special_evolution_routes": [
+          "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+        ],
+        "tamer_evolution_routes": [],
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Blocker＞\n[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost.\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+          },
+          {
+            "label": "DUAL Effect",
+            "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\n[Main] Delete 1 of your opponent's highest level Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+          },
+          {
+            "label": "DUAL Rule",
+            "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+          }
+        ],
+        "type": "Wizard/Three Musketeers/Iliad/TS"
+      },
+      "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+      "observation_id": "faedc71cb29b11d61e63efb47c6b51221fe8a799c95227cb0c3e27c890b4979b",
+      "parser_version": "official-html-v5",
+      "raw_payload_digest": "a28f3e4d202285421e016abd66f71f010f8ba6f2357ce0271fd865847ce542e2",
+      "schema_version": 1,
+      "source": "official",
+      "source_record_key": "522036:BT25-085:BT25-085_P2",
+      "source_schema_version": "world-card-list-html-v1",
+      "source_url": "https://world.digimoncard.com/cards/?search=true&category=522036"
+    }
+  ],
+  "status": "PROOF_ONLY_PENDING_INDEPENDENT_REVIEW",
+  "version": 1
+}

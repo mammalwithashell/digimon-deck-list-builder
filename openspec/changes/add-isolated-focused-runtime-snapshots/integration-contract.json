@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "status": "PROPOSED_PENDING_INDEPENDENT_REVIEW",
+  "repair_seed": "1201f706bcc48f27aa813c2dfe301ca1d567beb8",
+  "implementation_destinations": [
+    "repair",
+    "toho",
+    "jupiter"
+  ],
+  "read_only_reference": "base_reference",
+  "roots": {
+    "repair": {
+      "path": "D:\\cl-data-repair",
+      "head": "1201f706bcc48f27aa813c2dfe301ca1d567beb8",
+      "branch": "codex/focused-data-source-repair",
+      "files": {
+        "code/tools/card_data/complete_candidate.py": {
+          "sha256": "e43db847a705b33340508558fd540a6a75afcd1aa9ec61bf1edea207b8d5f9b3",
+          "bytes": 70417,
+          "git_status": ""
+        },
+        "code/tools/card_data/normalization.py": {
+          "sha256": "ba1a27a1581861c01718aa26e379e2f2d23b2387e911b2d0a9b444f2a7503961",
+          "bytes": 53837,
+          "git_status": ""
+        },
+        "code/tools/card_data/corrections.py": {
+          "sha256": "bdc9a8677d62620e5c1caa275c138889e6c8220695970a69ba47ec8c3f5eb894",
+          "bytes": 19996,
+          "git_status": ""
+        },
+        "code/tools/card_data/compatibility_corrections.py": {
+          "sha256": "7422d38d75562d7b44f004bdc81333ef9aebab169c79b67040c5eee3af51db8f",
+          "bytes": 11482,
+          "git_status": ""
+        },
+        "code/tools/card_data/source_manifest.py": {
+          "sha256": "2463e7cf8e95034b04a7e36b6f261205d433cb19a7a6440a87b1b9ddd3fb43f6",
+          "bytes": 10006,
+          "git_status": ""
+        },
+        "code/tools/clause_coverage/text_split.py": {
+          "sha256": "28e56eee6c45b24c87d77d4db61c6157e10b0c96f8cc9e6058660a5d97708d64",
+          "bytes": 11594,
+          "git_status": ""
+        },
+        "code/tools/clause_coverage/source_binding.py": {
+          "sha256": "dab8815d86817895f201bb6f7dc03460609f7b86d055697980c841090b1ba927",
+          "bytes": 37211,
+          "git_status": ""
+        },
+        "code/tools/card_loop/source_snapshot.py": {
+          "sha256": "99210d9f920b05958dbcd8639e2d3bfdd8590bfa7a9b1657f053007adc920cb2",
+          "bytes": 8557,
+          "git_status": ""
+        },
+        "code/digimon-engine/build.rs": {
+          "sha256": "99d23c59547a2faf40e7a492047478a90c4d2da6682f35b88e2bc1bfb5383926",
+          "bytes": 4298,
+          "git_status": ""
+        },
+        "code/digimon-engine/src/card_store.rs": {
+          "sha256": "093d8a58d14c1d5e51e2ff3d8f14b0b2c648d2b90e29970954fa01d3c0e0e1a6",
+          "bytes": 13077,
+          "git_status": ""
+        },
+        "code/digimon-engine/src/card_data.rs": {
+          "sha256": "b8855b43acb574de753a5b3018811ce9807c39edafa89ecbe97a420a60aadbcc",
+          "bytes": 46845,
+          "git_status": ""
+        },
+        "code/digimon-engine-py/src/lib.rs": {
+          "sha256": "a7b239312cea78d52807cded93e8ca66902c4e28224596c00e4f480be5f4bf6f",
+          "bytes": 69073,
+          "git_status": ""
+        },
+        "code/tools/dcgo-replay/src/lib.rs": {
+          "sha256": "7c9c0089c87fa1302101bea60ff4ca02892da1fccd138cf00a0d626118ed04c6",
+          "bytes": 5024,
+          "git_status": ""
+        },
+        "code/tools/dcgo-replay/src/main.rs": {
+          "sha256": "1dc8082316488e8113f33f1869e6637b222b15e10c5df3864e63d6c58e6ee14e",
+          "bytes": 11393,
+          "git_status": ""
+        },
+        "code/tools/dcgo-harness/src/main.rs": {
+          "sha256": "883ecba4095ac8eec55025c06bf1754f7c057ccc401faa90bf9da3a9435a4523",
+          "bytes": 67381,
+          "git_status": ""
+        },
+        "code/digimon-dsl/src/pack.rs": {
+          "sha256": "7a1d08014bf3b9dc58a1d19931a55a943d5f1f531496db71c898c96b4e74612a",
+          "bytes": 26085,
+          "git_status": ""
+        },
+        "openspec/specs/legacy-free-training-runtime/spec.md": {
+          "sha256": "42c72827a5fc9827180aa8dd05d5876b3c13c16bb06a87a107fbe4d48cce242f",
+          "bytes": 4810,
+          "git_status": ""
+        }
+      }
+    },
+    "toho": {
+      "path": "C:\\Users\\james\\.codex\\worktrees\\focus-toho",
+      "head": "a70a8b47a0aa0e4d6a9d0aa840ea610a41542a08",
+      "branch": "card-loop/meta-six-20261010-focus-toho/run",
+      "files": {
+        "code/tools/clause_coverage/text_split.py": {
+          "sha256": "fd8a62576be6159100c0e705c2c42bc405d5ffea58882e36f7dad52fdfc10608",
+          "bytes": 11223,
+          "git_status": ""
+        },
+        "code/tools/card_loop/source_snapshot.py": {
+          "sha256": "99210d9f920b05958dbcd8639e2d3bfdd8590bfa7a9b1657f053007adc920cb2",
+          "bytes": 8557,
+          "git_status": ""
+        },
+        "code/digimon-engine/build.rs": {
+          "sha256": "99d23c59547a2faf40e7a492047478a90c4d2da6682f35b88e2bc1bfb5383926",
+          "bytes": 4298,
+          "git_status": ""
+        },
+        "code/digimon-engine/src/card_store.rs": {
+          "sha256": "093d8a58d14c1d5e51e2ff3d8f14b0b2c648d2b90e29970954fa01d3c0e0e1a6",
+          "bytes": 13077,
+          "git_status": ""
+        },
+        "code/digimon-engine/src/card_data.rs": {
+          "sha256": "b8855b43acb574de753a5b3018811ce9807c39edafa89ecbe97a420a60aadbcc",
+          "bytes": 46845,
+          "git_status": ""
+        },
+        "code/digimon-engine-py/src/lib.rs": {
+          "sha256": "a7b239312cea78d52807cded93e8ca66902c4e28224596c00e4f480be5f4bf6f",
+          "bytes": 69073,
+          "git_status": ""
+        },
+        "code/tools/dcgo-replay/src/lib.rs": {
+          "sha256": "7c9c0089c87fa1302101bea60ff4ca02892da1fccd138cf00a0d626118ed04c6",
+          "bytes": 5024,
+          "git_status": ""
+        },
+        "code/tools/dcgo-replay/src/main.rs": {
+          "sha256": "1dc8082316488e8113f33f1869e6637b222b15e10c5df3864e63d6c58e6ee14e",
+          "bytes": 11393,
+          "git_status": ""
+        },
+        "code/tools/dcgo-harness/src/main.rs": {
+          "sha256": "c90ce031f860de2227a7230fdc25d03d87c030d365b2fe92a9ef8f123a73f387",
+          "bytes": 69626,
+          "git_status": ""
+        },
+        "code/digimon-dsl/src/pack.rs": {
+          "sha256": "7a1d08014bf3b9dc58a1d19931a55a943d5f1f531496db71c898c96b4e74612a",
+          "bytes": 26085,
+          "git_status": ""
+        },
+        "openspec/specs/legacy-free-training-runtime/spec.md": {
+          "sha256": "42c72827a5fc9827180aa8dd05d5876b3c13c16bb06a87a107fbe4d48cce242f",
+          "bytes": 4810,
+          "git_status": ""
+        }
+      }
+    },
+    "jupiter": {
+      "path": "C:\\Users\\james\\.codex\\worktrees\\focus-jupiter",
+      "head": "313baf829f8623b723e01ee569a193b7c56e433e",
+      "branch": "card-loop/meta-six-20261010-focus-jupiter/run",
+      "files": {
+        "code/tools/clause_coverage/text_split.py": {
+          "sha256": "fd8a62576be6159100c0e705c2c42bc405d5ffea58882e36f7dad52fdfc10608",
+          "bytes": 11223,
+          "git_status": ""
+        },
+        "code/tools/card_loop/source_snapshot.py": {
+          "sha256": "99210d9f920b05958dbcd8639e2d3bfdd8590bfa7a9b1657f053007adc920cb2",
+          "bytes": 8557,
+          "git_status": ""
+        },
+        "code/digimon-engine/build.rs": {
+          "sha256": "99d23c59547a2faf40e7a492047478a90c4d2da6682f35b88e2bc1bfb5383926",
+          "bytes": 4298,
+          "git_status": ""
+        },
+        "code/digimon-engine/src/card_store.rs": {
+          "sha256": "093d8a58d14c1d5e51e2ff3d8f14b0b2c648d2b90e29970954fa01d3c0e0e1a6",
+          "bytes": 13077,
+          "git_status": ""
+        },
+        "code/digimon-engine/src/card_data.rs": {
+          "sha256": "b8855b43acb574de753a5b3018811ce9807c39edafa89ecbe97a420a60aadbcc",
+          "bytes": 46845,
+          "git_status": ""
+        },
+        "code/digimon-engine-py/src/lib.rs": {
+          "sha256": "a7b239312cea78d52807cded93e8ca66902c4e28224596c00e4f480be5f4bf6f",
+          "bytes": 69073,
+          "git_status": ""
+        },
+        "code/tools/dcgo-replay/src/lib.rs": {
+          "sha256": "7c9c0089c87fa1302101bea60ff4ca02892da1fccd138cf00a0d626118ed04c6",
+          "bytes": 5024,
+          "git_status": ""
+        },
+        "code/tools/dcgo-replay/src/main.rs": {
+          "sha256": "1dc8082316488e8113f33f1869e6637b222b15e10c5df3864e63d6c58e6ee14e",
+          "bytes": 11393,
+          "git_status": ""
+        },
+        "code/tools/dcgo-harness/src/main.rs": {
+          "sha256": "c90ce031f860de2227a7230fdc25d03d87c030d365b2fe92a9ef8f123a73f387",
+          "bytes": 69626,
+          "git_status": ""
+        },
+        "code/digimon-dsl/src/pack.rs": {
+          "sha256": "7a1d08014bf3b9dc58a1d19931a55a943d5f1f531496db71c898c96b4e74612a",
+          "bytes": 26085,
+          "git_status": ""
+        },
+        "openspec/specs/legacy-free-training-runtime/spec.md": {
+          "sha256": "42c72827a5fc9827180aa8dd05d5876b3c13c16bb06a87a107fbe4d48cce242f",
+          "bytes": 4810,
+          "git_status": ""
+        }
+      }
+    },
+    "base_reference": {
+      "path": "C:\\Users\\james\\Documents\\digimon-deck-list-builder-1",
+      "head": "3341f2cf4e3e80516fd2525ffd7d05f79fc42353",
+      "branch": "feat/dcg-nexus-ingestion",
+      "files": {
+        "code/tools/card_data/complete_candidate.py": {
+          "sha256": "82e4c02b61ec87f384484c7a2f5ad6780b0bb197c779cb642d5be96647068677",
+          "bytes": 64843,
+          "git_status": "?? code/tools/card_data/complete_candidate.py"
+        },
+        "code/tools/card_data/normalization.py": {
+          "sha256": "6cf2d44eae6c91b37e728e441ea92b46b7ade8ee22a8ddefe91aef526e340cc9",
+          "bytes": 48807,
+          "git_status": "?? code/tools/card_data/normalization.py"
+        },
+        "code/tools/card_data/corrections.py": {
+          "sha256": "54d27d2b24ace868e8bb274b6f69256364de0c2254d188c6e54efc5835d37aaf",
+          "bytes": 18588,
+          "git_status": "?? code/tools/card_data/corrections.py"
+        },
+        "code/tools/card_data/source_manifest.py": {
+          "sha256": "2463e7cf8e95034b04a7e36b6f261205d433cb19a7a6440a87b1b9ddd3fb43f6",
+          "bytes": 10006,
+          "git_status": "?? code/tools/card_data/source_manifest.py"
+        },
+        "code/digimon-engine/build.rs": {
+          "sha256": "c974a79a589d8805466aa3b4f994199a6d4c293f2e3e9647db2ddb4d03ad229d",
+          "bytes": 9968,
+          "git_status": "M code/digimon-engine/build.rs"
+        },
+        "code/digimon-engine/src/card_store.rs": {
+          "sha256": "6619285f0325b0d67d9688a1b399b6efc0eb531b849d34150ad570fe0d3f6410",
+          "bytes": 9064,
+          "git_status": ""
+        },
+        "code/digimon-engine/src/card_data.rs": {
+          "sha256": "e270055f73a3c22d026f76a790aaeb4d9bde5cf44ba045fbb0a4e071ffa99ee6",
+          "bytes": 43576,
+          "git_status": "M code/digimon-engine/src/card_data.rs"
+        },
+        "code/digimon-engine-py/src/lib.rs": {
+          "sha256": "fc71282bce28e9df0307eed03886c6dff6e8cfda1f6c9814f89c4e5597378525",
+          "bytes": 68827,
+          "git_status": ""
+        },
+        "code/tools/dcgo-replay/src/lib.rs": {
+          "sha256": "0cf5ff257c3eb82ce13e86a732a32114b36a461fa63e78d1273f53f63bafd194",
+          "bytes": 1530,
+          "git_status": ""
+        },
+        "code/tools/dcgo-replay/src/main.rs": {
+          "sha256": "8e9b0ec5318b483941960f9f1db45ea38fe4d3f26dd520fa702fc615e6c9575a",
+          "bytes": 6831,
+          "git_status": ""
+        },
+        "code/digimon-dsl/src/pack_inputs.rs": {
+          "sha256": "353e47103aad9b2f658d7eb9999da92356698d7f3bbedb4a18ab87c19168c0f6",
+          "bytes": 21483,
+          "git_status": "?? code/digimon-dsl/src/pack_inputs.rs"
+        },
+        "code/digimon-dsl/src/pack.rs": {
+          "sha256": "86d0cea50bc624ee77a20698021555097cdcf2d8cd5e9d4f89a095639638f8e3",
+          "bytes": 36757,
+          "git_status": "M code/digimon-dsl/src/pack.rs"
+        },
+        "openspec/specs/canonical-card-data-pipeline/spec.md": {
+          "sha256": "09c81dadd1dc55f4ffa31da08d4d93ddca868c711bb53c5cfd92aec07294afb0",
+          "bytes": 20383,
+          "git_status": "?? openspec/specs/canonical-card-data-pipeline/spec.md"
+        },
+        "openspec/specs/card-data-validation-gates/spec.md": {
+          "sha256": "333e37c0e8cdc6cc1f385b524ddcdd5183140f9a38f07339bfe2bb60bd155295",
+          "bytes": 9825,
+          "git_status": "?? openspec/specs/card-data-validation-gates/spec.md"
+        },
+        "openspec/specs/legacy-free-training-runtime/spec.md": {
+          "sha256": "42c72827a5fc9827180aa8dd05d5876b3c13c16bb06a87a107fbe4d48cce242f",
+          "bytes": 4810,
+          "git_status": ""
+        }
+      }
+    }
+  },
+  "projection_epoch": {
+    "capability": "isolated-focused-runtime-projection-v1",
+    "state": "PROSPECTIVE_NOT_ISSUED",
+    "digest": null,
+    "requires_fresh_process_per_artifact": true,
+    "R3_relabel_allowed": false
+  },
+  "original_required_scope": {
+    "E": 99,
+    "Q": 99,
+    "role": "retained witness, not admission",
+    "full_inventory_and_unknowns_preserved": true
+  }
+}

@@ -994,18 +994,21 @@ pub enum OptionResolutionPhase {
 ///
 /// Phase order follows Comprehensive Rules §13-1-8 (Ver. 4.3; §13-1-7 in the
 /// Ver. 3.6 PDF): reveal → effects triggered by the check (the `[Security]`
-/// effect first per §15-16-10-2, then the `OnSecurityCheck` observers on both
-/// battle areas) → battle vs a Security Digimon → trash → next check. The
-/// security battle and all of its triggered/scheduled processing finish
-/// before check disposal or the next check (§13-1-8-3 / §14-2).
+/// effect first, immediately and without pending activation per §15-16-10-2,
+/// then the check / removal observers on both battle areas, captured at the
+/// reveal as one simultaneous pool — Q6813) → battle vs a Security Digimon →
+/// trash → next check. The security battle and all of its triggered/scheduled
+/// processing finish before check disposal or the next check (§13-1-8-3 /
+/// §14-2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SecurityPhase {
     /// Enqueue + drain `SecuritySkill` effects on the revealed card
     /// (§13-1-8-2 + §15-16-10-2).
     SecuritySkillDrain,
-    /// Enqueue + drain `OnSecurityCheck` observer effects over BOTH players'
-    /// battle areas, turn player first (§13-1-8-2). Precedes the battle so
-    /// an observer's DP/keyword grant shapes it.
+    /// Drain the check / removal observers captured at the reveal over BOTH
+    /// players' battle areas (one simultaneous pool, turn player first —
+    /// §13-1-8-2, Q6813) plus anything derived from them; no rescan occurs
+    /// here. Precedes the battle so an observer's DP/keyword grant shapes it.
     OnSecurityCheckDrain,
     /// Digimon-vs-security DP battle (§13-1-8-3-1; skipped for non-Digimon
     /// security per §13-1-8-3-2).
@@ -1029,13 +1032,12 @@ pub enum SecurityPhase {
     /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
     /// finally removed from the security stack.
     WhenWouldLoseSecurity,
-    /// Enqueue + drain `OnLoseSecurity` on the revealed card (observer timing).
+    /// Retained pass-through: `OnLoseSecurity` observers are captured at the
+    /// reveal and resolve in `OnSecurityCheckDrain` (Q6813).
     OnLoseSecurityDrain,
-    /// Trash the card (unless `pending_security.played` is set), then fire
-    /// `OnOpponentSecurityRemoved` observers in the attacker's battle area.
-    /// If that observer drain installs a pending selection, the state
-    /// machine parks with phase advanced to `DisposeFinalize` so the resume
-    /// path doesn't re-enqueue the observer on re-entry (§2.5j residual).
+    /// Retained pass-through: the security-removed observers are captured at
+    /// the reveal and resolve in `OnSecurityCheckDrain` (§13-1-6, Q6813); the
+    /// trash push happens in `DisposeFinalize` (§13-1-8-4).
     Dispose,
     /// Post-observer finalization: extract `SecurityResolutionState`,
     /// decide terminal outcome vs. loop to next security card.

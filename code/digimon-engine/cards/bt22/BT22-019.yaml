@@ -1,0 +1,52 @@
+# Official observation 58a8b08fbf2d5f6ae25a80d1811b245c8cfa1260f683c9b6f2b3228319315576;
+# BT22-019 image verified. Suspension is an optional processing condition (rules 15-7).
+card: BT22-019
+name: Veemon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Mini Dragon, CS]
+form: Rookie
+attribute: Free
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { kind: digimon, name_contains: Veedramon }
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into a Digimon card with [Veedramon] in its name, reduce the digivolution cost by 1."
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - name_contains: Veedramon
+        - replacement_cause: opponent_effect
+        - source_is_unsuspended: true
+        - any_permanent: { of: you, is_source: true, can_change_orientation: true }
+    summary: "[All Turns][Once Per Turn] When this Digimon with [Veedramon] in its name would leave the battle area by your opponent's effects, by suspending this Digimon, it doesn't leave."
+    process:
+      # The primitive cancels only after an actual orientation change; its
+      # all-matching filter is restricted to this exact inherited carrier.
+      - suspend_and_cancel_all_matching_leaves:
+          target: source
+          filter:
+            all_of:
+              - is_source: true
+              - name_contains: Veedramon
+              - replacement_cause: opponent_effect

@@ -64,7 +64,7 @@ def _write_verdicts(path: Path, entries: list[dict]) -> None:
     path.write_text(
         json.dumps(
             {
-                "version": 1,
+                "version": 3,
                 "last_updated": "2026-08-21T00:00:00Z",
                 "clauses": {e["clause_id"]: e for e in entries},
             },
@@ -90,6 +90,8 @@ def test_clause_with_a_scenario_and_a_stored_verdict_reports_that_verdict(tmp_pa
                 "verdict": "confirmed",
                 "label": clause["label"],
                 "text_sha256": clause_text_sha256(clause["text"]),
+                "semantic_fingerprint_version": 1,
+                "semantic_sha256": clause["semantic_sha256"],
                 "scenario_path": str(scenario),
                 "reason": None,
                 "dcgo_build": None,
@@ -151,7 +153,7 @@ def test_load_verdict_store_reads_a_directory_of_per_card_files(tmp_path):
     (d / "EX12-073.json").write_text(
         json.dumps(
             {
-                "version": 1,
+                "version": 3,
                 "clauses": {
                     "EX12-073#effect#0": {
                         "clause_id": "EX12-073#effect#0",
@@ -167,7 +169,7 @@ def test_load_verdict_store_reads_a_directory_of_per_card_files(tmp_path):
     (d / "BT8-084.json").write_text(
         json.dumps(
             {
-                "version": 1,
+                "version": 3,
                 "clauses": {
                     "BT8-084#effect#0": {
                         "clause_id": "BT8-084#effect#0",
@@ -224,7 +226,7 @@ def test_load_verdict_store_directory_rejects_a_row_filed_under_the_wrong_card(t
     (d / "EX12-035.json").write_text(
         json.dumps(
             {
-                "version": 1,
+                "version": 3,
                 "clauses": {
                     "BT8-084#effect#0": {
                         "clause_id": "BT8-084#effect#0",
@@ -265,7 +267,7 @@ def test_load_verdict_store_directory_rejects_a_row_whose_clause_id_disagrees_wi
     (d / "EX12-004.json").write_text(
         json.dumps(
             {
-                "version": 1,
+                "version": 3,
                 "clauses": {
                     "EX12-004#effect#0": {
                         "clause_id": "EX12-004#effect#2",
@@ -296,7 +298,7 @@ def test_load_verdict_store_directory_tolerates_an_empty_embedded_clause_id(tmp_
     (d / "EX12-004.json").write_text(
         json.dumps(
             {
-                "version": 1,
+                "version": 3,
                 "clauses": {
                     "EX12-004#effect#0": {
                         "clause_id": "",
@@ -320,7 +322,7 @@ def test_load_verdict_store_still_reads_a_single_file(tmp_path):
     p.write_text(
         json.dumps(
             {
-                "version": 1,
+                "version": 3,
                 "clauses": {
                     "EX12-073#effect#0": {
                         "clause_id": "EX12-073#effect#0",
@@ -339,12 +341,15 @@ def test_bind_passes_triage_and_citation_through(tmp_path):
     import json
     from tools.clause_coverage.exam_binding import bind
 
+    from tools.clause_coverage.extract import run
+    current = next(c for c in run(["EX10-025"], "fresh fixture")["clauses"]
+                   if c["id"] == "EX10-025#inherited#0")
     verdicts = tmp_path / "exam-verdicts"
     verdicts.mkdir()
     (verdicts / "EX10-025.json").write_text(
         json.dumps(
             {
-                "version": 1,
+                "version": 3,
                 "last_updated": "x",
                 "clauses": {
                     "EX10-025#inherited#0": {
@@ -352,6 +357,8 @@ def test_bind_passes_triage_and_citation_through(tmp_path):
                         "card_id": "EX10-025",
                         "verdict": "diverged",
                         "label": "Inherited Effect",
+                        "semantic_fingerprint_version": 1,
+                        "semantic_sha256": current["semantic_sha256"],
                         "recorded_at": "x",
                         "triage": "ours_wrong",
                         "citation": "general_rule.pdf 15-8-3-2",

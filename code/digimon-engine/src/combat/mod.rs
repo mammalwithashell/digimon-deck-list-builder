@@ -43,6 +43,103 @@ use crate::selection::{
 };
 use crate::trigger_context::AttackTargetChangeReason;
 
+#[cfg(test)]
+mod queue_handle_rekey_tests {
+    use crate::card_source::CardHandle;
+    use crate::debug_runner::DebugRunner;
+    use crate::enums::{EffectSourceKind, EffectTiming};
+    use crate::permanent::PermanentHandle;
+    use crate::selection::QueuedEffect;
+    use crate::trigger_context::TriggerContext;
+
+    /// A helper contract test, not a legal gameplay fixture: non-field
+    /// handle domains must be opaque to battlefield Vec compaction.
+    #[test]
+    fn security_compaction_rekeys_only_battlefield_handle_domains() {
+        for player in 0..=1 {
+            for index in [0, 1, 13, 14, 15, 199, 200, 201, 254, 255] {
+                for owner in 0..=1 {
+                    let handle = PermanentHandle {
+                        player: owner,
+                        index,
+                    };
+                    let context = TriggerContext {
+                        captured_security_check: true,
+                        target_permanent: Some(handle),
+                        event_permanent: Some(handle),
+                        event_host_permanent: Some(handle),
+                        ..Default::default()
+                    };
+                    let mut game = DebugRunner::builder().build().game;
+                    game.current_trigger_context = Some(context.clone());
+                    game.effect_queue.push_back(QueuedEffect {
+                        source_card: CardHandle(0),
+                        source_permanent: Some(handle),
+                        source_kind: EffectSourceKind::Digimon,
+                        attribution_source_card: None,
+                        attribution_source_kind: None,
+                        bypass_once_per_turn: false,
+                        controller: owner,
+                        timing: EffectTiming::OnOwnSecurityRemoved,
+                        trigger_context: Some(context),
+                        effect_slot: 0,
+                        is_optional: false,
+                        is_turn_player: false,
+                        card_id: String::new(),
+                        allow_below_top_liveness: false,
+                        dna_origin_context: None,
+                        granted_effect_id: None,
+                        keyword_effect: None,
+                        trigger_batch: 0,
+                        pending_processing: None,
+                    });
+                    game.shift_effect_queue_after_battle_area_remove(player, 0);
+                    let expected_source = Some(PermanentHandle {
+                        index: if owner == player && index > 0 && index < 14 {
+                            index - 1
+                        } else {
+                            index
+                        },
+                        ..handle
+                    });
+                    let expected_context = if owner == player && index == 0 {
+                        None
+                    } else {
+                        expected_source
+                    };
+                    let queued = &game.effect_queue[0];
+                    assert_eq!(
+                        queued.source_permanent, expected_source,
+                        "source owner={owner} index={index} removed_owner={player}"
+                    );
+                    assert_eq!(
+                        queued
+                            .trigger_context
+                            .as_ref()
+                            .unwrap()
+                            .security_check_source_invalidated,
+                        owner == player && index == 0
+                    );
+                    for ctx in [
+                        queued.trigger_context.as_ref().unwrap(),
+                        game.current_trigger_context.as_ref().unwrap(),
+                    ] {
+                        assert_eq!(
+                            (
+                                ctx.target_permanent,
+                                ctx.event_permanent,
+                                ctx.event_host_permanent
+                            ),
+                            (expected_context, expected_context, expected_context),
+                            "captured/current owner={owner} index={index} removed_owner={player}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// Phase 9 Task 3 — taxonomy of Counter-window candidates. The broadened
 /// window unifies three distinct resolution paths behind a single
 /// selection:
@@ -3295,6 +3392,52 @@ impl Game {
             outcome_so_far: AttackResult::SecurityCheckSurvived,
         });
 
+        // One reveal/removal occurrence: capture eligible entries now, before
+        // Security can play new observers or change the attacking source.
+        self.stamp_unstamped_trigger_batch();
+        let start = self.effect_queue.len();
+        self.enqueue_triggered(
+            EffectTiming::OnSecurityCheck,
+            TriggerSource::OnSecurityCheck {
+                attacker,
+                defender,
+                revealed_card: card_handle,
+                was_face_up,
+            },
+        );
+        if was_face_up {
+            self.enqueue_triggered(
+                EffectTiming::OnCheckFaceUpSecurity,
+                TriggerSource::OnCheckFaceUpSecurity {
+                    attacker,
+                    defender,
+                    revealed_card: card_handle,
+                },
+            );
+        }
+        self.enqueue_triggered(
+            EffectTiming::OnLoseSecurity,
+            TriggerSource::SecurityRevealed {
+                defender,
+                card: card_handle,
+            },
+        );
+        for (timing, observer_player) in [
+            (EffectTiming::OnOwnSecurityRemoved, defender),
+            (EffectTiming::OnOpponentSecurityRemoved, attacker.player),
+        ] {
+            self.enqueue_triggered(
+                timing,
+                TriggerSource::SecurityRemoved {
+                    affected_player: defender,
+                    observer_player,
+                    source_player: attacker.player,
+                    card: card_handle,
+                    cause: crate::trigger_context::EventCause::SecurityRemoval,
+                },
+            );
+        }
+        self.freeze_security_check_entries(start);
         true
     }
 
@@ -3309,6 +3452,8 @@ impl Game {
     ///   `Some(...)` with its current `phase`. Resume via
     ///   `advance_security_resolution`.
     ///
+    /// Rule 13-1-8 (Q6813): immediate Security, captured simultaneous observers,
+    /// security battle, then disposal. Security choices pause the barrier.
     /// A security battle's triggered and scheduled effects finish before
     /// disposal or another check (general_rule.pdf 13-1-8 / 14-2).
     fn drive_security_resolution(&mut self) -> Option<AttackResult> {
@@ -3369,10 +3514,12 @@ impl Game {
                         return None;
                     }
                     // §13-1-8-2: every effect triggered by the security
-                    // check resolves — the [Security] effect first
-                    // (§15-16-10-2, just drained), then the observers —
-                    // BEFORE the §13-1-8-3 battle against a Security
-                    // Digimon. DCGO: `ISecurityCheck.SecurityCheck` drains
+                    // check resolves -- the [Security] effect first
+                    // (§15-16-10-2, just drained: it activates immediately
+                    // without pending activation, Q6813), then the check /
+                    // removal observers captured at the reveal -- BEFORE the
+                    // §13-1-8-3 battle against a Security Digimon. DCGO:
+                    // `ISecurityCheck.SecurityCheck` drains
                     // `triggeredSkillInfos` (OnSecurityCheck) through
                     // `AutoProcessCheck` and only then enters
                     // `#region battle with security Digimon`.
@@ -3395,9 +3542,14 @@ impl Game {
                             .get(h.index as usize)
                             .map(|p| p.top_card().handle())
                     });
-                    if kind == CardKind::Digimon {
+                    if kind == CardKind::Digimon
+                        && self
+                            .pending_security
+                            .as_ref()
+                            .is_some_and(|pending| !pending.played)
+                    {
                         if let Some(attacker) = attacker_opt {
-                            if self.handle_valid(attacker)
+                            if self.handle_still_attacking(attacker)
                                 && !self
                                     .modifiers
                                     .has(attacker, ModifierType::DontBattleSecurityDigimon)
@@ -3561,66 +3713,29 @@ impl Game {
                     self.set_security_phase(SecurityPhase::WhenWouldLoseSecurity);
                 }
                 SecurityPhase::OnSecurityCheckDrain => {
-                    // §13-1-8-2: scan BOTH players' battle areas for
-                    // `OnSecurityCheck` observer effects (turn player's
-                    // first — `enqueue_triggered` orders the collection and
-                    // the drainer resolves the turn player's bundle first).
-                    // Runs after the revealed card's own `[Security]` effect
-                    // (§15-16-10-2) and before the §13-1-8-3 battle, so an
-                    // observer's DP / keyword grant (e.g. BT20-005's "gain
-                    // <Jamming> for the turn" ESS) shapes the battle it is
-                    // printed to shape. Requires an attacker — non-combat
-                    // security reveals skip this phase.
-                    let Some(state) = self.security_resolution.as_ref() else {
-                        break;
-                    };
-                    let enqueue_done = state.phase_enqueue_done;
-                    let attacker_opt = state.attacker;
-                    let defender = state.defender;
-                    let revealed_card = state.revealed_card;
-                    let was_face_up = state.was_face_up;
-                    if let Some(attacker) = attacker_opt {
-                        // Collect observers once; a parked selection re-enters
-                        // this phase, and `phase_enqueue_done` stops the
-                        // re-entry from double-firing the observers.
-                        if !enqueue_done {
-                            if let Some(st) = self.security_resolution.as_mut() {
-                                st.phase_enqueue_done = true;
-                            }
-                            let trigger = TriggerSource::OnSecurityCheck {
-                                attacker,
-                                defender,
-                                revealed_card,
-                                was_face_up,
-                            };
-                            self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger);
-                            if was_face_up {
-                                let trigger = TriggerSource::OnCheckFaceUpSecurity {
-                                    attacker,
-                                    defender,
-                                    revealed_card,
-                                };
-                                self.enqueue_triggered(
-                                    EffectTiming::OnCheckFaceUpSecurity,
-                                    trigger,
-                                );
-                            }
-                        }
-                        self.drain_effect_queue();
-                        if self.pending_selection.is_some() {
-                            // Parked on an observer's choice; resume
-                            // re-enters this phase (enqueue guarded by
-                            // `phase_enqueue_done`) and only then proceeds
-                            // to the battle.
-                            return None;
-                        }
+                    // §13-1-8-2 / Q6813: the check and removal observers
+                    // (OnSecurityCheck, OnCheckFaceUpSecurity, OnLoseSecurity,
+                    // On{Own,Opponent}SecurityRemoved) triggered
+                    // simultaneously at the reveal and were captured there
+                    // as one pool (`freeze_security_check_entries`); the
+                    // turn player's bundle activates first (§15-4-3-2). No
+                    // rescan here: a Digimon the [Security] effect played did
+                    // not exist at the check. Effects derived from the
+                    // [Security] body carry newer batch ids and activate
+                    // first (G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST).
+                    self.drain_effect_queue();
+                    if self.pending_selection.is_some() {
+                        return None;
                     }
-                    // §13-1-8-3: now the battle against a Security Digimon
-                    // (or straight through when the checked card isn't a
-                    // Digimon — §13-1-8-3-2).
                     self.set_security_phase(SecurityPhase::BattleResolved);
                 }
                 SecurityPhase::WhenWouldLoseSecurity => {
+                    // A battle-deletion replacement may still own the prompt.
+                    // Probing a different replacement here would reset its
+                    // offered-stage keys before the player accepts or declines.
+                    if self.pending_selection.is_some() {
+                        return None;
+                    }
                     let Some(state) = self.security_resolution.as_ref() else {
                         break;
                     };
@@ -3639,99 +3754,12 @@ impl Game {
                     }
                     self.commit_pending_security_loss_replacement(outcome);
                 }
-                SecurityPhase::OnLoseSecurityDrain => {
-                    let Some(state) = self.security_resolution.as_ref() else {
-                        break;
-                    };
-                    let defender = state.defender;
-                    let card_handle = state.revealed_card;
-                    let enqueue_done = state.phase_enqueue_done;
-                    // Collect `OnLoseSecurity` effects once; a parked selection
-                    // re-enters this phase, and `phase_enqueue_done` keeps the
-                    // re-entry from re-firing them.
-                    if !enqueue_done {
-                        if let Some(st) = self.security_resolution.as_mut() {
-                            st.phase_enqueue_done = true;
-                        }
-                        self.enqueue_triggered(
-                            EffectTiming::OnLoseSecurity,
-                            TriggerSource::SecurityRevealed {
-                                defender,
-                                card: card_handle,
-                            },
-                        );
-                    }
-                    self.drain_effect_queue();
-                    if self.pending_selection.is_some() {
-                        return None;
-                    }
-                    self.set_security_phase(SecurityPhase::Dispose);
-                }
-                SecurityPhase::Dispose => {
-                    // §13-1-6: "A checked card is removed from the security
-                    // stack and is treated as NOT BEING IN ANY PARTICULAR
-                    // AREA." It only reaches the trash at §13-1-8-4 ("a card
-                    // revealed from a security check is placed in the trash
-                    // unless it belongs to an area"), which is the LAST step
-                    // of the check procedure -- after §13-1-8-2's triggered
-                    // effects and §13-1-8-3's security battle.
-                    //
-                    // So the security-removed observers below run while the
-                    // card is still in no area, and the trash push happens in
-                    // `DisposeFinalize`. Trashing here instead made the card
-                    // visible to any trash-reading effect during the observer
-                    // window -- the divergence the DCGO card-clause exam
-                    // caught on six Toho Braves clauses (DCGO holds the card
-                    // in `ExecutingCards` and calls `AddTrashCard` only at the
-                    // end of `ISecurityCheck.SecurityCheck`).
-                    //
-                    // `security_resolution` stays alive across the observer
-                    // drain so a selection installed by an observer can
-                    // resume through `DisposeFinalize` (§2.5j residual).
-                    let defender = state.defender;
-                    let attacker_opt = state.attacker;
-                    let revealed_card = state.revealed_card;
-
-                    // Security-removed observers fire after a security card
-                    // leaves the defender's stack (trashed or played from
-                    // security). Own-side observers scan the defender's
-                    // battle area; opponent-side observers scan the attacker's.
-                    if let Some(atk) = attacker_opt {
-                        self.enqueue_triggered(
-                            crate::enums::EffectTiming::OnOwnSecurityRemoved,
-                            crate::selection::TriggerSource::SecurityRemoved {
-                                affected_player: defender,
-                                observer_player: defender,
-                                source_player: atk.player,
-                                card: revealed_card,
-                                cause: crate::trigger_context::EventCause::SecurityRemoval,
-                            },
-                        );
-                        self.drain_effect_queue();
-                        if self.pending_selection.is_some() {
-                            self.set_security_phase(SecurityPhase::DisposeFinalize);
-                            return None;
-                        }
-
-                        self.enqueue_triggered(
-                            crate::enums::EffectTiming::OnOpponentSecurityRemoved,
-                            crate::selection::TriggerSource::SecurityRemoved {
-                                affected_player: defender,
-                                observer_player: atk.player,
-                                source_player: atk.player,
-                                card: revealed_card,
-                                cause: crate::trigger_context::EventCause::SecurityRemoval,
-                            },
-                        );
-                        self.drain_effect_queue();
-                        if self.pending_selection.is_some() {
-                            // Park: on resume, `DisposeFinalize` skips the
-                            // re-enqueue and proceeds straight to terminal
-                            // finalization.
-                            self.set_security_phase(SecurityPhase::DisposeFinalize);
-                            return None;
-                        }
-                    }
+                SecurityPhase::OnLoseSecurityDrain | SecurityPhase::Dispose => {
+                    // Check-driven removal effects (§13-1-6: the checked card
+                    // left the security stack at the check) already activated
+                    // in `OnSecurityCheckDrain`, before the battle (Q6813). Do
+                    // not rescan or duplicate them at disposal; the trash
+                    // push stays in `DisposeFinalize` (§13-1-8-4).
                     self.set_security_phase(SecurityPhase::DisposeFinalize);
                 }
                 SecurityPhase::DisposeFinalize => {
@@ -3792,6 +3820,16 @@ impl Game {
                     };
                     if !self.handle_valid(attacker) {
                         return Some(AttackResult::AttackerDeletedBySecurity);
+                    }
+                    // A cancelled/exhausted carrier can finish this already
+                    // revealed occurrence but cannot reveal another card.
+                    if !self.handle_still_attacking(attacker)
+                        || self
+                            .pending_attack
+                            .as_ref()
+                            .is_some_and(|attack| attack.cancelled)
+                    {
+                        return Some(AttackResult::SecurityCheckSurvived);
                     }
 
                     // Recompute the live strike. Terminate when we've
@@ -4209,13 +4247,68 @@ impl Game {
         player: PlayerId,
         removed_index: u8,
     ) {
+        let shift = |handle: &mut Option<PermanentHandle>| {
+            if let Some(h) = handle.as_mut() {
+                // Only actual battle-area slots compact. Breeding, DigiXros
+                // limbo and absent/view sentinel handles retain their domain.
+                if h.player == player && (h.index as u16) < crate::action::space::MAX_FIELD_SLOTS {
+                    if h.index == removed_index {
+                        *handle = None;
+                    } else if h.index > removed_index {
+                        h.index -= 1;
+                    }
+                }
+            }
+        };
+        // The currently executing captured observer is no longer queued.
+        // Its remaining steps must see the same rekeyed attacker as queued
+        // siblings after a source deletes itself and compacts the board.
+        if let Some(ctx) = self.current_trigger_context.as_mut() {
+            if ctx.captured_security_check {
+                shift(&mut ctx.target_permanent);
+                shift(&mut ctx.event_permanent);
+                shift(&mut ctx.event_host_permanent);
+            }
+        }
         self.invalidate_pending_field_effects(&[PermanentHandle { player, index: removed_index }]);
         for qe in self.effect_queue.iter_mut() {
+            if let Some(ctx) = qe.trigger_context.as_mut() {
+                if ctx.captured_security_check {
+                    if qe.source_permanent
+                        == Some(PermanentHandle {
+                            player,
+                            index: removed_index,
+                        })
+                    {
+                        ctx.security_check_source_invalidated = true;
+                    }
+                    shift(&mut ctx.target_permanent);
+                    shift(&mut ctx.event_permanent);
+                    shift(&mut ctx.event_host_permanent);
+                }
+            }
             if let Some(h) = qe.source_permanent.as_mut() {
-                if h.player == player && h.index > removed_index {
+                if h.player == player
+                    && h.index > removed_index
+                    && (h.index as u16) < crate::action::space::MAX_FIELD_SLOTS
+                {
                     h.index -= 1;
                 }
             }
+        }
+        // Every field removal passes through this queue fixup, including moves
+        // whose older callers did not fix PendingAttack. Keep the security
+        // carrier alive across harmless compaction, but never alias a new slot.
+        if let Some(state) = self.security_resolution.as_mut() {
+            if state.attacker
+                == Some(PermanentHandle {
+                    player,
+                    index: removed_index,
+                })
+            {
+                state.outcome_so_far = AttackResult::AttackerDeletedBySecurity;
+            }
+            shift(&mut state.attacker);
         }
     }
 

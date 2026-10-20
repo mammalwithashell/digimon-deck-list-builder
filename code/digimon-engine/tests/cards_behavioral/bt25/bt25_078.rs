@@ -14,8 +14,8 @@
 //! DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_078.cs
 //!
 //! Pattern rows (RUST_DSL_TEST_API §4.3): reveal-N branch route to hand OR
-//! bottom-source-of-self (Group E), optional ("you may"), once-per-turn shared
-//! WM/OP trigger, inherited static keyword grant (Group G), alt-digivolve.
+//! bottom-source-of-self (Group E), mandatory reveal, optional trait placement,
+//! shared WM/OP trigger without printed OPT, inherited static keyword grant (Group G), alt-digivolve.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledRevealDestination,
@@ -70,7 +70,7 @@ fn shared_process(runner: &DebugRunner) -> Vec<CompiledStep> {
 // ── Section 1: Structural ──────────────────────────────────────────────────
 
 #[test]
-fn bt25_078_shared_clause_is_when_moving_and_on_play_optional_opt() {
+fn bt25_078_shared_clause_is_when_moving_and_on_play_mandatory_without_opt() {
     let runner = runner();
     let card = runner.compiled_card("BT25-078").expect("compiled");
 
@@ -92,12 +92,12 @@ fn bt25_078_shared_clause_is_when_moving_and_on_play_optional_opt() {
         "shared clause must also fire [When Moving] (on_move)"
     );
     assert!(
-        clause.optional,
-        "printed 'or you may place' → the whole effect is optional"
+        !clause.optional,
+        "official reveal is mandatory; only the trait placement pick is optional"
     );
     assert!(
-        clause.once_per_turn,
-        "DCGO maxCountPerTurn: 1 → once_per_turn"
+        !clause.once_per_turn,
+        "official BT25-078 observation/image prints no once-per-turn restriction"
     );
 }
 
@@ -349,59 +349,62 @@ fn bt25_078_place_branch_tucks_trait_card_under_self() {
     );
 }
 
-// ── Section 2: Optional — decline the whole effect ─────────────────────────
-
+// ── Section 2: Mandatory reveal; decline only the trait placement ────────
+// Original whole-effect decline test is retained in the frozen predecessor.
+// Exercise actual public queue dispatch, not direct run_steps for outer scope.
 #[test]
-fn bt25_078_effect_is_optional_decline_does_nothing() {
-    // The whole effect is optional. With the trigger queued through normal
-    // flow, PASS at the optional layer leaves hand and field untouched.
-    let mut trait_card = make_test_card("TM-TRAIT2", "TM Trait 2");
-    trait_card.traits.push("Three Musketeers".to_string());
-    let holder = make_test_card("BT25_078_HOLDER3", "Holder3");
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card("BT25-078")
-        .expect("BT25-078 compiles")
-        .add_card(trait_card)
-        .add_card(holder)
-        .build();
-
-    let holder_perm = runner.place_on_field(0, "BT25_078_HOLDER3", None);
-    let src = runner.top_card(holder_perm);
-    let hand_before = runner.game.players[0].hand.len();
-    stack_deck_top(&mut runner, &["TM-TRAIT2"]);
-
-    // Confirm the clause is optional at the structural level (the no-approx
-    // path: declining is exposed because the printed text says "you may").
-    let clause_optional = runner
-        .compiled_card("BT25-078")
-        .expect("compiled")
-        .effects
-        .iter()
-        .any(|c| {
-            matches!(c, CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay) && t.optional)
-        });
-    assert!(clause_optional, "shared clause is optional");
-
-    // Drive the process; at the first prompt (effect choice), the optional
-    // outer wrapper exposes PASS — declining must do nothing.
-    let process = shared_process(&runner);
-    {
-        let mut ctx = EffectContext::new(&mut runner.game, src, Some(holder_perm), 0);
-        run_steps(&process, &mut ctx, &mut Bindings::new());
+fn bt25_078_reveal_is_mandatory_but_placement_can_be_declined() {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::enums::{EffectTiming, GamePhase};
+    use digimon_engine::selection::TriggerSource;
+    fn choose(r: &mut DebugRunner, seat: u8, action: u16) {
+        assert_eq!(build_action_mask(&r.game, seat)[action as usize], 1.0);
+        assert_eq!(build_action_mask(&r.game, 1 - seat)[action as usize], 0.0);
+        r.game.decode_action(action, seat);
     }
-    if let Some(sel) = runner.pending_selection() {
-        if sel.is_optional || sel.valid_action_ids.contains(&PASS) {
-            let _ = runner.game.resolve_selection(0, PASS);
+    for seat in [0, 1] {
+        let mut material = make_test_card("TM-TRAIT2", "TM Trait 2");
+        material.traits.push("Three Musketeers".to_string());
+        let mut runner = DebugRunner::builder()
+            .dsl_card("BT25-078").expect("BT25-078 compiles")
+            .add_card(material)
+            .add_card(make_test_card("F078-A", "Filler A"))
+            .add_card(make_test_card("F078-B", "Filler B"))
+            .deck(seat, &["F078-B", "F078-A", "TM-TRAIT2"])
+            .deck(1 - seat, &["F078-A"; 3]).build();
+        runner.game.turn_player_idx = seat as usize;
+        runner.game.current_phase = GamePhase::Main;
+        runner.game.set_memory(5);
+        let host = runner.place_on_field(seat, "BT25-078", None);
+        runner.game.enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(host));
+        runner.game.drain_effect_queue();
+        assert_eq!(runner.game.revealed_cards.len(), 3, "reveal precedes any optional placement");
+        assert_eq!(runner.game.players[seat as usize].deck.len(), 0);
+        let choice = runner.pending_selection_view().expect("both branches surfaced");
+        assert_eq!(choice.kind, SelectionKind::EffectChoice);
+        assert!(!choice.is_optional);
+        assert_eq!(choice.valid_action_ids.len(), 2);
+        assert_eq!(build_action_mask(&runner.game, seat)[PASS as usize], 0.0);
+        choose(&mut runner, seat, choice.valid_action_ids[1]);
+        let pick = runner.pending_selection_view().expect("trait pick surfaced");
+        assert_eq!(pick.kind, SelectionKind::Reveal);
+        assert!(pick.is_optional);
+        assert_eq!(pick.valid_action_ids.len(), 1);
+        choose(&mut runner, seat, PASS);
+        for remaining in [3, 2, 1] {
+            let order = runner.pending_selection_view().expect("decline still returns every revealed card");
+            assert_eq!(order.kind, SelectionKind::OrderedPermutation { remaining });
+            assert!(!order.is_optional);
+            assert_eq!(order.valid_action_ids.len(), remaining as usize);
+            assert_eq!(build_action_mask(&runner.game, seat)[PASS as usize], 0.0);
+            choose(&mut runner, seat, *order.valid_action_ids.last().unwrap());
         }
+        assert!(runner.pending_selection().is_none());
+        assert!(runner.game.revealed_cards.is_empty());
+        assert!(runner.game.players[seat as usize].hand.is_empty(), "declining adds nothing to hand");
+        assert_eq!(runner.game.players[seat as usize].deck.len(), 3);
+        assert_eq!(runner.game.players[seat as usize].battle_area[host.index as usize].card_sources.len(), 1);
     }
-    // Hand unchanged (no add); deck still holds the trait card.
-    assert_eq!(
-        runner.game.players[0].hand.len(),
-        hand_before,
-        "declining adds nothing to hand"
-    );
 }
 
 // ── Section 5: Inherited <Retaliation> (behavioral) ────────────────────────

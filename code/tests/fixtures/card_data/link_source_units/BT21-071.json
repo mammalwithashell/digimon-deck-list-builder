@@ -1,0 +1,126 @@
+{
+  "extracted": {
+    "attribute": "Tool",
+    "card_id": "BT21-071",
+    "card_type": "Digimon",
+    "colors": [
+      "Purple"
+    ],
+    "dp": 4000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "cost": 2,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Purple"
+        ],
+        "dp": 4000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "Scopemon",
+        "play_cost": 4,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+          },
+          {
+            "label": "Effect",
+            "text": "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory."
+          },
+          {
+            "label": "Special Rule",
+            "text": "+3000 DP"
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] ＜Draw 2＞ and trash 2 cards in your hand."
+          }
+        ]
+      }
+    ],
+    "form": "Sup./Appmon",
+    "grade_evolution_routes": [
+      {
+        "colors": [
+          "Multicolor"
+        ],
+        "cost": 2,
+        "from_grade": "Standard",
+        "slot": 2
+      }
+    ],
+    "layout": "single",
+    "level": 4,
+    "name": "Scopemon",
+    "play_cost": 4,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522028",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT21-071.png?260529",
+      "printing_id": "BT21-071"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements.\nFor example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+        "date": "Jun. 13, 2025",
+        "number": "Q4577",
+        "question": "What does a card with \"X in its text\" refer to?"
+      },
+      {
+        "answer": "The BT21-054 [Shotmon] linked with this card is trashed upon the rule check timing.\nRelated Cards",
+        "date": "Apr. 4, 2025",
+        "number": "Q4578",
+        "question": "This card with BT21-054 [Shotmon] as a link card is in the battle area.\nWhat happens if this card digivolves into EX7-044 [Gigadramon] and no longer meets BT21-054 [Shotmon]'s link requirements?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "forms": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "[On Play] [When Digivolving] By placing 1 card with the [Appmon] or [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, gain 1 memory."
+      },
+      {
+        "label": "Special Rule",
+        "text": "+3000 DP"
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)\n[When Linking] ＜Draw 2＞ and trash 2 cards in your hand."
+      }
+    ],
+    "type": "Monitoring"
+  },
+  "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+  "observation_id": "fbd67ef6a2d5e7382763a3fff9e2072b3029ad69aae873f2b4f0df5d4a6d6497",
+  "parser_version": "official-html-v5",
+  "raw_payload_digest": "59226d6e3d8cc446a3668e4b7885b4808f277a6a0eab8345b9001f1fce3b1dc8",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522028:BT21-071:BT21-071",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522028"
+}

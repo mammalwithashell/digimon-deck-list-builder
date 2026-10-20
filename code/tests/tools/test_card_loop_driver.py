@@ -808,6 +808,7 @@ def _tree_cmds(book_rc=0):
     from tools.card_loop.stages.testing import FakeCommands
     return (FakeCommands()
             .on(("tools.clause_coverage.book", "add"), book_rc, "", "" if book_rc == 0 else "book broke")
+            .on(("tools.clause_coverage.book", "validate"), 0, "[]")
             .on(("symbolic-ref",), 0, "card-loop/r1/run\n")
             .on(("status", "exam-clause-text"), 0, " M qa/exam-clause-text.json\n")
             .on(("status", "exam-verdicts"), 0,
@@ -833,10 +834,11 @@ def test_oracle_writes_are_committed_after_the_clause_text_prelude(tmp_path):
     h.run()
     assert h.states() == {C1: "CONFIRMED", C2: "CONFIRMED"}
     book = cmds.argvs("clause_coverage.book")
-    assert len(book) == 1, "the prelude runs once per session"
+    assert len(book) == 2, "add and source validation each run once per session"
+    assert "validate" in book[1]
     assert book[0][-3:] == ["--card-ids", "BT1-001", "BT1-002"] and "qa/exam-clause-text.json" in book[0]
-    assert [c["cwd"] for c in cmds.calls if "clause_coverage.book" in " ".join(c["argv"])] == [str(tree)]
-    assert seen == [1, 1], "the book was extended before the first oracle call"
+    assert [c["cwd"] for c in cmds.calls if "clause_coverage.book" in " ".join(c["argv"])] == [str(tree), str(tree)]
+    assert seen == [2, 2], "the book was extended and validated before the first oracle call"
     commits = cmds.argvs("git", "commit")
     assert "qa/exam-clause-text.json" in commits[0]
     oracle_commit = commits[1]
@@ -857,6 +859,22 @@ def test_a_failed_prelude_holds_every_oracle_item(tmp_path):
     assert oracle.calls == [] and h.states() == {C1: "ORACLE"}
     assert result.stop.reason == "blocked"
     assert "clause-text book prelude failed" in result.blocked[C1] and "book broke" in result.blocked[C1]
+
+
+def test_stale_source_validation_stops_before_oracle_dispatch(tmp_path):
+    cmds = _tree_cmds()
+    def commands(argv, cwd, timeout):
+        if "validate" in argv and "tools.clause_coverage.book" in " ".join(argv):
+            return 1, '[{"kind":"source_changed"}]', ""
+        return cmds(argv, cwd, timeout)
+    oracle = oracle_confirms()
+    h = Harness(tmp_path, [seed(C1, "ORACLE")], [oracle], run_command=commands,
+                repo=tmp_path / "tree", manage_tree=True)
+    result = h.run()
+    assert not oracle.calls
+    assert h.states() == {C1: "ORACLE"}
+    assert result.stop.reason == "blocked"
+    assert "source binding validation failed" in result.blocked[C1]
 
 
 def test_nothing_is_committed_off_a_run_branch(tmp_path):

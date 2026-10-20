@@ -142,6 +142,19 @@ Bless intended behavior changes:
 cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- bless --goldens qa/replay-goldens --cards data/cards.json
 ```
 
+Re-record ONE generated golden whose recorded path an engine change made
+illegal (`bless` keeps the recorded actions, so it can only retire such a
+golden). It replays greedy vs greedy from the golden's own inline deck refs and
+seed, with the original action count as the step budget (`--max-steps`
+overrides), and writes the current engine schema. Hash `cards.json` as LF
+bytes (the committed blob), not a Windows CRLF working copy, so `cards_hash`
+stays canonical; record why in `qa/replay-goldens/NOTES.md`:
+
+```bash
+git show HEAD:data/cards.json > /tmp/cards_lf.json
+cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- regenerate --goldens qa/replay-goldens --cards /tmp/cards_lf.json --id greedy_002_
+```
+
 Convert reconstructible legacy training recordings:
 
 ```bash

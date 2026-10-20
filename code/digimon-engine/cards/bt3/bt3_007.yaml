@@ -1,0 +1,13 @@
+# Official observation 5378ba281b8d1becc9326737c4c9c78852d8e2c0ae91b6fecdf2cb0386d2439e
+# and BT3-007.webp agree: no main, inherited, security, Rule or keyword text.
+# The ordinary red Lv.2 cost-1 circle comes from the printed CardData route.
+card: BT3-007
+name: Agumon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 4000
+form: Rookie
+attribute: Virus
+traits: [Reptile]

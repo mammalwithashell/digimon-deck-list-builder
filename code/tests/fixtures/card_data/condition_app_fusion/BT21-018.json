@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "scope": "Pure segmentation fixture; complete A2 binding remains caller prerequisite.",
+  "card_id": "BT21-018",
+  "source_unit": {
+    "kind": "official-section",
+    "field": "xros_req",
+    "observation_id": "e19301ec373c45b15c9d2668ee331057db9f32a06c509f04f88bc4d859e8291a",
+    "section_index": 0,
+    "label": "Special Digivolution Condition",
+    "condition_type": "special_digivolution_condition",
+    "text": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+  },
+  "observation": {
+    "extracted": {
+      "attribute": "Social",
+      "card_id": "BT21-018",
+      "card_type": "Digimon",
+      "colors": [
+        "Red",
+        "Green"
+      ],
+      "dp": 6000,
+      "evolution_routes": [
+        {
+          "colors": [
+            "Red",
+            "Green"
+          ],
+          "cost": 3,
+          "from_level": 3,
+          "slot": 1
+        }
+      ],
+      "faces": [
+        {
+          "colors": [
+            "Red",
+            "Green"
+          ],
+          "dp": 6000,
+          "face_id": "primary",
+          "kind": "digimon",
+          "level": 4,
+          "name": "DoGatchmon",
+          "play_cost": 6,
+          "text_sections": [
+            {
+              "label": "Special Digivolution Condition",
+              "text": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+            },
+            {
+              "label": "Effect",
+              "text": "＜Rush＞ ＜Raid＞\n[Your Turn] [Once Per Turn] When this Digimon gets linked, it may attack."
+            },
+            {
+              "label": "Link DP",
+              "text": "DP+3000"
+            },
+            {
+              "label": "Link Condition",
+              "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+            },
+            {
+              "label": "Link Effect",
+              "text": "[When Linking] This Digimon may attack."
+            }
+          ]
+        }
+      ],
+      "form": "Sup./Appmon",
+      "grade_evolution_routes": [
+        {
+          "colors": [
+            "Multicolor"
+          ],
+          "cost": 3,
+          "from_grade": "Standard",
+          "slot": 2
+        }
+      ],
+      "layout": "single",
+      "level": 4,
+      "name": "DoGatchmon",
+      "play_cost": 6,
+      "printing": {
+        "alternate_art": true,
+        "category_id": "522902",
+        "image_url": "https://world.digimoncard.com/images/cardlist/card/BT21-018_P1.png?260529",
+        "printing_id": "BT21-018_P1"
+      },
+      "printing_field_gaps": [],
+      "qa": [
+        {
+          "answer": "App Fusion is possible with the following combinations.\n●[Gatchmon] with [Navimon] link card\n●[Gatchmon] with [Tweetmon] link card\n●[Navimon] with [Gatchmon] link card\n●[Navimon] with [Tweetmon] link card\n●[Tweetmon] with [Gatchmon] link card\n●[Tweetmon] with [Navimon] link card",
+          "date": "Jun. 13, 2025",
+          "number": "Q4527",
+          "question": "This card has 3 different cards in its App Fusion requirements. What combinations are possible for App Fusion?"
+        },
+        {
+          "answer": "No, you can't use the effect on the linked BT21-018 [DoGatchmon] to attack. A new attack declaration can't be made during an attack.\nIn this case, this card's [Your Turn] effect and BT21-018 [DoGatchmon]'s [When Linking] effect trigger simultaneously, and this card's [Your Turn] effect is used to attack.\nBT21-018 [DoGatchmon]'s [When Linking] effect can be activated before the counter timing, but because you can't declare another attack during an attack, you won't be able to attack using the linked BT21-018 [DoGatchmon]'s [When Linking] effect, even if you activate it.",
+          "date": "Apr. 4, 2025",
+          "number": "Q4528",
+          "question": "I link BT21-018 [DoGatchmon] with this card and use its effect to attack. Can I then use the effect on the linked BT21-018 [DoGatchmon] to attack?"
+        }
+      ],
+      "rarity": "R",
+      "rule_grants": {
+        "attributes": [],
+        "forms": [],
+        "traits": []
+      },
+      "special_evolution_routes": [
+        "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+      ],
+      "tamer_evolution_routes": [],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Rush＞ ＜Raid＞\n[Your Turn] [Once Per Turn] When this Digimon gets linked, it may attack."
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+3000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] This Digimon may attack."
+        }
+      ],
+      "type": "Super Search/Hero"
+    },
+    "first_acquired_at": "2026-10-11T06:46:58.418907+00:00",
+    "observation_id": "e19301ec373c45b15c9d2668ee331057db9f32a06c509f04f88bc4d859e8291a",
+    "parser_version": "official-html-v5",
+    "raw_payload_digest": "d19a21154e21453304021f71a7d07712673ffbf63948c98fe7bc7b3ebd0d0136",
+    "schema_version": 1,
+    "source": "official",
+    "source_record_key": "522902:BT21-018:BT21-018_P1",
+    "source_schema_version": "world-card-list-html-v1",
+    "source_url": "https://world.digimoncard.com/cards/?search=true&category=522902"
+  },
+  "observation_file_sha256": "be56645098479c2b928218ef22a6c2b5ab495893e022af2912debafa46e1d637",
+  "source_revision": "d3861451f9b856ce21f0ad41f00d33c963ade30f82127c6ac624a3a6d925bba8",
+  "image_review": {
+    "path": "C:\\Users\\james\\Documents\\DCGO_Application\\Assets\\Textures\\Card\\BT21-018.webp",
+    "sha256": "cf199c6e51b91e9ad27060e9c14a1804aa3f50b6a6ed4bb0dbee0ab4adb32954",
+    "observed": "Distinct printed App Fusion condition; named alternatives, zero cost and linked-card stacking reminder visually inspected."
+  }
+}
