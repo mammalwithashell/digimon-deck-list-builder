@@ -840,3 +840,133 @@ fn activated_effect_completes_after_source_becomes_new_card() {
         "the rest of the effect still resolved: BIG_LV6 is at the bottom of the deck ({deck1:?})"
     );
 }
+
+// ─── §15-5-2 ────────────────────────────────────────────────────────────────
+
+/// Use `MAIN_TRASH2_UNDER_MEM` ("[Main] By trashing 2 bottom face-down cards
+/// from under any of your Tamers, gain 1 memory.") on a board of P0 Tamers
+/// `TAMER_TRASH_OBS_MEM` ("[All Turns] When effects trash cards from under
+/// this Tamer, gain 1 memory."), one per entry of `face_down` carrying that
+/// many face-down cards, plus P0's `OBS_TAMER_TRASH` ("[All Turns] When
+/// effects trash cards from under your Tamers, gain 1 memory."). `picks` are
+/// the Tamer slots chosen for the 2 cards.
+///
+/// Returns the card ids of the first pending pool after the Option resolves
+/// (sorted) and of every effect-sourced memory gain (sorted).
+fn multi_card_cost_trash(face_down: &[usize], picks: &[u16]) -> (Vec<String>, Vec<String>) {
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards(), fixtures::ch15_08_cards()])
+        .hand(0, &["MAIN_TRASH2_UNDER_MEM"])
+        .deck(0, &[FILL; 4])
+        .memory(3)
+        .start();
+    let mut tamers = Vec::new();
+    for &n in face_down {
+        let tamer = r.place_on_field(0, "TAMER_TRASH_OBS_MEM", Some(0));
+        for _ in 0..n {
+            attach_face_down(&mut r, tamer, FILL);
+        }
+        tamers.push(tamer);
+    }
+    r.place_on_field(0, "OBS_TAMER_TRASH", Some(0));
+    let cp = r.event_checkpoint();
+
+    use_option(&mut r, 0, "MAIN_TRASH2_UNDER_MEM");
+    for &slot in picks {
+        pick_field(&mut r, slot);
+    }
+    let under: usize = tamers
+        .iter()
+        .map(|t| r.game.players[0].battle_area[t.index as usize].card_sources.len() - 1)
+        .sum();
+    assert_eq!(
+        under,
+        face_down.iter().sum::<usize>() - 2,
+        "the cost trashed exactly 2 face-down cards"
+    );
+
+    let mut pool: Option<Vec<String>> = None;
+    for _ in 0..8 {
+        if r.pending_selection().is_none() {
+            break;
+        }
+        let labels = order_choices(&r, 0);
+        if pool.is_none() {
+            let mut cards: Vec<String> =
+                labels.iter().map(|l| branch_card(l).to_string()).collect();
+            cards.sort();
+            pool = Some(cards);
+        }
+        let first = labels[0].clone();
+        choose(&mut r, &first);
+    }
+    assert!(r.pending_selection().is_none(), "the pool settled");
+    let mut gains: Vec<String> = memory_sources(&r, cp)
+        .into_iter()
+        .map(|(_, id)| id)
+        .collect();
+    gains.sort();
+    (pool.expect("the observers pended after the Option"), gains)
+}
+
+/// §15-5-2 "A triggering from 1 trigger condition is considered to only
+/// trigger once, even if it occurred multiple times at the same time.
+/// (Example: An effect that reads "[Opponent's Turn] When a card is removed
+/// from your security stack, <De-Digivolve 1> 1 of your opponent's Digimon"
+/// will only trigger once, even if 2 or more cards are trashed from your
+/// security stack at the same time.)"
+///
+/// "By trashing 2 bottom face-down cards from under any of your Tamers" is one
+/// processing condition (§15-7-1): its 2 cards are trashed at the same time,
+/// as one event, whichever Tamers they come from (the shape of Cougarmon
+/// BT25-035; DCGO asks one Tamer selection and stacks one
+/// `OnDigivolutionCardDiscarded`). So:
+/// - 2 cards from ONE Tamer: that Tamer's "under this Tamer" observer triggers
+///   once, and the "under your Tamers" observer once.
+/// - 1 card from EACH of two Tamers: each Tamer's own "under this Tamer"
+///   observer triggers once (each saw its trigger condition met once), and the
+///   "under your Tamers" observer still once.
+#[test]
+fn one_multi_card_cost_trash_triggers_each_observer_once() {
+    cite!(
+        "15-5-2",
+        "316122b26772b466e8ad851c4b88b40688944039549ecbf4591f5b20c7b33b51"
+    );
+    // 2 cards from one Tamer (slot 0).
+    let (pool, gains) = multi_card_cost_trash(&[2], &[0, 0]);
+    assert_eq!(
+        pool,
+        owned(&["OBS_TAMER_TRASH", "TAMER_TRASH_OBS_MEM"]),
+        "2 cards from one Tamer: each observer pends once"
+    );
+    assert_eq!(
+        gains,
+        owned(&[
+            "MAIN_TRASH2_UNDER_MEM",
+            "OBS_TAMER_TRASH",
+            "TAMER_TRASH_OBS_MEM"
+        ]),
+        "2 cards from one Tamer: each observer activates once"
+    );
+
+    // 1 card from each of two Tamers (slots 0 and 1).
+    let (pool, gains) = multi_card_cost_trash(&[1, 1], &[0, 1]);
+    assert_eq!(
+        pool,
+        owned(&[
+            "OBS_TAMER_TRASH",
+            "TAMER_TRASH_OBS_MEM",
+            "TAMER_TRASH_OBS_MEM"
+        ]),
+        "1 card from each of two Tamers: each Tamer's own observer pends once, the global one once"
+    );
+    assert_eq!(
+        gains,
+        owned(&[
+            "MAIN_TRASH2_UNDER_MEM",
+            "OBS_TAMER_TRASH",
+            "TAMER_TRASH_OBS_MEM",
+            "TAMER_TRASH_OBS_MEM"
+        ]),
+        "1 card from each of two Tamers: each observer activates once"
+    );
+}

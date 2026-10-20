@@ -918,6 +918,71 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    /// Trash one bottom face-down digivolution card from under each entry of
+    /// `targets` (a Tamer listed twice gives up its bottom two) as ONE
+    /// source-trash event: the cards of one "by trashing N bottom face-down
+    /// cards from under any of your Tamers" condition (§15-7-1) are trashed
+    /// at the same time, so each `OnDigivolutionCardTrashed` observer
+    /// triggers once for the whole payment, whichever Tamers the cards came
+    /// from (§15-5-2). An observer scoped to one Tamer ("under this Tamer",
+    /// ST23-13) triggers once if any card left that Tamer; one scoped to all
+    /// of them ("under your Tamers") once. The event's members are every
+    /// trashed card (`coalesce_source_trash_event`).
+    ///
+    /// The payment is all or nothing: every pick is checked first (each
+    /// listed Tamer still has that many face-down cards at the bottom of its
+    /// stack, none protected from this effect's trash), and on any failure
+    /// nothing moves and `false` is returned. Returns `true` once every card
+    /// is trashed.
+    ///
+    /// Used by `trash_bottom_face_down_sources_under_tamers` (BT25-035
+    /// Cougarmon, BT26-070, BT26-082, EX13-071, ST24-06, ST24-10).
+    /// G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+    pub fn trash_bottom_face_down_sources(&mut self, targets: &[PermanentHandle]) -> bool {
+        let mut per_target: Vec<(PermanentHandle, usize)> = Vec::new();
+        for &target in targets {
+            match per_target.iter_mut().find(|(h, _)| *h == target) {
+                Some((_, n)) => *n += 1,
+                None => per_target.push((target, 1)),
+            }
+        }
+        for &(target, n) in &per_target {
+            let Some(permanent) = self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+            else {
+                return false;
+            };
+            // The top card stays (a Tamer keeps its own card on top).
+            if permanent.card_sources.len() <= n
+                || !permanent.card_sources.iter().take(n).all(|s| s.face_down)
+            {
+                return false;
+            }
+            let cards: Vec<CardHandle> = permanent
+                .card_sources
+                .iter()
+                .take(n)
+                .map(|s| s.handle())
+                .collect();
+            if cards
+                .into_iter()
+                .any(|card| self.source_card_trash_blocked(target, card))
+            {
+                return false;
+            }
+        }
+        let event = self.game.begin_source_trash_event();
+        let mut paid = true;
+        for &target in targets {
+            paid &= self.trash_bottom_face_down_source(target);
+        }
+        self.game.end_source_trash_event(event);
+        paid
+    }
+
     /// Force `opponent`'s hand size down to `target_count` by surfacing a
     /// multi-pick selection on their hand. The opponent is the selecting
     /// player — they choose which cards to trash, per the no-approximations

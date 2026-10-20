@@ -1888,7 +1888,8 @@ pub enum CompiledStep {
     /// Multi-count / multi-Tamer sibling of
     /// `TrashBottomFaceDownSourceUnderTamer`. Trash `count` bottom-face-down
     /// digivolution sources total, distributed across `of`'s Tamers, each pick
-    /// surfaced as a real selection. Compiled from
+    /// surfaced as a real selection; the chosen cards are trashed together as
+    /// one event after the last pick (§15-5-2). Compiled from
     /// `trash_bottom_face_down_sources_under_tamers`; used as an activation cost
     /// by BT25-035 Cougarmon. `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER`.
     TrashBottomFaceDownSourcesUnderTamers {

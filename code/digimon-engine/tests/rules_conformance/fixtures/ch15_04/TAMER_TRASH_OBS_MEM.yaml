@@ -1,0 +1,17 @@
+# TAMER_TRASH_OBS_MEM -- Tamer, red, play cost 2.
+#   [All Turns] When effects trash cards from under this Tamer, gain 1
+#   memory.
+# The trigger scope of Tomoro Tenma & Kyo Sawashiro (ST23-13): one Tamer's
+# own stack (the §15-5-2 test).
+card: TAMER_TRASH_OBS_MEM
+name: Undertamer Witness
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: on_digivolution_card_trashed
+    trigger_if:
+      event_host_permanent_is_source: true
+    summary: "[All Turns] When effects trash cards from under this Tamer, gain 1 memory."
+    process:
+      - gain_memory: 1

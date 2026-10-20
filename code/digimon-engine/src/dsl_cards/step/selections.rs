@@ -454,6 +454,31 @@ pub(crate) fn run_resume(
                             );
                         }
                         Some(
+                            crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSourcesPick {
+                                remaining,
+                                picked,
+                            },
+                        ) => {
+                            // One pick of the multi-card face-down cost (mirrors
+                            // install_trash_n_bottom_face_down_sources_under_tamers'
+                            // callback): record it, then park the next pick or
+                            // trash every chosen card as ONE event (§15-5-2) and
+                            // run the cost-gated tail. A next pick is composed
+                            // onto by `outer_conts` below, like the
+                            // SelectAndTrashLinkCard second pick.
+                            advance_trash_n_bottom_face_down_pick(
+                                &mut ctx,
+                                of_player,
+                                remaining,
+                                picked,
+                                h,
+                                inner_tail.clone(),
+                                b,
+                                runtime.clone(),
+                                trigger_context,
+                            );
+                        }
+                        Some(
                             crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource,
                         ) => {
                             // Cost post-action (mirrors
@@ -3954,14 +3979,18 @@ pub fn try_install(
                 ctx.cost_unpayable = true;
                 return InstallResult::TailAlreadyRan;
             }
+            // One Tamer pick per card; the cards are trashed together as one
+            // event after the last pick (§15-5-2).
+            let trigger_context = ctx.game.current_trigger_context.clone();
             install_trash_n_bottom_face_down_sources_under_tamers(
                 ctx,
-                *of,
                 player,
                 *count,
-                tail.to_vec(),
+                Vec::new(),
+                Arc::new(tail.to_vec()),
                 bindings,
                 runtime.clone(),
+                trigger_context,
             );
             // The first Tamer pick always installs (≥`count`≥1 face-down source
             // exists ⇒ ≥1 eligible Tamer), so this parks.
@@ -6875,50 +6904,54 @@ pub(crate) fn face_down_sources_under_tamers(
 
 /// Install the next Tamer pick for the multi-count
 /// `trash_bottom_face_down_sources_under_tamers` cost. `remaining` is the
-/// number of bottom-face-down sources still to trash. Each pick trashes ONE
-/// bottom face-down source from the chosen Tamer; the callback then either
-/// re-installs the next pick (`remaining - 1 > 0`) or runs the captured `tail`
-/// (the rest of the clause — the free digivolve). Eligible Tamers are
-/// re-evaluated before every pick, so a single Tamer holding ≥`remaining`
-/// face-down sources can be re-picked to satisfy the whole cost, and the "1
-/// from each of two Tamers" distribution is equally reachable. The caller
-/// (`try_install`) has already verified `remaining` total face-down sources
-/// exist, so each install finds ≥1 eligible Tamer and always parks.
+/// number of cards still to choose; `picked` holds the Tamers already chosen
+/// (a Tamer chosen twice gives up its bottom two cards). Choosing WHICH Tamers
+/// pay is a real decision, so every card is one surfaced Tamer pick (no
+/// auto-selection): a Tamer is offered while it has more face-down cards at
+/// the bottom of its stack than it has already been chosen for, so "2 from
+/// one Tamer" and "1 from each of two Tamers" are both reachable.
+///
+/// Nothing is trashed until the last pick: the condition's cards are then
+/// trashed together as ONE source-trash event
+/// (`EffectContext::trash_bottom_face_down_sources`), so each observer
+/// triggers once for the payment (§15-5-2), and the captured `tail` (the rest
+/// of the clause, e.g. the free digivolve) runs only if the whole cost was
+/// paid. The caller (`try_install`) has already verified `remaining` total
+/// face-down cards exist (§15-7-4 `CostGuard::FaceDownUnderTamers`), so each
+/// install finds an eligible Tamer and parks.
+/// G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+#[allow(clippy::too_many_arguments)]
 fn install_trash_n_bottom_face_down_sources_under_tamers(
     ctx: &mut EffectContext<'_>,
-    of: CompiledPlayerRef,
     player: PlayerId,
     remaining: u8,
-    tail: Vec<CompiledStep>,
+    picked: Vec<PermanentHandle>,
+    tail: Arc<Vec<CompiledStep>>,
     bindings: Bindings,
     runtime: StepRuntime,
+    trigger_context: Option<TriggerContext>,
 ) {
     let filter = CompiledPredicate {
         kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
         has_face_down_source: Some(true),
         ..CompiledPredicate::default()
     };
-    let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let player_for_filter = ctx.player;
-    let filter_for_pred = filter.clone();
     let filter_bindings = bindings.clone();
-    // Resumable-VM (make-engine-cloneable): capture for the data frame before
-    // the closures consume tail/bindings/runtime/trigger. The whole multi-pick
-    // cost is modeled as a single-pick FieldPermanent{post:TrashBottomFaceDownSource}
-    // frame (the slice #4 arm) whose continuation re-enters
-    // `TrashBottomFaceDownSourcesUnderTamers{count: remaining-1}` until the cost
-    // is fully paid — so a per-pick trash that parks a nested OnDigivolutionCard-
-    // Trashed observer threads via the SAME park_pending_selection_tail recursion
-    // the single-pick under-tamer trash uses, with no bespoke continuation channel.
+    let picked_for_filter = picked.clone();
+    // Resumable-VM (make-engine-cloneable): the data frame below carries the
+    // picks made so far and the real tail; the closure is the legacy
+    // coexistence path and does exactly the same through the shared
+    // `advance_trash_n_bottom_face_down_pick`.
     let override_pin = ctx.override_selecting_player();
     let tail_for_resume = Arc::clone(&tail);
     let bindings_for_resume = bindings.clone();
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
+    let picked_for_resume = picked.clone();
     ctx.select_own_permanent(
         "Choose a Tamer to trash a face-down card from under",
         false,
@@ -6931,75 +6964,36 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
                 player_for_filter,
             );
             eval_predicate_with_bindings(
-                &filter_for_pred,
+                &filter,
                 &read_ctx,
                 PredicateSubject::Permanent(handle),
                 Some(&filter_bindings),
-            )
+            ) && bottom_face_down_run(game, handle)
+                > picked_for_filter.iter().filter(|h| **h == handle).count()
         },
         move |cb_ctx, handle: PermanentHandle| {
-            let trashed = cb_ctx.trash_bottom_face_down_source(handle);
-            debug_assert!(
-                trashed,
-                "trash_bottom_face_down_sources_under_tamers: eligibility filter \
-                 (has_face_down_source) offered a Tamer whose bottom source is not \
-                 face-down — filter and action have desynced"
+            advance_trash_n_bottom_face_down_pick(
+                cb_ctx,
+                player,
+                remaining,
+                picked.clone(),
+                handle,
+                Arc::clone(&tail),
+                bindings.clone(),
+                runtime.clone(),
+                trigger_context.clone(),
             );
-            if !trashed {
-                // No-approximations: a desync means nothing was paid; do NOT run
-                // the tail and do NOT re-install (which would offer a free
-                // digivolve for an unpaid cost).
-                return;
-            }
-            let now_remaining = remaining.saturating_sub(1);
-            if now_remaining == 0 {
-                // Cost fully paid: run the captured tail (the free digivolve).
-                let mut b = bindings.clone();
-                run_tail_preserving_trigger_context(
-                    cb_ctx,
-                    trigger_context.clone(),
-                    &tail,
-                    &mut b,
-                    &runtime,
-                );
-            } else {
-                // More to trash: re-install the next Tamer pick. Eligibility is
-                // re-evaluated (the just-trashed Tamer may have dropped below 1
-                // face-down source). The earlier total-source gate guarantees
-                // enough sources remain.
-                install_trash_n_bottom_face_down_sources_under_tamers(
-                    cb_ctx,
-                    of,
-                    player,
-                    now_remaining,
-                    tail.as_ref().clone(),
-                    bindings.clone(),
-                    runtime.clone(),
-                );
-            }
         },
     );
-    // Park the data frame alongside the closure (coexistence): driven by
-    // run_resume's FieldPermanent{post:Some(TrashBottomFaceDownSource)} arm. The
-    // frame trashes ONE bottom face-down source from the picked Tamer, then runs
-    // the continuation: when `remaining > 1`, re-enter the multi-trash step for
-    // the next `remaining - 1` (which re-parks the next pick); at `remaining ==
-    // 1` run the real captured tail (the free digivolve). `select_own_permanent`
-    // installs a MANDATORY pick (the caller pre-gated ≥`remaining` sources exist,
-    // so ≥1 eligible Tamer), so on_decline is None ⇒ ResumeDecline::None. Whether
-    // to activate the whole cost at all is the clause's `optional`, one level up.
+    // Park the data frame alongside the closure (coexistence): run_resume's
+    // FieldPermanent{post:TrashBottomFaceDownSourcesPick} arm records the pick
+    // and either parks the next one or pays the cost and runs the tail.
+    // `select_own_permanent` installs a MANDATORY pick (the caller pre-gated
+    // the face-down total, so an eligible Tamer exists), so on_decline is None
+    // => ResumeDecline::None. Whether to perform the condition at all is
+    // decided one level up (the clause's `optional` / a preceding optional
+    // pick).
     if ctx.game.pending_selection.is_some() {
-        let continuation_tail: Vec<CompiledStep> = if remaining <= 1 {
-            (*tail_for_resume).clone()
-        } else {
-            let mut v = Vec::with_capacity(1 + tail_for_resume.len());
-            v.push(CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
-                of,
-                count: remaining - 1,
-            });
-            v.extend_from_slice(&tail_for_resume);
-            v
-        };
         ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RunTail {
                 prov: crate::resume::ResumeProvenance {
@@ -7011,10 +7005,15 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
                 },
                 select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
                     of_player: player,
-                    post: Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource),
+                    post: Some(
+                        crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSourcesPick {
+                            remaining,
+                            picked: picked_for_resume,
+                        },
+                    ),
                 },
                 bind_as: None,
-                inner_tail: Arc::new(continuation_tail),
+                inner_tail: tail_for_resume,
                 outer_conts: Vec::new(),
                 bindings: bindings_for_resume,
                 runtime: runtime_for_resume,
@@ -7023,6 +7022,59 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
             }],
         });
     }
+}
+
+/// One Tamer pick of the `trash_bottom_face_down_sources_under_tamers` cost
+/// resolved (`handle`): record it, then park the next pick while cards remain
+/// to be chosen, or trash every chosen card as ONE event (§15-5-2) and run the
+/// cost-gated `tail`. Shared by the resume arm and the legacy closure.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn advance_trash_n_bottom_face_down_pick(
+    ctx: &mut EffectContext<'_>,
+    player: PlayerId,
+    remaining: u8,
+    mut picked: Vec<PermanentHandle>,
+    handle: PermanentHandle,
+    tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<TriggerContext>,
+) {
+    picked.push(handle);
+    if remaining > 1 {
+        install_trash_n_bottom_face_down_sources_under_tamers(
+            ctx,
+            player,
+            remaining - 1,
+            picked,
+            tail,
+            bindings,
+            runtime,
+            trigger_context,
+        );
+        return;
+    }
+    let paid = ctx.trash_bottom_face_down_sources(&picked);
+    debug_assert!(
+        paid,
+        "trash_bottom_face_down_sources_under_tamers: the picks {picked:?} chose a Tamer \
+         without that many bottom face-down cards; filter and action have desynced"
+    );
+    // No-approximations: the tail (the effect) runs ONLY if the cost was paid.
+    if paid {
+        let mut b = bindings;
+        run_tail_preserving_trigger_context(ctx, trigger_context, &tail, &mut b, &runtime);
+    }
+}
+
+/// Face-down cards at the bottom of `handle`'s stack, counted up to the first
+/// face-up card: how many bottom face-down cards a pick can still take from it.
+fn bottom_face_down_run(game: &crate::game::Game, handle: PermanentHandle) -> usize {
+    game.player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+        .map(|perm| perm.card_sources.iter().take_while(|s| s.face_down).count())
+        .unwrap_or(0)
 }
 
 fn install_select_opponent_permanent(

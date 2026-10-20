@@ -316,6 +316,17 @@ pub enum FieldPermanentPostAction {
     /// Tamer's bottom face-down digivolution source (`trash_bottom_face_down_source`);
     /// the tail runs ONLY if the trash succeeded (no-approximations cost gate).
     TrashBottomFaceDownSource,
+    /// `install_trash_n_bottom_face_down_sources_under_tamers`: one Tamer pick
+    /// of the multi-card "by trashing N bottom face-down cards from under any
+    /// of your Tamers" cost. `remaining` counts this pick; `picked` holds the
+    /// Tamers chosen before it. The arm records the pick, then parks the next
+    /// one or trashes every chosen card as ONE source-trash event (§15-5-2)
+    /// and runs the cost-gated `inner_tail`.
+    /// G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+    TrashBottomFaceDownSourcesPick {
+        remaining: u8,
+        picked: Vec<PermanentHandle>,
+    },
     /// `try_run_relink` (`relink_self_to_own_digimon`, EX11-027): the picked
     /// permanent is the host; absorb the effect's own standing `source`
     /// permanent onto it as a link card (`absorb_standing_digimon_as_link`).

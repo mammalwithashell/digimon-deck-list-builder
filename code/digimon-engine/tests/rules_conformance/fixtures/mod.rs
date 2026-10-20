@@ -65,6 +65,7 @@ const CH11_14: &[&str] = &[
 const CH15_04: &[&str] = &[
     include_str!("ch15_04/BIG_LV6.yaml"),
     include_str!("ch15_04/HYBRID_LV5.yaml"),
+    include_str!("ch15_04/MAIN_TRASH2_UNDER_MEM.yaml"),
     include_str!("ch15_04/OBS_OPP_DEL_MEM.yaml"),
     include_str!("ch15_04/OBS_PLAY_LE4K.yaml"),
     include_str!("ch15_04/OD_PLAY_LV6.yaml"),
@@ -73,6 +74,7 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/PLAY_DP_UP.yaml"),
     include_str!("ch15_04/RET_PLAYED.yaml"),
     include_str!("ch15_04/SWEEPER.yaml"),
+    include_str!("ch15_04/TAMER_TRASH_OBS_MEM.yaml"),
     include_str!("ch15_04/WA_ALLIANCE.yaml"),
     include_str!("ch15_04/WA_DEL4K.yaml"),
     include_str!("ch15_04/WA_DRAW_INH.yaml"),
