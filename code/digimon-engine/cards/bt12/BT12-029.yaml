@@ -1,0 +1,59 @@
+# Official Bandai observation 4e08c231c9e4c06b460985c3e84c98d7a3bbe5e17d743ad5c05fb165aaa7b6c8;
+# card image checked, including the exact-name special evolution route.
+card: BT12-029
+name: UlforceVeedramon (X Antibody)
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, Royal Knight, X Antibody]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: UlforceVeedramon }
+    cost: 1
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Unsuspend this Digimon or 1 of your blue Tamers"
+    process:
+      - select_own_permanent:
+          bind_as: refreshed
+          filter:
+            all_of:
+              - can_unsuspend: true
+              - any_of:
+                  - is_source: true
+                  - all_of:
+                      - kind: tamer
+                      - color_is: blue
+          prompt: "Unsuspend this Digimon or 1 of your blue Tamers"
+      - unsuspend: { target: refreshed }
+
+  - when: on_unsuspend
+    once_per_turn: true
+    summary: "[All Turns][Once Per Turn] When this Digimon unsuspends, with a blue Tamer or an UlforceVeedramon source, return 1 opposing lowest-level Digimon to hand"
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - any_of:
+            - any_field_permanent: { of: you, kind: tamer, color_is: blue }
+            - self_source_count:
+                filter: { name_is: UlforceVeedramon }
+                op: gte
+                value: 1
+    process:
+      - select_opponent_permanent:
+          bind_as: returned
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate: { selector: lowest_level, of: opponent }
+          prompt: "Return 1 of your opponent's lowest-level Digimon to hand"
+      - return_to_hand: { target: returned }

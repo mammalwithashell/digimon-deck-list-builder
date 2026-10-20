@@ -1,0 +1,57 @@
+# Official observation 7561b9dfd91768d2ab8d4c814e3f906a5b9181402c6582f9c2e613c9a4ed70b2.
+# Card image checked; Q4875 defines the whole-card text filter.
+card: BT22-022
+name: Veedramon
+kind: digimon
+level: 4
+color: [blue]
+cost: 5
+dp: 5000
+traits: [Mythical Dragon, CS]
+form: Champion
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: CS }
+    cost: 2
+effects:
+  - when: when_digivolving
+    summary: "If you have 1 or fewer Tamers, you may play 1 Veedramon-text Tamer from hand without paying the cost."
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer
+          optional: true
+          filter: { kind: tamer, in_text_contains: Veedramon }
+          prompt: "You may play 1 Tamer with Veedramon in its text without paying the cost"
+      - if:
+          condition: { binding_present: tamer }
+          then:
+            - play_from_hand_free: { of: you, hand_index: tamer }
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      is_source: true
+      name_contains: Veedramon
+      replacement_cause: opponent_effect
+      source_is_unsuspended: true
+      can_change_orientation: true
+    summary: "Inherited [All Turns][Once Per Turn] When this Veedramon-name Digimon would leave by an opponent effect, by suspending it, it doesn't leave."
+    process:
+      # Atomic paid prevention: a blocked suspension cannot cancel the leave.
+      - suspend_and_cancel_all_matching_leaves:
+          target: source
+          filter:
+            is_source: true
+            name_contains: Veedramon
+            replacement_cause: opponent_effect
