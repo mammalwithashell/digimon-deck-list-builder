@@ -153,7 +153,11 @@ impl<'a> EffectContext<'a> {
                 effect_initiated: true,
             },
         );
-        self.game.drain_effect_queue();
+        // §15-8-3-2: inside a resolving effect the Token's play observers
+        // wait for it to finish and pend with its other triggers (§15-4-3-2);
+        // only a top-level play drains here.
+        // G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH.
+        self.game.maybe_drain_effect_queue();
         self.game.mark_until_condition_dirty();
         self.game.reevaluate_until_condition_modifiers_if_dirty();
         Some(entered)

@@ -155,7 +155,8 @@ impl Game {
                 card: placed_card,
             },
         );
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         handle
     }
 
@@ -182,7 +183,8 @@ impl Game {
                 card: placed_card,
             },
         );
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         handle
     }
 
@@ -216,7 +218,8 @@ impl Game {
                 card: placed_card,
             },
         );
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnLink,
@@ -227,7 +230,8 @@ impl Game {
                 },
             );
         }
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         true
     }
 
@@ -538,7 +542,8 @@ impl Game {
                 last_state,
             },
         );
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         true
     }
 

@@ -229,7 +229,8 @@ impl<'a> EffectContext<'a> {
                 card: placed_card,
             },
         );
-        self.game.drain_effect_queue();
+        // §15-8-3-2: held until the placing effect has finished.
+        self.game.maybe_drain_effect_queue();
     }
 
     /// Relocate THIS effect's source Option (an in-battle-area field Option)
