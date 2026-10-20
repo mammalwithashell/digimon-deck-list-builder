@@ -1,0 +1,23 @@
+# WD_USE_OPTION_THEN_MEM -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [When Digivolving] You may use 1 Option card from your hand without
+#   paying the cost. Then, gain 1 memory.
+# The shape of EX7-013's "You may use 1 [Three Musketeers] trait Option card
+# from your hand without paying the cost. Then, ...": an Option used, and
+# disposed, inside a still-resolving effect.
+card: WD_USE_OPTION_THEN_MEM
+name: Usemon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] You may use 1 Option card from your hand without paying the cost. Then, gain 1 memory."
+    process:
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter: { kind: option }
+          prompt: "You may use 1 Option card from your hand without paying the cost"
+      - gain_memory: 1

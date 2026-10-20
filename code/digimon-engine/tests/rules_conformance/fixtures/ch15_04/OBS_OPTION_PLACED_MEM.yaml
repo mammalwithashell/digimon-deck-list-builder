@@ -1,0 +1,15 @@
+# OBS_OPTION_PLACED_MEM -- Tamer, red, play cost 2.
+#   [All Turns] When an Option card is placed in the battle area, gain 1
+#   memory.
+# The "when an Option is placed" observer shape of BT13-007's breeding
+# effect, without its qualifiers.
+card: OBS_OPTION_PLACED_MEM
+name: Placement Witness
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: on_option_placed
+    summary: "[All Turns] When an Option card is placed in the battle area, gain 1 memory."
+    process:
+      - gain_memory: 1

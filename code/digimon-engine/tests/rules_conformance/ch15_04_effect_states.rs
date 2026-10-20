@@ -1850,3 +1850,51 @@ fn effect_digivolve_triggers_wait_for_the_digivolving_effect_and_pool() {
         ])
     );
 }
+
+/// §15-8-3-2 (as above), for the disposal of an Option that a still-resolving
+/// effect used. `WD_USE_OPTION_THEN_MEM` ("[When Digivolving] You may use 1
+/// Option card from your hand without paying the cost. Then, gain 1 memory.",
+/// EX7-013's shape) uses `DELAY_OPT_MEM` (a <Delay> Option: "[Main] Gain 1
+/// memory."), which the disposal then places in the battle area. That
+/// placement triggers `OBS_OPTION_PLACED_MEM` ("When an Option card is placed
+/// in the battle area, gain 1 memory") during the using effect's processing,
+/// so it activates only after the using effect's "Then, gain 1 memory".
+/// Witness for G-ENGINE-OPTION-DISPOSAL-DRAINS-INSIDE-RESOLVING-EFFECT.
+#[test]
+#[ignore = "G-ENGINE-OPTION-DISPOSAL-DRAINS-INSIDE-RESOLVING-EFFECT: the <Delay> disposal drains the queue directly inside the using effect (15-8-3-2)"]
+fn option_disposal_triggers_wait_for_the_using_effect() {
+    cite!(
+        "15-8-3-2",
+        "db9514d0faa35f84c637c60f04cbbe89569aafaa1a4d579674c36b56820b69e1"
+    );
+    let mut r = fixtures::builder(&[fixtures::ch15_04_cards()])
+        .deck(0, &[FILL; 4])
+        .hand(0, &["DELAY_OPT_MEM"])
+        .memory(3)
+        .start();
+    r.place_on_field(0, "OBS_OPTION_PLACED_MEM", Some(0));
+    let carrier = r.place_on_field(0, "WD_USE_OPTION_THEN_MEM", Some(0));
+    let cp = r.event_checkpoint();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(carrier),
+    );
+    r.game.drain_effect_queue();
+    resolve_prompts(&mut r); // the Option to use
+
+    assert!(
+        field_top_ids(&r, 0).iter().any(|id| id == "DELAY_OPT_MEM"),
+        "the used <Delay> Option was placed in the battle area: {:?}",
+        field_top_ids(&r, 0)
+    );
+    assert_eq!(
+        memory_sources(&r, cp),
+        vec![
+            (0, "DELAY_OPT_MEM".to_string()),
+            (0, "WD_USE_OPTION_THEN_MEM".to_string()),
+            (0, "OBS_OPTION_PLACED_MEM".to_string()),
+        ],
+        "the placement observer activated after the whole using effect, not inside it"
+    );
+}

@@ -65,6 +65,7 @@ const CH11_14: &[&str] = &[
 const CH15_04: &[&str] = &[
     include_str!("ch15_04/BIG_LV6.yaml"),
     include_str!("ch15_04/CLIMB_WD_MEM.yaml"),
+    include_str!("ch15_04/DELAY_OPT_MEM.yaml"),
     include_str!("ch15_04/DELAY_SHIFT_GUARD.yaml"),
     include_str!("ch15_04/HYBRID_LV5.yaml"),
     include_str!("ch15_04/MAIN_OPP_DISCARD_MINUS3000.yaml"),
@@ -72,6 +73,7 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/MAIN_TRASH_UNDER_OPP_DISCARD.yaml"),
     include_str!("ch15_04/OBS_DIGIVOLVE_MEM.yaml"),
     include_str!("ch15_04/OBS_OPP_DEL_MEM.yaml"),
+    include_str!("ch15_04/OBS_OPTION_PLACED_MEM.yaml"),
     include_str!("ch15_04/OBS_OWN_DECK_ADD_MEM.yaml"),
     include_str!("ch15_04/OBS_PLAY_LE4K.yaml"),
     include_str!("ch15_04/OBS_SRC_RET_BOTTOM_MEM.yaml"),
@@ -99,6 +101,7 @@ const CH15_04: &[&str] = &[
     include_str!("ch15_04/WD_RETURN_SOURCE_THEN_MEM.yaml"),
     include_str!("ch15_04/WD_RETURN_TRASH_PLAY_TOKEN.yaml"),
     include_str!("ch15_04/WD_RETURN_TRASH_THEN_BATTLE.yaml"),
+    include_str!("ch15_04/WD_USE_OPTION_THEN_MEM.yaml"),
     include_str!("ch15_04/WIN_MEM.yaml"),
     include_str!("ch15_04/WOULD_DEL_STRIKE.yaml"),
 ];
