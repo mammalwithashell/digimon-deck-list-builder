@@ -42,6 +42,10 @@
 #      together after the last Tamer pick as ONE event (§15-5-2), so ST23-13
 #      triggers once, like DCGO's one selection / one trigger; it still waits
 #      for the causing effect (§15-8-3-2) and pends beside BT25-041.
+#      HELD DCGO QUIRK: for "1 from each of two Tamers" DCGO raises one trash
+#      event per Tamer, so a global "under your Tamers" observer would trigger
+#      twice there; §15-5-2 counts once per trigger condition and the PDF wins
+#      (owner sign-off item 18). Expect an oracle divergence on that shape.
 #
 # PROMPT SHAPE (BT25-035.yaml DCGO crosscheck): -3000 pick is
 # SelectPermanentEffect canNoSelect: false. The "Then" is a trash-2 cost over
