@@ -3113,14 +3113,21 @@ fn compile_step(
                     message: "include_sources is only valid with disposition: observed".to_string(),
                 });
             }
-            if (a.to_owner || a.bind_placed_as.is_some())
-                && !(is_permanent && matches!(a.disposition, D::None))
+            if a.bind_placed_as.is_some() && !(is_permanent && matches!(a.disposition, D::None))
             {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.place_on_security"),
+                    message: "bind_placed_as requires source: permanent with no disposition"
+                        .to_string(),
+                });
+            }
+            if a.to_owner && !(is_permanent && matches!(a.disposition, D::None | D::Cancel)) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.place_on_security"),
                     message:
-                        "to_owner / bind_placed_as require source: permanent with no disposition"
+                        "to_owner requires source: permanent with disposition none or cancel"
                             .to_string(),
                 });
             }
@@ -3172,6 +3179,7 @@ fn compile_step(
                             CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
                                 of,
                                 target,
+                                to_owner: a.to_owner,
                             }
                         }
                         D::Observed => CompiledStep::PlacePermanentOnSecurityObserved {

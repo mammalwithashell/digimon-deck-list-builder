@@ -84,11 +84,26 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement { of, target } => {
-            let player = crate::dsl_cards::step::resolve_player(ctx, *of);
+        CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
+            of,
+            target,
+            to_owner,
+        } => {
             if let Some(ResolvedBinding::Permanent(handle)) =
                 resolve_binding_ref(target, ctx, bindings)
             {
+                // `to_owner`: the placed card's OWNER's security (§3-1-3-8 —
+                // BT24-040 names no stack; owner ruling 2026-10-20).
+                let owner = ctx
+                    .game
+                    .player(handle.player)
+                    .battle_area
+                    .get(handle.index as usize)
+                    .map(|p| p.top_card().owner);
+                let player = match (*to_owner, owner) {
+                    (true, Some(owner)) => owner,
+                    _ => crate::dsl_cards::step::resolve_player(ctx, *of),
+                };
                 if ctx.place_sourceless_permanent_bottom_security_and_cancel_current_replacement(
                     player, handle,
                 ) {

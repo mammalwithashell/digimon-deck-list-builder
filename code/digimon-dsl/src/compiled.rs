@@ -2233,6 +2233,10 @@ pub enum CompiledStep {
     PlacePermanentBottomSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
         target: CompiledBindingRef,
+        /// Place into the placed card's OWNER's security (ignores `of`;
+        /// §3-1-3-8). BT24-040 Venusmon.
+        #[serde(default)]
+        to_owner: bool,
     },
     PlacePermanentOnSecurity {
         of: CompiledPlayerRef,

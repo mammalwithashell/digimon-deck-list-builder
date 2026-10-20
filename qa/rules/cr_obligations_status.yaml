@@ -26,6 +26,10 @@
   note: "Keyword icon <Security A.> with a formerly-named parenthetical (※formerly <Security Attack>); a keyword label, not a testable rule."
 
 # ── ch03 Areas (§3) — tests/rules_conformance/ch03_areas.rs ──
+"3-1-3-8":
+  status: proven
+  tests: ["ch03_areas::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack"]
+  note: "Authoring rule, not an engine inference: text that names no player's area is authored `to_owner: true` (the placed card's owner's stack), text that names one is authored `of: you|opponent`. `place_on_security` accepts `to_owner` with `disposition: none` (BT25-044 Junomon) and `disposition: cancel` (BT24-040 Venusmon's leave-replacement cost; owner ruling 2026-10-20, Q5781: the chosen 'other Digimon' may be either player's and goes to its owner's security). Proof limit: the security stack is the only area pinned; other unnamed-area verbs (hand/deck/trash returns) route to the owner by their own engine helpers and are not asserted here."
 "3-2-2":
   status: proven
   tests: ["ch03_areas::face_down_card_returned_to_the_deck_keeps_no_face_down_state"]

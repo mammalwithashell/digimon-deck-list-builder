@@ -79,6 +79,14 @@ effects:
         - none_of:
             - replacement_cause: own_effect
     summary: "[All Turns][OPT] Place another sourceless Digimon as bottom security so your TS Digimon does not leave"
+    # Destination (OWNER RULING 2026-10-20, binding): the printed text names no
+    # player's security stack, so the chosen Digimon goes to the bottom of ITS
+    # OWNER's security (§3-1-3-8) — your own sourceless Digimon recovers you;
+    # an opponent's goes to the bottom of the OPPONENT's security. Q5781
+    # confirms "other Digimon" may be either player's (and, with several
+    # Digimon leaving at once, any Digimon other than the one protected). DCGO
+    # `PlacePermanentInSecurityAndProcessAccordingToResult` and the printed
+    # text do not name the destination; the ruling settles it: `to_owner: true`.
     process:
       - select_any_permanent:
           bind_as: cost_body
@@ -90,6 +98,6 @@ effects:
           prompt: "Place another sourceless Digimon as bottom security"
       - place_on_security:
           source: { permanent: cost_body }
-          of: you
+          to_owner: true
           position: bottom
           disposition: cancel

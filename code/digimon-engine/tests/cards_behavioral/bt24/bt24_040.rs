@@ -182,12 +182,27 @@ fn bt24_040_protects_ts_digimon_from_non_own_effect_by_placing_other_sourceless_
     assert!(permanent_exists(&runner, 0, "TS-TARGET"));
     assert!(!permanent_exists(&runner, 0, "COST-BODY"));
     assert_eq!(bottom_security_id(&runner, 0), Some("COST-BODY"));
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "your own Digimon goes to YOUR (its owner's) security, never the opponent's"
+    );
 }
 
+/// OWNER RULING (2026-10-20, binding): "placing 1 other Digimon ... as the
+/// bottom security card" names no stack, so the chosen Digimon goes to the
+/// bottom of ITS OWNER's security stack. Q5781 confirms "other Digimon" may be
+/// either player's; choosing the opponent's sourceless Digimon therefore sends
+/// it to the bottom of the OPPONENT's security (their count +1, yours
+/// unchanged) while your [TS] Digimon still stays.
 #[test]
-fn bt24_040_protection_can_pay_with_opponent_sourceless_digimon() {
+fn bt24_040_protection_paid_with_opponent_digimon_places_it_in_opponent_security() {
     let mut runner = protection_runner()
         .add_card(make_test_card("OPP-COST-BODY", "Opponent Cost Body"))
+        .add_card(make_test_card("OWN-SEC", "Own Security"))
+        .add_card(make_test_card("OPP-SEC", "Opponent Security"))
+        .security(0, &["OWN-SEC"])
+        .security(1, &["OPP-SEC"])
         .start();
     runner.place_on_field(0, "BT24-040", Some(0));
     let target = runner.place_on_field(0, "TS-TARGET", Some(0));
@@ -213,7 +228,7 @@ fn bt24_040_protection_can_pay_with_opponent_sourceless_digimon() {
     assert!(
         view.valid_action_ids
             .contains(&encode_any_permanent(opponent_cost_body)),
-        "opponent sourceless Digimon must be a legal cost body"
+        "opponent sourceless Digimon must be a legal cost body (Q5781)"
     );
     choose_any_permanent(
         &mut runner,
@@ -222,9 +237,66 @@ fn bt24_040_protection_can_pay_with_opponent_sourceless_digimon() {
     );
 
     assert!(permanent_exists(&runner, 0, "TS-TARGET"));
+    assert!(!hand_contains(&runner, 0, "TS-TARGET"));
     assert!(permanent_exists(&runner, 0, "COST-BODY"));
     assert!(!permanent_exists(&runner, 1, "OPP-COST-BODY"));
-    assert_eq!(bottom_security_id(&runner, 0), Some("OPP-COST-BODY"));
+    assert_eq!(
+        security_ids(&runner, 1),
+        vec!["OPP-COST-BODY", "OPP-SEC"],
+        "opponent's Digimon goes to the BOTTOM of its owner's (the opponent's) security"
+    );
+    assert_eq!(
+        security_ids(&runner, 0),
+        vec!["OWN-SEC"],
+        "your security is unchanged when the opponent's Digimon pays the cost"
+    );
+}
+
+/// Follow-through of the owner ruling: the opponent's Digimon placed in the
+/// opponent's security is an ordinary security card of THAT player — a later
+/// security check reveals it from their stack and it is trashed to its owner's
+/// trash, never yours.
+#[test]
+fn bt24_040_opponent_cost_body_is_checked_from_opponent_security_into_owner_trash() {
+    let mut attacker = make_test_card("ATTACKER", "Attacker");
+    attacker.dp = Some(9000);
+    let mut runner = protection_runner()
+        .add_card(make_test_card("OPP-COST-BODY", "Opponent Cost Body"))
+        .add_card(attacker)
+        .start();
+    runner.place_on_field(0, "BT24-040", Some(0));
+    let target = runner.place_on_field(0, "TS-TARGET", Some(0));
+    let opponent_cost_body = runner.place_on_field(1, "OPP-COST-BODY", Some(0));
+
+    runner.game.return_to_hand_from_effect(target, 1);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept replacement protection");
+    choose_any_permanent(
+        &mut runner,
+        opponent_cost_body,
+        "pay with opponent cost body",
+    );
+    assert_eq!(security_ids(&runner, 1), vec!["OPP-COST-BODY"]);
+    assert_eq!(runner.security_count(0), 0);
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    runner.attack_player(attacker, 1, false);
+    runner.auto_resolve().expect("resolve the security check");
+
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "the security check consumed the opponent's only security card"
+    );
+    assert!(
+        trash_contains(&runner, 1, "OPP-COST-BODY"),
+        "the checked security Digimon goes to its owner's (the opponent's) trash"
+    );
+    assert!(
+        !trash_contains(&runner, 0, "OPP-COST-BODY"),
+        "the opponent's card never reaches your trash"
+    );
 }
 
 #[test]
@@ -393,10 +465,13 @@ fn bt24_040_replacement_is_once_per_turn_even_with_another_cost_body_available()
 
 #[test]
 fn bt24_040_declining_replacement_lets_ts_digimon_leave_without_paying_cost_body() {
-    let mut runner = protection_runner().start();
+    let mut runner = protection_runner()
+        .add_card(make_test_card("OPP-COST-BODY", "Opponent Cost Body"))
+        .start();
     runner.place_on_field(0, "BT24-040", Some(0));
     let target = runner.place_on_field(0, "TS-TARGET", Some(0));
     runner.place_on_field(0, "COST-BODY", Some(0));
+    runner.place_on_field(1, "OPP-COST-BODY", Some(0));
 
     runner.game.return_to_hand_from_effect(target, 1);
     assert!(
@@ -416,7 +491,12 @@ fn bt24_040_declining_replacement_lets_ts_digimon_leave_without_paying_cost_body
         permanent_exists(&runner, 0, "COST-BODY"),
         "decline must not place any cost body in security"
     );
+    assert!(
+        permanent_exists(&runner, 1, "OPP-COST-BODY"),
+        "decline must not move the opponent's sourceless Digimon either"
+    );
     assert_eq!(runner.security_count(0), 0);
+    assert_eq!(runner.security_count(1), 0);
 }
 
 fn venusmon_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
@@ -533,6 +613,15 @@ fn hand_contains(runner: &DebugRunner, player: usize, id: &str) -> bool {
         .hand
         .iter()
         .any(|card| card.card_id(&runner.game.card_data) == id)
+}
+
+/// Security stack bottom-first (index 0 = bottom card).
+fn security_ids(runner: &DebugRunner, player: usize) -> Vec<&str> {
+    runner.game.players[player]
+        .security
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data))
+        .collect()
 }
 
 fn bottom_security_id(runner: &DebugRunner, player: usize) -> Option<&str> {

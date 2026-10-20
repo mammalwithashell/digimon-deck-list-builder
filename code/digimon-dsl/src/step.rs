@@ -2320,12 +2320,14 @@ pub struct PlaceOnSecurityArgs {
     pub disposition: SecurityReplacementDisposition,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_sources: bool,
-    /// `source: permanent`, `disposition: none` only: place the card into its
-    /// OWNER's security stack instead of `of`'s (DCGO
+    /// `source: permanent`, `disposition: none` or `cancel` only: place the
+    /// card into its OWNER's security stack instead of `of`'s (§3-1-3-8: text
+    /// that names no player's area places the card in its owner's; DCGO
     /// `CardObjectController.AddSecurityCard` adds to
     /// `cardSource.Owner.SecurityCards`). For printed text with no "your"
     /// whose target may be either player's Digimon — BT25-044 Junomon "By
-    /// placing 1 other Digimon as the top security card".
+    /// placing 1 other Digimon as the top security card"; BT24-040 Venusmon's
+    /// leave-replacement cost (`disposition: cancel`).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub to_owner: bool,
     /// `source: permanent`, `disposition: none` only: on a SUCCESSFUL

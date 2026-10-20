@@ -38,6 +38,7 @@ const CH03: &[&str] = &[
     include_str!("ch03/MAIN_SRC_TO_HAND.yaml"),
     include_str!("ch03/MAIN_SRC_TO_DECK.yaml"),
     include_str!("ch03/MAIN_SRC_TO_SECURITY.yaml"),
+    include_str!("ch03/MAIN_SOURCELESS_TO_SECURITY.yaml"),
     include_str!("ch03/MAIN_TRASH_UNDER.yaml"),
 ];
 
