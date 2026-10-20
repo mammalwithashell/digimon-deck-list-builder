@@ -430,6 +430,69 @@ fn unpayable_optional_condition_cannot_be_chosen() {
     );
 }
 
+/// P0's two `PLAIN_TAMER`s, the first with the cards `a` and the second with
+/// the cards `b` under it (bottom first; `true` = face-down), and
+/// `OP_TRASH2_UNDER_MEM` ("[On Play] By trashing 2 bottom face-down cards from
+/// under any of your Tamers, gain 1 memory.") played from the hand.
+fn trash2_under_tamers_board(a: &[bool], b: &[bool]) -> DebugRunner {
+    let mut r = fixtures::builder(&[fixtures::ch15_07_cards(), fixtures::ch15_08_cards()])
+        .hand(0, &["OP_TRASH2_UNDER_MEM"])
+        .deck(0, &[FILL; 4])
+        .memory(5)
+        .start();
+    for cards in [a, b] {
+        let tamer = r.place_on_field(0, "PLAIN_TAMER", Some(0));
+        // `attach_face_down` inserts at the bottom: attach top-down.
+        for &face_down in cards.iter().rev() {
+            attach_face_down(&mut r, tamer, FILL);
+            r.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down =
+                face_down;
+        }
+    }
+    r.play(0, 0);
+    r
+}
+
+/// §15-7-4 (as above), for "by trashing 2 bottom face-down cards from under
+/// any of your Tamers": the cards the condition can take are the face-down
+/// cards at the bottom of each Tamer's stack. A face-down card above a face-up
+/// bottom card is not a bottom face-down card, so it does not make the
+/// condition payable.
+///
+/// - Tamer A holds a face-down card over a face-up bottom card; Tamer B holds
+///   one face-down bottom card. Only 1 of the 2 cards can be trashed, so the
+///   [On Play]'s condition can't be chosen: nothing is offered and nothing is
+///   trashed.
+/// - Control: each Tamer holds one face-down bottom card. The condition is
+///   offered.
+#[test]
+fn face_down_under_tamers_condition_counts_only_bottom_face_down_cards() {
+    cite!(
+        "15-7-4",
+        "210ce11e09b84d8a05b2b4861fcbff3ad5d398894a7da5879d8c869dc6446b14"
+    );
+    let r = trash2_under_tamers_board(&[false, true], &[true]);
+    assert!(
+        r.pending_selection().is_none(),
+        "only 1 bottom face-down card: the condition can't be chosen, so nothing is offered: {:?}",
+        r.pending_selection()
+    );
+    let under: Vec<usize> = r.game.players[0]
+        .battle_area
+        .iter()
+        .take(2) // the two Tamers (the played Digimon is third)
+        .map(|perm| perm.card_sources.len() - 1)
+        .collect();
+    assert_eq!(under, vec![2, 1], "nothing was trashed");
+
+    let r = trash2_under_tamers_board(&[true], &[true]);
+    assert_optional_decision(
+        &r,
+        0,
+        "control: 2 bottom face-down cards, the condition is offered",
+    );
+}
+
 // ─── §15-7-5 ────────────────────────────────────────────────────────────────
 
 /// §15-7-5 "A player can choose to execute the content of optional processing

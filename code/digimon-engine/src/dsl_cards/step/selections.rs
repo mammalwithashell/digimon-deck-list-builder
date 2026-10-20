@@ -6854,12 +6854,9 @@ fn install_link_card_trash_second_selection(
     }
 }
 
-/// Total bottom-reachable face-down digivolution sources across `player`'s
-/// Tamers — the eligibility gate for the multi-count trash cost. A "face-down
-/// source" is any `CardSource` marked `face_down`; in the BEATBREAK / DATA
-/// SQUAD stash family these always sit contiguously from the bottom of the
-/// stack (stashes insert at index 0), so the count equals the number of
-/// reachable bottom-trash picks.
+/// Total bottom face-down digivolution sources across `player`'s Tamers —
+/// the eligibility gate for the multi-count trash cost
+/// (`face_down_sources_under_tamers`).
 fn total_face_down_sources_under_tamers(
     ctx: &EffectContext<'_>,
     player: PlayerId,
@@ -6868,12 +6865,17 @@ fn total_face_down_sources_under_tamers(
     face_down_sources_under_tamers(&ctx.as_read(), player)
 }
 
-/// Face-down digivolution cards across `player`'s Tamers that carry a
-/// face-down stash (`{ kind: tamer, has_face_down_source: true }`, the
-/// fixed filter of the `trash_bottom_face_down_source(s)_under_tamer(s)`
-/// costs). Shared by those steps and by the read-only payability guard
+/// Bottom face-down cards across `player`'s Tamers that carry a face-down
+/// stash (`{ kind: tamer, has_face_down_source: true }`, the fixed filter of
+/// the `trash_bottom_face_down_source(s)_under_tamer(s)` costs): per Tamer,
+/// the unbroken run of face-down cards from the bottom of its stack
+/// (`bottom_face_down_run`), i.e. exactly the cards those costs can trash and
+/// the multi-count pick can offer. A face-down card above a face-up bottom
+/// card is not counted. The ONE count shared by the multi-count step's
+/// unpayable abort, the read-only payability guard
 /// (`dsl_cards::lower_triggered::CostGuard::FaceDownUnderTamers`, §15-7-4)
-/// so the two can't drift.
+/// and the `face_down_sources_under_tamers_gte` predicate, so the guard and
+/// the pick can't drift.
 pub(crate) fn face_down_sources_under_tamers(
     read: &EffectReadContext<'_>,
     player: PlayerId,
@@ -6891,14 +6893,7 @@ pub(crate) fn face_down_sources_under_tamers(
         .filter(|handle| {
             eval_predicate_with_bindings(&filter, read, PredicateSubject::Permanent(*handle), None)
         })
-        .map(|handle| {
-            read.game
-                .player(handle.player)
-                .battle_area
-                .get(handle.index as usize)
-                .map(|perm| perm.card_sources.iter().filter(|s| s.face_down).count())
-                .unwrap_or(0)
-        })
+        .map(|handle| bottom_face_down_run(read.game, handle))
         .sum()
 }
 
@@ -7068,8 +7063,10 @@ pub(crate) fn advance_trash_n_bottom_face_down_pick(
 }
 
 /// Face-down cards at the bottom of `handle`'s stack, counted up to the first
-/// face-up card: how many bottom face-down cards a pick can still take from it.
-fn bottom_face_down_run(game: &crate::game::Game, handle: PermanentHandle) -> usize {
+/// face-up card: how many bottom face-down cards the cost can take from it
+/// (the per-Tamer unit of `face_down_sources_under_tamers` and the
+/// multi-count pick's eligibility).
+pub(crate) fn bottom_face_down_run(game: &crate::game::Game, handle: PermanentHandle) -> usize {
     game.player(handle.player)
         .battle_area
         .get(handle.index as usize)

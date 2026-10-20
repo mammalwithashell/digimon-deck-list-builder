@@ -1,0 +1,21 @@
+# OP_TRASH2_UNDER_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] By trashing 2 bottom face-down cards from under any of your
+#   Tamers, gain 1 memory.
+# The shape of Cougarmon (BT25-035)'s "by trashing 2 bottom face-down cards
+# from under any of your Tamers": an optional processing condition (§15-7-1)
+# whose payability the engine derives (§15-7-4), not a hand-authored
+# `condition:`.
+card: OP_TRASH2_UNDER_MEM
+name: Undertithemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing 2 bottom face-down cards from under any of your Tamers, gain 1 memory."
+    process:
+      - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+      - gain_memory: 1
