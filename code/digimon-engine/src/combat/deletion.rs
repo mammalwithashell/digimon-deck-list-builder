@@ -56,7 +56,7 @@ impl Game {
     /// 5. **OnAnyDeletion / OnLeaveField** — global broadcast with each
     ///    snapshot, enqueued (not drained).
     /// 6. **One flush** — the OnDeletion and observer entries drain as ONE
-    ///    simultaneous trigger pool (§16-13-2 / §15-4-3-2). Handlers that
+    ///    simultaneous trigger pool (§15-4-3-2). Handlers that
     ///    park selections (printed `<Save>`) unwind through
     ///    `pending_selection`; the post-selection drain resumes the rest.
     ///
@@ -301,9 +301,10 @@ impl Game {
             self.enqueue_pending_battle_result_triggers();
         }
 
-        // Stage 5: one flush for the whole deletion. §16-13-2 / §15-4-3-2:
-        // every effect this deletion triggered -- `[On Deletion]` (incl.
-        // <Retaliation>) and the "when a Digimon is deleted" observers --
+        // Stage 5: one flush for the whole deletion. §15-4-3-2: every effect
+        // this deletion triggered -- `[On Deletion]` (incl. <Retaliation>, a
+        // trigger-type effect, §16-13-2) and the "when a Digimon is deleted"
+        // observers --
         // triggers simultaneously and pends in ONE pool: the drainer stamps
         // them as one trigger batch, the turn player orders theirs first and
         // a player with 2+ gets a `TriggerOrder` pick (§15-4-3-5). DCGO: one
@@ -913,7 +914,7 @@ impl Game {
     /// Enqueue global OnAnyDeletion and OnLeaveField per survivor with
     /// snapshots. No drain: the entries pool with the batch's `[On
     /// Deletion]` entries and are flushed together by the caller's single
-    /// `exit_deferred_drain_and_flush` (§16-13-2 / §15-4-3-2). Phase 5
+    /// `exit_deferred_drain_and_flush` (§15-4-3-2). Phase 5
     /// (2026-05-23) retired the legacy `pending_post_deletion_replays` slot
     /// — Fortitude/Partition now play from trash inline during their
     /// OnDeletion handlers, so no post-finalize drain hook is needed here.
@@ -1019,7 +1020,7 @@ impl Game {
     /// the batch is mid-stage. Resume by continuing the batch's trigger
     /// drain until either the queue is empty or another handler parks. The
     /// OnAnyDeletion / OnLeaveField observers were enqueued with the
-    /// `[On Deletion]` entries before the flush (one pool, §16-13-2), so
+    /// `[On Deletion]` entries before the flush (one pool, §15-4-3-2), so
     /// they are already in the queue: there is no later stage to advance to.
     pub(crate) fn resume_pending_deletion(&mut self) {
         use crate::deletion_batch::BatchStage;

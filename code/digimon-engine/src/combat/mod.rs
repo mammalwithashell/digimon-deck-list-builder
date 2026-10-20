@@ -1432,11 +1432,9 @@ impl Game {
     /// does NOT need the keyword (judge-quiz Q24). A `CannotSuspend` ally
     /// can't pay the suspension (prohibition precedence 15-1-3).
     pub(crate) fn alliance_ally_candidates(&self, attacker: PermanentHandle) -> Vec<u8> {
-        if !self
-            .pending_attack
-            .as_ref()
-            .is_some_and(|pa| pa.attacker == attacker)
-        {
+        // The attacker by stack identity (as `raid_switch_options`), never a
+        // Digimon that compacted into the attacker's slot.
+        if self.live_attack_attacker() != Some(attacker) {
             return Vec::new();
         }
         let Some(player) = self.players.get(attacker.player as usize) else {

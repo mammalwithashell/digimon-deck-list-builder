@@ -4405,7 +4405,7 @@ fn eval_permanent_fields(
         }
     }
     if let Some(want) = pred.has_face_down_source {
-        let has_face_down = perm.card_sources.iter().any(|cs| cs.face_down);
+        let has_face_down = perm.face_down_source_indices().next().is_some();
         if has_face_down != want {
             return false;
         }
@@ -4919,7 +4919,7 @@ fn eval_breeding_permanent_fields(
         }
     }
     if let Some(want) = pred.has_face_down_source {
-        let has_face_down = perm.card_sources.iter().any(|cs| cs.face_down);
+        let has_face_down = perm.face_down_source_indices().next().is_some();
         if has_face_down != want {
             return false;
         }
