@@ -62,11 +62,9 @@ jobs:
           #   bench_engine_throughput -- a `--release` benchmark, not a test
           #   timing_dispatch, blocker_current_defender,
           #   force_attack_effect_tail_order -- run by the other job
-          #   hina_pending_target_departure, replay_empty_replacement_window,
-          #   specialized_top_stacked_movement -- RED on head c3f8098a0 (one
-          #     failing test each), found while building engine-rules-conformance.yml. Fix the
-          #     test or the engine, then delete the name from EXCLUDE.
-          EXCLUDE=" bench_engine_throughput timing_dispatch blocker_current_defender force_attack_effect_tail_order hina_pending_target_departure replay_empty_replacement_window specialized_top_stacked_movement "
+          # A file known RED on head is listed here with its reason; delete
+          # the name when it is fixed.
+          EXCLUDE=" bench_engine_throughput timing_dispatch blocker_current_defender force_attack_effect_tail_order "
           i=0
           args=()
           for f in $(ls code/digimon-engine/tests/*.rs | sort); do
