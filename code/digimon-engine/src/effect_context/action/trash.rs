@@ -933,7 +933,9 @@ impl<'a> EffectContext<'a> {
     /// listed Tamer still has that many face-down cards at the bottom of its
     /// stack, none protected from this effect's trash), and on any failure
     /// nothing moves and `false` is returned. Returns `true` once every card
-    /// is trashed.
+    /// is trashed. A trash failing after the check passed is unreachable (see
+    /// the loop); it would stop at that card, `debug_assert!` and return
+    /// `false`.
     ///
     /// Used by `trash_bottom_face_down_sources_under_tamers` (BT25-035
     /// Cougarmon, BT26-070, BT26-082, EX13-071, ST24-06, ST24-10).
@@ -974,10 +976,26 @@ impl<'a> EffectContext<'a> {
                 return false;
             }
         }
+        // Unreachable failure: the check above validated exactly the cards
+        // the loop removes (each Tamer's bottom `n`, in order), and nothing
+        // resolves inside the event -- its observers only enqueue (the scope
+        // is a deferred-drain scope, §15-8-3-2) -- so no effect can move a
+        // Tamer, flip a card or protect one between the check and the last
+        // trash. Should that ever break, stop at the first failure (loudly in
+        // dev/test) instead of trashing the rest of a payment that already
+        // failed.
         let event = self.game.begin_source_trash_event();
         let mut paid = true;
         for &target in targets {
-            paid &= self.trash_bottom_face_down_source(target);
+            if !self.trash_bottom_face_down_source(target) {
+                debug_assert!(
+                    false,
+                    "trash_bottom_face_down_sources: the trash from {target:?} failed after \
+                     the payment check passed ({targets:?})"
+                );
+                paid = false;
+                break;
+            }
         }
         self.game.end_source_trash_event(event);
         paid
