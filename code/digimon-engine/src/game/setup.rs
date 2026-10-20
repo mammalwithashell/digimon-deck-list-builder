@@ -282,7 +282,7 @@ impl Game {
             current_trigger_context: None,
             current_deletion_cause: None,
             current_deletion_event_cause_override: None,
-            pending_overclock_attack: None,
+            parked_overclock_attacks: Vec::new(),
             declined_overclock_this_eot: HashSet::new(),
             current_dna_origin: None,
             parked_replacement: Vec::new(),
@@ -473,7 +473,7 @@ impl Game {
         self.current_trigger_context = None;
         self.current_deletion_cause = None;
         self.current_deletion_event_cause_override = None;
-        self.pending_overclock_attack = None;
+        self.parked_overclock_attacks.clear();
         self.declined_overclock_this_eot = HashSet::new();
         self.current_dna_origin = None;
         self.parked_replacement.clear();

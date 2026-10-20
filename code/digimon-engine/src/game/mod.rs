@@ -155,9 +155,44 @@ pub(crate) struct EndTurnResume {
     pub(crate) memory_before_end_effects: i16,
 }
 
+/// An `<Overclock>` attack whose cost deletion parked a decision (an
+/// optional replacement such as <Armor Purge>, or a deletion trigger), queued
+/// in [`Game::parked_overclock_attacks`]. It is declared once the decision has
+/// resolved and no attack is in progress, and only if the cost's deletion
+/// happened: `cost_receipt` (a `deletion_receipts` id) must hold the cost
+/// Digimon's stack `cost_identity` (§16-34-3, §15-7-1, §15-8-5-2). The
+/// attacker is re-found by its top card (`source_card`), never by the old
+/// slot.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct ParkedOverclockAttack {
+    pub(crate) player: PlayerId,
+    /// The `<Overclock>` carrier's top card.
+    pub(crate) source_card: CardHandle,
+    /// The player the attack is declared on.
+    pub(crate) opponent: PlayerId,
+    /// `capture_digivolve_host_identity` of the cost Digimon.
+    pub(crate) cost_identity: u64,
+    pub(crate) cost_receipt: u64,
+}
+
+impl ParkedOverclockAttack {
+    /// The tuple the former single slot (`pending_overclock_attack:
+    /// Option<(..)>`) hashed; the verification digest keeps that shape.
+    pub(crate) fn digest_tuple(&self) -> (PlayerId, CardHandle, PlayerId, u64, u64) {
+        (
+            self.player,
+            self.source_card,
+            self.opponent,
+            self.cost_identity,
+            self.cost_receipt,
+        )
+    }
+}
+
 /// An end-of-turn attack keyword's processing (`<Engage>`, `<Execute>`,
 /// `<Vortex>`, `<Overclock>`) whose trigger activated in the `[End of Your
-/// Turn]` pool while another attack was already declared and not yet ended.
+/// Turn]` pool while another attack was already declared and not yet ended
+/// (or an `<Overclock>` attack was queued, [`ParkedOverclockAttack`]).
 /// Only one attack is in progress at a time (§11-1-4: the declared attack's
 /// timings follow once the pool has resolved), so its offer waits until that
 /// attack has ended (`Game::resume_pending_end_turn`). The carrier is kept by
@@ -1014,20 +1049,26 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) current_deletion_event_cause_override: Option<crate::trigger_context::EventCause>,
 
-    /// Paused Overclock attack after the sacrifice deletion installed one or
-    /// more selections (a replacement decision such as <Armor Purge>, or an
-    /// observer). Once those selections finish, the attack is declared only
-    /// if the cost's deletion actually happened -- read from the deletion
-    /// receipt (the last field, a `deletion_receipts` id) -- and the source
-    /// card is re-resolved by handle/token instead of trusting the old slot.
-    /// The penultimate field is the cost Digimon's stack identity
-    /// (`capture_digivolve_host_identity`). §16-34-3, §15-7-1, §15-8-5-2.
+    /// `<Overclock>` attacks whose cost deletion parked a decision (a
+    /// replacement such as <Armor Purge>, or a deletion trigger), in the order
+    /// the costs were paid (FIFO; see [`ParkedOverclockAttack`]). The front
+    /// entry is declared once nothing is pending and no attack is in progress
+    /// (§11-2-4: "A new attack declaration can't be made during an attack"),
+    /// and only if its cost was actually deleted (§16-34-3, §15-7-1,
+    /// §15-8-5-2): `Game::resume_pending_overclock_attack`, from the
+    /// `resolve_selection` tail and when an attack ends (through
+    /// `resume_pending_end_turn`). While one is queued, a later end-of-turn
+    /// attack keyword's processing waits behind it
+    /// (`deferred_end_of_turn_attack_offers`). Plain data: survives
+    /// `Game::clone`.
     #[doc(hidden)]
-    pub(crate) pending_overclock_attack: Option<(PlayerId, CardHandle, PlayerId, u64, u64)>,
+    pub(crate) parked_overclock_attacks: Vec<ParkedOverclockAttack>,
     /// Overclock source cards whose optional cost was declined this end of
     /// turn. <Overclock> is a trigger that activates once per end of turn
-    /// (§16-34-2), so nothing re-offers it; the set is kept (cleared on
-    /// rotation) because the verification digest reads it.
+    /// (§16-34-2), so nothing re-offers it and no engine path reads the set.
+    /// It is kept (cleared on rotation) because the verification digest
+    /// hashes it: dropping it would change the digest of every recorded game
+    /// in which an <Overclock> was declined (replay goldens).
     #[doc(hidden)]
     pub(crate) declined_overclock_this_eot: HashSet<CardHandle>,
 

@@ -811,11 +811,13 @@ pub(crate) fn end_of_turn_keyword_can_activate(
 /// triggered [When Attacking] effects and other triggered effects have been
 /// resolved"; Q3869). Declining declares nothing.
 ///
-/// Only one attack is in progress at a time. When this activates while an
-/// attack declared earlier in the same pool is waiting for its counter timing,
-/// the offer is queued (`Game::deferred_end_of_turn_attack_offers`) and made
-/// once that attack has ended (`Game::resume_pending_end_turn`); attacks are
-/// never nested.
+/// Only one attack is in progress at a time (§11-2-4). When this activates
+/// while an attack declared earlier in the same pool is waiting for its
+/// counter timing, or while a paid `<Overclock>` attack is queued behind its
+/// cost's parked deletion (`Game::parked_overclock_attacks`, declared first:
+/// it activated first), the offer is queued
+/// (`Game::deferred_end_of_turn_attack_offers`) and made once that attack has
+/// ended (`Game::resume_pending_end_turn`); attacks are never nested.
 pub(crate) fn end_of_turn_keyword_attack_process(ctx: &mut EffectContext<'_>, keyword: Keyword) {
     let Some(carrier) = ctx.source_permanent else {
         return;
@@ -834,7 +836,10 @@ pub(crate) fn end_of_turn_keyword_attack_process(ctx: &mut EffectContext<'_>, ke
         ctx.game.pending_selection.is_none(),
         "an end-of-turn keyword entry activated while a selection was parked"
     );
-    if ctx.game.pending_attack.is_some() || ctx.game.pending_selection.is_some() {
+    if ctx.game.pending_attack.is_some()
+        || ctx.game.pending_selection.is_some()
+        || !ctx.game.parked_overclock_attacks.is_empty()
+    {
         if ctx
             .game
             .players
