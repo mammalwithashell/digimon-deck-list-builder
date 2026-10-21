@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-20",
+  "last_updated": "2026-10-21",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14781,25 +14781,25 @@
     },
     "BT26-057": {
       "card_name": "Bearcatmon",
-      "validated_date": "2026-10-20",
+      "validated_date": "2026-10-21",
       "report": "ex13-meta b1-glowing-dawn-1",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Glowing Dawn",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-057.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_057.rs",
-      "test_count": 20,
+      "test_count": 31,
       "patterns": [
         "D1",
         "F6",
         "E2",
         "F1"
       ],
-      "notes": "DUAL. Alt-digivolve Lv.4 [Glowing Dawn] cost 3. WD optional cost trash_bottom_face_down_source_under_tamer (lowest face-down card, owner ruling 2026-10-20) -> grant_effect_immunity opp Digimon + +3000 DP until end of opp turn. [All Turns][OPT] on_attack_target_change | on_digivolution_card_trashed (timing_conditions event_host_is_own_tamer) may unsuspend, gated source suspended. Option [Main] De-Digivolve 1 + grant_triggered_effect SOMP force_attack until end of opp turn; Q&A immunity gate honoured. Use Req [Glowing Dawn] + Arts Digivolve. Note: the granted-clause immunity gate attributes a DUAL Option-face grant as a Digimon effect (G-ENGINE-DUAL-OPTION-GRANT-SOURCE-KIND, non-blocking)."
+      "notes": "DUAL. Alt-digivolve Lv.4 [Glowing Dawn] cost 3. WD optional cost trash_bottom_face_down_source_under_tamer (lowest face-down card, owner ruling 2026-10-20) -> grant_effect_immunity opp Digimon + +3000 DP until end of opp turn. [All Turns][OPT] on_attack_target_change | on_digivolution_card_trashed (timing_conditions event_host_is_own_tamer) may unsuspend, gated source suspended. Option [Main] De-Digivolve 1 + grant_triggered_effect SOMP force_attack until end of opp turn; Q&A immunity gate honoured. Use Req [Glowing Dawn] (mask-tested: legal with a [Glowing Dawn] card and no black card; illegal with neither; an opponent's [Glowing Dawn] card does not count) + Arts Digivolve (tested: offered onto a [Glowing Dawn] or Red Lv.4, free, replaces the trash; declined -> trashed; not offered without a legal base). WD Tamer pick and payability exclude a Tamer whose lowest face-down card the effect cannot trash (ImmuneFromStackTrashing / CannotTrash; DCGO IsTamerWithFaceDownCard; G-ENGINE-FACE-DOWN-TAMER-COST-IGNORES-STACK-TRASH-PROTECTION). Self-combo tested: the WD cost trash triggers its own [All Turns] unsuspend. Note: the granted-clause immunity gate attributes a DUAL Option-face grant as a Digimon effect (G-ENGINE-DUAL-OPTION-GRANT-SOURCE-KIND, non-blocking)."
     },
     "BT26-061": {
       "card_name": "Chiropmon",
-      "validated_date": "2026-10-20",
+      "validated_date": "2026-10-21",
       "report": "ex13-meta b1-glowing-dawn-1",
       "status": "IMPLEMENTED",
       "gap_kind": null,
@@ -14816,23 +14816,23 @@
     },
     "BT26-052": {
       "card_name": "Pristimon",
-      "validated_date": "2026-10-20",
+      "validated_date": "2026-10-21",
       "report": "ex13-meta b1-glowing-dawn-1",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Glowing Dawn",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-052.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_052.rs",
-      "test_count": 8,
+      "test_count": 9,
       "patterns": [
         "A1",
         "H7"
       ],
-      "notes": "Alt-digivolve Lv.2 [Glowing Dawn] cost 0. On Play reveal 3 -> select_reveal_buckets ([Glowing Dawn]; black [BEATBREAK]; no_duplicate_cards — DCGO mutualConditions), rest to deck bottom (BT25-032 idiom). Inherited <Reboot>."
+      "notes": "Alt-digivolve Lv.2 [Glowing Dawn] cost 0. On Play reveal 3 -> select_reveal_buckets ([Glowing Dawn]; black [BEATBREAK]; no_duplicate_cards — DCGO mutualConditions; one card meeting both buckets is added once, tested). Known divergence (shared with BT25-032, flagged in review): the engine fills the buckets in printed order and cannot offer DCGO mutualConditions' option to skip the second pick when the only [Glowing Dawn] card also met the black [BEATBREAK] bucket; doing as much as possible (15-1-5) arguably makes the engine's version the rules-correct one."
     },
     "BT26-095": {
       "card_name": "Makoto Kuonji",
-      "validated_date": "2026-10-20",
+      "validated_date": "2026-10-21",
       "report": "ex13-meta b1-glowing-dawn-1",
       "status": "IMPLEMENTED",
       "gap_kind": null,
