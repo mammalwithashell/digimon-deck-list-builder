@@ -14825,6 +14825,22 @@
         "G4"
       ],
       "notes": "[When Digivolving] optional processing condition (§15-7): optional own-green-Digimon suspend pick -> effect_suspended_any_own_digimon -> optional free play from hand of a Digimon with Vegetation/Plant/Fairy (trait_contains) and DP<=3000; §15-7-4 condition gate; §15-7-5 suspend allowed with nothing playable. Inherited [Your Turn][OPT] effect-suspend <Draw 1>. Tests drive the real digivolve action. Data fix: cards.json + card_overrides.json drop the phantom green Lv.3/cost 0 circle (image + DCGO asset print only cost 2; official mirror also wrong). Q1974 (Digisorption timing) not exercised: no Digisorption card in the pack. DCGO oracle unmeasured."
+    },
+    "BT10-053": {
+      "card_name": "Ajatarmon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt10/BT10-053.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_053.rs",
+      "test_count": 15,
+      "patterns": [
+        "E2",
+        "G4"
+      ],
+      "notes": "[Main][OPT] activated through the action mask: optional own-green-Digimon suspend (self allowed, Q1977) -> effect_suspended re-check -> optional free play from hand of a Vegetation/Plant/Fairy Digimon with DP<=3000; §15-6-3/§15-7-4 gate (illegal with no unsuspended green Digimon); OPT lockout + reset. Inherited [Your Turn][OPT] effect-suspend gain 1 memory (attack suspend excluded, Q1978); buried-copy integration. DCGO lets [Main] be declared with only suspended green Digimon (no-op); ours follows §15-6-3. DCGO oracle unmeasured."
     }
   }
 }
