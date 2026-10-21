@@ -14909,6 +14909,24 @@
         "inherited-on-deletion"
       ],
       "notes": "Card data ingested 2026-10-21 (digimoncard.io API + official bundle; override restores the Black Lv.3 circle and the Champion form). TDD vs DCGO P_250.cs. {Trash}[End of Your Turn] needed G-ENGINE-TRASH-ZONE-END-OF-YOUR-TURN (engine scans the ending player's trash; substrate widened this commit). Demon pick filtered by has_digivolve_candidate, normal cost. OP/WD/WA shared OPT cost clause (BT24-026 idiom; DCGO has no hand>=1 gate, so declining/empty hand spends the OPT). Inherited [On Deletion] mandatory delete play cost <= 6. No local card image."
+    },
+    "BT6-108": {
+      "card_name": "Underworld's Call",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-108.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_108.rs",
+      "test_count": 9,
+      "patterns": [
+        "self-trashed-from-hand-trigger",
+        "own-effect-gate",
+        "option-main-play-from-trash-free",
+        "security-activates-main"
+      ],
+      "notes": "TDD vs DCGO BT6_108.cs. scope: trash + on_discard_hand (BT26-069 idiom) gated by event_caused_by_own_effect (mutation-checked) -> mandatory <Draw 1>; negatives: another card trashed, card already in trash, opponent's effect, using the Option. [Main] optional free play of a purple Lv.4- Digimon from trash (Lv.5 / red / Option excluded; use cost 4 paid). [Security] re-runs the [Main] body for the defender."
     }
   }
 }
