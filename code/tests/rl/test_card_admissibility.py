@@ -6,6 +6,10 @@ or interaction) that is `diverged` without a truncation reason or a cited
 `dcgo_quirk` / `stale` triage. Fingerprint drift never voids a diverged row.
 """
 import json
+import os
+import subprocess
+import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -110,10 +114,43 @@ def test_partial_verdict_blocks(status, ledger):
     assert adm.reason(CARD) == "failed_verdict"
 
 
-def test_failed_statuses_include_the_gauntlet_ledger_gate():
+def test_failed_statuses_are_the_ledger_gate_plus_explicit_failures():
+    assert ca.NOT_READY_LEDGER_STATUSES == {"PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"}
+    assert ca.EXPLICIT_FAILED_STATUSES == {"FAILED", "FAIL", "QA-FAIL"}
+    assert ca.FAILED_VERDICT_STATUSES == ca.NOT_READY_LEDGER_STATUSES | ca.EXPLICIT_FAILED_STATUSES
+
+
+def test_gauntlet_ledger_gate_matches_the_owned_constant():
+    """This module owns the status set; the gauntlet's ledger gate must agree."""
+    pytest.importorskip("digimon_engine")
     from digimon_gym.agents.gauntlet import _NOT_READY_DSL_STATUSES
 
-    assert ca.failed_verdict_statuses() == _NOT_READY_DSL_STATUSES | {"FAILED", "FAIL", "QA-FAIL"}
+    assert _NOT_READY_DSL_STATUSES == ca.NOT_READY_LEDGER_STATUSES
+
+
+def test_load_and_decisions_need_no_engine_binding():
+    """The pure path (`load` + the per-card decision) never imports the engine."""
+    script = textwrap.dedent(
+        """
+        import sys
+        sys.modules["digimon_engine"] = None  # any import of it now fails
+        import digimon_gym.agents.card_admissibility as ca
+        adm = ca.CardAdmissibility.load(
+            registry_ids={"BT1-001"},
+            tested_ids={"BT1-001"},
+            verdicts_dsl={"cards": {"BT1-001": {"status": "PARTIAL"}}},
+            verdicts_rust={},
+            exam_verdicts=[],
+        )
+        assert adm.reason("BT1-001") == "failed_verdict"
+        assert "digimon_gym.agents.gauntlet" not in sys.modules
+        print("ok")
+        """
+    )
+    env = {**os.environ, "PYTHONPATH": str(REPO / "code")}
+    out = subprocess.run([sys.executable, "-c", script], env=env, capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == "ok"
 
 
 @pytest.mark.parametrize("status", ["IMPLEMENTED", "AUDITED-OK", "PASS", "FIXED", None])
@@ -126,7 +163,9 @@ def test_passing_verdict_admits(status):
 def test_stale_diverged_verdict_still_blocks():
     """Ruling R1' (supersedes the brief's `..._is_unmeasured_and_admits`): a
     diverged row whose text fingerprint no longer matches the printed text is
-    still a recorded divergence, so it blocks until triaged."""
+    still a recorded divergence, so it blocks until triaged. This pins that
+    `official` (the text staleness is measured against) is NOT consulted: even
+    with text that would mark the row stale, the decision is unchanged."""
     official = {CARD: {"effect": "new printed text that no longer hashes to aaaa…"}}
     adm = _load(exams=[_exam(_clause(CARD, verdict="diverged"))], official=official)
     assert adm.admissible(CARD) is False
@@ -162,6 +201,19 @@ def test_diverged_without_quirk_blocks():
     assert adm.admissible(CARD) is False
     assert adm.reason(CARD) == "diverged_no_quirk"
     assert adm.admissible(OTHER) is True
+
+
+def test_truncated_row_triaged_ours_wrong_blocks():
+    """An explicit human `ours_wrong` triage outranks an automated
+    "ran out of steps" truncation reason."""
+    row = _clause(
+        CARD,
+        verdict="diverged",
+        reason="TRUNCATED, no divergence found (compared 12 of 13 ours / 12 dcgo steps)",
+        triage="ours_wrong",
+        citation="G-456: our trigger fires late",
+    )
+    assert _load(exams=[_exam(row)]).reason(CARD) == "diverged_no_quirk"
 
 
 def test_diverged_triaged_ours_wrong_blocks():
@@ -388,3 +440,42 @@ def test_from_artifact_reads_committed_file_and_rejects_other_versions(tmp_path)
     art["version"] = 99
     with pytest.raises(ValueError, match="version"):
         CardAdmissibility.from_artifact_dict(art)
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"admissible": True, "reason": None, "reasons": ["untested"]},
+        {"admissible": False, "reason": "untested", "reasons": []},
+        {"admissible": False, "reason": "failed_verdict", "reasons": ["untested", "failed_verdict"]},
+        {"admissible": False, "reason": "untested"},  # `reasons` is required
+        {"admissible": False, "reason": "bogus", "reasons": ["bogus"]},
+    ],
+)
+def test_from_artifact_rejects_inconsistent_entries(entry):
+    art = _load().build_artifact(sources={}, generated_at="x")
+    art["cards"][CARD] = entry
+    with pytest.raises(ValueError, match=CARD):
+        CardAdmissibility.from_artifact_dict(art)
+
+
+def test_input_override_refuses_the_committed_artifact_path(tmp_path, fake_registry, capsys):
+    _write_inputs(tmp_path)
+    assert ca.main(["--tested", str(tmp_path / "tested.json")]) == 2
+    assert "--out" in capsys.readouterr().err
+
+
+def test_check_reports_missing_exam_store(tmp_path, fake_registry, capsys):
+    _write_inputs(tmp_path)
+    assert ca.main(_argv(tmp_path)) == 0
+    (tmp_path / "exam" / f"{OTHER}.json").unlink()
+    (tmp_path / "exam").rmdir()
+    assert ca.main(_argv(tmp_path, "--check")) == 1
+    assert "exam-verdict store" in capsys.readouterr().err
+
+
+def test_check_reports_corrupt_artifact(tmp_path, fake_registry, capsys):
+    _write_inputs(tmp_path)
+    (tmp_path / "card_admissibility.json").write_text("{not json", encoding="utf-8")
+    assert ca.main(_argv(tmp_path, "--check")) == 1
+    assert "not valid JSON" in capsys.readouterr().err

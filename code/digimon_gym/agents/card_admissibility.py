@@ -7,9 +7,10 @@ A card may appear in a training decklist when it is:
 2. **tested** -- listed in `data/tested_cards.json`;
 3. free of a **failed ledger verdict** -- its status in
    `qa/qa-reports/validated_cards_dsl.json` or `validated_cards.json` is not in
-   `failed_verdict_statuses()` -- the gauntlet's ledger gate
+   `FAILED_VERDICT_STATUSES` -- the ledger gate `NOT_READY_LEDGER_STATUSES`
    (`PARTIAL`, `BLOCKED`, `AUDITED-DRIFT`, `AUDITED-MISSING-TESTS`) plus the
-   explicit failures `FAILED`, `FAIL`, `QA-FAIL` (ruling R4-revised);
+   explicit failures `FAILED`, `FAIL`, `QA-FAIL` (ruling R4-revised). This
+   module owns those sets; the gauntlet imports them;
 4. free of an **untriaged divergence** -- no exam row of either family
    (`clauses`, or `interactions`: `qa:` rulings and `probe:` risk probes) is
    blocking under `row_blocks`, the single home of that rule.
@@ -34,8 +35,13 @@ back at run time:
     PYTHONPATH=code python -m digimon_gym.agents.card_admissibility [--check] [--out PATH]
 
 `--check` rebuilds from the current inputs and fails when the committed file
-differs in anything but `generated_at`. Importing the module has no side
-effects; building the registry needs the `digimon_engine` binding.
+differs in anything but `generated_at`. Run `--check` (and any write of the
+committed artifact) without input overrides: the input flags are refused unless
+`--out` points elsewhere.
+
+Importing the module, `load()` and every per-card decision need no engine
+binding; only `load_registry_ids()` / `from_repo()` (the registry) import the
+gauntlet and so `digimon_engine`.
 """
 from __future__ import annotations
 
@@ -45,7 +51,6 @@ import json
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
@@ -60,9 +65,15 @@ FAILED_VERDICT = "failed_verdict"
 DIVERGED_NO_QUIRK = "diverged_no_quirk"
 REASONS = (UNREGISTERED, UNTESTED, FAILED_VERDICT, DIVERGED_NO_QUIRK)
 
-# Explicit failure statuses added to the gauntlet's ledger gate: `FAILED`, and
-# the hand-written ledger's `FAIL` / `QA-FAIL` (ruling R4-revised, 2026-10-21).
+# The ledger gate: a PARTIAL / BLOCKED card has an unimplemented printed clause,
+# an AUDITED-DRIFT / AUDITED-MISSING-TESTS card failed its audit. Owned here;
+# `gauntlet._NOT_READY_DSL_STATUSES` is this set.
+NOT_READY_LEDGER_STATUSES = frozenset({"PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"})
+# Explicit failures: `FAILED`, and the hand-written ledger's `FAIL` / `QA-FAIL`
+# (ruling R4-revised, 2026-10-21).
 EXPLICIT_FAILED_STATUSES = frozenset({"FAILED", "FAIL", "QA-FAIL"})
+# A ledger status in this set, in EITHER ledger, is a failed verdict.
+FAILED_VERDICT_STATUSES = NOT_READY_LEDGER_STATUSES | EXPLICIT_FAILED_STATUSES
 
 # A diverged row with this reason compared every step it could and found no
 # divergence; the scenario just ran out of DCGO steps.
@@ -81,13 +92,20 @@ def _has_text(value: Any) -> bool:
 def row_blocks(row: Mapping[str, Any]) -> bool:
     """Whether one exam verdict row (clause or interaction) blocks its cards.
 
-    Only a `diverged` row can block. It does not when its reason says the run
-    was truncated with no divergence found, or when it is triaged `dcgo_quirk`
-    or `stale` with a non-empty citation. `ours_wrong`, an uncited triage, or no
-    triage blocks. The text fingerprint plays no part (ruling R1').
+    Only a `diverged` row can block. In precedence order:
+
+    1. triage `ours_wrong` blocks -- an explicit human finding outranks the
+       automated truncation reason below;
+    2. a reason starting `TRUNCATED, no divergence found` clears it;
+    3. triage `dcgo_quirk` or `stale` with a non-empty citation clears it;
+    4. anything else (no triage, an uncited or unknown triage) blocks.
+
+    The text fingerprint plays no part (ruling R1').
     """
     if row.get("verdict") != "diverged":
         return False
+    if row.get("triage") == "ours_wrong":
+        return True
     if str(row.get("reason") or "").startswith(TRUNCATED_PREFIX):
         return False
     if row.get("triage") in CLEARING_TRIAGES and _has_text(row.get("citation")):
@@ -113,23 +131,11 @@ def _row_card_ids(
     return ids
 
 
-@lru_cache(maxsize=1)
-def failed_verdict_statuses() -> frozenset[str]:
-    """Ledger statuses that are a failed verdict, applied to both ledgers:
-    `gauntlet._NOT_READY_DSL_STATUSES` (a PARTIAL / BLOCKED card has an
-    unimplemented printed clause) plus `EXPLICIT_FAILED_STATUSES`. Imported
-    lazily: the gauntlet needs the engine binding and imports this module."""
-    from digimon_gym.agents.gauntlet import _NOT_READY_DSL_STATUSES
-
-    return frozenset(_NOT_READY_DSL_STATUSES) | EXPLICIT_FAILED_STATUSES
-
-
 def _failed_ids(ledger: Mapping[str, Any]) -> set[str]:
-    failed = failed_verdict_statuses()
     return {
         str(cid)
         for cid, entry in (ledger.get("cards") or {}).items()
-        if str((entry or {}).get("status") or "").strip().upper() in failed
+        if str((entry or {}).get("status") or "").strip().upper() in FAILED_VERDICT_STATUSES
     }
 
 
@@ -212,8 +218,9 @@ class CardAdmissibility:
         official: Optional[Mapping[str, Any]] = None,
         exam_verdicts: Iterable[Mapping[str, Any]] = (),
     ) -> "CardAdmissibility":
-        """Decide from in-memory inputs. `official` is accepted for interface
-        parity and never read: staleness cannot change a decision (module doc)."""
+        """Decide from in-memory inputs; needs no engine binding. `official` is
+        accepted for interface parity and never read: staleness cannot change a
+        decision (module doc)."""
         del official
         diverged: set[str] = set()
         for exam in exam_verdicts:
@@ -242,17 +249,32 @@ class CardAdmissibility:
 
     @classmethod
     def from_artifact_dict(cls, data: Mapping[str, Any]) -> "CardAdmissibility":
-        """Rebuild from the committed artifact's payload (its `reasons` lists).
-        An id the artifact does not list is unregistered."""
+        """Rebuild from the committed artifact's payload. Every entry must carry
+        `reasons` (known reasons, priority order) agreeing with its `admissible`
+        and `reason`; anything else raises `ValueError` naming the card. An id
+        the artifact does not list is unregistered."""
         if data.get("version") != ARTIFACT_VERSION:
             raise ValueError(
                 f"card admissibility artifact version {data.get('version')!r} != {ARTIFACT_VERSION}; "
                 f"regenerate it with `{_REGENERATE}`"
             )
-        reasons = {
-            str(cid): list(e.get("reasons") or ([e["reason"]] if e.get("reason") else []))
-            for cid, e in data["cards"].items()
-        }
+        reasons: dict[str, list[str]] = {}
+        for cid, entry in data["cards"].items():
+            found = entry.get("reasons")
+            ok = (
+                isinstance(found, list)
+                and all(r in REASONS for r in found)
+                and len(set(found)) == len(found)
+                and found == sorted(found, key=REASONS.index)
+                and entry.get("admissible") is (not found)
+                and entry.get("reason") == (found[0] if found else None)
+            )
+            if not ok:
+                raise ValueError(
+                    f"card admissibility artifact entry {cid} is inconsistent: {entry!r}; "
+                    f"regenerate it with `{_REGENERATE}`"
+                )
+            reasons[str(cid)] = list(found)
 
         def having(reason: str) -> frozenset[str]:
             return frozenset(c for c, rs in reasons.items() if reason in rs)
@@ -338,6 +360,23 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="exit 1 if the committed artifact differs (ignoring generated_at) from a fresh build",
     )
     args = ap.parse_args(argv)
+    overridden = [
+        flag
+        for flag, value, default in (
+            ("--tested", args.tested, defaults.tested),
+            ("--dsl-ledger", args.dsl_ledger, defaults.dsl_ledger),
+            ("--rust-ledger", args.rust_ledger, defaults.rust_ledger),
+            ("--exam-verdicts", args.exam_verdicts, defaults.exam_verdicts),
+        )
+        if Path(value).resolve() != Path(default).resolve()
+    ]
+    if overridden and Path(args.out).resolve() == Path(defaults.out).resolve():
+        print(
+            f"error: {', '.join(overridden)} would build the committed artifact "
+            f"{defaults.out} from non-repo inputs; pass --out elsewhere",
+            file=sys.stderr,
+        )
+        return 2
     paths = DataPaths(
         tested=args.tested,
         dsl_ledger=args.dsl_ledger,
@@ -346,21 +385,30 @@ def main(argv: Optional[list[str]] = None) -> int:
         out=args.out,
     )
 
-    adm = CardAdmissibility.from_repo(paths)
+    try:
+        adm = CardAdmissibility.from_repo(paths)
+        sources = source_hashes(paths)
+    except FileNotFoundError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    payload = adm.build_artifact(sources=source_hashes(paths), generated_at=now)
+    payload = adm.build_artifact(sources=sources, generated_at=now)
 
     existing: Optional[dict] = None
+    corrupt = False
     if args.out.exists():
         try:
             existing = json.loads(args.out.read_text(encoding="utf-8"))
         except ValueError:
-            existing = None
+            corrupt = True
     unchanged = existing is not None and _comparable(existing) == _comparable(payload)
 
     if args.check:
         if not args.out.exists():
             print(f"error: {args.out} is missing; run `{_REGENERATE}` to create it", file=sys.stderr)
+            return 1
+        if corrupt:
+            print(f"error: {args.out} is not valid JSON; run `{_REGENERATE}`", file=sys.stderr)
             return 1
         if not unchanged:
             recorded = (existing or {}).get("sources")
