@@ -282,6 +282,24 @@ impl<'a> EffectContext<'a> {
     ) where
         F: Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
     {
+        self.grant_triggered_effect_qualified(carrier, timing, expiry, None, body);
+    }
+
+    /// [`Self::grant_triggered_effect`] with a trigger qualifier: the granted
+    /// entry triggers only for events where `qualifier` holds (read with the
+    /// carrier as `source_permanent` and the event's trigger context).
+    /// G-DSL-GRANTED-TRIGGER-QUALIFIER (BT14-044 Palmon's granted "When THIS
+    /// Digimon becomes suspended").
+    pub fn grant_triggered_effect_qualified<F>(
+        &mut self,
+        carrier: PermanentHandle,
+        timing: crate::enums::EffectTiming,
+        expiry: Expiry,
+        qualifier: Option<crate::modifiers::GrantedTriggerQualifier>,
+        body: F,
+    ) where
+        F: Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
+    {
         // §15-15-5-2 / §15-15-5-4: an effect gained while immune (including
         // by a `<Progress>` attacker, §16-39-1) is recorded, not skipped. The
         // granted-trigger dispatch (`effect_queue.rs`: `progress_excludes`
@@ -301,6 +319,11 @@ impl<'a> EffectContext<'a> {
         self.game
             .granted_effect_bodies
             .insert(body_id, body_arc.clone());
+        if let Some(qualifier) = qualifier {
+            self.game
+                .granted_effect_bodies
+                .insert_qualifier(body_id, qualifier);
+        }
         self.game.modifiers.add_granted_triggered(
             carrier,
             crate::modifiers::GrantedTriggeredEffect {

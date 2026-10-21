@@ -387,11 +387,22 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             of: _,
             hand_index,
             bind_as,
+            suspended,
         } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                if let Some(played) = ctx.play_from_hand_free(owner, i as usize) {
+                // G-DSL-PLAY-FROM-HAND-FREE-SUSPENDED (BT2-047 "play ...
+                // from your hand suspended"): the commit site consumes the
+                // G-PLAY-ENTERS-SUSPENDED slot, so the permanent enters
+                // suspended with no suspend event. Cleared after the call so a
+                // rejected play cannot leak it into a later one.
+                if *suspended {
+                    ctx.game.play_enters_suspended = true;
+                }
+                let played = ctx.play_from_hand_free(owner, i as usize);
+                ctx.game.play_enters_suspended = false;
+                if let Some(played) = played {
                     bindings.record_played(played);
                     // G-PLAY-FROM-HAND-FREE-BIND-AS: expose the played
                     // permanent's handle to subsequent steps in the same body.

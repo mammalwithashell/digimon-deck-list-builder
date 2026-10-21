@@ -3343,6 +3343,7 @@ fn compile_step(
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
             bind_as: a.bind_as.clone(),
+            suspended: a.suspended,
         },
         S::UseOptionFromHand(a) => CompiledStep::UseOptionFromHand {
             of: compile_player_ref(a.of),
@@ -3782,6 +3783,14 @@ fn compile_step(
             }
         }
         S::GrantTriggeredEffect(a) => {
+            if a.dynamic && a.trigger_if.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.trigger_if"),
+                    message: "trigger_if is supported on static (non-dynamic) granted effects only"
+                        .to_string(),
+                });
+            }
             if a.dynamic
                 && (!matches!(&a.target, crate::step::ModifierTarget::Filter(_))
                     || !matches!(
@@ -3817,6 +3826,9 @@ fn compile_step(
                     .enumerate()
                     .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                     .collect(),
+                trigger_if: a.trigger_if.as_ref().map(|p| {
+                    compile_predicate(p, &format!("{prefix}.trigger_if"), card_id, errors)
+                }),
             }
         }
         S::GrantEffectImmunity(a) => {

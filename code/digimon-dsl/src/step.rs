@@ -2660,6 +2660,14 @@ pub struct PlayFromHandFreeArgs {
     /// same body. None (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+    /// "play 1 ... from your hand SUSPENDED without paying its memory cost"
+    /// (BT2-047 Argomon). The permanent enters the battle area suspended —
+    /// the G-PLAY-ENTERS-SUSPENDED slot `play_from_trash_free { suspended }`
+    /// already uses — so no suspend event fires (entering suspended is not
+    /// "becoming suspended"). `false` (the default) preserves prior behavior.
+    /// G-DSL-PLAY-FROM-HAND-FREE-SUSPENDED.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suspended: bool,
 }
 
 /// `play_or_use_from_hand:` args — the unified "play OR use 1 card from hand
@@ -3292,6 +3300,16 @@ pub struct GrantTriggeredEffectArgs {
     /// `EffectSourcePermanent`). The body uses the normal triggered queue,
     /// including resumable player selections, with the carrier's controller.
     pub body: Vec<StepSpec>,
+    /// The granted effect's trigger qualifier, decided when the event
+    /// triggers it (§15-8-3-1 / §15-8-3-4), evaluated with the carrier as the
+    /// effect's source and the event's trigger context — the granted-effect
+    /// analog of a triggered clause's `trigger_if:`. An observer timing such
+    /// as `on_suspend` fires for every matching event on the field, so "When
+    /// THIS Digimon becomes suspended" (BT14-044 Palmon) is
+    /// `trigger_if: { event_target_is_source: true }`. Static (snapshot)
+    /// grants only. G-DSL-GRANTED-TRIGGER-QUALIFIER.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trigger_if: Option<crate::predicate::PredicateSpec>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
