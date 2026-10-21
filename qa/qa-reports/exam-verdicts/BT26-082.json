@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-21T15:09:52.979449+00:00",
+  "last_updated": "2026-10-21T17:49:44.727085+00:00",
   "clauses": {
     "BT26-082#effect#0": {
       "clause_id": "BT26-082#effect#0",
@@ -140,8 +140,8 @@
       "reason": "ours contradicts ruling qa:Q7122 (ours vs DCGO: agree); CLEAN (compared 48 of 53 ours / 53 dcgo steps (5 sim-only row(s) with no DCGO prompt + 5 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-082-qa-Q7122",
-      "triage": "ours_wrong",
-      "citation": "G-ENGINE-SECURITY-END-OF-OPPONENT-TURN-PLAY-SKIPPED-BY-ENGAGE-ATTACK (docs/RUST_ENGINE_GAPS.md): during P1's end-of-turn <Engage> attack, P0's face-up Ravemon's {Security} [End of Opponent's Turn] 'play this card' does not resolve before the security check; the check takes Ravemon to the trash and the game continues (projection 53: Breeding, P0 security 0). Official Q&A Q7122: Ravemon is played, the attack succeeds against 0 security and P0 loses; end-of-turn effects resolve after the declaration and before the counter timing (owner ruling W3 (a), §11-1-4, Q3869). DCGO's recording ends before the check, so DCGO's outcome is unknown",
+      "triage": "stale",
+      "citation": "fixed 750c93efa; oracle re-exam needed",
       "recorded_at": "2026-10-08T03:03:04.999855100+00:00"
     }
   }
