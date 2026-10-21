@@ -21,7 +21,7 @@
 #   Owner ruling 2026-10-20: "the bottom face-down card" is the LOWEST
 #     face-down card, even with face-up cards below it.
 #
-# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Black/BT26_057.cs
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Red/BT26_057.cs
 #
 # ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
 # Alt-digivolve: level 4 + TopCard EqualsTraits "Glowing Dawn", cost 3.

@@ -17,14 +17,16 @@
 //! Owner ruling 2026-10-20: "the bottom face-down card" is the LOWEST
 //! face-down card, even with face-up cards below it.
 //!
-//! DCGO: BT26/Black/BT26_057.cs.
+//! DCGO: BT26/Red/BT26_057.cs.
 
 use super::support::*;
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::space::{encode_attack, encode_digivolve};
+use digimon_engine::action::space::{encode_attack, encode_digivolve, PASS, PLAY_HAND_START};
+use digimon_engine::card_data::EvoCost;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, EffectSourceKind, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::OptionPlayResult;
 
 const CARD_ID: &str = "BT26-057";
 
@@ -83,6 +85,8 @@ fn setup() -> DebugRunner {
         .add_card(tamer("PT", "Plain Tamer", CardColor::Red, &[]))
         .add_card(digimon("GD4", "GD Lv4", CardColor::Yellow, 4, 5, &["Glowing Dawn"]))
         .add_card(digimon("PLAIN4", "Plain Lv4", CardColor::Yellow, 4, 5, &[]))
+        .add_card(digimon("BLK4", "Black Lv4", CardColor::Black, 4, 5, &[]))
+        .add_card(digimon("RED4", "Red Lv4", CardColor::Red, 4, 5, &[]))
         .add_card(digimon("OPP4", "Opp4", CardColor::Red, 4, 5, &[]))
         .add_card(lv3)
         .add_card(digimon("ATK", "Attacker", CardColor::Red, 5, 7, &[]))
@@ -486,4 +490,182 @@ fn bt26_057_option_grant_does_not_trigger_on_an_unaffected_digimon() {
     r.pass_turn();
     let _ = r.auto_resolve();
     assert!(!suspended(&r, opp), "immune → the granted effect doesn't trigger");
+}
+
+// ─── Option face: <Use Req. ([Glowing Dawn] trait)> ─────────────────────────
+// §4-22 colour requirement + the printed Use Req.: the black Option is usable
+// with a black card OR a [Glowing Dawn] card on your field (DCGO
+// `CardEffectFactory.UseRequirements(card, EqualsTraits("Glowing Dawn"))`).
+
+/// The hand-play bit of the Option (DUAL hand play = Option use) after
+/// pushing it into P0's hand in the main phase.
+fn option_use_legal(r: &mut DebugRunner) -> bool {
+    r.game.enter_main_phase();
+    push_hand(r, 0, CARD_ID);
+    let idx = r.game.players[0].hand.len() - 1;
+    build_action_mask(&r.game, 0)[PLAY_HAND_START as usize + idx] == 1.0
+}
+
+#[test]
+fn bt26_057_use_req_glowing_dawn_card_allows_the_option_without_black() {
+    let mut r = setup();
+    // A purple [Glowing Dawn] Tamer and a yellow Digimon: no black card.
+    r.place_on_field(0, "GDT", Some(0));
+    r.place_on_field(0, "PLAIN4", Some(0));
+    assert!(
+        option_use_legal(&mut r),
+        "<Use Req. ([Glowing Dawn] trait)> satisfies the colour requirement"
+    );
+}
+
+#[test]
+fn bt26_057_option_is_illegal_without_black_or_glowing_dawn() {
+    let mut r = setup();
+    // The same board shape minus the [Glowing Dawn] card: a red plain Tamer
+    // and a yellow plain Digimon.
+    r.place_on_field(0, "PT", Some(0));
+    r.place_on_field(0, "PLAIN4", Some(0));
+    assert!(
+        !option_use_legal(&mut r),
+        "no black card and no [Glowing Dawn] card: not usable"
+    );
+}
+
+#[test]
+fn bt26_057_option_is_usable_with_a_black_card_alone() {
+    let mut r = setup();
+    r.place_on_field(0, "BLK4", Some(0));
+    assert!(option_use_legal(&mut r), "the normal black colour requirement");
+}
+
+#[test]
+fn bt26_057_opponents_glowing_dawn_card_does_not_satisfy_use_req() {
+    let mut r = setup();
+    r.place_on_field(0, "PT", Some(0));
+    r.place_on_field(1, "GDT", Some(0));
+    assert!(!option_use_legal(&mut r), "only YOUR [Glowing Dawn] cards");
+}
+
+// ─── Option face: <Arts Digivolve> (§4-20) ──────────────────────────────────
+// Instead of being trashed after use, one of your cards on the field may
+// digivolve into this DUAL card without paying the cost.
+
+/// Use the Option from hand with no opponent Digimon (the [Main] picks have
+/// no candidates) and return the memory right after paying its use cost.
+fn use_option_to_arts(r: &mut DebugRunner) -> i16 {
+    r.game.enter_main_phase();
+    push_hand(r, 0, CARD_ID);
+    let idx = r.game.players[0].hand.len() - 1;
+    let mem = r.memory();
+    let res = r.game.play_option_from_hand(0, idx);
+    assert_ne!(res, OptionPlayResult::Invalid, "the Option is usable");
+    mem - 4
+}
+
+fn arts_prompt_offers(r: &DebugRunner, base: PermanentHandle) -> bool {
+    r.pending_selection_view().is_some_and(|v| {
+        v.prompt.contains("Arts Digivolve")
+            && v.is_optional
+            && v.valid_action_ids
+                .contains(&encode_attack(0, base.index as u16))
+    })
+}
+
+#[test]
+fn bt26_057_arts_digivolve_onto_a_glowing_dawn_level_4_for_free() {
+    let mut r = setup();
+    r.place_on_field(0, "GDT", Some(0));
+    let base = r.place_on_field(0, "GD4", Some(0));
+    let mem_after_use = use_option_to_arts(&mut r);
+    assert!(arts_prompt_offers(&r, base), "Arts Digivolve offered");
+    let trash = r.trash_size(0);
+    r.execute_action(0, encode_attack(0, base.index as u16))
+        .expect("accept Arts Digivolve");
+    let _ = r.auto_resolve();
+    assert_eq!(top_id(&r, base), CARD_ID, "Bearcatmon on top");
+    assert_eq!(sources(&r, base), 1);
+    assert_eq!(r.memory(), mem_after_use, "no digivolve cost paid");
+    assert_eq!(r.trash_size(0), trash, "replaces the Option's trashing");
+}
+
+/// Install the printed digivolve circles (Black Lv.4 / 4, Red Lv.4 / 4 — the
+/// production `cards.json` `dual.digimon.evo_costs`): `DebugRunner` back-fills only the
+/// level+colour alt paths of a DSL card, not its printed circles.
+fn with_printed_circles(r: &mut DebugRunner) {
+    let idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == CARD_ID)
+        .expect("BT26-057 in card_data");
+    let circles = vec![
+        EvoCost { card_color: CardColor::Black as u8, level: 4, memory_cost: 4 },
+        EvoCost { card_color: CardColor::Red as u8, level: 4, memory_cost: 4 },
+    ];
+    // A DUAL's circles live on its Digimon face (`CardData::digivolution_costs`).
+    let data = &mut r.game.card_data[idx];
+    data.dual.as_mut().expect("DUAL").digimon.evo_costs = circles.clone();
+    data.evo_costs = circles;
+}
+
+#[test]
+fn bt26_057_arts_digivolve_onto_a_red_level_4() {
+    // The printed Red Lv.4 digivolve condition also qualifies (cost ignored).
+    let mut r = setup();
+    with_printed_circles(&mut r);
+    r.place_on_field(0, "GDT", Some(0)); // Use Req.
+    let base = r.place_on_field(0, "RED4", Some(0));
+    use_option_to_arts(&mut r);
+    assert!(arts_prompt_offers(&r, base));
+    r.execute_action(0, encode_attack(0, base.index as u16))
+        .expect("accept");
+    let _ = r.auto_resolve();
+    assert_eq!(top_id(&r, base), CARD_ID);
+}
+
+#[test]
+fn bt26_057_arts_digivolve_declined_trashes_the_option() {
+    let mut r = setup();
+    r.place_on_field(0, "GDT", Some(0));
+    let base = r.place_on_field(0, "GD4", Some(0));
+    use_option_to_arts(&mut r);
+    assert!(arts_prompt_offers(&r, base));
+    r.execute_action(0, PASS).expect("decline Arts Digivolve");
+    let _ = r.auto_resolve();
+    assert_eq!(top_id(&r, base), "GD4");
+    assert_eq!(trash_ids(&r, 0), vec![CARD_ID.to_string()], "trashed");
+}
+
+#[test]
+fn bt26_057_arts_digivolve_not_offered_without_a_legal_base() {
+    let mut r = setup();
+    r.place_on_field(0, "GDT", Some(0)); // Use Req.; a Tamer can't digivolve
+    let plain = r.place_on_field(0, "PLAIN4", Some(0)); // yellow, no GD trait
+    use_option_to_arts(&mut r);
+    let _ = r.auto_resolve();
+    assert!(!arts_prompt_offers(&r, plain));
+    assert!(r.game.pending_selection.is_none(), "nothing to choose");
+    assert_eq!(top_id(&r, plain), "PLAIN4");
+    assert_eq!(trash_ids(&r, 0), vec![CARD_ID.to_string()]);
+}
+
+// ─── Self-combo: the WD cost trash triggers its own [All Turns] unsuspend ───
+
+#[test]
+fn bt26_057_wd_cost_trash_lets_a_suspended_bearcatmon_unsuspend() {
+    let mut r = setup();
+    let t = tamer_with_face_down(&mut r, 0, "GDT", 1);
+    r.game.enter_main_phase();
+    let host = r.place_on_field(0, "GD4", Some(0));
+    set_suspended(&mut r, host); // e.g. it attacked earlier this turn
+    push_hand(&mut r, 0, CARD_ID);
+    r.game.decode_action(encode_digivolve(0, host.index as u16), 0);
+    r.accept_optional_trigger().expect("[When Digivolving] cost");
+    pick_first(&mut r, 0); // the Tamer
+    assert_eq!(sources(&r, t), 0, "an effect trashed from under your Tamer");
+    r.accept_optional_trigger()
+        .expect("[All Turns] this Digimon may unsuspend");
+    let _ = r.auto_resolve();
+    assert!(!suspended(&r, host), "unsuspended");
+    assert_eq!(r.effective_dp(host), Some(11000));
 }
