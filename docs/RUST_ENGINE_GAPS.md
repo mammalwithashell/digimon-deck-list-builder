@@ -6004,6 +6004,16 @@ Filed from the second re-review of the Venusmon owner-security fix (p4-venusmon-
 - **R3 (test-only):** `place_sourceless_permanent_bottom_security_and_cancel_current_replacement` (DebugRunner-only caller) ignores a parked placement; the primitive's doc comment still names EX8-028.
 - **Blocks training:** no — R1 has no production reach, R2 wastes an action without changing an outcome the rules give (the placement could not legally happen), R3 is test-only.
 
+### Placing a permanent as a digivolution card kept its whole stack  [G-ENGINE-PLACE-PERMANENT-AS-SOURCE-KEEPS-STACK] — RESOLVED (2026-10-21, EX13 lane c fix round)
+
+- **Where:** `Game::place_permanent_as_bottom_sources_inner` (`src/game_actions/sources.rs`), reached from the DSL `place_as_bottom_source` step when `source` is a permanent binding (`dsl_cards/step/play_digivolve.rs`) via `EffectContext::place_permanent_as_bottom_sources`.
+- **Defect:** the verb removed the source permanent and spliced its WHOLE `card_sources` under the target. CR 4.3 §4-7-7 (example) treats the placed permanent as removed from the field, and §4-7-8 trashes the cards under it at the same time; DCGO `IPlacePermanentToDigivolutionCards` runs `DiscardEvoRoots` and then `AddDigivolutionCardsBottom({ TopCard })`. The removal also skipped the leave-field bookkeeping (`clear_permanent_full`, modifier / pending-attack / effect-queue re-keying), so modifiers on higher slots could migrate to the wrong permanent.
+- **Card reached:** BT26-097 The Thunder Emperor Awakens ("place 1 of your [Dan Yuki]/[Kanan Yuki] Tamers as any of your [Aegiomon]'s bottom digivolution card") — the only production caller (scan of every `place_as_bottom_source` YAML on 2026-10-21; `EX2-007` uses `place_cards_as_bottom_sources`, a different verb).
+- **Reachable repro:** generic effects put cards under "1 of your Tamers", e.g. <Material Save N> (BT10-009; the engine gates Material Save only on an own Tamer), AD1-006, BT10-088. Material Save onto a [Dan Yuki] Tamer, then use BT26-097 on that Tamer: the saved cards used to become the [Aegiomon]'s (then [Jupitermon]'s) digivolution cards instead of going to the trash.
+- **Fix:** only the source's top card moves; the cards under it go to their owners' trash as ONE `OnDigivolutionCardTrashed` event (§15-5-2, `begin_source_move_event` scope, Ace overflow applied to them), linked cards go to the trash with `OnLinkedCardTrashed`, and the removal now does the same re-keying as `place_permanent_on_security_observed`. If the target vanished, the lifted top card is trashed (safe-fail, as `attach_tamer_to_digimon`).
+- **Witness:** `cards_behavioral::bt26::bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer` (RED before, GREEN after); `token_source_destination` still green.
+- **Blocks training:** no (resolved).
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.

@@ -374,6 +374,10 @@ impl Game {
         self.place_as_top_source_observed(source, target, target.player, face_down)
     }
 
+    /// Place the permanent `source` under `target` as its bottom
+    /// digivolution card. The source permanent leaves the field (CR 4.3
+    /// §4-7-7): only its top card moves; the cards under it and any linked
+    /// cards are trashed at the same time (§4-7-8), as one event (§15-5-2).
     pub fn place_permanent_as_bottom_sources(
         &mut self,
         source: PermanentHandle,
@@ -383,7 +387,7 @@ impl Game {
     }
 
     /// `place_permanent_as_bottom_sources` for an EFFECT-driven placement:
-    /// after the source permanent's whole stack rides under `target`, the
+    /// after the source permanent's top card rides under `target`, the
     /// host's `OnAddDigivolutionCards` batch is noted with `cause` as the
     /// placing effect (DCGO `IPlacePermanentToDigivolutionCards(..., cardEffect)`
     /// → `AddDigivolutionCardsBottom(..., _cardEffect)`).
@@ -438,41 +442,100 @@ impl Game {
             }
         }
 
-        let removed = self
+        // CR 4.3 §4-7-7 / §4-7-8: the source permanent is removed from the
+        // field, so only its TOP card becomes the target's digivolution card;
+        // the cards under it (and any linked cards) are trashed at the same
+        // time. DCGO `IPlacePermanentToDigivolutionCards` → `DiscardEvoRoots`
+        // then `AddDigivolutionCardsBottom({ TopCard })`.
+        // G-ENGINE-PLACE-PERMANENT-AS-SOURCE-KEEPS-STACK (resolved).
+        let mut removed = self
             .player_mut(source.player)
             .battle_area
             .remove(source.index as usize);
-        let cards = removed.card_sources;
-        let card_handles: Vec<crate::card_source::CardHandle> =
-            cards.iter().map(|c| c.handle()).collect();
+        // Same leave-field bookkeeping as the other battle-area removals
+        // (`place_permanent_on_security_observed`): clear the departing
+        // identity, then re-key every handle above the removed slot.
+        self.clear_permanent_full(source);
+        self.modifiers.expire_player_on_permanent_leave(source);
+        self.modifiers
+            .shift_after_battle_area_remove(source.player, source.index);
+        self.shift_pending_attack_after_battle_area_remove(source.player, source.index);
+        self.shift_effect_queue_after_battle_area_remove(source.player, source.index);
 
-        if adjusted_target.index == crate::action::space::BREEDING_TARGET as u8 {
-            let Some(breeding) = self
+        let Some(top) = removed.card_sources.pop() else {
+            return false;
+        };
+        let top_handle = top.handle();
+        let mut leaving_sources = removed.card_sources.clone();
+        leaving_sources.extend(removed.linked_cards.iter().cloned());
+        self.apply_ace_overflow_for_sources(&leaving_sources);
+        // The cards under it are trashed at the same time: ONE event
+        // (§15-5-2), and nothing activates before the placement has finished
+        // (§15-8-3-2) — the event scope closes after the placement below.
+        let event = self.begin_source_move_event();
+        for card in removed.card_sources.drain(..) {
+            let owner = card.owner;
+            self.trash_source_and_fire_with_cause(
+                owner,
+                source,
+                card,
+                top_handle,
+                crate::trigger_context::EventCause::Rule,
+            );
+        }
+        let had_linked = !removed.linked_cards.is_empty();
+        for linked in removed.linked_cards.drain(..) {
+            let owner = linked.owner;
+            self.player_mut(owner).put_in_trash(linked);
+        }
+        if had_linked {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnLinkedCardTrashed,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+                );
+            }
+        }
+
+        let placed = if adjusted_target.index == crate::action::space::BREEDING_TARGET as u8 {
+            match self
                 .player_mut(adjusted_target.player)
                 .breeding_area
                 .as_mut()
-            else {
-                return false;
-            };
-            breeding.card_sources.splice(0..0, cards);
-            if let Some(cause) = cause {
-                self.note_effect_added_sources(adjusted_target, card_handles, cause);
+            {
+                Some(breeding) => {
+                    breeding.card_sources.insert(0, top);
+                    true
+                }
+                None => {
+                    self.player_mut(top.owner).put_in_trash(top);
+                    false
+                }
             }
-            return true;
-        }
-
-        let Some(target_perm) = self
-            .player_mut(adjusted_target.player)
-            .battle_area
-            .get_mut(adjusted_target.index as usize)
-        else {
-            return false;
+        } else {
+            match self
+                .player_mut(adjusted_target.player)
+                .battle_area
+                .get_mut(adjusted_target.index as usize)
+            {
+                Some(target_perm) => {
+                    target_perm.card_sources.insert(0, top);
+                    true
+                }
+                None => {
+                    // Safe-fail (same shape as `attach_tamer_to_digimon`).
+                    self.player_mut(top.owner).put_in_trash(top);
+                    false
+                }
+            }
         };
-        target_perm.card_sources.splice(0..0, cards);
-        if let Some(cause) = cause {
-            self.note_effect_added_sources(adjusted_target, card_handles, cause);
+        if placed {
+            if let Some(cause) = cause {
+                self.note_effect_added_sources(adjusted_target, vec![top_handle], cause);
+            }
         }
-        true
+        self.end_source_move_event(event);
+        placed
     }
 
     /// Return one digivolution source from `perm`'s stack to its owner's deck

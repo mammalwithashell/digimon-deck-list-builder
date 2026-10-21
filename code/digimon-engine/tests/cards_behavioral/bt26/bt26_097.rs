@@ -66,6 +66,11 @@ fn setup_with_security(n: usize) -> DebugRunner {
         .add_card(digimon("TS6", "Ts Six", CardColor::Yellow, 5, 6, &["TS"]))
         .add_card(digimon("PLAIN3", "Plain Three", CardColor::Yellow, 3, 3, &[]))
         .add_card(ts_option("TSOPT", 1))
+        .add_card({
+            let mut t = tamer("TSTAMER6", "Ts Tamer Six", CardColor::Yellow, &["TS"]);
+            t.play_cost = 6;
+            t
+        })
         .add_card(digimon("ATK", "Attacker", CardColor::Blue, 5, 7, &[]))
         .deck(0, &["FILLER"; 6])
         .deck(1, &["FILLER"; 6])
@@ -368,6 +373,61 @@ fn bt26_097_main_after_is_skipped_without_aegiochusmon_in_trash() {
     assert_eq!(stack_ids(&r, aegio), vec!["DAN", "AEGIO", "JUPI"]);
 }
 
+#[test]
+fn bt26_097_main_after_is_skipped_without_a_jupitermon_on_the_field() {
+    // "any of your [Jupitermon]": with the digivolve declined and no
+    // [Jupitermon] in play there is no host, so no After prompt — even with an
+    // [Aegiochusmon] card in the trash (DCGO gates the After part on an own
+    // [Jupitermon] permanent existing).
+    let mut r = setup();
+    let aegio = r.place_on_field(0, "AEGIO", Some(0));
+    let dan = r.place_on_field(0, "DAN", Some(0));
+    push_hand(&mut r, 0, "JUPI");
+    push_trash(&mut r, 0, "AEGIOCHUS");
+    use_card(&mut r);
+    pick_own(&mut r, dan);
+    pick_own(&mut r, aegio);
+    let v = r.pending_selection_view().expect("digivolve prompt");
+    assert!(v.is_optional);
+    pass(&mut r, 0); // decline the digivolve
+    let _ = r.auto_resolve();
+    assert!(r.game.pending_selection.is_none(), "no [Jupitermon] on the field → no After prompt");
+    assert_eq!(stack_ids(&r, aegio), vec!["DAN", "AEGIO"]);
+    assert!(trash_ids(&r, 0).contains(&"AEGIOCHUS".to_string()));
+    assert!(hand_ids(&r, 0).contains(&"JUPI".to_string()));
+}
+
+#[test]
+fn bt26_097_main_trashes_the_cards_under_the_placed_tamer() {
+    // CR 4.3 §4-7-7 / §4-7-8: the Tamer placed under the [Aegiomon] is removed
+    // from the field, so the cards under it are trashed at the same time; only
+    // the Tamer card itself becomes the bottom digivolution card. DCGO moves
+    // only `selectedTamer.TopCard` (IPlacePermanentToDigivolutionCards →
+    // DiscardEvoRoots). Reachable via e.g. <Material Save> onto a Dan Yuki
+    // Tamer (BT10-009).
+    let mut r = setup();
+    let aegio = r.place_on_field(0, "AEGIO", Some(0));
+    let dan = r.place_stack(0, &["PLAIN3", "DAN"]);
+    push_hand(&mut r, 0, "JUPI");
+    assert!(!trash_ids(&r, 0).contains(&"PLAIN3".to_string()));
+    use_card(&mut r);
+    pick_own(&mut r, dan);
+    pick_own(&mut r, aegio);
+    pick_hand(&mut r, 0, "JUPI");
+    let _ = r.auto_resolve();
+    assert_eq!(
+        stack_ids(&r, aegio),
+        vec!["DAN", "AEGIO", "JUPI"],
+        "only the Tamer card rides under the [Aegiomon]"
+    );
+    assert_eq!(
+        trash_ids(&r, 0).iter().filter(|id| id.as_str() == "PLAIN3").count(),
+        1,
+        "the card that was under the Tamer is trashed (§4-7-8)"
+    );
+    assert!(!field_ids(&r, 0).contains(&"DAN".to_string()));
+}
+
 // ─── Clause 3: [Security] ────────────────────────────────────────────────────
 
 fn reveal_from_security(r: &mut DebugRunner) {
@@ -434,4 +494,26 @@ fn bt26_097_security_with_no_eligible_card_still_adds_self_to_hand() {
     let _ = r.auto_resolve();
     assert!(hand_ids(&r, 0).contains(&CARD_ID.to_string()));
     assert!(hand_ids(&r, 0).contains(&"TS6".to_string()));
+}
+
+#[test]
+fn bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free() {
+    // "1 play cost 5 or lower [TS] trait card": Tamers qualify (DCGO HasPlayCost).
+    let mut r = setup();
+    push_hand(&mut r, 0, "DAN"); // [TS] Tamer, play cost 3
+    push_hand(&mut r, 0, "TSTAMER6"); // [TS] Tamer, play cost 6
+    let mem = r.memory();
+    reveal_from_security(&mut r);
+    let v = r.pending_selection_view().expect("security play prompt");
+    let pos = |r: &DebugRunner, id: &str| {
+        r.game.players[0].hand.iter().position(|c| c.card_id(&r.game.card_data) == id).unwrap()
+    };
+    let hand_action = |i: usize| digimon_engine::action::space::PLAY_HAND_START + i as u16;
+    assert!(v.valid_action_ids.contains(&hand_action(pos(&r, "DAN"))), "a cost-3 [TS] Tamer is offered");
+    assert!(!v.valid_action_ids.contains(&hand_action(pos(&r, "TSTAMER6"))), "play cost 6 is too high");
+    pick_hand(&mut r, 0, "DAN");
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).contains(&"DAN".to_string()), "the Tamer is played");
+    assert!(hand_ids(&r, 0).contains(&CARD_ID.to_string()), "then add this card to the hand");
+    assert_eq!(r.memory(), mem, "without paying the cost");
 }
