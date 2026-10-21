@@ -1,9 +1,12 @@
 """Tests for digimon_gym/agents/card_admissibility.py — the light per-card gate.
 
-Rules (Plan 2 Task 2, rulings R1' and R5): a card is admissible when it is
-registered, tested, carries no failed ledger verdict, and has no exam row (clause
-or interaction) that is `diverged` without a truncation reason or a cited
-`dcgo_quirk` / `stale` triage. Fingerprint drift never voids a diverged row.
+Rules (Plan 2 Tasks 2 and 8b, rulings R1' and R5): a card is admissible when it
+is registered, lowering-covered (every construct its YAML uses is behaviourally
+tested by the mechanics tests; a non-DSL card needs its own test module instead),
+has its own test module when the hybrid rule asks for one (>= 4 clauses or a
+protection construct), carries no failed ledger verdict, and has no exam row
+(clause or interaction) that is `diverged` without a truncation reason or a
+cited `dcgo_quirk` / `stale` triage. Fingerprint drift never voids a diverged row.
 """
 import json
 import os
@@ -53,10 +56,21 @@ def _ledger(**statuses):
     }
 
 
+def _row(untested=(), parsed_only=(), clauses=1, protection=()):
+    """A `tools.lowering_coverage` card row (only the fields the gate reads)."""
+    return {
+        "untested_constructs": list(untested),
+        "parsed_only_constructs": list(parsed_only),
+        "clause_count": clauses,
+        "protection_constructs": list(protection),
+    }
+
+
 def _load(
     *,
     registry=(CARD, OTHER),
-    tested=(CARD, OTHER),
+    lowering=None,
+    card_tests=(CARD, OTHER),
     dsl=None,
     rust=None,
     exams=(),
@@ -64,7 +78,8 @@ def _load(
 ):
     return CardAdmissibility.load(
         registry_ids=set(registry),
-        tested_ids=set(tested),
+        lowering_cards=lowering if lowering is not None else {CARD: _row(), OTHER: _row()},
+        card_test_ids=set(card_tests),
         verdicts_dsl=dsl or _ledger(),
         verdicts_rust=rust or _ledger(),
         official=official or {},
@@ -85,10 +100,56 @@ def test_unregistered_blocks():
     assert adm.reason(OTHER) is None
 
 
-def test_untested_blocks():
-    adm = _load(tested=(OTHER,))
+def test_all_constructs_tested_admits():
+    adm = _load(lowering={CARD: _row(), OTHER: _row()}, card_tests=())
+    assert adm.admissible(CARD) is True
+    assert adm.constructs_missing(CARD) == []
+
+
+def test_untested_construct_blocks_and_is_named():
+    adm = _load(lowering={CARD: _row(untested=["verb:hatch"]), OTHER: _row()})
     assert adm.admissible(CARD) is False
-    assert adm.reason(CARD) == "untested"
+    assert adm.reason(CARD) == "untested_lowering"
+    assert adm.constructs_missing(CARD) == ["verb:hatch"]
+    assert adm.admissible(OTHER) is True
+
+
+def test_parsed_only_construct_counts_as_untested():
+    adm = _load(lowering={CARD: _row(parsed_only=["predicate:can_attack"]), OTHER: _row()})
+    assert adm.reason(CARD) == "untested_lowering"
+    assert adm.constructs_missing(CARD) == ["predicate:can_attack"]
+
+
+def test_four_clauses_without_own_test_is_untested_card():
+    adm = _load(lowering={CARD: _row(clauses=4), OTHER: _row(clauses=4)}, card_tests=(OTHER,))
+    assert adm.reason(CARD) == "untested_card"
+    assert adm.admissible(OTHER) is True
+
+
+def test_protection_construct_without_own_test_is_untested_card():
+    adm = _load(lowering={CARD: _row(clauses=1, protection=["clause:replacement"]), OTHER: _row()}, card_tests=())
+    assert adm.reason(CARD) == "untested_card"
+    assert adm.admissible(OTHER) is True
+
+
+def test_three_clauses_no_protection_covered_admits_without_own_test():
+    adm = _load(lowering={CARD: _row(clauses=3), OTHER: _row()}, card_tests=())
+    assert adm.admissible(CARD) is True
+    assert CARD not in adm.needs_card_test
+
+
+def test_non_dsl_card_needs_its_own_test_module():
+    """A raw_rust / hand-written (or unimplemented) card has no YAML constructs:
+    it is `untested_lowering` unless it has its own behavioural test module."""
+    adm = _load(lowering={}, card_tests=(OTHER,))
+    assert adm.reason(CARD) == "untested_lowering"
+    assert adm.constructs_missing(CARD) == []
+    assert adm.admissible(OTHER) is True
+
+
+def test_lowering_and_card_test_reasons_both_listed():
+    adm = _load(lowering={CARD: _row(untested=["verb:x"], clauses=5), OTHER: _row()}, card_tests=())
+    assert adm.reasons(CARD) == ["untested_lowering", "untested_card"]
 
 
 @pytest.mark.parametrize(
@@ -137,13 +198,16 @@ def test_load_and_decisions_need_no_engine_binding():
         import digimon_gym.agents.card_admissibility as ca
         adm = ca.CardAdmissibility.load(
             registry_ids={"BT1-001"},
-            tested_ids={"BT1-001"},
+            lowering_cards={"BT1-001": {"untested_constructs": [], "clause_count": 1}},
+            card_test_ids=set(),
             verdicts_dsl={"cards": {"BT1-001": {"status": "PARTIAL"}}},
             verdicts_rust={},
             exam_verdicts=[],
         )
         assert adm.reason("BT1-001") == "failed_verdict"
         assert "digimon_gym.agents.gauntlet" not in sys.modules
+        assert "tools.lowering_coverage" not in sys.modules
+        assert "yaml" not in sys.modules
         print("ok")
         """
     )
@@ -279,15 +343,20 @@ def test_row_without_card_id_falls_back_to_file_card_and_clause_prefix():
 def test_reason_priority_and_all_reasons_recorded():
     adm = _load(
         registry=(OTHER,),
-        tested=(OTHER,),
+        lowering={CARD: _row(untested=["verb:x"], clauses=4), OTHER: _row()},
+        card_tests=(OTHER,),
         dsl=_ledger(BT1_001="FAILED"),
         exams=[_exam(_clause(CARD, verdict="diverged"))],
     )
     assert adm.reason(CARD) == "unregistered"
-    assert adm.reasons(CARD) == ["unregistered", "untested", "failed_verdict", "diverged_no_quirk"]
+    assert adm.reasons(CARD) == [
+        "unregistered", "untested_lowering", "untested_card", "failed_verdict", "diverged_no_quirk",
+    ]
 
-    adm = _load(tested=(OTHER,), dsl=_ledger(BT1_001="FAILED"))
-    assert adm.reason(CARD) == "untested"
+    adm = _load(lowering={CARD: _row(untested=["verb:x"]), OTHER: _row()}, dsl=_ledger(BT1_001="FAILED"))
+    assert adm.reason(CARD) == "untested_lowering"
+    adm = _load(lowering={CARD: _row(clauses=4), OTHER: _row()}, card_tests=(), dsl=_ledger(BT1_001="FAILED"))
+    assert adm.reason(CARD) == "untested_card"
     adm = _load(rust=_ledger(BT1_001="FAILED"), exams=[_exam(_clause(CARD, verdict="diverged"))])
     assert adm.reason(CARD) == "failed_verdict"
     assert adm.reasons(OTHER) == []
@@ -298,37 +367,53 @@ def test_reason_priority_and_all_reasons_recorded():
 
 def test_build_artifact_shape_and_counts():
     adm = _load(
-        registry=(CARD, OTHER, "BT1-003", "BT1-004"),
-        tested=(CARD, OTHER, "BT1-004"),
+        registry=(CARD, OTHER, "BT1-003", "BT1-004", "BT1-005", "BT1-006"),
+        lowering={
+            CARD: _row(),
+            OTHER: _row(),
+            "BT1-003": _row(untested=["verb:hatch"], parsed_only=["predicate:can_attack"]),
+            "BT1-004": _row(),
+            "BT1-005": _row(clauses=6),
+        },
+        card_tests=(CARD, OTHER, "BT1-004"),
         dsl=_ledger(BT1_004="AUDITED-DRIFT"),
         exams=[_exam(_clause(OTHER, verdict="diverged"))],
     )
-    sources = {"card_registry_sha256": "g", "behavioral_test_modules_sha256": "t",
-               "validated_cards_dsl_sha256": "d", "validated_cards_sha256": "r",
-               "exam_verdicts_sha256": "e"}
+    sources = {k: "x" for k in SOURCE_KEYS}
     art = adm.build_artifact(sources=sources, generated_at="2026-10-21T00:00:00+00:00")
-    assert art["version"] == 1
+    assert art["version"] == 2
     assert art["generated_at"] == "2026-10-21T00:00:00+00:00"
     assert art["sources"] == sources
     assert art["counts"] == {
-        "registered": 4,
+        "registered": 6,
         "admissible": 1,
         "unregistered": 0,
-        "untested": 1,
+        "untested_lowering": 2,
+        "untested_card": 1,
         "failed_verdict": 1,
         "diverged_no_quirk": 1,
     }
     assert list(art["cards"]) == sorted(art["cards"])
-    assert art["cards"][CARD] == {"admissible": True, "reason": None, "reasons": []}
-    assert art["cards"]["BT1-003"]["reason"] == "untested"
+    assert art["cards"][CARD] == {
+        "admissible": True, "reason": None, "reasons": [], "untested_constructs": [],
+        "needs_card_test": False, "has_card_test": True, "dsl": True,
+    }
+    assert art["cards"]["BT1-003"]["reason"] == "untested_lowering"
+    assert art["cards"]["BT1-003"]["untested_constructs"] == ["predicate:can_attack", "verb:hatch"]
     assert art["cards"]["BT1-004"]["reason"] == "failed_verdict"
+    assert art["cards"]["BT1-005"]["reason"] == "untested_card"
+    assert art["cards"]["BT1-005"]["needs_card_test"] is True
+    assert art["cards"]["BT1-006"] == {
+        "admissible": False, "reason": "untested_lowering", "reasons": ["untested_lowering"],
+        "untested_constructs": [], "needs_card_test": False, "has_card_test": False, "dsl": False,
+    }
     assert art["cards"][OTHER]["reason"] == "diverged_no_quirk"
 
     # The artifact is also the run-time reader (training ships no qa/).
     back = CardAdmissibility.from_artifact_dict(art)
-    for cid in (CARD, OTHER, "BT1-003", "BT1-004", "ZZ9-999"):
-        assert back.admissible(cid) == adm.admissible(cid)
-        assert back.reason(cid) == adm.reason(cid)
+    for cid in (CARD, OTHER, "BT1-003", "BT1-004", "BT1-005", "BT1-006", "ZZ9-999"):
+        assert back.reasons(cid) == adm.reasons(cid), cid
+        assert back.constructs_missing(cid) == adm.constructs_missing(cid), cid
 
 
 def _write_behavioral(root: Path, card_ids, *, declare=True):
@@ -351,6 +436,21 @@ def _write_behavioral(root: Path, card_ids, *, declare=True):
         for stem in stems:
             (tests / set_dir / f"{stem}.rs").write_text("// test\n", encoding="utf-8")
     return tests
+
+
+FAKE_LOWERING = {
+    "constructs": {"verb:hatch": {"tested": True, "tested_behaviourally": True, "parsed_only": False}},
+    "cards": {CARD: _row(), OTHER: _row(), "BT1-003": _row()},
+}
+
+
+@pytest.fixture(autouse=True)
+def fake_lowering(monkeypatch):
+    """CLI tests run on tmp inputs; the real lowering build reads the repo's YAML
+    and mechanics tests, so stand it in (tests may mutate `FAKE_LOWERING` copies)."""
+    state = {"payload": json.loads(json.dumps(FAKE_LOWERING))}
+    monkeypatch.setattr(ca, "build_lowering", lambda has_card_test: state["payload"])
+    return state
 
 
 def _write_inputs(root: Path, *, dsl_status="IMPLEMENTED"):
@@ -382,6 +482,7 @@ def _argv(root: Path, *extra):
 SOURCE_KEYS = {
     "card_registry_sha256",
     "behavioral_test_modules_sha256",
+    "lowering_coverage_sha256",
     "validated_cards_dsl_sha256",
     "validated_cards_sha256",
     "exam_verdicts_sha256",
@@ -457,6 +558,8 @@ def test_generator_needs_no_engine_binding(tmp_path):
         import sys
         sys.modules["digimon_engine"] = None  # any import of it now fails
         import digimon_gym.agents.card_admissibility as ca
+        ca.build_lowering = lambda has_card_test: {"cards": {
+            c: {"untested_constructs": [], "clause_count": 1} for c in ("BT1-001", "BT1-002")}}
         rc = ca.main(sys.argv[1:])
         assert "digimon_gym.agents.gauntlet" not in sys.modules
         sys.exit(rc)
@@ -473,11 +576,14 @@ def test_generator_needs_no_engine_binding(tmp_path):
 # ─── CLI ──────────────────────────────────────────────────────────────
 
 
-def test_cli_writes_then_check_passes_and_detects_drift(tmp_path, capsys):
+def test_cli_writes_then_check_passes_and_detects_drift(tmp_path, capsys, fake_lowering):
     _write_inputs(tmp_path)
     assert ca.main(_argv(tmp_path)) == 0
     out = capsys.readouterr().out
-    assert "3 registered cards: 2 admissible / 0 unregistered / 1 untested / 0 failed_verdict / 0 diverged_no_quirk" in out
+    assert (
+        "3 registered cards: 3 admissible / 0 unregistered / 0 untested_lowering / 0 untested_card"
+        " / 0 failed_verdict / 0 diverged_no_quirk"
+    ) in out
     art = json.loads((tmp_path / "card_admissibility.json").read_text(encoding="utf-8"))
     assert set(art["sources"]) == SOURCE_KEYS
     assert ca.main(_argv(tmp_path, "--check")) == 0
@@ -493,7 +599,13 @@ def test_cli_writes_then_check_passes_and_detects_drift(tmp_path, capsys):
     assert ca.main(_argv(tmp_path)) == 0
     assert ca.main(_argv(tmp_path, "--check")) == 0
 
-    # A new test module (BT1-003 becomes tested) makes it stale too.
+    # A construct losing its test (BT1-003 not lowering-covered) makes it stale.
+    fake_lowering["payload"]["cards"]["BT1-003"] = _row(untested=["verb:hatch"])
+    assert ca.main(_argv(tmp_path, "--check")) == 1
+    assert ca.main(_argv(tmp_path)) == 0
+    assert ca.main(_argv(tmp_path, "--check")) == 0
+
+    # A new test module (BT1-003 gains one) makes it stale too.
     _write_behavioral(tmp_path, [CARD, OTHER, "BT1-003"])
     assert ca.main(_argv(tmp_path, "--check")) == 1
     assert ca.main(_argv(tmp_path)) == 0
@@ -509,7 +621,7 @@ def test_cli_check_detects_tampered_card(tmp_path):
     assert ca.main(_argv(tmp_path)) == 0
     path = tmp_path / "card_admissibility.json"
     art = json.loads(path.read_text(encoding="utf-8"))
-    art["cards"]["BT1-003"] = {"admissible": True, "reason": None, "reasons": []}
+    art["cards"][CARD]["has_card_test"] = False  # still consistent: needs_card_test is False
     path.write_text(json.dumps(art), encoding="utf-8")
     assert ca.main(_argv(tmp_path, "--check")) == 1
 
@@ -531,36 +643,50 @@ def test_rewrite_without_changes_keeps_generated_at(tmp_path):
 # ─── The real repo ───────────────────────────────────────────────────
 
 
-def test_real_repo_counts_add_up():
+_REAL_BUILD_LOWERING = ca.build_lowering
+
+
+@pytest.fixture
+def real_lowering(monkeypatch):
+    """Undo the autouse fake: this test reads the real repo."""
+    monkeypatch.setattr(ca, "build_lowering", _REAL_BUILD_LOWERING)
+
+
+def test_real_repo_counts_add_up(real_lowering):
+    pytest.importorskip("yaml")
     adm = CardAdmissibility.from_repo()
     art = adm.build_artifact(sources={}, generated_at="x")
     c = art["counts"]
     registry = json.loads((REPO / "data/card_registry.json").read_text(encoding="utf-8"))["assignments"]
     assert c["registered"] == len(art["cards"]) == len(registry) > 0
-    assert c["registered"] == (
-        c["admissible"] + c["unregistered"] + c["untested"]
-        + c["failed_verdict"] + c["diverged_no_quirk"]
-    )
+    assert c["registered"] == c["admissible"] + sum(c[r] for r in ca.REASONS)
     assert c["unregistered"] == 0  # the artifact covers registered ids only
     modules = ca.behavioral_test_modules()
-    for cid in art["cards"]:
+    for cid, row in art["cards"].items():
         if ca.behavioral_test_key(cid) in modules:
-            assert art["cards"][cid]["reason"] != "untested", cid
-    # R3/R5-revised regressions: tested Examon cards and cards a lagging wheel missed.
-    for cid in ("BT20-025", "BT20-042", "EX3-024", "EX3-037", "BT20-007", "BT21-046", "BT20-093", "LM-062"):
-        assert "untested" not in art["cards"][cid]["reasons"], cid
+            assert row["has_card_test"] is True, cid
+        if not row["dsl"]:
+            assert row["untested_constructs"] == []
+            assert ("untested_lowering" in row["reasons"]) == (not row["has_card_test"]), cid
+    # The in-process build agrees with the committed report (its own --check guards it).
+    report = json.loads((REPO / "qa/impact/lowering_coverage.json").read_text(encoding="utf-8"))["cards"]
+    for cid, row in art["cards"].items():
+        if row["dsl"]:
+            assert row["untested_constructs"] == ca.missing_constructs(report[cid]), cid
+            assert row["needs_card_test"] == ca.needs_own_test(report[cid]), cid
     for cid in ("LM-062", "BT23-022", "BT23-039", "P-250"):
         assert cid in art["cards"], cid
 
 
 
 def test_from_artifact_reads_committed_file_and_rejects_other_versions(tmp_path):
-    adm = _load(tested=(OTHER,))
+    adm = _load(lowering={CARD: _row(untested=["verb:hatch"]), OTHER: _row()})
     art = adm.build_artifact(sources={}, generated_at="x")
     path = tmp_path / "card_admissibility.json"
     path.write_text(ca.serialise(art), encoding="utf-8")
     back = CardAdmissibility.from_artifact(path)
-    assert back.reason(CARD) == "untested" and back.admissible(OTHER) is True
+    assert back.reason(CARD) == "untested_lowering" and back.admissible(OTHER) is True
+    assert back.constructs_missing(CARD) == ["verb:hatch"]
     art["version"] = 99
     with pytest.raises(ValueError, match="version"):
         CardAdmissibility.from_artifact_dict(art)
@@ -569,16 +695,23 @@ def test_from_artifact_reads_committed_file_and_rejects_other_versions(tmp_path)
 @pytest.mark.parametrize(
     "entry",
     [
-        {"admissible": True, "reason": None, "reasons": ["untested"]},
-        {"admissible": False, "reason": "untested", "reasons": []},
-        {"admissible": False, "reason": "failed_verdict", "reasons": ["untested", "failed_verdict"]},
-        {"admissible": False, "reason": "untested"},  # `reasons` is required
+        {"admissible": True, "reason": None, "reasons": ["untested_lowering"]},
+        {"admissible": False, "reason": "untested_lowering", "reasons": []},
+        {"admissible": False, "reason": "failed_verdict", "reasons": ["untested_lowering", "failed_verdict"]},
+        {"admissible": False, "reason": "untested_lowering"},  # `reasons` is required
         {"admissible": False, "reason": "bogus", "reasons": ["bogus"]},
+        # untested_card must agree with needs_card_test / has_card_test
+        {"admissible": True, "reason": None, "reasons": [], "needs_card_test": True, "has_card_test": False},
+        {"admissible": False, "reason": "untested_card", "reasons": ["untested_card"], "needs_card_test": False},
+        # named constructs imply untested_lowering
+        {"admissible": True, "reason": None, "reasons": [], "untested_constructs": ["verb:x"]},
+        {"admissible": True, "reason": None, "reasons": [], "dsl": "yes"},
     ],
 )
 def test_from_artifact_rejects_inconsistent_entries(entry):
     art = _load().build_artifact(sources={}, generated_at="x")
-    art["cards"][CARD] = entry
+    base = {"untested_constructs": [], "needs_card_test": False, "has_card_test": True, "dsl": True}
+    art["cards"][CARD] = {**base, **entry}
     with pytest.raises(ValueError, match=CARD):
         CardAdmissibility.from_artifact_dict(art)
 

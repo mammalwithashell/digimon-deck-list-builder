@@ -73,7 +73,7 @@ def _library(tmp_path, decks):
 def _admissibility(*, untested=(), failed=(), diverged=(), registered=REGISTERED):
     return CardAdmissibility(
         registered=frozenset(registered),
-        tested=frozenset(set(registered) - set(untested)),
+        lowering_covered=frozenset(set(registered) - set(untested)),
         failed_verdict=frozenset(failed),
         diverged_no_quirk=frozenset(diverged),
     )
@@ -146,7 +146,8 @@ def test_admissible_deck_admitted_with_unmeasured_clauses(tmp_path, monkeypatch)
         "interactions": {},
     }
     adm = CardAdmissibility.load(
-        registry_ids=REGISTERED, tested_ids=REGISTERED,
+        registry_ids=REGISTERED, card_test_ids=REGISTERED,
+        lowering_cards={cid: {"untested_constructs": [], "clause_count": 1} for cid in REGISTERED},
         verdicts_dsl={"cards": {}}, verdicts_rust={"cards": {}}, exam_verdicts=[exam],
     )
     assert adm.admissible("BT12-031")
@@ -214,7 +215,7 @@ def test_snapshot_load_applies_light_gate(tmp_path, artifacts):
 
     # Nothing injected (eval CLIs, --curriculum-pool): the committed artifacts decide.
     artifacts(admissibility=_admissibility(untested={"BT12-031"}))
-    with pytest.raises(gauntlet_module.NotAdmissibleDeckError, match=r"BT12-031 \(untested\)"):
+    with pytest.raises(gauntlet_module.NotAdmissibleDeckError, match=r"BT12-031 \(untested_lowering\)"):
         GeneralistDeckPool.from_snapshot(snapshot, implemented_card_ids=REGISTERED)
     artifacts()
     assert GeneralistDeckPool.from_snapshot(snapshot, implemented_card_ids=REGISTERED).snapshot_hash == written
@@ -295,7 +296,7 @@ def test_blocker_message_names_gap_ids_and_regenerate_command(tmp_path):
             implemented_card_ids=REGISTERED, mechanics_readiness=READY, admissibility=adm,
         ).load(str(_library(tmp_path, [_deck(), _deck("BT12-031")])))
     message = str(exc.value)
-    assert "BT12-022 ExVeemon (2 decklists, untested)" in message, message
+    assert "BT12-022 ExVeemon (2 decklists, untested_lowering)" in message, message
     assert "BT12-031" in message and "diverged_no_quirk" in message, message
     assert ADMISSIBILITY_CMD in message and MECHANICS_CMD in message, message
 

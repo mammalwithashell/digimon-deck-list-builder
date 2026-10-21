@@ -1,52 +1,67 @@
-"""Light per-card admissibility for the mechanics training gate (Plan 2 Task 2).
+"""Light per-card admissibility for the mechanics training gate (Plan 2 Tasks 2, 8b).
 
 A card may appear in a training decklist when it is:
 
 1. **registered** -- an `assignments` key of the committed `data/card_registry.json`
    (ruling R5-revised: the artifact is a pure function of the repo, never of the
    installed `digimon_engine` wheel, which can lag the branch);
-2. **tested** -- a behavioural test module exists for it when the artifact is
-   generated (ruling R3-revised): `code/digimon-engine/tests/cards_behavioral/
-   <set>/<card_id>.rs` (set = id prefix, file stem = id, both lowercased with
-   `-` -> `_`), declared from the discovery roots `cards_behavioral/main.rs`
-   (`mod <set>;`) and `<set>/mod.rs` (`mod <stem>;`); or a `test_path` recorded
-   for the card in either validated-cards ledger names an existing file (cards
-   whose test lives elsewhere, e.g. a shared `st2_cards.rs`);
-3. free of a **failed ledger verdict** -- its status in
+2. **lowering-covered** (Task 8b, owner decision 2026-10-21) -- every construct
+   its YAML references (verbs, predicates, timings, keywords: exactly the set
+   `tools.lowering_coverage` attributes to the card from the impact index) is
+   `tested` BEHAVIOURALLY by the mechanics tests. A construct that is untested,
+   or tested only at parse level (`parsed_only`), fails it. Reason
+   `untested_lowering`; the row names the failing constructs in
+   `untested_constructs`. A card with no DSL YAML (a raw_rust / hand-written
+   escape-hatch card, or one not implemented at all) has no constructs to
+   check: it is `untested_lowering` unless it has its own behavioural test
+   module (below) -- the only evidence available for it;
+3. **card-tested where it matters** (the hybrid rule) -- a DSL card whose
+   `clause_count` is >= `CARD_TEST_CLAUSE_THRESHOLD` (4) OR that uses any
+   construct of the protection family (`tools.lowering_coverage`'s
+   `protection_constructs`) also needs its own behavioural test module: a
+   declared `code/digimon-engine/tests/cards_behavioral/<set>/<card_id>.rs`
+   (set = id prefix, file stem = id, lowercased, `-` -> `_`; declared from
+   `cards_behavioral/main.rs` and `<set>/mod.rs`), or an existing ledger
+   `test_path`. Reason `untested_card`; rows carry `needs_card_test` /
+   `has_card_test`;
+4. free of a **failed ledger verdict** -- its status in
    `qa/qa-reports/validated_cards_dsl.json` or `validated_cards.json` is not in
    `FAILED_VERDICT_STATUSES` -- the ledger gate `NOT_READY_LEDGER_STATUSES`
    (`PARTIAL`, `BLOCKED`, `AUDITED-DRIFT`, `AUDITED-MISSING-TESTS`) plus the
    explicit failures `FAILED`, `FAIL`, `QA-FAIL` (ruling R4-revised). This
    module owns those sets; the gauntlet imports them;
-4. free of an **untriaged divergence** -- no exam row of either family
+5. free of an **untriaged divergence** -- no exam row of either family
    (`clauses`, or `interactions`: `qa:` rulings and `probe:` risk probes) is
    blocking under `row_blocks`, the single home of that rule.
 
-When several rules fail, `reason()` names the first in `REASONS` order and
-`reasons()` lists them all.
+When several rules fail, `reason()` names the first in `REASONS` order
+(unregistered > untested_lowering > untested_card > failed_verdict >
+diverged_no_quirk) and `reasons()` lists them all.
+
+The work queue for rule 2 is the committed report `qa/impact/lowering_coverage.json`
+(`PYTHONPATH=code python -m tools.lowering_coverage [--check]`); this module calls
+the same `build()` in-process, so the two cannot disagree on attribution.
 
 Fingerprint staleness (ruling R1', 2026-10-21): a row whose `text_sha256` no
 longer matches the printed text is `unmeasured` when it was `confirmed`, and a
 `confirmed` / `unmeasured` / `unreachable` / `unavailable` row never blocks, so
 staleness cannot change a decision. It never voids a `diverged` row: a recorded
 divergence stays a finding until it is triaged `dcgo_quirk` or `stale` with a
-citation. That is why `load()` accepts `official` (the printed text the
-readiness report fingerprints against) for interface parity but does not read
-it, and why `from_repo()` does not load it.
+citation. That is why `load()` accepts `official` for interface parity but does
+not read it.
 
 Training images ship no `qa/` and no `tests/` (ruling R5), so this module is also
 the generator and checker of the committed artifact `data/card_admissibility.json`,
 which covers every registered card id; `CardAdmissibility.from_artifact()` reads
-it back at run time and never scans tests:
+it back at run time (stdlib only) and never scans tests or YAML:
 
     PYTHONPATH=code python -m digimon_gym.agents.card_admissibility [--check] [--out PATH]
 
 `--check` rebuilds from the current inputs and fails when the committed file
 differs in anything but `generated_at`. Run `--check` (and any write of the
 committed artifact) without input overrides: the input flags are refused unless
-`--out` points elsewhere.
-
-Stdlib only: nothing here (generator included) needs the engine binding.
+`--out` points elsewhere. The generator needs no engine binding; it imports
+`tools.lowering_coverage` (PyYAML) lazily, so the run-time reader stays stdlib-only.
 """
 from __future__ import annotations
 
@@ -55,21 +70,26 @@ import hashlib
 import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
 from data_paths import CARD_ADMISSIBILITY, CARD_REGISTRY, QA_REPORTS_DIR, REPO_ROOT
 
-ARTIFACT_VERSION = 1
+ARTIFACT_VERSION = 2
 
 # Priority order: the first failing reason is `reason()`.
 UNREGISTERED = "unregistered"
-UNTESTED = "untested"
+UNTESTED_LOWERING = "untested_lowering"
+UNTESTED_CARD = "untested_card"
 FAILED_VERDICT = "failed_verdict"
 DIVERGED_NO_QUIRK = "diverged_no_quirk"
-REASONS = (UNREGISTERED, UNTESTED, FAILED_VERDICT, DIVERGED_NO_QUIRK)
+REASONS = (UNREGISTERED, UNTESTED_LOWERING, UNTESTED_CARD, FAILED_VERDICT, DIVERGED_NO_QUIRK)
+
+# The hybrid rule: a DSL card with at least this many clauses (or any protection
+# construct) also needs its own behavioural test module.
+CARD_TEST_CLAUSE_THRESHOLD = 4
 
 # The ledger gate: a PARTIAL / BLOCKED card has an unimplemented printed clause,
 # an AUDITED-DRIFT / AUDITED-MISSING-TESTS card failed its audit. Owned here;
@@ -89,6 +109,7 @@ CLEARING_TRIAGES = frozenset({"dcgo_quirk", "stale"})
 
 EXAM_FAMILIES = ("clauses", "interactions")
 BEHAVIORAL_TESTS = REPO_ROOT / "code" / "digimon-engine" / "tests" / "cards_behavioral"
+IMPACT_INDEX = REPO_ROOT / "qa" / "impact" / "dsl_impact_index.json"
 _REGENERATE = "PYTHONPATH=code python -m digimon_gym.agents.card_admissibility"
 _MOD_DECL = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_][A-Za-z0-9_]*)\s*;", re.M)
 
@@ -147,7 +168,7 @@ def _failed_ids(ledger: Mapping[str, Any]) -> set[str]:
     }
 
 
-# ─── Tested: behavioural test modules (generation time only) ──────────
+# ─── Own card test: behavioural test modules (generation time only) ───
 
 
 def behavioral_test_key(card_id: str) -> str:
@@ -195,11 +216,48 @@ def discover_tested_ids(
     ledgers: Iterable[Mapping[str, Any]],
     repo_root: Path = REPO_ROOT,
 ) -> set[str]:
-    """The ids among `card_ids` with a behavioural test (module or ledger `test_path`)."""
+    """The ids among `card_ids` with their own behavioural test (module or ledger `test_path`)."""
     via_ledger: set[str] = set()
     for ledger in ledgers:
         via_ledger |= _ledger_test_path_ids(ledger, repo_root)
     return {cid for cid in card_ids if behavioral_test_key(cid) in modules or cid in via_ledger}
+
+
+# ─── Lowering coverage (generation time only) ─────────────────────────
+
+
+def build_lowering(has_card_test: set[str]) -> dict:
+    """`tools.lowering_coverage.build()` -- the one attribution code path.
+    Imported lazily: it needs PyYAML and the repo's tests/YAML, which the
+    run-time reader never does."""
+    from tools import lowering_coverage
+
+    return lowering_coverage.build(has_card_test=set(has_card_test))
+
+
+def missing_constructs(row: Mapping[str, Any]) -> list[str]:
+    """A lowering row's constructs that fail rule 2: untested, or parse-level only."""
+    return sorted(set(row.get("untested_constructs") or []) | set(row.get("parsed_only_constructs") or []))
+
+
+def needs_own_test(row: Mapping[str, Any]) -> bool:
+    """The hybrid rule over a lowering row: many clauses, or any protection construct."""
+    return int(row.get("clause_count") or 0) >= CARD_TEST_CLAUSE_THRESHOLD or bool(row.get("protection_constructs"))
+
+
+def lowering_sha256(lowering: Mapping[str, Any]) -> str:
+    """sha256 over what the decision reads from a lowering build: each construct's
+    test status and each card's failing constructs / hybrid inputs."""
+    constructs = {
+        k: [bool(v.get("tested")), bool(v.get("tested_behaviourally")), bool(v.get("parsed_only"))]
+        for k, v in (lowering.get("constructs") or {}).items()
+    }
+    cards = {
+        cid: [missing_constructs(r), int(r.get("clause_count") or 0), sorted(r.get("protection_constructs") or [])]
+        for cid, r in (lowering.get("cards") or {}).items()
+    }
+    blob = json.dumps({"constructs": constructs, "cards": cards}, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
 @dataclass(frozen=True)
@@ -249,11 +307,12 @@ def store_sha256(directory: Path) -> str:
     return h.hexdigest()
 
 
-def source_hashes(paths: DataPaths) -> dict[str, str]:
+def source_hashes(paths: DataPaths, lowering: Mapping[str, Any]) -> dict[str, str]:
     modules = "\n".join(sorted(behavioral_test_modules(paths.behavioral_tests)))
     return {
         "card_registry_sha256": file_sha256(paths.registry),
         "behavioral_test_modules_sha256": hashlib.sha256(modules.encode("utf-8")).hexdigest(),
+        "lowering_coverage_sha256": lowering_sha256(lowering),
         "validated_cards_dsl_sha256": file_sha256(paths.dsl_ledger),
         "validated_cards_sha256": file_sha256(paths.rust_ledger),
         "exam_verdicts_sha256": store_sha256(paths.exam_verdicts),
@@ -266,24 +325,36 @@ class CardAdmissibility:
     `from_artifact`; ask with `admissible`, `reason`, `reasons`."""
 
     registered: frozenset[str]
-    tested: frozenset[str]
-    failed_verdict: frozenset[str]
-    diverged_no_quirk: frozenset[str]
+    lowering_covered: frozenset[str]
+    failed_verdict: frozenset[str] = frozenset()
+    diverged_no_quirk: frozenset[str] = frozenset()
+    needs_card_test: frozenset[str] = frozenset()
+    has_card_test: frozenset[str] = frozenset()
+    dsl: frozenset[str] = frozenset()
+    untested_constructs: Mapping[str, tuple[str, ...]] = field(default_factory=dict, compare=False, hash=False)
 
     @classmethod
     def load(
         cls,
         *,
         registry_ids: Iterable[str],
-        tested_ids: Iterable[str],
+        lowering_cards: Mapping[str, Mapping[str, Any]],
+        card_test_ids: Iterable[str],
         verdicts_dsl: Mapping[str, Any],
         verdicts_rust: Mapping[str, Any],
         official: Optional[Mapping[str, Any]] = None,
         exam_verdicts: Iterable[Mapping[str, Any]] = (),
     ) -> "CardAdmissibility":
-        """Decide from in-memory inputs. `official` is accepted for interface
-        parity and never read: staleness cannot change a decision (module doc)."""
+        """Decide from in-memory inputs. `lowering_cards` is the `cards` map of a
+        `tools.lowering_coverage.build()` payload (one row per DSL card);
+        `card_test_ids` are the cards with their own behavioural test module.
+        `official` is accepted for interface parity and never read."""
         del official
+        has_test = frozenset(str(c) for c in card_test_ids)
+        dsl = frozenset(str(c) for c in lowering_cards)
+        missing = {str(cid): tuple(missing_constructs(row)) for cid, row in lowering_cards.items()}
+        covered = {cid for cid, m in missing.items() if not m} | (set(has_test) - dsl)
+        needs = {str(cid) for cid, row in lowering_cards.items() if needs_own_test(row)}
         diverged: set[str] = set()
         for exam in exam_verdicts:
             file_card = exam.get("card_id")
@@ -293,45 +364,61 @@ class CardAdmissibility:
                         diverged.update(_row_card_ids(family, str(row_id), row, file_card))
         return cls(
             registered=frozenset(str(c) for c in registry_ids),
-            tested=frozenset(str(c) for c in tested_ids),
+            lowering_covered=frozenset(covered),
             failed_verdict=frozenset(_failed_ids(verdicts_dsl) | _failed_ids(verdicts_rust)),
             diverged_no_quirk=frozenset(diverged),
+            needs_card_test=frozenset(needs),
+            has_card_test=has_test,
+            dsl=dsl,
+            untested_constructs={cid: m for cid, m in missing.items() if m},
         )
 
     @classmethod
     def from_repo(cls, paths: DataPaths = DataPaths()) -> "CardAdmissibility":
-        """Decide from the repo's sources (registry json, behavioural tests, `qa/`)."""
+        """Decide from the repo's sources (registry json, behavioural tests,
+        lowering coverage, `qa/`)."""
+        return cls._from_repo(paths)[0]
+
+    @classmethod
+    def _from_repo(cls, paths: DataPaths) -> tuple["CardAdmissibility", dict]:
         registry = load_registry_ids(paths.registry)
         dsl = _read_json(paths.dsl_ledger)
         rust = _read_json(paths.rust_ledger)
-        tested = discover_tested_ids(
-            registry,
-            modules=behavioral_test_modules(paths.behavioral_tests),
-            ledgers=(dsl, rust),
-            repo_root=paths.repo_root,
-        )
-        return cls.load(
+        modules = behavioral_test_modules(paths.behavioral_tests)
+        exams = _read_exam_verdicts(paths.exam_verdicts)
+        card_tests = discover_tested_ids(registry, modules=modules, ledgers=(dsl, rust), repo_root=paths.repo_root)
+        lowering = build_lowering(card_tests)
+        adm = cls.load(
             registry_ids=registry,
-            tested_ids=tested,
+            lowering_cards=lowering.get("cards") or {},
+            card_test_ids=card_tests,
             verdicts_dsl=dsl,
             verdicts_rust=rust,
-            exam_verdicts=_read_exam_verdicts(paths.exam_verdicts),
+            exam_verdicts=exams,
         )
+        return adm, lowering
 
     @classmethod
     def from_artifact_dict(cls, data: Mapping[str, Any]) -> "CardAdmissibility":
         """Rebuild from the committed artifact's payload. Every entry must carry
-        `reasons` (known reasons, priority order) agreeing with its `admissible`
-        and `reason`; anything else raises `ValueError` naming the card. An id
-        the artifact does not list is unregistered."""
+        `reasons` (known reasons, priority order) agreeing with its `admissible`,
+        `reason`, `needs_card_test` / `has_card_test` and `untested_constructs`;
+        anything else raises `ValueError` naming the card. An id the artifact
+        does not list is unregistered."""
         if data.get("version") != ARTIFACT_VERSION:
             raise ValueError(
                 f"card admissibility artifact version {data.get('version')!r} != {ARTIFACT_VERSION}; "
                 f"regenerate it with `{_REGENERATE}`"
             )
         reasons: dict[str, list[str]] = {}
+        needs: set[str] = set()
+        has: set[str] = set()
+        dsl: set[str] = set()
+        constructs: dict[str, tuple[str, ...]] = {}
         for cid, entry in data["cards"].items():
+            cid = str(cid)
             found = entry.get("reasons")
+            missing = entry.get("untested_constructs")
             ok = (
                 isinstance(found, list)
                 and all(r in REASONS for r in found)
@@ -339,22 +426,40 @@ class CardAdmissibility:
                 and found == sorted(found, key=REASONS.index)
                 and entry.get("admissible") is (not found)
                 and entry.get("reason") == (found[0] if found else None)
+                and isinstance(entry.get("needs_card_test"), bool)
+                and isinstance(entry.get("has_card_test"), bool)
+                and isinstance(entry.get("dsl"), bool)
+                and isinstance(missing, list)
+                and (UNTESTED_CARD in found) == (entry["needs_card_test"] and not entry["has_card_test"])
+                and (not missing or UNTESTED_LOWERING in found)
             )
             if not ok:
                 raise ValueError(
                     f"card admissibility artifact entry {cid} is inconsistent: {entry!r}; "
                     f"regenerate it with `{_REGENERATE}`"
                 )
-            reasons[str(cid)] = list(found)
+            reasons[cid] = list(found)
+            if entry["needs_card_test"]:
+                needs.add(cid)
+            if entry["has_card_test"]:
+                has.add(cid)
+            if entry["dsl"]:
+                dsl.add(cid)
+            if missing:
+                constructs[cid] = tuple(missing)
 
         def having(reason: str) -> frozenset[str]:
             return frozenset(c for c, rs in reasons.items() if reason in rs)
 
         return cls(
             registered=frozenset(c for c, rs in reasons.items() if UNREGISTERED not in rs),
-            tested=frozenset(c for c, rs in reasons.items() if UNTESTED not in rs),
+            lowering_covered=frozenset(c for c, rs in reasons.items() if UNTESTED_LOWERING not in rs),
             failed_verdict=having(FAILED_VERDICT),
             diverged_no_quirk=having(DIVERGED_NO_QUIRK),
+            needs_card_test=frozenset(needs),
+            has_card_test=frozenset(has),
+            dsl=frozenset(dsl),
+            untested_constructs=constructs,
         )
 
     @classmethod
@@ -367,8 +472,10 @@ class CardAdmissibility:
         out = []
         if card_id not in self.registered:
             out.append(UNREGISTERED)
-        if card_id not in self.tested:
-            out.append(UNTESTED)
+        if card_id not in self.lowering_covered:
+            out.append(UNTESTED_LOWERING)
+        if card_id in self.needs_card_test and card_id not in self.has_card_test:
+            out.append(UNTESTED_CARD)
         if card_id in self.failed_verdict:
             out.append(FAILED_VERDICT)
         if card_id in self.diverged_no_quirk:
@@ -383,6 +490,10 @@ class CardAdmissibility:
     def admissible(self, card_id: str) -> bool:
         return not self.reasons(card_id)
 
+    def constructs_missing(self, card_id: str) -> list[str]:
+        """The constructs behind `untested_lowering` (empty for a non-DSL card)."""
+        return list(self.untested_constructs.get(card_id, ()))
+
     def build_artifact(self, *, sources: Mapping[str, str], generated_at: str) -> dict:
         """The `data/card_admissibility.json` payload over every registered id."""
         cards = {}
@@ -390,7 +501,15 @@ class CardAdmissibility:
         counts.update({r: 0 for r in REASONS})
         for cid in sorted(self.registered):
             found = self.reasons(cid)
-            cards[cid] = {"admissible": not found, "reason": found[0] if found else None, "reasons": found}
+            cards[cid] = {
+                "admissible": not found,
+                "reason": found[0] if found else None,
+                "reasons": found,
+                "untested_constructs": self.constructs_missing(cid),
+                "needs_card_test": cid in self.needs_card_test,
+                "has_card_test": cid in self.has_card_test,
+                "dsl": cid in self.dsl,
+            }
             counts[found[0] if found else "admissible"] += 1
         return {
             "version": ARTIFACT_VERSION,
@@ -460,8 +579,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
 
     try:
-        adm = CardAdmissibility.from_repo(paths)
-        sources = source_hashes(paths)
+        adm, lowering = CardAdmissibility._from_repo(paths)
+        sources = source_hashes(paths, lowering)
     except FileNotFoundError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

@@ -114,7 +114,7 @@ def _admitting_all_but(*inadmissible: str, registered=("BT12-002", "BT12-022", "
     """A `CardAdmissibility` that rejects `inadmissible` (as `failed_verdict`) and admits the rest."""
     return CardAdmissibility(
         registered=frozenset(registered),
-        tested=frozenset(registered),
+        lowering_covered=frozenset(registered),
         failed_verdict=frozenset(inadmissible),
         diverged_no_quirk=frozenset(),
     )

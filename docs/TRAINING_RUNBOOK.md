@@ -255,7 +255,8 @@ python code/tools/meta_loader.py --build
 - Runtime gauntlet loading applies a two-layer training gate (spec `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5b). It reads only two committed `data/` artifacts, because the training image ships no `qa/`; a missing artifact stops the load (`MechanicsReadinessMissingError` / `CardAdmissibilityMissingError`, each naming its regenerate command):
   1. **Mechanics (global).** `data/mechanics_readiness.json` must be `ready`: no open blocking gap among the mechanics-set rules obligations. This is checked once per load, before any deck is examined. Otherwise `MechanicsNotReadyError` names the blocking rule and gap ids. Regenerate with `PYTHONPATH=code python -m tools.rules.mechanics_readiness`.
   2. **Light per-card (per decklist).** Every card ID must be playable, meaning registered in the Rust engine and present in `data/cards.json` (rejection `unregistered`). It must also be admissible in `data/card_admissibility.json` (rejection `not_admissible`, logged with the card's reason):
-     - tested, i.e. a behavioural test module exists at generation time: `code/digimon-engine/tests/cards_behavioral/<set>/<card_id>.rs` declared from `main.rs` / `<set>/mod.rs`, or an existing ledger `test_path` (`untested`);
+     - lowering-covered: every construct its YAML references (verbs, predicates, timings, keywords, as `tools.lowering_coverage` attributes them from the impact index) is tested behaviourally by the mechanics tests; a `parsed_only` construct does not count (`untested_lowering`, with the constructs listed in the row's `untested_constructs`). A non-DSL card (raw_rust / hand-written, or unimplemented) has no constructs and is `untested_lowering` unless it has its own test module;
+     - hybrid rule: a card with >= 4 clauses or any protection construct (the `protection_constructs` family in `qa/impact/lowering_coverage.json`) also needs its own behavioural test module, `code/digimon-engine/tests/cards_behavioral/<set>/<card_id>.rs` declared from `main.rs` / `<set>/mod.rs`, or an existing ledger `test_path` (`untested_card`; rows carry `needs_card_test` / `has_card_test`);
      - no failed ledger verdict, i.e. `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT`, `AUDITED-MISSING-TESTS`, `FAILED`, `FAIL` or `QA-FAIL` in either ledger (`failed_verdict`);
      - no `diverged` exam row without a cited `dcgo_quirk`/`stale` triage (`diverged_no_quirk`).
 
@@ -963,13 +964,23 @@ in §2 ("Runtime gauntlet loading ..."); this section is the operator view.
 | Layer | Artifact | Regenerate | Fails with |
 |---|---|---|---|
 | Mechanics (global) | `data/mechanics_readiness.json` | `PYTHONPATH=code python -m tools.rules.mechanics_readiness` | `MechanicsNotReadyError` / `MechanicsReadinessMissingError` |
-| Per-card (per decklist) | `data/card_admissibility.json` | `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility` (stdlib only; reads `data/card_registry.json`, the `cards_behavioral/` test modules, both ledgers and the exam verdicts) | `NotAdmissibleDeckError` / `CardAdmissibilityMissingError` |
+| Per-card (per decklist) | `data/card_admissibility.json` | `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility` (no engine wheel; reads `data/card_registry.json`, runs `tools.lowering_coverage.build()` in-process, scans the `cards_behavioral/` test modules, both ledgers and the exam verdicts) | `NotAdmissibleDeckError` / `CardAdmissibilityMissingError` |
 
 Both take `--check` (run by `scripts/verify` tier 0, which CI's tier-1 job
-includes). Regenerate the mechanics artifact after any change to the rules
-ledger (`qa/rules/`), and the admissibility artifact after any change to the
-validated-cards ledgers, exam verdicts, `data/card_registry.json` or the
-behavioural test modules (a new or removed `cards_behavioral/<set>/<id>.rs`).
+includes, beside `lowering_coverage_check`). Regenerate the mechanics artifact
+after any change to the rules ledger (`qa/rules/`), and the admissibility
+artifact (plus `PYTHONPATH=code python -m tools.lowering_coverage`) after any
+change to the validated-cards ledgers, exam verdicts, `data/card_registry.json`,
+card YAML, the mechanics tests, or the behavioural test modules (a new or
+removed `cards_behavioral/<set>/<id>.rs`).
+
+**The work queue.** `qa/impact/lowering_coverage.json` is the human-readable
+report behind `untested_lowering`: per construct, whether a mechanics test
+exercises it; per card, its `untested_constructs`. A construct test in the
+mechanics suites (`tests/dsl`, `tests/rules_conformance`, ... -- never
+`cards_behavioral`) unblocks every card that uses it. `PYTHONPATH=code python -m
+tools.lowering_coverage --report OUT.md --decks deckpool.json` ranks the untested
+constructs by decks blocked.
 
 **Pre-flight for a training or cloud run.** Both artifacts must be present on the
 host: they are the only gate inputs, because the training image and cloud pods
@@ -979,9 +990,10 @@ bare pod, `scp` them with the rest of `data/` (docs/CLOUD_TRAINING.md). Override
 `DIGIMON_MECHANICS_READINESS` / `DIGIMON_CARD_ADMISSIBILITY` (or `DIGIMON_DATA_DIR`).
 
 If training stops with `EmptyTrainingPoolError`, the message lists the cards
-blocking the most decklists, each with its reason (`untested`, `failed_verdict`,
-`diverged_no_quirk`, `unregistered`), and both regenerate commands. Fix the card
-(test it, resolve the ledger verdict, triage the divergence with a cited
+blocking the most decklists, each with its reason (`unregistered`,
+`untested_lowering`, `untested_card`, `failed_verdict`, `diverged_no_quirk`), and
+both regenerate commands. Fix the cause (test the construct, add the card's own
+test, resolve the ledger verdict, triage the divergence with a cited
 `dcgo_quirk`) and regenerate; do not edit the artifacts by hand.
 
 Pool snapshots (`--curriculum-pool`, eval CLIs) are refused if they contain an

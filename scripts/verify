@@ -206,8 +206,18 @@ def tier0_suites() -> list[Suite]:
             command=[PYTHON, "-m", "tools.rules.mechanics_readiness", "--check"],
             env={"PYTHONPATH": "code"},
         ),
-        # Stdlib only: the registry is data/card_registry.json and "tested" is a scan of
-        # cards_behavioral/, so this runs on a bare runner with no engine wheel.
+        # The lowering-coverage report (qa/impact/lowering_coverage.json): which DSL
+        # constructs the mechanics tests exercise -- the admissibility work queue.
+        Suite(
+            tier=0,
+            name="lowering_coverage_check",
+            kind="python",
+            command=[PYTHON, "-m", "tools.lowering_coverage", "--check"],
+            env={"PYTHONPATH": "code"},
+        ),
+        # No engine wheel needed: the registry is data/card_registry.json, lowering
+        # coverage is tools.lowering_coverage.build() in-process (PyYAML), and the own-
+        # card-test scan reads cards_behavioral/.
         Suite(
             tier=0,
             name="card_admissibility_check",
