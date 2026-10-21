@@ -7044,20 +7044,23 @@
     },
     "BT25-097": {
       "card_name": "Guardian Palace",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "aegiomon-3",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-c1-jupitermon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Jupitermon",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-097.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_097.rs",
+      "test_count": 16,
       "patterns": [
         "D3",
         "D4",
-        "D5"
+        "D5",
+        "C5",
+        "B2",
+        "F9"
       ],
-      "notes": "Alliance primary aura is implementable, but the conditional secondary grant of <Scapegoat> (while a [Junomon]-named Digimon is present) to a security-aura TARGET SET is not behaviorally installable. Scapegoat is a replacement-effect keyword requiring an installed when_would_be_deleted effect on each target permanent; the aura grant_keyword path only registers has_keyword and does NOT synthesize the replacement auto-effect for aura-granted (esp. conditional) keywords on a target set (game.rs:4111-4129 explicitly skips conditional grants and only covers the source card via registry). G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD."
+      "notes": "TDD vs DCGO BT25_097.cs; prior unreviewed draft 38d596b56 re-verified (dropped its player-scoped IgnoreColorRequirement flood_gate; the colour bypass is the card-scoped use_requirement face_up_security_count_lte 0; 4-22-3 both colours otherwise). {Security}[All Turns] face-up aura: yellow/purple [TS] Digimon gain <Alliance>; with an own [Junomon]-named Digimon they also gain <Scapegoat>, which is behavioural (recipient-side replacement synthesis) now that the DSL maps the keyword (G-DSL-SCAPEGOAT-GRANT-KEYWORD). [Main] bottom security -> hand, self face-up bottom security, optional yellow/purple [TS] Digimon play -3. [Security] optional free level<=4 yellow/purple [TS] Digimon from hand or trash. Supersedes the 2026-06-06 BLOCKED (G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD) verdict."
     },
     "BT25-102": {
       "status": "IMPLEMENTED",

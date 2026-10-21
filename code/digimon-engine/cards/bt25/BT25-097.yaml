@@ -1,0 +1,147 @@
+# BT25-097 Guardian Palace — Option, Yellow/Purple, use cost 3. Traits: Iliad, TS.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT25-097.md):
+#   While you have no face-up security cards, you can ignore this card's color
+#     requirements.
+#   {Security} [All Turns] All of your yellow or purple [TS] trait Digimon gain
+#     ＜Alliance＞. While you have a Digimon with [Junomon] in its name, they
+#     also gain ＜Scapegoat＞.
+#   [Main] Add your bottom security card to the hand and place this card face up
+#     as the bottom security card. Then, you may play 1 yellow or purple [TS]
+#     trait Digimon card from your hand with the cost reduced by 3.
+#   Security Effect:
+#   [Security] You may play 1 level 4 or lower yellow or purple [TS] trait
+#     Digimon card from your hand or trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_097.cs
+#
+# Prior UNREVIEWED draft 38d596b56 — re-verified clause by clause. Changes vs
+# the draft: the colour bypass is carried by `use_requirement` ONLY (the draft
+# also had a player-scoped `IgnoreColorRequirement` flood_gate, which is not
+# card-scoped and adds nothing for an Option in hand); the {Security} aura's
+# `kind: digimon` target matches DCGO's IsPermanentExistsOnOwnerBattleAreaDigimon.
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Colour (EffectTiming.None, IgnoreColorConditionClass): active while the owner
+#   has 0 face-up (non-flipped) security cards; applies to this card only.
+#   → `use_requirement: face_up_security_count_lte: 0` — the engine's Option
+#   colour check treats a true use requirement as satisfying the colour
+#   requirement (action/mask.rs `option_use_requirement_or_color_available`).
+# Alliance (OnAllyAttack, AllianceStaticEffect): own battle-area Digimon whose
+#   top card is yellow OR purple AND [TS], while this card is face up in
+#   security. → `kind: aura, scope: security` grant_keyword Alliance (BT25-099
+#   sister idiom).
+# Scapegoat (AddSkillClass, WhenPermanentWouldBeDeleted → ScapegoatSelfEffect)
+#   over the same set, additionally gated on an own permanent whose top card
+#   name contains "Junomon". → second security aura, active_when any own
+#   [Junomon]-named Digimon, grant_keyword Scapegoat. The aura-granted keyword
+#   is behavioural: the WhenWouldBeDeleted scan synthesizes the Scapegoat
+#   replacement body on the recipient (G-DSL-SCAPEGOAT-GRANT-KEYWORD added the
+#   missing DSL string mapping).
+# [Main] (OptionSkill): ReplaceBottomSecurityWithFaceUpOptionEffect (bottom
+#   security → hand if any; this card → face-up bottom security) then
+#   canNoSelect hand pick over yellow/purple [TS] Digimon → PlayByEffect with
+#   the cost reduced by 3. → BT25-099 sister idiom.
+# [Security] (SecuritySkill): level <= 4 yellow/purple [TS] Digimon from hand
+#   or trash (zone choice incl. "don't play") → PlayByEffect free.
+#   → optional select_union_zone + play_union_bound_free.
+
+card: BT25-097
+name: "Guardian Palace"
+kind: option
+color: [yellow, purple]
+cost: 3
+traits: [Iliad, TS]
+
+# "While you have no face-up security cards, you can ignore this card's color
+# requirements."
+use_requirement:
+  face_up_security_count_lte: 0
+
+effects:
+  # ─── {Security} [All Turns] yellow/purple [TS] Digimon gain <Alliance> ──────
+  - kind: aura
+    scope: security
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: yellow
+        - color_is: purple
+    grant_keyword: { keyword: Alliance }
+    summary: "{Security} [All Turns] All of your yellow or purple [TS] trait Digimon gain <Alliance>"
+
+  # ─── {Security} [All Turns] ... while you have a [Junomon]-named Digimon,
+  #     they also gain <Scapegoat> ──────────────────────────────────────────────
+  - kind: aura
+    scope: security
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            name_contains: "Junomon"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: yellow
+        - color_is: purple
+    grant_keyword: { keyword: Scapegoat }
+    summary: "{Security} [All Turns] While you have a Digimon with [Junomon] in its name, your yellow or purple [TS] trait Digimon also gain <Scapegoat>"
+
+  # ─── [Main] ────────────────────────────────────────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 yellow or purple [TS] trait Digimon card from your hand with the cost reduced by 3"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+      - select_hand:
+          of: you
+          bind_as: picked_digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+              - any_of:
+                  - color_is: yellow
+                  - color_is: purple
+          prompt: "You may play 1 yellow or purple [TS] trait Digimon card from your hand with the cost reduced by 3"
+      - play_from_hand:
+          of: you
+          hand_index: picked_digimon
+          cost_delta: { reduce: 3 }
+
+  # ─── [Security] may play 1 level <= 4 yellow/purple [TS] Digimon from hand
+  #     or trash free ────────────────────────────────────────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 level 4 or lower yellow or purple [TS] trait Digimon card from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: TS
+              - any_of:
+                  - color_is: yellow
+                  - color_is: purple
+          prompt: "You may play 1 level 4 or lower yellow or purple [TS] trait Digimon card from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked

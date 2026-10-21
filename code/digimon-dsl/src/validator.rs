@@ -3106,6 +3106,9 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "ArmorPurge",
     "Fragment",
     "Retaliation",
+    // Scapegoat — replacement-type keyword (§16-32); aura-granted by
+    // BT25-097 Guardian Palace. G-DSL-SCAPEGOAT-GRANT-KEYWORD.
+    "Scapegoat",
     "Execute",
     "Engage",
     "Guard",
