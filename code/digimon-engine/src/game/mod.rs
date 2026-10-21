@@ -4242,7 +4242,9 @@ impl Game {
                     continue;
                 }
                 total += 1;
-                let count = permanent.activation_count(source.handle(), slot as u8);
+                // Shared-OPT groups count on their group key (`Game::opt_slot_key`).
+                let key = effect.shared_opt_group.unwrap_or(slot as u8);
+                let count = permanent.activation_count(source.handle(), key);
                 if count >= effect.max_per_turn {
                     used += 1;
                 }
