@@ -27,7 +27,7 @@
 
 use super::support::*;
 use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
-use digimon_engine::action::space::{encode_attack, PLAY_HAND_START};
+use digimon_engine::action::space::{encode_attack, PASS, PLAY_HAND_START};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
@@ -153,19 +153,48 @@ fn bt26_004_offers_only_your_glowing_dawn_tamers() {
     let gd1 = tamer_with_face_down(&mut r, 0, "GDT", 0);
     let gd2 = tamer_with_face_down(&mut r, 0, "GDT2", 0);
     let plain = tamer_with_face_down(&mut r, 0, "PT", 0);
+    // Park the opponent's [Glowing Dawn] Tamer at a slot index (4) that no
+    // own permanent occupies, so a leak into the candidate set could not
+    // hide behind an own slot's action id.
+    for _ in 0..4 {
+        r.place_on_field(1, "PT", Some(0));
+    }
     let opp_gd = tamer_with_face_down(&mut r, 1, "GDT", 0);
+    assert_eq!(opp_gd.index, 4);
     let m = carrier(&mut r);
+    assert!(m.index < 4, "own field is slots 0..=3");
     push_hand(&mut r, 0, "HANDDIGI");
     r.attack_player(m, 1, false);
     r.accept_optional_trigger().unwrap();
     let a = hand_action(&r, "HANDDIGI");
     r.execute_action(0, a).unwrap();
     let v = r.pending_selection_view().expect("Tamer pick");
-    assert!(v.valid_action_ids.contains(&tamer_action(gd1)));
-    assert!(v.valid_action_ids.contains(&tamer_action(gd2)));
+    // An own-field pick (the opponent's field is not in the candidate kind)
+    // whose candidates are exactly your two [Glowing Dawn] Tamers: not the
+    // plain Tamer, not the opponent's [Glowing Dawn] Tamer (slot 4).
+    assert!(
+        matches!(v.kind, digimon_engine::selection::SelectionKind::OwnField),
+        "own-field pick, got {:?}",
+        v.kind
+    );
+    let mut offered: Vec<u16> = v
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .collect();
+    offered.sort_unstable();
+    let mut want = vec![tamer_action(gd1), tamer_action(gd2)];
+    want.sort_unstable();
+    assert_eq!(offered, want, "only your [Glowing Dawn] Tamers are offered");
     assert!(
         !v.valid_action_ids.contains(&tamer_action(plain)),
         "a Tamer without [Glowing Dawn] is not offered"
+    );
+    assert!(
+        !v.valid_action_ids.contains(&encode_attack(0, opp_gd.index as u16))
+            && !v.valid_action_ids.contains(&encode_attack(1, opp_gd.index as u16)),
+        "the opponent's [Glowing Dawn] Tamer is not offered"
     );
     r.execute_action(0, tamer_action(gd2)).unwrap();
     let _ = r.auto_resolve();
