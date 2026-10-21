@@ -1,0 +1,102 @@
+# BT23-039 Perorimon — Digimon, Lv.3, Green, DP 1000, Play Cost 3.
+# Trait line (card image): Stnd./Appmon | Entertainment | Gourmet
+#   → traits: [Stnd., Appmon, Gourmet], attribute: Entertainment.
+#
+# Printed text (card image + official Bandai DB bundle data/card_bundles/BT23-039.md):
+#   Digivolve circle: Green Lv.2 / Cost 0
+#   [Digivolve] Lv.2 w/[Appmon] trait: Cost 0
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon]
+#     trait and 1 card with the [Game] or [Invincible] trait among them to the
+#     hand. Return the rest to the bottom of the deck.
+#   Link box: <Link> [Appmon] trait: Cost 1 | +2000 DP |
+#     [When Linking] You may suspend 1 of your opponent's Digimon.
+#
+# DCGO BT23_039.cs:
+#   - AddSelfDigivolutionRequirementStaticEffect(HasAppmonTraits && IsLevel2, 0)
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 1)
+#   - OnEnterFieldAnyone: SimplifiedRevealDeckTopCardsAndSelect(3), buckets
+#     HasAppmonTraits (max 1, AddHand) and EqualsTraits("Game")||("Invincible")
+#     (max 1, AddHand); remainder DeckBottom.
+#   - WhenLinked (SetIsLinkedEffect, optional): SelectPermanentEffect Mode.Tap
+#     over the opponent's Digimon, canNoSelect: true.
+#
+# Exemplars: BT21-047 Navimon (same reveal-3 two-bucket shape + link box),
+#   BT25-045 Onmon (linked when_linked suspend).
+# Notes:
+#   - [Game] is an attribute on the Appmon cards that carry it (e.g. Shotmon
+#     BT21-054); attributes fold into the trait line, so trait_has: Game matches.
+#   - "You may suspend 1" → the opponent-Digimon pick is optional (PASS legal).
+
+card: BT23-039
+name: Perorimon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: ["Stnd.", Appmon, Gourmet]
+attribute: Entertainment
+
+alt_paths:
+  # Printed standard circle: Green Lv.2 / Cost 0.
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+  # Printed special condition: "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0".
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── <Link> [Appmon] trait: Cost 1 ─────────────────────────────────────────
+  - kind: link_condition
+    cost: 1
+    filter: { trait_has: Appmon }
+    summary: "<Link> [Appmon] trait: Cost 1"
+
+  # ─── [On Play] reveal 3; add 1 [Appmon] + 1 [Game]/[Invincible]; rest bottom ─
+  - when: on_play
+    summary: "[On Play] Reveal the top 3; add 1 [Appmon] card and 1 [Game]/[Invincible] card to the hand; return the rest to the bottom of the deck"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: appmon_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Appmon }
+            - bind_as: game_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: Game
+                  - trait_has: Invincible
+          no_duplicate_cards: true
+          prompt: "Add 1 card with the [Appmon] trait and 1 card with the [Game] or [Invincible] trait to the hand"
+      - add_to_hand_from_reveal: { of: you, card: appmon_pick }
+      - add_to_hand_from_reveal: { of: you, card: game_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Link box: +2000 DP to the host while linked ───────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon"
+
+  # ─── Link box: [When Linking] you may suspend 1 opponent Digimon ───────────
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] You may suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may suspend 1 of your opponent's Digimon"
+      - if:
+          condition: { binding_present: suspend_target }
+          then:
+            - suspend: { target: suspend_target }

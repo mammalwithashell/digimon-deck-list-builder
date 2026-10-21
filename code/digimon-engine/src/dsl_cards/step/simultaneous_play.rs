@@ -1,4 +1,7 @@
-//! One activation per simultaneous play event; singular event references remain choices.
+//! One activation per simultaneous event (a simultaneous play, or one deletion
+//! batch, §15-5-2); singular event references ("that Digimon") remain
+//! choices. The prompt and labels are event-neutral: deletion observers reach
+//! this too (`Game::collapse_simultaneous_deletion_event_batch`).
 use digimon_dsl::compiled::CompiledStep;
 use crate::dsl_cards::bindings::{Bindings,BindingValue};
 use crate::effect_context::EffectContext;
@@ -12,11 +15,11 @@ pub(super) fn expand_body(steps:&[CompiledStep],ctx:&mut EffectContext<'_>,bindi
     if members.len()<2 || !uses_singular_event_subject(steps) { return None; }
     let labels=members.iter().enumerate().map(|(i,m)| {
         let name=m.event_card.and_then(|h|ctx.game.card_data_for_handle(h)).map(|d|d.card_name.as_str()).unwrap_or("event card");
-        format!("Use simultaneous play subject {}: {}",i+1,name)
+        format!("Use simultaneous event subject {}: {}",i+1,name)
     }).collect();
     let mut n=0;
     let binding=loop {let s=format!("__simultaneous_play_subject_{n}"); if bindings.get_ref(&s).is_none(){break s;} n+=1;};
-    Some(vec![CompiledStep::SelectEffectChoice {labels,legal_when:None,bind_as:Some(binding.clone()),prompt:"Choose the played card referred to by this effect".into(),prompt_key:Some(SUBJECT_CHOICE_KEY.into())},
+    Some(vec![CompiledStep::SelectEffectChoice {labels,legal_when:None,bind_as:Some(binding.clone()),prompt:"Choose the card referred to by this effect".into(),prompt_key:Some(SUBJECT_CHOICE_KEY.into())},
         CompiledStep::WithSimultaneousPlaySubject{binding,body:steps.to_vec()}])
 }
 

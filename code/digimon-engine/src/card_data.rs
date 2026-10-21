@@ -304,6 +304,17 @@ impl CardData {
         matches!(self.card_kind, CardKind::Option | CardKind::Dual)
     }
 
+    /// Whether this card has a play cost at all. An Option has a use cost,
+    /// not a play cost; a DUAL card prints "Play cost: D" and has none even
+    /// on the field, where it is treated as a Digimon (§4-6-3) — DCGO
+    /// `CEntity_Base.HasPlayCost` = `!cardKind.Contains(Option) && PlayCost
+    /// >= 0`, and a DUAL's kinds contain Option. Play-cost-budget picks
+    /// (`select_opponent_play_cost_budget`) never offer a card without one.
+    /// G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP.
+    pub fn has_play_cost(&self) -> bool {
+        !matches!(self.card_kind, CardKind::Option | CardKind::Dual)
+    }
+
     pub fn digimon_level(&self) -> Option<u8> {
         self.dual.as_ref().map(|d| d.digimon.level).or(self.level)
     }
@@ -1023,6 +1034,35 @@ mod tests {
         assert_eq!(dual.option.use_cost, 5);
         assert_eq!(dual.option.colors, vec![CardColor::Purple]);
         assert_eq!(dual.digimon.colors, vec![CardColor::Red, CardColor::Yellow]);
+    }
+
+    /// G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP: a DUAL ("Play cost: D") and an
+    /// Option (use cost) have no play cost; Digimon / Tamers / eggs do — DCGO
+    /// `CEntity_Base.HasPlayCost`.
+    #[test]
+    fn has_play_cost_is_false_for_dual_and_option_cards() {
+        let json = r#"{
+            "DUAL-001": {
+                "card_id": "DUAL-001", "card_name_eng": "DualTest", "card_kind": 4,
+                "play_cost": 5, "level": 6, "dp": 12000, "card_colors": [0],
+                "dual": {
+                    "digimon": {"level": 6, "dp": 12000, "colors": ["Red"], "traits": [],
+                                "evo_costs": [], "effect_text": "", "inherited_text": ""},
+                    "option": {"use_cost": 5, "colors": ["Purple"], "traits": [],
+                               "effect_text": "", "security_text": ""}
+                }
+            }
+        }"#;
+        let cards = CardData::load_from_str(json).expect("dual card parses");
+        let mut card = cards.get("DUAL-001").expect("card exists").clone();
+        assert_eq!(card.card_kind, CardKind::Dual);
+        assert!(!card.has_play_cost(), "a DUAL has no play cost");
+        card.card_kind = CardKind::Option;
+        assert!(!card.has_play_cost(), "an Option has a use cost, not a play cost");
+        for kind in [CardKind::Digimon, CardKind::Tamer, CardKind::DigiEgg] {
+            card.card_kind = kind;
+            assert!(card.has_play_cost(), "{kind:?} has a play cost");
+        }
     }
 
     #[test]

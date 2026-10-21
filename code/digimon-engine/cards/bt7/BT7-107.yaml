@@ -1,0 +1,84 @@
+# BT7-107 Calling From the Darkness — Option, Purple, Cost 1.
+#
+# Printed text (card image + official Bandai DB bundle data/card_bundles/BT7-107.md):
+#   [Main] Delete 1 of your Digimon. Then, return up to 2 purple Digimon cards
+#     from your trash to your hand.
+#   Security Effect: [Security] Add this card to its owner's hand.
+#
+# Official Q&A: Q1673 — the Digimon deleted by this effect may be one of the
+#   returned cards. Q1674 — a returned Digimon's [On Deletion] triggers but
+#   can't activate (it left the trash before activation); the engine's
+#   deferred On Deletion queue already honours this (tested).
+#
+# DCGO BT7_107.cs:
+#   - OptionSkill: SelectPermanentEffect over own battle-area Digimon, maxCount 1,
+#     canNoSelect: false, Mode.Destroy (skipped when there is none). Then
+#     SelectCardEffect over own purple Digimon cards in the trash, maxCount 2,
+#     Mode.AddHand.
+#   - SecuritySkill: AddThisCardToHand.
+#
+# Divergence from DCGO (rules govern): DCGO's CanEndSelectCondition forces at
+#   least 1 card back when any qualifies; the printed "up to 2" and rule
+#   15-10-2-2 ("up to X cards are chosen") allow choosing 0. Authored as 0-2.
+#
+# Modeling: "Then" does not depend on the deletion (no "By"), so the return
+#   runs even with no Digimon to delete. The up-to-2 return is two optional
+#   trash picks; the second is offered only after a first pick, so PASS at the
+#   first ends the effect (one decision = one PASS for the RL agent).
+#   Purple Digimon cards only (Tamers / Options excluded).
+# Promoted from cards/_examples/ (2026-10-21; previous version offered a second
+#   pick after the first was declined).
+
+card: BT7-107
+name: Calling From the Darkness
+kind: option
+color: [purple]
+cost: 1
+
+effects:
+  # ─── [Main] delete 1 own Digimon; then return up to 2 purple Digimon cards ─
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your Digimon. Then, return up to 2 purple Digimon cards from your trash to your hand"
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your Digimon"
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - delete_permanent: { target: sacrifice }
+      - select_trash:
+          of: you
+          bind_as: first
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          prompt: "Return up to 2 purple Digimon cards from your trash to your hand (1/2)"
+      - if:
+          condition: { binding_present: first }
+          then:
+            - add_to_hand_from_trash: { of: you, card: first }
+            - select_trash:
+                of: you
+                bind_as: second
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: purple
+                prompt: "Return up to 2 purple Digimon cards from your trash to your hand (2/2)"
+            - if:
+                condition: { binding_present: second }
+                then:
+                  - add_to_hand_from_trash: { of: you, card: second }
+
+  # ─── [Security] Add this card to its owner's hand ──────────────────────────
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Add this card to its owner's hand"
+    process:
+      - add_this_option_to_hand: {}

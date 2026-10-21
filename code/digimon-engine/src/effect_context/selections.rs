@@ -3371,6 +3371,11 @@ fn play_cost_budget_candidates(
         if !(filter)(game, handle) {
             continue;
         }
+        // A DUAL-topped permanent has no play cost (DCGO HasPlayCost) and
+        // is never a budget candidate. G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP.
+        if !perm.top_card().has_play_cost(&game.card_data) {
+            continue;
+        }
         let play_cost = i32::from(perm.top_card().play_cost(&game.card_data));
         if play_cost <= remaining_play_cost {
             out.push((encode_attack(0, index as u16), handle, play_cost));

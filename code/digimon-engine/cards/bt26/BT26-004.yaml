@@ -1,0 +1,73 @@
+# BT26-004 Pagumon — Digi-Egg, Lv.2, Purple.
+# Traits: Lesser, Glowing Dawn, BEATBREAK. Form: In-Training.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-004.md):
+#   Inherited: [When Attacking] [Once Per Turn] By placing 1 card from your
+#     hand face down under any of your [Glowing Dawn] trait Tamers, <Draw 1>.
+#   Official Q&A: Q6954 the card is placed on the BOTTOM of the cards under the
+#     Tamer; Q6955 the stacking order can't be changed; Q6956 only its owner
+#     may look at a face-down card; Q6957 a trashed face-down card goes to the
+#     trash face up.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_004.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# Inherited (OnAllyAttack, maxCount 1, skippable): CanActivate = an own
+#   [Glowing Dawn] Tamer exists. A canNoSelect:true pick of any hand card,
+#   then a canNoSelect:true pick of an own [Glowing Dawn] Tamer →
+#   AddDigivolutionCardsBottom(face down) → Draw 1. Not completing the
+#   placement refunds the [Once Per Turn] (RemoveUse).
+#   → scope inherited, when_attacking, once_per_turn, optional (the "by
+#   placing" cost is the player's choice; a declined optional trigger keeps
+#   its OPT), gated on a [Glowing Dawn] Tamer AND a hand card (§15-7-4: an
+#   unpayable cost is not offered) → select_hand (any card) +
+#   select_own_permanent ([Glowing Dawn] Tamer) + place_selected_card_under_
+#   tamer face_down (bottom, Q6954) + draw 1 (BT26-095 / ST23-06 idioms).
+#   Once accepted, the cost is paid: both picks are mandatory (the decision
+#   not to pay is the clause's optional prompt).
+
+card: BT26-004
+name: "Pagumon"
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser, Glowing Dawn, BEATBREAK]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    once_per_turn: true
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            trait_has: "Glowing Dawn"
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+            n: 1
+    summary: "Inherited [When Attacking][Once Per Turn] By placing 1 card from your hand face down under any of your [Glowing Dawn] trait Tamers, <Draw 1>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          filter: {}
+          prompt: "Place 1 card from your hand face down under one of your [Glowing Dawn] trait Tamers"
+      - select_own_permanent:
+          bind_as: gd_tamer
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: "Glowing Dawn"
+          prompt: "Choose a [Glowing Dawn] trait Tamer to place the card face down under"
+      - place_selected_card_under_tamer:
+          card: stash
+          tamer: gd_tamer
+          face_down: true
+      - draw: { of: you, count: 1 }

@@ -4128,6 +4128,14 @@ impl Game {
         self.collapse_event_batch(first_index, true, false);
     }
 
+    /// Collapse the `OnAnyDeletion` / `OnLeaveField` observer entries one
+    /// deletion batch enqueued (from `first_index`) to one per observer and
+    /// timing, keeping every deleted Digimon as a member (§15-5-2; see
+    /// `Game::enqueue_batch_on_any_deletion`).
+    pub(crate) fn collapse_simultaneous_deletion_event_batch(&mut self, first_index: usize) {
+        self.collapse_event_batch(first_index, true, false);
+    }
+
     /// Coalesce one source-move event (`Game::begin_source_move_event`):
     /// the `OnDigivolutionCardTrashed` entries the event stamped
     /// (`TriggerContext::in_source_move_event`, selected wherever they sit,

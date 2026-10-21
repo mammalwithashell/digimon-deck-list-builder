@@ -14983,6 +14983,222 @@
         "G4"
       ],
       "notes": "Standard Lv.4 black + special Lv.4 [TS] digivolve (both cost 3). [On Play][When Digivolving] mandatory pick of 1 opponent Digimon or Tamer with play cost <=3 (DCGO HasPlayCost && GetCostItself<=3, canNoSelect false) returned to the top of its owner's deck, stacked cards trashed (§4-7-8). Inherited [When Attacking][OPT] mandatory <De-Digivolve 1> on an opponent Digimon (§16-12), driven through real attacks incl. OPT lockout + next-turn reset and top-card-inactive negative. DCGO BT24/Black/BT24_061.cs; no official Q&A. Mutation-checked (position/cost/OPT)."
+    },
+    "BT26-057": {
+      "card_name": "Bearcatmon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b1-glowing-dawn-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-057.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_057.rs",
+      "test_count": 31,
+      "patterns": [
+        "D1",
+        "F6",
+        "E2",
+        "F1"
+      ],
+      "notes": "DUAL. Alt-digivolve Lv.4 [Glowing Dawn] cost 3. WD optional cost trash_bottom_face_down_source_under_tamer (lowest face-down card, owner ruling 2026-10-20) -> grant_effect_immunity opp Digimon + +3000 DP until end of opp turn. [All Turns][OPT] on_attack_target_change | on_digivolution_card_trashed (timing_conditions event_host_is_own_tamer) may unsuspend, gated source suspended. Option [Main] De-Digivolve 1 + grant_triggered_effect SOMP force_attack until end of opp turn; Q&A immunity gate honoured. Use Req [Glowing Dawn] (mask-tested: legal with a [Glowing Dawn] card and no black card; illegal with neither; an opponent's [Glowing Dawn] card does not count) + Arts Digivolve (tested: offered onto a [Glowing Dawn] or Red Lv.4, free, replaces the trash; declined -> trashed; not offered without a legal base). WD Tamer pick and payability exclude a Tamer whose lowest face-down card the effect cannot trash (ImmuneFromStackTrashing / CannotTrash; DCGO IsTamerWithFaceDownCard; G-ENGINE-FACE-DOWN-TAMER-COST-IGNORES-STACK-TRASH-PROTECTION). Self-combo tested: the WD cost trash triggers its own [All Turns] unsuspend. Note: the granted-clause immunity gate attributes a DUAL Option-face grant as a Digimon effect (G-ENGINE-DUAL-OPTION-GRANT-SOURCE-KIND, non-blocking)."
+    },
+    "BT26-061": {
+      "card_name": "Chiropmon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b1-glowing-dawn-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_061.rs",
+      "test_count": 9,
+      "patterns": [
+        "A1",
+        "G4",
+        "E2"
+      ],
+      "notes": "Alt-digivolve Lv.2 [Glowing Dawn] cost 0. On Play reveal 3 -> select_reveal_buckets ([Glowing Dawn]; purple [BEATBREAK]; no_duplicate_cards), rest to deck bottom (BT25-032 idiom). Inherited [When Attacking][OPT] Draw 1 then mandatory hand trash."
+    },
+    "BT26-052": {
+      "card_name": "Pristimon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b1-glowing-dawn-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-052.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_052.rs",
+      "test_count": 9,
+      "patterns": [
+        "A1",
+        "H7"
+      ],
+      "notes": "Alt-digivolve Lv.2 [Glowing Dawn] cost 0. On Play reveal 3 -> select_reveal_buckets ([Glowing Dawn]; black [BEATBREAK]; no_duplicate_cards — DCGO mutualConditions; one card meeting both buckets is added once, tested). Known divergence (shared with BT25-032, flagged in review): the engine fills the buckets in printed order and cannot offer DCGO mutualConditions' option to skip the second pick when the only [Glowing Dawn] card also met the black [BEATBREAK] bucket; doing as much as possible (15-1-5) arguably makes the engine's version the rules-correct one."
+    },
+    "BT26-095": {
+      "card_name": "Makoto Kuonji",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b1-glowing-dawn-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-095.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_095.rs",
+      "test_count": 15,
+      "patterns": [
+        "B1",
+        "B3",
+        "A6",
+        "E2"
+      ],
+      "notes": "SOMP optional BEATBREAK hand stash face down (bottom, Q&A) -> Draw 1 + 1 memory (Kyo BT26-089 idiom). [All Turns] on_any_deletion trigger_if event_target_kind digimon (either player's), optional, suspend_self cost (source_is_unsuspended) -> Draw 1 -> mandatory hand trash -> mandatory pick of a BEATBREAK non-Digi-Egg trash card placed bottom face down. One trigger per simultaneous deletion (§15-5-2, engine fix G-ENGINE-DELETION-OBSERVER-TRIGGERS-PER-DELETED-DIGIMON). [Security] play self."
+    },
+    "BT26-053": {
+      "card_name": "Wolvermon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b2-glowing-dawn-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-053.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_053.rs",
+      "test_count": 19,
+      "patterns": [
+        "H5",
+        "E2"
+      ],
+      "notes": "Alt-digivolve Lv.3 [Glowing Dawn] cost 2 (printed Black Lv.3 circle comes from cards.json evo_costs). <Blocker> own + inherited (grant_keyword). [All Turns][OPT] on_attack_target_change (any attack, either turn; tested with its own block, an own attack being blocked, and the opponent's attack redirected by another blocker): optional clause gated face_down_sources_under_tamers_gte 1 (declining keeps the OPT = DCGO RemoveUse) -> trash_bottom_face_down_source_under_tamer (lowest face-down card, owner ruling #19; fires on_digivolution_card_trashed observers) -> optional use_option_from_hand free over kind option + [Glowing Dawn] + use cost <= 4 (a [Glowing Dawn] DUAL is offered by its Option use cost, rules 4-6-1/4-6-6-2; use cost 5, no trait, and Digimon cards are not offered; DUAL fixtures with Option use cost 5 / Digimon play cost 3 (not offered) and use cost 4 / play cost 9 (offered) pin that the Option use cost is read). Paying without an eligible Option still trashes (DCGO)."
+    },
+    "BT6-103": {
+      "card_name": "Blasted Disaster",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b2-glowing-dawn-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta (splash)",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_103.rs",
+      "test_count": 8,
+      "patterns": [
+        "F7"
+      ],
+      "notes": "Option, green, cost 6. [Main] for_each opponent battle-area Digimon -> suspend (Tamers and own Digimon untouched; a CannotSuspend Digimon is skipped), then gain_memory_fn = count of the opponent's suspended Digimon read after the suspends (already-suspended ones count; a Digimon that could not be suspended does not; none -> 0). Green colour requirement enforced by the engine (tested). [Security] (scope inherited + on_security, BT6-105 idiom) mandatory select_opponent_permanent Digimon + suspend, chosen by the security card's owner."
+    },
+    "BT26-004": {
+      "card_name": "Pagumon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b2-glowing-dawn-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-004.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_004.rs",
+      "test_count": 9,
+      "patterns": [
+        "G4",
+        "E2",
+        "A6"
+      ],
+      "notes": "Digi-Egg. Inherited [When Attacking][OPT], optional (the 'by placing' cost; declining keeps the OPT = DCGO RemoveUse, rule 15-14-1-4), gated on an own [Glowing Dawn] Tamer AND a hand card (15-7-4) -> select_hand (any card: Digimon / Tamer / Option all offered) -> select_own_permanent ([Glowing Dawn] Tamer; plain and opponent Tamers not offered) -> place_selected_card_under_tamer face_down (BOTTOM of the stack, Q6954) -> <Draw 1>. Face-up Pagumon has no effect (inherited only)."
+    },
+    "BT8-070": {
+      "card_name": "BlackWarGreymon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b2-glowing-dawn-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta (splash)",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_070.rs",
+      "test_count": 20,
+      "patterns": [
+        "F7",
+        "E2"
+      ],
+      "notes": "Printed circles Black/Red Lv.5 cost 4 come from cards.json evo_costs (tested via an integrated digivolve). [When Digivolving] select_opponent_play_cost_budget (budget 6, min_picks 1 per rule 1-3-6, PASS only after a pick) whose filter admits a non-token Digimon while self_source_count(red) >= 1 and a Tamer while self_source_count(black) >= 1 -- one shared budget (Q1751/Q1752), a single red+black source enables both (Q1753), DCGO HasPlayCost: tokens excluded by the filter, a DUAL-topped Digimon (e.g. BT26-057 Bearcatmon, Play cost: D) skipped by the budget step itself (substrate fix G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP / G-DSL-PLAY-COST-BUDGET-DUAL-TOP, tested incl. the re-derived pick after a first choice), cost > 6 never offered, no red/black source or no candidate -> no prompt -> delete_bound_permanents, now ONE deletion event (substrate fix G-DSL-DELETE-BOUND-PERMANENTS-ONE-EVENT). [All Turns][OPT] on_any_deletion trigger_if opponent Digimon, optional, gated source suspended (DCGO CanUnsuspend; an unsuspended BWG keeps its OPT) -> unsuspend; fires on the opponent's turn; own Digimon / opponent Tamer deletions don't trigger; its own WD deleting two Digimon triggers it once."
+    },
+    "BT23-039": {
+      "card_name": "Perorimon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta — Rebootmon (DigiLab 11087 #2)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-039.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_039.rs",
+      "test_count": 17,
+      "patterns": [
+        "A2",
+        "C-link",
+        "E1"
+      ],
+      "notes": "Green Lv.3 Appmon. Digivolve: printed Green Lv.2/0 circle + Lv.2 w/[Appmon]/0 special condition (both tested, plus the off-colour traitless negative). [On Play] reveal 3 -> select_reveal_buckets (1 [Appmon], 1 [Game]|[Invincible], no_duplicate_cards; Game is the Appmon attribute, folded into the trait line) -> hand; rest to deck bottom. Link box: link_condition [Appmon] cost 1 (non-Appmon host refused), linked +2000 DP aura, [When Linking] optional opponent-Digimon suspend (PASS declines; own Digimon not eligible). DCGO BT23_039.cs."
+    },
+    "BT23-022": {
+      "card_name": "Oujamon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta — Rebootmon (DigiLab 11087 #2)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_022.rs",
+      "test_count": 27,
+      "patterns": [
+        "C-link",
+        "E2",
+        "G-app-fusion"
+      ],
+      "notes": "Blue/Red Lv.5 Appmon. Digivolve: Lv.4 blue / red circles cost 4, Sup. (rainbow) cost 4, App Fusion [Dosukomon]&[Coachmon] cost 0 (engine offers the cost choice when the paid circle also matches). <Raid>. [WD][WA][OPT] optional + outer_prompt (DCGO optional confirm: declining it keeps [WA] available) link_cards from hand/self_sources, level<=4 Digimon, to self, free; zone choice when both zones qualify; Q5243 enforced by link_card_qualifies_for (no <Link> -> not offered). [All Turns][OPT] when_card_linked_to_this optional self-unsuspend (any link source; not when another Digimon is linked). Link box: [Appmon] cost 3, +4000 DP, Security A. +1 (attack checks 2). Integrated WA line with Perorimon BT23-039 (Raid ordering, unsuspend + Perorimon suspend). Second link replaces the first (§4-9-5 max 1 link card). DCGO BT23_022.cs."
+    },
+    "BT11-052": {
+      "card_name": "Tyrannomon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta — Chronomon",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-052.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_052.rs",
+      "test_count": 13,
+      "patterns": [
+        "B2",
+        "D2"
+      ],
+      "notes": "Green/Red Lv.4. Digivolve circles Green Lv.3 / 3 and Red Lv.3 / 3 (blue refused). [On Play][When Digivolving] optional select_hand Tamer with play_cost_lte 3 -> play_from_hand_free (cost-4 Tamer and Digimon not offered; PASS declines). Inherited aura +2000 DP gated on your_turn + own Tamer on the battle area (opponent's Tamer and opponent's turn give nothing). DCGO BT11_052.cs."
+    },
+    "BT24-024": {
+      "card_name": "Submarimon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta — DATA SQUAD Ravemon (TS splash)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_024.rs",
+      "test_count": 17,
+      "patterns": [
+        "B2",
+        "E2",
+        "H-ArmorPurge"
+      ],
+      "notes": "Blue/Yellow Lv.4 Armor Form. Digivolve: Blue / Yellow Lv.3 circles cost 3; [Armadillomon] (any level, DCGO EqualsCardName) or Lv.3 w/[TS] cost 2 (red non-TS Lv.3 and Lv.2 TS refused). <Armor Purge> (deletion -> top card trashed). [When Attacking][OPT] optional clause over a mandatory select_hand ([TS] Tamer only) -> guarded outer confirm (no prompt without a candidate; declining keeps the OPT, as DCGO's optional confirm) -> play_from_hand cost_delta reduce 2 (floors at 0). Lockout + next-turn reset tested; real attack_player path tested. DCGO BT24_024.cs."
+    },
+    "BT7-107": {
+      "card_name": "Calling From the Darkness",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta (purple splash)",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-107.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_107.rs",
+      "test_count": 14,
+      "patterns": [
+        "F1",
+        "A3"
+      ],
+      "notes": "Option, purple, cost 1. Promoted from cards/_examples/ (git mv; the pack forbids duplicate ids) and fixed: the second 'up to 2' trash pick is now offered only after a first pick (previously PASS at pick 1 still offered pick 2). [Main] mandatory select_own_permanent (battle-area Digimon only; opponent / breeding excluded) -> delete; then (independent of the deletion) up to 2 purple Digimon cards trash -> hand (purple Tamer/Option and red Digimon excluded; 0, 1 or 2). Q1673 (deleted card returnable) and Q1674 (returned Digimon's On Deletion does not activate; control: it activates when left in trash) tested. DCGO forces >=1 return; printed 'up to 2' + rule 15-10-2-2 allow 0 (rules govern). [Security] scope inherited on_security add_this_option_to_hand. Colour requirement enforced (tested)."
     }
   }
 }

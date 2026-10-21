@@ -932,6 +932,7 @@ impl Game {
         };
 
         // OnAnyDeletion + OnLeaveField per survivor.
+        let first_observer_entry = self.effect_queue.len();
         for ((handle, snapshot), top_card_opt) in
             kill_list.iter().zip(snapshots.iter()).zip(top_cards.iter())
         {
@@ -975,6 +976,18 @@ impl Game {
                 );
             }
         }
+        // §15-5-2: the Digimon one batch deletes are deleted at the same
+        // time — ONE event — so each "when ... deleted" / "leaves the battle
+        // area" observer triggers once for it, not once per deleted Digimon
+        // (DCGO stacks one `OnDestroyedAnyone` carrying every deleted
+        // permanent; `CanTriggerOnPermanentDeleted` matches if any of them
+        // qualifies). The per-survivor entries above passed their trigger
+        // qualifiers individually; collapse them per observer, keeping every
+        // qualifying deleted Digimon as a member (as for a simultaneous play)
+        // so the condition holds when any member meets it and a "that
+        // Digimon" reference is read from a matching member.
+        // G-ENGINE-DELETION-OBSERVER-TRIGGERS-PER-DELETED-DIGIMON.
+        self.collapse_simultaneous_deletion_event_batch(first_observer_entry);
         // The post-deletion trigger drain is the caller's scope exit
         // (`exit_deferred_drain_and_flush`), which drains only when the
         // deferred counter reaches 0. Inside an effect's resolution window

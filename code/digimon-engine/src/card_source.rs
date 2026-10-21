@@ -151,6 +151,11 @@ impl CardSource {
         data[self.data_index].play_cost
     }
 
+    /// See [`CardData::has_play_cost`] (a DUAL or Option card has none).
+    pub fn has_play_cost(&self, data: &[CardData]) -> bool {
+        data[self.data_index].has_play_cost()
+    }
+
     pub fn dp(&self, data: &[CardData]) -> Option<i32> {
         data[self.data_index].dp
     }

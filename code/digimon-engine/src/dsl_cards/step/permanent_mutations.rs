@@ -128,28 +128,38 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        // G-DSL-DELETE-BOUND-PERMANENTS-ONE-EVENT (BT8-070 "Delete the chosen
+        // cards"; EX4-073 / P-094 / BT17-018 / LM-021 budget picks): the
+        // chosen permanents are deleted at the same time — ONE event (DCGO
+        // `SelectPermanentEffect` Mode.Destroy → one
+        // `DestroyPermanentsClass(list)`; §15-5-2: an observer of that event
+        // triggers once). Vanished / duplicate / effect-immune permanents are
+        // skipped (the immunity gate `ctx.delete_permanent` applies), then one
+        // `delete_permanents_batch` runs — the `delete_permanents` shape.
         CompiledStep::DeleteBoundPermanents { binding } => {
-            if let Some(mut handles) = bindings.get_permanent_list(binding) {
-                handles.sort_by_key(|h| (h.player, h.index));
-                handles.reverse();
-                for handle in handles {
-                    let existed = ctx
-                        .game
-                        .player(handle.player)
-                        .battle_area
-                        .get(handle.index as usize)
-                        .is_some();
-                    let dp = if existed {
-                        ctx.game.effective_dp(handle)
-                    } else {
-                        None
-                    };
-                    let is_digimon=ctx.game.permanent_is_digimon_for_rules(handle);
-                    ctx.delete_permanent(handle);
-                    if existed {
-                        bindings.record_deleted(handle, dp, is_digimon);
-                    }
+            let mut handles: Vec<crate::permanent::PermanentHandle> = Vec::new();
+            for h in bindings.get_permanent_list(binding).unwrap_or_default() {
+                let exists = ctx
+                    .game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some();
+                if exists && !handles.contains(&h) && ctx.can_affect_permanent(h) {
+                    handles.push(h);
                 }
+            }
+            if handles.is_empty() {
+                return true;
+            }
+            let snapshots: Vec<(crate::permanent::PermanentHandle, Option<i32>, bool)> = handles
+                .iter()
+                .map(|&h| (h, ctx.game.effective_dp(h), ctx.game.permanent_is_digimon_for_rules(h)))
+                .collect();
+            let cause = ctx.game.infer_deletion_cause(handles[0]);
+            ctx.game.delete_permanents_batch(handles, cause);
+            for (h, dp, is_digimon) in snapshots {
+                bindings.record_deleted(h, dp, is_digimon);
             }
             true
         }
