@@ -27404,7 +27404,7 @@
       ]
     }
   },
-  "cards_root": "D:/wt/p2-triage/code/digimon-engine/cards",
+  "cards_root": "code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost_reduce": [
       "BT26-084",
