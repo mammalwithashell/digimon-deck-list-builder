@@ -75,6 +75,8 @@ fn setup() -> DebugRunner {
         .add_card(digimon("P6C", "Purple Cost Six", CardColor::Purple, 4, 6, &[]))
         .add_card(digimon("P9C", "Purple Cost Nine", CardColor::Purple, 5, 9, &[]))
         .add_card(digimon("P2C", "Purple Cost Two", CardColor::Purple, 3, 2, &[]))
+        .add_card(digimon("P12C", "Purple Cost Twelve", CardColor::Purple, 6, 12, &[]))
+        .add_card(digimon("P14C", "Purple Cost Fourteen", CardColor::Purple, 6, 14, &[]))
         .add_card(digimon("R6C", "Red Cost Six", CardColor::Red, 4, 6, &[]))
         .add_card(tamer_p)
         .add_card(digimon("OPP5", "Opp Five", CardColor::Red, 5, 7, &[]))
@@ -289,6 +291,88 @@ fn ex5_062_wd_no_purple_digimon_in_trash_plays_nothing() {
     assert_eq!(r.memory(), 6);
 }
 
+// ─── Section 2b — the play pick offers only payable cards (CR 4.3 §1-3-11-1) ─
+//
+// DCGO's pick filter is CanPlayAsNewPermanent(payCost: true) with the
+// -(3 + trashed) ChangeCostClass registered: a card whose reduced cost would
+// take memory past the -10 floor is not offered. Otherwise a player could
+// pick it, fail the payment, and dodge the mandatory play.
+
+/// Player 0's memory, whoever's turn it is (memory below 0 passes the turn
+/// once the effects resolve, and `r.memory()` is turn-player relative).
+fn p0_memory(r: &DebugRunner) -> i16 {
+    if r.game.turn_player() == 0 {
+        r.memory()
+    } else {
+        -r.memory()
+    }
+}
+
+/// Memory 2 before the 4-memory digivolve → -2 when [When Digivolving] fires.
+fn low_memory_digivolve(r: &mut DebugRunner) {
+    r.game.memory = 2;
+    anubis_by_digivolve(r);
+    assert_eq!(r.memory(), -2);
+}
+
+#[test]
+fn ex5_062_wd_low_memory_offers_only_the_affordable_card_and_forces_the_play() {
+    let mut r = setup();
+    push_trash(&mut r, 0, "P12C"); // 12 - 3 = 9 → -11: past the floor
+    push_trash(&mut r, 0, "P6C"); //  6 - 3 = 3 → -5
+    low_memory_digivolve(&mut r);
+    pass(&mut r, 0); // decline trashing the card the digivolve drew
+    let v = r.pending_selection_view().expect("the play pick");
+    assert!(!v.is_optional, "the play is mandatory");
+    assert_eq!(
+        non_pass(&r).len(),
+        1,
+        "only the payable purple Digimon is offered (not the cost-12 one)"
+    );
+    pick_trash(&mut r, 0, "P6C");
+    drain_first(&mut r);
+    assert!(field_ids(&r, 0).contains(&"P6C".to_string()));
+    assert_eq!(trash_count(&r, "P12C"), 1, "the unpayable card stays in the trash");
+    assert_eq!(p0_memory(&r), -2 - (6 - 3));
+}
+
+#[test]
+fn ex5_062_wd_low_memory_trashing_three_makes_the_expensive_card_payable() {
+    let mut r = setup();
+    push_trash(&mut r, 0, "P12C"); // 12 - 6 = 6 → -8: payable after 3 trashed
+    push_trash(&mut r, 0, "P6C");
+    for _ in 0..3 {
+        push_hand(&mut r, 0, "FILLER");
+    }
+    low_memory_digivolve(&mut r);
+    pick_hand(&mut r, 0, "FILLER");
+    pick_hand(&mut r, 0, "FILLER");
+    pick_hand(&mut r, 0, "FILLER");
+    let v = r.pending_selection_view().expect("the play pick");
+    assert!(!v.is_optional);
+    assert_eq!(non_pass(&r).len(), 2, "-6: both purple Digimon are payable");
+    pick_trash(&mut r, 0, "P12C");
+    drain_first(&mut r);
+    assert!(field_ids(&r, 0).contains(&"P12C".to_string()));
+    assert_eq!(p0_memory(&r), -2 - (12 - 6));
+}
+
+#[test]
+fn ex5_062_wd_only_unpayable_purple_digimon_skips_the_play() {
+    let mut r = setup();
+    push_trash(&mut r, 0, "P12C");
+    low_memory_digivolve(&mut r);
+    pass(&mut r, 0); // decline the hand trash: -3 leaves P12C unpayable
+    assert!(
+        r.pending_selection_view().is_none(),
+        "no payable card: the play pick is skipped (not offered and then failed)"
+    );
+    drain_first(&mut r);
+    assert_eq!(trash_count(&r, "P12C"), 1);
+    assert_eq!(r.battle_area_size(0), 1, "only Anubismon");
+    assert_eq!(p0_memory(&r), -2);
+}
+
 // ─── Section 3 — [Main] + the shared [Once Per Turn] ─────────────────────────
 
 #[test]
@@ -360,6 +444,28 @@ fn ex5_062_main_with_only_a_purple_digimon_in_trash_is_activatable() {
     drain_first(&mut r);
     assert!(field_ids(&r, 0).contains(&"P6C".to_string()));
     assert_eq!(r.memory(), 10 - (6 - 3));
+}
+
+#[test]
+fn ex5_062_main_trash_gate_counts_only_a_card_payable_at_minus_3() {
+    // Empty hand: the reduction is exactly 3. A cost-14 purple Digimon at
+    // memory 0 would cost 11 (→ -11, past the floor): nothing to play.
+    let mut r = setup();
+    r.game.memory = 0;
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    push_trash(&mut r, 0, "P14C");
+    assert!(
+        !r.game.activate_field_main(0, me.index as usize),
+        "no hand card and no purple Digimon payable at -3"
+    );
+    // A cost-12 one costs 9 at -3 (→ -9): payable, so [Main] activates.
+    push_trash(&mut r, 0, "P12C");
+    assert!(r.game.activate_field_main(0, me.index as usize));
+    assert_eq!(non_pass(&r).len(), 1, "only the payable card is offered");
+    pick_trash(&mut r, 0, "P12C");
+    drain_first(&mut r);
+    assert!(field_ids(&r, 0).contains(&"P12C".to_string()));
+    assert_eq!(p0_memory(&r), -9);
 }
 
 #[test]

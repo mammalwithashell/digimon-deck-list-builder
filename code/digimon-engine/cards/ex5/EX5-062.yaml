@@ -22,7 +22,13 @@
 #   counter, G-OPT-MULTI-TIMING-SHARED-LOCKOUT).
 #   [Main] CanUseCondition: on the battle area AND (hand >= 1 OR a playable
 #   purple Digimon card in the trash) → a `timing_conditions` gate on the
-#   `main_on_field` timing only ([When Digivolving] has no such gate).
+#   `main_on_field` timing only ([When Digivolving] has no such gate). The
+#   trash branch only matters with an empty hand, where the effect's
+#   reduction is exactly 3, so it is `affordable_with_cost_reduce: 3`. (DCGO
+#   evaluates CanPlayAsNewPermanent in the gate BEFORE its ChangeCostClass
+#   is registered, i.e. at full printed cost — a gate-timing quirk that would
+#   refuse an activation whose -3 play is payable; CR 4.3 §15-6-3 only bars
+#   activation when no processing condition is met.)
 #   Body: SelectHandEffect maxCount min(3, hand), canNoSelect true,
 #   Mode.Discard (one discard batch) → discardedCount. Authored as up to three
 #   chained optional `select_hand` + `trash_from_hand_by_index` picks inside
@@ -32,7 +38,11 @@
 #   purple Digimon card → PlayPermanentCards(payCost true, Root.Trash) with
 #   the play cost reduced by 3 + discardedCount (ChangeCostClass, clamped at
 #   0). The number trashed is read back from which picks were bound
-#   (reduce 3 / 4 / 5 / 6).
+#   (reduce 3 / 4 / 5 / 6). DCGO's pick filter also requires
+#   CanPlayAsNewPermanent(payCost: true) with the reduction registered, so
+#   each branch's pick carries `affordable_with_cost_reduce: 3/4/5/6`: an
+#   unpayable card is never offered (no picking it to dodge the play), and
+#   with no payable card the pick is skipped (DCGO HasMatchCondition).
 # [Your Turn] (OnEnterFieldAnyone; CanUse: on the battle area, a played
 #   permanent is one of the owner's battle-area Digimon, IsByEffect,
 #   IsOwnerTurn; not optional, no per-turn cap): if an opponent Digimon with
@@ -71,12 +81,15 @@ effects:
             - count_gte:
                 filter: { of: you, zone: [hand] }
                 n: 1
+            # Only reached with an empty hand, where the reduction is exactly 3:
+            # a purple Digimon card payable at -3 (see the clause notes).
             - count_gte:
                 filter:
                   of: you
                   zone: [trash]
                   kind: digimon
                   color_is: purple
+                  affordable_with_cost_reduce: 3
                 n: 1
     summary: "[When Digivolving][Main][Once Per Turn] You may trash up to 3 cards in your hand. Then, play 1 purple Digimon card from your trash with the play cost reduced by 3, and by 1 more for each card trashed by this effect"
     process:
@@ -107,29 +120,62 @@ effects:
                       filter: {}
                       prompt: "You may trash up to 3 cards in your hand (3rd card)"
                   - trash_from_hand_by_index: { of: you, hand_index: trashed_3 }
-      - select_trash:
-          of: you
-          bind_as: revived
-          filter:
-            all_of:
-              - kind: digimon
-              - color_is: purple
-          prompt: "Play 1 purple Digimon card from your trash with the play cost reduced by 3 (and 1 more per card trashed)"
+      # The mandatory play pick sits inside each reduction branch so its
+      # filter can require the card to be payable at THAT reduction (DCGO
+      # CanSelectCardCondition: CanPlayAsNewPermanent(payCost: true) with the
+      # -(3+k) ChangeCostClass registered; CR 4.3 §1-3-11-1). An unpayable
+      # card is never offered, so the mandatory play can't be dodged.
       - if:
           condition: { binding_present: trashed_3 }
           then:
+            - select_trash:
+                of: you
+                bind_as: revived
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: purple
+                    - affordable_with_cost_reduce: 6
+                prompt: "Play 1 purple Digimon card from your trash with the play cost reduced by 6"
             - play_from_trash: { of: you, hand_index: revived, cost_delta: { reduce: 6 } }
           else:
             - if:
                 condition: { binding_present: trashed_2 }
                 then:
+                  - select_trash:
+                      of: you
+                      bind_as: revived
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - color_is: purple
+                          - affordable_with_cost_reduce: 5
+                      prompt: "Play 1 purple Digimon card from your trash with the play cost reduced by 5"
                   - play_from_trash: { of: you, hand_index: revived, cost_delta: { reduce: 5 } }
                 else:
                   - if:
                       condition: { binding_present: trashed_1 }
                       then:
+                        - select_trash:
+                            of: you
+                            bind_as: revived
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - color_is: purple
+                                - affordable_with_cost_reduce: 4
+                            prompt: "Play 1 purple Digimon card from your trash with the play cost reduced by 4"
                         - play_from_trash: { of: you, hand_index: revived, cost_delta: { reduce: 4 } }
                       else:
+                        - select_trash:
+                            of: you
+                            bind_as: revived
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - color_is: purple
+                                - affordable_with_cost_reduce: 3
+                            prompt: "Play 1 purple Digimon card from your trash with the play cost reduced by 3"
                         - play_from_trash: { of: you, hand_index: revived, cost_delta: { reduce: 3 } }
 
   # ─── [Your Turn] when an effect plays one of your Digimon, delete 1 of your
