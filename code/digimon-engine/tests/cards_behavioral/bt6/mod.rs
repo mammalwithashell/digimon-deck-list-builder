@@ -1,3 +1,4 @@
+mod bt6_006;
 mod bt6_060;
 mod bt6_082;
 mod bt6_084;

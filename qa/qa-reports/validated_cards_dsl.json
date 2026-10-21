@@ -14872,6 +14872,24 @@
         "security-draw-add-self"
       ],
       "notes": "TDD vs DCGO EX2_068.cs. Tamer-gated color bypass (+/-); [Main] mandatory pick of 1 own Digimon -> <Jamming> + new CannotBeBlocked modifier for the turn (G-ENGINE-CANNOT-BE-BLOCKED / G-DSL-CANNOT-BE-BLOCKED-MODIFIER, substrate widened this commit); block window suppressed only for the pick; Jamming survives a bigger Security Digimon; expiry at end of turn; [Security] draw 1 then add this card to hand."
+    },
+    "BT6-006": {
+      "card_name": "Tsunomon",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_006.rs",
+      "test_count": 7,
+      "patterns": [
+        "G4",
+        "on-discard-hand-observer",
+        "own-effect-gate",
+        "opt-lockout"
+      ],
+      "notes": "TDD vs DCGO BT6_006.cs. Inherited [Your Turn][OPT] on_discard_hand gated on event_discard_player: you + event_caused_by_own_effect: true (ST16-14 idiom); mandatory <Draw 1>. Negatives: opponent's turn, opponent's effect trashing your hand (mutation-checked), your effect trashing the opponent's hand, Tsunomon as top card. OPT lockout + reset next turn."
     }
   }
 }
