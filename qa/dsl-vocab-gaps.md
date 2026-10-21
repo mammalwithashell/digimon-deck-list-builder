@@ -9130,3 +9130,11 @@ EX2-068 High-Speed Plug-In D: "For the turn, 1 of your Digimon gains <Jamming> a
 
 - **Resolution:** `"CannotBeBlocked"` added to `KNOWN_MODIFIER_KEYS` (digimon-dsl validator) and `lookup_modifier_type("CannotBeBlocked") => ModifierType::CannotBeBlocked` (engine `dsl_cards/modifier_map.rs`); engine primitive in `docs/RUST_ENGINE_GAPS.md` [G-ENGINE-CANNOT-BE-BLOCKED]. Authoring: `add_modifier { target: <binding>, modifier: CannotBeBlocked, value: 1, expiry: end_of_turn }`. No pack-format change (string-keyed). Tests: `cards_behavioral -- ex2_068`.
 - **Not covered:** the blocker-qualified form ("by your opponent's Digimon with no digivolution cards", BT1-034 / BT2-029) — needs a predicate payload.
+
+### `has_digivolve_candidate` checks routes, not memory affordability [G-DSL-DIGIVOLVE-CANDIDATE-AFFORDABLE] — OPEN, minor (2026-10-21, EX13 lane c)
+
+P-250 Ogremon (X Antibody) {Trash}[End of Your Turn]: "If your hand has 5 or fewer cards, 1 of your [Demon] trait Digimon may digivolve into this card." DCGO P_250.cs filters the target pick with `card.CanPlayCardTargetFrame(permanent.PermanentFrame, true, activateClass)` (PayCost: true), which rejects a target when `Owner.MaxMemoryCost < cost`. Our `has_digivolve_candidate` (and `can_digivolve_onto`) probe digivolve ROUTES only, so at a deeply negative end-of-turn memory a target whose digivolve cost can't be paid is still offered; the `effect_initiated_digivolve` then fails in `pay_memory` and nothing happens.
+
+- **Impact:** the pick is optional ("may"), so choosing the unpayable target equals declining — game state never diverges. Only an extra, rules-illegal-looking option (CR 4.3 §1-3-11-1) is exposed to the action space.
+- **Proposed vocab:** an `affordable: true` flag on the `has_digivolve_candidate` / `can_digivolve_onto` specs that keeps only routes whose (effect-adjusted) digivolve cost keeps the controller's memory at or above the floor — the digivolve sibling of `affordable_with_cost_reduce` (BT26-084). Must use the same route cost the effect digivolve will charge (printed circle vs alt path).
+- **Cards:** P-250 (and any "may digivolve into this card" / "digivolve into ... paying the cost" pick filtered by these probes).
