@@ -201,6 +201,30 @@ def tier0_suites() -> list[Suite]:
         ),
         Suite(
             tier=0,
+            name="mechanics_readiness_check",
+            kind="python",
+            command=[PYTHON, "-m", "tools.rules.mechanics_readiness", "--check"],
+            env={"PYTHONPATH": "code"},
+        ),
+        # The registry half of card admissibility needs the installed `digimon_engine`
+        # wheel. --skip-if-no-engine makes this a no-op (with a notice) on a bare runner;
+        # the verification-ladder `card-admissibility` CI job builds the wheel and runs
+        # the same check unskipped.
+        Suite(
+            tier=0,
+            name="card_admissibility_check",
+            kind="python",
+            command=[
+                PYTHON,
+                "-m",
+                "digimon_gym.agents.card_admissibility",
+                "--check",
+                "--skip-if-no-engine",
+            ],
+            env={"PYTHONPATH": "code"},
+        ),
+        Suite(
+            tier=0,
             name="verification_tool_tests",
             kind="python",
             command=[

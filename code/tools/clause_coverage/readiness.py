@@ -1,4 +1,12 @@
-"""Oracle readiness: which cards RL training may draw.
+"""Oracle readiness: which cards have every clause and interaction adjudicated.
+
+REPORT, NOT A TRAINING GATE (since 2026-10-21). Training admission is the two-layer
+mechanics gate -- `data/mechanics_readiness.json` plus the light per-card
+`data/card_admissibility.json` (spec `2026-10-15-engine-rules-conformance-validation-design.md`
+§5b). This module still computes and `--check`s `data/oracle_readiness.json` as the
+progress report of the opt-in DCGO exam deepening (and `--plan` still ranks which
+exams to run next); `gauntlet.py` reads it only under `pilot_training --legacy-clause-gate`.
+The rest of this docstring defines the report.
 
 A card is READY when every printed clause AND every gating interaction of the
 card is adjudicated against the DCGO oracle: confirmed; unreachable/unavailable

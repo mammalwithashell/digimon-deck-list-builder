@@ -479,3 +479,14 @@ def test_check_reports_corrupt_artifact(tmp_path, fake_registry, capsys):
     (tmp_path / "card_admissibility.json").write_text("{not json", encoding="utf-8")
     assert ca.main(_argv(tmp_path, "--check")) == 1
     assert "not valid JSON" in capsys.readouterr().err
+
+
+def test_skip_if_no_engine_requires_check(capsys):
+    assert ca.main(["--skip-if-no-engine"]) == 2
+    assert "only makes sense with --check" in capsys.readouterr().err
+
+
+def test_check_skips_cleanly_when_engine_binding_is_absent(monkeypatch, capsys):
+    monkeypatch.setattr(ca.importlib.util, "find_spec", lambda name: None)
+    assert ca.main(["--check", "--skip-if-no-engine"]) == 0
+    assert "SKIPPED" in capsys.readouterr().out

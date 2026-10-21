@@ -37,7 +37,9 @@ back at run time:
 `--check` rebuilds from the current inputs and fails when the committed file
 differs in anything but `generated_at`. Run `--check` (and any write of the
 committed artifact) without input overrides: the input flags are refused unless
-`--out` points elsewhere.
+`--out` points elsewhere. `--check --skip-if-no-engine` exits 0 with a notice when
+the `digimon_engine` wheel is absent (used by `scripts/verify` tier 0; CI's
+`card-admissibility` job builds the wheel and checks unskipped).
 
 Importing the module, `load()` and every per-card decision need no engine
 binding; only `load_registry_ids()` / `from_repo()` (the registry) import the
@@ -47,6 +49,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import sys
 from dataclasses import dataclass
@@ -359,7 +362,26 @@ def main(argv: Optional[list[str]] = None) -> int:
         action="store_true",
         help="exit 1 if the committed artifact differs (ignoring generated_at) from a fresh build",
     )
+    ap.add_argument(
+        "--skip-if-no-engine",
+        action="store_true",
+        help="with --check: exit 0 with a notice when the `digimon_engine` binding is not "
+        "installed (the registry needs it). For environments with no wheel, e.g. "
+        "`scripts/verify` tier 0 on a bare CI runner; a job that builds the wheel runs the "
+        "check without this flag.",
+    )
     args = ap.parse_args(argv)
+    if args.skip_if_no_engine:
+        if not args.check:
+            print("error: --skip-if-no-engine only makes sense with --check", file=sys.stderr)
+            return 2
+        if importlib.util.find_spec("digimon_engine") is None:
+            print(
+                "card admissibility check: SKIPPED -- the `digimon_engine` binding is not "
+                "installed (the registry needs it). The verification-ladder `card-admissibility` "
+                "job builds the wheel and runs this check unskipped."
+            )
+            return 0
     overridden = [
         flag
         for flag, value, default in (

@@ -129,6 +129,12 @@ COPY code/data_paths.py .
 COPY training_jobs/ training_jobs/
 
 # Card data is mounted at runtime: -v $(pwd)/data:/app/data
+# The mount MUST carry data/mechanics_readiness.json and
+# data/card_admissibility.json (the two-layer training gate, rule 34):
+# gauntlet.py fails fast without them, and this image ships no qa/ to
+# regenerate them. They are runtime-only (not include_str! build inputs), so
+# they are deliberately NOT in the rust-builder COPY above -- that would bust
+# the wheel-build layer cache on every artifact regen.
 #
 # data_paths.py computes REPO_ROOT as `__file__.parent.parent`. In the
 # repo, data_paths.py lives at code/data_paths.py, so the walk reaches
