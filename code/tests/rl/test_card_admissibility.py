@@ -87,7 +87,10 @@ def test_untested_blocks():
     assert adm.reason(CARD) == "untested"
 
 
-@pytest.mark.parametrize("status", ["FAILED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS", " audited-drift "])
+@pytest.mark.parametrize(
+    "status",
+    ["FAILED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS", " audited-drift ", "FAIL", "QA-FAIL", "qa-fail"],
+)
 @pytest.mark.parametrize("ledger", ["dsl", "rust"])
 def test_failed_verdict_blocks(status, ledger):
     adm = _load(**{ledger: _ledger(BT1_001=status)})
@@ -96,8 +99,25 @@ def test_failed_verdict_blocks(status, ledger):
     assert adm.admissible(OTHER) is True
 
 
-@pytest.mark.parametrize("status", ["PARTIAL", "BLOCKED", "IMPLEMENTED", "AUDITED-OK", "PASS", None])
-def test_partial_verdict_admits(status):
+@pytest.mark.parametrize("status", ["PARTIAL", "BLOCKED"])
+@pytest.mark.parametrize("ledger", ["dsl", "rust"])
+def test_partial_verdict_blocks(status, ledger):
+    """Ruling R4-revised: a PARTIAL / BLOCKED card has an unimplemented printed
+    clause -- the approximation training must not see -- so it is a failed verdict,
+    exactly as the gauntlet's ledger gate rejects it today."""
+    adm = _load(**{ledger: _ledger(BT1_001=status)})
+    assert adm.admissible(CARD) is False
+    assert adm.reason(CARD) == "failed_verdict"
+
+
+def test_failed_statuses_include_the_gauntlet_ledger_gate():
+    from digimon_gym.agents.gauntlet import _NOT_READY_DSL_STATUSES
+
+    assert ca.failed_verdict_statuses() == _NOT_READY_DSL_STATUSES | {"FAILED", "FAIL", "QA-FAIL"}
+
+
+@pytest.mark.parametrize("status", ["IMPLEMENTED", "AUDITED-OK", "PASS", "FIXED", None])
+def test_passing_verdict_admits(status):
     adm = _load(dsl=_ledger(BT1_001=status), rust=_ledger(BT1_001=status))
     assert adm.admissible(CARD) is True
     assert adm.reason(CARD) is None

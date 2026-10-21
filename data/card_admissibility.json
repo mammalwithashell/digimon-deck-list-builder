@@ -6,9 +6,11 @@
       "reasons": []
     },
     "AD1-002": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "AD1-004": {
       "admissible": true,
@@ -136,9 +138,11 @@
       "reasons": []
     },
     "BT10-093": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT10-111": {
       "admissible": true,
@@ -358,7 +362,8 @@
       "admissible": false,
       "reason": "untested",
       "reasons": [
-        "untested"
+        "untested",
+        "failed_verdict"
       ]
     },
     "BT13-101": {
@@ -367,14 +372,18 @@
       "reasons": []
     },
     "BT13-102": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT13-103": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT13-106": {
       "admissible": true,
@@ -432,9 +441,11 @@
       "reasons": []
     },
     "BT15-037": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT15-084": {
       "admissible": true,
@@ -789,9 +800,11 @@
       "reasons": []
     },
     "BT19-093": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT19-099": {
       "admissible": true,
@@ -922,9 +935,11 @@
       "reasons": []
     },
     "BT20-056": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT20-059": {
       "admissible": true,
@@ -1039,9 +1054,11 @@
       "reasons": []
     },
     "BT21-021": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT21-023": {
       "admissible": true,
@@ -1402,9 +1419,11 @@
       "reasons": []
     },
     "BT23-035": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT23-037": {
       "admissible": true,
@@ -1467,9 +1486,11 @@
       "reasons": []
     },
     "BT23-102": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT24-001": {
       "admissible": true,
@@ -1668,9 +1689,11 @@
       "reasons": []
     },
     "BT24-068": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT24-072": {
       "admissible": true,
@@ -1735,9 +1758,11 @@
       "reasons": []
     },
     "BT24-093": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT24-094": {
       "admissible": true,
@@ -2914,9 +2939,11 @@
       "reasons": []
     },
     "BT8-097": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "BT8-107": {
       "admissible": true,
@@ -2967,7 +2994,8 @@
       "admissible": false,
       "reason": "untested",
       "reasons": [
-        "untested"
+        "untested",
+        "failed_verdict"
       ]
     },
     "BT9-112": {
@@ -2991,9 +3019,11 @@
       "reasons": []
     },
     "EX1-068": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "EX1-072": {
       "admissible": true,
@@ -3016,9 +3046,11 @@
       "reasons": []
     },
     "EX10-020": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "EX10-025": {
       "admissible": false,
@@ -3035,9 +3067,11 @@
       ]
     },
     "EX10-031": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "EX10-032": {
       "admissible": true,
@@ -3075,14 +3109,18 @@
       "reasons": []
     },
     "EX10-056": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "EX10-059": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "EX10-063": {
       "admissible": true,
@@ -3995,7 +4033,8 @@
       "admissible": false,
       "reason": "untested",
       "reasons": [
-        "untested"
+        "untested",
+        "failed_verdict"
       ]
     },
     "EX3-074": {
@@ -4403,14 +4442,18 @@
       "reasons": []
     },
     "LM-027": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "LM-028": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "LM-029": {
       "admissible": true,
@@ -4478,9 +4521,11 @@
       "reasons": []
     },
     "LM-055": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "LM-056": {
       "admissible": true,
@@ -4488,14 +4533,18 @@
       "reasons": []
     },
     "LM-057": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "LM-058": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "LM-059": {
       "admissible": true,
@@ -4531,7 +4580,8 @@
       "admissible": false,
       "reason": "untested",
       "reasons": [
-        "untested"
+        "untested",
+        "failed_verdict"
       ]
     },
     "P-094": {
@@ -4895,9 +4945,11 @@
       "reasons": []
     },
     "ST17-07": {
-      "admissible": true,
-      "reason": null,
-      "reasons": []
+      "admissible": false,
+      "reason": "failed_verdict",
+      "reasons": [
+        "failed_verdict"
+      ]
     },
     "ST18-14": {
       "admissible": true,
@@ -5603,14 +5655,14 @@
     }
   },
   "counts": {
-    "admissible": 1025,
+    "admissible": 1001,
     "diverged_no_quirk": 31,
-    "failed_verdict": 0,
+    "failed_verdict": 24,
     "registered": 1093,
     "unregistered": 0,
     "untested": 37
   },
-  "generated_at": "2026-10-21T15:11:29+00:00",
+  "generated_at": "2026-10-21T15:15:19+00:00",
   "sources": {
     "exam_verdicts_sha256": "0888d106cfc848db624be24d8affe948466d7fff15f1e50b29e891d557ee3692",
     "tested_cards_sha256": "4d397070844146a41a3f679fc372c3d00666b5068066919a60e02b102aca428a",

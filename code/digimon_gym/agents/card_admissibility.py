@@ -7,7 +7,9 @@ A card may appear in a training decklist when it is:
 2. **tested** -- listed in `data/tested_cards.json`;
 3. free of a **failed ledger verdict** -- its status in
    `qa/qa-reports/validated_cards_dsl.json` or `validated_cards.json` is not in
-   `FAILED_VERDICT_STATUSES` (`PARTIAL` / `BLOCKED` admit);
+   `failed_verdict_statuses()` -- the gauntlet's ledger gate
+   (`PARTIAL`, `BLOCKED`, `AUDITED-DRIFT`, `AUDITED-MISSING-TESTS`) plus the
+   explicit failures `FAILED`, `FAIL`, `QA-FAIL` (ruling R4-revised);
 4. free of an **untriaged divergence** -- no exam row of either family
    (`clauses`, or `interactions`: `qa:` rulings and `probe:` risk probes) is
    blocking under `row_blocks`, the single home of that rule.
@@ -43,6 +45,7 @@ import json
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
@@ -57,10 +60,9 @@ FAILED_VERDICT = "failed_verdict"
 DIVERGED_NO_QUIRK = "diverged_no_quirk"
 REASONS = (UNREGISTERED, UNTESTED, FAILED_VERDICT, DIVERGED_NO_QUIRK)
 
-# Ledger statuses that are a failed verdict. PARTIAL and BLOCKED are NOT
-# failures here (they admit) -- unlike `gauntlet._NOT_READY_DSL_STATUSES`,
-# which today rejects them.
-FAILED_VERDICT_STATUSES = frozenset({"FAILED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"})
+# Explicit failure statuses added to the gauntlet's ledger gate: `FAILED`, and
+# the hand-written ledger's `FAIL` / `QA-FAIL` (ruling R4-revised, 2026-10-21).
+EXPLICIT_FAILED_STATUSES = frozenset({"FAILED", "FAIL", "QA-FAIL"})
 
 # A diverged row with this reason compared every step it could and found no
 # divergence; the scenario just ran out of DCGO steps.
@@ -111,11 +113,23 @@ def _row_card_ids(
     return ids
 
 
+@lru_cache(maxsize=1)
+def failed_verdict_statuses() -> frozenset[str]:
+    """Ledger statuses that are a failed verdict, applied to both ledgers:
+    `gauntlet._NOT_READY_DSL_STATUSES` (a PARTIAL / BLOCKED card has an
+    unimplemented printed clause) plus `EXPLICIT_FAILED_STATUSES`. Imported
+    lazily: the gauntlet needs the engine binding and imports this module."""
+    from digimon_gym.agents.gauntlet import _NOT_READY_DSL_STATUSES
+
+    return frozenset(_NOT_READY_DSL_STATUSES) | EXPLICIT_FAILED_STATUSES
+
+
 def _failed_ids(ledger: Mapping[str, Any]) -> set[str]:
+    failed = failed_verdict_statuses()
     return {
         str(cid)
         for cid, entry in (ledger.get("cards") or {}).items()
-        if str((entry or {}).get("status") or "").strip().upper() in FAILED_VERDICT_STATUSES
+        if str((entry or {}).get("status") or "").strip().upper() in failed
     }
 
 
