@@ -1,0 +1,124 @@
+# BT23-022 Oujamon — Digimon, Lv.5, Blue/Red, DP 9000, Play Cost 9.
+# Trait line (card image): Ult./Appmon | Game | Battle
+#   → traits: [Ult., Appmon, Battle], attribute: Game.
+#
+# Printed text (card image + official Bandai DB bundle data/card_bundles/BT23-022.md):
+#   Digivolve circles: Lv.4 / Cost 4 (blue/red ring) · Sup. / Cost 4 (rainbow ring)
+#   [App Fusion] [Dosukomon] & [Coachmon]: Cost 0
+#     If 2 such cards are linked together, stack the link card on top and digivolve.
+#   <Raid>
+#   [When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 4 or
+#     lower Digimon card from your hand or this Digimon's digivolution cards to
+#     this Digimon without paying the cost.
+#   [All Turns] [Once Per Turn] When this Digimon gets linked, it may unsuspend.
+#   Link box: <Link> [Appmon] trait: Cost 3 | +4000 DP | <Security A. +1>
+#
+# Official Q&A Q5243: the WD/WA effect can't link a card that doesn't have <Link>
+#   → link_cards (to: self) only offers cards whose link requirement this
+#     Digimon meets (Game::link_card_qualifies_for, DCGO CanLinkToTargetPermanent).
+#
+# DCGO BT23_022.cs:
+#   - AddSelfDigivolutionRequirementStaticEffect(HasSuperAppTraits, cost 4) — no
+#     level / colour gate (rainbow "Sup." circle).
+#   - AddAppFusionConditionClass: Dosukomon top + Coachmon linked (or reverse), cost 0.
+#   - AddSelfLinkConditionStaticEffect(IsDigimon && HasAppmonTraits, linkCost 3).
+#   - RaidSelfEffect.
+#   - WD + WA ActivateClass sharing hash "BT23-022_WD/WA", maxCountPerTurn 1,
+#     isOptional true (DCGO's Yes/No confirm), then a hand-vs-sources bool pick
+#     when both zones qualify, canNoSelect: true, AddLinkCard (free).
+#   - WhenLinked ActivateClass ("BT23-022_WL", maxCountPerTurn 1, isOptional true):
+#     CanTriggerWhenLinked(this permanent) → IUnsuspendPermanents(self).
+#   - ChangeSelfSAttackStaticEffect(+1, isLinkedEffect: true).
+#
+# Exemplars: BT21-023 Globemon (link_cards from hand/self_sources to self,
+#   dual-colour Lv.4 circles + Sup. circle + App Fusion + link box), BT25-060
+#   Rebootmon (WD/WA shared OPT link to self), BT25-101 (linked security_attack aura).
+# Notes:
+#   - outer_prompt: true on the WD/WA clause mirrors DCGO's always-shown optional
+#     confirm: declining it does not use the [Once Per Turn] (so [When Attacking]
+#     can still fire after a declined [When Digivolving]); accepting and then
+#     passing the pick uses it (G-OPT-REFUND-ON-DECLINE semantics).
+#   - The unsuspend clause's body is a single mandatory action, so the lowering
+#     installs its "it may" confirm automatically (G-OUTER-OPTIONAL-NOT-INSTALLED).
+
+card: BT23-022
+name: Oujamon
+kind: digimon
+level: 5
+color: [blue, red]
+cost: 9
+dp: 9000
+traits: ["Ult.", Appmon, Battle]
+attribute: Game
+
+alt_paths:
+  # Printed standard circle: Lv.4 / Cost 4 on the blue/red ring (official DB
+  # lists Blue Lv.4 / 4 and Red Lv.4 / 4).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  # Printed "Sup." circle / Cost 4 (rainbow ring = any colour; trait gate only).
+  - kind: digivolve
+    from: { trait_has: "Sup." }
+    cost: 4
+  # [App Fusion] [Dosukomon] & [Coachmon]: Cost 0.
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Dosukomon, Coachmon]
+    cost: 0
+
+effects:
+  # ─── <Raid> ──────────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── [WD][WA][OPT] you may link 1 Lv.4- Digimon card from hand / own sources ─
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    summary: "[When Digivolving][When Attacking][Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost"
+    process:
+      - link_cards:
+          from: [hand, self_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          to: self
+          count: { up_to: 1 }
+          cost: free
+          prompt: "Link 1 level 4 or lower Digimon card to this Digimon without paying the cost"
+
+  # ─── [All Turns][OPT] when this Digimon gets linked, it may unsuspend ────────
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][Once Per Turn] When this Digimon gets linked, it may unsuspend"
+    process:
+      - unsuspend: { target: source }
+
+  # ─── Link box: <Link> [Appmon] trait: Cost 3 ────────────────────────────────
+  - kind: link_condition
+    cost: 3
+    filter: { trait_has: Appmon }
+    summary: "<Link> [Appmon] trait: Cost 3"
+
+  # ─── Link box: +4000 DP to the host while linked ────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 4000
+    summary: "[Link] +4000 DP to the linked Digimon"
+
+  # ─── Link box: <Security A. +1> on the host while linked ────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    security_attack: 1
+    summary: "[Link] <Security A. +1>"

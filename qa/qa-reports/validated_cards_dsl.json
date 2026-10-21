@@ -14928,6 +14928,23 @@
         "E1"
       ],
       "notes": "Green Lv.3 Appmon. Digivolve: printed Green Lv.2/0 circle + Lv.2 w/[Appmon]/0 special condition (both tested, plus the off-colour traitless negative). [On Play] reveal 3 -> select_reveal_buckets (1 [Appmon], 1 [Game]|[Invincible], no_duplicate_cards; Game is the Appmon attribute, folded into the trait line) -> hand; rest to deck bottom. Link box: link_condition [Appmon] cost 1 (non-Appmon host refused), linked +2000 DP aura, [When Linking] optional opponent-Digimon suspend (PASS declines; own Digimon not eligible). DCGO BT23_039.cs."
+    },
+    "BT23-022": {
+      "card_name": "Oujamon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta — Rebootmon (DigiLab 11087 #2)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_022.rs",
+      "test_count": 27,
+      "patterns": [
+        "C-link",
+        "E2",
+        "G-app-fusion"
+      ],
+      "notes": "Blue/Red Lv.5 Appmon. Digivolve: Lv.4 blue / red circles cost 4, Sup. (rainbow) cost 4, App Fusion [Dosukomon]&[Coachmon] cost 0 (engine offers the cost choice when the paid circle also matches). <Raid>. [WD][WA][OPT] optional + outer_prompt (DCGO optional confirm: declining it keeps [WA] available) link_cards from hand/self_sources, level<=4 Digimon, to self, free; zone choice when both zones qualify; Q5243 enforced by link_card_qualifies_for (no <Link> -> not offered). [All Turns][OPT] when_card_linked_to_this optional self-unsuspend (any link source; not when another Digimon is linked). Link box: [Appmon] cost 3, +4000 DP, Security A. +1 (attack checks 2). Integrated WA line with Perorimon BT23-039 (Raid ordering, unsuspend + Perorimon suspend). Second link replaces the first (§4-9-5 max 1 link card). DCGO BT23_022.cs."
     }
   }
 }
