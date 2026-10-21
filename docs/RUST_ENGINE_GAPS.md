@@ -6056,6 +6056,34 @@ Filed from the second re-review of the Venusmon owner-security fix (p4-venusmon-
 - **Still open:** the `lowest_play_cost` aggregate and the field-subject `play_cost_*` predicates still read a DUAL top's raw play cost (see the DSL entry).
 - **Blocks training:** was a wrong candidate set in the Glowing Dawn mirror (Bearcatmon in 11 EX13 lists) for BT8-070.
 
+### Placing a permanent as a digivolution card kept its whole stack  [G-ENGINE-PLACE-PERMANENT-AS-SOURCE-KEEPS-STACK] — RESOLVED (2026-10-21, EX13 lane c fix round)
+
+- **Where:** `Game::place_permanent_as_bottom_sources_inner` (`src/game_actions/sources.rs`), reached from the DSL `place_as_bottom_source` step when `source` is a permanent binding (`dsl_cards/step/play_digivolve.rs`) via `EffectContext::place_permanent_as_bottom_sources`.
+- **Defect:** the verb removed the source permanent and spliced its WHOLE `card_sources` under the target. CR 4.3 §4-7-7 (example) treats the placed permanent as removed from the field, and §4-7-8 trashes the cards under it at the same time; DCGO `IPlacePermanentToDigivolutionCards` runs `DiscardEvoRoots` and then `AddDigivolutionCardsBottom({ TopCard })`. The removal also skipped the leave-field bookkeeping (`clear_permanent_full`, modifier / pending-attack / effect-queue re-keying), so modifiers on higher slots could migrate to the wrong permanent.
+- **Card reached:** BT26-097 The Thunder Emperor Awakens ("place 1 of your [Dan Yuki]/[Kanan Yuki] Tamers as any of your [Aegiomon]'s bottom digivolution card") — the only production caller (scan of every `place_as_bottom_source` YAML on 2026-10-21; `EX2-007` uses `place_cards_as_bottom_sources`, a different verb).
+- **Reachable repro:** generic effects put cards under "1 of your Tamers", e.g. <Material Save N> (BT10-009; the engine gates Material Save only on an own Tamer), AD1-006, BT10-088. Material Save onto a [Dan Yuki] Tamer, then use BT26-097 on that Tamer: the saved cards used to become the [Aegiomon]'s (then [Jupitermon]'s) digivolution cards instead of going to the trash.
+- **Fix:** only the source's top card moves; the cards under it go to their owners' trash as ONE `OnDigivolutionCardTrashed` event (§15-5-2, `begin_source_move_event` scope, Ace overflow applied to them), linked cards go to the trash with `OnLinkedCardTrashed`, and the removal now does the same re-keying as `place_permanent_on_security_observed`. If the target vanished, the lifted top card is trashed (safe-fail, as `attach_tamer_to_digimon`).
+- **Witness:** `cards_behavioral::bt26::bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer` (RED before, GREEN after); `token_source_destination` still green.
+- **Blocks training:** no (resolved).
+
+### No attacker-side "can't be blocked" restriction  [G-ENGINE-CANNOT-BE-BLOCKED] — RESOLVED (2026-10-21, EX13 lane c)
+
+- **Card reached:** EX2-068 High-Speed Plug-In D ("[Main] For the turn, 1 of your Digimon gains <Jamming> and can't be blocked by your opponent's Digimon"). Same primitive is needed by the unauthored BT1-034 / BT2-029 ("can't be blocked by your opponent's Digimon with no digivolution cards"), BT3-074, BT6-028, BT7-087, BT9-023, BT11-106, BT14-020, BT16-054, EX1-019.
+- **Defect:** the engine only had the defender-side `ModifierType::CannotBlock` (the carrier can't declare a block). Nothing stopped a Blocker from blocking a given ATTACKER, so "this Digimon can't be blocked" was inexpressible (approximating it with `CannotBlock` on every opponent Digimon would miss Blockers played after the effect).
+- **Fix:** new `ModifierType::CannotBeBlocked` (appended to the enum to keep existing IDs; DSL modifier string `CannotBeBlocked`, serialization name `CannotBeBlocked`, frontend label). `Game::try_enter_block` returns early (no block window) when the attacker carries it — before the candidate scan, so a <Collision>-forced window does not open either. DCGO `GainCanNotBeBlocked` / `CanNotBeBlockedClass` with `defenderCondition: null`.
+- **Not covered:** the conditional "can't be blocked by your opponent's Digimon with no digivolution cards" (BT1-034 / BT2-029) needs a blocker-side predicate on the modifier (DCGO `defenderCondition`); `CannotBeBlocked` is unconditional. Add a payload when those cards are authored.
+- **Witness:** `combat -- block_interrupt::blocker_window_skipped_when_attacker_cannot_be_blocked`, `block_interrupt::cannot_be_blocked_is_attacker_side_only`; `cards_behavioral -- ex2_068_chosen_digimon_cannot_be_blocked`, `ex2_068_unchosen_digimon_can_still_be_blocked`.
+- **Blocks training:** no (resolved).
+
+### `{Trash}` [End of Your Turn] effects never triggered from the trash  [G-ENGINE-TRASH-ZONE-END-OF-YOUR-TURN] — RESOLVED (2026-10-21, EX13 lane c)
+
+- **Card reached:** P-250 Ogremon (X Antibody) ("{Trash} [End of Your Turn] If your hand has 5 or fewer cards, 1 of your [Demon] trait Digimon may digivolve into this card"). The same timing is printed on the unauthored BT24-080 Megidramon, EX4-011 ChaosGallantmon and EX10-071 Paradise Lost.
+- **Defect:** trash-scoped clauses (`scope: trash`, `Effect::trash_zone`) were only scanned for `OnAllyPlayed` (BT20-084) and the self "trashed from the hand" path (BT26-069). `Game::fire_end_of_your_turn` fanned `EndOfYourTurn` out to the battle area and the security stack only, so a `scope: trash` + `when: end_of_your_turn` clause compiled but never fired.
+- **Fix:** `fire_end_of_your_turn` also calls `enqueue_from_player_trash(EndOfYourTurn, player, None)` (now `pub(crate)`) for the ENDING player, so the `{Trash}` clauses join the same simultaneous end-of-turn pool (§15-4-3-5-1 ordering unchanged). `enqueue_from_player_trash` already filters to `trash_zone` clauses, so a dead card's ordinary field effects stay dormant. DCGO `IsExistOnTrashTrigger` + `IsOwnerTurn`; Q&A: a {Trash} effect triggers only while its card is in the trash.
+- **Not covered:** `[End of Opponent's Turn]` / `[End of All Turns]` from the trash (no card needs it yet), and a card that enters the trash DURING the end-of-turn pool is not re-scanned (§15-8-3-6 — the scan is a one-time snapshot, like the security-stack scan).
+- **Witness:** `trash_zone_end_of_your_turn` (4 tests: fires from the ending player's trash; dormant on the field, in the hand, and at the opponent's turn end); `cards_behavioral -- p_250_trash_end_of_turn_*` (7 tests).
+- **Blocks training:** no (resolved).
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.

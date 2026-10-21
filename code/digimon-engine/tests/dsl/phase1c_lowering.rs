@@ -33,6 +33,8 @@ fn keyword_map_covers_aura_grants_used_by_examples() {
     assert_eq!(lookup_keyword("Execute", None), Some(Keyword::Execute));
     assert_eq!(lookup_keyword("Guard", None), Some(Keyword::Guard));
     assert_eq!(lookup_keyword("Engage", None), Some(Keyword::Engage));
+    // G-DSL-SCAPEGOAT-GRANT-KEYWORD (BT25-097 Guardian Palace).
+    assert_eq!(lookup_keyword("Scapegoat", None), Some(Keyword::Scapegoat));
     assert_eq!(
         lookup_keyword("SecurityAttackPlus", Some(1)),
         Some(Keyword::SecurityAttackPlus(1))

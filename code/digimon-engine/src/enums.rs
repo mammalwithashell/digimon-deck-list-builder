@@ -1054,6 +1054,15 @@ pub enum ModifierType {
     /// Player restriction: cannot play Digimon with printed DP at most value.
     /// Includes effect plays and Digimon tokens; appended to preserve existing IDs.
     CannotPlayDigimonWithDPAtMost,
+    /// Attacker-side block immunity: "this Digimon can't be blocked (by your
+    /// opponent's Digimon)". While present on the ATTACKING permanent the
+    /// block timing offers no blocker (§12-1: a block redirects the attack to
+    /// the blocker; the attacker forbids it), so `try_enter_block` returns
+    /// early. Distinct from `CannotBlock` (defender-side: the carrier can't
+    /// declare a block). DCGO `GainCanNotBeBlocked` / `CanNotBeBlockedClass`
+    /// with `defenderCondition: null`. Appended to preserve existing IDs.
+    /// G-ENGINE-CANNOT-BE-BLOCKED (EX2-068).
+    CannotBeBlocked,
 }
 
 /// When a modifier expires.

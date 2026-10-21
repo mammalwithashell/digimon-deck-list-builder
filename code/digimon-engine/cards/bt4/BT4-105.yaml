@@ -1,0 +1,61 @@
+# BT4-105 Tactical Retreat! — Option, Yellow, use cost 1.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT4-105.md):
+#   [Main] Place 1 of your Digimon on top of your security stack face down.
+#   Security Effect:
+#   [Security] <Recovery +1 (Deck)> (Place the top card of your deck on top of
+#     your security stack.)
+#   Official Q&A: the Digimon isn't deleted, so [On Deletion] effects don't
+#     activate.
+#
+# The original printing (local card image) also read "Trash all of the
+# digivolution cards of that Digimon."; the current official text omits it
+# because CR 4.3 §4-7-8 trashes the cards under a card leaving the field at the
+# same time. Behaviour is identical either way.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT4/Yellow/BT4_105.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# [Main] (OptionSkill): if an own battle-area Digimon exists (and the owner can
+#   add security): mandatory (canNoSelect: false) pick of 1 own Digimon →
+#   IPutSecurityPermanent(toTop: true) — top card face down on top of security,
+#   the stacked cards trashed. → mandatory select_own_permanent { kind: digimon }
+#   + place_on_security { source: permanent, top, face down } (LM-020 idiom).
+#   `owner_can_add_security: true` mirrors DCGO's CanAddSecurity gate: with
+#   CannotAddSecurityByEffect on you, no Digimon is offered (BT24-040 predicate).
+# [Security] (SecuritySkill): IRecovery(1) — deck top onto the security top.
+#   → inherited on_security `recover: { count: 1 }`.
+
+card: BT4-105
+name: "Tactical Retreat!"
+kind: option
+color: [yellow]
+cost: 1
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Place 1 of your Digimon on top of your security stack face down"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              owner_can_add_security: true
+          then:
+            - select_own_permanent:
+                bind_as: retreating
+                filter: { kind: digimon, owner_can_add_security: true }
+                prompt: "Place 1 of your Digimon on top of your security stack face down"
+            - place_on_security:
+                source: { permanent: retreating }
+                of: you
+                position: top
+                face_up: false
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] <Recovery +1 (Deck)>"
+    process:
+      - recover: { of: you, count: 1 }

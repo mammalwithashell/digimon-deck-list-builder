@@ -7044,20 +7044,23 @@
     },
     "BT25-097": {
       "card_name": "Guardian Palace",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "aegiomon-3",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-c1-jupitermon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Jupitermon",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-097.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_097.rs",
+      "test_count": 18,
       "patterns": [
         "D3",
         "D4",
-        "D5"
+        "D5",
+        "C5",
+        "B2",
+        "F9"
       ],
-      "notes": "Alliance primary aura is implementable, but the conditional secondary grant of <Scapegoat> (while a [Junomon]-named Digimon is present) to a security-aura TARGET SET is not behaviorally installable. Scapegoat is a replacement-effect keyword requiring an installed when_would_be_deleted effect on each target permanent; the aura grant_keyword path only registers has_keyword and does NOT synthesize the replacement auto-effect for aura-granted (esp. conditional) keywords on a target set (game.rs:4111-4129 explicitly skips conditional grants and only covers the source card via registry). G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD."
+      "notes": "TDD vs DCGO BT25_097.cs; prior unreviewed draft 38d596b56 re-verified (dropped its player-scoped IgnoreColorRequirement flood_gate; the colour bypass is the card-scoped use_requirement face_up_security_count_lte 0; 4-22-3 both colours otherwise). {Security}[All Turns] face-up aura: yellow/purple [TS] Digimon gain <Alliance>; with an own [Junomon]-named Digimon they also gain <Scapegoat>, which is behavioural (recipient-side replacement synthesis) now that the DSL maps the keyword (G-DSL-SCAPEGOAT-GRANT-KEYWORD). [Main] bottom security -> hand, self face-up bottom security, optional yellow/purple [TS] Digimon play -3. [Security] optional free level<=4 yellow/purple [TS] Digimon from hand or trash. Supersedes the 2026-06-06 BLOCKED (G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD) verdict. Fix round 2026-10-21: added Q6458 (0-security [Main] only places the card face up) and Q6463 (granted <Scapegoat> still prevents the deletion when the [Junomon] is deleted in the same batch) tests."
     },
     "BT25-102": {
       "status": "IMPLEMENTED",
@@ -15199,6 +15202,191 @@
         "A3"
       ],
       "notes": "Option, purple, cost 1. Promoted from cards/_examples/ (git mv; the pack forbids duplicate ids) and fixed: the second 'up to 2' trash pick is now offered only after a first pick (previously PASS at pick 1 still offered pick 2). [Main] mandatory select_own_permanent (battle-area Digimon only; opponent / breeding excluded) -> delete; then (independent of the deletion) up to 2 purple Digimon cards trash -> hand (purple Tamer/Option and red Digimon excluded; 0, 1 or 2). Q1673 (deleted card returnable) and Q1674 (returned Digimon's On Deletion does not activate; control: it activates when left in trash) tested. DCGO forces >=1 return; printed 'up to 2' + rule 15-10-2-2 allow 0 (rules govern). [Security] scope inherited on_security add_this_option_to_hand. Colour requirement enforced (tested)."
+    },
+    "BT26-097": {
+      "card_name": "The Thunder Emperor Awakens",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-c1-jupitermon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Jupitermon",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-097.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_097.rs",
+      "test_count": 22,
+      "patterns": [
+        "USE-COST-INCREASE",
+        "OPTIONAL-PROCESSING-CONDITION",
+        "HAND-OR-TRASH-DIGIVOLVE",
+        "PLACE-AS-TOP-SOURCE",
+        "SECURITY-PLAY-THEN-ADD-SELF"
+      ],
+      "notes": "TDD vs DCGO BT26_097.cs + CR 4.3 15-7-1/15-7-2/15-7-4: use cost +1 per own security (use_cost_increase); [Main] optional Tamer ([Dan Yuki]/[Kanan Yuki] in name) + [Aegiomon] picks gate everything (no placement -> no digivolve, no After); free requirement-ignoring digivolve into [Jupitermon] from hand or trash (union pick, optional); After: optional [Aegiochusmon]-named trash card as top source of any own [Jupitermon]; [Security] optional free play of a play-cost<=5 [TS] Digimon/Tamer from hand, then add self to hand. Fix round 2026-10-21: place_as_bottom_source with a permanent source used to move the Tamer's whole stack; this IS reachable (e.g. <Material Save> BT10-009 / AD1-006 / BT10-088 put cards under 'one of your Tamers', which can be a Dan/Kanan Tamer). Fixed in the engine verb (G-ENGINE-PLACE-PERMANENT-AS-SOURCE-KEEPS-STACK, RESOLVED): only the Tamer card moves, the cards under it are trashed (CR 4.3 4-7-7/4-7-8, DCGO DiscardEvoRoots + TopCard). Added tests: cards under the Tamer trashed, [TS] Tamer security play, no After without a [Jupitermon] on the field."
+    },
+    "BT4-105": {
+      "card_name": "Tactical Retreat!",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-c1-jupitermon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Jupitermon",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-105.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_105.rs",
+      "test_count": 9,
+      "patterns": [
+        "OPTION-MAIN-MANDATORY-OWN-PICK",
+        "PERMANENT-TO-SECURITY",
+        "SECURITY-RECOVERY"
+      ],
+      "notes": "TDD vs DCGO BT4_105.cs + official text (the old printing's 'Trash all of the digivolution cards of that Digimon' is CR 4.3 4-7-8): [Main] mandatory pick of 1 own Digimon -> top card face down on top of own security, stacked cards trashed; not a deletion (Q&A: no [On Deletion]); offered only when you can add security (owner_can_add_security, DCGO CanAddSecurity); [Security] <Recovery +1 (Deck)>. Fix round 2026-10-21: added Q1271 token test (a chosen token is removed from the game instead, security unchanged, no add-to-security trigger; CR 4.3 4-21-5 / 15-1-10) with a positive add-to-security probe control."
+    },
+    "LM-062": {
+      "card_name": "Breathing Training",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c2 — Three Musketeers / Beelstarmon (3M)",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-062.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_062.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (purple/yellow), twin of LM-061 per DCGO LM_062.cs: name-gated color bypass, [Main] reveal 2 add 1 purple/yellow + bottom + place as Delay, <Delay> optional cost -2 digivolve into purple/yellow Digimon in hand (legal-target gated), [Security] mirror + placement."
+    },
+    "BT26-064": {
+      "card_name": "DemiDevimon",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c2 — Three Musketeers / Beelstarmon (3M)",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_064.rs",
+      "test_count": 11,
+      "patterns": [
+        "alt-path-digivolve",
+        "A2",
+        "reveal-two-buckets",
+        "inherited-when-attacking-opt"
+      ],
+      "notes": "TDD vs DCGO BT26_064.cs (BT26-065 Falcomon idiom). Alt digivolve Lv.2 [TS] cost 0 (behavioural +/-); [On Play] reveal 3, two mandatory ordered buckets ([Fallen Angel]/[Undead]/[Wizard]/[Demon Lord] exact traits, then [TS]), no duplicate card, rest to bottom; inherited [When Attacking][OPT] draw 1 then mandatory trash 1 (lockout + next-turn reset)."
+    },
+    "EX2-068": {
+      "card_name": "High-Speed Plug-In D",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c2 — Three Musketeers / Beelstarmon (3M)",
+      "yaml_path": "code/digimon-engine/cards/ex2/EX2-068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex2/ex2_068.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "select-own-permanent",
+        "grant-keyword-eot",
+        "attacker-cannot-be-blocked",
+        "security-draw-add-self"
+      ],
+      "notes": "TDD vs DCGO EX2_068.cs. Tamer-gated color bypass (+/-); [Main] mandatory pick of 1 own Digimon -> <Jamming> + new CannotBeBlocked modifier for the turn (G-ENGINE-CANNOT-BE-BLOCKED / G-DSL-CANNOT-BE-BLOCKED-MODIFIER, substrate widened this commit); block window suppressed only for the pick; Jamming survives a bigger Security Digimon; expiry at end of turn; [Security] draw 1 then add this card to hand."
+    },
+    "BT6-006": {
+      "card_name": "Tsunomon",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_006.rs",
+      "test_count": 7,
+      "patterns": [
+        "G4",
+        "on-discard-hand-observer",
+        "own-effect-gate",
+        "opt-lockout"
+      ],
+      "notes": "TDD vs DCGO BT6_006.cs. Inherited [Your Turn][OPT] on_discard_hand gated on event_discard_player: you + event_caused_by_own_effect: true (ST16-14 idiom); mandatory <Draw 1>. Negatives: opponent's turn, opponent's effect trashing your hand (mutation-checked), your effect trashing the opponent's hand, Tsunomon as top card. OPT lockout + reset next turn."
+    },
+    "P-250": {
+      "card_name": "Ogremon (X Antibody)",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/p/P-250.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_250.rs",
+      "test_count": 20,
+      "patterns": [
+        "alt-digivolve-by-name",
+        "trash-zone-end-of-your-turn",
+        "effect-digivolve-from-trash",
+        "shared-opt-cost-clause",
+        "inherited-on-deletion"
+      ],
+      "notes": "Card data ingested 2026-10-21 (digimoncard.io API + official bundle; override restores the Black Lv.3 circle and the Champion form). TDD vs DCGO P_250.cs. {Trash}[End of Your Turn] needed G-ENGINE-TRASH-ZONE-END-OF-YOUR-TURN (engine scans the ending player's trash; substrate widened this commit). Demon pick filtered by has_digivolve_candidate, normal cost. OP/WD/WA shared OPT cost clause (BT24-026 idiom; DCGO has no hand>=1 gate, so declining/empty hand spends the OPT). Inherited [On Deletion] mandatory delete play cost <= 6. No local card image."
+    },
+    "BT6-108": {
+      "card_name": "Underworld's Call",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-108.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_108.rs",
+      "test_count": 10,
+      "patterns": [
+        "self-trashed-from-hand-trigger",
+        "own-effect-gate",
+        "option-main-play-from-trash-free",
+        "security-activates-main"
+      ],
+      "notes": "TDD vs DCGO BT6_108.cs. scope: trash + on_discard_hand (BT26-069 idiom) gated by event_caused_by_own_effect (mutation-checked) -> mandatory <Draw 1>; negatives: another card trashed, card already in trash, opponent's effect, using the Option. [Main] optional free play of a purple Lv.4- Digimon from trash (Lv.5 / red / Option excluded; use cost 4 paid). [Security] re-runs the [Main] body for the defender. Fix round: a cost-style \"by trashing 1 card in your hand\" discard also draws; the [Security] test asserts the Option is trashed afterwards."
+    },
+    "EX5-062": {
+      "card_name": "Anubismon",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/ex5/EX5-062.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex5/ex5_062.rs",
+      "test_count": 26,
+      "patterns": [
+        "shared-opt-wd-main",
+        "timing-conditions-main-gate",
+        "up-to-n-hand-trash-counted-reduction",
+        "play-from-trash-with-cost",
+        "effect-play-observer",
+        "didnt-delete-draw"
+      ],
+      "notes": "TDD vs DCGO EX5_062.cs + official Q&A (2 trashed = -5). ONE clause when [when_digivolving, main_on_field] + once_per_turn (DCGO shared hash); [Main] gated by timing_conditions (hand >= 1 or a purple Digimon payable at -3 in trash). Up to 3 chained optional hand picks in one effect body (one discard batch); mandatory purple-Digimon trash pick inside each reduction branch, filtered by affordable_with_cost_reduce 3/4/5/6 (DCGO CanPlayAsNewPermanent(payCost) with the reduction registered; CR 4.3 §1-3-11-1 - an unpayable card is never offered, so the mandatory play cannot be dodged); play_from_trash with the matching reduce. [Your Turn] on_any_digimon_played (own, effect-initiated) -> mandatory delete opp Lv.5-; effect_deleted_any_opponent_digimon false -> <Draw 1>. Tests cover 0/1/2/3 trashed, floor at 0, trashed card replayed, purple-only, shared OPT both directions, Main gates, reset, and observer negatives (hand play, opponent's turn, opponent's Digimon) plus the WD-play -> delete combo; fix round: low-memory WD offers only the payable card and forces the play, trashing 3 makes a cost-12 card payable, only-unpayable skips the pick, [Main] trash gate counts only a card payable at -3."
+    },
+    "BT24-074": {
+      "card_name": "SkullSeadramon",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_074.rs",
+      "test_count": 17,
+      "patterns": [
+        "alt-digivolve-trait-contains",
+        "opponent-source-strip",
+        "played-by-effect-tail",
+        "on-deletion-play-from-trash-free",
+        "inherited-opt-place-permanent-as-source"
+      ],
+      "notes": "TDD vs DCGO BT24_074.cs + official Q&A. Alt Lv.4 w/ trait_contains Aqua / Sea Animal or trait TS cost 3; colour circles cost 4. OP/WD (BT20-027 shape): mandatory host pick among opp Digimon with sources, any 3 sources (clamped); delete 1 sourceless opp Digimon only when played_by_effect (true only on the OnPlay firing of an effect play; WD and hand play never delete — both tested). [On Deletion] optional free play Lv.4- [Seadramon]-named or [TS] Digimon from trash. Inherited [When Attacking][OPT] optional: place another own Digimon (top card only; its sources trashed) as bottom source, then unsuspend (BT24-059 clause). (Rule) [Aquatic] in traits."
     }
   }
 }

@@ -2348,6 +2348,15 @@ impl Game {
             return false;
         }
 
+        // "This Digimon can't be blocked": an attacker carrying
+        // `CannotBeBlocked` opens no block (DCGO `CanNotBeBlockedClass`,
+        // `defenderCondition: null` — no Digimon may block it). Checked
+        // before the candidate scan so even a <Collision>-forced block
+        // window does not open. G-ENGINE-CANNOT-BE-BLOCKED (EX2-068).
+        if self.modifiers.has(attacker, ModifierType::CannotBeBlocked) {
+            return false;
+        }
+
         // Self-block is not allowed — attacker cannot block their own
         // attack. Also rules out the edge case where attacker and blocker
         // would be the same permanent.

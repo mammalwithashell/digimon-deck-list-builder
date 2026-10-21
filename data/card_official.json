@@ -1,5 +1,5 @@
 {
-  "count": 4416,
+  "count": 4417,
   "failed": [],
   "cards": {
     "AD1-001": {
@@ -116310,6 +116310,45 @@
           "text": "[Security] You may play 1 play cost 5 or lower [Shambala] trait card from your hand or trash without paying the cost."
         }
       ]
+    },
+    "P-250": {
+      "card_id": "P-250",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Purple Black",
+      "play_cost": "6",
+      "dp": "7000",
+      "form": "Champion",
+      "attribute": "Virus",
+      "type": "Demon/X Antibody",
+      "qa": [
+        "A {Trash} effect can be triggered and activated while its card is in the trash. It can't be triggered or activated in areas other than the trash."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] [Ogremon]/[Fugamon]/[Hyogamon]: Cost 1"
+        },
+        {
+          "label": "Effect",
+          "text": "{Trash} [End of Your Turn] If your hand has 5 or fewer cards, 1 of your [Demon] trait Digimon may digivolve into this card. [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card in your hand, 1 of your [Demon], [Shaman] or [Undead] trait Digimon gains ＜Blocker＞ and ＜Retaliation＞ until your opponent's turn ends."
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "[On Deletion] Delete 1 of your opponent's Digimon with a play cost of 6 or less."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] [Ogremon]/[Fugamon]/[Hyogamon]: Cost 1"
     }
   }
 }

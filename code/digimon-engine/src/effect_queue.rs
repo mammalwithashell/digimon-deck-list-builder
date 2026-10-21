@@ -1134,7 +1134,7 @@ impl Game {
     /// Collect top-level observer effects from a player's trash. These
     /// sources are not attached to a live permanent; the trigger payload
     /// carries the played/deleted/moved subject instead.
-    fn enqueue_from_player_trash(
+    pub(crate) fn enqueue_from_player_trash(
         &mut self,
         timing: EffectTiming,
         controller: PlayerId,

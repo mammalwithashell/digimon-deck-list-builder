@@ -628,3 +628,54 @@ fn suspended_blocker_is_not_a_candidate() {
     assert_eq!(result, AttackResult::AttackerWins);
     assert!(r.game.pending_selection.is_none());
 }
+
+/// G-ENGINE-CANNOT-BE-BLOCKED (EX2-068): an attacker carrying the
+/// attacker-side `CannotBeBlocked` modifier opens no block window even with an
+/// unsuspended Blocker up; the attack continues against the original target.
+#[test]
+fn blocker_window_skipped_when_attacker_cannot_be_blocked() {
+    let mut r = DebugRunner::builder()
+        .add_card(strong_digimon("ATK", 9000))
+        .add_card(strong_digimon("BLK", 9000))
+        .add_card(strong_digimon("SEC", 1))
+        .security(1, &["SEC", "SEC", "SEC"])
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+    r.game.modifiers.add(
+        atk,
+        ModifierEntry::simple(ModifierType::CannotBeBlocked, 0, Expiry::EndOfTurn, 0),
+    );
+
+    let sec_before = r.security_count(1);
+    let result = r.attack_player(atk, 1, false);
+
+    assert_ne!(result, AttackResult::InProgress);
+    assert_ne!(r.current_phase(), GamePhase::BlockTiming);
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.security_count(1), sec_before - 1);
+}
+
+/// Control: `CannotBeBlocked` on a DIFFERENT permanent (here the blocker
+/// itself) does not suppress the block window — the gate is attacker-side.
+#[test]
+fn cannot_be_blocked_is_attacker_side_only() {
+    let mut r = runner_with_attacker_vs(5000, 5000);
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _def = r.place_on_field(1, "DEF", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+    r.game.modifiers.add(
+        blk,
+        ModifierEntry::simple(ModifierType::CannotBeBlocked, 0, Expiry::EndOfTurn, 0),
+    );
+
+    let result = r.attack_digimon(atk, r.perm_handle(1, 0), false);
+    assert_eq!(result, AttackResult::InProgress);
+    assert_eq!(r.current_phase(), GamePhase::BlockTiming);
+}
