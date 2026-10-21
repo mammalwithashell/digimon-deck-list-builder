@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-19",
+  "last_updated": "2026-10-20",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14778,6 +14778,25 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_138.rs",
       "test_count": 6,
       "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT26-097": {
+      "card_name": "The Thunder Emperor Awakens",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-c1-jupitermon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Jupitermon",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-097.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_097.rs",
+      "test_count": 19,
+      "patterns": [
+        "USE-COST-INCREASE",
+        "OPTIONAL-PROCESSING-CONDITION",
+        "HAND-OR-TRASH-DIGIVOLVE",
+        "PLACE-AS-TOP-SOURCE",
+        "SECURITY-PLAY-THEN-ADD-SELF"
+      ],
+      "notes": "TDD vs DCGO BT26_097.cs + CR 4.3 15-7-1/15-7-2/15-7-4: use cost +1 per own security (use_cost_increase); [Main] optional Tamer ([Dan Yuki]/[Kanan Yuki] in name) + [Aegiomon] picks gate everything (no placement -> no digivolve, no After); free requirement-ignoring digivolve into [Jupitermon] from hand or trash (union pick, optional); After: optional [Aegiochusmon]-named trash card as top source of any own [Jupitermon]; [Security] optional free play of a play-cost<=5 [TS] Digimon/Tamer from hand, then add self to hand. Edge: place_as_bottom_source with a permanent source moves the Tamer's whole stack (cards under a Tamer ride along instead of being trashed per 4-7-8) - only reachable if a Dan/Kanan Tamer carries stacked cards."
     }
   }
 }
