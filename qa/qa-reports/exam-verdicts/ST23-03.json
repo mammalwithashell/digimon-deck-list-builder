@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-10T17:12:54.114528100+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "ST23-03#effect#0": {
       "clause_id": "ST23-03#effect#0",
@@ -30,6 +30,8 @@
       "reason": "DIVERGED at step 9 (compared 12 of 22 ours / 14 dcgo steps (6 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable); trace truncated); DCGO job failed: prompt mismatch: step 14 expected prompt 'OptionalSkill' but DCGO asked 'MultipleSkills'",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-ST23-03-effect2",
+      "triage": "stale",
+      "citation": "Scenario re-lowered 2026-10-19 (e8ab1396f: source-trash triggers wait for the causing effect) after this 2026-10-10 recording; that DCGO run aborted at step 14 (expected OptionalSkill, DCGO asked MultipleSkills) so the clause was never compared; the only compared diff is the Gekkomon add/place prefix row (Q-REVEAL-ADD-THEN-PLACE). Re-exam",
       "recorded_at": "2026-10-10T17:12:54.114528100+00:00"
     },
     "ST23-03#inherited#0": {

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-05T18:07:22.638871200+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "BT25-049#effect#0": {
       "clause_id": "BT25-049#effect#0",
@@ -28,6 +28,8 @@
       "text_sha256": "8ff49543bbc239b486eae586a361867a732a98a6a39fee1690cdc1ea1d14e0e9",
       "scenario_path": "qa/dcgo-exams/BT25/BT25-049-effect2.yaml",
       "reason": "DIVERGED at step 9 (compared 12 of 25 ours / 14 dcgo steps (9 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable); trace truncated)",
+      "triage": "stale",
+      "citation": "Scenario re-lowered 2026-10-19 (e8ab1396f: source-trash triggers wait for the causing effect) after this 2026-10-05 recording; that DCGO run aborted at step 14 (expected OptionalSkill, DCGO asked SelectCardEffect) so the clause was never compared; the only compared diff is the Gekkomon add/place prefix row (Q-REVEAL-ADD-THEN-PLACE). Re-exam",
       "recorded_at": "2026-10-05T18:07:22.638871200+00:00"
     },
     "BT25-049#inherited#0": {
