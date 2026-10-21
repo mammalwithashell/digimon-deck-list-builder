@@ -14927,6 +14927,26 @@
         "security-activates-main"
       ],
       "notes": "TDD vs DCGO BT6_108.cs. scope: trash + on_discard_hand (BT26-069 idiom) gated by event_caused_by_own_effect (mutation-checked) -> mandatory <Draw 1>; negatives: another card trashed, card already in trash, opponent's effect, using the Option. [Main] optional free play of a purple Lv.4- Digimon from trash (Lv.5 / red / Option excluded; use cost 4 paid). [Security] re-runs the [Main] body for the defender."
+    },
+    "EX5-062": {
+      "card_name": "Anubismon",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/ex5/EX5-062.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex5/ex5_062.rs",
+      "test_count": 22,
+      "patterns": [
+        "shared-opt-wd-main",
+        "timing-conditions-main-gate",
+        "up-to-n-hand-trash-counted-reduction",
+        "play-from-trash-with-cost",
+        "effect-play-observer",
+        "didnt-delete-draw"
+      ],
+      "notes": "TDD vs DCGO EX5_062.cs + official Q&A (2 trashed = -5). ONE clause when [when_digivolving, main_on_field] + once_per_turn (DCGO shared hash); [Main] gated by timing_conditions (hand >= 1 or a purple Digimon in trash). Up to 3 chained optional hand picks in one effect body (one discard batch); mandatory purple-Digimon trash pick; play_from_trash with reduce 3/4/5/6 chosen by which picks were bound. [Your Turn] on_any_digimon_played (own, effect-initiated) -> mandatory delete opp Lv.5-; effect_deleted_any_opponent_digimon false -> <Draw 1>. Tests cover 0/1/2/3 trashed, floor at 0, trashed card replayed, purple-only, shared OPT both directions, Main gates, reset, and observer negatives (hand play, opponent's turn, opponent's Digimon) plus the WD-play -> delete combo."
     }
   }
 }
