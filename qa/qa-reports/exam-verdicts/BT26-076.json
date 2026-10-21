@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-07T01:12:38.497228500+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "BT26-076#effect#0": {
       "clause_id": "BT26-076#effect#0",
@@ -23,6 +23,8 @@
       "reason": "DIVERGED at step 18 (compared 14 of 24 ours / 15 dcgo steps (8 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable); trace truncated); DCGO job failed: MultipleSkills: wanted card 'BT26-076' is AMBIGUOUS: it is offered 2 times by [BT26-076,BT26-094,BT26-076,BT26-094]. Add select_ordinal, the 0-based position among that card's own candidates (0..1). Candidates: [0:BT26-076 'Digivolve into [Ravemon]/[DATA SQUAD] from trash for 1 less' | 1:BT26-094 'By suspending this Tamer, 1 [DATA SQUAD] Digimon gains Execute' | 2:BT26-076 'Digivolve into [Ravemon]/[DATA SQUAD] from trash for 1 less' | 3:BT26-094 'By suspending this Tamer, 1 [DATA SQUAD] Digimon gains Execute']",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-076-effect2",
+      "triage": "stale",
+      "citation": "Scenario re-lowered 2026-10-19 (one trigger pool, §15-4-3-2; eb2eec06b) after this 2026-10-07 recording, whose DCGO run aborted on an ambiguous MultipleSkills pick; today's line vs that sidecar is TRUNCATED with no divergence. The re-lowered tail is PROVISIONAL until an oracle run",
       "recorded_at": "2026-10-07T01:12:38.497228500+00:00"
     }
   }
