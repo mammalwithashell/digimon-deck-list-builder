@@ -7,6 +7,7 @@ mod bt23_027;
 mod bt23_032;
 mod bt23_035;
 mod bt23_037;
+mod bt23_039;
 mod bt23_047;
 mod bt23_054;
 mod bt23_057;
