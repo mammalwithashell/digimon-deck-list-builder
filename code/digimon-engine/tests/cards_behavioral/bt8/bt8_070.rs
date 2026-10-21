@@ -320,6 +320,65 @@ fn bt8_070_a_token_has_no_play_cost_and_is_not_offered() {
     assert!(offered(&r, "OPP-D2"));
 }
 
+/// Setup with an opposing DUAL card (Bearcatmon BT26-057, "Play cost: D") on
+/// top of a permanent. Its cards.json `play_cost` (4) is restored so the test
+/// discriminates: a raw-play-cost read would offer it under the 6 budget.
+fn setup_with_opposing_dual() -> DebugRunner {
+    use CardColor::*;
+    use CardKind::*;
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT8-070 in the embedded DSL pack")
+        .dsl_card("BT26-057")
+        .expect("BT26-057 in the embedded DSL pack")
+        .add_card(card("FILL", Digimon, &[Green], Some(3), 3))
+        .add_card(card("REDSRC", Digimon, &[Red], Some(4), 5))
+        .add_card(card("BLACKSRC", Digimon, &[Black], Some(4), 5))
+        .add_card(card("OPP-D2", Digimon, &[Blue], Some(3), 2))
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+    r.set_first_player(0);
+    let dual = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BT26-057")
+        .unwrap();
+    assert_eq!(r.game.card_data[dual].card_kind, Dual);
+    r.game.card_data[dual].play_cost = 4;
+    r
+}
+
+#[test]
+fn bt8_070_a_dual_topped_digimon_has_no_play_cost_and_is_not_offered() {
+    // DCGO CEntity_Base.HasPlayCost = !cardKind.Contains(Option) && PlayCost
+    // >= 0 — a DUAL's kinds contain Option, so a DUAL-topped Digimon (§4-6-3)
+    // is never a play-cost candidate; a normal Digimon still is.
+    let mut r = setup_with_opposing_dual();
+    r.place_on_field(1, "BT26-057", Some(0));
+    r.place_on_field(1, "OPP-D2", Some(0));
+    wd_with_sources(&mut r, &["REDSRC", "BLACKSRC"]);
+    assert!(!offered(&r, "BT26-057"), "a DUAL top has no play cost");
+    assert!(offered(&r, "OPP-D2"));
+    pick(&mut r, "OPP-D2");
+    // 4 of the budget remains, and the DUAL is still not offered on the
+    // re-derived (resume) pick: the step ends with OPP-D2 as the only pick.
+    assert!(!offered(&r, "BT26-057"), "still no play cost after the first pick");
+    let _ = r.auto_resolve();
+    assert_eq!(field_ids(&r, 1), vec!["BT26-057".to_string()]);
+}
+
+#[test]
+fn bt8_070_only_a_dual_topped_digimon_means_no_prompt() {
+    let mut r = setup_with_opposing_dual();
+    r.place_on_field(1, "BT26-057", Some(0));
+    wd_with_sources(&mut r, &["REDSRC", "BLACKSRC"]);
+    assert!(r.game.pending_selection.is_none(), "no candidate → nothing to choose");
+    assert_eq!(field_ids(&r, 1), vec!["BT26-057".to_string()]);
+}
+
 // ─── Section 3: [All Turns][Once Per Turn] unsuspend ────────────────────────
 
 #[test]

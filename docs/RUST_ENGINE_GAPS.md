@@ -6033,6 +6033,14 @@ Filed from the second re-review of the Venusmon owner-security fix (p4-venusmon-
 - **Resolution:** the executor collects the live, affectable, de-duplicated handles and runs ONE `Game::delete_permanents_batch` (the `delete_permanents` shape). DSL entry: `qa/dsl-vocab-gaps.md` G-DSL-DELETE-BOUND-PERMANENTS-ONE-EVENT. Test: `dsl -- delete_bound_permanents_deletes_the_picks_as_one_event`.
 - **Blocks training:** was a phantom decision whenever a budget pick deleted 2+ Digimon with a deletion observer on the field.
 
+### A play-cost budget multi-select offered a DUAL-topped Digimon  [G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP] — RESOLVED (2026-10-21, ex13-lane-b)
+
+- **Rule / card:** §4-6 (Ver. 4.3) — a DUAL card prints "Play cost: D" and, on the field, is treated as a Digimon (§4-6-3); BT8-070 BlackWarGreymon's play-cost budget (and EX4-073, P-094, BT17-018, LM-021). DCGO `CEntity_Base.HasPlayCost` = `!cardKind.Contains(Option) && PlayCost >= 0` excludes a DUAL (its kinds contain Option).
+- **Ours (before):** every candidate derivation for `select_opponent_permanents_by_play_cost_budget` read the raw `top_card().play_cost`, so an opposing BT26-057 Bearcatmon was offered at its cards.json 4 (0 in DebugRunner).
+- **Resolution:** new `CardData::has_play_cost` / `CardSource::has_play_cost` (false for `Dual` and `Option`); the closure installer (`effect_context/selections.rs` `play_cost_budget_candidates`), the resume VM (`dsl_cards/step/selections.rs` `budget_candidates_data`, `BudgetKind::PlayCost`), the step pre-check and the replacement preflight skip such a top. DSL entry: `qa/dsl-vocab-gaps.md` G-DSL-PLAY-COST-BUDGET-DUAL-TOP. Tests: `cards_behavioral -- bt8_070_a_dual_topped_digimon_has_no_play_cost_and_is_not_offered`, `bt8_070_only_a_dual_topped_digimon_means_no_prompt`; lib `has_play_cost_is_false_for_dual_and_option_cards`.
+- **Still open:** the `lowest_play_cost` aggregate and the field-subject `play_cost_*` predicates still read a DUAL top's raw play cost (see the DSL entry).
+- **Blocks training:** was a wrong candidate set in the Glowing Dawn mirror (Bearcatmon in 11 EX13 lists) for BT8-070.
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.

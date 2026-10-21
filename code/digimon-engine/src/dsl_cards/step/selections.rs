@@ -3269,6 +3269,15 @@ fn budget_candidates_data(
         ) {
             continue;
         }
+        // A permanent with no play cost (a DUAL top — DCGO HasPlayCost) is
+        // never a play-cost-budget candidate. G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP.
+        if state.kind == BudgetKind::PlayCost
+            && !game.player(state.opponent).battle_area[index]
+                .top_card()
+                .has_play_cost(&game.card_data)
+        {
+            continue;
+        }
         let cost = match state.kind {
             BudgetKind::Dp => game.effective_dp(handle).unwrap_or(0),
             BudgetKind::PlayCost => i32::from(
@@ -5245,6 +5254,11 @@ fn has_opponent_play_cost_budget_candidates(
         .iter()
         .enumerate()
         .any(|(index, perm)| {
+            // No play cost (a DUAL top) → never a candidate.
+            // G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP.
+            if !perm.top_card().has_play_cost(&ctx.game.card_data) {
+                return false;
+            }
             if i32::from(perm.top_card().play_cost(&ctx.game.card_data)) > play_cost_budget {
                 return false;
             }

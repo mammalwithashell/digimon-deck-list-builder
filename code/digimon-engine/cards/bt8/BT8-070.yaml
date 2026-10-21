@@ -28,9 +28,11 @@
 #   → select_opponent_play_cost_budget (budget 6, min_picks 1) whose filter
 #   admits a Digimon only while self_source_count(red) >= 1 and a Tamer only
 #   while self_source_count(black) >= 1 (one shared budget, Q1752) →
-#   delete_bound_permanents. `none_of: [kind: token]` = DCGO HasPlayCost (a
-#   token has no printed play cost). With no candidate the step installs
-#   nothing (no red/black source, or every target over 6).
+#   delete_bound_permanents. DCGO HasPlayCost: `none_of: [kind: token]`
+#   drops a token (no printed play cost); a DUAL-topped Digimon ("Play cost:
+#   D") is skipped by the budget step itself (CardData::has_play_cost,
+#   G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP). With no candidate the step installs
+#   nothing (no red/black source, or every target over 6 / without a cost).
 # [All Turns][OPT] (OnDestroyedAnyone, maxCount 1, optional): an opponent
 #   battle-area Digimon deleted; CanActivate = CanUnsuspend(this).
 #   → on_any_deletion + trigger_if event_target_owner opponent / kind digimon
