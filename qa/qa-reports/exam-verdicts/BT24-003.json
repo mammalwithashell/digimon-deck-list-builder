@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-21T15:09:52.979449+00:00",
+  "last_updated": "2026-10-21T15:40:02.795949+00:00",
   "clauses": {
     "BT24-003#inherited#0": {
       "clause_id": "BT24-003#inherited#0",
@@ -28,8 +28,8 @@
       "reason": "DIVERGED at step 11 (compared 15 of 15 ours / 15 dcgo steps)",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT24-003-inherited0-optional-decline",
-      "triage": "ours_wrong",
-      "citation": "G-CARD-BT24-003-DECLINED-OPT-NOT-REFUNDED (docs/RUST_ENGINE_GAPS.md): after Tsunomon's [Your Turn] [Once Per Turn] 'may digivolve' is declined, the second security removal the same turn offers nothing and the turn ends (ours turn 4 at row 11); DCGO re-offers it. Declining a 'may' does not use up [Once Per Turn] (official Q&A Q1818 on the same wording; CR 4.3 §15-14-1-1, §15-14-1-4 count an activation only when the player chooses to activate). Re-diffed 2026-10-21: same LEAD",
+      "triage": "stale",
+      "citation": "fixed a396076fd; oracle re-exam needed",
       "recorded_at": "2026-10-11T03:21:38.012514800+00:00"
     }
   }
