@@ -53,6 +53,32 @@ effects:
       - trash_from_hand_by_index: { of: opponent, hand_index: gone }
 "#;
 
+/// Test-only [On Play] "By trashing 1 card in your hand, gain 1 memory" — a
+/// cost-style ("by trashing", CR 4.3 §15-7) hand trash by your own effect.
+const COST_TRASHER_YAML: &str = r#"
+card: T-COSTTRASH
+name: CostTrasher
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 3000
+traits: []
+effects:
+  - when: on_play
+    summary: "[On Play] By trashing 1 card in your hand, gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: paid
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "By trashing 1 card in your hand, gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: paid }
+      - gain_memory: 1
+"#;
+
 fn purple_option() -> digimon_engine::card_data::CardData {
     let mut c = make_test_card("PURPLE-OPT", "Purple Option");
     c.card_kind = CardKind::Option;
@@ -73,6 +99,8 @@ fn setup() -> DebugRunner {
         .expect("trasher")
         .from_dsl_yaml(OPP_HAND_TRASHER_YAML)
         .expect("opp trasher")
+        .from_dsl_yaml(COST_TRASHER_YAML)
+        .expect("cost trasher")
         .add_card(filler("FILLER"))
         .add_card(attacker)
         .add_card(digimon("PURPLE4", "Purple Four", CardColor::Purple, 4, 6, &[]))
@@ -154,6 +182,28 @@ fn bt6_108_trashed_from_hand_by_own_effect_draws_one() {
     pick_hand(&mut r, 0, CARD_ID);
     let _ = r.auto_resolve();
     assert!(trash_ids(&r, 0).contains(&CARD_ID.to_string()));
+    assert_eq!(r.deck_size(0), deck_before - 1, "<Draw 1>");
+    assert_eq!(r.hand_size(0), 1);
+}
+
+#[test]
+fn bt6_108_trashed_from_hand_as_your_effects_cost_draws_one() {
+    // "By trashing 1 card in your hand, ..." is still trashing it from the
+    // hand using one of your effects (DCGO: the discard goes through the same
+    // OnDiscardHand / IsOwnerEffect path).
+    let mut r = setup();
+    push_hand(&mut r, 0, CARD_ID);
+    r.game.memory = 3; // below the cap, so the +1 is observable
+    let deck_before = r.deck_size(0);
+    let memory_before = r.memory();
+    let t = r.place_on_field(0, "T-COSTTRASH", Some(0));
+    fire(&mut r, EffectTiming::OnPlay, t);
+    let v = r.pending_selection_view().expect("the optional cost pick");
+    assert!(v.is_optional);
+    pick_hand(&mut r, 0, CARD_ID);
+    let _ = r.auto_resolve();
+    assert!(trash_ids(&r, 0).contains(&CARD_ID.to_string()));
+    assert_eq!(r.memory(), memory_before + 1, "the cost was paid: +1 memory");
     assert_eq!(r.deck_size(0), deck_before - 1, "<Draw 1>");
     assert_eq!(r.hand_size(0), 1);
 }
@@ -280,5 +330,10 @@ fn bt6_108_security_plays_purple_level_4_or_lower_from_trash_free() {
     pick_trash(&mut r, 1, "PURPLE3");
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 1).contains(&"PURPLE3".to_string()));
+    assert!(
+        trash_ids(&r, 1).contains(&CARD_ID.to_string()),
+        "the Option goes to the trash after its [Security] effect"
+    );
+    assert!(r.game.players[1].security.is_empty());
     let _ = hand_idx;
 }

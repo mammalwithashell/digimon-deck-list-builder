@@ -14919,14 +14919,14 @@
       "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
       "yaml_path": "code/digimon-engine/cards/bt6/BT6-108.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_108.rs",
-      "test_count": 9,
+      "test_count": 10,
       "patterns": [
         "self-trashed-from-hand-trigger",
         "own-effect-gate",
         "option-main-play-from-trash-free",
         "security-activates-main"
       ],
-      "notes": "TDD vs DCGO BT6_108.cs. scope: trash + on_discard_hand (BT26-069 idiom) gated by event_caused_by_own_effect (mutation-checked) -> mandatory <Draw 1>; negatives: another card trashed, card already in trash, opponent's effect, using the Option. [Main] optional free play of a purple Lv.4- Digimon from trash (Lv.5 / red / Option excluded; use cost 4 paid). [Security] re-runs the [Main] body for the defender."
+      "notes": "TDD vs DCGO BT6_108.cs. scope: trash + on_discard_hand (BT26-069 idiom) gated by event_caused_by_own_effect (mutation-checked) -> mandatory <Draw 1>; negatives: another card trashed, card already in trash, opponent's effect, using the Option. [Main] optional free play of a purple Lv.4- Digimon from trash (Lv.5 / red / Option excluded; use cost 4 paid). [Security] re-runs the [Main] body for the defender. Fix round: a cost-style \"by trashing 1 card in your hand\" discard also draws; the [Security] test asserts the Option is trashed afterwards."
     },
     "EX5-062": {
       "card_name": "Anubismon",
