@@ -4994,6 +4994,27 @@ impl Game {
                 return false;
             }
         }
+        // A digivolution card's OWN "when this card is trashed from
+        // digivolution cards" effect (`enqueue_from_trashed_source`: the
+        // inherited effect, `source_permanent: None`) pends on the card in the
+        // trash. The trigger waits for the effect that trashed the card
+        // (§15-8-3-2); if the card has left the trash by the time it would
+        // activate it is a new card (§3-1-3-1-1) and the pending effect can no
+        // longer activate (§15-4-4-3). Official Q&A Q6396: BT25-083 trashes
+        // P-180 from digivolution cards as a cost and then uses it -- a used
+        // Option is in no area, then is placed under a Digimon -- so P-180's
+        // trashed-from-digivolution-cards effect can't activate. Card handles
+        // are unique per game, so the owner's trash is found by scanning both.
+        // G-ENGINE-USED-OPTION-FIRES-ITS-TRASHED-FROM-SOURCES-TRIGGER.
+        if qe.source_permanent.is_none()
+            && qe.timing == EffectTiming::OnDigivolutionCardTrashed
+            && effect.inherited
+        {
+            return self
+                .players
+                .iter()
+                .any(|p| p.trash.iter().any(|c| c.handle() == qe.source_card));
+        }
         // Source permanent may have been deleted by a prior effect in this
         // batch or by a parked pay-cost selection callback. Skip silently —
         // matches Python behavior.
