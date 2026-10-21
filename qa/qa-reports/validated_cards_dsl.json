@@ -13852,21 +13852,21 @@
     },
     "LM-058": {
       "card_name": "Parkour Training",
-      "validated_date": "2026-10-10",
-      "report": "examon-2026-10-10",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-10-21",
+      "report": "mechanics-gate-task-7-2026-10-21",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-058.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_058.rs",
-      "test_count": 10,
+      "test_count": 19,
       "patterns": [
         "D3",
         "A2",
         "delay-main",
         "effect-digivolve-reduce"
       ],
-      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "notes": "Re-audit 2026-10-21 (mechanics gate Task 7): G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE was RESOLVED 2026-10-10 by the shared effect-cost continuation. YAML unchanged and faithful to the card image (blue/green, cost -2) and DCGO LM_058.cs (DigivolveIntoHandOrTrashCard isHand, payCost, reduceCost 2; canNoSelect host/hand). Formerly blocked clause exercised by real paid placement + later Main <Delay> activation through the mask: synthetic 3/4 routes pay 1/2 (cloned), and the deck's real pair Groundramon BT20-042 on Coredramon BT20-040 offers exactly two payments (named 3 -> 1, colour 4 -> 2). 19/19 lm_058 tests pass; DCGO oracle unmeasured.",
       "prior_authoring_status": "IMPLEMENTED"
     },
     "LM-059": {
