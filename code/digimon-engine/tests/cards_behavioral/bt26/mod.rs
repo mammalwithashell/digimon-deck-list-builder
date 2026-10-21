@@ -1,5 +1,6 @@
 mod bt26_001;
 mod bt26_002;
+mod bt26_004;
 mod bt26_005;
 mod bt26_007;
 mod bt26_008;

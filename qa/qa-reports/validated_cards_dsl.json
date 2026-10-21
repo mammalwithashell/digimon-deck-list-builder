@@ -14878,6 +14878,23 @@
         "F7"
       ],
       "notes": "Option, green, cost 6. [Main] for_each opponent battle-area Digimon -> suspend (Tamers and own Digimon untouched; a CannotSuspend Digimon is skipped), then gain_memory_fn = count of the opponent's suspended Digimon read after the suspends (already-suspended ones count; a Digimon that could not be suspended does not; none -> 0). Green colour requirement enforced by the engine (tested). [Security] (scope inherited + on_security, BT6-105 idiom) mandatory select_opponent_permanent Digimon + suspend, chosen by the security card's owner."
+    },
+    "BT26-004": {
+      "card_name": "Pagumon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b2-glowing-dawn-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-004.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_004.rs",
+      "test_count": 9,
+      "patterns": [
+        "G4",
+        "E2",
+        "A6"
+      ],
+      "notes": "Digi-Egg. Inherited [When Attacking][OPT], optional (the 'by placing' cost; declining keeps the OPT = DCGO RemoveUse, rule 15-14-1-4), gated on an own [Glowing Dawn] Tamer AND a hand card (15-7-4) -> select_hand (any card: Digimon / Tamer / Option all offered) -> select_own_permanent ([Glowing Dawn] Tamer; plain and opponent Tamers not offered) -> place_selected_card_under_tamer face_down (BOTTOM of the stack, Q6954) -> <Draw 1>. Face-up Pagumon has no effect (inherited only)."
     }
   }
 }
