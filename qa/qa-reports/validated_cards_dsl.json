@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-19",
+  "last_updated": "2026-10-20",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14778,6 +14778,21 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_138.rs",
       "test_count": 6,
       "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT9-047": {
+      "card_name": "Pomumon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_047.rs",
+      "test_count": 10,
+      "patterns": [
+        "D6"
+      ],
+      "notes": "Every printed clause covered: [All Turns] any-player CannotPlayDigimonByEffect flood_gate (installed via real hand play; effect plays blocked for both players; hand play, breeding move (Q1844) legal; effect play into breeding blocked (Q5206); lifts when Pomumon leaves). §3-4-7-4 breeding-area gate via not:in_breeding (engine leak logged G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE). DCGO has no BT9_047.cs (Pillomon/Gotsumon reprint). DCGO oracle unmeasured."
     }
   }
 }
