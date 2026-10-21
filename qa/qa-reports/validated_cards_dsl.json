@@ -14947,6 +14947,25 @@
         "didnt-delete-draw"
       ],
       "notes": "TDD vs DCGO EX5_062.cs + official Q&A (2 trashed = -5). ONE clause when [when_digivolving, main_on_field] + once_per_turn (DCGO shared hash); [Main] gated by timing_conditions (hand >= 1 or a purple Digimon in trash). Up to 3 chained optional hand picks in one effect body (one discard batch); mandatory purple-Digimon trash pick; play_from_trash with reduce 3/4/5/6 chosen by which picks were bound. [Your Turn] on_any_digimon_played (own, effect-initiated) -> mandatory delete opp Lv.5-; effect_deleted_any_opponent_digimon false -> <Draw 1>. Tests cover 0/1/2/3 trashed, floor at 0, trashed card replayed, purple-only, shared OPT both directions, Main gates, reset, and observer negatives (hand play, opponent's turn, opponent's Digimon) plus the WD-play -> delete combo."
+    },
+    "BT24-074": {
+      "card_name": "SkullSeadramon",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_074.rs",
+      "test_count": 17,
+      "patterns": [
+        "alt-digivolve-trait-contains",
+        "opponent-source-strip",
+        "played-by-effect-tail",
+        "on-deletion-play-from-trash-free",
+        "inherited-opt-place-permanent-as-source"
+      ],
+      "notes": "TDD vs DCGO BT24_074.cs + official Q&A. Alt Lv.4 w/ trait_contains Aqua / Sea Animal or trait TS cost 3; colour circles cost 4. OP/WD (BT20-027 shape): mandatory host pick among opp Digimon with sources, any 3 sources (clamped); delete 1 sourceless opp Digimon only when played_by_effect (true only on the OnPlay firing of an effect play; WD and hand play never delete — both tested). [On Deletion] optional free play Lv.4- [Seadramon]-named or [TS] Digimon from trash. Inherited [When Attacking][OPT] optional: place another own Digimon (top card only; its sources trashed) as bottom source, then unsuspend (BT24-059 clause). (Rule) [Aquatic] in traits."
     }
   }
 }
