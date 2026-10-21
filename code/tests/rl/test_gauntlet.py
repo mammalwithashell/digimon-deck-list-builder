@@ -17,6 +17,7 @@ import gymnasium
 import pytest
 
 import digimon_gym.agents.gauntlet as gauntlet_module
+from digimon_gym.agents.card_admissibility import CardAdmissibility
 from digimon_gym.agents.gauntlet import (
     ArchetypeStats,
     DeckEntry,
@@ -25,7 +26,6 @@ from digimon_gym.agents.gauntlet import (
     GauntletWrapper,
     MetaGauntlet,
     UnimplementedDeckError,
-    _load_not_ready_card_ids,
     stable_deck_id,
     validate_implemented_deck,
 )
@@ -110,34 +110,14 @@ def _with_card(card_id: str) -> str:
     return json.dumps(["BT12-022"] * 49 + [card_id] + ["BT12-002"] * 5)
 
 
-def _write_dsl_ledger(tmp_path, rows: dict) -> str:
-    """Write a minimal `validated_cards_dsl.json`; `rows` maps card ID -> (status, archetype label)."""
-    ledger = {
-        "version": 1,
-        "cards": {
-            card_id: {"status": status, "archetype": label}
-            for card_id, (status, label) in rows.items()
-        },
-    }
-    path = tmp_path / "validated_cards_dsl.json"
-    path.write_text(json.dumps(ledger))
-    return str(path)
-
-
-@pytest.fixture
-def default_library(tmp_path, monkeypatch):
-    """Point the module's default deck library and DSL ledger at tmp files.
-
-    Loading the default library is the production path: it is the load that
-    reads the DSL ledger itself. Write the library to the returned path and the
-    ledger with `_write_dsl_ledger(tmp_path, ...)`.
-    """
-    library_path = tmp_path / "deck_library.json"
-    monkeypatch.setattr(gauntlet_module, "DECK_LIBRARY_PATH", str(library_path))
-    monkeypatch.setattr(
-        gauntlet_module, "_QA_DSL_STATUS_PATH", tmp_path / "validated_cards_dsl.json"
+def _admitting_all_but(*inadmissible: str, registered=("BT12-002", "BT12-022", "BT12-031", "P-241")):
+    """A `CardAdmissibility` that rejects `inadmissible` (as `failed_verdict`) and admits the rest."""
+    return CardAdmissibility(
+        registered=frozenset(registered),
+        tested=frozenset(registered),
+        failed_verdict=frozenset(inadmissible),
+        diverged_no_quirk=frozenset(),
     )
-    return library_path
 
 
 @pytest.fixture
@@ -631,67 +611,25 @@ class TestMetaGauntlet:
 
 
 class TestTrainingReadyGate:
-    """A decklist is admitted when every card is registered and none has a
-    not-ready DSL ledger verdict. The ledger's `archetype` field is a batch
-    label, so it plays no part in admission."""
+    """A decklist is admitted when every card is registered and admissible
+    (the light per-card layer; its rules are tested in test_card_admissibility.py,
+    the two-layer gate in test_gauntlet_mechanics_gate.py)."""
 
-    @pytest.mark.parametrize(
-        "status", ["PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"],
-    )
-    def test_list_with_a_not_ready_card_is_rejected(self, tmp_path, status):
+    def test_list_with_an_inadmissible_card_is_rejected(self, tmp_path):
         lib = _make_deck_library({"Mixed": _make_archetype("Mixed", n_decks=2)})
         lib["archetypes"]["Mixed"]["decklists"][1]["decklist"] = _with_card("BT12-031")
         path = tmp_path / "lib.json"
         path.write_text(json.dumps(lib))
-        ledger = _write_dsl_ledger(tmp_path, {
-            "BT12-022": ("IMPLEMENTED", "Mixed"),
-            "BT12-031": (status, "Mixed"),
-        })
 
         g = MetaGauntlet(
-            # Every card is registered, so only the ledger can reject a list.
+            # Every card is registered, so only admissibility can reject a list.
             implemented_card_ids={"BT12-002", "BT12-022", "BT12-031"},
-            not_ready_card_ids=_load_not_ready_card_ids(ledger),
+            admissibility=_admitting_all_but("BT12-031"),
         )
         g.load(str(path))
 
         assert g.deck_count == 1
         assert g._deck_pool[0].source_deck_id == "mixed_000"
-
-    def test_default_library_admits_a_ready_list_whose_archetype_has_no_ledger_label(
-        self, tmp_path, default_library,
-    ):
-        default_library.write_text(json.dumps(_make_deck_library({
-            "Three Musketeers": _make_archetype("Three Musketeers", n_decks=1),
-        })))
-        # Ledger labels are batch names that never match the library's archetype
-        # key, and BT12-002 has no ledger entry at all (a registered spec that was
-        # never ledgered still counts as ready).
-        _write_dsl_ledger(tmp_path, {"BT12-022": ("IMPLEMENTED", "store-champs-june-2026")})
-
-        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022"})
-        g.load(str(default_library))
-
-        assert set(g.archetypes) == {"Three Musketeers"}
-        assert g.deck_count == 1
-
-    def test_default_library_drops_only_the_lists_that_play_a_not_ready_card(
-        self, tmp_path, default_library,
-    ):
-        lib = _make_deck_library({"Toho Braves": _make_archetype("Toho Braves", n_decks=2)})
-        lib["archetypes"]["Toho Braves"]["decklists"][1]["decklist"] = _with_card("BT12-031")
-        default_library.write_text(json.dumps(lib))
-        # One PARTIAL card under the archetype's own label: the list that never
-        # plays it stays trainable.
-        _write_dsl_ledger(tmp_path, {
-            "BT12-022": ("IMPLEMENTED", "Toho Braves"),
-            "BT12-031": ("PARTIAL", "Toho Braves"),
-        })
-
-        g = MetaGauntlet(implemented_card_ids={"BT12-002", "BT12-022", "BT12-031"})
-        g.load(str(default_library))
-
-        assert [d.source_deck_id for d in g._deck_pool] == ["toho braves_000"]
 
     def test_registered_card_missing_from_the_card_database_is_not_playable(
         self, tmp_path, monkeypatch,
@@ -718,11 +656,6 @@ class TestTrainingReadyGate:
         g.load(str(path))
 
         assert [d.source_deck_id for d in g._deck_pool] == ["mixed_000"]
-
-    def test_missing_ledger_means_no_ledger_gate(self, tmp_path, caplog):
-        with caplog.at_level("WARNING", logger="digimon_gym.agents.gauntlet"):
-            assert _load_not_ready_card_ids(tmp_path / "absent.json") is None
-        assert any("ledger not found" in r.getMessage() for r in caplog.records)
 
 
 # ─── GauntletWrapper Tests ──────────────────────────────────────────
@@ -1027,15 +960,15 @@ class TestAllowedArchetypes:
         ), f"expected warning naming the unrecognized entry; got {[r.getMessage() for r in warnings]}"
 
     @pytest.mark.parametrize(
-        "bad_card, implemented, not_ready",
+        "bad_card, implemented, inadmissible",
         [
-            ("BT12-031", {"BT12-002", "BT12-022", "BT12-031"}, {"BT12-031"}),
-            ("BT99-999", {"BT12-002", "BT12-022"}, set()),
+            ("BT12-031", {"BT12-002", "BT12-022", "BT12-031"}, ("BT12-031",)),
+            ("BT99-999", {"BT12-002", "BT12-022"}, ()),
         ],
-        ids=["not-ready-card", "unregistered-card"],
+        ids=["inadmissible-card", "unregistered-card"],
     )
     def test_safety_floor_overrides_allowed(
-        self, tmp_path, caplog, bad_card, implemented, not_ready,
+        self, tmp_path, caplog, bad_card, implemented, inadmissible,
     ):
         """An allowed archetype with no training-ready decklist is excluded and logged."""
         lib = _make_deck_library({
@@ -1049,7 +982,7 @@ class TestAllowedArchetypes:
         with caplog.at_level("INFO", logger="digimon_gym.agents.gauntlet"):
             g = MetaGauntlet(
                 implemented_card_ids=implemented,
-                not_ready_card_ids=not_ready,
+                admissibility=_admitting_all_but(*inadmissible),
                 allowed_archetypes={"Ready", "NotReady"},
             )
             g.load(str(path))
@@ -1099,7 +1032,7 @@ class TestAllowedArchetypes:
         assert pool.archetype_names == ["Rocks"]
         assert pool.deck_count == 2
 
-    def test_load_generalist_deck_pool_forwards_not_ready_cards(self, tmp_path):
+    def test_load_generalist_deck_pool_forwards_admissibility(self, tmp_path):
         from digimon_gym.agents.gauntlet import load_generalist_deck_pool
 
         lib = _make_deck_library({"Rocks": _make_archetype("Rocks", n_decks=2)})
@@ -1110,7 +1043,7 @@ class TestAllowedArchetypes:
         pool = load_generalist_deck_pool(
             str(path),
             implemented_card_ids={"BT12-002", "BT12-022", "BT12-031"},
-            not_ready_card_ids={"BT12-031"},
+            admissibility=_admitting_all_but("BT12-031"),
         )
 
         assert pool.deck_count == 1
@@ -1178,148 +1111,3 @@ class TestAllowedArchetypes:
         assert sampled_archetypes <= {"Rocks", "Yellow Hybrid"}
         # Verify both members are reachable (not stuck on one).
         assert sampled_archetypes == {"Rocks", "Yellow Hybrid"}
-
-
-# ─── Oracle readiness gate (spec 2026-10-04 §4.7) ──────────────────────
-
-@pytest.mark.oracle_gate
-class TestOracleReadinessGate:
-    REGISTERED = {"BT12-002", "BT12-022", "BT12-031"}
-
-    def _lib(self, tmp_path):
-        lib = _make_deck_library({"Mixed": _make_archetype("Mixed", n_decks=2)})
-        lib["archetypes"]["Mixed"]["decklists"][1]["decklist"] = _with_card("BT12-031")
-        path = tmp_path / "lib.json"
-        path.write_text(json.dumps(lib))
-        return path
-
-    def test_list_with_a_not_ready_card_is_rejected(self, tmp_path):
-        g = MetaGauntlet(
-            implemented_card_ids=self.REGISTERED,
-            not_ready_card_ids=set(),
-            oracle_ready_card_ids={"BT12-002", "BT12-022"},
-        )
-        g.load(str(self._lib(tmp_path)))
-        assert g.deck_count == 1
-        assert g._deck_pool[0].source_deck_id == "mixed_000"
-
-    def test_gate_applies_to_a_non_default_library_path(self, tmp_path, monkeypatch):
-        # The ledger gate only auto-loads for the default path; the oracle gate
-        # must not inherit that hole. Nothing is injected here: the loader runs.
-        readiness = tmp_path / "oracle_readiness.json"
-        readiness.write_text(json.dumps({"version": 1, "cards": {
-            "BT12-002": {"status": "ready"}, "BT12-022": {"status": "ready"},
-            "BT12-031": {"status": "not_ready"},
-        }}))
-        monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", readiness)
-        g = MetaGauntlet(implemented_card_ids=self.REGISTERED, not_ready_card_ids=set())
-        g.load(str(self._lib(tmp_path)))
-        assert g.deck_count == 1
-
-    def test_missing_artifact_fails_at_load(self, tmp_path, monkeypatch):
-        monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", tmp_path / "absent.json")
-        g = MetaGauntlet(implemented_card_ids=self.REGISTERED, not_ready_card_ids=set())
-        with pytest.raises(gauntlet_module.OracleReadinessMissingError) as exc:
-            g.load(str(self._lib(tmp_path)))
-        message = str(exc.value)
-        # A cloud box has data/ but not qa/: say how to get the artifact there.
-        assert "copy it from the repo" in message
-        assert "qa/qa-reports/exam-verdicts" in message
-        assert "tools.clause_coverage.readiness" in message
-
-    def test_empty_pool_fails_fast_naming_the_blockers(self, tmp_path):
-        g = MetaGauntlet(
-            implemented_card_ids=self.REGISTERED,
-            not_ready_card_ids=set(),
-            oracle_ready_card_ids={"BT12-002"},
-        )
-        with pytest.raises(gauntlet_module.EmptyTrainingPoolError) as exc:
-            g.load(str(self._lib(tmp_path)))
-        message = str(exc.value)
-        assert "BT12-022" in message
-        assert "BT12-022 ExVeemon (2)" in message  # card, name, decklists blocked
-        assert "--plan" in message
-
-    def test_allowed_archetypes_empty_set_still_produces_an_empty_pool_quietly(self, tmp_path):
-        # No decklist reached the oracle gate, so this is not an oracle failure.
-        g = MetaGauntlet(
-            implemented_card_ids=self.REGISTERED,
-            not_ready_card_ids=set(),
-            oracle_ready_card_ids=set(),
-            allowed_archetypes=set(),
-        )
-        g.load(str(self._lib(tmp_path)))
-        assert g.deck_count == 0
-
-    def test_generalist_pool_loader_passes_the_ready_set_through(self, tmp_path):
-        pool = gauntlet_module.load_generalist_deck_pool(
-            str(self._lib(tmp_path)),
-            implemented_card_ids=self.REGISTERED,
-            not_ready_card_ids=set(),
-            oracle_ready_card_ids={"BT12-002", "BT12-022"},
-        )
-        assert pool.deck_count == 1
-
-    def test_starter_curriculum_archetypes_are_gated(self):
-        # ST-1..6 live in the real deck library; with nothing oracle-ready the
-        # starter archetype fails fast instead of training on nothing.
-        with pytest.raises(gauntlet_module.EmptyTrainingPoolError):
-            gauntlet_module.load_generalist_deck_pool(
-                allowed_archetypes={"ST-1 Gaia Red"},
-                oracle_ready_card_ids=set(),
-            )
-
-    def _snapshot(self, tmp_path):
-        g = MetaGauntlet(
-            implemented_card_ids=self.REGISTERED,
-            not_ready_card_ids=set(),
-            oracle_ready_card_ids=set(self.REGISTERED),
-        )
-        g.load(str(self._lib(tmp_path)))
-        snapshot = tmp_path / "pool.json"
-        written = g.as_generalist_pool().write_snapshot(snapshot)
-        return snapshot, written
-
-    def test_snapshot_with_a_not_ready_card_is_refused(self, tmp_path):
-        snapshot, _ = self._snapshot(tmp_path)
-        with pytest.raises(gauntlet_module.NotOracleReadyDeckError, match="BT12-031"):
-            GeneralistDeckPool.from_snapshot(
-                snapshot,
-                implemented_card_ids=self.REGISTERED,
-                oracle_ready_card_ids={"BT12-002", "BT12-022"},
-            )
-
-    def test_snapshot_of_ready_decks_still_loads(self, tmp_path):
-        snapshot, written = self._snapshot(tmp_path)
-        loaded = GeneralistDeckPool.from_snapshot(
-            snapshot, implemented_card_ids=self.REGISTERED,
-            oracle_ready_card_ids=set(self.REGISTERED),
-        )
-        assert loaded.snapshot_hash == written
-
-    def test_run_training_job_library_deck_is_gated(self, tmp_path, monkeypatch):
-        # `agent_deck: {source: deck_id}` reads a deck straight from the library;
-        # it must pass the same gate as the pool (explicit file decks are the
-        # operator's own choice and stay ungated).
-        import data_paths
-        from tools import run_training_job
-
-        readiness = tmp_path / "oracle_readiness.json"
-        readiness.write_text(json.dumps({"version": 1, "cards": {
-            "BT12-002": {"status": "ready"}, "BT12-022": {"status": "ready"},
-            "BT12-031": {"status": "not_ready"},
-        }}))
-        monkeypatch.setattr(data_paths, "DECK_LIBRARY", self._lib(tmp_path))
-        monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", readiness)
-        deck = run_training_job.load_deck({"source": "deck_id", "deck_id": "mixed_000"})
-        assert len(deck) == 55
-        with pytest.raises(gauntlet_module.NotOracleReadyDeckError, match="mixed_001.*BT12-031"):
-            run_training_job.load_deck({"source": "deck_id", "deck_id": "mixed_001"})
-
-    def test_snapshot_load_reads_the_artifact_when_nothing_is_injected(self, tmp_path, monkeypatch):
-        # A snapshot taken before the gate must not smuggle decks back in, even
-        # through callers (eval CLIs, --curriculum-pool) that inject nothing.
-        snapshot, _ = self._snapshot(tmp_path)
-        monkeypatch.setattr(gauntlet_module, "_ORACLE_READINESS_PATH", tmp_path / "absent.json")
-        with pytest.raises(gauntlet_module.OracleReadinessMissingError):
-            GeneralistDeckPool.from_snapshot(snapshot, implemented_card_ids=self.REGISTERED)

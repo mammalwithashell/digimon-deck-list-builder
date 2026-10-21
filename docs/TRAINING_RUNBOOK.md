@@ -252,13 +252,17 @@ python code/tools/meta_loader.py --build
 - Scrapes tournament data from DigiLab, DigimonMeta, Egman Events.
 - Outputs: `data/deck_library.json`.
 - Format: archetypes → decklists + `digilab_stats`.
-- Runtime gauntlet loading admits each decklist on its own. A list is training-ready when:
-  1. every card ID is playable: registered in the Rust engine and present in the card database the game runner loads (`data/cards.json`), and
-  2. no card's verdict in `qa/qa-reports/validated_cards_dsl.json` is `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS`. A playable card with no ledger entry counts as ready.
-  3. every card is oracle-ready in `data/oracle_readiness.json` — see [Oracle readiness gate](#oracle-readiness-gate-2026-10-04). Unlike check 2, this applies to every library path and to pool snapshots, and it has no off switch.
-- The ledger's `archetype` field is a batch label (`store-champs-june-2026`, `three-musketeers`), not a deck-library archetype key, so it plays no part in admission. An archetype is eligible when at least one of its lists is admitted.
-- `--archetypes` / `allowed_archetypes` narrows the pool further; each scoped name that ends up with no admitted list is logged at INFO with how many lists each check rejected.
-- The ledger is read only when loading the default `data/deck_library.json`, and a missing ledger skips check 2. The training image does not ship `qa/`, so cloud runs skip check 2 (checks 1 and 3 still apply).
+- Runtime gauntlet loading applies a two-layer training gate (spec `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5b). It reads only two committed `data/` artifacts, because the training image ships no `qa/`; a missing artifact stops the load (`MechanicsReadinessMissingError` / `CardAdmissibilityMissingError`, each naming its regenerate command):
+  1. **Mechanics (global).** `data/mechanics_readiness.json` must be `ready`: no open blocking gap among the mechanics-set rules obligations. This is checked once per load, before any deck is examined. Otherwise `MechanicsNotReadyError` names the blocking rule and gap ids. Regenerate with `PYTHONPATH=code python -m tools.rules.mechanics_readiness`.
+  2. **Light per-card (per decklist).** Every card ID must be playable, meaning registered in the Rust engine and present in `data/cards.json` (rejection `unregistered`). It must also be admissible in `data/card_admissibility.json` (rejection `not_admissible`, logged with the card's reason):
+     - tested (`untested`);
+     - no failed ledger verdict, i.e. `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT`, `AUDITED-MISSING-TESTS`, `FAILED`, `FAIL` or `QA-FAIL` in either ledger (`failed_verdict`);
+     - no `diverged` exam row without a cited `dcgo_quirk`/`stale` triage (`diverged_no_quirk`).
+
+     An unmeasured clause blocks nothing. Regenerate with `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`.
+- Both layers apply to every library path, to pool snapshots (`GeneralistDeckPool.from_snapshot`, `--curriculum-pool`, the eval CLIs) and to a job's `agent_deck: {source: deck_id}` library deck. There is no off switch. `--legacy-clause-gate` (pilot_training) only *adds* the old per-card requirement, `ready` in `data/oracle_readiness.json` (see [Oracle readiness gate](#oracle-readiness-gate-2026-10-04)), for transition comparison runs. It never admits a deck the two layers reject.
+- When no decklist survives, `EmptyTrainingPoolError` lists the cards blocking the most decklists, each with its reason, and gives both regenerate commands. An archetype is eligible when at least one of its lists is admitted.
+- `--archetypes` / `allowed_archetypes` narrows the pool further. Each scoped name that ends up with no admitted list is logged at INFO with how many lists each check rejected (`unregistered`, `not_admissible`, and `not_oracle_ready` under the legacy flag).
 - `code/tools/meta_coverage.py` reports the field share this gate admits as **Trainable today**.
 
 ### Configuration Parameters

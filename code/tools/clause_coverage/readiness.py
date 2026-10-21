@@ -62,8 +62,9 @@ GATING_CLAUSES = "clauses"
 GATING_INTERACTIONS = "interactions"
 READY = "ready"
 NOT_READY = "not_ready"
-# Mirror of gauntlet._NOT_READY_DSL_STATUSES (gauntlet needs the engine binding,
-# which this stdlib tool must not import).
+# Mirror of card_admissibility.NOT_READY_LEDGER_STATUSES (re-exported as
+# gauntlet._NOT_READY_DSL_STATUSES; gauntlet needs the engine binding, which this
+# stdlib tool must not import).
 LEDGER_NOT_READY = frozenset({"PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"})
 # Mirror of the engine's `deck_tools::is_card_id`, which `parse_tts` -- the
 # gauntlet's decklist parser -- applies: anything else in a decklist is an

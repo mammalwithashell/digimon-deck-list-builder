@@ -1,9 +1,20 @@
 """MetaGauntlet: meta-weighted opponent deck sampling for RL training.
 
 Loads the deck library (produced by tools/meta_loader.py), keeps the
-training-ready decklists (every card registered in the Rust engine and in its
-card database, none with a not-ready DSL ledger verdict), computes a Threat
-Index for each archetype, and samples opponent decks weighted by TI or uniformly.
+training-ready decklists, computes a Threat Index for each archetype, and samples
+opponent decks weighted by TI or uniformly.
+
+**Training gate (two layers, spec 2026-10-15 §5b):**
+  1. Mechanics -- `data/mechanics_readiness.json` must be `ready` (no open
+     blocking mechanics gap). Checked once per load, before any deck is
+     examined; `MechanicsNotReadyError` otherwise.
+  2. Light per-card -- every card of a decklist must be registered in the Rust
+     engine and its card database, and admissible in
+     `data/card_admissibility.json` (tested, no failed ledger verdict, no
+     untriaged divergence). An unmeasured clause blocks nothing.
+  Only those two committed `data/` artifacts are read at run time. No override
+  admits a non-admissible deck; `legacy_clause_gate=True` only ADDS the old
+  per-card oracle-readiness requirement for comparison runs.
 
 **Survivorship Bias Fix (v2):**
   - Statistical weights (Threat Index) are derived ONLY from DigiLab tournament
@@ -39,11 +50,12 @@ import json
 import logging
 import os
 import hashlib
+import warnings
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Mapping, Optional, Set
 
 import numpy as np
 import gymnasium
@@ -54,18 +66,23 @@ logger = logging.getLogger(__name__)
 
 from data_paths import (
     ARCHETYPE_ALIASES as _ARCHETYPE_ALIASES_PATH,
+    CARD_ADMISSIBILITY as _CARD_ADMISSIBILITY_PATH,
     DECK_LIBRARY as _DECK_LIBRARY_PATH,
+    MECHANICS_READINESS as _MECHANICS_READINESS_PATH,
     ORACLE_READINESS as _ORACLE_READINESS_PATH,
+)
+# `card_admissibility` owns the ledger status set and folds it (plus FAILED /
+# FAIL / QA-FAIL) into the committed per-card artifact, whose `failed_verdict`
+# reason subsumes the retired run-time ledger gate. `_NOT_READY_DSL_STATUSES`
+# is re-exported under its old name for one release. The import edge is one-way
+# (gauntlet -> card_admissibility).
+from digimon_gym.agents.card_admissibility import (
+    CardAdmissibility,
+    NOT_READY_LEDGER_STATUSES as _NOT_READY_DSL_STATUSES,
 )
 
 DECK_LIBRARY_PATH = str(_DECK_LIBRARY_PATH)
 ARCHETYPE_ALIASES_PATH = str(_ARCHETYPE_ALIASES_PATH)
-_QA_DSL_STATUS_PATH = (
-    _DECK_LIBRARY_PATH.parent.parent
-    / "qa"
-    / "qa-reports"
-    / "validated_cards_dsl.json"
-)
 
 
 def _load_alias_map() -> Dict[str, str]:
@@ -112,64 +129,97 @@ def canonicalize_archetype(name: str) -> str:
     return _ALIAS_MAP.get(name.lower(), name)
 
 
-# DSL ledger verdicts that keep a card out of training: a decklist that plays any
-# card with one of these verdicts is not admitted to the deck pool. IMPLEMENTED
-# and AUDITED-OK cards are ready, and so is a playable card with no ledger entry:
-# the playability check (`missing_unimplemented_card_ids` against
-# `load_playable_card_ids()`) already proves the engine can build it. The
-# ledger's `archetype` field is a batch label, not a deck-library archetype key,
-# so it plays no part.
-_NOT_READY_DSL_STATUSES = frozenset({
-    "PARTIAL",
-    "BLOCKED",
-    "AUDITED-DRIFT",
-    "AUDITED-MISSING-TESTS",
-})
+# ─── Training gate: two layers (spec 2026-10-15 §5b) ─────────────────
+# Layer 1, mechanics: `data/mechanics_readiness.json` must be `ready`. Checked
+#   once per load before any deck is examined (`require_mechanics_ready`).
+# Layer 2, light per-card: every card of a decklist is admissible in
+#   `data/card_admissibility.json` (`validate_admissible_deck`); rejection
+#   reason `not_admissible`, logged with the artifact's per-card reason.
+# Run time reads ONLY those two committed `data/` artifacts (training images
+# ship no `qa/`, ruling R5); a missing one stops training. Always on, for every
+# library path and every pool snapshot; no CLI or env override admits a
+# non-admissible deck. `legacy_clause_gate=True` (`--legacy-clause-gate`) only
+# ADDS the old per-card requirement -- `ready` in `data/oracle_readiness.json`
+# (spec 2026-10-04 §4.7) -- for transition comparison runs.
+
+_REGENERATE_MECHANICS = "PYTHONPATH=code python -m tools.rules.mechanics_readiness"
+_REGENERATE_ADMISSIBILITY = "PYTHONPATH=code python -m digimon_gym.agents.card_admissibility"
+_REGENERATE_READINESS = "PYTHONPATH=code python -m tools.clause_coverage.readiness"
+_NOT_ORACLE_READY = "not_oracle_ready"
 
 
-def _load_not_ready_card_ids(path: Optional[str | Path] = None) -> Optional[Set[str]]:
-    """Return the card IDs whose DSL ledger verdict is not training-ready.
-
-    `path` defaults to the repo ledger. A missing ledger returns None (no ledger
-    gate) so non-standard test/library callers can still load synthetic data.
-    """
-    path = _QA_DSL_STATUS_PATH if path is None else path
-    try:
-        with open(path, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-    except FileNotFoundError:
-        logger.warning("DSL validation ledger not found: %s", path)
-        return None
-    return {
-        str(card_id)
-        for card_id, entry in raw.get("cards", {}).items()
-        if str(entry.get("status") or "").strip().upper() in _NOT_READY_DSL_STATUSES
-    }
+class MechanicsReadinessMissingError(RuntimeError):
+    """`data/mechanics_readiness.json` is missing; training refuses to guess."""
 
 
-# ─── Oracle readiness gate ───────────────────────────────────────────
-# Training admits a decklist only if every card in it is `ready` in the
-# committed artifact `data/oracle_readiness.json`: every printed clause
-# adjudicated against the DCGO oracle. Always on, no override, for every
-# library path and every pool snapshot. Spec:
-# docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md §4.7.
+class CardAdmissibilityMissingError(RuntimeError):
+    """`data/card_admissibility.json` is missing; training refuses to guess."""
+
+
+class MechanicsNotReadyError(RuntimeError):
+    """A blocking mechanics gap is open: no decklist is admitted."""
+
 
 class OracleReadinessMissingError(RuntimeError):
-    """`data/oracle_readiness.json` is missing; training refuses to guess."""
+    """`data/oracle_readiness.json` is missing under `--legacy-clause-gate`."""
 
 
 class EmptyTrainingPoolError(RuntimeError):
-    """No decklist survived the oracle readiness gate."""
+    """No decklist survived the training gate."""
 
 
-_REGENERATE_READINESS = "PYTHONPATH=code python -m tools.clause_coverage.readiness"
+def _load_mechanics_readiness(path: Optional[str | Path] = None) -> Dict[str, Any]:
+    """The committed mechanics artifact. No fallback: a missing file stops training."""
+    path = Path(_MECHANICS_READINESS_PATH if path is None else path)
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise MechanicsReadinessMissingError(
+            f"{path} is missing; copy it from the repo (data/mechanics_readiness.json), "
+            f"or regenerate it with `{_REGENERATE_MECHANICS}`"
+        ) from None
+
+
+def require_mechanics_ready(readiness: Optional[Mapping[str, Any]] = None) -> None:
+    """Layer 1: raise `MechanicsNotReadyError` unless the mechanics gate is open.
+
+    `readiness` defaults to the committed artifact. The message names every
+    blocking rule and gap id and the regenerate command.
+    """
+    readiness = _load_mechanics_readiness() if readiness is None else readiness
+    if readiness.get("ready") is True:
+        return
+    blocking = list(readiness.get("blocking") or [])
+    listed = "; ".join(
+        f"{b.get('rule', '?')} ({b.get('gap_id') or 'no gap id'})" for b in blocking
+    ) or "none listed (no proven obligation?)"
+    counts = readiness.get("counts") or {}
+    raise MechanicsNotReadyError(
+        f"The mechanics training gate is closed: {len(blocking)} blocking mechanics gap(s): "
+        f"{listed}. Counts: {json.dumps(counts, sort_keys=True)}. No decklist is admitted "
+        "until they are fixed or reclassified in the obligation ledger; then regenerate "
+        f"data/mechanics_readiness.json with `{_REGENERATE_MECHANICS}`."
+    )
+
+
+def _load_card_admissibility(path: Optional[str | Path] = None) -> CardAdmissibility:
+    """The committed per-card artifact. No fallback: a missing file stops training."""
+    path = Path(_CARD_ADMISSIBILITY_PATH if path is None else path)
+    try:
+        return CardAdmissibility.from_artifact(path)
+    except FileNotFoundError:
+        raise CardAdmissibilityMissingError(
+            f"{path} is missing; copy it from the repo (data/card_admissibility.json), "
+            "or regenerate it in a checkout that has qa/ and the engine binding with "
+            f"`{_REGENERATE_ADMISSIBILITY}`"
+        ) from None
 
 
 def _load_oracle_ready_card_ids(path: Optional[str | Path] = None) -> Set[str]:
     """Card IDs whose every printed clause is adjudicated against the DCGO oracle.
 
-    Reads the committed artifact written by `tools.clause_coverage.readiness`.
-    There is deliberately no fallback: a missing artifact stops training.
+    Read only under `legacy_clause_gate=True`. There is deliberately no
+    fallback: a missing artifact stops a legacy-gated run.
     """
     path = Path(_ORACLE_READINESS_PATH if path is None else path)
     try:
@@ -186,27 +236,60 @@ def _load_oracle_ready_card_ids(path: Optional[str | Path] = None) -> Set[str]:
     }
 
 
-def validate_oracle_ready_deck(
+def _inadmissible_cards(card_ids: List[str], admissibility: Any) -> Dict[str, str]:
+    """{card id: the artifact's reason} for each distinct non-admissible card, sorted."""
+    return {
+        cid: admissibility.reason(cid) or "not_admissible"
+        for cid in sorted(set(card_ids))
+        if not admissibility.admissible(cid)
+    }
+
+
+def _format_card_reasons(blocked: Mapping[str, str]) -> str:
+    return ", ".join(f"{cid} ({reason})" for cid, reason in blocked.items())
+
+
+def validate_admissible_deck(
     card_ids: List[str],
-    oracle_ready_card_ids: Optional[Set[str]] = None,
+    admissibility: Optional[Any] = None,
     *,
     label: str = "deck",
 ) -> None:
-    """Raise `NotOracleReadyDeckError` if a deck holds a card that is not oracle-ready.
+    """Layer 2: raise `NotAdmissibleDeckError` if a deck holds a non-admissible card.
 
     For decks that reach training without passing through `MetaGauntlet.load`
     (pool snapshots, a job's `agent_deck: {source: deck_id}` library deck).
-    `oracle_ready_card_ids` defaults to the committed artifact.
+    `admissibility` (a `CardAdmissibility`, or anything with `admissible` and
+    `reason`) defaults to the committed artifact. Layer 1 is checked separately,
+    once per load: `require_mechanics_ready`.
     """
-    ready = (
-        oracle_ready_card_ids
-        if oracle_ready_card_ids is not None
-        else _load_oracle_ready_card_ids()
+    admissibility = _load_card_admissibility() if admissibility is None else admissibility
+    blocked = _inadmissible_cards(card_ids, admissibility)
+    if blocked:
+        raise NotAdmissibleDeckError(
+            f"{label} contains cards that are not admissible: {_format_card_reasons(blocked)}"
+        )
+
+
+def validate_oracle_ready_deck(*args: Any, **kwargs: Any) -> None:
+    """Deprecated alias of `validate_admissible_deck` (removed next release)."""
+    warnings.warn(
+        "validate_oracle_ready_deck is deprecated; use validate_admissible_deck "
+        "(the training gate is mechanics + light per-card, spec 2026-10-15 §5b)",
+        DeprecationWarning,
+        stacklevel=2,
     )
-    not_ready = sorted({cid for cid in card_ids if cid not in ready})
+    validate_admissible_deck(*args, **kwargs)
+
+
+def _validate_oracle_ready_deck_legacy(
+    card_ids: List[str], oracle_ready: Set[str], *, label: str
+) -> None:
+    not_ready = sorted({cid for cid in card_ids if cid not in oracle_ready})
     if not_ready:
-        raise NotOracleReadyDeckError(
-            f"{label} contains cards that are not oracle-ready: {', '.join(not_ready)}"
+        raise NotAdmissibleDeckError(
+            f"{label} contains cards that are not oracle-ready (--legacy-clause-gate): "
+            f"{', '.join(not_ready)}"
         )
 
 
@@ -215,20 +298,26 @@ def _card_name(card_db: Optional[Any], card_id: str) -> str:
     return f" {card.card_name}" if card is not None and getattr(card, "card_name", "") else ""
 
 
-def _describe_oracle_blockers(blockers: Counter, top: int = 10) -> str:
-    """The fail-fast message: card, name, and decklists blocked, worst first."""
+def _describe_blockers(blockers: Counter, reasons: Mapping[str, str], top: int = 10) -> str:
+    """The fail-fast message: card, name, decklists blocked and reason, worst first."""
     try:
         card_db: Optional[Any] = CardDatabase()
     except Exception:  # names are a courtesy; never mask the real error
         card_db = None
-    worst = ", ".join(
-        f"{cid}{_card_name(card_db, cid)} ({n})"
-        for cid, n in sorted(blockers.items(), key=lambda kv: (-kv[1], kv[0]))[:top]
+    worst = sorted(blockers.items(), key=lambda kv: (-kv[1], kv[0]))[:top]
+    listed = ", ".join(
+        f"{cid}{_card_name(card_db, cid)} ({n} decklist{'' if n == 1 else 's'}, {reasons[cid]})"
+        for cid, n in worst
     )
-    return (
-        "No training decklist is oracle-ready. Cards blocking the most decklists "
-        f"(decklists blocked): {worst}. Next exams: `{_REGENERATE_READINESS} --plan`."
+    message = (
+        "No training decklist is admissible. Cards blocking the most decklists: "
+        f"{listed}. Fix the cards or their verdicts, then regenerate "
+        f"data/card_admissibility.json with `{_REGENERATE_ADMISSIBILITY}` "
+        f"(and data/mechanics_readiness.json with `{_REGENERATE_MECHANICS}`)."
     )
+    if _NOT_ORACLE_READY in reasons.values():
+        message += f" --legacy-clause-gate is on; next exams: `{_REGENERATE_READINESS} --plan`."
+    return message
 
 
 # Deck source priority for within-archetype selection (higher = preferred).
@@ -241,8 +330,13 @@ class UnimplementedDeckError(ValueError):
     """Raised when a training deck contains cards outside the Rust registry."""
 
 
-class NotOracleReadyDeckError(ValueError):
-    """A pool snapshot contains a card that is not oracle-ready."""
+class NotAdmissibleDeckError(ValueError):
+    """A deck outside the gauntlet (pool snapshot, library deck) holds a card the
+    training gate does not admit."""
+
+
+# Deprecated alias (one release): the gate is no longer per-clause oracle readiness.
+NotOracleReadyDeckError = NotAdmissibleDeckError
 
 
 def canonical_deck_counts(card_ids: List[str]) -> Dict[str, int]:
@@ -412,10 +506,16 @@ class GeneralistDeckPool:
         path: str | Path,
         *,
         implemented_card_ids: Optional[Set[str]] = None,
-        oracle_ready_card_ids: Optional[Set[str]] = None,
+        admissibility: Optional[Any] = None,
+        mechanics_readiness: Optional[Mapping[str, Any]] = None,
+        legacy_clause_gate: bool = False,
     ) -> "GeneralistDeckPool":
-        """Reload a written pool. Every deck must still pass the oracle gate: a
-        snapshot taken before the gate cannot smuggle non-ready decks back in."""
+        """Reload a written pool. Every deck must still pass the training gate
+        (mechanics, then light per-card; plus oracle readiness under
+        `legacy_clause_gate`): a snapshot taken under an older gate cannot
+        smuggle non-admissible decks back in. `admissibility` and
+        `mechanics_readiness` default to the committed artifacts."""
+        require_mechanics_ready(mechanics_readiness)
         path = Path(path)
         raw = json.loads(path.read_text(encoding="utf-8"))
         if raw.get("schema_version") != SNAPSHOT_SCHEMA_VERSION:
@@ -432,11 +532,10 @@ class GeneralistDeckPool:
         if raw.get("snapshot_hash") != expected_hash:
             raise ValueError("Deck-pool snapshot hash mismatch.")
 
-        oracle_ready = (
-            oracle_ready_card_ids
-            if oracle_ready_card_ids is not None
-            else _load_oracle_ready_card_ids()
+        admissibility = (
+            _load_card_admissibility() if admissibility is None else admissibility
         )
+        oracle_ready = _load_oracle_ready_card_ids() if legacy_clause_gate else None
         archetypes: Dict[str, List[DeckEntry]] = {}
         for record in raw.get("decks", []):
             card_ids = list(record.get("card_ids", []))
@@ -449,9 +548,10 @@ class GeneralistDeckPool:
                     implemented_card_ids,
                     label=f"snapshot deck {record.get('deck_id', '?')}",
                 )
-            validate_oracle_ready_deck(
-                card_ids, oracle_ready, label=f"snapshot deck {record.get('deck_id', '?')}"
-            )
+            label = f"snapshot deck {record.get('deck_id', '?')}"
+            validate_admissible_deck(card_ids, admissibility, label=label)
+            if oracle_ready is not None:
+                _validate_oracle_ready_deck_legacy(card_ids, oracle_ready, label=label)
             deck_id = stable_deck_id(card_ids)
             if record.get("deck_id") != deck_id:
                 raise ValueError(
@@ -488,18 +588,19 @@ def load_generalist_deck_pool(
     *,
     implemented_card_ids: Optional[Set[str]] = None,
     allowed_archetypes: Optional[Set[str]] = None,
-    not_ready_card_ids: Optional[Set[str]] = None,
-    oracle_ready_card_ids: Optional[Set[str]] = None,
+    admissibility: Optional[Any] = None,
+    mechanics_readiness: Optional[Mapping[str, Any]] = None,
+    legacy_clause_gate: bool = False,
 ) -> GeneralistDeckPool:
-    """Load the same implementation-safe eligible pool used by MetaGauntlet."""
+    """Load the same gated eligible pool used by MetaGauntlet."""
     gauntlet = MetaGauntlet(
         sampling_mode="random",
         implemented_card_ids=implemented_card_ids,
         allowed_archetypes=allowed_archetypes,
-        not_ready_card_ids=not_ready_card_ids,
-        oracle_ready_card_ids=oracle_ready_card_ids,
+        admissibility=admissibility,
+        mechanics_readiness=mechanics_readiness,
     )
-    gauntlet.load(path)
+    gauntlet.load(path, legacy_clause_gate=legacy_clause_gate)
     return gauntlet.as_generalist_pool()
 
 
@@ -539,8 +640,8 @@ class MetaGauntlet:
         implemented_only: bool = True,
         implemented_card_ids: Optional[Set[str]] = None,
         allowed_archetypes: Optional[Set[str]] = None,
-        not_ready_card_ids: Optional[Set[str]] = None,
-        oracle_ready_card_ids: Optional[Set[str]] = None,
+        admissibility: Optional[Any] = None,
+        mechanics_readiness: Optional[Mapping[str, Any]] = None,
     ) -> None:
         if sampling_mode not in {"meta", "random"}:
             raise ValueError("sampling_mode must be 'meta' or 'random'")
@@ -553,21 +654,35 @@ class MetaGauntlet:
         self.implemented_only = implemented_only
         self._implemented_card_ids = implemented_card_ids
         self._allowed_archetypes = allowed_archetypes
-        self._not_ready_card_ids = not_ready_card_ids
-        self._oracle_ready_card_ids = oracle_ready_card_ids
+        # Injected gate inputs (tests); None = the committed data/ artifacts.
+        self._admissibility = admissibility
+        self._mechanics_readiness = mechanics_readiness
 
         self.archetypes: Dict[str, ArchetypeStats] = {}
         self._deck_pool: List[DeckEntry] = []
         self._weights: Optional[np.ndarray] = None
         self._rng = np.random.default_rng(seed)
 
-    def load(self, path: str = DECK_LIBRARY_PATH) -> None:
+    def load(self, path: str = DECK_LIBRARY_PATH, *, legacy_clause_gate: bool = False) -> None:
         """Load deck library JSON and compute threat indices + sampling weights.
 
         Statistical weights come ONLY from digilab_stats.  Scraper stats
         (meta_share, conversion_rate in the top-level ``stats`` block) are
         ignored for TI computation to avoid survivorship bias.
+
+        The training gate applies to every library path: the mechanics layer
+        first (`MechanicsNotReadyError` before any deck is examined), then each
+        decklist is admitted only if every card is registered and admissible.
+        `legacy_clause_gate=True` additionally requires every card to be
+        oracle-ready; it never admits a deck the two layers reject.
         """
+        require_mechanics_ready(self._mechanics_readiness)
+        admissibility = (
+            self._admissibility if self._admissibility is not None
+            else _load_card_admissibility()
+        )
+        oracle_ready = _load_oracle_ready_card_ids() if legacy_clause_gate else None
+
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -581,19 +696,8 @@ class MetaGauntlet:
                 if self._implemented_card_ids is not None
                 else load_playable_card_ids()
             )
-        # The default library reads the DSL ledger itself; synthetic libraries
-        # (tests) pass `not_ready_card_ids` explicitly.
-        not_ready_card_ids = self._not_ready_card_ids
-        if not_ready_card_ids is None and os.path.abspath(path) == os.path.abspath(DECK_LIBRARY_PATH):
-            not_ready_card_ids = _load_not_ready_card_ids()
-        # The oracle gate applies to EVERY library path (no default-path-only
-        # hole like the ledger gate's). Tests inject; production loads the artifact.
-        oracle_ready = (
-            self._oracle_ready_card_ids
-            if self._oracle_ready_card_ids is not None
-            else _load_oracle_ready_card_ids()
-        )
-        oracle_blockers: Counter = Counter()
+        blockers: Counter = Counter()
+        blocker_reasons: Dict[str, str] = {}
 
         canonical_allowed: Optional[Set[str]] = None
         if self._allowed_archetypes is not None:
@@ -646,7 +750,7 @@ class MetaGauntlet:
             canonical_groups[arch_name].append((raw_name, arch_data))
 
         # Second pass: build archetype stats and deck pools. Each decklist is
-        # admitted on its own: every card registered and none not-ready.
+        # admitted on its own: every card registered and admissible.
         rejected: Dict[str, Counter] = defaultdict(Counter)
         for arch_name, group in canonical_groups.items():
             if canonical_allowed is not None and arch_name not in canonical_allowed:
@@ -685,28 +789,29 @@ class MetaGauntlet:
                     )
                     rejected[arch_name]["unregistered"] += 1
                     continue
-                if not_ready_card_ids is not None:
-                    not_ready = sorted(
-                        {cid for cid in card_ids if cid in not_ready_card_ids}
-                    )
-                    if not_ready:
-                        logger.debug(
-                            "Skipping not-ready decklist %s for %s: %s",
-                            dl.get("deck_id", "?"),
-                            arch_name,
-                            ", ".join(not_ready),
-                        )
-                        rejected[arch_name]["not_ready"] += 1
-                        continue
-                not_oracle = sorted({cid for cid in card_ids if cid not in oracle_ready})
-                if not_oracle:
+                blocked = _inadmissible_cards(card_ids, admissibility)
+                if blocked:
                     logger.debug(
-                        "Skipping not-oracle-ready decklist %s for %s: %s",
-                        dl.get("deck_id", "?"), arch_name, ", ".join(not_oracle),
+                        "Skipping not-admissible decklist %s for %s: %s",
+                        dl.get("deck_id", "?"), arch_name, _format_card_reasons(blocked),
                     )
-                    rejected[arch_name]["not_oracle_ready"] += 1
-                    oracle_blockers.update(not_oracle)
+                    rejected[arch_name]["not_admissible"] += 1
+                    blockers.update(blocked.keys())
+                    blocker_reasons.update(blocked)
                     continue
+                if oracle_ready is not None:
+                    not_oracle = sorted({cid for cid in card_ids if cid not in oracle_ready})
+                    if not_oracle:
+                        logger.debug(
+                            "Skipping not-oracle-ready decklist %s for %s "
+                            "(--legacy-clause-gate): %s",
+                            dl.get("deck_id", "?"), arch_name, ", ".join(not_oracle),
+                        )
+                        rejected[arch_name][_NOT_ORACLE_READY] += 1
+                        blockers.update(not_oracle)
+                        for cid in not_oracle:
+                            blocker_reasons.setdefault(cid, _NOT_ORACLE_READY)
+                        continue
                 decks.append(DeckEntry(
                     deck_id=stable_deck_id(card_ids),
                     archetype_name=arch_name,
@@ -753,16 +858,16 @@ class MetaGauntlet:
             for name in sorted((canonical_allowed & set(canonical_groups)) - set(self.archetypes)):
                 logger.info(
                     "allowed_archetypes entry %r excluded: no training-ready decklist "
-                    "(%d with unregistered cards, %d with not-ready ledger verdicts, "
-                    "%d with not-oracle-ready cards)",
+                    "(%d with unregistered cards, %d with not-admissible cards, "
+                    "%d not oracle-ready under --legacy-clause-gate)",
                     name,
                     rejected[name]["unregistered"],
-                    rejected[name]["not_ready"],
-                    rejected[name]["not_oracle_ready"],
+                    rejected[name]["not_admissible"],
+                    rejected[name][_NOT_ORACLE_READY],
                 )
 
-        if not self.archetypes and sum(r["not_oracle_ready"] for r in rejected.values()) > 0:
-            raise EmptyTrainingPoolError(_describe_oracle_blockers(oracle_blockers))
+        if not self.archetypes and blockers:
+            raise EmptyTrainingPoolError(_describe_blockers(blockers, blocker_reasons))
 
         self._compute_threat_indices()
         self._compute_sampling_weights()

@@ -3533,6 +3533,12 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Sample both player decks from eligible Rust DSL archetypes."
     )
     parser.add_argument(
+        "--legacy-clause-gate", action="store_true",
+        help="Transition comparison only: on top of the training gate (mechanics + "
+             "light per-card admissibility), ALSO require every card to be ready in "
+             "data/oracle_readiness.json. Never admits a deck the gate rejects."
+    )
+    parser.add_argument(
         "--generalist-sampling", choices=["uniform-archetype"], default="uniform-archetype",
         help="Generalist sampling mode. Currently uniform archetype, then uniform deck."
     )
@@ -3777,7 +3783,7 @@ def main():
             allowed_archetypes=allowed_set,
         )
         try:
-            gauntlet.load()
+            gauntlet.load(legacy_clause_gate=args.legacy_clause_gate)
             print(f"  MetaGauntlet: {gauntlet.archetype_count} archetypes, "
                   f"{gauntlet.deck_count} fully implemented decks loaded "
                   f"({args.gauntlet_sampling} sampling)")
@@ -3831,7 +3837,10 @@ def main():
                 "--opponent league pins the agent deck to a single archetype: "
                 "pass exactly one --archetypes (or an explicit --deck1/--deck-json)"
             )
-        league_pool = load_generalist_deck_pool(allowed_archetypes={archs[0]})
+        league_pool = load_generalist_deck_pool(
+            allowed_archetypes={archs[0]},
+            legacy_clause_gate=args.legacy_clause_gate,
+        )
         names = league_pool.archetype_names
         if not names:
             parser.error(
@@ -3856,6 +3865,7 @@ def main():
                 generalist_deck_pool = GeneralistDeckPool.from_snapshot(
                     cfg.curriculum_pool,
                     implemented_card_ids=load_implemented_card_ids(),
+                    legacy_clause_gate=args.legacy_clause_gate,
                 )
                 print(
                     f"  Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
@@ -3872,6 +3882,7 @@ def main():
                 )
                 generalist_deck_pool = load_generalist_deck_pool(
                     allowed_archetypes=allowed_set,
+                    legacy_clause_gate=args.legacy_clause_gate,
                 )
                 print(
                     f"  Generalist pool: {generalist_deck_pool.archetype_count} archetypes, "
@@ -3910,6 +3921,7 @@ def main():
                 # "all" = no filter for opponent
                 generalist_opponent_pool = load_generalist_deck_pool(
                     allowed_archetypes=None,
+                    legacy_clause_gate=args.legacy_clause_gate,
                 )
             else:
                 opp_set = {
@@ -3917,6 +3929,7 @@ def main():
                 }
                 generalist_opponent_pool = load_generalist_deck_pool(
                     allowed_archetypes=opp_set,
+                    legacy_clause_gate=args.legacy_clause_gate,
                 )
             print(
                 f"  Opponent pool:    {generalist_opponent_pool.archetype_count} archetypes, "
