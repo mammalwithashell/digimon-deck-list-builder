@@ -759,13 +759,11 @@ fn lm_058_real_delay_groundramon_on_coredramon_offers_reduced_1_and_2() {
         assert_eq!(build_action_mask(&r.game, 0)[a as usize], 1.0);
         r.execute_action(0, a).unwrap();
         r.auto_resolve().unwrap();
-        assert!(r
-            .game
-            .player(0)
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&r.game.card_data) == "BT20-042"
-                && p.stack_size() == 2));
+        assert!(r.game.player(0).battle_area.iter().any(|p| p
+            .top_card()
+            .card_id(&r.game.card_data)
+            == "BT20-042"
+            && p.stack_size() == 2));
         memories.push(r.memory());
     }
     memories.sort();

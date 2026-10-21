@@ -839,11 +839,11 @@ fn lm_055_real_delay_wingdramon_on_coredramon_offers_reduced_1_and_2() {
         assert_eq!(build_action_mask(&r.game, 0)[a as usize], 1.0);
         r.execute_action(0, a).unwrap();
         r.auto_resolve().unwrap();
-        assert!(r.game.players[0]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&r.game.card_data) == "BT20-025"
-                && p.stack_size() == 2));
+        assert!(r.game.players[0].battle_area.iter().any(|p| p
+            .top_card()
+            .card_id(&r.game.card_data)
+            == "BT20-025"
+            && p.stack_size() == 2));
         memories.push(r.memory());
     }
     memories.sort();
