@@ -365,6 +365,61 @@ fn bt26_053_offers_only_gd_options_with_use_cost_4_or_less() {
     assert!(!offered(&r, hand_action(&r, "GDDIGI")), "not an Option card");
 }
 
+/// Re-cost the [Glowing Dawn] DUAL BT26-057 so its Digimon play cost and its
+/// Option use cost differ (DebugRunner leaves the play cost at 0).
+fn set_dual_costs(r: &mut DebugRunner, play_cost: u16, use_cost: u16) {
+    let idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BT26-057")
+        .unwrap();
+    r.game.card_data[idx].play_cost = play_cost;
+    r.game.card_data[idx]
+        .dual
+        .as_mut()
+        .expect("BT26-057 is a DUAL card")
+        .option
+        .use_cost = use_cost;
+}
+
+#[test]
+fn bt26_053_dual_with_option_use_cost_5_is_not_offered_despite_play_cost_3() {
+    // "use cost of 4 or less" reads a DUAL's Option information (§4-6-6-2;
+    // DCGO GetCostItself on an Option card) — its Digimon play cost (3 here)
+    // is irrelevant.
+    let mut r = setup();
+    board(&mut r);
+    set_dual_costs(&mut r, 3, 5);
+    for id in ["T-GDOPT4", "BT26-057"] {
+        push_hand(&mut r, 0, id);
+    }
+    own_attack_gets_blocked(&mut r, "ATK", "BLK");
+    r.accept_optional_trigger().unwrap();
+    pick_first(&mut r, 0);
+    assert!(offered(&r, hand_action(&r, "T-GDOPT4")), "control: GD, use cost 4");
+    assert!(
+        !offered(&r, hand_action(&r, "BT26-057")),
+        "Option use cost 5 > 4, whatever the Digimon play cost"
+    );
+}
+
+#[test]
+fn bt26_053_dual_with_option_use_cost_4_is_offered_despite_play_cost_9() {
+    // Mirror: a high Digimon play cost does not hide an eligible Option face.
+    let mut r = setup();
+    board(&mut r);
+    set_dual_costs(&mut r, 9, 4);
+    push_hand(&mut r, 0, "BT26-057");
+    own_attack_gets_blocked(&mut r, "ATK", "BLK");
+    r.accept_optional_trigger().unwrap();
+    pick_first(&mut r, 0);
+    assert!(
+        offered(&r, hand_action(&r, "BT26-057")),
+        "Option use cost 4 <= 4, whatever the Digimon play cost"
+    );
+}
+
 #[test]
 fn bt26_053_may_decline_the_option_after_paying() {
     let mut r = setup();
