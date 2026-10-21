@@ -667,21 +667,21 @@
     },
     "LM-055": {
       "card_name": "Sprint Dash Training",
-      "validated_date": "2026-10-10",
-      "report": "examon-2026-10-10",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-10-21",
+      "report": "mechanics-gate-task-7-2026-10-21",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-055.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_055.rs",
-      "test_count": 12,
+      "test_count": 17,
       "patterns": [
         "A1",
         "A2",
         "Option-as-permanent Delay",
         "C-digivolve"
       ],
-      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "notes": "Re-audit 2026-10-21 (mechanics gate Task 7): G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE (incl. its LM-055 extension) was RESOLVED 2026-10-10 by the shared effect-cost continuation. YAML unchanged (the 2026-10-10 local repairs — exact-name battle-area use_requirement and mandatory Main/Security reveal picks — retained) and faithful to the card image and DCGO LM_055.cs. The formerly RED clause (real Delay auto-paid 1 for 3/4 routes) is green: real placement + later Main <Delay> activation offers both reduced payments for synthetic 3/4 routes and for the deck's real pair Wingdramon BT20-025 on Coredramon BT20-023 (named 3 -> 1, colour 4 -> 2, duplicates collapsed), cloned per choice. 17/17 lm_055 tests pass; DCGO oracle unmeasured.",
       "prior_authoring_status": "IMPLEMENTED"
     },
     "BT20-016": {
