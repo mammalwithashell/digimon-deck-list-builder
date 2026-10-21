@@ -384,39 +384,16 @@ impl<'a> EffectContext<'a> {
 
     pub fn gain_memory(&mut self, amount: i16) {
         let target = self.player;
-        // Phase 6: CannotGainMemoryByEffect — suppress all memory gains by effect.
-        if self
+        // Memory-gain restrictions (DCGO `CanAddMemory`):
+        // `CannotGainMemoryByEffect`, `CannotGainMemoryExceptFromTamers`
+        // (Tamer-sourced gains still allowed) and the permanent-scoped
+        // `CannotAddMemory` (Track C / D, 2026-05-08). One gate, shared with
+        // the DSL `can_gain_memory` predicate.
+        if !self
             .game
-            .modifiers
-            .player_has(target, ModifierType::CannotGainMemoryByEffect)
+            .player_can_gain_memory_by_effect(target, self.source_is_tamer())
         {
             return;
-        }
-        // Phase 6: CannotGainMemoryExceptFromTamers — only Tamer-sourced gains are
-        // allowed; block Digimon/Option-sourced gains.
-        if self
-            .game
-            .modifiers
-            .player_has(target, ModifierType::CannotGainMemoryExceptFromTamers)
-            && !self.source_is_tamer()
-        {
-            return;
-        }
-        // Track C / D consult site (2026-05-08): permanent-scoped
-        // `CannotAddMemory` — while any permanent in the acting player's
-        // battle area carries this modifier, the controller's effects
-        // can't add memory. Sibling of player-scoped
-        // `CannotGainMemoryByEffect` for printed text anchored to a
-        // specific Digimon.
-        let battle_area_len = self.game.player(target).battle_area.len();
-        for i in 0..battle_area_len {
-            let h = PermanentHandle {
-                player: target,
-                index: i as u8,
-            };
-            if self.game.modifiers.has(h, ModifierType::CannotAddMemory) {
-                return;
-            }
         }
         let source = self.effect_memory_source();
         self.game

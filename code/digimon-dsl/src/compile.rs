@@ -1298,6 +1298,7 @@ fn compile_predicate(
         can_hatch: p.can_hatch.map(compile_player_ref),
         digimon_attacked_this_turn: p.digimon_attacked_this_turn.map(compile_player_ref),
         during_attack: p.during_attack,
+        can_gain_memory: p.can_gain_memory,
         in_breeding: p.in_breeding,
         on_field: p.on_field,
         dna_origin: p.dna_origin,
@@ -4852,6 +4853,27 @@ effects:
         assert!(
             errors.contains("unknown replacement timing"),
             "unexpected errors:\n{errors}"
+        );
+    }
+
+    #[test]
+    fn can_gain_memory_predicate_compiles_and_round_trips() {
+        // G-DSL-CAN-GAIN-MEMORY (BT10-057): a game-level leaf, carried
+        // verbatim; absent stays `None`.
+        let spec: crate::predicate::PredicateSpec =
+            serde_yml::from_str("can_gain_memory: true").unwrap();
+        let mut errors = Vec::new();
+        let compiled = compile_predicate(&spec, "t", "TEST", &mut errors);
+        assert!(errors.is_empty(), "{errors:?}");
+        assert_eq!(compiled.can_gain_memory, Some(true));
+        let bytes = bincode::serialize(&compiled).unwrap();
+        let back: CompiledPredicate = bincode::deserialize(&bytes).unwrap();
+        assert_eq!(back, compiled);
+        let none: crate::predicate::PredicateSpec =
+            serde_yml::from_str("your_turn: true").unwrap();
+        assert_eq!(
+            compile_predicate(&none, "t", "TEST", &mut errors).can_gain_memory,
+            None
         );
     }
 

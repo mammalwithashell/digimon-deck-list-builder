@@ -14915,12 +14915,12 @@
       "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
       "yaml_path": "code/digimon-engine/cards/bt10/BT10-057.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_057.rs",
-      "test_count": 15,
+      "test_count": 16,
       "patterns": [
         "F1",
         "D3"
       ],
-      "notes": "[When Digivolving] mandatory clause: optional own unsuspended Digimon suspend (continue_on_decline), gain_memory = own suspended Vegetation/Plant/Fairy Digimon (trait_contains, self included), count_gte 2 -> unsuspend self + Piercing until end of turn (count compared, as DCGO plusMemory; memory-cap edge noted). [Your Turn] aura +2000 DP per 2 own suspended Digimon and base-inclusive security_attack_fn. Q1980/Q1981/Q1982 tested. DCGO oracle unmeasured."
+      "notes": "[When Digivolving] mandatory clause: optional own unsuspended Digimon suspend (continue_on_decline), gain_memory = own suspended Vegetation/Plant/Fairy Digimon (trait_contains, self included), can_gain_memory (DCGO CanAddMemory gate; EX13-050 witness) AND count_gte 2 -> unsuspend self + Piercing until end of turn (count compared, as DCGO plusMemory; memory-cap edge is a residual without a ruling). [Your Turn] aura +2000 DP per 2 own suspended Digimon and base-inclusive security_attack_fn. Q1980/Q1981/Q1982 tested. DCGO oracle unmeasured."
     },
     "P-166": {
       "card_name": "Galemon",

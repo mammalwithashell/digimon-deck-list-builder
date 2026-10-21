@@ -615,6 +615,16 @@ pub struct PredicateSpec {
     /// attack, it also ..." rider (BT20-053 precedent). G-DSL-DURING-ATTACK.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub during_attack: Option<bool>,
+    /// Game-level gate: the effect's controller can gain memory from THIS
+    /// effect right now (DCGO `Owner.CanAddMemory(activateClass)`) — no
+    /// `CannotGainMemoryByEffect`, no `CannotGainMemoryExceptFromTamers`
+    /// unless the source is a Tamer, no `CannotAddMemory` on their
+    /// permanents. Use it for printed text conditioned on the memory the
+    /// effect gains ("If this effect gains 2 or more memory, ..."): under a
+    /// restriction the effect gains none. Driver BT10-057 BloomLordmon.
+    /// G-DSL-CAN-GAIN-MEMORY.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub can_gain_memory: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub in_breeding: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -14,8 +14,8 @@
 #   - [When Digivolving] (isOptional false): SelectPermanent over the owner's
 #     Digimon (canNoSelect true, Mode.Tap) → plusMemory = owner's suspended
 #     Digimon with HasPlantTraits || HasFairyTraits (this one included) →
-#     AddMemory(plusMemory) → if plusMemory >= 2: unsuspend this Digimon +
-#     Pierce UntilEachTurnEnd.
+#     if Owner.CanAddMemory(activateClass): AddMemory(plusMemory) → if
+#     plusMemory >= 2: unsuspend this Digimon + Pierce UntilEachTurnEnd.
 #   - [Your Turn] two static effects: count = owner's suspended Digimon / 2
 #     (no trait filter; this one included): +2000×count DP, +count S.Attack.
 #
@@ -28,8 +28,12 @@
 #     `binding_present` guard ("Then" runs either way); `gain_memory` formula
 #     = count of your suspended Digimon whose traits contain Vegetation /
 #     Plant / Fairy; the "2 or more" check re-counts the same set (nothing
-#     changes in between; DCGO compares plusMemory, the count, too), then
+#     changes in between; DCGO compares plusMemory, the count, too) AND
+#     `can_gain_memory: true` (DCGO's CanAddMemory gate: under a memory-gain
+#     restriction such as EX13-050 the effect gains none), then
 #     `unsuspend: source` + `grant_keyword: Piercing` until end of turn.
+#   - Residual (no ruling): at the memory cap the effect may actually gain
+#     fewer than the count; the count is compared, as DCGO does.
 #   - [Your Turn] — `aura` on this Digimon: `dp_modifier_fn` 2000 ×
 #     floor(n/2) and a BASE-INCLUSIVE `security_attack_fn` floor((2+n)/2) =
 #     1 + floor(n/2) (ST1-11 idiom), n = `suspended_count { of: you }`.
@@ -84,20 +88,26 @@ effects:
                       - trait_contains: Plant
                       - trait_contains: Fairy
           delta: 1
+      # "If this effect gains 2 or more memory": DCGO compares the count
+      # (plusMemory >= 2), inside its `Owner.CanAddMemory(activateClass)`
+      # gate — under a memory-gain restriction (e.g. EX13-050) the effect
+      # gains none, so nothing unsuspends and no <Piercing>.
       - if:
           condition:
-            count_gte:
-              filter:
-                all_of:
-                  - of: you
-                  - zone: [battle_area]
-                  - kind: digimon
-                  - is_suspended: true
-                  - any_of:
-                      - trait_contains: Vegetation
-                      - trait_contains: Plant
-                      - trait_contains: Fairy
-              n: 2
+            all_of:
+              - can_gain_memory: true
+              - count_gte:
+                  filter:
+                    all_of:
+                      - of: you
+                      - zone: [battle_area]
+                      - kind: digimon
+                      - is_suspended: true
+                      - any_of:
+                          - trait_contains: Vegetation
+                          - trait_contains: Plant
+                          - trait_contains: Fairy
+                  n: 2
           then:
             - unsuspend: { target: source }
             - grant_keyword:

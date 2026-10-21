@@ -56,6 +56,44 @@ impl Game {
         true
     }
 
+    /// Whether `player` can gain memory from an effect right now — DCGO
+    /// `Player.CanAddMemory(effect)`. `false` while the player has
+    /// `CannotGainMemoryByEffect`, while they have
+    /// `CannotGainMemoryExceptFromTamers` and the effect is not a Tamer
+    /// effect, or while any permanent in their battle area carries
+    /// `CannotAddMemory`. `EffectContext::gain_memory` consults this gate,
+    /// and the DSL `can_gain_memory` predicate reads it for printed text
+    /// conditioned on memory the effect gains (BT10-057).
+    pub fn player_can_gain_memory_by_effect(
+        &self,
+        player: PlayerId,
+        source_is_tamer: bool,
+    ) -> bool {
+        if self
+            .modifiers
+            .player_has(player, ModifierType::CannotGainMemoryByEffect)
+        {
+            return false;
+        }
+        if !source_is_tamer
+            && self
+                .modifiers
+                .player_has(player, ModifierType::CannotGainMemoryExceptFromTamers)
+        {
+            return false;
+        }
+        let battle_area_len = self.player(player).battle_area.len();
+        !(0..battle_area_len).any(|i| {
+            self.modifiers.has(
+                PermanentHandle {
+                    player,
+                    index: i as u8,
+                },
+                ModifierType::CannotAddMemory,
+            )
+        })
+    }
+
     /// Gain memory for the active player.
     pub fn gain_memory(&mut self, amount: i16) {
         self.gain_memory_for_player(self.turn_player(), amount);

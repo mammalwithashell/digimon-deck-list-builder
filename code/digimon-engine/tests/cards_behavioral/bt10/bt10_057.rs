@@ -44,7 +44,7 @@ use digimon_dsl::compiled::{CompiledClause, CompiledCost, CompiledScope, Compile
 use digimon_engine::action::space::{encode_digivolve, ATTACK_START, PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, Keyword};
+use digimon_engine::enums::{CardColor, CardKind, Keyword, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
 
 const CARD_ID: &str = "BT10-057";
@@ -64,6 +64,8 @@ fn runner() -> DebugRunner {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT10-057 in pack")
+        .dsl_card("EX13-050")
+        .expect("EX13-050 in pack")
         .add_card(digimon("BASE", CardColor::Green, 5, &["Dragon"]))
         .add_card(digimon("VEG", CardColor::Green, 4, &["Vegetation"]))
         .add_card(digimon("PLANT", CardColor::Green, 4, &["Plant"]))
@@ -169,6 +171,35 @@ fn bt10_057_two_plant_suspended_gains_2_unsuspends_and_pierces() {
     assert_eq!(r.memory(), 4, "VEG + PLANT + BloomLordmon = 3");
     assert!(!suspended(&r, base), "unsuspended");
     assert!(r.game.has_keyword(base, Keyword::Piercing));
+}
+
+/// "If this effect gains 2 or more memory": when its controller can't gain
+/// memory from it (EX13-050 Bokomon: "Players can't gain memory other than by
+/// Tamer effects"), the effect gains none, so BloomLordmon neither unsuspends
+/// nor gains <Piercing> although 3 qualifying Digimon are suspended. DCGO
+/// BT10_057.cs gates the gain AND the unsuspend/<Piercing> on
+/// `Owner.CanAddMemory(activateClass)`.
+#[test]
+fn bt10_057_no_unsuspend_or_piercing_when_memory_cannot_be_gained() {
+    let mut r = runner();
+    r.place_on_field(1, "EX13-050", Some(0));
+    r.game.tick_declarative_effects();
+    assert!(r
+        .game
+        .modifiers
+        .player_has(0, ModifierType::CannotGainMemoryExceptFromTamers));
+    let base = r.place_on_field(0, "BASE", Some(0));
+    suspend(&mut r, base);
+    let veg = r.place_on_field(0, "VEG", Some(0));
+    let plant = r.place_on_field(0, "PLANT", Some(0));
+    suspend(&mut r, plant);
+    digivolve_into_bloomlordmon(&mut r, base);
+    assert_eq!(r.memory(), 1, "5 - 4 paid");
+    resolve_wd(&mut r, Some(veg));
+    assert!(suspended(&r, veg), "the suspension still happens");
+    assert_eq!(r.memory(), 1, "no memory gained");
+    assert!(suspended(&r, base), "no unsuspend");
+    assert!(!r.game.has_keyword(base, Keyword::Piercing), "no <Piercing>");
 }
 
 /// Exactly 1 qualifying suspended Digimon: 1 memory, no unsuspend, no

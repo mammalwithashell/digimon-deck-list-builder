@@ -619,6 +619,9 @@ pub struct CompiledPredicate {
     /// G-DSL-DURING-ATTACK.
     #[serde(default)]
     pub during_attack: Option<bool>,
+    /// See `PredicateSpec::can_gain_memory` (BT10-057). G-DSL-CAN-GAIN-MEMORY.
+    #[serde(default)]
+    pub can_gain_memory: Option<bool>,
     pub in_breeding: Option<bool>,
     pub on_field: Option<bool>,
     pub dna_origin: Option<bool>,

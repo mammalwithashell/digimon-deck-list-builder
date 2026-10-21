@@ -35,7 +35,8 @@ use std::collections::BTreeSet;
 // the engine-only `SecurityPlacementCancelFinalize` continuation, and the
 // `owner_can_add_security` permanent predicate.
 // 0.24.0 adds `play_from_hand_free.suspended` and
-// `grant_triggered_effect.trigger_if`. Rebuild packs; bincode layouts differ.
+// `grant_triggered_effect.trigger_if`, and the `can_gain_memory` predicate
+// leaf. Rebuild packs; bincode layouts differ.
 pub const PACK_FORMAT_VERSION: &str = "0.24.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
