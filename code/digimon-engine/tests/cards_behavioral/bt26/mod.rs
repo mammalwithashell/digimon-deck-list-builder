@@ -41,6 +41,7 @@ mod bt26_056;
 mod bt26_059;
 mod bt26_060;
 mod bt26_063;
+mod bt26_064;
 mod bt26_065;
 mod bt26_066;
 mod bt26_067;

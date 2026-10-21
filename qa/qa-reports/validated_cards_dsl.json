@@ -14835,6 +14835,24 @@
         "effect-digivolve-reduce"
       ],
       "notes": "Shared Training-option shape (purple/yellow), twin of LM-061 per DCGO LM_062.cs: name-gated color bypass, [Main] reveal 2 add 1 purple/yellow + bottom + place as Delay, <Delay> optional cost -2 digivolve into purple/yellow Digimon in hand (legal-target gated), [Security] mirror + placement."
+    },
+    "BT26-064": {
+      "card_name": "DemiDevimon",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c2 — Three Musketeers / Beelstarmon (3M)",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_064.rs",
+      "test_count": 11,
+      "patterns": [
+        "alt-path-digivolve",
+        "A2",
+        "reveal-two-buckets",
+        "inherited-when-attacking-opt"
+      ],
+      "notes": "TDD vs DCGO BT26_064.cs (BT26-065 Falcomon idiom). Alt digivolve Lv.2 [TS] cost 0 (behavioural +/-); [On Play] reveal 3, two mandatory ordered buckets ([Fallen Angel]/[Undead]/[Wizard]/[Demon Lord] exact traits, then [TS]), no duplicate card, rest to bottom; inherited [When Attacking][OPT] draw 1 then mandatory trash 1 (lockout + next-turn reset)."
     }
   }
 }
