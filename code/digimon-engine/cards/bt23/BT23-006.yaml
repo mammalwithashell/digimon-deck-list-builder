@@ -1,0 +1,57 @@
+# BT23-006 Huckmon: card image and official Bandai bundle verified.
+# Behavior cross-checked against DCGO/Assets/Scripts/CardEffect/BT23/Red/BT23_006.cs.
+card: BT23-006
+name: Huckmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Mini Dragon, CS]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+    ignore_requirements: true
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 Huckmon/Sistermon-name card and 1 Royal Knight-trait card; bottom the rest"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter:
+                any_of:
+                  - name_contains: Huckmon
+                  - name_contains: Sistermon
+              to: hand
+              max: 1
+              prompt: "Add 1 card with [Huckmon] or [Sistermon] in its name"
+            - filter: { trait_has: Royal Knight }
+              to: hand
+              max: 1
+              prompt: "Add 1 card with the [Royal Knight] trait"
+          remainder: bottom
+
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_card_kind: digimon
+            - event_card_kind: token
+        - event_card_color_has: [white]
+    summary: "[Your Turn][Once Per Turn] When any of your white Digimon are played, gain 1 memory"
+    process:
+      - gain_memory: 1

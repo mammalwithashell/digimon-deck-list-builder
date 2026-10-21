@@ -4412,20 +4412,22 @@
     },
     "BT6-084": {
       "card_name": "Sistermon Ciel",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
-      "status": "IMPLEMENTED",
-      "gap_kind": "none",
-      "archetype": "Puppets",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Jesmon supplied deck (2026-10-19)",
       "yaml_path": "code/digimon-engine/cards/bt6/BT6-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_084.rs",
-      "test_count": 6,
+      "test_count": 7,
       "patterns": [
         "AURA",
         "DP-MODIFIER",
         "ON-PLAY-MEMORY"
       ],
-      "notes": "Production YAML and focused tests cover printed metadata, face-up All Turns +2000 DP aura for own Huckmon-name or Royal Knight-trait Digimon, aura refresh when the source leaves field, and On Play gain 1 memory. Duplicated ingestion inherited text is not implemented as inherited behavior."
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim.",
+      "tests_ignored": 0,
+      "tests_passing": 7
     },
     "BT9-033": {
       "card_name": "Pillomon",
@@ -5052,22 +5054,25 @@
     },
     "BT23-013": {
       "card_name": "Jesmon",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Royal Knights",
+      "archetype": "Jesmon supplied deck (2026-10-19)",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-013.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_013.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "NAMED-EVOLUTION",
+        "CONDITIONAL-EVOLUTION",
+        "NAME-SAFE-TOKEN-PLAY",
+        "HAND-TRASH-UNION-PLAY",
+        "CAPTURED-PLAY-OBSERVER",
+        "OPTIONAL-ATTACK"
       ],
-      "notes": "Rush and Alliance implemented; Atho/Rene/Por token or Sistermon union play with name exclusion and other-played may-attack observer remain blocked.",
-      "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale."
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
     },
     "BT23-035": {
       "card_name": "Dynasmon",
@@ -5491,22 +5496,17 @@
     },
     "ST12-12": {
       "card_name": "Sistermon Blanc",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "AUDITED-OK",
       "gap_kind": null,
-      "archetype": "Royal Knights",
+      "archetype": "Jesmon supplied deck (2026-10-19)",
       "yaml_path": "code/digimon-engine/cards/st12/ST12-12.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st12/st12_12.rs",
-      "test_count": 3,
-      "tests_passing": 2,
-      "tests_ignored": 1,
-      "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
-      ],
-      "notes": "Supported Sistermon Blanc slice implemented; remaining unsupported clauses gap-stubbed.",
-      "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale."
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
     },
     "ST12-15": {
       "card_name": "From Master to Disciple",
@@ -14778,6 +14778,104 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_138.rs",
       "test_count": 6,
       "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT8-001": {
+      "card_name": "Gurimon",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Jesmon supplied deck (2026-10-19)",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-001.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_001.rs",
+      "test_count": 4,
+      "tests_passing": 4,
+      "tests_ignored": 0,
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
+    },
+    "BT23-006": {
+      "card_name": "Huckmon",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Jesmon supplied deck (2026-10-19)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_006.rs",
+      "test_count": 16,
+      "tests_passing": 16,
+      "tests_ignored": 0,
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
+    },
+    "ST12-13": {
+      "card_name": "Sistermon Ciel",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Jesmon supplied deck (2026-10-19)",
+      "yaml_path": "code/digimon-engine/cards/st12/ST12-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st12/st12_13.rs",
+      "test_count": 5,
+      "tests_passing": 5,
+      "tests_ignored": 0,
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
+    },
+    "BT13-013": {
+      "card_name": "BaoHuckmon",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Jesmon supplied deck (2026-10-19)",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-013.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_013.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
+    },
+    "BT10-085": {
+      "card_name": "Sistermon Ciel",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Jesmon supplied deck (2026-10-19)",
+      "yaml_path": "code/digimon-engine/cards/bt10/BT10-085.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_085.rs",
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
+    },
+    "BT23-076": {
+      "card_name": "Sistermon Blanc",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Jesmon supplied deck (2026-10-19)",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_076.rs",
+      "test_count": 13,
+      "tests_passing": 13,
+      "tests_ignored": 0,
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
+    },
+    "BT20-014": {
+      "card_name": "SaviorHuckmon",
+      "validated_date": "2026-10-19",
+      "report": "qa/archetype-qa/dsl/jesmon-deck-2026-10-19.md",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Jesmon supplied deck (2026-10-19)",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_014.rs",
+      "test_count": 9,
+      "tests_passing": 9,
+      "tests_ignored": 0,
+      "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
     }
   }
 }

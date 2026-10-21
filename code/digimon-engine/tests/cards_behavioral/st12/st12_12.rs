@@ -1,13 +1,14 @@
 //! ST12-12 Sistermon Blanc
 //!
-//! Implemented slice:
-//! - [On Play] By trashing 1 card in your hand, Draw 2.
-//!
-//! Gap-routed slice:
-//! - Conditional Decoy (Red/Black) while you have a Huckmon/Royal Knight.
+//! Printed image + official bundle: optional discard cost for Draw 2,
+//! and conditional Decoy (Red/Black) while you have a Huckmon/Royal Knight.
+//! DCGO ST12_12.cs likewise permits declining the discard.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
-use digimon_engine::action::space::REPLACEMENT_ACCEPT;
+use digimon_engine::action::{
+    build_action_mask,
+    space::{PASS, REPLACEMENT_ACCEPT},
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -29,6 +30,7 @@ fn st12_12_has_on_play_discard_draw_clause() {
         .compiled_card("ST12-12")
         .expect("ST12-12 must be compiled");
 
+    assert_eq!(card.form.as_deref(), Some("Rookie"));
     assert!(
         card.effects.iter().any(|clause| matches!(
             clause,
@@ -52,8 +54,8 @@ fn st12_12_on_play_trashes_one_card_and_draws_two() {
         .memory(5)
         .start();
 
-    runner.play(0, 0);
-    runner.auto_resolve();
+    runner.play(0, 0).unwrap();
+    runner.auto_resolve().unwrap();
 
     assert_eq!(
         runner.game.players[0].trash.len(),
@@ -162,4 +164,108 @@ fn digimon(id: &str, name: &str, color: CardColor, traits: &[&str]) -> CardData 
     card.colors = vec![color];
     card.traits = traits.iter().map(|t| (*t).to_string()).collect();
     card
+}
+
+#[test]
+fn st12_12_declining_discard_does_not_draw() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("ST12-12")
+        .unwrap()
+        .add_card(make_test_card("KEEP", "Keep"))
+        .hand(0, &["ST12-12", "KEEP"])
+        .deck(0, &["KEEP", "KEEP"])
+        .memory(5)
+        .start();
+    r.play(0, 0).unwrap();
+    assert!(r.pending_is_optional(), "By trashing is an optional cost");
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+    r.execute_action(0, PASS).unwrap();
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.hand_size(0), 1);
+    assert_eq!(r.trash_size(0), 0);
+    assert_eq!(r.deck_size(0), 2, "unpaid cost must not Draw 2");
+}
+
+#[test]
+fn st12_12_empty_hand_cannot_pay_and_does_not_draw() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("ST12-12")
+        .unwrap()
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &["ST12-12"])
+        .deck(0, &["FILL", "FILL"])
+        .memory(5)
+        .start();
+    r.play(0, 0).unwrap();
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.hand_size(0), 0);
+    assert_eq!(r.trash_size(0), 0);
+    assert_eq!(r.deck_size(0), 2);
+}
+
+#[test]
+fn st12_12_decoy_black_ally_with_royal_knight_and_decline() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("ST12-12")
+        .unwrap()
+        .add_card(digimon(
+            "KNIGHT",
+            "Gallantmon",
+            CardColor::Red,
+            &["Royal Knight"],
+        ))
+        .add_card(digimon("BLACK", "Black Ally", CardColor::Black, &[]))
+        .memory(5)
+        .start();
+    r.place_on_field(0, "ST12-12", Some(0));
+    r.place_on_field(0, "KNIGHT", Some(0));
+    let ally = r.place_on_field(0, "BLACK", Some(0));
+    r.game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+    assert!(r.pending_is_optional());
+    assert_eq!(build_action_mask(&r.game, 0)[PASS as usize], 1.0);
+    r.execute_action(0, PASS).unwrap();
+    r.auto_resolve().unwrap();
+    assert_eq!(r.battle_area_size(0), 2);
+    assert_eq!(
+        r.game.players[0].trash[0].card_id(&r.game.card_data),
+        "BLACK"
+    );
+}
+
+#[test]
+fn st12_12_decoy_cannot_protect_itself() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("ST12-12")
+        .unwrap()
+        .add_card(digimon("HUCK", "Huckmon", CardColor::Red, &[]))
+        .memory(5)
+        .start();
+    let blanc = r.place_on_field(0, "ST12-12", Some(0));
+    r.place_on_field(0, "HUCK", Some(0));
+    r.game
+        .delete_permanent_with_cause(blanc, ReplacementCause::OpponentEffect);
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.battle_area_size(0), 1);
+}
+
+#[test]
+fn st12_12_decoy_ignores_own_effect_and_battle_deletion() {
+    for cause in [ReplacementCause::OwnEffect, ReplacementCause::Battle] {
+        let mut r = DebugRunner::builder()
+            .dsl_card("ST12-12")
+            .unwrap()
+            .add_card(digimon("HUCK", "Huckmon", CardColor::Red, &[]))
+            .memory(5)
+            .start();
+        r.place_on_field(0, "ST12-12", Some(0));
+        let ally = r.place_on_field(0, "HUCK", Some(0));
+        r.game.delete_permanent_with_cause(ally, cause);
+        assert!(r.pending_selection().is_none());
+        assert_eq!(r.battle_area_size(0), 1);
+        assert_eq!(
+            r.game.players[0].trash[0].card_id(&r.game.card_data),
+            "HUCK"
+        );
+    }
 }

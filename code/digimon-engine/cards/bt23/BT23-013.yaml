@@ -6,6 +6,7 @@ color: [red]
 cost: 12
 dp: 12000
 traits: [Holy Warrior, Royal Knight, CS]
+form: Mega
 attribute: Data
 
 alt_paths:
@@ -13,8 +14,18 @@ alt_paths:
     from: { level_eq: 5, color_is: red }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from:
+      any_of:
+        - name_is: SaviorHuckmon
+        - { level_eq: 5, trait_has: CS }
     cost: 3
+    ignore_requirements: true
+  - kind: digivolve
+    from: { name_is: Huckmon }
+    cost: 5
+    ignore_requirements: true
+    condition:
+      any_permanent: { of: opponent, kind: digimon, dp_gte: 10000 }
 
 effects:
   - kind: grant_keyword
@@ -31,6 +42,18 @@ effects:
           labels:
             - "Play Atho, Rene & Por Token"
             - "Play Sistermon from hand or trash"
+          legal_when:
+            - no_permanent:
+                of: you
+                name_is: "Atho, René & Por"
+            - count_gte:
+                filter:
+                  owner: you
+                  zone: [hand, trash]
+                  kind: digimon
+                  name_contains: Sistermon
+                  name_not_shared_by_field_digimon: you
+                n: 1
           prompt: "Choose what Jesmon plays"
       - if:
           condition: { equals: [play_choice, 0] }
@@ -61,7 +84,9 @@ effects:
     trigger_if:
       all_of:
         - event_target_owner: you
-        - event_target_kind: digimon
+        - any_of:
+            - event_card_kind: digimon
+            - event_card_kind: token
         - event_target_is_source: false
     summary: "[Your Turn][Once Per Turn] When another Digimon is played, this Digimon may attack"
     process:

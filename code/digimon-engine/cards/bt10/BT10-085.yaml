@@ -1,0 +1,61 @@
+# Printed image and official BT10-085 bundle; DCGO BT10_085.cs.
+card: BT10-085
+name: Sistermon Ciel
+kind: digimon
+level: 4
+color: [white]
+cost: 4
+dp: 5000
+traits: [Puppet]
+form: Champion
+attribute: Data
+
+effects:
+  - when: on_play
+    active_when: { your_turn: true }
+    summary: "[On Play] If it is your turn, 1 of your Digimon may digivolve into a Royal Knight in hand for its digivolution cost"
+    process:
+      - select_own_permanent:
+          prompt: "Select a Digimon to digivolve into a Royal Knight"
+          bind_as: base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: Royal Knight
+      - if:
+          condition: { binding_present: base }
+          then:
+            - select_hand:
+                prompt: "Select a Royal Knight to digivolve into for its cost"
+                of: you
+                bind_as: evolution
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: Royal Knight
+                    - can_digivolve_onto: base
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: evolution
+                cost: { reduce: 0 }
+  - when: on_digivolve
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_card_kind: digimon
+        - any_of:
+            - event_card_name_contains: Huckmon
+            - event_card_trait_has: Royal Knight
+    summary: "[Your Turn][Once Per Turn] When one of your Digimon digivolves into a Huckmon or Royal Knight, gain 1 memory"
+    process:
+      - gain_memory: 1
