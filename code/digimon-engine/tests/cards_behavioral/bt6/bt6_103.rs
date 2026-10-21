@@ -221,11 +221,30 @@ fn bt6_103_security_suspends_the_chosen_opponent_digimon() {
 
 #[test]
 fn bt6_103_security_does_not_touch_the_owners_digimon() {
+    // P1 (the security card's owner) chooses among P0's Digimon only. P1's own
+    // Digimon sits at slot 2, which no P0 permanent occupies, so a leak into
+    // the candidate set would show up as its own action id (100 + 2).
     let mut r = base().security(1, &[CARD_ID]).memory(3).start();
     let atk = r.place_on_field(0, "ATK", Some(0));
+    let other = r.place_on_field(0, "RED", Some(0));
+    r.place_on_field(1, "OPP-T", Some(0));
+    r.place_on_field(1, "OPP-B", Some(0));
     let p1_own = r.place_on_field(1, "OPP-A", Some(0));
+    assert_eq!(p1_own.index, 2);
     r.attack_player(atk, 1, false);
+    assert_eq!(r.pending_kind(), Some(SelectionKind::OppField), "P1 chooses");
+    let v = r.pending_selection_view().unwrap();
+    assert_eq!(v.selecting_player, 1);
+    let mut offered = v.valid_action_ids.clone();
+    offered.sort_unstable();
+    assert_eq!(
+        offered,
+        vec![100 + atk.index as u16, 100 + other.index as u16],
+        "exactly P0's Digimon (the attacker included); none of P1's own"
+    );
+    assert!(!offered.contains(&(100 + p1_own.index as u16)));
+    r.execute_action(1, 100 + other.index as u16).unwrap();
     let _ = r.auto_resolve();
+    assert!(suspended(&r, other), "the explicitly chosen P0 Digimon");
     assert!(!suspended(&r, p1_own), "P1's own Digimon is never a target");
-    assert!(suspended(&r, atk));
 }
