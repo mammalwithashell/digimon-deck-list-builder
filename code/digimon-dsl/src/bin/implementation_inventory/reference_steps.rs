@@ -3390,11 +3390,13 @@ impl Walk for digimon_dsl::step::PlayFromHandFreeArgs {
             hand_index,
             cost_delta,
             bind_as,
+            suspended,
         } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         hand_index.walk(c, &format!("{}.hand_index", path), "UNCLASSIFIED_STRING");
         cost_delta.walk(c, &format!("{}.cost_delta", path), "UNCLASSIFIED_STRING");
         bind_as.walk(c, &format!("{}.bind_as", path), "EXISTING_INSTANCE_BINDING");
+        suspended.walk(c, &format!("{}.suspended", path), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::step::PlayOrUseFromHandArgs {
@@ -4099,11 +4101,13 @@ impl Walk for digimon_dsl::step::GrantTriggeredEffectArgs {
             timing,
             expiry,
             body,
+            trigger_if,
         } = self;
         target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
         timing.walk(c, &format!("{}.timing", path), "ENGINE_TIMING_NAME");
         expiry.walk(c, &format!("{}.expiry", path), "ENGINE_EXPIRY_NAME");
         body.walk(c, &format!("{}.body", path), "UNCLASSIFIED_STRING");
+        trigger_if.walk(c, &format!("{}.trigger_if", path), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::step::EffectSourceKindSpec {
@@ -5496,7 +5500,7 @@ digimon_dsl::compiled::CompiledStep::TrashTopStackedSources{target,count,include
 digimon_dsl::compiled::CompiledStep::Hatch{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("Hatch"));of.walk(c, &format!("{}.of", &format!("{}@Hatch",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::MoveFromBreeding{of} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("MoveFromBreeding"));of.walk(c, &format!("{}.of", &format!("{}@MoveFromBreeding",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlayFromHand{of,hand_index,cost_delta,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromHand"));of.walk(c, &format!("{}.of", &format!("{}@PlayFromHand",path)), "UNCLASSIFIED_STRING");hand_index.walk(c, &format!("{}.hand_index", &format!("{}@PlayFromHand",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayFromHand",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromHand",path)), "EXISTING_INSTANCE_BINDING");},
-digimon_dsl::compiled::CompiledStep::PlayFromHandFree{of,hand_index,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromHandFree"));of.walk(c, &format!("{}.of", &format!("{}@PlayFromHandFree",path)), "UNCLASSIFIED_STRING");hand_index.walk(c, &format!("{}.hand_index", &format!("{}@PlayFromHandFree",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromHandFree",path)), "EXISTING_INSTANCE_BINDING");},
+digimon_dsl::compiled::CompiledStep::PlayFromHandFree{of,hand_index,bind_as,suspended} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromHandFree"));of.walk(c, &format!("{}.of", &format!("{}@PlayFromHandFree",path)), "UNCLASSIFIED_STRING");hand_index.walk(c, &format!("{}.hand_index", &format!("{}@PlayFromHandFree",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromHandFree",path)), "EXISTING_INSTANCE_BINDING");suspended.walk(c, &format!("{}.suspended", &format!("{}@PlayFromHandFree",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::UseOptionFromHand{of,filter,use_cost_lte_opponent_memory,optional,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("UseOptionFromHand"));of.walk(c, &format!("{}.of", &format!("{}@UseOptionFromHand",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@UseOptionFromHand",path)), "UNCLASSIFIED_STRING");use_cost_lte_opponent_memory.walk(c, &format!("{}.use_cost_lte_opponent_memory", &format!("{}@UseOptionFromHand",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@UseOptionFromHand",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@UseOptionFromHand",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::UseOptionFromTrash{of,filter,cost_delta,optional,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("UseOptionFromTrash"));of.walk(c, &format!("{}.of", &format!("{}@UseOptionFromTrash",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@UseOptionFromTrash",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@UseOptionFromTrash",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@UseOptionFromTrash",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@UseOptionFromTrash",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::UseOptionFromRevealed{of,card,cost_delta} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("UseOptionFromRevealed"));of.walk(c, &format!("{}.of", &format!("{}@UseOptionFromRevealed",path)), "UNCLASSIFIED_STRING");card.walk(c, &format!("{}.card", &format!("{}@UseOptionFromRevealed",path)), "EXISTING_INSTANCE_BINDING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@UseOptionFromRevealed",path)), "UNCLASSIFIED_STRING");},

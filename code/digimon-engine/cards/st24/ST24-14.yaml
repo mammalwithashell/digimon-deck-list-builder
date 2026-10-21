@@ -9,8 +9,9 @@
 #     this Tamer, suspend 1 of your opponent's Digimon.
 #   Inherited: [Security] Play this card without paying the cost.
 #
-# (DCGO carries a [Rule] name-alias — also treated as "Yoshino Fujieda"/"Keenan
-#  Crier" — metadata-only, NOT authored, exactly as ST23-13/14 omit theirs.)
+# ＜Rule＞ Name: Also treated as [Yoshino Fujieda]/[Keenan Crier] (official
+#  Bandai DB, data/card_bundles/ST24-14.md) → top-level `also_treated_as`, so
+#  `name_is` matches it (e.g. BT13-049 Lalamon's "1 [Yoshino Fujieda]").
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Green/ST24_14.cs
 #
@@ -36,6 +37,7 @@ kind: tamer
 color: [green, purple]
 cost: 4
 traits: [DATA SQUAD]
+also_treated_as: ["Yoshino Fujieda", "Keenan Crier"]
 
 effects:
   # ─── [SOMP][On Play] may place top deck card FD under self; then if opp has a

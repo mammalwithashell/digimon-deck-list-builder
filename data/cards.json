@@ -37552,11 +37552,6 @@
         "card_color": 3,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 3,
-        "level": 3,
-        "memory_cost": 0
       }
     ],
     "xros_req": ""

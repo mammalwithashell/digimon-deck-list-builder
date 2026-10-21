@@ -1,0 +1,90 @@
+# BT14-044 Palmon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Vegetation. Form: Rookie. Attribute: Data.
+# Digivolve: green Lv.2 / cost 0 (official DB + image).
+#
+# Printed text (official Bandai DB, data/card_bundles/BT14-044.md; image agrees):
+#   [Start of Your Main Phase] 1 of your opponent's Digimon gains "[All Turns]
+#   When this Digimon becomes suspended, lose 2 memory." until the end of
+#   their turn.
+#   Inherited: [Your Turn][Once Per Turn] When this Digimon would digivolve, if
+#   you have a green Tamer, reduce the digivolution cost by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT14/Green/BT14_044.cs
+#   - OnStartMainPhase ActivateClass (not optional), IsOwnerTurn, CanActivate =
+#     an opponent battle-area Digimon. Mandatory SelectPermanent (canNoSelect
+#     false) → AddEffectToPermanent(selected, UntilOpponentTurnEnd,
+#     OnTappedAnyone) whose body is `selectedPermanent.TopCard.Owner
+#     .AddMemory(-2)` — the SUSPENDED Digimon's controller loses the memory.
+#   - Inherited: ChangeCostClass -1 (maxCountPerTurn 1, inherited),
+#     IsOwnerTurn, an own green Tamer, applied to a digivolution of THIS
+#     permanent.
+#
+# Modeling:
+#   - Clause 1 — `start_of_your_main_phase`, mandatory; gated on an opponent
+#     Digimon existing (DCGO CanActivate); `select_opponent_permanent` (a
+#     Digimon) + `grant_triggered_effect` (EX10-034 shape) with timing
+#     `on_suspend` ([All Turns]: a granted trigger fires on either turn),
+#     `trigger_if: { event_target_is_source: true }` ("When THIS Digimon
+#     becomes suspended"; G-DSL-GRANTED-TRIGGER-QUALIFIER) and expiry
+#     `end_of_opponents_turn` ("until the end of their turn"). The
+#     granted body runs as the carrier's own effect, so `lose_memory` is the
+#     carrier's controller's loss.
+#   - Clause 2 — inherited `cost_reduction` on this permanent's digivolve
+#     (`source_is_cost_target_permanent`, BT14-046 shape), gated on an own
+#     green Tamer; mandatory; OPT.
+
+card: BT14-044
+name: Palmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Vegetation]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Start of Your Main Phase] 1 of your opponent's Digimon gains \"[All Turns] When this Digimon becomes suspended, lose 2 memory.\" until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: debuff_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to gain \"[All Turns] When this Digimon becomes suspended, lose 2 memory.\""
+      - grant_triggered_effect:
+          target: debuff_target
+          timing: on_suspend
+          # "When THIS Digimon becomes suspended": `on_suspend` is an observer
+          # timing (every suspension on the field reaches every carrier), so
+          # the grant's trigger qualifier keeps it to the carrier's own event.
+          trigger_if: { event_target_is_source: true }
+          expiry: end_of_opponents_turn
+          body:
+            - lose_memory: 2
+
+  - kind: cost_reduction
+    scope: inherited
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            color_is: green
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][Once Per Turn] When this Digimon would digivolve, if you have a green Tamer, reduce the digivolution cost by 1"

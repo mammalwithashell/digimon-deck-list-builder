@@ -1,0 +1,40 @@
+# BT3-054 Blossomon — Digimon, Lv.5, Green, DP 7000, Cost 7.
+# Traits: Vegetation. Form: Ultimate. Attribute: Data.
+# Digivolve: green Lv.4 / cost 3 (official DB + image).
+#
+# Printed text (official Bandai DB, data/card_bundles/BT3-054.md; image agrees):
+#   ＜Digisorption -3＞ (When one of your Digimon digivolves into this card from
+#   your hand, you may suspend 1 of your Digimon to reduce the memory cost of
+#   the digivolution by 3.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT3/Green/BT3_054.cs —
+#   BeforePayCost ActivateClass (optional) for a digivolution INTO this hand
+#   card; SelectPermanent over the owner's suspendable Digimon (the
+#   digivolving one included), Mode.Tap → "Digivolution Cost -3".
+#
+# Modeling: the printed keyword `<Digisorption -3>` (§16-10) —
+#   `grant_keyword: Digisorption, value: 3` → `Keyword::Digisorption(3)`, read
+#   off the HAND card by the digivolve reducer chain (accept/decline, then the
+#   Digimon to suspend; §16-10-3 optional condition, mandatory reduction).
+
+card: BT3-054
+name: Blossomon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Vegetation]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Digisorption
+    value: 3
+    summary: "<Digisorption -3>"

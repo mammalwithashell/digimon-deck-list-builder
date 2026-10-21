@@ -1,0 +1,70 @@
+# BT2-047 Argomon — Digimon, Lv.5, Green, DP 6000, Cost 8.
+# Traits: Mutant. Form: Ultimate. Attribute: Virus.
+# Digivolve: green Lv.4 / cost 3 (official DB + image).
+#
+# Printed text (official Bandai DB, data/card_bundles/BT2-047.md; image agrees):
+#   ＜Digisorption -3＞ (When one of your Digimon digivolves into this card from
+#   your hand, you may suspend 1 of your Digimon to reduce the memory cost of
+#   the digivolution by 3.)
+#   Inherited: [When Attacking] You may play 1 level 3 green Digimon card from
+#   your hand suspended without paying its memory cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT2/Green/BT2_047.cs
+#   - BeforePayCost "Digisorption -3" (optional), as BT3-054.
+#   - OnAllyAttack (inherited, optional): SelectHandEffect (canNoSelect) over
+#     own level-3 green Digimon cards that can be played without paying →
+#     PlayPermanentCards(payCost false, isTapped true, activateETB true).
+#
+# Rulings: Q1018 — the played Digimon's [On Play] effects activate.
+#
+# Modeling:
+#   - `<Digisorption -3>` — printed keyword (BT3-054).
+#   - Inherited `when_attacking`, optional ("You may"): optional `select_hand`
+#     (level 3, green, Digimon) + `play_from_hand_free { suspended: true }` —
+#     the permanent enters suspended (G-PLAY-ENTERS-SUSPENDED slot; no suspend
+#     event), On Play fires (Q1018). G-DSL-PLAY-FROM-HAND-FREE-SUSPENDED.
+
+card: BT2-047
+name: Argomon
+kind: digimon
+level: 5
+color: [green]
+cost: 8
+dp: 6000
+traits: [Mutant]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Digisorption
+    value: 3
+    summary: "<Digisorption -3>"
+
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    summary: "[When Attacking] You may play 1 level 3 green Digimon card from your hand suspended without paying its memory cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: play_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - color_is: green
+          prompt: "You may play 1 level 3 green Digimon card from your hand suspended without paying its memory cost"
+      - if:
+          condition: { binding_present: play_pick }
+          then:
+            - play_from_hand_free:
+                of: you
+                hand_index: play_pick
+                suspended: true

@@ -619,6 +619,9 @@ pub struct CompiledPredicate {
     /// G-DSL-DURING-ATTACK.
     #[serde(default)]
     pub during_attack: Option<bool>,
+    /// See `PredicateSpec::can_gain_memory` (BT10-057). G-DSL-CAN-GAIN-MEMORY.
+    #[serde(default)]
+    pub can_gain_memory: Option<bool>,
     pub in_breeding: Option<bool>,
     pub on_field: Option<bool>,
     pub dna_origin: Option<bool>,
@@ -2021,6 +2024,10 @@ pub enum CompiledStep {
         /// `None` preserves prior behavior (no binding insert).
         /// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
         bind_as: Option<String>,
+        /// Enter the battle area suspended (not a suspend event).
+        /// G-DSL-PLAY-FROM-HAND-FREE-SUSPENDED.
+        #[serde(default)]
+        suspended: bool,
     },
     UseOptionFromHand {
         of: CompiledPlayerRef,
@@ -2445,6 +2452,10 @@ pub enum CompiledStep {
         timing: String,
         expiry: String,
         body: Vec<CompiledStep>,
+        /// Granted trigger qualifier (`GrantTriggeredEffectArgs::trigger_if`).
+        /// G-DSL-GRANTED-TRIGGER-QUALIFIER.
+        #[serde(default)]
+        trigger_if: Option<CompiledPredicate>,
     },
     SelectOwnPermanent {
         filter: CompiledPredicate,

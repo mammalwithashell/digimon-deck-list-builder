@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-19",
+  "last_updated": "2026-10-21",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14778,6 +14778,211 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_138.rs",
       "test_count": 6,
       "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT9-047": {
+      "card_name": "Pomumon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_047.rs",
+      "test_count": 10,
+      "patterns": [
+        "D6"
+      ],
+      "notes": "Every printed clause covered: [All Turns] any-player CannotPlayDigimonByEffect flood_gate (installed via real hand play; effect plays blocked for both players; hand play, breeding move (Q1844) legal; effect play into breeding blocked (Q5206); lifts when Pomumon leaves). §3-4-7-4 breeding-area gate via not:in_breeding (engine leak logged G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE). DCGO has no BT9_047.cs (Pillomon/Gotsumon reprint). DCGO oracle unmeasured."
+    },
+    "EX4-002": {
+      "card_name": "Kokomon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/ex4/EX4-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_002.rs",
+      "test_count": 11,
+      "patterns": [
+        "G4",
+        "E2"
+      ],
+      "notes": "Inherited [Your Turn][OPT] on_suspend <Draw 1> with trigger_if event_is_effect_initiated + own Digimon (EX6-004 shape). Tests: effect suspend of another own Digimon / of the carrier draws; attack declaration (Q3438), non-effect suspend, opponent's Digimon, opponent's turn, Kokomon not a source: no draw; OPT lockout + reset. DCGO oracle unmeasured."
+    },
+    "BT10-048": {
+      "card_name": "Sunflowmon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt10/BT10-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_048.rs",
+      "test_count": 17,
+      "patterns": [
+        "E2",
+        "G4"
+      ],
+      "notes": "[When Digivolving] optional processing condition (§15-7): optional own-green-Digimon suspend pick -> effect_suspended_any_own_digimon -> optional free play from hand of a Digimon with Vegetation/Plant/Fairy (trait_contains) and DP<=3000; §15-7-4 condition gate; §15-7-5 suspend allowed with nothing playable. Inherited [Your Turn][OPT] effect-suspend <Draw 1>. Tests drive the real digivolve action. Data fix: cards.json + card_overrides.json drop the phantom green Lv.3/cost 0 circle (image + DCGO asset print only cost 2; official mirror also wrong). Q1974 (Digisorption timing) not exercised: no Digisorption card in the pack. DCGO oracle unmeasured."
+    },
+    "BT10-053": {
+      "card_name": "Ajatarmon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt10/BT10-053.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_053.rs",
+      "test_count": 15,
+      "patterns": [
+        "E2",
+        "G4"
+      ],
+      "notes": "[Main][OPT] activated through the action mask: optional own-green-Digimon suspend (self allowed, Q1977) -> effect_suspended re-check -> optional free play from hand of a Vegetation/Plant/Fairy Digimon with DP<=3000; §15-6-3/§15-7-4 gate (illegal with no unsuspended green Digimon); OPT lockout + reset. Inherited [Your Turn][OPT] effect-suspend gain 1 memory (attack suspend excluded, Q1978); buried-copy integration. DCGO lets [Main] be declared with only suspended green Digimon (no-op); ours follows §15-6-3. DCGO oracle unmeasured."
+    },
+    "BT14-085": {
+      "card_name": "Mimi Tachikawa",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt14/BT14-085.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_085.rs",
+      "test_count": 13,
+      "patterns": [
+        "A2",
+        "B1"
+      ],
+      "notes": "[On Play] reveal 3, add 1 Digimon with Vegetation/Plant/Fairy (trait_contains) via single-bucket select_reveal_buckets (min 1), rest to deck bottom. [Your Turn] when an effect suspends a Digimon (any player's, Q2458), optional suspend-self cost -> gain 1 memory; no OPT; attack suspend, opponent's turn, already-suspended Mimi (§15-7-4) negatives. [Security] play self free. DCGO oracle unmeasured."
+    },
+    "BT14-046": {
+      "card_name": "Togemon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt14/BT14-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_046.rs",
+      "test_count": 18,
+      "patterns": [
+        "D2",
+        "E2"
+      ],
+      "notes": "Clause 1: field-hosted cost_reduction, when_any_ally_played green Tamer + cost_target_from_hand, optional, OPT, interactive pay_cost (select own unsuspended green Digimon -> suspend), amount 3; §15-7-4 gate. Clause 2: inherited cost_reduction on this permanent's digivolve (source_is_cost_target_permanent) with an own green Tamer, mandatory, OPT. Substrate fix G-COST-REDUCTION-ALLY-PLAYED-OWNER: when_any_ally_played now requires the played card to belong to the reducer's controller (opponent's green Tamer play was offered Togemon's prompt). DCGO oracle unmeasured."
+    },
+    "BT14-044": {
+      "card_name": "Palmon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/bt14/BT14-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_044.rs",
+      "test_count": 18,
+      "patterns": [
+        "B1",
+        "D2"
+      ],
+      "notes": "[Start of Your Main Phase] mandatory opponent-Digimon pick + grant_triggered_effect on_suspend / end_of_opponents_turn, body lose_memory 2 (the carrier's controller), trigger_if event_target_is_source (G-DSL-GRANTED-TRIGGER-QUALIFIER: on_suspend is an observer timing, any suspension made the carrier's controller lose 2). Inherited [Your Turn][OPT] digivolve cost -1 with an own green Tamer (BT14-046 shape). DCGO oracle unmeasured."
+    },
+    "BT2-047": {
+      "card_name": "Argomon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_047.rs",
+      "test_count": 11,
+      "patterns": [
+        "H1",
+        "F1"
+      ],
+      "notes": "<Digisorption -3> printed keyword (grant_keyword value 3, read off the hand card by the digivolve reducer chain). Inherited [When Attacking] optional select_hand level 3 green Digimon + play_from_hand_free suspended: true (G-DSL-PLAY-FROM-HAND-FREE-SUSPENDED: enters suspended, no suspend event); Q1018 On Play activates. DCGO oracle unmeasured."
+    },
+    "BT10-057": {
+      "card_name": "BloomLordmon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/bt10/BT10-057.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_057.rs",
+      "test_count": 16,
+      "patterns": [
+        "F1",
+        "D3"
+      ],
+      "notes": "[When Digivolving] mandatory clause: optional own unsuspended Digimon suspend (continue_on_decline), gain_memory = own suspended Vegetation/Plant/Fairy Digimon (trait_contains, self included), can_gain_memory (DCGO CanAddMemory gate; EX13-050 witness) AND count_gte 2 -> unsuspend self + Piercing until end of turn (count compared, as DCGO plusMemory; memory-cap edge is a residual without a ruling). [Your Turn] aura +2000 DP per 2 own suspended Digimon and base-inclusive security_attack_fn. Q1980/Q1981/Q1982 tested. DCGO oracle unmeasured."
+    },
+    "P-166": {
+      "card_name": "Galemon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/p/P-166.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_166.rs",
+      "test_count": 16,
+      "patterns": [
+        "F1",
+        "D2"
+      ],
+      "notes": "[On Play][When Digivolving] optional any-Digimon suspend (continue_on_decline), then if your turn optional digivolve into an Avian/Bird-trait hand Digimon via effect_initiated_digivolve with reduce = suspended_count {of: any, exclude_source}. Inherited [Your Turn] +2000 DP. PARTIAL: Q4276 - a Digimon suspended by a would-digivolve reducer (BT3-103) during this digivolution must count toward the reduction; the formula is evaluated when the effect starts the digivolution (as DCGO). G-ENGINE-EFFECT-DIGIVOLVE-COST-LATE-COUNT; witness p_166_q4276_hidden_potential_suspension_counts (ignored; run with --ignored it fails only at the final cost: 3 paid instead of 2). DCGO oracle unmeasured."
+    },
+    "BT3-054": {
+      "card_name": "Blossomon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_054.rs",
+      "test_count": 8,
+      "patterns": [
+        "H1"
+      ],
+      "notes": "<Digisorption -3> printed keyword only (grant_keyword value 3); §16-10-1..5 behaviour (optional, before payment, may suspend the digivolving Digimon, only own unsuspended Digimon, not on a play) tested through the real digivolve action. DCGO oracle unmeasured."
+    },
+    "BT13-049": {
+      "card_name": "Lalamon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_049.rs",
+      "test_count": 14,
+      "patterns": [
+        "A1",
+        "D2"
+      ],
+      "notes": "[On Play] reveal 3, two mandatory buckets (Digimon with Vegetation/Plant/Fairy trait_contains; name_is Yoshino Fujieda) + no_duplicate_cards, rest to bottom in a chosen order. ST24-14 now authors its <Rule> name alias (also_treated_as Yoshino Fujieda / Keenan Crier) so it fills the Yoshino bucket. Inherited [Your Turn][OPT] digivolve -1 with a green Tamer. DCGO oracle unmeasured."
+    },
+    "BT24-061": {
+      "card_name": "Vademon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a3-mervamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Mervamon — EX13 meta slice a3-mervamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_061.rs",
+      "test_count": 16,
+      "patterns": [
+        "G4"
+      ],
+      "notes": "Standard Lv.4 black + special Lv.4 [TS] digivolve (both cost 3). [On Play][When Digivolving] mandatory pick of 1 opponent Digimon or Tamer with play cost <=3 (DCGO HasPlayCost && GetCostItself<=3, canNoSelect false) returned to the top of its owner's deck, stacked cards trashed (§4-7-8). Inherited [When Attacking][OPT] mandatory <De-Digivolve 1> on an opponent Digimon (§16-12), driven through real attacks incl. OPT lockout + next-turn reset and top-card-inactive negative. DCGO BT24/Black/BT24_061.cs; no official Q&A. Mutation-checked (position/cost/OPT)."
     }
   }
 }

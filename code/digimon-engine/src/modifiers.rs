@@ -763,12 +763,24 @@ impl KeywordEntry {
 pub type GrantedEffectBody =
     std::sync::Arc<dyn Fn(&mut crate::effect_context::EffectContext<'_>) + Send + Sync + 'static>;
 
+/// Trigger qualifier of a granted triggered effect (G-DSL-GRANTED-TRIGGER-
+/// QUALIFIER): decided when the event triggers the granted effect
+/// (§15-8-3-1 / §15-8-3-4), read with the carrier as `source_permanent` and
+/// the event's trigger context installed. An observer timing (`OnSuspend`)
+/// enqueues a granted entry on every carrier for every matching event; the
+/// qualifier keeps "When THIS Digimon becomes suspended" to its own event.
+pub type GrantedTriggerQualifier = std::sync::Arc<
+    dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync + 'static,
+>;
+
 /// Phase 4i — `Debug`-friendly wrapper around the granted-effect body
 /// registry. The body closures are `Arc<dyn Fn ...>` which don't
 /// implement `Debug`; the wrapper hides them behind a count.
 #[derive(Default, Clone)]
 pub struct GrantedEffectBodyRegistry {
     pub bodies: std::collections::HashMap<u64, GrantedEffectBody>,
+    /// Trigger qualifiers keyed by the same body id (absent = none).
+    pub qualifiers: std::collections::HashMap<u64, GrantedTriggerQualifier>,
 }
 
 impl std::fmt::Debug for GrantedEffectBodyRegistry {
@@ -787,7 +799,14 @@ impl GrantedEffectBodyRegistry {
         self.bodies.get(&id)
     }
     pub fn remove(&mut self, id: u64) -> Option<GrantedEffectBody> {
+        self.qualifiers.remove(&id);
         self.bodies.remove(&id)
+    }
+    pub fn insert_qualifier(&mut self, id: u64, qualifier: GrantedTriggerQualifier) {
+        self.qualifiers.insert(id, qualifier);
+    }
+    pub fn qualifier(&self, id: u64) -> Option<&GrantedTriggerQualifier> {
+        self.qualifiers.get(&id)
     }
 }
 

@@ -441,7 +441,7 @@ pub fn lower_for_kind_with_clause_index(
     out
 }
 
-fn predicate_subject_for_source(
+pub(crate) fn predicate_subject_for_source(
     rctx: &crate::effect_context::EffectReadContext<'_>,
 ) -> PredicateSubject {
     let Some(handle) = rctx.source_permanent else {

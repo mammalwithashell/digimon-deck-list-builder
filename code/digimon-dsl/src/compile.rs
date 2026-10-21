@@ -1298,6 +1298,7 @@ fn compile_predicate(
         can_hatch: p.can_hatch.map(compile_player_ref),
         digimon_attacked_this_turn: p.digimon_attacked_this_turn.map(compile_player_ref),
         during_attack: p.during_attack,
+        can_gain_memory: p.can_gain_memory,
         in_breeding: p.in_breeding,
         on_field: p.on_field,
         dna_origin: p.dna_origin,
@@ -3343,6 +3344,7 @@ fn compile_step(
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
             bind_as: a.bind_as.clone(),
+            suspended: a.suspended,
         },
         S::UseOptionFromHand(a) => CompiledStep::UseOptionFromHand {
             of: compile_player_ref(a.of),
@@ -3782,6 +3784,14 @@ fn compile_step(
             }
         }
         S::GrantTriggeredEffect(a) => {
+            if a.dynamic && a.trigger_if.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.trigger_if"),
+                    message: "trigger_if is supported on static (non-dynamic) granted effects only"
+                        .to_string(),
+                });
+            }
             if a.dynamic
                 && (!matches!(&a.target, crate::step::ModifierTarget::Filter(_))
                     || !matches!(
@@ -3817,6 +3827,9 @@ fn compile_step(
                     .enumerate()
                     .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                     .collect(),
+                trigger_if: a.trigger_if.as_ref().map(|p| {
+                    compile_predicate(p, &format!("{prefix}.trigger_if"), card_id, errors)
+                }),
             }
         }
         S::GrantEffectImmunity(a) => {
@@ -4840,6 +4853,27 @@ effects:
         assert!(
             errors.contains("unknown replacement timing"),
             "unexpected errors:\n{errors}"
+        );
+    }
+
+    #[test]
+    fn can_gain_memory_predicate_compiles_and_round_trips() {
+        // G-DSL-CAN-GAIN-MEMORY (BT10-057): a game-level leaf, carried
+        // verbatim; absent stays `None`.
+        let spec: crate::predicate::PredicateSpec =
+            serde_yml::from_str("can_gain_memory: true").unwrap();
+        let mut errors = Vec::new();
+        let compiled = compile_predicate(&spec, "t", "TEST", &mut errors);
+        assert!(errors.is_empty(), "{errors:?}");
+        assert_eq!(compiled.can_gain_memory, Some(true));
+        let bytes = bincode::serialize(&compiled).unwrap();
+        let back: CompiledPredicate = bincode::deserialize(&bytes).unwrap();
+        assert_eq!(back, compiled);
+        let none: crate::predicate::PredicateSpec =
+            serde_yml::from_str("your_turn: true").unwrap();
+        assert_eq!(
+            compile_predicate(&none, "t", "TEST", &mut errors).can_gain_memory,
+            None
         );
     }
 

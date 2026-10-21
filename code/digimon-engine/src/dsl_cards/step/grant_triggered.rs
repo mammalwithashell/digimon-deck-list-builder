@@ -57,6 +57,7 @@ pub(crate) fn try_run(
         timing,
         expiry,
         body,
+        trigger_if,
     } = step
     else {
         return false;
@@ -111,12 +112,28 @@ pub(crate) fn try_run(
     // the inner ctx automatically — the engine sets them at fire time
     // per `Game::fire_granted_triggered_effects`.
     let body_arc: Arc<Vec<CompiledStep>> = Arc::new(body.clone());
+    // G-DSL-GRANTED-TRIGGER-QUALIFIER: the grant's `trigger_if`, read with
+    // the carrier as the effect's source (`predicate_subject_for_source`).
+    let qualifier: Option<crate::modifiers::GrantedTriggerQualifier> =
+        trigger_if.clone().map(|predicate| {
+            let q: crate::modifiers::GrantedTriggerQualifier = Arc::new(move |rctx| {
+                let subject = crate::dsl_cards::lower_triggered::predicate_subject_for_source(rctx);
+                eval_predicate(&predicate, rctx, subject)
+            });
+            q
+        });
     for carrier in matches {
         let body_for_closure = body_arc.clone();
-        ctx.grant_triggered_effect(carrier, engine_timing, engine_expiry, move |inner_ctx| {
-            let mut bindings = Bindings::default();
-            let _ = run_steps(&body_for_closure, inner_ctx, &mut bindings);
-        });
+        ctx.grant_triggered_effect_qualified(
+            carrier,
+            engine_timing,
+            engine_expiry,
+            qualifier.clone(),
+            move |inner_ctx| {
+                let mut bindings = Bindings::default();
+                let _ = run_steps(&body_for_closure, inner_ctx, &mut bindings);
+            },
+        );
     }
     true
 }
