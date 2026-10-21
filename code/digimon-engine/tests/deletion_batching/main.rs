@@ -10,3 +10,4 @@
 mod aoe_save_park;
 mod mutual_destruction;
 mod rule_check_cause;
+mod simultaneous_observer;
