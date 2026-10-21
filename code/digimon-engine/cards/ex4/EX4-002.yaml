@@ -1,0 +1,44 @@
+# EX4-002 Kokomon — Digi-Egg (In-Training), Lv.2, Green, no DP, no play cost.
+# Traits: Lesser.
+#
+# Printed text (official Bandai DB, data/card_bundles/EX4-002.md; image agrees)
+# — INHERITED ONLY:
+#   [Your Turn][Once Per Turn] When an effect suspends one of your Digimon,
+#   <Draw 1>. (Draw 1 card from your deck.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX4/Green/EX4_002.cs
+#   OnTappedAnyone, SetIsInheritedEffect, IsOwnerTurn, maxCountPerTurn 1,
+#   CanTriggerWhenPermanentSuspends(own battle-area Digimon) +
+#   IsByEffect(hashtable, null) → DrawClass(owner, 1). isOptional false.
+#
+# Official Q&A Q3438: "Attack with this Digimon" suspends by the ATTACK, not by
+# an effect — no activation.
+#
+# Same shape as EX6-004 Kokomon: "When an effect suspends one of your
+# Digimon" is the trigger qualifier (`trigger_if`, decided when the suspend
+# event triggers the effect); `event_is_effect_initiated` reads the suspend
+# event's effect bit (G-SUSPEND-EFFECT-INITIATED: EffectContext::suspend tags
+# true, attack declarations / non-effect suspends tag false).
+
+card: EX4-002
+name: Kokomon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+    summary: "[Your Turn][Once Per Turn] When an effect suspends one of your Digimon, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

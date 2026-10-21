@@ -14793,6 +14793,22 @@
         "D6"
       ],
       "notes": "Every printed clause covered: [All Turns] any-player CannotPlayDigimonByEffect flood_gate (installed via real hand play; effect plays blocked for both players; hand play, breeding move (Q1844) legal; effect play into breeding blocked (Q5206); lifts when Pomumon leaves). §3-4-7-4 breeding-area gate via not:in_breeding (engine leak logged G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE). DCGO has no BT9_047.cs (Pillomon/Gotsumon reprint). DCGO oracle unmeasured."
+    },
+    "EX4-002": {
+      "card_name": "Kokomon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/ex4/EX4-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_002.rs",
+      "test_count": 11,
+      "patterns": [
+        "G4",
+        "E2"
+      ],
+      "notes": "Inherited [Your Turn][OPT] on_suspend <Draw 1> with trigger_if event_is_effect_initiated + own Digimon (EX6-004 shape). Tests: effect suspend of another own Digimon / of the carrier draws; attack declaration (Q3438), non-effect suspend, opponent's Digimon, opponent's turn, Kokomon not a source: no draw; OPT lockout + reset. DCGO oracle unmeasured."
     }
   }
 }
