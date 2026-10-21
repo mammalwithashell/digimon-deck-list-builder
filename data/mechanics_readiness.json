@@ -1,0 +1,30 @@
+{
+  "blocking": [],
+  "counts": {
+    "gap_blocking": 0,
+    "gap_nonblocking": 318,
+    "not_testable": 152,
+    "proven": 245,
+    "total": 715
+  },
+  "mechanics_set": [
+    "effects-and-ordering",
+    "keywords",
+    "attack-and-timing",
+    "security",
+    "battle",
+    "blocking",
+    "rule-checks",
+    "turn-flow",
+    "digivolution-and-costs",
+    "play-and-costs",
+    "card-use-and-costs",
+    "link"
+  ],
+  "ready": true,
+  "source": {
+    "obligations_sha256": "e338a00a2e51491da2a2dffd5491a77ff0a5a02a1e7a78c918af22365e7802ce",
+    "rules_version": "4.3"
+  },
+  "version": 1
+}
