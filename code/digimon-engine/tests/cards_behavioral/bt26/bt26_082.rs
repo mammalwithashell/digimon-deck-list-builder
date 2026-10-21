@@ -143,6 +143,88 @@ fn bt26_082_face_up_security_plays_itself_at_end_of_opponents_turn() {
     assert_eq!(r.security_count(0), 1);
 }
 
+/// A red Lv.4 5000 DP Digimon with <Engage> (the rules-conformance fixture).
+const ENGAGE_YAML: &str = r#"
+card: ENGAGE
+name: Engagemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: Engage
+    summary: "<Engage> (At the end of your turn, this Digimon may attack.)"
+"#;
+
+/// Official Q&A Q7122 (2026-08-18): "An opponent's Digimon attacks the player
+/// with an effect at the end of their turn. What happens if this card's
+/// {Security} [End of Opponent's Turn] effect then plays this card, my
+/// security stack is reduced to 0 cards, and the attack against the player is
+/// successful?" -- "You lose the game."
+///
+/// [End of Your Turn] and [End of Opponent's Turn] both trigger when the turn
+/// ends (CR 4.3 §15-16-12-1/-2, §15-8-3-6): one simultaneous pool, the turn
+/// player's effects first, then the non-turn player's (§15-4-3-5). P0's
+/// <Engage> (§16-44-2) declares its attack inside that pool, and the counter
+/// timing waits until every triggered effect has resolved (§11-1-4), so P1's
+/// face-up Ravemon plays itself before the attack reaches its security check.
+/// With 0 security cards the successful attack on the player wins the game.
+#[test]
+fn bt26_082_q7122_engage_attack_after_security_play_wins_the_game() {
+    let mut r = builder()
+        .from_dsl_yaml(ENGAGE_YAML)
+        .expect("ENGAGE fixture compiles")
+        .security(1, &[CARD_ID])
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .start();
+    r.set_first_player(0);
+    let engage = r.place_on_field(0, "ENGAGE", Some(0));
+    let idx = r.game.players[1].security[0].card_index;
+    r.game.players[1].face_up_security.insert(idx);
+
+    r.end_turn();
+    let attack = digimon_engine::action::space::encode_attack(
+        engage.index as u16,
+        digimon_engine::action::space::SECURITY_TARGET,
+    );
+    assert!(
+        r.pending_selection()
+            .is_some_and(|sel| sel.selecting_player == 0 && sel.valid_action_ids.contains(&attack)),
+        "<Engage> offers its attack inside the end-of-turn pool: {:?}",
+        r.pending_selection()
+    );
+    r.game.decode_action(attack, 0);
+    for _ in 0..12 {
+        let Some(sel) = r.pending_selection() else { break };
+        if sel.is_optional {
+            r.decline_optional_trigger().expect("decline an optional prompt");
+        } else {
+            let (player, act) = (sel.selecting_player, sel.valid_action_ids[0]);
+            r.execute_action(player, act).expect("take the first pick");
+        }
+    }
+
+    assert!(
+        field_ids(&r, 1).contains(&CARD_ID.to_string()),
+        "Ravemon's {{Security}} [End of Opponent's Turn] play resolved before the counter timing (§11-1-4)"
+    );
+    assert_eq!(r.security_count(1), 0);
+    assert!(r.game.game_over, "Q7122: the successful attack on a player with 0 security ends the game");
+    assert_eq!(r.game.winner, Some(0), "Q7122: the player whose Ravemon was played loses");
+    // Game over is terminal: the end of turn the attack interrupted does not
+    // resume, so no turn change follows the win.
+    assert_eq!(
+        r.game.current_phase,
+        digimon_engine::enums::GamePhase::GameOver,
+        "the end of turn does not continue after the game ended"
+    );
+    assert_eq!(r.game.turn_player(), 0, "the turn never passes to P1");
+}
+
+
 #[test]
 fn bt26_082_face_down_security_does_nothing() {
     let mut r = builder()

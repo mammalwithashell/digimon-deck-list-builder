@@ -141,8 +141,9 @@ pub(crate) struct DelayedOptionLifecycleResume {
 /// parked it. The boundary does not pass until that pool has resolved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TurnBoundaryResume {
-    /// The `EndOfOpponentsTurn` pool of `rotate_turn_player`: finish the
-    /// rotation (memory floor, turn advance, seesaw flip, `begin_turn`).
+    /// Whatever `rotate_turn_player`'s expiries queued (the `[End of
+    /// Opponent's Turn]` effects resolve earlier, in the end-of-turn pool):
+    /// finish the rotation (memory floor, turn advance, seesaw flip, `begin_turn`).
     FinishTurnRotation { ending_player: PlayerId },
     /// The `UntilNextUnsuspend` pool at the start of a turn: continue into
     /// the per-turn reset and the unsuspend phase.

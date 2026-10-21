@@ -444,7 +444,20 @@ impl Game {
         // Memory swing-back: capture memory before firing OnEndTurn effects,
         // fire them, then see if an effect restored memory from negative.
         let memory_before = self.memory;
-        self.fire_end_of_your_turn(ending_player);
+        // [End of Your Turn] and [End of Opponent's Turn] both trigger at the
+        // point the turn ends (§15-16-12-1, §15-16-12-2, §15-8-3-6): ONE
+        // simultaneous pool, the turn player's effects activating first, then
+        // the non-turn player's (§15-4-3-5-1, §15-4-3-5-2). Building them as
+        // one pool matters when an end-of-turn attack keyword declares its
+        // attack inside it: the counter timing waits for every triggered
+        // effect, the non-turn player's pending end-of-turn effects included
+        // (§11-1-4). Official Q&A Q7122: the defender's face-up
+        // {Security} [End of Opponent's Turn] Ravemon (BT26-082) plays itself
+        // before that attack's security check.
+        // G-ENGINE-SECURITY-END-OF-OPPONENT-TURN-PLAY-SKIPPED-BY-ENGAGE-ATTACK.
+        self.enqueue_end_of_your_turn_pool(ending_player);
+        self.enqueue_end_of_opponents_turn_pool(ending_player);
+        self.drain_effect_queue();
         // A decision in the pool, or an attack declared in it (an end-of-turn
         // attack keyword's processing, §16-44-2 / §16-38-2 / §16-33-2 /
         // §16-34-2), holds the end of turn until it has all resolved (§6-6-2);
@@ -465,6 +478,14 @@ impl Game {
     }
 
     fn continue_end_turn_after_effects(&mut self, ending_player: PlayerId, memory_before: i16) {
+        // Game over is terminal (owner ruling 2026-10-19 #14): an effect or
+        // attack in the end-of-turn pool that ended the game (Q7122: an
+        // <Engage> attack on a player with 0 security cards) leaves nothing
+        // to continue -- no `EndOfTurnAction` window, no turn rotation.
+        if self.game_over {
+            self.pending_end_turn_resume = None;
+            return;
+        }
         if memory_before < 0 && self.memory >= 0 && !self.game_over {
             self.set_turn_phase(GamePhase::Main);
             return;
@@ -526,34 +547,10 @@ impl Game {
         });
         self.mark_until_condition_dirty();
 
-        // EndOfOpponentsTurn: every non-ending-player observes the turn ending.
-        // Fires after EndOfYourTurn has drained but before memory flip and rotation.
-        for opp in self.opponents(ending_player) {
-            self.enqueue_triggered(
-                EffectTiming::EndOfOpponentsTurn,
-                crate::selection::TriggerSource::PlayerBattleArea(opp),
-            );
-            let security_cards: Vec<_> = self
-                .player(opp)
-                .security
-                .iter()
-                .map(|card| card.handle())
-                .collect();
-            for card in security_cards {
-                self.enqueue_triggered(
-                    EffectTiming::EndOfOpponentsTurn,
-                    crate::selection::TriggerSource::SecurityStackCard { player: opp, card },
-                );
-            }
-        }
-        // §18-1-2: pending processing due at the end of the opponent's turn
-        // pools with the printed `EndOfOpponentsTurn` effects above: the
-        // scheduled bodies and the provenance-keyed deletions ("At the end of
-        // your opponent's turn, delete that token" — P-165 ShoeShoemon; only
-        // entries whose controller is an opponent of `ending_player`).
-        self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsTurn);
-        self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsNextTurn);
-        self.enqueue_provenance_deletions_at_opponents_turn_end(ending_player);
+        // The `[End of Opponent's Turn]` effects already resolved in the
+        // end-of-turn pool (`continue_end_turn_after_delays`). Anything still
+        // queued (an effect the expiries above triggered) resolves before the
+        // turn changes.
         self.drain_effect_queue();
         // The turn does not end until that pool has resolved: a decision in
         // it (a `TriggerOrder`, a body's own pick) holds the rotation here.
@@ -566,7 +563,7 @@ impl Game {
         self.finish_turn_rotation(ending_player);
     }
 
-    /// The rest of `rotate_turn_player` once the `EndOfOpponentsTurn` pool
+    /// The rest of `rotate_turn_player` once anything its expiries queued
     /// has resolved: memory floor, turn advance, seesaw flip, `begin_turn`.
     fn finish_turn_rotation(&mut self, ending_player: PlayerId) {
         if let Some(floor) = self.modifiers.end_turn_min_memory_floor(ending_player) {
@@ -735,6 +732,14 @@ impl Game {
     /// rotation.
     pub(crate) fn resume_pending_end_turn(&mut self) {
         if self.pending_selection.is_some() || self.pending_attack.is_some() {
+            return;
+        }
+        // Game over is terminal: a parked end of turn never resumes (no
+        // waiting end-of-turn attack offer, no rotation).
+        if self.game_over {
+            self.pending_end_turn_resume = None;
+            self.deferred_end_of_turn_attack_offers.clear();
+            self.parked_overclock_attacks.clear();
             return;
         }
         self.resume_pending_overclock_attack();
@@ -1293,12 +1298,54 @@ impl Game {
         self.end_turn();
     }
 
+    /// Enqueue the non-turn players' `[End of Opponent's Turn]` effects
+    /// (battle area, face-up `{Security}` cards, §18-1-2 pending processing
+    /// due then, provenance-keyed deletions) into the end-of-turn pool, behind
+    /// the turn player's `[End of Your Turn]` entries (§15-4-3-5-2). Not
+    /// drained here.
+    fn enqueue_end_of_opponents_turn_pool(&mut self, ending_player: PlayerId) {
+        for opp in self.opponents(ending_player) {
+            self.enqueue_triggered(
+                EffectTiming::EndOfOpponentsTurn,
+                crate::selection::TriggerSource::PlayerBattleArea(opp),
+            );
+            let security_cards: Vec<_> = self
+                .player(opp)
+                .security
+                .iter()
+                .map(|card| card.handle())
+                .collect();
+            for card in security_cards {
+                self.enqueue_triggered(
+                    EffectTiming::EndOfOpponentsTurn,
+                    crate::selection::TriggerSource::SecurityStackCard { player: opp, card },
+                );
+            }
+        }
+        // §18-1-2: pending processing due at the end of the opponent's turn
+        // pools with the printed `EndOfOpponentsTurn` effects above: the
+        // scheduled bodies and the provenance-keyed deletions ("At the end of
+        // your opponent's turn, delete that token" — P-165 ShoeShoemon; only
+        // entries whose controller is an opponent of `ending_player`).
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsTurn);
+        self.enqueue_scheduled_for_timing(EffectTiming::EndOfOpponentsNextTurn);
+        self.enqueue_provenance_deletions_at_opponents_turn_end(ending_player);
+    }
+
     /// Fire `EndOfYourTurn` effects on every permanent in `player`'s battle area.
     /// Called by `end_turn`; exposed for tests that want to trigger swing-back.
     ///
     /// Thin wrapper over the effect-queue drainer — collects every matching
     /// effect across the battle area into `effect_queue`, then drains.
     pub fn fire_end_of_your_turn(&mut self, player: PlayerId) {
+        self.enqueue_end_of_your_turn_pool(player);
+        self.drain_effect_queue();
+    }
+
+    /// Enqueue the turn player's `[End of Your Turn]` pool (battle area,
+    /// `{Security}` cards, `{Trash}` cards, pending processing, provenance
+    /// deletions) without draining it.
+    fn enqueue_end_of_your_turn_pool(&mut self, player: PlayerId) {
         self.enqueue_triggered(
             EffectTiming::EndOfYourTurn,
             crate::selection::TriggerSource::PlayerBattleArea(player),
@@ -1306,7 +1353,7 @@ impl Game {
         // G-ENGINE-SECURITY-STACK-END-OF-YOUR-TURN (BT25-039 Sirenmon):
         // turn-boundary `{Security}[End of Your Turn]` effects on cards living
         // in the ENDING player's persistent security stack. Mirrors
-        // `rotate_turn_player`'s existing `EndOfOpponentsTurn` security scan;
+        // `enqueue_end_of_opponents_turn_pool`'s `EndOfOpponentsTurn` security scan;
         // `enqueue_from_security_stack_card` filters to `effect.security`
         // (scope: security) so battle-area-only observers are unaffected.
         let security_cards: Vec<_> = self
@@ -1337,16 +1384,16 @@ impl Game {
         //
         // Note: `EffectTiming` does not have a unified `EndOfTurn`
         // variant — the enum collapses to `EndOfYourTurn` (active
-        // player) and `EndOfOpponentsTurn` (inactive players, fired
-        // from `rotate_turn_player`). Both peer pools are built
-        // separately at their respective observer-fire sites.
+        // player) and `EndOfOpponentsTurn` (inactive players,
+        // `enqueue_end_of_opponents_turn_pool`). `end_turn` enqueues both
+        // into ONE pool before draining (§15-4-3-5); this wrapper fires the
+        // turn player's half alone, for tests.
         // PUPPETS-G003: the provenance-keyed turn-end deletions ("At turn
         // end, delete the Digimon this effect played") are pending processing
         // of this timing too, so they join the same pool.
         self.enqueue_scheduled_for_timing(EffectTiming::EndOfYourTurn);
         self.enqueue_scheduled_for_timing(EffectTiming::EndOfYourNextTurn);
         self.enqueue_provenance_deletions_at_turn_end();
-        self.drain_effect_queue();
     }
 
     /// Phase 8 Task 3: fire and trash every Delayed Option (across all
