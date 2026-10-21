@@ -7920,6 +7920,7 @@
         "materials_count_lte",
         "none_of",
         "not_in_binding",
+        "owner_can_add_security",
         "replacement_cause",
         "replacement_subject_is_mine",
         "security_count_lte",
@@ -26524,7 +26525,7 @@
       ]
     }
   },
-  "cards_root": "code/digimon-engine/cards",
+  "cards_root": "C:/Users/james/Documents/digimon-deck-list-builder-1/.claude/worktrees/digimon-simulator-validation-4dd340/code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost_reduce": [
       "BT26-084"
@@ -33981,6 +33982,9 @@
       "ST6-14",
       "ST9-04",
       "ST9-09"
+    ],
+    "owner_can_add_security": [
+      "BT24-040"
     ],
     "play_cost": [
       "EX7-008"
