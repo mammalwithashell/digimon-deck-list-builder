@@ -1,0 +1,16 @@
+# LOWMON -- Digimon, Lv.3, red, 3000 DP, play cost 3. Name: Lowmon.
+#   [When Attacking] Gain 3 memory.
+# The bottom of the §16-47 stack: only BASEMON_A's own <Succession ([Lowmon])>
+# names it, and that <Succession> is the one effect the top card does NOT gain.
+card: LOWMON
+name: Lowmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Gain 3 memory."
+    process:
+      - gain_memory: 3

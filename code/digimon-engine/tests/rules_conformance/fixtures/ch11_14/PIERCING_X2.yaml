@@ -1,0 +1,20 @@
+# PIERCING_X2 -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   <Piercing> (When this Digimon attacks and deletes your opponent's Digimon
+#   in battle, it checks security before the attack ends.)
+#   [Your Turn] This Digimon gains <Piercing>.
+# Two <Piercing> instances on one Digimon during its owner's turn (§16-7-5).
+card: PIERCING_X2
+name: Twinlancemon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing> (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
+  - kind: grant_keyword
+    keyword: Piercing
+    active_when: { your_turn: true }
+    summary: "[Your Turn] This Digimon gains <Piercing>."

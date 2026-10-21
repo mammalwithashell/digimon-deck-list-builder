@@ -152,6 +152,8 @@ fn bt25_100_main_de_digivolves_two_then_can_decline_link() {
     runner
         .execute_action(tview.selecting_player, encode_attack(0, opp.index as u16))
         .expect("choose opponent Digimon");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
 
     // De-Digivolve 2 trashes the top two sources (Lv5 + Lv4), leaving Lv3 top.
     assert_eq!(
@@ -304,7 +306,7 @@ fn bt25_100_linked_host_gains_dp_2000_collision_and_piercing() {
 // G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON. A security-flipped Iron Slash
 // runs the same [Main] body, and its "you may link this card" tail must lift
 // the card OUT of the security resolution onto the chosen host (DCGO
-// `Permanent.AddLinkCard` → `RemoveFromAllArea`; §13-1-7-4 trashes a checked
+// `Permanent.AddLinkCard` → `RemoveFromAllArea`; §13-1-8-4 trashes a checked
 // card only "unless it belongs to an area"). Before the fix the link step
 // silently returned (no `pending_option`), Iron Slash was trashed, and the
 // host never gained the Link DP / <Piercing>.
@@ -340,6 +342,8 @@ fn bt25_100_security_flip_links_to_defenders_digimon() {
     runner
         .execute_action(1, encode_attack(0, attacker.index as u16))
         .expect("defender picks the attacking stack");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
 
     // [Main] step 2: the link tail — an OPTIONAL own-Digimon pick, asked even
     // though the card came from security.
@@ -401,6 +405,8 @@ fn bt25_100_security_flip_declined_link_trashes_the_card_once() {
     runner
         .execute_action(1, encode_attack(0, attacker.index as u16))
         .expect("defender picks the attacking stack");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
     let lview = runner.pending_selection_view().expect("link-host prompt");
     assert!(lview.is_optional);
     runner.execute_action(1, PASS).expect("decline the link");
@@ -438,6 +444,8 @@ fn bt25_100_security_flip_without_host_trashes_the_card() {
     runner
         .execute_action(1, encode_attack(0, attacker.index as u16))
         .expect("defender picks the attacking stack");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
     assert!(
         runner.pending_selection().is_none(),
         "no host → no link prompt"
@@ -599,7 +607,7 @@ fn bt25_100_no_mode_select_when_only_non_ts_digimon_on_board() {
 // "`effect#5` -- unreachable: no shared action means \"plug this Option in from
 // hand\"", same clause on BT25-093#effect#4).
 //
-// general_rule.pdf (Ver.3.6) §6-5-1 lists the main-phase actions, and "use an
+// general_rule.pdf (Ver.4.3) §6-5-1 lists the main-phase actions, and "use an
 // Option card from the hand" (§6-5-1-3) and "link a card from the hand or
 // battle area" (§6-5-1-4) are two SEPARATE entries; §10-1-1 says a card is
 // linked from the hand "by paying the cost as part of the main phase actions".

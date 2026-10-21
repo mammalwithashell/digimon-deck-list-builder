@@ -233,10 +233,10 @@ fn ex12_032_without_a_same_level_pair_the_security_check_deletes_the_attacker() 
 /// An INHERITED `<Decode>` is still SELF-scoped: it belongs to the host the
 /// source card is buried under, not to every friendly permanent on the field.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 scopes the
 /// trigger the same way. DCGO agrees:
 /// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
 /// `CanTriggerWhenRemoveField`, which
@@ -275,7 +275,7 @@ fn ex12_032_inherited_decode_does_not_open_a_window_for_another_permanents_leave
 
     assert!(
         runner.game.pending_selection.is_none(),
-        "16-35-1: <Decode> triggers only when the Digimon WITH THIS EFFECT \
+        "16-36-1: <Decode> triggers only when the Digimon WITH THIS EFFECT \
          would leave the battle area -- the EX12-032 host is still on the field \
          and the leaving Digimon does not carry it as a source (got: {:?})",
         runner
@@ -290,7 +290,7 @@ fn ex12_032_inherited_decode_does_not_open_a_window_for_another_permanents_leave
     );
     assert!(
         !field_contains(&runner, 0, "VB-L4"),
-        "16-35-1: the Decode payload comes from THAT DIGIMON'S digivolution \
+        "16-36-1: the Decode payload comes from THAT DIGIMON'S digivolution \
          cards -- an inherited Decode may not reach into another permanent's \
          stack"
     );
@@ -300,10 +300,10 @@ fn ex12_032_inherited_decode_does_not_open_a_window_for_another_permanents_leave
 /// battle area other than by a battle must still open its window and play the
 /// named source from its OWN digivolution cards.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 scopes the
 /// trigger the same way. DCGO agrees:
 /// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
 /// `CanTriggerWhenRemoveField`, which
@@ -329,7 +329,7 @@ fn ex12_032_inherited_decode_plays_matching_source_on_its_hosts_non_battle_leave
 
     assert!(
         field_contains(&runner, 0, "VB-L4"),
-        "16-35-1: the host's own non-battle leave plays 1 named Digimon card \
+        "16-36-1: the host's own non-battle leave plays 1 named Digimon card \
          from THAT DIGIMON'S digivolution cards"
     );
     assert!(
@@ -341,10 +341,10 @@ fn ex12_032_inherited_decode_plays_matching_source_on_its_hosts_non_battle_leave
 /// NEGATIVE control on the other axis -- a leave BY A BATTLE opens no
 /// `<Decode>` window at all.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 scopes the
 /// trigger the same way. DCGO agrees:
 /// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
 /// `CanTriggerWhenRemoveField`, which
@@ -369,7 +369,7 @@ fn ex12_032_inherited_decode_does_not_trigger_on_a_battle_leave() {
 
     assert!(
         runner.game.pending_selection.is_none(),
-        "16-35-1: <Decode> fires only when the carrier would leave the battle \
+        "16-36-1: <Decode> fires only when the carrier would leave the battle \
          area OTHER THAN BY A BATTLE (got: {:?})",
         runner
             .game
@@ -379,7 +379,7 @@ fn ex12_032_inherited_decode_does_not_trigger_on_a_battle_leave() {
     );
     assert!(
         !field_contains(&runner, 0, "VB-L4"),
-        "16-35-1: a battle leave Decodes nothing -- the source goes to trash \
+        "16-36-1: a battle leave Decodes nothing -- the source goes to trash \
          with the stack"
     );
 }

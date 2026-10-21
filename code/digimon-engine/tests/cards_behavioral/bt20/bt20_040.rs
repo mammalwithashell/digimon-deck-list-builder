@@ -191,8 +191,14 @@ fn bt20_040_real_groundramon_cost_routes_are_player_selected_and_clone_safe() {
     assert_eq!(r.effective_dp(h), Some(9000));
 }
 
+// §11-2-7-1: the attack declaration targets the opponent or a suspended
+// Digimon. <Raid> SWITCHES the target after the declaration (§16-23-1 /
+// §16-23-2), so the unsuspended Digimon tied for the highest DP are not
+// declaration targets; the player is. Inverted from
+// `bt20_040_raid_mask_offers_both_highest_unsuspended_targets`
+// (G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED).
 #[test]
-fn bt20_040_raid_mask_offers_both_highest_unsuspended_targets() {
+fn bt20_040_raid_adds_no_unsuspended_declaration_target() {
     use digimon_engine::action::space::encode_attack;
     let (mut r, h) = setup();
     r.game.turn_count = 1;
@@ -202,7 +208,11 @@ fn bt20_040_raid_mask_offers_both_highest_unsuspended_targets() {
     let lower = r.place_on_field(1, ID, Some(0));
     let mask = digimon_engine::action::build_action_mask(&r.game, 0);
     for target in [first, second] {
-        assert!(mask[encode_attack(h.index as u16, target.index as u16) as usize] > 0.5);
+        assert_eq!(
+            mask[encode_attack(h.index as u16, target.index as u16) as usize],
+            0.0,
+            "a highest-DP unsuspended Digimon is not a declaration target"
+        );
     }
     assert_eq!(
         mask[encode_attack(h.index as u16, lower.index as u16) as usize],
@@ -210,6 +220,6 @@ fn bt20_040_raid_mask_offers_both_highest_unsuspended_targets() {
     );
     assert!(
         mask[encode_attack(h.index as u16, 14) as usize] > 0.5,
-        "Raid does not force an attack on the highest-DP Digimon"
+        "the opponent is a declaration target"
     );
 }

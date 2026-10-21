@@ -113,11 +113,13 @@ fn reboot_combined_with_overclock_composes() {
     r.game.players[tp as usize].battle_area[plain.index as usize].is_suspended = true;
 
     r.game.end_turn();
-    // Overclock parks `end_turn` in EndOfTurnAction waiting for the player
-    // to declare an Overclock attack. Decline it so the turn actually
-    // rotates to the opponent and their unsuspend phase runs.
-    if r.game.current_phase == digimon_engine::enums::GamePhase::EndOfTurnAction {
-        r.game.pass_end_of_turn_action();
+    // <Overclock> (§16-34-2) triggers at the end of the turn and offers its
+    // optional condition inside the end-of-turn pool. Decline it so the turn
+    // actually rotates to the opponent and their unsuspend phase runs.
+    if r.game.pending_selection.is_some() {
+        r.game
+            .resolve_selection(tp, digimon_engine::action::space::PASS)
+            .expect("decline <Overclock>");
     }
 
     assert_eq!(r.game.turn_player(), opp, "turn rotated to opponent");

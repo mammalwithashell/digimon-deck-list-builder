@@ -124,7 +124,7 @@ fn bt23_077_metadata_blocker_and_supported_clause_shape_match_printed_text() {
         .expect("printed self-suspend De-Digivolve clause should be authored");
     assert!(
         on_suspend
-            .condition
+            .trigger_if
             .as_ref()
             .is_some_and(predicate_has_event_permanent_is_source),
         "BT23-077 OnSuspend must be gated to the suspending event permanent being this source"
@@ -273,7 +273,8 @@ fn bt23_077_self_suspend_de_digivolves_one_opponent_digimon_but_other_suspend_do
     let mut runner = sistermon_runner()
         .add_card(make_digimon("ALLY", 3))
         .add_card(make_digimon("BASE-LV3", 3))
-        .add_card(make_digimon("TOP-LV4", 4))
+        // Level 4: <De-Digivolve> can't trash a level 3 top card (§16-12-4).
+        .add_card(make_digimon_lvl("TOP-LV4", 4, 4))
         .start();
     let ciel = runner.place_on_field(0, "BT23-077", Some(0));
     let ally = runner.place_on_field(0, "ALLY", Some(0));

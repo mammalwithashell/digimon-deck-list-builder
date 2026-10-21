@@ -100,6 +100,13 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
     ) -> Option<usize> {
+        if self.game_over {
+            return None;
+        }
+        // §18-3: a player's play is a decision; the loop watch starts over.
+        if matches!(source, PlaySource::ByHand) {
+            self.reset_loop_watch();
+        }
         self.play_from_hand_with_cost_result(player_id, hand_index, cost_delta, source, true)
             .into_option()
     }
@@ -140,6 +147,46 @@ impl Game {
         self.play_from_trash_with_cost_suppress(player_id, trash_index, cost_delta, source, false)
     }
 
+    /// Why `player_id` can't play the card at `trash_index` of their trash
+    /// right now, or `None` if nothing stops it before the cost is computed:
+    /// the checks [`Self::play_from_trash_with_cost_suppress`] makes before
+    /// it moves the card. Read-only, so a caller whose play did not happen
+    /// can report the reason instead of silently doing nothing.
+    pub(crate) fn trash_play_refusal(
+        &self,
+        player_id: PlayerId,
+        trash_index: usize,
+        source: PlaySource,
+    ) -> Option<&'static str> {
+        if self
+            .modifiers
+            .player_has(player_id, ModifierType::CannotPlayFromTrash)
+        {
+            return Some("playing cards from the trash is prohibited");
+        }
+        let player = self.player(player_id);
+        let Some(card) = player.trash.get(trash_index) else {
+            return Some("the card is no longer in the trash");
+        };
+        if player.battle_area.len() >= self.rules.field_slots as usize {
+            return Some("the battle area is full");
+        }
+        if source == PlaySource::ByEffect
+            && self.effect_play_is_prohibited(player_id, card.card_kind(&self.card_data))
+        {
+            return Some("playing this kind of card by effects is prohibited");
+        }
+        let controller = if source == PlaySource::ByEffect {
+            self.effect_source_player.unwrap_or(player_id)
+        } else {
+            player_id
+        };
+        if self.card_play_is_prohibited(controller, card) {
+            return Some("playing this card is prohibited");
+        }
+        None
+    }
+
     /// As [`Self::play_from_trash_with_cost`], but threads a `suppress_on_play`
     /// flag (PUPPETS-G030). When `true`, the just-played permanent's own
     /// `[On Play]` effects are skipped for this play event only. Used by
@@ -152,38 +199,35 @@ impl Game {
         source: PlaySource,
         suppress_on_play: bool,
     ) -> Option<usize> {
-        if self
-            .modifiers
-            .player_has(player_id, ModifierType::CannotPlayFromTrash)
-        {
-            return None;
-        }
-        let field_slots = self.rules.field_slots;
+        self.play_from_trash_with_cost_result_suppress(
+            player_id,
+            trash_index,
+            cost_delta,
+            source,
+            suppress_on_play,
+        )
+        .into_option()
+    }
 
-        let card_kind = {
-            let player = self.player(player_id);
-            if trash_index >= player.trash.len() {
-                return None;
-            }
-            if player.battle_area.len() >= field_slots as usize {
-                return None;
-            }
-            let card = &player.trash[trash_index];
-            card.card_kind(&self.card_data)
-        };
-
-        if source == PlaySource::ByEffect && self.effect_play_is_prohibited(player_id, card_kind) {
-            return None;
-        }
-        let controller = if source == PlaySource::ByEffect {
-            self.effect_source_player.unwrap_or(player_id)
-        } else { player_id };
-        if self.card_play_is_prohibited(controller, &self.player(player_id).trash[trash_index]) {
-            return None;
+    /// As [`Self::play_from_trash_with_cost_suppress`], but keeps the three
+    /// outcomes apart: `Played`, `Pending` (the play parked on a decision --
+    /// a cost-reduction prompt, a would-play window, a DigiXros pick -- and
+    /// its own resume frame finishes it), or `Failed` (refused before the card
+    /// moved, see [`Self::trash_play_refusal`], or rolled back to the trash).
+    pub(crate) fn play_from_trash_with_cost_result_suppress(
+        &mut self,
+        player_id: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        suppress_on_play: bool,
+    ) -> PlayFromHandCostResult {
+        if self.trash_play_refusal(player_id, trash_index, source).is_some() {
+            return PlayFromHandCostResult::Failed;
         }
 
         let card = self.player_mut(player_id).trash.remove(trash_index);
-        self.player_mut(player_id).hand.push(card);
+        self.player_mut(player_id).put_in_hand(card);
         let hand_index = self.player(player_id).hand.len() - 1;
 
         match self.play_from_hand_with_cost_result_from_origin_suppress(
@@ -195,17 +239,16 @@ impl Game {
             PendingWouldPlayOrigin::Trash { index: trash_index },
             suppress_on_play,
         ) {
-            PlayFromHandCostResult::Played(field_index) => Some(field_index),
-            PlayFromHandCostResult::Pending => None,
             PlayFromHandCostResult::Failed => {
                 let card = self
                     .player_mut(player_id)
                     .hand
                     .pop()
                     .expect("invariant: card was just pushed to hand");
-                self.player_mut(player_id).trash.insert(trash_index, card);
-                None
+                self.player_mut(player_id).insert_in_trash(trash_index, card);
+                PlayFromHandCostResult::Failed
             }
+            other => other,
         }
     }
 
@@ -363,6 +406,10 @@ impl Game {
     /// Hand/Trash per-turn activation counters (§4.5c-residual 🟡) are not
     /// tracked here; see docs/RUST_PYTHON_PARITY.md §4.5c.
     pub fn activate_hand_main(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
+        // §1-2-2: a finished game accepts no action.
+        if self.game_over {
+            return false;
+        }
         let (card_id, handle, card_kind) = {
             let player = match self.players.get(player_id as usize) {
                 Some(p) => p,
@@ -406,8 +453,12 @@ impl Game {
                 }
             }
             if let Some(process) = &effect.process {
+                // One effect: triggers it causes wait until it has finished
+                // (§15-8-3-2). G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+                self.enter_deferred_drain();
                 let mut ctx = EffectContext::new(self, handle, None, player_id);
                 process(&mut ctx);
+                self.exit_deferred_drain_and_flush();
             }
             return true;
         }
@@ -427,11 +478,15 @@ impl Game {
     ///
     /// Mirrors Python's `_execute_field_main_effect`.
     pub fn activate_field_main(&mut self, player_id: PlayerId, field_index: usize) -> bool {
+        // §1-2-2: a finished game accepts no action.
+        if self.game_over {
+            return false;
+        }
         // Phase F Task 6 — breeding-area Training dispatch.
         //
         // `field_index == BREEDING_TARGET (=14)` routes to the breeding-area
         // path. The mask only emits this bit for `<Training>`-bearing
-        // breeding-area carriers (RULES_CONTEXT 16-40 — only Training
+        // breeding-area carriers (RULES_CONTEXT 16-41 — only Training
         // activates from breeding); the dispatcher here independently
         // re-checks the gate (printed Training keyword on top + carrier not
         // suspended) and runs only the `<Training>` effect (filtered by
@@ -489,7 +544,7 @@ impl Game {
         for (source_index, stack_size, is_adopted, card_id, source_handle) in sources {
             // Use `effects_for_card` rather than the raw registry so that
             // keyword-derived auto-installed effects (e.g. printed
-            // `MaterialSave(N)`) are visible here. The action mask uses the
+            // `<Mind Link>` / `<Training>`) are visible here. The action mask uses the
             // same accessor — without this, the mask would emit a Field
             // [Main] bit for an auto-installed keyword that this dispatcher
             // could not honor.
@@ -528,6 +583,21 @@ impl Game {
                         continue;
                     }
                 }
+                // §15-8-4-4-1: a `[Main]` whose optional processing condition
+                // can't be performed is not declarable — skip it exactly as
+                // the mask (`main_effect_select::field_main_match`) does, so
+                // first-match-wins picks the same effect on both sides.
+                // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+                if let Some(cost_guard) = &effect.optional_condition_guard {
+                    if !self.cost_guard_holds_at(
+                        cost_guard,
+                        source_handle,
+                        Some(perm_handle),
+                        player_id,
+                    ) {
+                        continue;
+                    }
+                }
                 // Python records activation before invoking the callback so a
                 // panic inside the process still counts toward OPT. Mirror that.
                 if let Some(perm) = self.players[player_id as usize]
@@ -550,22 +620,26 @@ impl Game {
                 // and the OPT slot stays consumed (recorded just above), so a
                 // cost-impossible activation cannot be retried this turn.
                 // `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+                // The activated effect resolves as ONE effect: triggers it
+                // causes (e.g. "when digivolution cards are trashed") wait
+                // until it has finished (§15-8-3-2), exactly as a queued
+                // effect's body does. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+                self.enter_deferred_drain();
+                let mut paid = true;
                 if let Some(activation_cost) = &effect.activation_cost_fn {
-                    let paid = {
-                        let mut ctx =
-                            EffectContext::new(self, source_handle, Some(perm_handle), player_id);
-                        activation_cost(&mut ctx)
-                    };
-                    if !paid {
-                        return false;
-                    }
-                }
-                if let Some(process) = &effect.process {
                     let mut ctx =
                         EffectContext::new(self, source_handle, Some(perm_handle), player_id);
-                    process(&mut ctx);
+                    paid = activation_cost(&mut ctx);
                 }
-                return true;
+                if paid {
+                    if let Some(process) = &effect.process {
+                        let mut ctx =
+                            EffectContext::new(self, source_handle, Some(perm_handle), player_id);
+                        process(&mut ctx);
+                    }
+                }
+                self.exit_deferred_drain_and_flush();
+                return paid;
             }
         }
         false
@@ -612,8 +686,12 @@ impl Game {
                 }
             }
             if let Some(process) = &effect.process {
+                // One effect: triggers it causes wait until it has finished
+                // (§15-8-3-2). G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+                self.enter_deferred_drain();
                 let mut ctx = EffectContext::new(self, handle, None, player_id);
                 process(&mut ctx);
+                self.exit_deferred_drain_and_flush();
             }
             return true;
         }

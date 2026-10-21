@@ -1,0 +1,14 @@
+# VORTEX -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Vortex> (At the end of your turn, this Digimon may attack an opponent's
+#   Digimon. With this effect, it can attack the turn it was played.)
+card: VORTEX
+name: Whirlmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: Vortex
+    summary: "<Vortex> (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)"

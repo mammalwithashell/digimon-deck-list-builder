@@ -405,7 +405,7 @@ fn ex13_059_eot_decline_deletes_nothing() {
 
 #[test]
 fn ex13_059_eot_cost_is_payable_without_an_opponent_digimon() {
-    // §15-7-4: the player may execute the processing condition regardless of
+    // §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the player may execute the processing condition regardless of
     // whether the following content can be executed.
     let mut runner = eot_board(&["OWN-MAME"], &[]);
     runner.accept_optional_trigger().expect("accept");

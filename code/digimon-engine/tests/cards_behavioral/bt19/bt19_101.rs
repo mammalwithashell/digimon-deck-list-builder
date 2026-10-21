@@ -36,7 +36,7 @@
 //!   **OPTIONAL** — `SetUpActivateClass(..., isOptional: true, ...)` at
 //!   `BT19_101.cs:44` / `:161` / `:278`, and the inner `SelectCardEffect` is
 //!   additionally `canNoSelect: () => true`. `general_rule.pdf` §15-7-1 names
-//!   "By X, Y" an OPTIONAL PROCESSING CONDITION and §15-7-4 lets the player
+//!   "By X, Y" an OPTIONAL PROCESSING CONDITION and §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] lets the player
 //!   decline it "regardless of whether or not the content of the conditions
 //!   can be executed"; §15-7-2 makes the decline skip the post-condition
 //!   processing too. The outer `CanActivateCondition`
@@ -264,12 +264,10 @@ fn bt19_101_overclock_sacrifice_accepts_token() {
     runner.set_first_player(0);
     let zeed = runner.place_on_field(0, CARD_ID, Some(0));
     let _tok = runner.place_on_field(0, "TOKEN-A", Some(0));
-    runner.game.current_phase = digimon_engine::enums::GamePhase::EndOfTurnAction;
-
-    runner
-        .game
-        .activate_overclock(zeed.index as usize)
-        .expect("Overclock with a Token sacrifice available must install a prompt");
+    let _ = zeed;
+    // §16-34-2: <Overclock> triggers at the end of the turn and offers its
+    // condition's pick inside the end-of-turn pool.
+    runner.end_turn();
 
     let sel = runner
         .game
@@ -285,13 +283,19 @@ fn bt19_101_overclock_sacrifice_accepts_other_composite_digimon() {
     let mut runner = base_runner();
     runner.set_first_player(0);
     let zeed = runner.place_on_field(0, CARD_ID, Some(0));
-    let _composite = runner.place_on_field(0, "COMPOSITE-A", Some(0));
-    runner.game.current_phase = digimon_engine::enums::GamePhase::EndOfTurnAction;
+    let composite = runner.place_on_field(0, "COMPOSITE-A", Some(0));
+    let _ = zeed;
+    runner.end_turn();
 
-    runner
+    let sel = runner
         .game
-        .activate_overclock(zeed.index as usize)
+        .pending_selection
+        .as_ref()
         .expect("a [Composite]-trait Digimon is a legal Overclock sacrifice");
+    assert_eq!(sel.kind, SelectionKind::OwnField);
+    assert!(sel
+        .valid_action_ids
+        .contains(&digimon_engine::action::space::encode_attack(0, composite.index as u16)));
 }
 
 #[test]
@@ -300,13 +304,16 @@ fn bt19_101_overclock_sacrifice_rejects_non_composite_non_token() {
     runner.set_first_player(0);
     let zeed = runner.place_on_field(0, CARD_ID, Some(0));
     let _plain = runner.place_on_field(0, "PLAIN-A", Some(0));
-    runner.game.current_phase = digimon_engine::enums::GamePhase::EndOfTurnAction;
+    let _ = zeed;
+    runner.end_turn();
 
-    let err = runner.game.activate_overclock(zeed.index as usize);
+    // No legal candidate: <Overclock> does not activate (DCGO
+    // `CanActivateOverclock`), so nothing is offered and the turn passes.
     assert!(
-        err.is_err(),
+        runner.game.pending_selection.is_none(),
         "a non-Token, non-[Composite] Digimon is not a legal Overclock sacrifice"
     );
+    assert_eq!(runner.turn_player(), 1);
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -327,7 +334,7 @@ fn bt19_101_on_play_with_opp_trash_digimon_installs_trash_prompt() {
     // §15-7-1: "Optional processing conditions include text such as 'by X,
     // Y.'" — "By returning 1 Digimon card from your opponent's trash to the
     // top of the deck, return 1 of their Digimon to the bottom of the deck" is
-    // that shape. §15-7-4: the player "can choose whether or not to execute
+    // that shape. §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the player "can choose whether or not to execute
     // the content of optional processing conditions, regardless of whether or
     // not the content of the conditions can be executed". So the FIRST thing
     // to surface is the accept/decline confirm, not the cost pick.
@@ -339,7 +346,7 @@ fn bt19_101_on_play_with_opp_trash_digimon_installs_trash_prompt() {
     // three timings (:44, :161, :278), and its inner `SelectCardEffect` IS
     // `canNoSelect: () => true`. A satisfiable outer `CanActivateCondition`
     // does not convert an optional processing condition into a mandatory one
-    // (§15-7-4's "regardless of whether ... can be executed").
+    // (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]'s "regardless of whether ... can be executed").
     let outer = r
         .pending_selection_view()
         .expect("the optional processing condition must surface a prompt (rule 17)");
@@ -350,7 +357,7 @@ fn bt19_101_on_play_with_opp_trash_digimon_installs_trash_prompt() {
     );
     assert!(
         outer.is_optional,
-        "the outer confirm must expose PASS so the player can decline (§15-7-4)"
+        "the outer confirm must expose PASS so the player can decline (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
 
     // Accepting reaches the (now committed) cost pick.
@@ -392,7 +399,7 @@ fn bt19_101_on_play_returns_trash_to_top_then_bottom_decks_opp_digimon() {
 
     fire(&mut r, EffectTiming::OnPlay, zeed);
 
-    // §15-7-1/§15-7-4: the optional processing condition prompts first; this
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the optional processing condition prompts first; this
     // test drives the ACCEPT branch (the decline branch is covered by
     // `bt19_101_optional_processing_condition_may_be_declined`).
     r.accept_optional_trigger()
@@ -449,7 +456,7 @@ fn bt19_101_on_play_bottom_deck_step_noops_with_no_opp_digimon_on_field() {
     let zeed = r.place_on_field(0, CARD_ID, Some(0));
 
     fire(&mut r, EffectTiming::OnPlay, zeed);
-    // §15-7-1/§15-7-4: accept the optional processing condition first.
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: accept the optional processing condition first.
     r.accept_optional_trigger()
         .expect("accept the optional 'by returning ...' condition");
     let cost_view = r
@@ -473,7 +480,7 @@ fn bt19_101_when_digivolving_fires_same_clause() {
     let zeed = r.place_on_field(0, CARD_ID, Some(0));
 
     fire(&mut r, EffectTiming::WhenDigivolving, zeed);
-    // 15-7-1/15-7-4: the outer accept/decline confirm gates every timing
+    // 15-7-1/15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the outer accept/decline confirm gates every timing
     // of this shared clause — DCGO passes isOptional=true on all three.
     r.accept_optional_trigger()
         .expect("accept the optional 'by returning ...' condition");
@@ -491,7 +498,7 @@ fn bt19_101_when_attacking_fires_same_clause() {
     let zeed = r.place_on_field(0, CARD_ID, Some(0));
 
     fire(&mut r, EffectTiming::WhenAttacking, zeed);
-    // 15-7-1/15-7-4: the outer accept/decline confirm gates every timing
+    // 15-7-1/15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the outer accept/decline confirm gates every timing
     // of this shared clause — DCGO passes isOptional=true on all three.
     r.accept_optional_trigger()
         .expect("accept the optional 'by returning ...' condition");
@@ -515,7 +522,7 @@ fn bt19_101_trash_return_cost_does_not_touch_security() {
 
     let cp = r.event_checkpoint();
     fire(&mut r, EffectTiming::OnPlay, zeed);
-    // §15-7-1/§15-7-4: accept the optional processing condition first.
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: accept the optional processing condition first.
     r.accept_optional_trigger()
         .expect("accept the optional 'by returning ...' condition");
     let cost_view = r
@@ -691,7 +698,7 @@ fn bt19_101_locks_and_immunity_turn_on_once_stack_shrinks_to_no_sources() {
 /// Digimon card from your opponent's trash to the top of the deck, return 1 of
 /// their Digimon to the bottom of the deck."
 ///
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions, REGARDLESS of whether or not the content of
 /// the conditions can be executed." So a satisfied clause `condition:` (>=1
 /// opponent-trash Digimon) does NOT make the return mandatory.
@@ -727,7 +734,7 @@ fn bt19_101_optional_processing_condition_may_be_declined() {
         .expect("the optional processing condition must surface a prompt (rule 17)");
     assert!(
         outer.is_optional,
-        "the outer confirm must be optional so PASS is legal (§15-7-4)"
+        "the outer confirm must be optional so PASS is legal (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     r.execute_action(outer.selecting_player, PASS)
         .expect("declining must be reachable from the action space");
@@ -758,7 +765,7 @@ fn bt19_101_optional_processing_condition_may_be_declined() {
 }
 
 /// Declining is reachable on the [When Attacking] timing too — the same shared
-/// clause, the same §15-7-4 choice. (DCGO: `BT19_101.cs:278`, isOptional=true.)
+/// clause, the same §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] choice. (DCGO: `BT19_101.cs:278`, isOptional=true.)
 #[test]
 fn bt19_101_when_attacking_optional_condition_may_be_declined() {
     let mut r = base_runner();

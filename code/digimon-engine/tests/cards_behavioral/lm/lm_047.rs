@@ -576,7 +576,7 @@ fn lm_047_security_check_places_self_in_battle_area_as_delay_option() {
 /// LM-047's standard `<Delay>` is a player-visible `[Main]`-phase activation
 /// (mirrors LM-037 / PUPPETS-G009): the controller trashes the parked Option
 /// to activate the body on a later main phase; it never auto-fires
-/// (RULES_CONTEXT 16-16).
+/// (RULES_CONTEXT 16-17).
 #[test]
 fn lm_047_delay_activation_gains_2_memory_via_main_phase_action() {
     let yaml = lm_047_yaml();

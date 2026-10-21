@@ -151,11 +151,11 @@ pub struct CardData {
     pub effect_text: String,
     pub inherited_text: String,
     pub security_text: String,
-    /// A link card's printed link effect (general_rule.pdf 2-3-12-6), from
+    /// A link card's printed link effect (general_rule.pdf 2-3-11-4-6), from
     /// cards.json's `link_effect_description_eng`. A Digimon gains it while this
-    /// card is one of its link cards (4-2-6), never while the card is one of its
-    /// digivolution cards: that is `inherited_text` (4-2-4), and a link card isn't
-    /// a stacked card (4-7-2). "[X] in its text" searches don't read it: the
+    /// card is one of its link cards (4-3-5), never while the card is one of its
+    /// digivolution cards: that is `inherited_text` (4-3-3), and a link card isn't
+    /// a stacked card (4-9-2). "[X] in its text" searches don't read it: the
     /// official ruling enumerating that text lists no link effects, and DCGO's
     /// `CardSource.HasText` skips `LinkEffect`.
     #[serde(default)]
@@ -339,6 +339,45 @@ impl CardData {
             .as_ref()
             .map(|d| d.digimon.evo_costs.as_slice())
             .unwrap_or(self.evo_costs.as_slice())
+    }
+
+    /// Whole-card "[X] in its text" scan (G-DSL-IN-TEXT-CONTAINS), the broad
+    /// DCGO `CardSource.HasText` surface: name, identity aliases, the whole
+    /// trait line, printed requirement wording and all printed text (both faces
+    /// of a DUAL). Case-insensitive substring. Shared by the `in_text_contains`
+    /// predicate and by DNA-requirement text matching (`text_contains`).
+    pub fn in_text_contains(&self, needle: &str) -> bool {
+        let needle = needle.to_lowercase();
+        if needle.is_empty() {
+            return false;
+        }
+        if self.card_name.to_lowercase().contains(&needle)
+            || self
+                .also_treated_as
+                .iter()
+                .any(|a| a.to_lowercase().contains(&needle))
+            || self
+                .digixros_aliases
+                .iter()
+                .any(|a| a.to_lowercase().contains(&needle))
+        {
+            return true;
+        }
+        // The top-level trait list AND the DUAL Digimon-face traits.
+        if self
+            .traits
+            .iter()
+            .chain(self.dual.iter().flat_map(|d| d.digimon.traits.iter()))
+            .any(|t| t.to_lowercase().contains(&needle))
+        {
+            return true;
+        }
+        if self.requirement_text.to_lowercase().contains(&needle) {
+            return true;
+        }
+        self.text_for_search_all_faces()
+            .to_lowercase()
+            .contains(&needle)
     }
 
     pub fn text_for_search_all_faces(&self) -> String {
@@ -574,7 +613,8 @@ fn keyword_token_continues_into_then(after: &str) -> bool {
 /// (`Security A. +N`, `De-Digivolve N`, `Draw N`, …) are parsed into their
 /// typed variants.
 ///
-/// Returns a deduplicated Vec in document order across the three input fields.
+/// Returns a deduplicated Vec in document order across the three input fields
+/// (except `Digisorption`, whose every printed instance is kept, §16-10-4).
 pub fn parse_printed_keywords(
     effect_text: &str,
     inherited_text: &str,
@@ -741,6 +781,19 @@ pub fn parse_printed_keywords(
                 let n_str = rest.trim().split_whitespace().next().unwrap_or("");
                 let n = n_str.parse::<u8>().unwrap_or(1);
                 push_unique(Keyword::MaterialSave(n), &mut found);
+                continue;
+            }
+
+            // Parametric: Digisorption -N. Every printed instance is kept,
+            // duplicates included: multiple instances on one card all
+            // activate for a single digivolution (§16-10-4).
+            if let Some(rest) = trimmed.strip_prefix("Digisorption") {
+                let rest = rest.trim();
+                let digits = rest.strip_prefix('-').unwrap_or(rest);
+                let n_str = digits.trim().split_whitespace().next().unwrap_or("");
+                if let Ok(n) = n_str.parse::<u8>() {
+                    found.push(Keyword::Digisorption(n));
+                }
                 continue;
             }
 
@@ -1115,6 +1168,25 @@ mod tests {
             "",
         );
         assert_eq!(kws, vec![Keyword::DigiBurst(2)]);
+    }
+
+    /// §16-10-1 `<Digisorption -N>` parses with its value; §16-10-4 every
+    /// printed instance is kept (two `-1` instances both activate).
+    #[test]
+    fn digisorption_parses_value_and_keeps_every_instance() {
+        use crate::enums::Keyword;
+        let kws = parse_printed_keywords(
+            "＜Digisorption -2＞ (When one of your Digimon digivolves into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 2.)",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::Digisorption(2)]);
+        let kws = parse_printed_keywords(
+            "＜Digisorption -1＞ (reminder) ＜Digisorption -1＞ (reminder)",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::Digisorption(1), Keyword::Digisorption(1)]);
     }
 
     #[test]

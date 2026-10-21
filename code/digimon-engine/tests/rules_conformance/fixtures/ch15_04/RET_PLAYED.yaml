@@ -1,0 +1,18 @@
+# RET_PLAYED -- Tamer, red, play cost 3.
+#   [Your Turn] When one of your Digimon is played, return that Digimon to the
+#   hand.
+card: RET_PLAYED
+name: Recall Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_digimon_played
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "[Your Turn] When one of your Digimon is played, return that Digimon to the hand."
+    process:
+      - return_to_hand: { target: event_target }

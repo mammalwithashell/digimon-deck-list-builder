@@ -1,0 +1,16 @@
+# REBOOT_INH -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   Inherited Effect: <Reboot> (Unsuspend this Digimon during your opponent's
+#   unsuspend phase.)
+# A second instance of <Reboot> under REBOOT (§16-11-3).
+card: REBOOT_INH
+name: Restartlingmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Reboot
+    summary: "Inherited: <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase.)"

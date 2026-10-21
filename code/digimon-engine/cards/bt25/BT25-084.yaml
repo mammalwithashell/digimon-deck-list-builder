@@ -119,11 +119,11 @@ effects:
     optional: true
     once_per_turn: true
     # A face-up replacement clause is anchored to its own carrier
-    # (`replacement_subject` = this Digimon), as in BT23-032.
-    active_when:
-      count_gte:
-        filter: { of: you, zone: [hand] }
-        n: 2
+    # (`replacement_subject` = this Digimon), as in BT23-032. With fewer than
+    # 2 cards in hand the "by trashing 2 cards" condition can't be executed,
+    # so the engine does not offer the replacement (§15-7-4, Ver. 4.3: the two
+    # leading hand picks are the optional processing condition;
+    # `leading_cost_guard`; DCGO `HandCards.Count() >= 2`).
     summary: "[All Turns][OPT] When this Digimon would leave, by trashing 2 cards in your hand, it doesn't leave"
     process:
       - select_hand:
@@ -142,12 +142,13 @@ effects:
 
   # ─── [All Turns] your hand is trashed from -> delete 1 opp lowest DP ───────
   - when: on_discard_hand
-    active_when: { event_discard_player: you }
     condition:
       any_permanent:
         of: opponent
         zone: [battle_area]
         kind: digimon
+    trigger_if:
+      event_discard_player: you
     summary: "[All Turns] When your hand is trashed from, delete 1 of your opponent's lowest DP Digimon"
     process:
       - select_opponent_permanent:

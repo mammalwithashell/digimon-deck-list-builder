@@ -158,13 +158,15 @@ pub fn lower_for_kind_with_clause_index(
         } else {
             None
         };
-        // Captured before `body_steps` is moved — used to gate [Main]/activated
-        // abilities on first-step actionability even when the clause isn't
-        // "optional" (activating IS the player's opt-in).
-        let activation_first_step = body_steps.first().cloned();
+        // Captured before `body_steps` is moved: the payability of the clause's
+        // leading optional processing condition (§15-7-4, §15-8-4-4-1). Used
+        // for optional clauses and for [Main] field abilities even when the
+        // clause isn't "optional" (activating IS the player's opt-in).
+        let cost_guard = leading_cost_guard(&body_steps);
         let process_steps = Arc::new(body_steps);
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
+        let trigger_if = clause.trigger_if.clone().map(Arc::new);
         // G-SHARED-OPT-HETEROGENEOUS-TIMING: per-timing condition override for
         // THIS timing, if the clause declares one. AND-ed onto the clause-level
         // gates inside the condition closure so each timing of a shared-OPT
@@ -246,16 +248,18 @@ pub fn lower_for_kind_with_clause_index(
                 }
             }
         }
-        // [Main] activated field abilities: the action mask (`field_main_match`)
-        // and the effect-queue both consult `outer_optional_guard` to suppress
-        // an activation whose leading selection/cost has no candidate — e.g.
-        // <Digi-Burst N> with too few sources to trash. Install it from the
-        // first body step for `MainOnField` even when the clause isn't
-        // "optional" (activating the [Main] IS the opt-in). `!optional` avoids
-        // double-installing over the optional path above.
-        if !optional && matches!(engine_timing, EffectTiming::MainOnField) {
-            if let Some(guard) = digi_burst_main_activation_guard(activation_first_step.as_ref()) {
-                builder = builder.outer_optional_guard(guard);
+        // §15-7-4 / §15-8-4-4-1 (G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED):
+        // the payability of the clause's optional processing condition — its
+        // leading cost-shaped steps. An optional clause whose condition can't
+        // be executed is neither offered nor run (the queue's prompt gates and
+        // `run_queued_effect_inner`), and a `[Main]` field ability whose
+        // condition can't be executed is not declarable (`field_main_match`;
+        // activating the `[Main]` IS the opt-in, so this applies whether or not
+        // the clause is marked `optional`). This also carries the former
+        // `[Main]` <Digi-Burst N> gate (`CostGuard::OwnSources`).
+        if optional || matches!(engine_timing, EffectTiming::MainOnField) {
+            if let Some(guard) = cost_guard {
+                builder = builder.optional_condition_guard(guard);
             }
         }
         if steps_provide_resource_flow(&clause.process) {
@@ -283,11 +287,17 @@ pub fn lower_for_kind_with_clause_index(
             }
         }
 
-        // Security checks capture eligible entries at reveal, before Security
-        // can change state. Only turn and attacker-self trigger gates are
-        // separated here; ordinary clause conditions remain processing-time
-        // checks. This does not reinterpret unrelated DSL timings or predicates.
-        if matches!(
+        // §13-1-8-2 / Q6813: a security check's observers are captured at
+        // the reveal, before the [Security] effect can change the state. Their
+        // turn gates and "when THIS Digimon checks" self-gate are trigger
+        // qualifiers, decided at that capture together with any authored
+        // `trigger_if:` (`Game::discard_entries_not_triggered`); every other
+        // clause condition stays a processing-time check (§15-8-3-9).
+        // The gate terms are COPIED, not moved: they stay in `condition` too,
+        // so the activation-time check reads them twice (the qualifier is
+        // ANDed into `condition` by `EffectBuilder::build`). Deliberate and
+        // harmless -- the copy exists only for the capture-time decision.
+        let security_check_gate = if matches!(
             engine_timing,
             EffectTiming::OnSecurityCheck | EffectTiming::OnCheckFaceUpSecurity
         ) {
@@ -299,10 +309,10 @@ pub fn lower_for_kind_with_clause_index(
             if let Some(cc) = &condition {
                 gate.event_target_is_source = cc.event_target_is_source;
             }
-            builder = builder.trigger_eligibility(move |rctx| {
-                eval_predicate(&gate, rctx, predicate_subject_for_source(rctx))
-            });
-        }
+            Some(Arc::new(gate))
+        } else {
+            None
+        };
 
         if active_when.is_some()
             || condition.is_some()
@@ -351,6 +361,21 @@ pub fn lower_for_kind_with_clause_index(
                 true
             });
         }
+        // The trigger qualifier: decided when the event triggers the effect
+        // (`Game::discard_entries_not_triggered`, §15-8-3-1 / §15-8-3-4);
+        // `EffectBuilder::build` folds it into the activation-time
+        // `condition` above (§15-4-4-5).
+        if trigger_if.is_some() || security_check_gate.is_some() {
+            builder = builder.trigger_qualifier(move |rctx| {
+                let subject = predicate_subject_for_source(rctx);
+                trigger_if
+                    .as_ref()
+                    .is_none_or(|p| eval_predicate(p, rctx, subject))
+                    && security_check_gate
+                        .as_ref()
+                        .is_none_or(|p| eval_predicate(p, rctx, subject))
+            });
+        }
 
         if is_would_link_to_this {
             // Gap 5 — the host-side pre-link reducer body runs inside the
@@ -364,7 +389,8 @@ pub fn lower_for_kind_with_clause_index(
             builder = builder.replacement_process(move |rctx| {
                 let mut bindings = Bindings::new();
                 let runtime = StepRuntime::new(raw_for_process.clone())
-                    .with_dna_origin(rctx.effect.game.current_dna_origin);
+                    .with_dna_origin(rctx.effect.game.current_dna_origin)
+                    .with_source_kind(rctx.effect.source_kind);
                 run_steps_with_runtime(
                     process_steps.as_slice(),
                     rctx.effect,
@@ -382,7 +408,8 @@ pub fn lower_for_kind_with_clause_index(
                 let runtime = StepRuntime::new(raw_for_process.clone())
                     .with_dna_origin(ctx.game.current_dna_origin)
                     .with_opt_key(shared_opt_group)
-                    .with_opt_key_inherited(opt_key_inherited);
+                    .with_opt_key_inherited(opt_key_inherited)
+                    .with_source_kind(ctx.source_kind);
                 run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
             });
         }
@@ -580,6 +607,7 @@ pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool 
         CompiledStep::EffectInitiatedDigivolve { .. }
             | CompiledStep::PaySourcePrefix { .. }
             | CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+            | CompiledStep::TrashBottomFaceDownSourcesUnderTamers { .. }
             | CompiledStep::TrashLinkCardOfOwnDigimon { .. }
             | CompiledStep::SelectHand { .. }
             | CompiledStep::SelectTrash { .. }
@@ -615,73 +643,6 @@ fn players_for_compiled_ref(
 /// single-pick selection steps are covered — they are the ones that drive
 /// the `G-OUTER-OPTIONAL-NOT-INSTALLED` failure mode (a useless prompt for
 /// a body that would silently no-op).
-/// For a [Main]-activated field ability whose leading step is a ＜Digi-Burst N＞
-/// self-cost (`SelectOwnSources` over THIS Digimon's own sources), return a
-/// guard requiring N digivolution cards under the top to trash
-/// (`card_sources.len() > N`). Used ONLY in the `MainOnField` branch to keep the
-/// action mask from offering a [Main] activation that can't pay its cost —
-/// execution would refuse it, a no-op the deterministic policy loops on to the
-/// step limit. Returns None for any other first step (no [Main]-side gate). This
-/// is deliberately separate from `first_step_candidate_guard` (which serves the
-/// optional-TRIGGERED path, where the same step instead silently skips).
-fn digi_burst_main_activation_guard(
-    step: Option<&CompiledStep>,
-) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
-    if let Some(CompiledStep::SelectOwnSources {
-        target: Some(CompiledBindingRef::Source),
-        min,
-        filter,
-        bind_as,
-        then,
-        ..
-    }) = step
-    {
-        let need = *min as usize;
-        let filter = filter.clone();
-        let trash_cost = crate::dsl_cards::step::selections::source_selection_pays_trash_cost(
-            then,
-            bind_as.as_deref(),
-        );
-        Some(Box::new(move |rctx| {
-            rctx.source_permanent.is_some_and(|host| {
-                rctx.game
-                    .player(host.player)
-                    .battle_area
-                    .get(host.index as usize)
-                    .is_some_and(|perm| {
-                        perm.card_sources
-                            .iter()
-                            .take(perm.card_sources.len().saturating_sub(1))
-                            .enumerate()
-                            .filter(|(index, card)| {
-                                let source = crate::selection::SourceSelectionRef {
-                                    permanent: host,
-                                    field_index: host.index,
-                                    source_index: *index as u8,
-                                    card: card.handle(),
-                                };
-                                (!trash_cost
-                                    || !rctx.game.source_card_trash_blocked(
-                                        host,
-                                        card.handle(),
-                                        rctx.player,
-                                    ))
-                                    && eval_predicate(
-                                        &filter,
-                                        rctx,
-                                        PredicateSubject::Source(source),
-                                    )
-                            })
-                            .count()
-                            >= need
-                    })
-            })
-        }))
-    } else {
-        None
-    }
-}
-
 pub(crate) fn first_step_candidate_guard(
     step: &CompiledStep,
 ) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
@@ -728,19 +689,529 @@ pub(crate) fn first_step_candidate_guard(
                     .any(|p| permanent_zone_has_match(rctx, p, &filter))
             }))
         }
-        // NOTE: `SelectOwnSources` is intentionally NOT handled here. A
-        // "by trashing N sources" cost lowers to it, but for an OPTIONAL
-        // TRIGGERED ability (e.g. EX10-034's [All Turns] when-attacking) the
-        // designed behavior is to fire and SILENTLY SKIP the trash when fewer
-        // than N sources exist — it triggers on an event, so it can't loop.
-        // The [Main]-activated digi_burst case (BlitzGreymon) IS gated, but
-        // only in the `MainOnField` branch of `lower` (mask-offered, so it
-        // would loop) — see `digi_burst_main_activation_guard`.
+        // NOTE: cost-shaped first steps (`SelectOwnSources` "by trashing N
+        // sources", `trash_top_security`, `suspend`, memory, hand / trash
+        // pick runs, face-down cards under Tamers, …) are not handled here:
+        // their payability is the optional processing condition's, gated by
+        // `leading_cost_guard` (§15-7-4), which also suppresses the run.
         //
-        // Other first-step kinds (suspend, select_effect_choice, budget
-        // selects, etc.) are not pre-evaluated — the outer prompt installs
-        // unconditionally for them.
+        // Other first-step kinds (select_effect_choice, budget selects, etc.)
+        // are not pre-evaluated — the outer prompt installs unconditionally
+        // for them.
         _ => None,
+    }
+}
+
+// ─── Optional processing condition payability (§15-7-4, §15-8-4-4-1) ──────
+
+/// The payability of a clause's optional processing condition — the "by X"
+/// of "by X, Y" (Comprehensive Rules Ver. 4.3 §15-7-1) — derived from the
+/// clause's LEADING cost-shaped steps (`leading_cost_guard`).
+///
+/// §15-7-4 (Ver. 4.3; it said the opposite in 3.6): "If executing an
+/// optional processing condition's contents isn't possible, then the player
+/// can't choose to execute them." §15-8-4-4-1: "If an activation-type effect
+/// has optional processing conditions, a player can only declare activation
+/// while the optional processing conditions can be performed." §15-7-3: a
+/// condition can't be performed only in part, so every guard takes a COUNT
+/// ("by trashing 2 cards in your hand" needs 2), never a boolean. Owner
+/// ruling 2026-10-10 #6: never offer a trigger whose condition can't be paid.
+/// DCGO gates the same thing per card in `CanActivateCondition`
+/// (`BT22_041.cs`: `card.Owner.SecurityCards.Any()`; `BT25_084.cs`:
+/// `card.Owner.HandCards.Count() >= 2`).
+///
+/// Plain data (clone-safe, `Game: Clone`), evaluated read-only by
+/// [`crate::game::Game::cost_guard_holds_at`]. The engine-side interim for the
+/// DSL `by:` block (`G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK`), which will
+/// mark the condition explicitly instead of recognising its shape.
+/// `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum CostGuard {
+    /// "By trashing your top N security cards": N cards in your security.
+    Security { n: usize },
+    /// "By paying / losing N memory": the memory can move N toward the
+    /// opponent's side within the gauge (`Game::can_pay_memory_for`).
+    Memory { n: u16 },
+    /// "By suspending this Digimon / Tamer": the source permanent can be
+    /// suspended (`ActivationCostKind::SuspendSelf`'s probe).
+    SuspendSource,
+    /// "By suspending 1 of your Digimon": one of your permanents matching
+    /// `filter` can be suspended.
+    SuspendChosen { filter: CompiledPredicate },
+    /// "By trashing N cards in your hand" / "by returning 1 [A] and 1 [B]
+    /// from your trash": one DISTINCT card in `zone` per pick filter.
+    ZonePicks {
+        zone: CostPickZone,
+        filters: Vec<CompiledPredicate>,
+    },
+    /// "By trashing N of this Digimon's digivolution cards" (incl.
+    /// <Digi-Burst N>): `min` matching cards under the source's top card
+    /// (that can be trashed, when the pick pays a trash cost).
+    OwnSources {
+        min: usize,
+        filter: CompiledPredicate,
+        trash_cost: bool,
+    },
+    /// "By trashing the bottom face-down card / N bottom face-down cards from
+    /// under your Tamers": N face-down cards under your Tamers. "The bottom
+    /// face-down card" is a Tamer's LOWEST face-down card, whether or not
+    /// face-up cards sit below it (card text BT26-005 / BT25-035; DCGO
+    /// `BT26_005.cs` `LastOrDefault(IsFlipped)`; the rules manual is silent),
+    /// so every face-down card counts. Read through
+    /// `step::selections::face_down_sources_under_tamers`, the same count the
+    /// steps' Tamer picks and the trash use.
+    FaceDownUnderTamers { n: usize },
+    /// "By trashing 1 [X] from your hand / your Digimon's digivolution cards"
+    /// (BT25-083 "1 Option card from any of your Digimon's digivolution
+    /// cards"): the `select_union_zone` pick that `trash_union_bound` pays
+    /// offers a card whose trash isn't blocked -- asked through the pick's own
+    /// candidate builder (`union_zone_candidate_actions`), so the guard reads a
+    /// card exactly as the pick does (a DUAL digivolution card is an Option
+    /// card there, §4-6-6-2, official Q&A Q6395).
+    UnionZoneTrash {
+        zones: crate::selection::UnionZoneSet,
+        /// The material carrier is the effect's own permanent
+        /// (`material_of: source`); `false` scans every own Digimon.
+        material_of_source: bool,
+        filter: CompiledPredicate,
+        zone_filters: digimon_dsl::compiled::CompiledUnionZoneFilters,
+        material_carrier_filter: Option<CompiledPredicate>,
+    },
+}
+
+/// The zone a `CostGuard::ZonePicks` condition draws its cards from.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CostPickZone {
+    Hand,
+    Trash,
+}
+
+/// Derive the payability guard of the optional processing condition at the
+/// head of `steps` (a clause body with any `activation_cost` already lifted
+/// off), or `None` when the body does not open with a recognised cost shape.
+///
+/// Recognised leading conditions:
+/// - `trash_top_security { of: you }` (literal count) ⇒ that many security.
+/// - `lose_memory: N` ⇒ the memory can be paid.
+/// - `suspend { target: source }` ⇒ the source can be suspended;
+///   `select_own_permanent` (mandatory) then `suspend` of that pick ⇒ a
+///   matching permanent can be suspended.
+/// - A run of own-hand picks each consumed by `trash_from_hand_by_index` or
+///   `place_selected_card_under_tamer` (the run's first pick `cost: true` or
+///   mandatory) ⇒ one distinct hand card per pick; the same for own-trash
+///   picks consumed by `return_trash_list_to_deck_bottom`.
+/// - `select_own_sources { target: source }` ⇒ `min` matching sources.
+/// - `trash_bottom_face_down_source(s)_under_tamer(s)` ⇒ that many face-down
+///   cards under your Tamers (any face-down card; the trash takes the lowest).
+/// - `select_union_zone { of: you }` (`cost: true` or mandatory; material
+///   carrier unpinned or `source`) whose pick `trash_union_bound` trashes next
+///   ⇒ the pick has a trashable card.
+///
+/// One guard per clause: a compound condition is gated as a whole only when
+/// it is one pick run (§15-7-3, "1 [A] and 1 [B]" from the same zone, matched
+/// to distinct cards). Compounds across DIFFERENT step kinds ("by suspending
+/// this Tamer and trashing 1 Option card", BT25-092) are gated on their FIRST
+/// recognised part only — composing them is the DSL `by:` block's job
+/// (`G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK`).
+///
+/// A declinable pick WITHOUT `cost: true` is not a condition (declining it
+/// continues the clause), so it yields no guard. Self-targeted costs
+/// ("return / delete this Digimon") are payable whenever the source is live,
+/// which the queue's source-liveness gate already checks.
+pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
+    let first = steps.first()?;
+    match first {
+        CompiledStep::TrashTopSecurity {
+            of: CompiledPlayerRef::You,
+            count,
+            leave: None,
+            ..
+        } => {
+            let n = match count {
+                None => 1,
+                Some(digimon_dsl::compiled::CompiledFormula::Literal(n)) => (*n).max(0) as usize,
+                Some(_) => return None,
+            };
+            (n > 0).then_some(CostGuard::Security { n })
+        }
+        CompiledStep::LoseMemory(n) if *n > 0 => Some(CostGuard::Memory {
+            n: u16::try_from(*n).ok()?,
+        }),
+        CompiledStep::Suspend {
+            target: CompiledBindingRef::Source,
+        } => Some(CostGuard::SuspendSource),
+        CompiledStep::SelectOwnPermanent {
+            filter,
+            bind_as: Some(bound),
+            optional: false,
+            ..
+        } => matches!(
+            steps.get(1),
+            Some(CompiledStep::Suspend { target }) if binding_ref_names(target, bound)
+        )
+        .then(|| CostGuard::SuspendChosen {
+            filter: filter.clone(),
+        }),
+        CompiledStep::SelectHand {
+            of: CompiledPlayerRef::You,
+            optional,
+            cost,
+            ..
+        }
+        | CompiledStep::SelectTrash {
+            of: CompiledPlayerRef::You,
+            optional,
+            cost,
+            ..
+        } if *cost || !*optional => {
+            let zone = if matches!(first, CompiledStep::SelectHand { .. }) {
+                CostPickZone::Hand
+            } else {
+                CostPickZone::Trash
+            };
+            let filters = leading_pick_run(steps, zone);
+            (!filters.is_empty()).then_some(CostGuard::ZonePicks { zone, filters })
+        }
+        CompiledStep::SelectOwnSources {
+            target: Some(CompiledBindingRef::Source),
+            min,
+            filter,
+            bind_as,
+            then,
+            ..
+        } => Some(CostGuard::OwnSources {
+            min: *min as usize,
+            filter: filter.clone(),
+            trash_cost: crate::dsl_cards::step::selections::source_selection_pays_trash_cost(
+                then,
+                bind_as.as_deref(),
+            ),
+        }),
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+            of: CompiledPlayerRef::You,
+            ..
+        } => Some(CostGuard::FaceDownUnderTamers { n: 1 }),
+        CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+            of: CompiledPlayerRef::You,
+            count,
+        } if *count > 0 => Some(CostGuard::FaceDownUnderTamers {
+            n: *count as usize,
+        }),
+        CompiledStep::SelectUnionZone {
+            of: CompiledPlayerRef::You,
+            zones,
+            material_of,
+            filter,
+            zone_filters,
+            material_carrier_filter,
+            bind_as: Some(bound),
+            optional,
+            cost,
+            then,
+            ..
+        } if *cost || !*optional => {
+            // The pick's success tail is `then` followed by the clause's
+            // remaining steps; its first step must trash the picked card.
+            let consumer = if then.is_empty() {
+                steps.get(1)
+            } else {
+                then.first()
+            };
+            let pays_trash = matches!(
+                consumer,
+                Some(CompiledStep::TrashUnionBound { binding }) if binding == bound
+            );
+            let material_of_source = match material_of {
+                None => false,
+                Some(CompiledBindingRef::Source) => true,
+                // A carrier bound earlier in the clause is not known before
+                // the clause activates.
+                Some(_) => return None,
+            };
+            let set = crate::dsl_cards::step::selections::union_zone_set(zones);
+            (pays_trash && set.0 != 0).then(|| CostGuard::UnionZoneTrash {
+                zones: set,
+                material_of_source,
+                filter: filter.clone(),
+                zone_filters: zone_filters.clone(),
+                material_carrier_filter: material_carrier_filter.clone(),
+            })
+        }
+        _ => None,
+    }
+}
+
+/// The filters of the run of own-`zone` picks at the head of `steps`, each
+/// pick immediately consumed by the zone's cost step (hand: trash it or place
+/// it under a Tamer; trash: return it to the deck). Stops at the first step
+/// that breaks the pattern; empty when the first pick is not consumed.
+fn leading_pick_run(steps: &[CompiledStep], zone: CostPickZone) -> Vec<CompiledPredicate> {
+    let mut filters = Vec::new();
+    let mut rest = steps;
+    loop {
+        let (pick, consumer) = match rest {
+            [pick, consumer, ..] => (pick, consumer),
+            _ => break,
+        };
+        let (filter, bound) = match (zone, pick) {
+            (
+                CostPickZone::Hand,
+                CompiledStep::SelectHand {
+                    of: CompiledPlayerRef::You,
+                    filter,
+                    bind_as: Some(bound),
+                    ..
+                },
+            )
+            | (
+                CostPickZone::Trash,
+                CompiledStep::SelectTrash {
+                    of: CompiledPlayerRef::You,
+                    filter,
+                    bind_as: Some(bound),
+                    ..
+                },
+            ) => (filter, bound),
+            _ => break,
+        };
+        let consumed = match (zone, consumer) {
+            (
+                CostPickZone::Hand,
+                CompiledStep::TrashFromHandByIndex {
+                    of: CompiledPlayerRef::You,
+                    hand_index,
+                },
+            ) => binding_ref_names(hand_index, bound),
+            (CostPickZone::Hand, CompiledStep::PlaceSelectedCardUnderTamer { card, .. }) => {
+                binding_ref_names(card, bound)
+            }
+            (
+                CostPickZone::Trash,
+                CompiledStep::ReturnTrashListToDeckBottom {
+                    of: CompiledPlayerRef::You,
+                    cards,
+                    ..
+                },
+            ) => binding_ref_names(cards, bound),
+            _ => false,
+        };
+        if !consumed {
+            break;
+        }
+        filters.push(filter.clone());
+        rest = &rest[2..];
+    }
+    filters
+}
+
+/// True when `r` refers to the binding named `name`.
+fn binding_ref_names(r: &CompiledBindingRef, name: &str) -> bool {
+    matches!(
+        r,
+        CompiledBindingRef::Named(n) | CompiledBindingRef::Binding(n) | CompiledBindingRef::Permanent(n)
+            if n == name
+    )
+}
+
+impl CostGuard {
+    /// Can the condition be executed right now, for the effect `rctx`
+    /// describes (its source card / permanent and controller)?
+    pub(crate) fn holds(&self, rctx: &crate::effect_context::EffectReadContext<'_>) -> bool {
+        let game = rctx.game;
+        match self {
+            CostGuard::Security { n } => game.player(rctx.player).security.len() >= *n,
+            CostGuard::Memory { n } => game.can_pay_memory_for(rctx.player, *n),
+            CostGuard::SuspendSource => {
+                ActivationCostKind::SuspendSelf.is_payable(game, rctx.source_permanent)
+            }
+            CostGuard::SuspendChosen { filter } => {
+                let player = rctx.player;
+                (0..game.player(player).battle_area.len()).any(|i| {
+                    let handle = crate::permanent::PermanentHandle {
+                        player,
+                        index: i as u8,
+                    };
+                    ActivationCostKind::SuspendSelf.is_payable(game, Some(handle))
+                        && eval_predicate(filter, rctx, PredicateSubject::Permanent(handle))
+                })
+            }
+            CostGuard::ZonePicks { zone, filters } => {
+                let player = game.player(rctx.player);
+                let cards: Vec<CardHandle> = match zone {
+                    CostPickZone::Hand => player.hand.iter().map(|c| c.handle()).collect(),
+                    CostPickZone::Trash => player.trash.iter().map(|c| c.handle()).collect(),
+                };
+                let candidates: Vec<Vec<usize>> = filters
+                    .iter()
+                    .map(|filter| {
+                        cards
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, card)| {
+                                eval_predicate(filter, rctx, PredicateSubject::Card(**card))
+                            })
+                            .map(|(i, _)| i)
+                            .collect()
+                    })
+                    .collect();
+                picks_have_distinct_cards(&candidates, cards.len())
+            }
+            CostGuard::OwnSources {
+                min,
+                filter,
+                trash_cost,
+            } => rctx.source_permanent.is_some_and(|host| {
+                game.player(host.player)
+                    .battle_area
+                    .get(host.index as usize)
+                    .is_some_and(|perm| {
+                        perm.card_sources
+                            .iter()
+                            .take(perm.card_sources.len().saturating_sub(1))
+                            .enumerate()
+                            .filter(|(index, card)| {
+                                let source = crate::selection::SourceSelectionRef {
+                                    permanent: host,
+                                    field_index: host.index,
+                                    source_index: *index as u8,
+                                    card: card.handle(),
+                                };
+                                (!trash_cost
+                                    || !game.source_card_trash_blocked(
+                                        host,
+                                        card.handle(),
+                                        rctx.player,
+                                    ))
+                                    && eval_predicate(
+                                        filter,
+                                        rctx,
+                                        PredicateSubject::Source(source),
+                                    )
+                            })
+                            .count()
+                            >= *min
+                    })
+            }),
+            CostGuard::FaceDownUnderTamers { n } => {
+                crate::dsl_cards::step::selections::face_down_sources_under_tamers(
+                    rctx,
+                    rctx.player,
+                ) >= *n
+            }
+            CostGuard::UnionZoneTrash {
+                zones,
+                material_of_source,
+                filter,
+                zone_filters,
+                material_carrier_filter,
+            } => {
+                let material_of = if *material_of_source {
+                    match rctx.source_permanent {
+                        Some(host) => Some(host),
+                        None => return false,
+                    }
+                } else {
+                    None
+                };
+                // The candidate builder hands back `game` (== `rctx.game`); the
+                // predicates read through the effect's own context.
+                let carrier_filter =
+                    |_: &crate::game::Game, handle: crate::permanent::PermanentHandle| {
+                        material_carrier_filter.as_ref().is_none_or(|pred| {
+                            eval_predicate(pred, rctx, PredicateSubject::Permanent(handle))
+                        })
+                    };
+                // The pick's own card matcher (no clause bindings exist before
+                // the clause activates; the guard reads a leading step).
+                let card_filter = |_: &crate::game::Game,
+                                   card: &crate::card_source::CardSource,
+                                   zone: crate::selection::UnionZoneSet| {
+                    crate::dsl_cards::step::selections::union_zone_card_matches(
+                        rctx,
+                        filter,
+                        zone_filters,
+                        card.handle(),
+                        zone,
+                        None,
+                    )
+                };
+                let offered = crate::effect_context::selections::union_zone_candidate_actions(
+                    game,
+                    rctx.player,
+                    *zones,
+                    material_of,
+                    Some(&carrier_filter),
+                    &card_filter,
+                );
+                // A digivolution card whose trash is prohibited can't pay
+                // "by trashing" (§15-7-4); a hand card can always be trashed.
+                crate::dsl_cards::step::selections::union_zone_candidates(
+                    game,
+                    rctx.player,
+                    &offered,
+                )
+                .into_iter()
+                .any(|(_, card, origin)| match origin {
+                    crate::selection::UnionZoneOrigin::Material { carrier, .. } => {
+                        !game.source_card_trash_blocked(carrier, card, rctx.player)
+                    }
+                    _ => true,
+                })
+            }
+        }
+    }
+}
+
+/// True when every pick can take a DISTINCT card: `candidates[pick]` lists
+/// the indices (of `card_count` zone cards) that pick's filter accepts.
+/// Bipartite matching by augmenting paths (Kuhn); the runs are tiny.
+fn picks_have_distinct_cards(candidates: &[Vec<usize>], card_count: usize) -> bool {
+    if candidates.len() > card_count {
+        return false;
+    }
+    fn augment(
+        pick: usize,
+        candidates: &[Vec<usize>],
+        owner: &mut [Option<usize>],
+        seen: &mut [bool],
+    ) -> bool {
+        for &card in &candidates[pick] {
+            if seen[card] {
+                continue;
+            }
+            seen[card] = true;
+            if owner[card].is_none_or(|other| augment(other, candidates, owner, seen)) {
+                owner[card] = Some(pick);
+                return true;
+            }
+        }
+        false
+    }
+    let mut owner = vec![None; card_count];
+    (0..candidates.len()).all(|pick| {
+        let mut seen = vec![false; card_count];
+        augment(pick, candidates, &mut owner, &mut seen)
+    })
+}
+
+impl crate::game::Game {
+    /// Whether the optional processing condition `guard` can be executed
+    /// now (§15-7-4, §15-8-4-4-1), for a caller that already knows the
+    /// effect's source permanent (a queued effect, a `[Main]` mask scan).
+    pub(crate) fn cost_guard_holds_at(
+        &self,
+        guard: &CostGuard,
+        source: CardHandle,
+        source_permanent: Option<crate::permanent::PermanentHandle>,
+        controller: crate::enums::PlayerId,
+    ) -> bool {
+        let rctx = crate::effect_context::EffectReadContext::new(
+            self,
+            source,
+            source_permanent,
+            controller,
+        );
+        guard.holds(&rctx)
     }
 }
 
@@ -813,6 +1284,7 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         EffectTiming::OnOpponentSecurityRemoved => Effect::on_opponent_security_removed(card),
         EffectTiming::OnOwnSecurityRemoved => Effect::on_own_security_removed(card),
         EffectTiming::OnDigivolutionCardTrashed => Effect::on_digivolution_card_trashed(card),
+        EffectTiming::OnTopCardTrashed => Effect::on_top_card_trashed(card),
         EffectTiming::OnAddDigivolutionCards => Effect::on_add_digivolution_cards(card),
         EffectTiming::OnDigivolutionCardReturnedToDeckBottom => {
             Effect::on_digivolution_card_returned_to_deck_bottom(card)
@@ -849,6 +1321,25 @@ mod tests {
         }])];
 
         assert!(steps_provide_resource_flow(&steps));
+    }
+
+    /// Both face-down-under-Tamer trash costs park a Tamer pick, so a
+    /// cost-reduction `pay_cost` built on either is interactive
+    /// (`G-COST-REDUCTION-INTERACTIVE-PAY-COST`).
+    #[test]
+    fn face_down_under_tamer_trash_costs_install_a_selection() {
+        assert!(body_first_step_installs_selection(&[
+            CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+                of: CompiledPlayerRef::You,
+                optional: false,
+            }
+        ]));
+        assert!(body_first_step_installs_selection(&[
+            CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+                of: CompiledPlayerRef::You,
+                count: 2,
+            }
+        ]));
     }
 
     #[test]

@@ -304,7 +304,7 @@ fn bt16_082_condition_requires_event_target_kind_digimon() {
 
     let clause = triggered[0];
     let condition = clause
-        .condition
+        .trigger_if
         .as_ref()
         .expect("Ukkomon's clause must have a condition");
 

@@ -225,7 +225,7 @@ fn p_035_clause_0_process_places_self_as_delay_option() {
 
 /// Clause 1: Delay declarative with the standard printed `<Delay>` trigger
 /// (`delayed` → CompiledTiming::Delayed → DelayTrigger::MainPhaseActivated).
-/// This is the player-initiated [Main]-phase activation per RULES_CONTEXT 16-16.
+/// This is the player-initiated [Main]-phase activation per RULES_CONTEXT 16-17.
 #[test]
 fn p_035_clause_1_is_delay_main_phase_activated() {
     let runner = DebugRunner::builder()
@@ -627,7 +627,7 @@ fn p_035_delay_activation_gains_2_memory_via_main_phase_action() {
         .expect("playing P-035 must park it as a MainPhaseActivated delayed option");
 
     // OPT/lockout-style check: same turn as placement → activation is NOT legal
-    // (RULES_CONTEXT 16-16-3: cannot activate on the placing turn).
+    // (RULES_CONTEXT 16-17-3: cannot activate on the placing turn).
     let bit = (FIELD_EFFECT_START
         + delay_idx as u16 * EFFECTS_PER_PERMANENT
         + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
@@ -874,7 +874,7 @@ fn p_035_inherited_security_placement_preserves_main_phase_activated_trigger() {
 }
 
 // Tail audit: official observation 183f4c89f487eb44051d189b1ff8807b7c522f7ab65a0b83f244bc0277bb5ab2,
-// card image P-035.webp, DCGO P/Red/P_035.cs, official rule 16-16-3.
+// card image P-035.webp, DCGO P/Red/P_035.cs, official rule 16-17-3.
 fn tail_runner(deck: &[&str]) -> DebugRunner {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)

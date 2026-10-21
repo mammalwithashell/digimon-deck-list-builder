@@ -150,14 +150,13 @@ fn bt3_096_own_option_use_offers_suspend_then_gains_one_memory() {
         "the Option's use cost was paid before the trigger"
     );
 
-    // 15-4-3-5-1: P0 orders their two pending items. Take DCGO's order (the
-    // trash first) -- the alternative is pinned in Section 2b.
-    pick_order_entry(&mut runner, "Trash");
+    // §9-1-5: the used Option is trashed before Mimi's trigger with no
+    // decision; the parked prompt is Mimi's own (Section 2b).
     accept_prompt(&mut runner);
     assert!(is_suspended(&runner, mimi), "Mimi suspends as the cost");
     assert_eq!(runner.memory(), 5, "gained 1 memory");
 
-    // Nothing else is parked — the Option was already trashed after Mimi.
+    // Nothing else is parked — the Option was already trashed before Mimi.
     let _ = runner.auto_resolve();
     assert!(runner.pending_selection().is_none());
 }
@@ -172,7 +171,7 @@ fn bt3_096_declining_leaves_mimi_unsuspended_and_memory_unchanged() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
-    pick_order_entry(&mut runner, "Trash");
+    // §9-1-5: no trash-order pick; Mimi's optional gate is the parked prompt.
     let view = runner.pending_selection_view().expect("prompt parked");
     assert!(view.is_optional);
     runner
@@ -205,33 +204,7 @@ fn bt3_096_suspended_mimi_is_not_offered() {
     assert_eq!(runner.memory(), 4, "no memory gained");
 }
 
-// ─── Section 2b: 9-1-5 trash vs the user's own trigger — the ORDER is theirs ──
-
-/// Pick the ordering entry whose label contains `needle` and execute it.
-fn pick_order_entry(runner: &mut DebugRunner, needle: &str) {
-    let view = runner
-        .pending_selection_view()
-        .expect("the trash-order prompt must be parked");
-    assert_eq!(
-        view.kind,
-        digimon_engine::selection::SelectionKind::TriggerOrder,
-        "ordering the used Option's trash against a trigger is a TriggerOrder pick"
-    );
-    assert!(
-        !view.is_optional,
-        "15-4-3-5-1 orders the pending items; it cannot be declined"
-    );
-    let choices = view.effect_choices.clone().expect("labelled entries");
-    assert_eq!(choices.len(), 2, "trash-now vs trigger-first");
-    let entry = choices
-        .iter()
-        .find(|c| c.label.contains(needle))
-        .unwrap_or_else(|| panic!("no ordering entry matching {needle:?}: {choices:?}"));
-    let aid = entry.action_id;
-    runner
-        .execute_action(view.selecting_player, aid)
-        .expect("answer the ordering prompt");
-}
+// ─── Section 2b: §9-1-5 — the used Option's trash is not an orderable item ───
 
 fn p0_trash_ids(runner: &DebugRunner) -> Vec<String> {
     runner.game.players[0]
@@ -241,19 +214,20 @@ fn p0_trash_ids(runner: &DebugRunner) -> Vec<String> {
         .collect()
 }
 
-/// general_rule.pdf 9-1-5 (the used Option is trashed as PENDING PROCESSING at
-/// the timing its 1st [Main] has resolved) + 18-1-2 (processing performed at
-/// the same time as pending processing is performed like simultaneously
-/// triggering effects → 15-4-3) + 15-4-3-5-1 (one of the TURN PLAYER's
-/// simultaneous items is chosen at a time, by that player). Mimi's
-/// `[All Turns] When a player uses an Option card` trigger and the used
-/// Option's trash are both P0's items at the same timing, so P0 — not the
-/// engine — decides which goes first.
+/// §9-1-5 (Ver. 4.3) "A used Option card is immediately trashed as pending
+/// processing as soon as the timing when its 1st [Main] effect has been
+/// resolved ... Other effects and rule checks don't interrupt the period
+/// between [Main] effect activation and trashing."
 ///
-/// Branch A: Mimi first. The Option is NOT yet in the trash while her
-/// optional suspend-cost gate (15-7-1) is answered.
+/// INVERTED (was `bt3_096_option_user_may_resolve_their_trigger_before_the_
+/// option_is_trashed`, G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER, which read
+/// §18-1-2 as letting P0 order the trash against Mimi's trigger). Mimi's
+/// `[All Turns] When a player uses an Option card` trigger cannot go first:
+/// no ordering decision is offered, and the Option is already in the trash
+/// when her optional suspend-cost gate (15-7-1) parks.
+/// F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE.
 #[test]
-fn bt3_096_option_user_may_resolve_their_trigger_before_the_option_is_trashed() {
+fn bt3_096_option_user_cannot_resolve_their_trigger_before_the_option_is_trashed() {
     let mut runner = base().hand(0, &[OPTION_ID]).memory(5).start();
     runner.place_on_field(0, CARD_ID, Some(0));
     let mimi = mimi_handle(&runner);
@@ -263,35 +237,40 @@ fn bt3_096_option_user_may_resolve_their_trigger_before_the_option_is_trashed() 
         OptionPlayResult::Pending
     );
     assert_eq!(runner.memory(), 4, "the Option's use cost was paid");
+    let view = runner.pending_selection_view().expect("Mimi's gate parked");
+    // Mimi's lone optional trigger parks as a one-entry activation prompt.
+    // The removed ordering prompt had two entries (the trash and the
+    // trigger) and named the trash; neither shape may come back.
+    let entries = view.effect_choices.as_ref().map_or(0, |c| c.len());
     assert!(
-        p0_trash_ids(&runner).is_empty(),
-        "the trash is still pending — the order has not been chosen yet"
+        entries <= 1 && !view.prompt.to_lowercase().contains("trash"),
+        "§9-1-5: the trash is not orderable against P0's own trigger: {} ({entries} entries)",
+        view.prompt
     );
-
-    pick_order_entry(&mut runner, "triggered effect");
     assert!(
-        p0_trash_ids(&runner).is_empty(),
-        "P0 chose their trigger first: the used Option is still in no area (9-1-4/9-1-5)"
+        view.is_optional,
+        "the parked decision is Mimi's optional suspend-cost gate: {}",
+        view.prompt
     );
-
-    // The optional suspend-cost gate survives the ordering pick.
-    accept_prompt(&mut runner);
-    assert!(is_suspended(&runner, mimi), "Mimi suspends as the cost");
-    assert_eq!(runner.memory(), 5, "gained 1 memory");
-
-    let _ = runner.auto_resolve();
     assert_eq!(
         p0_trash_ids(&runner),
         vec![OPTION_ID.to_string()],
-        "with no pending item left, the Option is disposed"
+        "§9-1-5: the used Option was trashed before Mimi's trigger activated"
     );
+
+    accept_prompt(&mut runner);
+    assert!(is_suspended(&runner, mimi), "Mimi suspends as the cost");
+    assert_eq!(runner.memory(), 5, "gained 1 memory");
+    let _ = runner.auto_resolve();
     assert!(runner.pending_selection().is_none());
 }
 
-/// Branch B: the trash first (DCGO's hard-coded order, still legal) — Mimi's
-/// gate then sees the Option in the trash.
+/// The trash happens first (§9-1-5; DCGO `UseOptionClass.UseOption` also
+/// trashes before the stacked skills) — Mimi's gate then sees the Option in
+/// the trash. (Was `bt3_096_option_user_may_trash_the_option_before_their_
+/// trigger`, which made that order an explicit pick; now no pick exists.)
 #[test]
-fn bt3_096_option_user_may_trash_the_option_before_their_trigger() {
+fn bt3_096_option_is_trashed_before_their_trigger_with_no_pick() {
     let mut runner = base().hand(0, &[OPTION_ID]).memory(5).start();
     runner.place_on_field(0, CARD_ID, Some(0));
     let mimi = mimi_handle(&runner);
@@ -300,7 +279,6 @@ fn bt3_096_option_user_may_trash_the_option_before_their_trigger() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
-    pick_order_entry(&mut runner, "Trash");
     assert_eq!(
         p0_trash_ids(&runner),
         vec![OPTION_ID.to_string()],
@@ -314,21 +292,21 @@ fn bt3_096_option_user_may_trash_the_option_before_their_trigger() {
     assert!(runner.pending_selection().is_none());
 }
 
-/// No ordering prompt when the user has no pending item of their own: a lone
-/// pending trash is not a choice.
+/// No ordering prompt when the user has no pending item of their own either
+/// (§9-1-5: the trash is never a choice).
 #[test]
 fn bt3_096_no_order_prompt_when_the_user_has_no_pending_trigger() {
     let mut runner = base().hand(0, &[OPTION_ID]).memory(5).start();
     // No Mimi on P0's field — nothing of P0's is pending beside the trash.
-    // FILL is purple, so P0 still meets the Option's colour requirement (4-19).
+    // FILL is purple, so P0 still meets the Option's colour requirement (4-22).
     runner.place_on_field(0, "FILL", Some(0));
     assert_ne!(
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Invalid
     );
     if let Some(view) = runner.pending_selection_view() {
-        // Death Claw's own optional [Main] pick may park -- but never the
-        // ordering prompt: a lone pending processing is not a choice.
+        // Death Claw's own optional [Main] pick may park -- but never an
+        // ordering prompt: the used Option's trash is not a choice (§9-1-5).
         assert!(
             !view.prompt.contains("pending items"),
             "no ordering prompt when the user has no pending item of their own: {}",
@@ -444,9 +422,9 @@ fn bt3_096_security_plays_itself_free() {
 // Exam BT3-096#effect#0 (qa/dcgo-exams/BT3/BT3-096-effect0.yaml) diverged at
 // Mimi's prompt: DCGO had already placed the <Delay> Option LM-032 in the
 // battle area, ours asked first. Official Q&A: "It can be activated after
-// activating the used Option card's [Main] effect."; general_rule.pdf 9-1-5 /
-// 18-1-2 dispose the used Option once its [Main] resolves, before the
-// triggers pending alongside it; DCGO CardController.cs
+// activating the used Option card's [Main] effect."; general_rule.pdf §9-1-5
+// (Ver. 4.3) disposes the used Option once its [Main] resolves, before the
+// triggers pending alongside it and with no decision; DCGO CardController.cs
 // `UseOptionClass.UseOption` disposes straight after `OptionSkill`, then the
 // stacked OnUseOption skills resolve. CLEAN on HEAD after the option-disposal
 // ordering work (5108e58ee `complete_option_body_if_done`, c652676d1).
@@ -467,8 +445,7 @@ fn bt3_096_prompt_sees_delay_option_already_placed() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
-    // P0 orders the pending disposal ahead of their own trigger (15-4-3-5-1).
-    pick_order_entry(&mut runner, "Trash");
+    // §9-1-5: the disposal precedes Mimi's trigger with no decision.
     assert!(
         runner.pending_selection_view().is_some(),
         "Mimi's prompt is parked"
@@ -495,8 +472,7 @@ fn bt3_096_prompt_sees_standard_option_already_trashed() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
-    // P0 orders the pending disposal ahead of their own trigger (15-4-3-5-1).
-    pick_order_entry(&mut runner, "Trash");
+    // §9-1-5: the disposal precedes Mimi's trigger with no decision.
     assert!(
         runner.pending_selection_view().is_some(),
         "Mimi's prompt is parked"

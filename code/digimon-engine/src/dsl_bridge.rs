@@ -178,6 +178,9 @@ fn compiled_dna_requirement(pred: &CompiledPredicate) -> Option<DnaRequirement> 
     supported.color_only = pred.color_only.clone();
     supported.name_is = pred.name_is.clone();
     supported.name_contains = pred.name_contains.clone();
+    // "w/[X] in text" (in_text_contains) lowers to the requirement's
+    // `text_contains`, searched over the whole-card text surface.
+    supported.in_text_contains = pred.in_text_contains.clone();
     if &supported != pred {
         return None;
     }
@@ -198,7 +201,7 @@ fn compiled_dna_requirement(pred: &CompiledPredicate) -> Option<DnaRequirement> 
             .clone()
             .or_else(|| pred.name_is.clone())
             .unwrap_or_default(),
-        text_contains: String::new(),
+        text_contains: pred.in_text_contains.clone().unwrap_or_default(),
     })
 }
 
@@ -211,5 +214,24 @@ fn compiled_color_to_engine(color: CompiledColor) -> crate::enums::CardColor {
         CompiledColor::Black => crate::enums::CardColor::Black,
         CompiledColor::Purple => crate::enums::CardColor::Purple,
         CompiledColor::White => crate::enums::CardColor::White,
+    }
+}
+
+#[cfg(test)]
+mod dna_requirement_tests {
+    use super::*;
+
+    #[test]
+    fn in_text_contains_lowers_to_the_requirement_text() {
+        // BT20-081: "[DNA Digivolve] [Fenriloogamon] + yellow Lv.6 w/[Pulsemon]
+        // in text". The text must survive lowering, never be dropped.
+        let mut pred = CompiledPredicate::default();
+        pred.level_eq = Some(6);
+        pred.color_is = Some(CompiledColor::Yellow);
+        pred.in_text_contains = Some("Pulsemon".to_string());
+        let req = compiled_dna_requirement(&pred).expect("lowers");
+        assert_eq!(req.level, 6);
+        assert_eq!(req.card_colors, vec![crate::enums::CardColor::Yellow]);
+        assert_eq!(req.text_contains, "Pulsemon");
     }
 }

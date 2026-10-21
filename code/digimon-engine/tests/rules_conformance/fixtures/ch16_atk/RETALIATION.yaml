@@ -1,0 +1,14 @@
+# RETALIATION -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   <Retaliation> (When this Digimon is deleted after losing a battle, delete
+#   the Digimon it was battling.)
+card: RETALIATION
+name: Spitemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: grant_keyword
+    keyword: Retaliation
+    summary: "<Retaliation> (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"

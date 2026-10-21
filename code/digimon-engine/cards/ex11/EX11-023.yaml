@@ -69,7 +69,7 @@ effects:
     # (true for Digimon tokens). Tokens are CardKind::Token in the engine, so
     # the kind match must list both, exactly like sibling cards BT22-040 /
     # EX11-060. (G-EX11-023-TOKEN-DELETION.)
-    condition:
+    trigger_if:
       all_of:
         - any_of:
             - event_target_kind: digimon

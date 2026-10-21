@@ -1,0 +1,28 @@
+# OPT_OBS_OPP_DISCARD -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] [Once Per Turn] When effects trash cards from under your
+#   Tamers, your opponent trashes 1 card in their hand.
+# A pooled trigger whose own resolution raises a new event (the nested-pool
+# test, §15-4-3-2 per resolving effect / §15-4-5-2).
+card: OPT_OBS_OPP_DISCARD
+name: Squeezer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_digivolution_card_trashed
+    once_per_turn: true
+    trigger_if:
+      event_host_is_own_tamer: true
+    summary: "[All Turns] [Once Per Turn] When effects trash cards from under your Tamers, your opponent trashes 1 card in their hand."
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_hand:
+                of: opponent
+                bind_as: discarded
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discarded }

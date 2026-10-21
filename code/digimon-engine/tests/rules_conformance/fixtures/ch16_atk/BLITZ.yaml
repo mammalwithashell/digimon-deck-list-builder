@@ -1,0 +1,25 @@
+# BLITZ -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [When Digivolving] <Blitz> (If your opponent has 1 or more memory, this
+#   Digimon may attack.)
+#   Digivolve: red Lv.3, cost 3.
+# Authored with the production idiom (EX3-063): the [When Digivolving]
+# effect grants Keyword::Blitz for the turn.
+card: BLITZ
+name: Rushdigimon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] <Blitz> (If your opponent has 1 or more memory, this Digimon may attack.)"
+    process:
+      - grant_keyword:
+          target: source
+          keyword: Blitz
+          expiry: end_of_turn

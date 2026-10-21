@@ -1,0 +1,15 @@
+# INH_PIERCE -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   Inherited Effect: <Piercing>
+# A second <Piercing> instance under PIERCE_EOA (§16-7-5).
+card: INH_PIERCE
+name: Spearmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "Inherited: <Piercing> (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"

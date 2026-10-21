@@ -105,6 +105,13 @@ pub struct Permanent {
     /// Phase 8: additional state when the top card is an Option.
     /// For Digimon/Tamer/DigiEgg permanents this is always `Standard`.
     pub option_state: OptionState,
+    /// §17-1-3-2-3: this permanent was placed in the breeding area by an
+    /// effect (`Game::play_to_breeding_from_hand`), so a non-Digimon top here
+    /// is exempt from the rule check's breeding-area trash target. `false`
+    /// for a hatched Digi-Egg and for every battle-area permanent: the move
+    /// from the breeding area clears it (the battle area's analogue for
+    /// Options is `option_state`).
+    pub placed_by_effect: bool,
 }
 
 impl std::fmt::Debug for Permanent {
@@ -126,7 +133,15 @@ impl std::fmt::Debug for Permanent {
 
 impl Permanent {
     /// Create a new permanent with a single card (played from hand or hatched).
-    pub fn new(card: CardSource, turn: u16) -> Self {
+    ///
+    /// The field is a public area; cards are placed face-up in it (§3-4-2).
+    /// A card that was a face-down digivolution card (§4-7-9) is a new card
+    /// once it moves (§3-1-3-1-2), so the new permanent's card is face-up
+    /// whatever zone it came from. (Only a card already ON the field can end
+    /// up a face-down top -- a source exposed when the cards above it leave --
+    /// and the rule check trashes that one, §17-1-3-2-4.)
+    pub fn new(mut card: CardSource, turn: u16) -> Self {
+        card.face_down = false;
         Self {
             face_generation: 0,
             battle_identity: None,
@@ -140,6 +155,7 @@ impl Permanent {
             is_attacking: false,
             effect_activations: HashMap::new(),
             option_state: OptionState::Standard,
+            placed_by_effect: false,
         }
     }
 
@@ -172,6 +188,24 @@ impl Permanent {
         self.card_sources
             .last()
             .expect("Permanent must have at least one card")
+    }
+
+    /// Indices into `card_sources` of the face-down cards UNDER the top card,
+    /// lowest first. The one notion behind every "by trashing the bottom
+    /// face-down card(s) from under your Tamers" cost: its eligible cards are
+    /// these, and "the bottom face-down card" is the first -- the LOWEST
+    /// face-down card, whether or not face-up cards sit below it (card text of
+    /// BT26-005 / BT25-035; DCGO `BT26_005.cs`
+    /// `DigivolutionCards.LastOrDefault(IsFlipped)`; the rules manual has no
+    /// narrower definition). The payability check, the Tamer picks and the
+    /// trash all read it.
+    pub fn face_down_source_indices(&self) -> impl Iterator<Item = usize> + '_ {
+        let under = self.card_sources.len().saturating_sub(1);
+        self.card_sources[..under]
+            .iter()
+            .enumerate()
+            .filter(|(_, source)| source.face_down)
+            .map(|(index, _)| index)
     }
 
     /// Mutable reference to top card.
@@ -393,7 +427,7 @@ impl Permanent {
     /// The Petrification Token prints as `(Digimon/white/3000 DP/...)`.
     ///
     /// Leaving it out made every rule phrased "your opponent's Digimon" skip
-    /// tokens. Measured case: `<Raid>` (general_rule.pdf 16-22-1 switches the
+    /// tokens. Measured case: `<Raid>` (general_rule.pdf 16-23-1 switches the
     /// attack to the opponent's unsuspended DIGIMON with the highest DP) never
     /// offered a Petrification Token, because `raid_switch_candidates` gates on
     /// this predicate -- every other filter passed (unsuspended, Standard option
@@ -511,19 +545,32 @@ impl Permanent {
             .any(|card| card.contains_card_name(name, data))
     }
 
-    /// Check if any card in the stack has a given trait.
-    pub fn has_trait(&self, trait_name: &str, data: &[CardData]) -> bool {
-        let trait_lower = trait_name.to_lowercase();
-        for card in &self.card_sources {
-            for t in card.traits(data) {
-                if t.to_lowercase() == trait_lower {
-                    return true;
-                }
-            }
-        }
-        false
+    /// Whether this Digimon's printed traits include `trait_name`
+    /// (case-insensitive): the TOP card's trait line, including its
+    /// `(Rule) Trait: Has [X]` grants (§2-3-4-2, folded into `CardData::traits`).
+    /// A digivolution card's traits are not the Digimon's: the bottom cards of
+    /// a stack contribute their inherited effects (§4-7-4, §4-7-7 "treated as
+    /// part of the information on the top card"), not their characteristics.
+    /// Official Q&A Q3225 (EX1-038): trashing the top card turns the Digimon
+    /// into one "without [Free] in its traits" while the [Free] EX1-038 is
+    /// still one of its digivolution cards. DCGO reads `permanent.TopCard`
+    /// (`BT25_020.cs` `CanTriggerWhenWinBattle`, `EX8_047.cs`).
+    /// Trait-changing effects are layered on by [`Self::has_trait_for_rules`],
+    /// the reader every rules check must use; this one is crate-private and
+    /// named "printed" so no caller skips them by accident.
+    /// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
+    pub(crate) fn has_printed_trait(&self, trait_name: &str, data: &[CardData]) -> bool {
+        self.top_card()
+            .traits(data)
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(trait_name))
     }
 
+    /// Whether this Digimon has `trait_name` for the rules: its synthesized
+    /// identity's traits (the top card plus trait-changing effects:
+    /// `ChangeTraits`, `TreatAsDigimon`) or its top card's printed traits --
+    /// the same reading as the DSL `trait_has` permanent predicate. Never a
+    /// digivolution card's traits (see [`Self::has_printed_trait`]).
     pub fn has_trait_for_rules(
         &self,
         trait_name: &str,
@@ -537,14 +584,28 @@ impl Permanent {
             .traits
             .iter()
             .any(|trait_name| trait_name.to_lowercase() == needle)
-            || self.has_trait(trait_name, data)
+            || self.has_printed_trait(trait_name, data)
     }
 
     /// Digivolve: push a new card on top of the stack.
     pub fn digivolve(&mut self, card: CardSource, turn: u16) {
-        self.face_generation = self.face_generation.saturating_add(1);
-        self.card_sources.push(card);
+        self.push_top(card);
         self.turn_digivolved = turn;
+    }
+
+    /// Stack `card` on top as this permanent's new TOP card, face-up
+    /// (§3-4-2), whatever zone it came from -- a hand or trash card, or a
+    /// digivolution card digivolved into from under a permanent. Every path
+    /// that installs a new top card on an existing stack (digivolution, DNA
+    /// digivolution, Blast DNA, Assembly-style merges) goes through here.
+    /// Digivolution cards placed UNDER the top keep the face they are placed
+    /// with (§4-7-5, §4-7-9): use `push_under` / `push_as_top_source`.
+    /// A new top card is a new face incarnation (`face_generation`), so a
+    /// captured Security-check observer of the previous face cannot revive.
+    pub fn push_top(&mut self, mut card: CardSource) {
+        self.face_generation = self.face_generation.saturating_add(1);
+        card.face_down = false;
+        self.card_sources.push(card);
     }
 
     /// Insert `card` at the bottom of the digivolution stack (position 0).

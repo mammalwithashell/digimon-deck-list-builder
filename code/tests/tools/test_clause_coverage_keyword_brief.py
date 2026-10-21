@@ -13,7 +13,7 @@ def test_opt_cost_keywords_expect_a_prompt():
     evade = lookup(briefs, "Evade")
     assert evade is not None
     assert evade["kind"] == "Opt-cost→Mand"
-    assert evade["rule"] == "16-21"
+    assert evade["rule"] == "16-22"  # Comprehensive Rules Ver. 4.3 (3.6: 16-21)
     assert evade["expects_prompt"] is True, "DCGO asks before an Opt-cost keyword resolves"
 
 
@@ -51,17 +51,19 @@ def test_every_table_row_parses():
 
 
 def test_every_table_row_parses_including_multi_name_cells():
-    """Row 16-3's cell names the keyword TWICE -- the current
+    """Row 16-4's cell names the keyword TWICE -- the current
     `<Security A. +x / -x>` and the retired `<Security Attack>` -- plus prose.
 
     A pattern demanding exactly one backticked span dropped that row silently,
     which left one of the most common keywords in the game impossible to look
-    up. 38 distinct briefs is the whole table; anything less means a row is
-    being skipped again.
+    up. 44 distinct briefs is the whole table (38 keywords through 3.6 plus the
+    six 4.x keywords <Use Req.> <Ascension> <Engage> <Guard> <Detach>
+    <Succession>, Comprehensive Rules Ver. 4.3 §16-42..§16-47); anything less
+    means a row is being skipped again.
     """
     briefs = load_briefs(SEMANTICS, INDEX)
     distinct = {id(v) for v in briefs.values()}
-    assert len(distinct) == 38, f"expected all 38 table rows, got {len(distinct)}"
+    assert len(distinct) == 44, f"expected all 44 table rows, got {len(distinct)}"
 
 
 def test_security_attack_resolves_under_both_its_printed_names():
@@ -70,6 +72,6 @@ def test_security_attack_resolves_under_both_its_printed_names():
     retired = lookup(briefs, "Security Attack")
     assert current is not None and retired is not None
     assert current is retired, "both names must reach the same brief"
-    assert current["rule"] == "16-3"
+    assert current["rule"] == "16-4"  # Ver. 4.3 (3.6: 16-3)
     assert current["kind"] == "Persistent"
     assert current["expects_prompt"] is False, "a persistent keyword asks nothing"

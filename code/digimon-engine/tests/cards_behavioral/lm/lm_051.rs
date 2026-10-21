@@ -8,7 +8,7 @@
 //! - [Main] <Delay> Gain 2 memory.
 //! - Security Effect [Security] Place this card in the battle area.
 //! Audit: official observation 7015da3dc289210a2033c1b73e18e6a0dbcc2a7bd14e9b7a26d3a9c1cc19e342,
-//! actual card image, base DCGO LM_051.cs, and rules section 16-16.
+//! actual card image, base DCGO LM_051.cs, and rules section 16-17.
 //!
 #![allow(dead_code)]
 

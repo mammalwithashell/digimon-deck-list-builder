@@ -431,7 +431,7 @@ fn place_lm_030_as_start_delay(runner: &mut DebugRunner) {
 
 /// Advance from P0's turn to the start of P0's next turn (P0 → P1 → P0),
 /// where `StartOfYourNextTurn` delays mature.
-/// Accept the §16-16-2 `<Delay>` cost confirm that now precedes the body.
+/// Accept the §16-17-2 `<Delay>` cost confirm that now precedes the body.
 ///
 /// Added 2026-08-24: the scheduled window used to auto-pay the trash-this-card
 /// cost and run the body straight away. It is optional processing, so the
@@ -1099,11 +1099,11 @@ fn lm_030_security_adds_card_to_hand_even_when_trash_play_declined() {
     );
 }
 
-/// §16-16-2: "The processing from <Delay> is optional." Reaching the scheduled
+/// §16-17-2: "The processing from <Delay> is optional." Reaching the scheduled
 /// window must therefore OFFER the trash-this-card cost, not pay it, and
 /// §15-7-2 means declining skips the linked effect too.
 ///
-/// Declining must also leave the Option ON THE FIELD: §16-16-1 makes the Delay
+/// Declining must also leave the Option ON THE FIELD: §16-17-1 makes the Delay
 /// available "while a card with this effect is in the battle area", and the
 /// printed timing here is [Start of Your Turn] -- a window that comes round
 /// every own turn -- so a decline is a pass on THIS window, not a forfeit.
@@ -1143,7 +1143,7 @@ fn lm_030_delay_may_be_declined_leaving_the_option_on_the_field() {
         .expect("the scheduled window must surface the optional <Delay> cost (rule 17)");
     assert!(
         outer.is_optional,
-        "the <Delay> confirm must expose PASS (§16-16-2)"
+        "the <Delay> confirm must expose PASS (§16-17-2)"
     );
 
     runner

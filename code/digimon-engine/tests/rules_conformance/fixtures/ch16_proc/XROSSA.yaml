@@ -1,0 +1,9 @@
+# XROSSA -- Digimon, Lv.3, red, 3000 DP, play cost 3. No text.
+# A DigiXros material named in MSAVE2's DigiXros requirements.
+card: XROSSA
+name: Xrossa
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000

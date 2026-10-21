@@ -9,7 +9,7 @@
 //!     `OnAnyDeletion`.
 //!   - The `ReplacementCause` reported at the fire-site matches the runtime
 //!     context (`Battle` — including the security-check battle, per
-//!     13-1-7-3-1/14-2-2 — `OwnEffect`, `OpponentEffect`).
+//!     13-1-8-3-1/14-2-2 — `OwnEffect`, `OpponentEffect`).
 //!
 //! Per the Task 3 plan, we restrict ourselves to **mandatory** replacements
 //! here — optional accept/decline flows are already covered by the Task 2
@@ -428,12 +428,12 @@ fn deletion_cause_opponent_effect_is_inferred_when_opponent_deletes() {
 /// is deleted by the BATTLE, not by the check — the cause is
 /// `ReplacementCause::Battle`.
 ///
-/// Ruling (general_rule.pdf Ver.3.6): 13-1-7-3-1 — the security check against
+/// Ruling (general_rule.pdf Ver.4.3): 13-1-7-3-1 — the security check against
 /// a Security Digimon is processed as "a battle … (For details, refer to 14
 /// 'Battles')"; 14-2-2 — "The Digimon that loses is immediately deleted."
-/// 16-8-1 names the attribution outright: a `<Jamming>` Digimon "isn't
+/// 16-9-1 names the attribution outright: a `<Jamming>` Digimon "isn't
 /// deleted as a result of a battle with an opponent's Security Digimon", and
-/// 16-24-1/-2 `<Barrier>` ("would be deleted in battle") can only fire during
+/// 16-25-1/-2 `<Barrier>` ("would be deleted in battle") can only fire during
 /// security battles under this cause. The fire-site passes the cause
 /// explicitly (`SecurityPhase::BattleResolved`, commit a1f7f59e9) because
 /// `infer_deletion_cause`'s security-first priority would mis-attribute it —
@@ -469,8 +469,8 @@ fn deletion_cause_battle_is_reported_when_attacker_loses_security_battle() {
     let _ = r.attack_player(attacker, 1, false);
 
     // The attacker's cause-sentinel fires when the security battle deletes
-    // it. Losing to a Security Digimon is a battle deletion (13-1-7-3-1 →
-    // 14-2-2; 16-8-1 <Jamming> / 16-24 <Barrier> both read it as such), so
+    // it. Losing to a Security Digimon is a battle deletion (13-1-8-3-1 →
+    // 14-2-2; 16-9-1 <Jamming> / 16-25 <Barrier> both read it as such), so
     // the fire-site must report Battle even though `security_resolution`
     // is still live at that moment.
     assert_eq!(

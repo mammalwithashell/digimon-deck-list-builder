@@ -225,8 +225,8 @@ fn bt24_100_delay_activation_gains_two_memory_and_trashes_delay_option() {
     // Delay to AUTO-FIRE, which is what the old `end_of_your_next_turn` wiring
     // did. BT24-100 prints "[Main] <Delay>" and DCGO registers it at
     // EffectTiming.OnDeclaration, so it is player-activated: it waits on the
-    // field until the controller spends a [Main] action on it (§16-16-1), and
-    // §16-16-3 only bars activation on the turn it was placed.
+    // field until the controller spends a [Main] action on it (§16-17-1), and
+    // §16-17-3 only bars activation on the turn it was placed.
     runner.end_turn();
     runner.game.enter_main_phase();
     runner.end_turn();

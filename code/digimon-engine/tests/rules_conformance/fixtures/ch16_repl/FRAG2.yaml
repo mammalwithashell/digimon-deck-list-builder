@@ -1,0 +1,16 @@
+# FRAG2 -- Digimon, Lv.5, red, 5000 DP, play cost 7.
+#   <Fragment (2)> (When this Digimon would be deleted, by trashing any 2 of
+#   its digivolution cards, it isn't deleted.)
+# The §16-37 keyword card.
+card: FRAG2
+name: Shardmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 2
+    summary: "<Fragment (2)> (When this Digimon would be deleted, by trashing any 2 of its digivolution cards, it isn't deleted.)"

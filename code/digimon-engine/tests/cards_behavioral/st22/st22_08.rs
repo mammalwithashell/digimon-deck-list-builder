@@ -145,7 +145,7 @@ fn mode_select_pending(runner: &DebugRunner) -> bool {
 /// `link_mode == true` — §6-5-1-4 "Linking a Card in the Hand or Battle Area":
 /// the hand slot's `HAND_EFFECT` bit, which is a DIFFERENT main-phase action,
 /// not a mode of the first (`G-ENGINE-OPTION-LINK-FROM-HAND`; general_rule.pdf
-/// Ver.3.6 §6-5-1, §10-1-1; DCGO `CardEffectFactory.LinkEffect`, `Link.cs:19`,
+/// Ver.4.3 §6-5-1, §10-1-1; DCGO `CardEffectFactory.LinkEffect`, `Link.cs:19`,
 /// reached as an `ActivateCardAction` and never a `PlayCardAction`).
 ///
 /// Returns the `OptionPlayResult` of the play call, or `Pending` for the link
@@ -1025,7 +1025,7 @@ fn st22_08_main_link_excludes_level_2_host() {
 /// action bits — §6-5-1-3 (use) on the PLAY bit and §6-5-1-4 (link) on the
 /// `HAND_EFFECT` bit. It is NOT one action with a mode branch.
 ///
-/// `G-ENGINE-OPTION-LINK-FROM-HAND`. general_rule.pdf (Ver.3.6) §6-5-1 lists
+/// `G-ENGINE-OPTION-LINK-FROM-HAND`. general_rule.pdf (Ver.4.3) §6-5-1 lists
 /// "use an Option card from the hand" and "link a card from the hand or battle
 /// area" as separate main-phase actions, and §10-1-1 says a card is linked from
 /// the hand "by paying the cost as part of the main phase actions". DCGO draws
@@ -1107,7 +1107,7 @@ fn st22_08_standard_mode_charges_use_cost_4() {
 }
 
 /// Choosing the Link mode charges exactly the Link Requirements cost (2) —
-/// and charges it at `general_rule.pdf` (Ver.3.6) §10-1-3-2, i.e. AFTER
+/// and charges it at `general_rule.pdf` (Ver.4.3) §10-1-3-2, i.e. AFTER
 /// §10-1-3-1's host pick, never at the declaration
 /// (`G-ENGINE-OPTION-HAND-LINK-COST-TIMING`).
 #[test]

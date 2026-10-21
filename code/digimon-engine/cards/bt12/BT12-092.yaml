@@ -139,7 +139,7 @@ effects:
     active_when: { your_turn: true }
     optional: true
     summary: "[Your Turn] When this Tamer becomes suspended, 1 of your Digimon may digivolve into a yellow [Greymon]-named hand card, free"
-    condition:
+    trigger_if:
       event_permanent_is_source: true
     process:
       - select_own_permanent:

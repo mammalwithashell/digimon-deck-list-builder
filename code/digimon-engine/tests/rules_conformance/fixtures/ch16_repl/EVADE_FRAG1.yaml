@@ -1,0 +1,22 @@
+# EVADE_FRAG1 -- Digimon, Lv.5, red, 6000 DP, play cost 6.
+#   <Evade> (When this Digimon would be deleted, by suspending it, it isn't
+#   deleted.)
+#   <Fragment (1)> (When this Digimon would be deleted, by trashing any 1 of
+#   its digivolution cards, it isn't deleted.)
+# Two different immediate-type effects that trigger on the same "would be
+# deleted" (§15-8-5-3).
+card: EVADE_FRAG1
+name: Twinguardmon
+kind: digimon
+level: 5
+color: [red]
+cost: 6
+dp: 6000
+effects:
+  - kind: grant_keyword
+    keyword: Evade
+    summary: "<Evade> (When this Digimon would be deleted, by suspending it, it isn't deleted.)"
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 1
+    summary: "<Fragment (1)> (When this Digimon would be deleted, by trashing any 1 of its digivolution cards, it isn't deleted.)"

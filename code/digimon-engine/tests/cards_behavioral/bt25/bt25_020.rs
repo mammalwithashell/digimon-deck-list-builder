@@ -740,3 +740,73 @@ fn bt25_020_does_not_fire_on_direct_player_attack() {
         "a direct player attack must not cause an EXTRA security trash beyond its own security check"
     );
 }
+
+/// The loser of the next test: P1's attacker whose `[On Deletion]` removes
+/// P0's 9000-DP [TS] winner (and leaves 12000-DP Marsmon on the field).
+const OD_DELETE_LE_9K: &str = r#"
+card: OPP-OD-DEL9K
+name: Spitemon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Delete all of your opponent's Digimon with 9000 DP or less."
+    process:
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - kind: digimon
+              - dp_lte: 9000
+"#;
+
+/// §15-8-3-1 / §15-8-3-8 (G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX): on
+/// the opponent's turn ([All Turns]), P1's attacker loses the battle to P0's
+/// [TS] Digimon, and the deleted attacker's `[On Deletion]` deletes the
+/// winner before Marsmon's "When any of your [TS] trait Digimon win a
+/// battle" activates. A [TS] Digimon won the battle -- the trigger condition
+/// is read in the state where it triggered (the winner's last-known
+/// information) -- so Marsmon still trashes the opponent's top security
+/// card. Control: the same sequence with a winner without [TS] does not.
+/// DCGO: `CanTriggerWhenWinBattle` reads the battle hashtable's
+/// `WinnerPermanents`, a copy of each winner taken at the battle.
+#[test]
+fn bt25_020_fires_when_the_ts_winner_is_deleted_by_the_losers_on_deletion() {
+    for (winner_id, fires) in [("OWN-TS", true), ("OWN-B", false)] {
+        let mut runner = base()
+            .from_dsl_yaml(OD_DELETE_LE_9K)
+            .expect("fixture loser parses")
+            .security(1, &["FILL", "FILL"])
+            .memory(20)
+            .start();
+        let marsmon = place_marsmon(&mut runner);
+        let winner = runner.place_on_field(0, winner_id, Some(0)); // 9000 / 4500 DP
+        let attacker = runner.place_on_field(1, "OPP-OD-DEL9K", Some(0)); // 4000 DP
+        runner.game.turn_player_idx = 1;
+
+        let sec_before = runner.security_count(1);
+        runner.attack_digimon(attacker, winner, false);
+        let _ = runner.auto_resolve();
+
+        let field: Vec<String> = runner.game.players[0]
+            .battle_area
+            .iter()
+            .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+            .collect();
+        assert_eq!(
+            field,
+            vec![CARD_ID.to_string()],
+            "the loser's [On Deletion] deleted the winner; Marsmon stayed ({winner_id})"
+        );
+        assert!(runner.game.players[1].battle_area.is_empty(), "the attacker lost the battle");
+        let _ = marsmon;
+        assert_eq!(
+            runner.security_count(1),
+            if fires { sec_before - 1 } else { sec_before },
+            "winner {winner_id}: Marsmon reads the departed winner's last-known [TS] trait"
+        );
+    }
+}

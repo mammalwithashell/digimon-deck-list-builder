@@ -130,9 +130,8 @@ effects:
     optional: true
     outer_prompt: true
     summary: "[All Turns][OPT] On any Digimon play/digivolve: may suspend 1 opp Digimon + unsuspend self; if by effect, may bottom-deck 1 suspended opp Digimon"
-    condition:
-      all_of:
-        - event_target_kind: digimon
+    trigger_if:
+      event_target_kind: digimon
     process:
       # Suspend pick — declinable (DCGO canNoSelect: true); declining must
       # CONTINUE the body (the by-effect leg is independent of this pick).

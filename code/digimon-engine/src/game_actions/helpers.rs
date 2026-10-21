@@ -45,21 +45,26 @@ impl Game {
         }
         let count = removed.len();
         for source in &removed {
-            self.player_mut(source.owner).trash.push(source.clone());
+            self.player_mut(source.owner).put_in_trash(source.clone());
         }
         self.tick_declarative_effects();
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         self.apply_ace_overflow_for_sources(&removed);
-        for source in removed {
-            self.enqueue_digivolution_card_trashed(
-                host.player,
-                host,
-                host_card,
-                source.handle(),
-                cause,
-            );
-        }
+        // One payment trashes every selected card at the same time: one
+        // event (§15-5-2).
+        self.enqueue_digivolution_cards_trashed(
+            removed
+                .iter()
+                .map(|source| super::TrashedSource {
+                    player: host.player,
+                    host,
+                    host_card,
+                    card: source.handle(),
+                })
+                .collect(),
+            cause,
+        );
         count
     }
 
@@ -100,7 +105,7 @@ impl Game {
         cause: crate::trigger_context::EventCause,
     ) {
         let source_card = removed.handle();
-        self.player_mut(trash_owner).trash.push(removed);
+        self.player_mut(trash_owner).put_in_trash(removed);
         self.fire_digivolution_card_trashed(
             fire_target.player,
             fire_target,
@@ -246,11 +251,32 @@ impl Game {
     /// `EffectContext` so `can_affect_permanent` and source-kind metadata come
     /// from the real resolving card.
     #[doc(hidden)]
-    /// Tier-2 de-digivolve rules machinery: fire `WhenWouldBeDeDigivolved`
-    /// once, then pop digivolution sources (honoring `stop_at_level` and the
-    /// `amount` cap), trash each popped source firing
-    /// `OnDigivolutionCardTrashed`, and clean up a newly-exposed DigiEgg.
-    /// Returns the number of sources popped.
+    /// Tier-2 `<De-Digivolve>` rules machinery (§16-12). Fires
+    /// `WhenWouldBeDeDigivolved` once, then:
+    ///
+    /// - §16-12-1 / §16-12-3: the effect's controller DECLARES a number from 1
+    ///   up to the number specified, and 0 can't be chosen. When `declaration`
+    ///   carries the resolving effect's provenance, `amount` is a printed
+    ///   number, and at least 2 cards are trashable, a non-optional count
+    ///   choice (1..=min(N, trashable)) parks through the resumable count VM
+    ///   (`ResumeSelectKind::DeDigivolveCount`) and this returns 0; the
+    ///   declared number is trashed when the choice resolves
+    ///   (`de_digivolve_commit_declared`). With 1 trashable card the number
+    ///   is forced and no prompt is installed (DCGO `IDegeneration` opens a
+    ///   `SelectCountEffect` with `CanNoSelect: false`). `amount = None` is
+    ///   the unnumbered pop-everything helper, not a printed <De-Digivolve N>,
+    ///   and never declares.
+    /// - §16-12-4: the TOP card is never trashed while its level is at most
+    ///   `stop_at_level` (the keyword's floor is 3); a top card with no level
+    ///   (a Tamer in the stack, §16-12-6's category change) does not stop it.
+    ///   The trashing also stops when the Digimon has no digivolution cards.
+    /// - §4-8-1 / §16-12-5: every trashed card is the top card when trashed,
+    ///   so no digivolution card is trashed; the instance enqueues
+    ///   `OnTopCardTrashed` ONCE with every card it trashed (DCGO stacks
+    ///   `WhenTopCardTrashed` once per `IDegeneration`), never
+    ///   `OnDigivolutionCardTrashed`.
+    ///
+    /// Returns the number of cards trashed now (0 when a declaration parked).
     ///
     /// Relocated from `EffectContext::de_digivolve` so the rules machinery
     /// lives in Tier 2 (placement rule §engine-effect-context-layering). The
@@ -273,6 +299,7 @@ impl Game {
         stop_at_level: Option<u8>,
         amount: Option<u8>,
         immunity_recheck: Option<(crate::enums::PlayerId, crate::enums::EffectSourceKind)>,
+        declaration: Option<crate::resume::ResumeProvenance>,
     ) -> u8 {
         use crate::enums::EffectTiming;
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
@@ -310,16 +337,174 @@ impl Game {
             }
         };
         let target = effective_target;
+        let cause =
+            crate::trigger_context::EventCause::from(self.infer_effect_cause(target.player));
 
         let max = amount.unwrap_or(u8::MAX);
-        let mut popped: u8 = 0;
+        if let (Some(prov), Some(_)) = (declaration, amount) {
+            let trashable = self.de_digivolve_trashable_count(target, stop_at_level, max);
+            if trashable >= 2 {
+                let state = DeDigivolveCountState {
+                    host: crate::count_choice::CountChoiceHost {
+                        player: target.player,
+                        field_index: target.index,
+                        battle_identity: self.capture_digivolve_host_identity(target),
+                    },
+                    stop_at_level,
+                    immunity_recheck,
+                    cause,
+                };
+                self.install_de_digivolve_declaration(prov, trashable, state);
+                return 0;
+            }
+        }
+        self.de_digivolve_trash_from_top(target, stop_at_level, max, immunity_recheck, cause)
+    }
 
-        while popped < max {
-            let perm = match self
-                .player(target.player)
-                .battle_area
-                .get(target.index as usize)
+    /// How many cards one `<De-Digivolve>` instance of up to `max` can trash
+    /// from `target` (§16-12-1 / §16-12-4): walk down from the top while the
+    /// stack keeps a card under the top and the top's level is above the
+    /// floor (the live top is read through `level_for_rules`, lower cards by
+    /// their printed level); an exposed Digi-Egg ends the walk.
+    pub(crate) fn de_digivolve_trashable_count(
+        &self,
+        target: PermanentHandle,
+        stop_at_level: Option<u8>,
+        max: u8,
+    ) -> u8 {
+        let Some(perm) = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+        else {
+            return 0;
+        };
+        let stack = &perm.card_sources;
+        let mut len = stack.len();
+        let mut n: u8 = 0;
+        while n < max && len > 1 {
+            let level = if n == 0 {
+                perm.level_for_rules(&self.card_data, &self.modifiers, target)
+            } else {
+                stack[len - 1].level(&self.card_data)
+            };
+            if let (Some(floor), Some(level)) = (stop_at_level, level) {
+                if level <= floor {
+                    break;
+                }
+            }
+            n += 1;
+            len -= 1;
+            if stack[len - 1].card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg {
+                break;
+            }
+        }
+        n
+    }
+
+    /// Park the §16-12-1 count declaration: a non-optional count choice with
+    /// the values `1..=trashable` for the resolving effect's controller.
+    fn install_de_digivolve_declaration(
+        &mut self,
+        prov: crate::resume::ResumeProvenance,
+        trashable: u8,
+        state: DeDigivolveCountState,
+    ) {
+        use crate::count_choice::{CountChoicePage, CountChoiceValue};
+        let values = (1..=u64::from(trashable))
+            .map(|n| CountChoiceValue {
+                declared: n,
+                payable: n,
+            })
+            .collect();
+        let Some(page) = CountChoicePage::new(values, Some(state.host)) else {
+            // Unreachable (1..=trashable, trashable >= 2, is strictly
+            // ascending); never skip the mandatory trash (§16-12-3): fall back
+            // to trashing the maximum.
+            debug_assert!(false, "<De-Digivolve> declaration page rejected 1..={trashable}");
+            if let Some(target) =
+                self.resolve_digivolve_host_identity(state.host.player, state.host.battle_identity)
             {
+                self.de_digivolve_trash_from_top(
+                    target,
+                    state.stop_at_level,
+                    trashable,
+                    state.immunity_recheck,
+                    state.cause,
+                );
+            }
+            return;
+        };
+        {
+            let mut ctx = crate::effect_context::EffectContext::new_with_source_kind_and_override(
+                self,
+                prov.source_card,
+                prov.source_permanent,
+                prov.source_kind,
+                prov.controller,
+                prov.override_pin,
+            );
+            crate::count_choice::install_count_choice(
+                &mut ctx,
+                page.clone(),
+                false,
+                "<De-Digivolve>: declare how many cards to trash".into(),
+                None,
+                Vec::new(),
+                crate::dsl_cards::bindings::Bindings::default(),
+                crate::dsl_cards::step::StepRuntime::default(),
+            );
+        }
+        if let Some(crate::resume::ResumeFrame::RunTail { select_kind, .. }) = self
+            .pending_selection_resume
+            .as_mut()
+            .and_then(|s| s.frames.last_mut())
+        {
+            *select_kind = crate::resume::ResumeSelectKind::DeDigivolveCount { page, state };
+        }
+    }
+
+    /// Resolve a parked §16-12-1 declaration: trash the declared number of
+    /// cards from the top of the (still present) declared Digimon.
+    pub(crate) fn de_digivolve_commit_declared(
+        &mut self,
+        state: &DeDigivolveCountState,
+        declared: u64,
+    ) -> u8 {
+        let Some(target) =
+            self.resolve_digivolve_host_identity(state.host.player, state.host.battle_identity)
+        else {
+            return 0;
+        };
+        let max = u8::try_from(declared).unwrap_or(u8::MAX);
+        self.de_digivolve_trash_from_top(
+            target,
+            state.stop_at_level,
+            max,
+            state.immunity_recheck,
+            state.cause,
+        )
+    }
+
+    /// Trash up to `max` cards from the top of `target`, one at a time
+    /// (§16-12-5), stopping at a top card of level `<= stop_at_level`
+    /// (§16-12-4) or when no digivolution card remains, then enqueue
+    /// `OnTopCardTrashed` once with every trashed card (§4-8-1: these are top
+    /// cards, not digivolution cards).
+    fn de_digivolve_trash_from_top(
+        &mut self,
+        target: PermanentHandle,
+        stop_at_level: Option<u8>,
+        max: u8,
+        immunity_recheck: Option<(crate::enums::PlayerId, crate::enums::EffectSourceKind)>,
+        cause: crate::trigger_context::EventCause,
+    ) -> u8 {
+        let owner = target.player;
+        let mut trashed: Vec<CardHandle> = Vec::new();
+        let mut exposed_egg = false;
+
+        while (trashed.len() as u8) < max {
+            let perm = match self.player(owner).battle_area.get(target.index as usize) {
                 Some(p) => p,
                 None => break,
             };
@@ -328,67 +513,53 @@ impl Game {
                 break;
             }
 
-            let next_top_level = {
-                let stack = perm.digivolution_cards();
-                let next_top = &stack[stack.len() - 2];
-                next_top.level(&self.card_data)
-            };
-
-            if let (Some(floor), Some(nt_level)) = (stop_at_level, next_top_level) {
-                if nt_level < floor {
+            // §16-12-4: the card being trashed is the TOP card; a level 3 (or
+            // lower) top card is never trashed. DCGO `IDegeneration` stops on
+            // the permanent's own level (`_permanent.Level == 3 &&
+            // TopCard.HasLevel`); a level-less top card does not stop it.
+            if let (Some(floor), Some(level)) = (
+                stop_at_level,
+                perm.level_for_rules(&self.card_data, &self.modifiers, target),
+            ) {
+                if level <= floor {
                     break;
                 }
             }
 
-            let owner = target.player;
-            let (popped_card, host_card) = {
-                let p = self.player_mut(owner);
-                let stack = &mut p.battle_area[target.index as usize].card_sources;
+            let popped_card = {
+                let stack =
+                    &mut self.player_mut(owner).battle_area[target.index as usize].card_sources;
                 debug_assert!(stack.len() >= 2, "stack_size-guard failed");
-                let popped_card = stack.pop().expect("stack_size-guarded pop");
-                let host_card = stack
-                    .last()
-                    .map(|source| source.handle())
-                    .unwrap_or_else(|| popped_card.handle());
-                (popped_card, host_card)
+                stack.pop().expect("stack_size-guarded pop")
             };
-            let source_card = popped_card.handle();
-            self.player_mut(owner).trash.push(popped_card);
-            self.fire_digivolution_card_trashed(
-                owner,
-                target,
-                host_card,
-                source_card,
-                crate::trigger_context::EventCause::from(self.infer_effect_cause(owner)),
-            );
-            popped += 1;
+            trashed.push(popped_card.handle());
+            self.player_mut(owner).put_in_trash(popped_card);
+            // The departed top card's continuous text stops applying and the
+            // new top card's applies before the next trash.
+            self.tick_declarative_effects();
 
             // Inlined cleanup_exposed_battle_area_digi_egg: if popping exposed
-            // a DigiEgg on top, delete the permanent and stop.
-            let exposed = self
-                .player(target.player)
+            // a DigiEgg on top, the permanent is deleted and trashing stops.
+            if self
+                .player(owner)
                 .battle_area
                 .get(target.index as usize)
                 .is_some_and(|perm| {
                     perm.top_card().card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg
-                });
-            if exposed {
-                self.delete_permanent_with_effects(target);
+                })
+            {
+                exposed_egg = true;
                 break;
             }
 
-            // De-Digivolve trashes ONE card at a time: the newly-exposed top
-            // card's continuous text is live before the next trash.
-            // Re-materialize declarative effects and re-check effect
-            // immunity — if the exposed card is now unaffected by this
-            // effect (e.g. EX8-073's [All Turns] opponent-Digimon-effect
-            // immunity, judge-quiz Q15), the remaining pops are halted. The
-            // re-tick also keeps the registry fresh for any FOLLOW-UP
-            // `de_digivolve` call in the same resolving process (repeated
-            // `<De-Digivolve 1>` instances, BT19-073).
+            // De-Digivolve trashes ONE card at a time: if the exposed card is
+            // now unaffected by this effect (e.g. EX8-073's [All Turns]
+            // opponent-Digimon-effect immunity, judge-quiz Q15), the remaining
+            // pops are halted. The re-tick above also keeps the registry fresh
+            // for any FOLLOW-UP `de_digivolve` call in the same resolving
+            // process (repeated `<De-Digivolve 1>` instances, BT19-073).
             if let Some((effect_controller, source_kind)) = immunity_recheck {
-                self.tick_declarative_effects();
-                if popped < max
+                if (trashed.len() as u8) < max
                     && self.permanent_is_unaffected_by_effect(
                         target,
                         effect_controller,
@@ -400,6 +571,31 @@ impl Game {
             }
         }
 
-        popped
+        if !trashed.is_empty() {
+            let host_card = self
+                .player(owner)
+                .battle_area
+                .get(target.index as usize)
+                .map(|perm| perm.top_card().handle())
+                .unwrap_or(trashed[trashed.len() - 1]);
+            self.enqueue_top_cards_trashed(owner, target, host_card, trashed.clone(), cause);
+            self.mark_until_condition_dirty();
+            self.reevaluate_until_condition_modifiers_if_dirty();
+        }
+        if exposed_egg {
+            self.delete_permanent_with_effects(target);
+        }
+        trashed.len() as u8
     }
+}
+
+/// A parked §16-12-1 `<De-Digivolve>` count declaration (plain data, clone
+/// safe): the declared Digimon by battle identity plus everything the trash
+/// needs once the number is chosen.
+#[derive(Debug, Clone)]
+pub struct DeDigivolveCountState {
+    pub host: crate::count_choice::CountChoiceHost,
+    pub stop_at_level: Option<u8>,
+    pub immunity_recheck: Option<(crate::enums::PlayerId, crate::enums::EffectSourceKind)>,
+    pub cause: crate::trigger_context::EventCause,
 }

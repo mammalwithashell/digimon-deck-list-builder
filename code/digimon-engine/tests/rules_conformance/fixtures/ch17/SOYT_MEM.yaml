@@ -1,0 +1,12 @@
+# SOYT_MEM -- Tamer, red, play cost 2.
+#   [Start of Your Turn] Gain 1 memory.
+card: SOYT_MEM
+name: Dawn Tamer
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] Gain 1 memory."
+    process:
+      - gain_memory: 1

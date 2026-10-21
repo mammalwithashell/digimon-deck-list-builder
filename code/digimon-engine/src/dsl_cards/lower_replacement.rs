@@ -139,6 +139,17 @@ pub fn lower_with_raw_and_slot(
         .as_ref()
         .is_some_and(predicate_reads_replacement_subject);
     let preflight_process = process.clone();
+    // §15-7-4 (Ver. 4.3): an optional replacement's "by X" condition that
+    // can't be executed can't be chosen, so the replacement is not offered
+    // (e.g. "When this Digimon would leave the battle area, by trashing 2
+    // cards in your hand, it doesn't leave" with 1 card in hand). Same
+    // payability guard as the triggered path (`leading_cost_guard`).
+    // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+    let cost_guard = if optional {
+        crate::dsl_cards::lower_triggered::leading_cost_guard(&process)
+    } else {
+        None
+    };
     let field_dna_flow = DelayFieldDnaDigivolveFlow::from_process(&process);
     let requires_ready_delay = field_dna_flow.is_some();
     builder = builder.replacement_condition(move |ctx, subject| {
@@ -153,6 +164,7 @@ pub fn lower_with_raw_and_slot(
                 )
             })
             && replacement_process_has_payable_required_selection(&preflight_process, ctx, *subject)
+            && cost_guard.as_ref().is_none_or(|guard| guard.holds(ctx))
     });
 
     if let Some(flow) = field_dna_flow {
@@ -464,6 +476,7 @@ fn predicate_reads_replacement_subject(pred: &CompiledPredicate) -> bool {
         || pred.is_unsuspended.is_some()
         || pred.can_change_orientation.is_some()
         || pred.can_unsuspend.is_some()
+        || pred.owner_can_add_security.is_some()
         || pred.can_attack.is_some()
         || pred.has_keyword.is_some()
         || !pred.zone.is_empty()
@@ -845,7 +858,9 @@ fn required_selection_step_has_candidate(
             }),
         // EX7-048 — the protect-OTHERS Option-trash cost is payable only when the
         // CARRIER (the effect's own `source_permanent`, NOT the leaving subject)
-        // has ≥1 Option among its below-top digivolution sources. Gates the
+        // has ≥1 Option among its below-top digivolution sources (a DUAL card
+        // there is one, §4-6-6-2 / Q6395, the same set as
+        // `own_digivolution_option_handles`). Gates the
         // optional accept prompt so it is not offered when the carrier cannot pay.
         CompiledStep::TrashOptionFromOwnDigivolutionCardsAndCancelLeave => ctx
             .source_permanent
@@ -854,7 +869,7 @@ fn required_selection_step_has_candidate(
                 let n = perm.card_sources.len();
                 n > 1
                     && perm.card_sources.iter().take(n - 1).any(|s| {
-                        s.is_option(ctx.card_data())
+                        s.is_option_card_for_search(ctx.card_data())
                             && !ctx.game.source_card_trash_blocked(
                                 ctx.source_permanent.unwrap(),
                                 s.handle(),

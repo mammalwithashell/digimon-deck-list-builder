@@ -129,7 +129,7 @@ fn buff_runner_with_mineral_host() -> (DebugRunner, PermanentHandle) {
 /// §15-7-1: "Optional processing conditions include text such as 'by X, Y.'" —
 /// EX10-032's "By trashing any 1 [Mineral] or [Rock] trait card from your
 /// Digimon's digivolution cards, 1 of your such Digimon gains ＜Collision＞,
-/// ＜Piercing＞ and +3000 DP" is exactly that shape, and §15-7-4 gives the
+/// ＜Piercing＞ and +3000 DP" is exactly that shape, and §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] gives the
 /// player the choice of whether to execute it. So clause 2 installs a
 /// `SelectionKind::Replacement` accept/decline prompt BEFORE the SourceMulti
 /// cost selection.
@@ -486,7 +486,7 @@ fn ex10_032_on_play_prompts_source_selection_with_mineral_source() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -522,7 +522,7 @@ fn ex10_032_on_play_prompts_source_selection_with_rock_source() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -538,7 +538,7 @@ fn ex10_032_on_play_prompts_source_selection_with_rock_source() {
 /// Negative: firing on_play when no Mineral/Rock source is available installs
 /// no cost selection (silent skip).
 ///
-/// The §15-7-4 accept/decline prompt itself still installs — the player gets
+/// The §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] accept/decline prompt itself still installs — the player gets
 /// the choice "regardless of whether or not the content of the conditions can
 /// be executed", and the lowering deliberately attaches no candidate guard to
 /// a `select_own_sources` first step (see `first_step_candidate_guard`'s NOTE
@@ -568,7 +568,7 @@ fn ex10_032_on_play_no_selection_when_no_mineral_rock_source() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -581,7 +581,7 @@ fn ex10_032_on_play_no_selection_when_no_mineral_rock_source() {
 /// Negative: firing on_play when there are no digivolution sources at all
 /// installs no cost selection.
 ///
-/// The §15-7-4 accept/decline prompt itself still installs — the player gets
+/// The §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] accept/decline prompt itself still installs — the player gets
 /// the choice "regardless of whether or not the content of the conditions can
 /// be executed", and the lowering deliberately attaches no candidate guard to
 /// a `select_own_sources` first step (see `first_step_candidate_guard`'s NOTE
@@ -610,7 +610,7 @@ fn ex10_032_on_play_no_selection_when_no_sources_at_all() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -636,7 +636,7 @@ fn ex10_032_on_play_grants_collision() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -669,7 +669,7 @@ fn ex10_032_on_play_grants_piercing() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -701,7 +701,7 @@ fn ex10_032_on_play_grants_plus_3000_dp() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -743,7 +743,7 @@ fn ex10_032_on_play_removes_source_from_stack() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -783,7 +783,7 @@ fn ex10_032_does_not_grant_reboot() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -830,7 +830,7 @@ fn ex10_032_when_digivolving_fires_buff_clause() {
     );
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -878,7 +878,7 @@ fn ex10_032_when_attacking_fires_buff_clause() {
     );
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -917,7 +917,7 @@ fn ex10_032_buffs_persist_through_own_turn_end() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -975,7 +975,7 @@ fn ex10_032_buffs_expire_after_opponents_turn_ends() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4: the "By trashing ..." cost is an optional processing
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
     // condition — accept it before the cost selection (see `accept_optional_cost`).
     accept_optional_cost(&mut runner);
 
@@ -1146,10 +1146,10 @@ fn ex10_032_inherited_no_dedigivolve_when_no_opp_digimon() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 8 — Clause 2: the §15-7-4 decline branch
+// Section 8 — Clause 2: the §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] decline branch
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions, regardless of whether or not the content of
 /// the conditions can be executed." Declining "By trashing any 1 [Mineral] or
 /// [Rock] trait card from your Digimon's digivolution cards" must leave BOTH

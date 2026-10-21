@@ -31,8 +31,8 @@
 //! Clause 1 (inherited): IMPLEMENTED — `kind: aura, scope: inherited` with a
 //!   materialized self keyword grant. The [Imperialdramon] name arm, [Free]
 //!   trait arm, and [Your Turn] gate are covered by `active_when` using
-//!   `self_digivolution_contains_name`, `source_permanent_trait_has`, and
-//!   `your_turn`.
+//!   `source_name_contains` (the carrier's top-card name),
+//!   `source_permanent_trait_has`, and `your_turn`.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
 use digimon_engine::card_data::CardData;

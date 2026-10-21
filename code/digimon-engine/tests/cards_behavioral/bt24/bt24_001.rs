@@ -36,7 +36,7 @@ fn make_filler(id: &str) -> CardData {
 /// Tamer security filler — used when the test wants to verify the
 /// `on_opp_security_removed` trigger fires WITHOUT incidentally running a
 /// security-DP battle between the carrier and a same-DP Digimon security
-/// card. Per RULES_CONTEXT 13-1-7-3 / 14-2-3, only Digimon security
+/// card. Per RULES_CONTEXT 13-1-8-3 / 14-2-3, only Digimon security
 /// triggers the battle compare; non-Digimon security skips straight
 /// through. (The post-fix-2026-05 engine correctly deletes the attacker
 /// on a tied security battle per rule 14-2-1-3, which would void the

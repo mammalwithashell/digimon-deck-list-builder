@@ -76,15 +76,13 @@ steps:
     do: { play: { card: BT4-104, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { choice: "Trash the used Option", sim_only: true } }
-  - actor: 0
     do: { select: { targets: [opp.field.0, opp.field.1, opp.field.2] } }
     expect: { prompt: SelectPermanentEffect }
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 11
+  - at: 10
     that:
       turn: 3
       p0.memory: 3

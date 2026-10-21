@@ -59,7 +59,7 @@ fn ex10_003_trashes_three_matching_carrier_sources_to_cancel_attack() {
 
     runner.attack_player(attacker, 0, false);
 
-    // §15-7-1/§15-7-4: "by trashing 3 [Mineral] or [Rock] trait cards ..., end
+    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "by trashing 3 [Mineral] or [Rock] trait cards ..., end
     // that attack" is an OPTIONAL PROCESSING CONDITION, so the clause now
     // installs an outer accept/decline prompt BEFORE the cost selection.
     //
@@ -123,7 +123,7 @@ fn ex10_003_trashes_three_matching_carrier_sources_to_cancel_attack() {
     );
 }
 
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions, regardless of whether or not the content of
 /// the conditions can be executed." Declining "by trashing 3 [Mineral] or
 /// [Rock] trait cards from this Digimon's digivolution cards" must leave BOTH

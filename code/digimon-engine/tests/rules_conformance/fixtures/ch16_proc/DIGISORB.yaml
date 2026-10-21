@@ -1,0 +1,21 @@
+# DIGISORB -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   Digivolve: red Lv.3, cost 2.
+#   <Digisorption -3> (When one of your Digimon would digivolve into this card
+#   from your hand, you may suspend 1 of your Digimon to reduce the memory
+#   cost of the digivolution by 3.)
+# The §16-10 keyword card. <Digisorption> is the printed keyword
+# `Keyword::Digisorption(N)` (`parse_printed_keywords`), read off the hand
+# card by the digivolve reducer chain. This file registers the plain body; the
+# tests (`ch16_processing_keywords::digisorption_card`) load the printed face
+# (effect text + evo cost), as production would load cards.json.
+card: DIGISORB
+name: Absorbmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2

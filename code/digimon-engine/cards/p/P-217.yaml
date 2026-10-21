@@ -100,8 +100,10 @@ effects:
     active_when:
       all_of:
         - your_turn: true
-        - event_target_owner: you
         - source_is_unsuspended: true
+    trigger_if:
+      all_of:
+        - event_target_owner: you
         - any_of:
             - event_card_trait_has: Social
             - event_card_trait_has: Navi

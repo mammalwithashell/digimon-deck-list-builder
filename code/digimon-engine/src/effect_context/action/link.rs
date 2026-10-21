@@ -320,12 +320,24 @@ impl<'a> EffectContext<'a> {
     /// Cost payment + `WhenWouldLink` cost reduction are the calling effect's
     /// responsibility (register via the cost step before invoking). Returns
     /// `true` when the card was found and attached.
+    ///
+    /// §4-9-5 / §10-1-3-1: at the host's link limit with a choice (2+
+    /// existing link cards, fewer to replace), the linking player picks the
+    /// replaced ones BEFORE this attach. Callers go through the shared
+    /// replacement step first (`Game::park_link_replacement_choice`, with a
+    /// `LinkTrashPurpose` that resumes into this attach, as the DSL
+    /// `link_cards` step does); this primitive only trims when there is
+    /// nothing to choose.
     pub fn link_chosen_card_into_host(
         &mut self,
         host: PermanentHandle,
         card: CardHandle,
         from: crate::enums::LinkCardSource,
     ) -> bool {
+        debug_assert!(
+            !self.game.link_replacement_is_a_choice(host),
+            "§4-9-5: park_link_replacement_choice before linking onto a host at its limit"
+        );
         self.game.link_chosen_card_into_host(host, card, from)
     }
 }
@@ -333,7 +345,9 @@ impl<'a> EffectContext<'a> {
 /// The below-top digivolution sources of `perm` that are Option cards — the
 /// candidate set for [`EffectContext::trash_own_digivolution_option_and_cancel_leave`]
 /// (EX7-048 "1 Option card from this Digimon's digivolution cards"). The top
-/// card is excluded (it is the Digimon itself, not a digivolution source).
+/// card is excluded (it is the Digimon itself, not a digivolution source). A
+/// DUAL card among them is an Option card to this reference (§4-6-6-2;
+/// official Q&A Q6395); §4-6-3 makes only the top card a Digimon.
 fn own_digivolution_option_handles(
     perm: &crate::permanent::Permanent,
     data: &[crate::card_data::CardData],
@@ -345,7 +359,7 @@ fn own_digivolution_option_handles(
     perm.card_sources
         .iter()
         .take(n - 1)
-        .filter(|s| s.is_option(data))
+        .filter(|s| s.is_option_card_for_search(data))
         .map(|s| s.handle())
         .collect()
 }

@@ -1,0 +1,12 @@
+# EOT_MEM3 -- Tamer, red, play cost 3.
+#   [End of Your Turn] Gain 3 memory.
+card: EOT_MEM3
+name: Twilight Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: end_of_your_turn
+    summary: "[End of Your Turn] Gain 3 memory."
+    process:
+      - gain_memory: 3

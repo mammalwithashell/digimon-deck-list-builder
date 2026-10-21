@@ -114,7 +114,7 @@ effects:
     optional: true
     active_when: { all_turns: true }
     summary: "[All Turns] When a 13000+ DP Digimon attacks, this Digimon may digivolve into [Marsmon]/[Callismon] in hand without paying the cost"
-    condition:
+    trigger_if:
       event_target_dp_gte: 13000
     process:
       - select_hand:

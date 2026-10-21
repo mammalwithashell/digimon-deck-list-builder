@@ -411,7 +411,7 @@ fn bt25_078_reveal_is_mandatory_but_placement_can_be_declined() {
 //
 // Exam clause BT25-078#inherited#0. Gazimon is a digivolution SOURCE under a
 // vanilla host; the host attacks a bigger Digimon, loses, and is deleted in
-// battle. general_rule.pdf 16-12: <Retaliation> deletes the Digimon it battled.
+// battle. general_rule.pdf 16-13: <Retaliation> deletes the Digimon it battled.
 // DCGO (BT25_078.cs RetaliationSelfEffect, OnDestroyedAnyone) has exactly ONE
 // trigger at this deletion and opens no ordering prompt: a deletion is not a
 // move, so the [When Moving] clause must NOT be a candidate beside it.
@@ -479,7 +479,7 @@ fn bt25_078_inherited_retaliation_deletes_battled_digimon_without_trigger_order(
     );
     assert!(
         runner.game.players[1].battle_area.is_empty(),
-        "inherited <Retaliation> (16-12) must delete the Digimon it battled"
+        "inherited <Retaliation> (16-13) must delete the Digimon it battled"
     );
     assert!(runner.game.players[1]
         .trash
@@ -547,7 +547,7 @@ fn bt25_078_inherited_retaliation_survives_a_trigger_order_prompt() {
     assert!(
         runner.game.players[1].battle_area.is_empty(),
         "<Retaliation> resolved after the ordering prompt must still delete \
-         the Digimon it battled (16-12)"
+         the Digimon it battled (16-13)"
     );
 }
 

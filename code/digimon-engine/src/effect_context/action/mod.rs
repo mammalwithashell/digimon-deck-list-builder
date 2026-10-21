@@ -12,7 +12,7 @@ mod digixros;
 mod lifecycle;
 mod link;
 mod modifiers;
-mod play;
+pub(crate) mod play;
 mod refire;
 mod replacement;
 mod security;

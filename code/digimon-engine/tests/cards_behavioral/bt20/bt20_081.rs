@@ -13,6 +13,9 @@ fn bt20_081_counter_blast_dna_uses_fenriloogamon_and_kazuchimon() {
 
     let mut kazuchimon = make_test_card_with_level("TEST-KAZUCHIMON", "Kazuchimon", 6);
     kazuchimon.colors = vec![CardColor::Yellow];
+    // Like the real Kazuchimon (BT17-040, BT20-035), [Pulsemon] appears only in
+    // its digivolution requirement; the official Q&A counts that as text.
+    kazuchimon.requirement_text = "[Pulsemon]".to_string();
     kazuchimon.dp = Some(12000);
 
     let mut attacker = make_test_card_with_level("TEST-ATTACKER", "Attacker", 6);

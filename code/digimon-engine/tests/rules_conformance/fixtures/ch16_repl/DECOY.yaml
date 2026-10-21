@@ -1,0 +1,18 @@
+# DECOY -- Digimon, Lv.4, black, 4000 DP, play cost 4.
+#   <Decoy (Black)> (When one of your other black Digimon would be deleted by
+#   an opponent's effect, by deleting this Digimon, prevent that deletion.)
+# The §16-18 keyword card. `value: 32` is the colour bitmask of the
+# parenthetical (bit 5 = black; `modifier_map::lookup_keyword`), i.e. the
+# §16-3 "specified cards" of the icon.
+card: DECOY
+name: Decoymon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+effects:
+  - kind: grant_keyword
+    keyword: Decoy
+    value: 32
+    summary: "<Decoy (Black)> (When one of your other black Digimon would be deleted by an opponent's effect, by deleting this Digimon, prevent that deletion.)"

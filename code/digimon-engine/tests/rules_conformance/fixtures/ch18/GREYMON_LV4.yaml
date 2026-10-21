@@ -1,0 +1,9 @@
+# GREYMON_LV4 -- Digimon "Greymon", Lv.4, red, 5000 DP, play cost 5. No text.
+# A Digimon with [Greymon] in its name (the §18-2-1 overwrite condition).
+card: GREYMON_LV4
+name: Greymon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000

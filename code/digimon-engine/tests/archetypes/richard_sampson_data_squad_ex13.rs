@@ -280,7 +280,7 @@ fn c1_without_ds_tamer_only_adds_to_hand() {
 ///
 /// Expected: Reppamon digivolves onto Kudamon/Kyaromon (cost 2). Its [When
 /// Digivolving] cost is paid with no [Richard Sampson] available (Official Q&A
-/// "Yes, you can."; rule 15-7-4) → 1 security trashed → Kyaromon's inherited
+/// "Yes, you can."; rule 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]) → 1 security trashed → Kyaromon's inherited
 /// "[Your Turn] when your security stack is removed from" fires → the stack
 /// digivolves into Shishimamon from hand at 4 − 1 = 3. Net memory −5,
 /// security −1, stack Kyaromon/Kudamon/Reppamon/Shishimamon.

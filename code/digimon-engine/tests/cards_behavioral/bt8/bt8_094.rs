@@ -304,7 +304,7 @@ fn bt8_094_has_opponents_turn_on_move_clause() {
         "[Opponent's Turn] gate must be encoded via active_when"
     );
     assert!(
-        observer.condition.is_some(),
+        observer.trigger_if.is_some(),
         "on_move clause must gate on event_target_owner + event_target_kind + level"
     );
 }

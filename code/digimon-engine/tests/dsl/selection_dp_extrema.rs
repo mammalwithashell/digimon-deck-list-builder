@@ -326,7 +326,7 @@ effects:
         attacker: excluded_low,
         original_target: AttackTarget::Player(1),
         effective_target: AttackTarget::Player(1),
-        effective_target_removed_by_dna: false,
+        effective_target_removed: false,
         is_blocked: false,
         blocker: None,
         is_vortex: false,

@@ -1,0 +1,25 @@
+# OBS_TOP_TRASH_MEM -- Tamer, red, play cost 3.
+#   [All Turns] When the top stacked card of one of your Digimon is trashed,
+#   gain 1 memory.
+# Counts the trashings of a <De-Digivolve>, which trashes "starting with the
+# top card" (§16-12-1): each card it trashes is the top stacked card at that
+# moment. Printed wording as on BT21-094 ("When the top stacked card of ...
+# is trashed"); DCGO fires `EffectTiming.WhenTopCardTrashed` ONCE per
+# <De-Digivolve> instance, with every trashed card in its hashtable
+# (`CardController.cs` `IDegeneration`, ~L5372-5385). Authored on the
+# `on_top_card_trashed` timing (G-DSL-TOP-CARD-TRASHED-TIMING, resolved),
+# which the engine fires once per <De-Digivolve> instance and for <Armor
+# Purge>.
+card: OBS_TOP_TRASH_MEM
+name: Watch Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_top_card_trashed
+    active_when: { all_turns: true }
+    condition:
+      event_host_is_own_digimon: true
+    summary: "[All Turns] When the top stacked card of one of your Digimon is trashed, gain 1 memory."
+    process:
+      - gain_memory: 1

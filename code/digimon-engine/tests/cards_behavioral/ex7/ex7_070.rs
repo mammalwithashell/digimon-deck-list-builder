@@ -25,7 +25,7 @@
 //!   opponent Digimon existing. `de_digivolve { amount: 1, stop_at_level: 3 }`.
 //!   Positive fire, negative (host-owner mismatch / different source card /
 //!   no opponent Digimon), and no-decline coverage (EX7_070.cs:18 isOptional
-//!   = false; printed text has no "may"; <De-Digivolve> is Mandatory, 16-11).
+//!   = false; printed text has no "may"; <De-Digivolve> is Mandatory, 16-12).
 //! - Clause 2 (flood_gate): positive-gate ignore-color while a [Three
 //!   Musketeers] Digimon is on the field (vs BT19-093's negative-gate
 //!   sibling), scoped to this card only via `card_number_is`.
@@ -304,7 +304,7 @@ fn ex7_070_source_trash_offers_dedigivolve_and_resolves() {
     }
 
     // Mandatory trigger (EX7_070.cs:18 isOptional = false; printed text has
-    // no "may"; <De-Digivolve> Mandatory per general_rule 16-11): NO outer
+    // no "may"; <De-Digivolve> Mandatory per general_rule 16-12): NO outer
     // accept/decline gate — the target pick installs directly.
     assert_eq!(
         runner.pending_kind(),

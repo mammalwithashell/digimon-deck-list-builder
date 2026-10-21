@@ -29,6 +29,11 @@
 #       Digimon to battle) but our engine still queues both and asks a
 #       TriggerOrder -> SIM-ONLY row (expected: DCGO's CanActivate gates keep
 #       both off its stack; unverified -- no C# in this container).
+#       RE-LOWERED 2026-10-19: neither decision is asked any more -- an
+#       optional processing condition that can't be executed can't be chosen
+#       (§15-7-4; Task 8, 82a2bf29c: the reducer gate and the unpayable
+#       [When Digivolving] entry are no longer offered), so both sim-only
+#       rows are gone.
 #       Monarchlizamon (8000) attacks P1's security; the top card (stack[9])
 #       is Phoenixmon ST1-10, 12000 DP: it would be deleted in battle.
 #   THE CLAUSE: the only <Barrier> in play is inherited from ST23-03 in the
@@ -76,13 +81,6 @@ steps:
   - actor: 0
     do: { digivolve: { from: field.0, using: BT25-057 } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: ST23-03's phantom cost-reducer gate (no Tamer) -- see header.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
-  # SIM-ONLY: our TriggerOrder over Monarchlizamon's two target-starved
-  # [When Digivolving] effects -- see header.
-  - actor: 0
-    do: { select: { cards: [BT25-057], ordinal: 0, sim_only: true } }
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
@@ -94,7 +92,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 11
+  - at: 9
     that:
       turn: 3
       p0.memory: 0

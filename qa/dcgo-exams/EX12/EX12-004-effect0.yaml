@@ -131,9 +131,11 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: field.0 } }
     expect: { prompt: OptionalSkill }
-  # Sim-only phase exit: our engine stays parked in EndOfTurnAction until a
-  # PASS even after the carrier self-deleted; DCGO rotates on its own, so this
-  # row emits nothing on the wire.
+  # Retired window-exit PASS: <Execute> is a trigger-type effect whose attack
+  # is its own decision in the [End of Your Turn] pool (Comprehensive Rules
+  # 4.3 §16-38-2), so once the attack is over the end of turn continues by
+  # itself in both engines; the harness lowers this step to nothing (no wire
+  # row, our game does not move).
   - actor: 0
     do: { pass: {} }
   # Trailing pass: P1's next breeding decision.
@@ -152,8 +154,8 @@ assert:
       turn: 5
       p0.field: [{ card_id: EX12-026, dp: 7000, suspended: false, sources: [EX12-004, EX12-009] }]
       p1.field: [{ card_id: EX12-020, dp: 2000, suspended: false, sources: [] }]
-  # The clause's payoff, INSIDE the still-open window (step 14, still turn 5 --
-  # our engine lingers in EndOfTurnAction until a PASS): the defender is gone
+  # The clause's payoff right after the attack (step 14; the end of turn has
+  # already continued into turn 6, §16-38-2 / §16-44-1): the defender is gone
   # (battle) AND the attacker is gone (the <Execute> self-delete), the
   # attacker's whole 3-card stack is in P0's trash, and neither security stack
   # was touched -- the granted attack went at a Digimon, not at the player.
@@ -161,7 +163,7 @@ assert:
   # block is a sim-side regression guard only.
   - at: 14
     that:
-      turn: 5
+      turn: 6
       p0.field: []
       p1.field: []
       p0.trash: [EX12-004, EX12-009, EX12-026]

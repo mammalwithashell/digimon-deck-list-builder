@@ -54,7 +54,8 @@ effects:
   #
   # Condition: this Digimon's digivolution cards contain [Magnamon (X Antibody)]
   # or an [Armor Form] trait card. "Isn't affected by your opponent's effects"
-  # = the 4-source-kind opponent immunity idiom (digimon/tamer/option/rule),
+  # = the opponent immunity idiom over every effect kind (§15-2-1:
+  # digimon/tamer/option; a token's effect is a Digimon effect, §15-2-1-1),
   # until end of opponent's turn (EX6-011 pattern).
   - when: when_digivolving
     summary: "[WD] If [Magnamon X]/[Armor Form] in sources: immune to opp effects + +3000 DP until end of opp turn, then unsuspend"
@@ -76,11 +77,6 @@ effects:
       - grant_effect_immunity:
           target: self
           source_kind: option
-          source_controller: opponent
-          expiry: end_of_opponents_turn
-      - grant_effect_immunity:
-          target: self
-          source_kind: rule
           source_controller: opponent
           expiry: end_of_opponents_turn
       - add_dp_modifier:

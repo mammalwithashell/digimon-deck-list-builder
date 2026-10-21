@@ -1,0 +1,15 @@
+# GUARD -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   <Guard> (When any of your other Digimon would leave the battle area by
+#   your opponent's effects, by deleting this Digimon, it doesn't leave.)
+# The §16-45 keyword card.
+card: GUARD
+name: Guardmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: grant_keyword
+    keyword: Guard
+    summary: "<Guard> (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, it doesn't leave.)"

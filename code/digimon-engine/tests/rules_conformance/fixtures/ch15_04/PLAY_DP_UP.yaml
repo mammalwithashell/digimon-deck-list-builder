@@ -1,0 +1,17 @@
+# PLAY_DP_UP -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] This Digimon gets +3000 DP for the turn.
+card: PLAY_DP_UP
+name: Pumpmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] This Digimon gets +3000 DP for the turn."
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_turn

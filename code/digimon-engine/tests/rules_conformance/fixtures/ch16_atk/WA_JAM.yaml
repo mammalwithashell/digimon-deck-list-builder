@@ -1,0 +1,19 @@
+# WA_JAM -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [When Attacking] This Digimon gains <Jamming> for the turn.
+# A <Jamming> gained mid-attack applies to the security battle at once
+# (§16-9-2, persistent).
+card: WA_JAM
+name: Lateshieldmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon gains <Jamming> for the turn."
+    process:
+      - grant_keyword:
+          target: source
+          keyword: Jamming
+          expiry: end_of_turn

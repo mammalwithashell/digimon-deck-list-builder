@@ -213,7 +213,7 @@ fn set_active_attacker(r: &mut DebugRunner, attacker: PermanentHandle) {
         attacker,
         original_target: target,
         effective_target: target,
-        effective_target_removed_by_dna: false,
+        effective_target_removed: false,
         is_blocked: false,
         blocker: None,
         is_vortex: false,
@@ -325,6 +325,17 @@ fn q1_belphemon_opp_turn_ends_attack_through_progress() {
          would affect Medusamon (so the only way the attack ends is if end-attack \
          does NOT 'affect' Medusamon)"
     );
+
+    // §15-4-3-5-1 / §16-23-2: Medusamon's <Raid> (a trigger-type effect of the
+    // TURN player) pends with Belphemon's trigger and resolves first. Decline
+    // the switch so the attack stays on Player 0's security.
+    let raid = r
+        .pending_selection_view()
+        .expect("Medusamon's <Raid> switch is offered first");
+    assert_eq!(raid.kind, digimon_engine::selection::SelectionKind::OppField);
+    assert_eq!(raid.selecting_player, 1);
+    r.execute_action(1, digimon_engine::action::space::PASS)
+        .expect("decline <Raid>");
 
     // Belphemon's [Opp Turn][OPT] "trash 2 cards in hand to end the attack" — pay
     // the cost by trashing the 2 hand cards (two sequential picks).

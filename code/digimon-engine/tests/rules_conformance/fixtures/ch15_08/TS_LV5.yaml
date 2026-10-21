@@ -1,0 +1,10 @@
+# TS_LV5 -- Digimon, Lv.5, red, 7000 DP, play cost 5. Traits: [TS]. No text.
+# A [TS] trait battle winner for the §15-8-3-8 "wins a battle" tests.
+card: TS_LV5
+name: Hoplitemon
+kind: digimon
+level: 5
+color: [red]
+cost: 5
+dp: 7000
+traits: [TS]

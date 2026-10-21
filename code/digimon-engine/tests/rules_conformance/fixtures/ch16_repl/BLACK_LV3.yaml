@@ -1,0 +1,9 @@
+# BLACK_LV3 -- Digimon, Lv.3, black, 3000 DP, play cost 3. No text.
+# A black Digimon: one of DECOY's specified cards (<Decoy (Black)>).
+card: BLACK_LV3
+name: Shadowmon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 3000

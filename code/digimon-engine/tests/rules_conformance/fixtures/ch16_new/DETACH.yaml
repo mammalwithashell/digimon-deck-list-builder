@@ -1,0 +1,26 @@
+# DETACH -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Detach ([Seven Code] trait)> (When this Digimon would leave the battle
+#   area other than by your effects, by trashing 1 of its [Seven Code] trait
+#   link cards, it doesn't leave.)
+# The §16-46 keyword card. There is no `Keyword::Detach`: the keyword is
+# authored with the production idiom (BT26-010 Roleplaymon), a `replacement`
+# clause with a `trash_own_link_card` cost restricted by `link_card_filter`.
+card: DETACH
+name: Detachmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: Seven Code }
+    outcome: prevent
+    summary: "<Detach ([Seven Code] trait)> (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] trait link cards, it doesn't leave.)"

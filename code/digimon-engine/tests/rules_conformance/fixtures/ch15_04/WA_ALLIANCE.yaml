@@ -1,0 +1,20 @@
+# WA_ALLIANCE -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   <Alliance> (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#   <Security A. +1> for the attack.)
+#   [When Attacking] Gain 1 memory.
+card: WA_ALLIANCE
+name: Allymon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance> (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains <Security A. +1> for the attack.)"
+  - when: when_attacking
+    summary: "[When Attacking] Gain 1 memory."
+    process:
+      - gain_memory: 1

@@ -1,0 +1,21 @@
+# DELAY_MEM -- Option, red, use cost 3.
+#   [Main] Place this card in the battle area.
+#   <Delay> (Trash this card in your battle area to activate the effect below.
+#   You can't activate this effect the turn this card enters play.)
+#   ・Gain 2 memory.
+# The §16-17 keyword card ([Main]-activated <Delay>, production idiom P-035).
+card: DELAY_MEM
+name: Saved Reserve
+kind: option
+color: [red]
+cost: 3
+effects:
+  - when: main_from_hand
+    summary: "[Main] Place this card in the battle area."
+    process:
+      - place_self_as_delay_option: {}
+  - kind: delay
+    trigger: delayed
+    summary: "<Delay> (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) ・Gain 2 memory."
+    process:
+      - gain_memory: 2

@@ -1,0 +1,23 @@
+# IMMUNE_DIGI_ONLY -- Digimon, Lv.6, green, 12000 DP, play cost 12.
+#   [On Play] Your opponent's Digimon effects don't affect this Digimon until
+#   their turn ends.
+# The Atratusmon (ST23-09) immunity clause, authored with its production
+# idiom (`grant_effect_immunity`, `source_kind: digimon`, opponent-scoped,
+# `end_of_opponents_turn`). DCGO ST23_09.cs: DigimonEffectImmunity
+# (UntilOpponentTurnEnd).
+card: IMMUNE_DIGI_ONLY
+name: Eclipsemon
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 12000
+effects:
+  - when: on_play
+    summary: "[On Play] Your opponent's Digimon effects don't affect this Digimon until their turn ends."
+    process:
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn

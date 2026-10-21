@@ -466,7 +466,7 @@ fn ex10_069_delay_after_close_suspend_exposes_base_then_hand_evo_choices() {
 
     runner.game.suspend(close);
 
-    // Accept the optional <Delay> activation (16-16-2) first.
+    // Accept the optional <Delay> activation (16-17-2) first.
     {
         let view = runner
             .pending_selection_view()
@@ -474,7 +474,7 @@ fn ex10_069_delay_after_close_suspend_exposes_base_then_hand_evo_choices() {
         assert_eq!(view.kind, SelectionKind::Replacement);
         assert!(
             runner.pending_is_optional(),
-            "the <Delay> activation itself is optional (16-16-2)"
+            "the <Delay> activation itself is optional (16-17-2)"
         );
         runner
             .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
@@ -570,7 +570,7 @@ fn ex10_069_delay_accepts_rock_trait_digimon_as_base() {
 
     runner.game.suspend(close);
 
-    // Accept the optional <Delay> activation (16-16-2) first.
+    // Accept the optional <Delay> activation (16-17-2) first.
     let view = runner
         .pending_selection_view()
         .expect("Close suspend offers the Delay activation");
@@ -605,7 +605,7 @@ fn ex10_069_delay_accepts_rock_trait_digimon_as_base() {
 // ============================================================================
 
 /// Negative gate (placing turn): a [Close] suspend on the same turn EX10-069
-/// was placed must NOT fire the Delay body (rule 16-16-3: "after the placing
+/// was placed must NOT fire the Delay body (rule 16-17-3: "after the placing
 /// turn").
 #[test]
 fn ex10_069_delay_does_not_fire_on_the_placing_turn() {
@@ -737,7 +737,7 @@ fn ex10_069_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
 
     runner.game.suspend(close);
 
-    // ACCEPT the (optional, 16-16-2) Delay activation itself...
+    // ACCEPT the (optional, 16-17-2) Delay activation itself...
     let view = runner
         .pending_selection_view()
         .expect("Close suspend after the placing turn offers the Delay activation");

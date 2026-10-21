@@ -22,14 +22,14 @@ use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 /// Accept the outer accept/decline confirm the OPTIONAL PROCESSING CONDITION
 /// ("By trashing 1 card in your hand, ...") installs before its body runs.
-/// §15-7-1/§15-7-4 — see the clause comment in `cards/ex9/EX9-027.yaml`.
+/// §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] — see the clause comment in `cards/ex9/EX9-027.yaml`.
 fn accept_optional_cost(runner: &mut DebugRunner) {
     let view = runner
         .pending_selection_view()
         .expect("the optional processing condition must surface a prompt (rule 17)");
     assert!(
         view.is_optional,
-        "the outer accept/decline prompt must be declinable (§15-7-4)"
+        "the outer accept/decline prompt must be declinable (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     runner
         .accept_optional_trigger()
@@ -100,7 +100,7 @@ fn ex9_027_on_deletion_trashes_hand_card_for_minus_4000_dp() {
 // opponent's Digimon gets -4000 DP for the turn."
 //
 // §15-7-1 names this exact shape ("by X, Y") an OPTIONAL PROCESSING CONDITION,
-// and its worked example is the same template. §15-7-4: the player chooses
+// and its worked example is the same template. §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the player chooses
 // whether to execute it. §15-7-2: when it is not executed, "the processing
 // after the conditions can't be executed" — so declining must trash NO card
 // AND apply NO -4000 DP. EX9-027's own official Q&A repeats this: "If the 'by
@@ -132,14 +132,14 @@ fn ex9_027_when_digivolving_optional_cost_may_be_declined() {
         .expect("the optional processing condition must surface a prompt (rule 17)");
     assert!(
         view.is_optional,
-        "the outer accept/decline prompt must be declinable (§15-7-4)"
+        "the outer accept/decline prompt must be declinable (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     runner
         .decline_optional_trigger()
         .expect("declining must be reachable from the action space");
     let _ = runner.auto_resolve();
 
-    // §15-7-4 — the cost is NOT paid.
+    // §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] — the cost is NOT paid.
     assert_eq!(
         runner.hand_size(0),
         hand_before,
@@ -176,14 +176,14 @@ fn ex9_027_on_deletion_optional_cost_may_be_declined() {
         .expect("the optional processing condition must surface a prompt (rule 17)");
     assert!(
         view.is_optional,
-        "the outer accept/decline prompt must be declinable (§15-7-4)"
+        "the outer accept/decline prompt must be declinable (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     runner
         .decline_optional_trigger()
         .expect("declining must be reachable from the action space");
     let _ = runner.auto_resolve();
 
-    // §15-7-4 — the cost is NOT paid. (Trash size is not asserted here: the
+    // §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] — the cost is NOT paid. (Trash size is not asserted here: the
     // deleted Kokeshimon itself lands in trash, so only the hand proves the
     // discard never happened.)
     assert_eq!(
@@ -208,6 +208,8 @@ fn ex9_027_inherited_may_delete_carrier_to_end_opponent_attack() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX9-027", "CARRIER"]);
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));

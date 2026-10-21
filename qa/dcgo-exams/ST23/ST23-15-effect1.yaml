@@ -77,12 +77,9 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-049] } }
     expect: { prompt: SelectHandEffect }
-  # SIM-ONLY: our 9-1-5 "used Option vs pending trigger" order prompt (no
-  # DCGO counterpart). The Option's disposal goes first; it is PLACED in the
-  # battle area ("Then, place this card in the battle area") although the
-  # label reads "Trash".
-  - actor: 0
-    do: { select: { choice: "Trash the used Option", sim_only: true } }
+  # The Option's disposal goes first, with no decision (§9-1-5; formerly a
+  # sim-only "Trash the used Option" ordering row): it is PLACED in the
+  # battle area ("Then, place this card in the battle area").
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -90,7 +87,7 @@ assert:
   # T3 after the Option resolved (before P0's pass): memory 3 -> 0 is the
   # Option's use cost only -- Armalizamon (cost 4) came free; e-Pulse is in
   # the battle area, not the trash.
-  - at: 12
+  - at: 11
     that:
       turn: 3
       p0.memory: 0

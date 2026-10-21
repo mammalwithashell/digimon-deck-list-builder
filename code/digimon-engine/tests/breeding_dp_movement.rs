@@ -1,4 +1,4 @@
-//! Capability RED tests: official general rules 4-15-2 (PDF p9), EX2-007 Q3276.
+//! Capability RED tests: official general rules 4-17-2 (PDF p.11), EX2-007 Q3276.
 //! Printed metadata only; this is not a partial Mother D-Reaper implementation.
 use digimon_engine::action::{mask::build_action_mask, space::{MOVE_FROM_BREEDING, PASS}};
 use digimon_engine::debug_runner::{DebugRunner, make_test_card, make_test_egg};
@@ -53,7 +53,7 @@ fn runner(id: &str) -> DebugRunner {
     assert!(!r.game.move_from_breeding(0));assert!(r.game.players[0].breeding_area.is_some());
 }
 
-// Rule 4-15-2 / Mother Q3276: turn entry must preserve the legal DP-based action.
+// Rule 4-17-2 / Mother Q3276: turn entry must preserve the legal DP-based action.
 #[test]
 fn next_turn_keeps_level_less_dp_breeding_move_available() {
     let mut r = runner("EX2-007");

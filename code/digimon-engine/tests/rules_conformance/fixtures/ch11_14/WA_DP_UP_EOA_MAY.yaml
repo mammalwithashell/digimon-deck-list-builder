@@ -1,0 +1,26 @@
+# WA_DP_UP_EOA_MAY -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] This Digimon gets +2000 DP for the attack.
+#   [End of Attack] You may gain 1 memory.
+# The "+2000 DP for the attack" lasts until the attack ends: it witnesses
+# whether the attack is still going while the [End of Attack] effect waits on
+# its decision (§11-6-2).
+card: WA_DP_UP_EOA_MAY
+name: Lingermon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon gets +2000 DP for the attack."
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 2000
+          expiry: end_of_attack
+  - when: end_of_attack
+    optional: true
+    summary: "[End of Attack] You may gain 1 memory."
+    process:
+      - gain_memory: 1

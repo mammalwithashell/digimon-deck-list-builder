@@ -965,6 +965,62 @@ fn ex7_048_protect_accept_trashes_option_and_saves_subject() {
     );
 }
 
+/// A DUAL card in Gundramon's digivolution cards is "1 Option card from this
+/// Digimon's digivolution cards" (§4-6-6-2; official Q&A Q6395 / Q6404 --
+/// §4-6-3 makes only a permanent's top card a Digimon; DCGO
+/// `CardSource.IsOption` is true for a DUAL card). The replacement's
+/// payability gate and its cost pick must both see it: the protect prompt is
+/// offered, the DUAL card (BeelStarmon BT25-085) is the only Option to trash,
+/// and the [Three Musketeers] Digimon stays.
+#[test]
+fn ex7_048_protect_cost_takes_a_dual_digivolution_card() {
+    let mut runner = replacement_runner()
+        .dsl_card("BT25-085")
+        .expect("BT25-085 YAML parses and compiles")
+        .memory(5)
+        .start();
+    runner.place_stack(0, &["BT25-085", CARD_ID]);
+    let subject = runner.place_on_field(0, "SUBJECT-3M", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(subject, ReplacementCause::OpponentEffect);
+
+    let (aid, sp) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("the payability gate sees the DUAL card: the protect prompt is offered");
+        (p.valid_action_ids[0], p.selecting_player)
+    };
+    runner.game.resolve_selection(sp, aid).expect("accept");
+
+    let (aid, sp) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("the cost pick offers the DUAL digivolution card");
+        assert_eq!(p.valid_action_ids.len(), 1, "the DUAL card is the only Option: {p:?}");
+        (p.valid_action_ids[0], p.selecting_player)
+    };
+    runner
+        .game
+        .resolve_selection(sp, aid)
+        .expect("trash the DUAL card");
+
+    assert!(runner.game.pending_selection.is_none(), "resolved");
+    assert!(
+        trash_contains(&runner, 0, "BT25-085"),
+        "the DUAL digivolution card was trashed as the cost"
+    );
+    assert!(
+        battle_area_contains(&runner, 0, "SUBJECT-3M"),
+        "the [Three Musketeers] Digimon is protected (stays)"
+    );
+}
+
 /// KEY faithfulness point: the printed text has NO "other" qualifier —
 /// Gundramon itself is a [Three Musketeers] Digimon and can protect ITSELF
 /// by trashing its own Option digivolution card.

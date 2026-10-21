@@ -562,7 +562,7 @@ fn bt22_098_delay_after_arisa_suspend_exposes_base_then_hand_evo_choices() {
 
     runner.game.suspend(arisa);
 
-    // First the optional <Delay> ACTIVATION choice (16-16-2) — accept it.
+    // First the optional <Delay> ACTIVATION choice (16-17-2) — accept it.
     {
         let view = runner
             .pending_selection_view()
@@ -570,7 +570,7 @@ fn bt22_098_delay_after_arisa_suspend_exposes_base_then_hand_evo_choices() {
         assert_eq!(view.kind, SelectionKind::Replacement);
         assert!(
             runner.pending_is_optional(),
-            "the <Delay> activation itself is optional (16-16-2)"
+            "the <Delay> activation itself is optional (16-17-2)"
         );
         runner
             .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
@@ -633,7 +633,7 @@ fn bt22_098_delay_after_arisa_suspend_exposes_base_then_hand_evo_choices() {
 }
 
 /// Negative gate (placing turn): the `<Delay>` text is only activatable
-/// "after the placing turn" (RULES_CONTEXT 16-16-3). An Arisa suspend on the
+/// "after the placing turn" (RULES_CONTEXT 16-17-3). An Arisa suspend on the
 /// same turn BT22-098 was placed must NOT fire the Delay body.
 #[test]
 fn bt22_098_delay_does_not_fire_on_the_placing_turn() {
@@ -756,7 +756,7 @@ fn bt22_098_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
 
     runner.game.suspend(arisa);
 
-    // ACCEPT the (optional, 16-16-2) Delay activation itself...
+    // ACCEPT the (optional, 16-17-2) Delay activation itself...
     let view = runner
         .pending_selection_view()
         .expect("Arisa suspend after the placing turn offers the Delay activation");

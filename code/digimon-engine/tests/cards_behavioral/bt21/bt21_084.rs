@@ -54,6 +54,8 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT21-084 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("APPMON-CARD", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         .add_card(make_digimon("MY-DIGIMON", 4, 4000, 4))
         .add_card(make_digimon("OPP-DIGIMON", 4, 4000, 4))
@@ -374,6 +376,7 @@ fn bt21_084_app_fuse_from_hand_after_draw() {
         .expect("APP_FUSE_RESULT compiles")
         .add_card(named_material("TEST-KABEMON", "Kabemon"))
         .add_card(named_material("TEST-GOMIMON", "Gomimon"))
+        .link_requirement("TEST-GOMIMON", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .deck(0, &["DECK-PAD"; 12])
         .hand(0, &["TEST-APPFUSE"])
         .memory(5)

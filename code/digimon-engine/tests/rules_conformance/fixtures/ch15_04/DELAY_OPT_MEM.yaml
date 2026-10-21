@@ -1,0 +1,23 @@
+# DELAY_OPT_MEM -- Option, red, play cost 2.
+#   [Main] Gain 1 memory.
+#   <Delay> (Trash this card in your battle area to activate the effect below.
+#   You can't activate this effect the turn this card enters play.)
+#   ・<Draw 1>.
+# A <Delay> Option (OptionSubtype::Delay): once its [Main] has resolved it is
+# placed in the battle area by the Option disposal (`dispose_option`), which
+# fires "when an Option card is placed" observers.
+card: DELAY_OPT_MEM
+name: Delay Spark
+kind: option
+color: [red]
+cost: 2
+effects:
+  - when: main_from_hand
+    summary: "[Main] Gain 1 memory."
+    process:
+      - gain_memory: 1
+  - kind: delay
+    trigger: delayed
+    summary: "<Delay> ・<Draw 1>."
+    process:
+      - draw: { of: you, count: 1 }

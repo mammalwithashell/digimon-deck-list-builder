@@ -21,7 +21,7 @@
 //!   (On Play) and `:106` (When Digivolving) — both share
 //!   `SharedActivateCoroutine`, which runs `IDestroySecurity` BEFORE the
 //!   debuff. `general_rule.pdf` §15-7-1 names "by X, Y" an OPTIONAL
-//!   PROCESSING CONDITION; §15-7-4 lets the player decline it; §15-7-2 makes
+//!   PROCESSING CONDITION; §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] lets the player decline it; §15-7-2 makes
 //!   the decline skip the post-condition debuff too. → clause carries
 //!   `optional: true` + `outer_prompt: true` (the body's first step
 //!   `trash_top_security` is a bare cost with no PASS of its own).
@@ -34,7 +34,7 @@
 //! - D4 Barrier keyword (kept)
 //! - On Play/When Digivolving security-trash + board-wide -6000 DP debuff (kept)
 //! - E2 optional processing condition ("by trashing your top security card")
-//!   with an explicit decline path (15-7-1 / 15-7-2 / 15-7-4)
+//!   with an explicit decline path (15-7-1 / 15-7-2 / 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])
 //! - H4 Security A. +1 grant with `end_of_your_next_turn` expiry
 //! - Security-removed observer (OnOwnSecurityRemoved) + conditional Recovery
 
@@ -126,12 +126,12 @@ fn bt23_035_keeps_on_play_when_digivolving_debuff() {
 
     // 15-7-1: "Optional processing conditions include text such as 'by X,
     // Y.'" — "BY TRASHING your top security card, all of your opponent's
-    // Digimon get -6000 DP for the turn" is that shape. 15-7-4: the player
+    // Digimon get -6000 DP for the turn" is that shape. 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the player
     // "can choose whether or not to execute" it. DCGO agrees:
     // BT23_035.cs:77 / :106 pass isOptional=true.
     assert!(
         clause.optional,
-        "the security-trash cost is an optional processing condition (15-7-1/15-7-4)"
+        "the security-trash cost is an optional processing condition (15-7-1/15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     // The body's first step is a bare `trash_top_security` — it exposes no
     // PASS of its own, so the forced outer confirm is the only decline gate.
@@ -357,13 +357,13 @@ fn bt23_035_accepting_security_trash_applies_board_debuff() {
 
     fire_timing(&mut runner, EffectTiming::OnPlay, dyna);
 
-    // 15-7-4: the choice must surface BEFORE the security card is trashed.
+    // 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the choice must surface BEFORE the security card is trashed.
     let outer = runner
         .pending_selection_view()
         .expect("the optional processing condition must surface a prompt (rule 17)");
     assert!(
         outer.is_optional,
-        "the outer confirm must expose PASS (15-7-4)"
+        "the outer confirm must expose PASS (15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     assert_eq!(
         runner.security_count(0),
@@ -394,7 +394,7 @@ fn bt23_035_accepting_security_trash_applies_board_debuff() {
 }
 
 /// DECLINE: 15-7-1 names "By trashing your top security card, ..." an OPTIONAL
-/// PROCESSING CONDITION and 15-7-4 says "A player can choose whether or not to
+/// PROCESSING CONDITION and 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] says "A player can choose whether or not to
 /// execute the content of optional processing conditions, REGARDLESS of whether
 /// or not the content of the conditions can be executed" — so merely having
 /// security to trash does not force the payment. 15-7-2: with the condition's

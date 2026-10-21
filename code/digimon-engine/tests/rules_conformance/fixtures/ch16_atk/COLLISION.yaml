@@ -1,0 +1,14 @@
+# COLLISION -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   <Collision> (During this Digimon's attack, all of your opponent's Digimon
+#   gain <Blocker>, and your opponent blocks if possible.)
+card: COLLISION
+name: Rammon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - kind: grant_keyword
+    keyword: Collision
+    summary: "<Collision> (During this Digimon's attack, all of your opponent's Digimon gain <Blocker>, and your opponent blocks if possible.)"

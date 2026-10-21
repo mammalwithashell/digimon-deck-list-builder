@@ -1,0 +1,25 @@
+# OPT_TWO_EVENT_OBS_DRAW -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] [Once Per Turn] When your opponent's hand is trashed from or
+#   effects trash cards from under your Tamers, <Draw 1>.
+# The trigger shape of Crowmon (BT26-076)'s [Once Per Turn] reaction: two
+# trigger conditions, one use per turn.
+card: OPT_TWO_EVENT_OBS_DRAW
+name: Onceler
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: [on_discard_hand, on_digivolution_card_trashed]
+    once_per_turn: true
+    timing_conditions:
+      - when: on_discard_hand
+        condition:
+          event_discard_player: opponent
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_is_own_tamer: true
+    summary: "[All Turns] [Once Per Turn] When your opponent's hand is trashed from or effects trash cards from under your Tamers, <Draw 1>."
+    process:
+      - draw: { of: you, count: 1 }

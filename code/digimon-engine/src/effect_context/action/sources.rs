@@ -73,22 +73,26 @@ impl<'a> EffectContext<'a> {
         Some(permanent.card_sources.remove(pos))
     }
 
+    /// Place a sourceless Digimon at the bottom of `player`'s security stack
+    /// (see `Game::place_sourceless_permanent_on_security_bottom`). `true`
+    /// only when the placement completed synchronously; a parked placement
+    /// (the Digimon's own would-leave replacement prompt) returns `false`
+    /// with `pending_selection` set and completes on resume.
+    pub fn place_sourceless_permanent_bottom_security(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+    ) -> bool {
+        self.game
+            .place_sourceless_permanent_on_security_bottom(player, target, self.player)
+    }
+
     pub fn place_sourceless_permanent_bottom_security_and_cancel_current_replacement(
         &mut self,
         player: PlayerId,
         target: PermanentHandle,
     ) -> bool {
-        if self
-            .game
-            .modifiers
-            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
-        {
-            return false;
-        }
-        if self
-            .game
-            .place_sourceless_permanent_on_security_bottom(player, target, self.player)
-        {
+        if self.place_sourceless_permanent_bottom_security(player, target) {
             if self.game.has_active_parked_replacement() {
                 self.cancel_current_replacement();
             }
@@ -515,7 +519,7 @@ impl<'a> EffectContext<'a> {
             // controller's trash rather than dropping the card on the floor.
             // Trashed cards are not face-down sources, so `face_down` is not
             // applied on this path.
-            target_player.trash.push(taken);
+            target_player.put_in_trash(taken);
             return;
         }
         taken.face_down = face_down;
@@ -657,10 +661,12 @@ impl<'a> EffectContext<'a> {
         // host them via `<Linked>`) likewise go to trash — they cannot
         // ride the host into another permanent's digivolution stack.
         //
-        // Mirror `Game::return_to_deck` (game_actions.rs:1497-1506): fire
-        // `OnDigivolutionCardTrashed` per source, per player, draining
-        // between each so observers see them one at a time.
+        // The sources are trashed at the same time: ONE
+        // `OnDigivolutionCardTrashed` event (§15-5-2), and nothing activates
+        // before the Mind Link placement has finished (§15-8-3-2) — the
+        // event scope closes after the placement below.
         let top_handle = top.handle();
+        let event = self.game.begin_source_move_event();
         for source in tamer_perm.card_sources.drain(..) {
             self.game.trash_source_and_fire_with_cause(
                 controller,
@@ -675,7 +681,7 @@ impl<'a> EffectContext<'a> {
         // `OnLinkedCardTrashed` per player if any were present.
         let had_linked = !tamer_perm.linked_cards.is_empty();
         for linked in tamer_perm.linked_cards.drain(..) {
-            self.game.player_mut(controller).trash.push(linked);
+            self.game.player_mut(controller).put_in_trash(linked);
         }
         if had_linked {
             for pid in 0..self.game.players.len() {
@@ -684,7 +690,6 @@ impl<'a> EffectContext<'a> {
                     crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
                 );
             }
-            self.game.drain_effect_queue();
         }
 
         // Resolve the target's NEW slot after the index shift. If the
@@ -701,7 +706,8 @@ impl<'a> EffectContext<'a> {
         // (safe-fail — same shape as `place_card_under_permanent_bottom`).
         let target_player = self.game.player_mut(controller);
         if digimon_idx >= target_player.battle_area.len() {
-            target_player.trash.push(top);
+            target_player.put_in_trash(top);
+            self.game.end_source_move_event(event);
             return;
         }
         // Insert at the bottom of the target's stack. `face_down` stays
@@ -717,6 +723,7 @@ impl<'a> EffectContext<'a> {
         let cause = self.placing_effect_attribution();
         self.game
             .note_effect_added_sources(host, vec![top_handle], cause);
+        self.game.end_source_move_event(event);
     }
 
     /// Trash the current top Digimon of `perm` and promote the next-highest
@@ -776,12 +783,12 @@ impl<'a> EffectContext<'a> {
         // Modifier cleanup: no per-card-source tracking exists in this engine;
         // permanent-handle modifiers remain valid for the promoted top card.
         //
-        // Host = the promoted new top. The `top` was already popped above, and
-        // pushing it to TRASH (inside the helper) does not touch the perm's
-        // battle-area stack, so the host is identical computed here vs after
-        // the push. Cause = `Cost` (matches DCGO `ArmorPurge.cs:65-78`, which
-        // re-stacks `WhenTopCardTrashed`). Trash + fire via the shared Tier-2
-        // primitive.
+        // Host = the promoted new top. The trashed card is the TOP card, not a
+        // digivolution card (§4-8-1), so it fires `OnTopCardTrashed` (DCGO
+        // `ArmorPurge.cs:65-78` stacks `WhenTopCardTrashed`), never
+        // `OnDigivolutionCardTrashed`. Cause = `Cost` (the optional "by
+        // trashing the top card" condition, §16-19).
+        // G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED.
         let host_card = self
             .game
             .player(perm.player)
@@ -789,13 +796,16 @@ impl<'a> EffectContext<'a> {
             .get(perm.index as usize)
             .map(|permanent| permanent.top_card().handle())
             .unwrap_or(top_handle);
-        self.game.trash_source_and_fire_with_cause(
+        self.game.player_mut(controller).put_in_trash(top);
+        self.game.enqueue_top_cards_trashed(
             controller,
             perm,
-            top,
             host_card,
+            vec![top_handle],
             crate::trigger_context::EventCause::Cost,
         );
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// `<Training>` (Phase F §F4 / RULES_CONTEXT 16-40 / DCGO `Training.cs:30`)
@@ -960,7 +970,7 @@ impl<'a> EffectContext<'a> {
             permanent.card_sources.remove(pos)
         };
         let owner = removed.owner;
-        self.game.player_mut(owner).hand.push(removed);
+        self.game.player_mut(owner).put_in_hand(removed);
         // The source has left the stack — refresh materialized declaratives so
         // continuous grants sourced from the departed card stop applying
         // immediately (same contract as `fire_digivolution_card_trashed`).
@@ -1039,11 +1049,15 @@ impl<'a> EffectContext<'a> {
         to_bottom: bool,
     ) -> bool {
         let mut all_ok = true;
+        // The selected cards are returned at the same time: one event
+        // (§15-5-2), whose observers wait for the effect (§15-8-3-2).
+        let event = self.game.begin_source_move_event();
         for source_ref in selected {
             if !self.return_card_source_to_deck(source_ref.permanent, source_ref.card, to_bottom) {
                 all_ok = false;
             }
         }
+        self.game.end_source_move_event(event);
         all_ok
     }
 }

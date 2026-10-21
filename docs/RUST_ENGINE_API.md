@@ -142,6 +142,19 @@ Bless intended behavior changes:
 cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- bless --goldens qa/replay-goldens --cards data/cards.json
 ```
 
+Re-record ONE generated golden whose recorded path an engine change made
+illegal (`bless` keeps the recorded actions, so it can only retire such a
+golden). It replays greedy vs greedy from the golden's own inline deck refs and
+seed, with the original action count as the step budget (`--max-steps`
+overrides), and writes the current engine schema. Hash `cards.json` as LF
+bytes (the committed blob), not a Windows CRLF working copy, so `cards_hash`
+stays canonical; record why in `qa/replay-goldens/NOTES.md`:
+
+```bash
+git show HEAD:data/cards.json > /tmp/cards_lf.json
+cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- regenerate --goldens qa/replay-goldens --cards /tmp/cards_lf.json --id greedy_002_
+```
+
 Convert reconstructible legacy training recordings:
 
 ```bash
@@ -333,7 +346,7 @@ ctx.bounce_self() -> Option<CardHandle>
 ctx.trash_card_source(perm, card)            // trash one source by handle
 ctx.trash_all_sources(target) -> bool         // strip every digivolution source
 ctx.trash_top_source(target) -> bool          // strip only the topmost source under the visible top
-ctx.armor_purge_top(perm)                     // <ArmorPurge> trash of the top printed card
+ctx.armor_purge_top(perm)                     // <ArmorPurge> trash of the top printed card (fires OnTopCardTrashed)
 
 ctx.return_card_source_to_hand(perm, card) -> bool            // return one source by handle to its OWNER's hand
 ctx.return_selected_sources_to_hand(selected: Vec<SourceSelectionRef>) -> bool
@@ -450,11 +463,19 @@ transaction state (clone-safe). Distinctness is slot-scoped.
 
 `delete_permanent` removes the permanent and moves all cards in its stack to trash. It also clears modifiers attached to that handle. **Does not fire OnDeletion** — use `Game::delete_permanent_with_effects` for that when you're calling from combat paths. From a card script, `ctx.delete_permanent` is usually what you want (OnDeletion is handled by combat, not effect).
 
-`de_digivolve` (`effect_context/mod.rs:1966`) pops up to `amount` sources off
-`target`'s stack, trashing each into the target owner's trash. `stop_at_level`
-clamps the pop so the resulting top card's level is ≥ the floor; `None` for
-no floor (TS Olympos Ikkakumon-style pop-to-base). Returns the actual count
-popped. See §Phase 10 for printed examples.
+`de_digivolve` (`effect_context/action/digivolve.rs`, rules machinery in
+`Game::de_digivolve_core`) implements `<De-Digivolve N>` (§16-12). With a
+printed `amount` and at least 2 trashable cards, the effect's controller
+declares 1..=min(N, trashable) through a non-optional count choice
+(`ResumeSelectKind::DeDigivolveCount`, §16-12-1 / §16-12-3) and the call
+returns 0; the declared cards are trashed when the choice resolves. The cards
+are trashed one at a time from the top into the target owner's trash;
+`stop_at_level = Some(3)` stops at a TOP card of level 3 or lower (§16-12-4; a
+level-less top card does not stop it); `None` for no floor (TS Olympos
+Ikkakumon-style pop-to-base, never declared). Each instance enqueues
+`OnTopCardTrashed` ONCE with every trashed card, never
+`OnDigivolutionCardTrashed` (§4-8-1: a top card is not a digivolution card).
+Returns the count trashed now. See §Phase 10 for printed examples.
 
 `return_to_hand` (`effect_context/mod.rs:3329`) bounces a permanent: top
 card → owner's hand, sources under → owner's trash. Routed through
@@ -1550,7 +1571,7 @@ SecuritySkill, OnSecurityCheck, OnLoseSecurity, OnDiscardSecurity, CounterEffect
 // Turn-based
 StartOfYourTurn, StartOfOpponentsTurn, StartOfYourMainPhase,
 EndOfYourTurn, EndOfOpponentsTurn, EndOfYourNextTurn, EndOfOpponentsNextTurn,
-UntilNextUnsuspend, EndOfAttack, EndOfBattle
+UntilNextUnsuspend, EndOfAttack, EndOfBattle, BattleResult
 
 // Event-triggered
 OnAllyAttack, OnOpponentAttack, OnDrawCard, OnTrash, OnReturn, OnSuspend, OnUnsuspend,
@@ -1587,6 +1608,7 @@ MainFromHand, MainOnField, MainFromTrash
 
 // Archetype observers
 OnOpponentSecurityRemoved, OnOwnSecurityRemoved, OnDigivolutionCardTrashed,
+OnTopCardTrashed                         // the TOP stacked card was trashed: once per <De-Digivolve> instance (all its cards) / <Armor Purge>; DSL `when: on_top_card_trashed`
 OnAddDigivolutionCards                   // an EFFECT placed cards into a permanent's digivolution cards (BT7-056 / EX7-005 / BT25-005); DSL `when: on_add_digivolution_cards`
 OnDigivolutionCardReturnedToDeckBottom   // source returned to deck BOTTOM (BT21-058 / BT18-065); DSL `when: on_source_returned_to_deck_bottom`
 
@@ -1607,7 +1629,7 @@ EndOfOpponentsNextTurn      # Track H — "until the end of their next turn" (EX
                             # then expires at the SECOND end-of-opp-turn after install.
                             # Tracked via a `pending_skips` counter on `ModifierEntry`.
 EndOfYourNextTurn           # Track H — symmetric mirror, "until the end of your next turn"
-EndOfAttack                 # cleared when the current attack resolves
+EndOfAttack                 # cleared when the current attack ends, i.e. after its End of Attack pool has resolved (§11-6-2)
 EndOfBattle                 # cleared when the current battle resolution finishes
 UntilLeaveField             # cleared when the source permanent leaves the field
 UntilCondition              # active while a per-entry boolean predicate holds; re-evaluated
@@ -1722,7 +1744,7 @@ storage entry, lifecycle, and DSL string published.
 | `CannotAttack` | permanent | `WhenWouldAttack` replacement (Phase 9) |
 | `CannotAttackTarget` | permanent | `WhenWouldBeAttackTarget` replacement (Phase 9) |
 | `CannotSwitchAttackTarget` | permanent | `combat::redirect_attack_target` (Track D) |
-| `CannotBeRedirectedAsAttackTarget` | permanent | retarget candidate filter in `try_enter_block` and Raid post-block rider (Track D) |
+| `CannotBeRedirectedAsAttackTarget` | permanent | retarget candidate filter in `try_enter_block` and the `<Raid>` switch (`raid_switch_candidates`) (Track D) |
 | `CanAttackTargetDefendingPermanent` | permanent | `combat::is_legal_attack_target` — overrides negative gates (Track D) |
 | `CannotAddMemory` | permanent | `Game::adjust_memory_by_effect` |
 | `CannotAddSecurity` | permanent | `Game::add_security_by_effect` |
@@ -3215,7 +3237,7 @@ pub fn attack_target_change(&self) -> Option<AttackTargetChange>;
 ```
 
 The payload is present for script-facing `ctx.redirect_attack`, Blocker
-retargets, printed `RaidOpen` switches, and the post-Block target-loss rider.
+retargets, and `<Raid>` switches (resolved in the declaration's trigger pool).
 Rejected retarget attempts do not fire the timing or install a payload.
 
 DSL `on_attack_target_change` predicates can read the same payload:
@@ -3261,24 +3283,27 @@ the final pick, while up-to-N selections expose PASS only after `min` is met.
 
 ### New state machine transitions
 
-**Retarget validation** — every current attack-target rewrite source routes through `Game::validate_attack_redirect_target`: script-facing `ctx.redirect_attack`, Blocker candidate selection/resolution, and the post-Block Raid retarget rider. This keeps `CannotAttackTarget`, `CannotBeRedirectedAsAttackTarget`, and `CanNotSwitchAttackTarget` semantics consistent and prevents rejected redirects from firing `OnAttackTargetChange`.
+**Retarget validation** — every current attack-target rewrite source routes through `Game::validate_attack_redirect_target`: script-facing `ctx.redirect_attack`, Blocker candidate selection/resolution, and the `<Raid>` switch. This keeps `CannotAttackTarget`, `CannotBeRedirectedAsAttackTarget`, and `CanNotSwitchAttackTarget` semantics consistent and prevents rejected redirects from firing `OnAttackTargetChange`.
 
-**`AttackState::RaidOpen`** — after declaration and attack-target replacement
-checks, before Alliance / Counter / Blocker windows. If the attacker has
-`<Raid>` (printed or modifier-granted), and the opponent has one or more
-unsuspended Digimon tied for highest DP that pass the shared retarget validator,
-the engine installs an optional pending selection for the attacker's controller.
-PASS keeps the declared target. Choosing a candidate rewrites `effective_target`
-and fires `OnAttackTargetChange { reason: Raid }`.
+**`<Raid>` switch** (`AttackState::RaidOpen` is now a pass-through state) —
+`<Raid>` is a trigger-type effect that triggers once, when its Digimon attacks,
+and is optional (§16-23-2 / §16-23-3). It pends in the attack declaration's
+trigger pool (`fire_on_attack`); its body (`install_raid_switch_selection`)
+offers the opponent's unsuspended Digimon tied for highest DP that pass the
+shared retarget validator, as an optional pending selection for the
+attacker's controller. PASS keeps the target. Choosing a candidate rewrites
+`effective_target` and fires `OnAttackTargetChange { reason: Raid }`.
 
-**`AttackState::PostBlock`** — after the Block window resolves. This state keeps
-the older target-loss rescue path: if the effective target has been invalidated
-since declaration (e.g. destroyed by a Block-window effect, returned to hand, or
-otherwise no longer legal), the engine can surface a final retarget/decline
-selection instead of silently resolving against a stale handle. Ordinary printed
-`<Raid>` switching happens in `RaidOpen`.
+**`AttackState::PostBlock`** — after the Block window resolves; transitions
+straight to `Battle`. There is no retarget here: a removed attack target
+remains the attack target and the attack fails (§11-2-6), so `Battle` ends it
+as `AttackResult::Unsuccessful` (§11-5-1-4-1). The former post-Block `<Raid>`
+retarget rider was deleted (2026-10-17, G-ENGINE-REMOVED-ATTACK-TARGET-SLOT-REUSED):
+`<Raid>` triggers only when the Digimon attacks (§16-23-2) and is optional.
 
 **`AttackState::PostBattle`** — processes owed `<Piercing>` before EndOfAttack, after battle rewards resolve. The active attacking Digimon can earn Piercing by deleting an opponent in either the attack's ordinary battle or an effect-caused battle during that attack. A vanished declared target does not erase this pending check. There is only one transition to security checking per attack: an ordinary player-attack check consumes that transition, and multiple Piercing activations cannot add another. A nonattacking effect battler cannot earn Piercing for the attacker. Ending the attack by an effect skips to EndOfAttack; removing the attacker also prevents its pending check. See official rules 16-6-2/4, 15-15-1-1 and [Bandai's CRM4 clarification](https://en.digimoncard.com/rule/revised/).
+
+**`AttackState::EndOfAttackDrain(outcome)`** — the End of Attack timing (§11-6-2: "the attack won't end until all processing has been resolved"). `cleanup_attack` enqueues the `EndOfAttack` effects of every battle area plus the scheduled pending processing due then (one §18-1-2 pool, e.g. `<Execute>`'s deletion, §16-38-4), sets this state carrying the attack's outcome, and drains. While the pool resolves the attack is still in progress: `pending_attack` stays set, the attacker keeps `is_attacking` (`current_attacker()` is valid), and the "for the attack" (`Expiry::EndOfAttack`) modifiers still apply. If the pool parks on a decision the attack entry point returns `AttackResult::InProgress`; the `resolve_selection` tail drains the rest and re-enters `advance_pending_attack`, whose `EndOfAttackDrain` arm calls `finish_attack_after_end_of_attack_timing`: clear `is_attacking`, `expire_end_of_attack()`, clear `pending_attack`, rule check, turn-end check, and return the carried outcome. The state is plain data (clone-safe). After an end-of-turn attack (`PendingAttack::return_phase` is `EndTurn` — declared inside the `[End of Your Turn]` pool — or `EndOfTurnAction` — a `MayAttack` grant's window) the finish arms `settle_end_of_turn_attack` (`game_phases.rs`): once nothing is resolving it continues the end of turn — `resume_pending_end_turn` (the next waiting end-of-turn keyword offer, then the §6-6-4 swing-back check and the rotation) for a pool attack, or, in the `EndOfTurnAction` window, a re-check of `has_end_of_turn_keywords` that rotates the turn when no end-of-turn action is left (§16-44-1; no PASS-only step). An effect in the End of Attack pool must not declare a new attack (`begin_attack_open` refuses it while this state is held; no card does so).
 
 ### Keyword consumers wired
 
@@ -3287,7 +3312,7 @@ selection instead of silently resolving against a stale handle. Ordinary printed
 | `<Piercing>` | `AttackState::PostBattle` | Post-Digimon-battle security check against defending player (§4.3 of spec). |
 | `<Collision>` | `AttackState::BlockOpen` mask builder | Flips `is_optional = false` on the block window; the PASS/no-block action bit drops from the mask. `CannotBlock` modifier still gates individual defenders before Collision elevates the choice to mandatory. |
 | `<Reboot>` | Opponent's unsuspend phase | Unsuspends the Reboot permanent during the opponent's unsuspend step. Gated by `CannotUnsuspend` / `CannotBeUnsuspendedByEffect` modifiers. |
-| `<Raid>` | `AttackState::PostBlock` | Retarget rider as described above. |
+| `<Raid>` | Attack declaration trigger pool (`fire_on_attack`) | Optional once-at-declaration switch, as described above (§16-23-2 / §16-23-3). |
 
 ### New observer dispatch
 
@@ -3354,9 +3379,9 @@ Effect::new(card, EffectTiming::OnAllyAttack)
 
 1. **Counter-chain depth > 1 is not supported.** `pending_attack.counter_fired` is a boolean, not a counter. Printed rules today do not require recursive Counter-chains; if a future card requires Counter-in-response-to-Counter, this becomes a multi-level fired-set.
 2. **Attacker-side substitution (`WhenWouldAttack` with `Substituted`) is a `debug_assert`**, not a printed mechanic. No card moves the attacker slot via a replacement; the variant is kept for shape symmetry with `WhenWouldBeAttackTarget`.
-3. **Single Raid retarget per attack.** `AttackState::PostBlock` fires the retarget check once. If the retargeted target also invalidates before `Battle`, the state machine falls through to `Battle`, which handles zero-target cleanup trivially (no damage, no security check).
-4. **Raid retarget candidate set is stricter than declaration-time mask.** v1 prefers unsuspended Digimon; suspended fallback only fires when no unsuspended target exists. Declaration-time mask has no such ordering. This is a parity gap between the two selection flows — tracked in `RUST_PYTHON_PARITY.md` §15.4.
-5. **Native `<Raid>` parsing is still modifier-only.** Phase 3 parsed `<Collision>`, `<Piercing>`, `<Reboot>` off the card face; `<Raid>` is still mask-layer-only (same pre-existing gap, not introduced by Phase 9). Printed Raid cards require a modifier emission to honor the retarget rider in v1.
+3. **One `<Raid>` switch per attack, at the declaration.** A target removed afterwards is not retargeted: the attack fails (§11-2-6), `AttackResult::Unsuccessful`, no damage, no security check.
+4. *(Removed 2026-10-17.)* The post-Block Raid retarget rider and its suspended-Digimon fallback were deleted (§11-2-6, §16-23-2).
+5. *(Superseded 2026-10-17.)* `<Raid>` is no longer mask-layer-only: it pends in the declaration's trigger pool through `keyword_trigger_dispatched_from_registry` (see the trigger-pool section below) and offers its once-at-declaration optional switch from there (§16-23-2).
 6. **Piercing on direct-player-attack does NOT fire.** Piercing is a post-Digimon-battle rule only. An attack declared against the opposing player (not a Digimon) that lands zero damage is not a Piercing trigger.
 7. **`ACTION_SPACE_SIZE` unchanged at 2168.** All Phase 9 interrupts reuse existing action ranges: Counter window Option plays route through the Phase 8 `PLAY_HAND` range, Raid retargets reuse the target-selection range, Counter passes reuse the `SEL_REPLACEMENT_PASS` bit. No tensor or mask growth.
 
@@ -4039,9 +4064,10 @@ Tamers, …":
 - trash_bottom_face_down_source_under_tamer: { of: you }
 ```
 
-It installs a `select_own_permanent { kind: tamer, has_face_down_source: true }`
-Tamer-pick, then trashes the chosen Tamer's bottom face-down source (firing
-`OnDigivolutionCardTrashed`). When the player controls no eligible Tamer the
+It installs a `select_own_permanent` Tamer-pick over your Tamers with a
+face-down card under them, then trashes the chosen Tamer's bottom face-down
+card -- its LOWEST face-down card, face-up cards below it notwithstanding
+(`Permanent::face_down_source_indices`) -- firing `OnDigivolutionCardTrashed`. When the player controls no eligible Tamer the
 cost is unpayable: the clause's remaining steps are skipped. Used by the
 cost-form trash family (ST23-01/03/04/08/11/12, ST24-01/06/10/11/12).
 
@@ -4373,11 +4399,21 @@ The source-trash slice routes digivolution-source movement through
 payloads now carry `event_card` / `event_source_card` for the trashed source,
 `event_host_card` for the former or remaining host top card,
 `event_host_permanent` when a stable host handle is available,
-`affected_player` / `source_player`, `cause`, and a one-card
-`moved_card_sets` entry from `BattleArea` to `Trash`. DSL
+`affected_player` / `source_player`, `cause`, and a `moved_card_sets` entry
+from `BattleArea` to `Trash` naming every card of the trashing event. DSL
 `host_permanent_trait_has` first checks the live host and then falls back to
 the host-card snapshot, so return-to-hand/deck source disposition remains
 observable after the host leaves the battle area.
+Source-trash observers never drain inline (§15-8-3-2): one step that trashes
+several digivolution cards wraps them in `Game::begin_source_move_event()` /
+`end_source_move_event(..)` (a deferred-drain scope shared by source trashes and
+source returns to the deck bottom; renamed from `*_source_trash_event` in Task 41), and a rule process that
+moves a whole stack uses `Game::enqueue_digivolution_cards_trashed(..)`. Either
+way the cards form ONE event, so each observer triggers once for it (§15-5-2,
+the kept entry retains every card as a member, like a simultaneous play), and a
+later trashing step is a new event that triggers it again (§15-4-2-4). A
+trashed card's own inherited "when this card is trashed" effect stays one
+trigger per card. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
 For source-cost authoring, DSL `select_own_sources` accepts an optional
 `target: <binding-ref>` field. When omitted, it scans the controller's own
 battle-area source cards as before. When set, it resolves the binding to a
@@ -4446,7 +4482,8 @@ Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 n
 |--------|---------|-----------|
 | `OnAttack` | `Effect::on_attack(card)` | `fire_on_attack` (already wired; per-attacker) |
 | `WhenAttacking` | `Effect::when_attacking(card)` | `fire_on_attack` (observer — attacker's battle area) |
-| `EndOfBattle` | `Effect::end_of_battle(card)` | `resolve_battle` (Digimon-vs-Digimon only) |
+| `BattleResult` | `Effect::battle_result(card)` | Triggered by the battle (§14-2-4): "wins a battle", "deletes in battle" (DSL `on_ally_won_battle`), `<Piercing>`. Enqueued once per battle by the battle deletion batch's stage 4d (`Game::enqueue_pending_battle_result_triggers`), so it pends in ONE pool with the loser's `[On Deletion]`, turn player first (§15-4-3-5-1, Q3931); when no Digimon is deleted, by `resume_pending_battle_resolutions`; security battles: `SecurityPhase::EndOfSecurityBattleDrain`. Source `TriggerSource::BattleResolved` |
+| `EndOfBattle` | `Effect::end_of_battle(card)` | The end of the battle timing (§14-2-5: "At the end of a battle"), with the §18-1-2 pending processing due then, AFTER the `BattleResult` / `[On Deletion]` pool: `resume_pending_battle_resolutions`; security battles: `SecurityPhase::EndOfSecurityBattleTimingDrain` |
 | `EndOfAttack` | `Effect::end_of_attack(card)` | `cleanup_attack` (global) |
 | `OnAttackTargetChange` | `Effect::on_attack_target_change(card)` | Block interrupt, after `effective_target` rewrite |
 
@@ -4577,14 +4614,77 @@ Unrecognized keyword names are ignored silently. Cards that need
 behavior not covered by the `Keyword` enum must use the modifier-based
 API via `Effect` builders.
 
+### End-of-turn attack keywords (`<Engage>`, `<Execute>`, `<Vortex>`, `<Overclock>`)
+
+All four are trigger-type effects at the end of your turn (§16-44-2, §16-38-2,
+§16-33-2, §16-34-2). Each is a `keyword_to_auto_effect` `EndOfYourTurn` body
+(`keyword_effects::end_of_turn_keyword_attack_process`), dispatched from the
+modifier registry like `<Raid>` / `<Alliance>` (`keyword_trigger_dispatched_from_registry`)
+so printed, DSL-granted, aura-granted and raw registry grants all reach the
+pool once, with the activation condition kept
+(`end_of_turn_keyword_can_activate`: a legal declaration, or for
+`<Overclock>` a legal cost candidate; DCGO `CanActivate*`). They pend with
+the other `[End of Your Turn]` effects and the turn player orders them
+(`TriggerOrder`, §15-4-3-5-1).
+
+When an entry activates, its processing is its own resumable decision inside
+the pool (`Game::offer_end_of_turn_keyword_attack`):
+
+- `<Engage>` / `<Execute>` / `<Vortex>`: one optional attack declaration
+  (`ResumeFrame::AttackDeclarationDecision`, shared with `<Blitz>`; targets from
+  `action::mask::end_of_turn_keyword_attack_action_ids`: Engage the player or a
+  suspended Digimon; Execute also unsuspended Digimon, §16-38-1; Vortex an
+  opponent's Digimon, the player only under `VortexCanAttackPlayer`, opened as
+  `AttackInitiator::Vortex` so it may attack the turn it was played). PASS
+  declines; nothing else happens.
+- `<Overclock>`: its optional processing condition (below), then the mandatory
+  attack on the player without suspending.
+
+A declaration made there is made inside the pool: `advance_pending_attack`
+yields while the effect queue is non-empty, so the declaration's own
+`[When Attacking]` triggers and the pool's remaining entries resolve before the
+counter timing (§11-1-4; Q3868 / Q3869), then the `resolve_selection` tail
+resumes the attack. The end of turn waits for it (`continue_end_turn_after_delays`
+/ `resume_pending_end_turn` hold while `pending_attack` is set, §6-6-2) and
+continues when it ends (`settle_end_of_turn_attack`). Only one attack is in
+progress at a time: a keyword entry that activates while an earlier keyword's
+attack waits for its counter timing does not nest a second attack; its offer
+is queued (`Game::deferred_end_of_turn_attack_offers`, carrier by stack
+identity) and made after that attack has ended, in activation order. The
+declared keyword is recorded on the attack (`Game::end_of_turn_attack_keyword`,
+cleared at the attack's end); `<Execute>`'s End of Attack deletion (§16-38-4)
+keys on it, so a Main-phase attack by an `<Execute>` Digimon is never deleted.
+
+There is no `EndOfTurnAction` offer for these keywords any more (no Vortex /
+Engage attack bits, no `FIELD_EFFECT_SLOT_FOR_OVERCLOCK` bit; the constant stays
+in the action space). The `EndOfTurnAction` window remains for `MayAttack` /
+`ForceAttack` grants and registered end-of-turn DNA routes.
+
 ### Overclock Cost Selection
 
-`<Overclock (...)>` is optional and always surfaces its cost as a
-`PendingSelection` during `GamePhase::EndOfTurnAction`; it never auto-deletes a
-cost permanent. The selection stores the exact legal cost action IDs in
-`valid_action_ids`, uses the selecting Overclock controller as
-`selecting_player`, sets `is_optional = true`, and restores
-`EndOfTurnAction` after either a cost pick or `PASS`.
+`<Overclock (...)>`'s cost is optional (§16-34-3) and always surfaces as a
+`PendingSelection` (`Game::install_overclock_selection`,
+`ResumeFrame::OverclockSelection`) inside the `[End of Your Turn]` pool; it
+never auto-deletes a cost permanent. The selection stores the exact legal cost
+action IDs in `valid_action_ids`, uses the Overclock controller as
+`selecting_player`, sets `is_optional = true` and marks the §18-3 optional
+decision. `PASS` declines (nothing else happens). A cost pick deletes the
+chosen Digimon, and the Overclock attack on the opponent (without suspending)
+is declared **only if that deletion actually happened** (§16-34-3 "if the
+content of that condition is executed", §15-7-1 "and is successful",
+§15-7-2; DCGO `OverclockProcess` attacks only `if (isDeleted)`). The cost is
+deleted under a deletion receipt (`Game::open_deletion_receipt`), and the
+attack is gated on `Game::take_deletion_receipt_matching` finding the chosen
+stack's identity in it. A deletion a replacement prevents (§15-8-5-2: "it
+isn't deleted", e.g. `<Armor Purge>` trashing the top card) records nothing,
+and a substituted deletion records another stack; either way there is no
+attack and nothing else of the body runs. The once-per-turn use is still
+spent: <Overclock> is a trigger-type effect that activates once at the end of
+your turn (§16-34-2), and a prevented condition does not re-open it, so no
+second cost pick is offered. When the attack is declared, the pool's remaining
+entries resolve before its counter timing, and once the attack has ended
+(after its End of Attack pool, §11-6-2) the end of turn continues
+(`settle_end_of_turn_attack`).
 
 Candidate action IDs reuse the field-target half of the attack range:
 `encode_attack(0, field_index)`. The action mask must emit only those stored
@@ -4592,14 +4692,36 @@ candidate bits plus `PASS`. The decoder/resolver must reject any non-candidate
 target before deleting the cost or starting the Overclock attack.
 
 Legal cost candidates are Tokens plus other Digimon accepted by the Overclock
-parameter. Printed text like `＜Overclock ([Puppet] Trait)＞` derives a trait
+parameter (`is_specified_overclock_cost`) whose deletion can be executed
+(`is_legal_overclock_cost`): §15-7-4 "If executing an optional processing
+condition's contents isn't possible, then the player can't choose to execute
+them", so a Digimon a passive "can't be deleted" restriction protects
+(`replacement::deletion_passively_prevented`, a mandatory `PassiveCancel`
+candidate for `ReplacementCause::Cost`) is not offered, and with no other
+candidate the condition is not offered at all. An optional or effect-based
+prevention (`<Armor Purge>`) stays offered: that deletion is executable and
+only replaced, so its outcome is read from the receipt. Printed text like `＜Overclock ([Puppet] Trait)＞` derives a trait
 filter from the bracketed trait. DSL `grant_keyword` clauses may provide an
 `overclock_cost_filter` predicate; lowering attaches it with
 `EffectBuilder::overclock_with_cost_filter`, and runtime candidate collection
 uses the same predicate path.
 
-If deleting the Overclock cost produces observer selections, the attack is
-paused and resumed after those selections finish. The resumed attack re-finds
+If deleting the Overclock cost parks a decision -- a replacement decision
+such as `<Armor Purge>`'s yes/no prompt, or an observer selection -- the
+attack is queued (`parked_overclock_attacks`, a FIFO of `ParkedOverclockAttack`:
+the cost stack's identity and the receipt; plain data, clone-safe) and
+`resume_pending_overclock_attack` declares the queue's front once nothing is
+pending and no attack is in progress -- at the `resolve_selection` tail, and
+through `resume_pending_end_turn` when an attack ends. One attack at a time
+(§11-2-4: `begin_attack_open` refuses a declaration while `pending_attack` is
+set); while an Overclock attack is queued, a later end-of-turn attack
+keyword's processing waits in `deferred_end_of_turn_attack_offers`, so two
+parked costs attack in activation order and none overwrites another. The resume
+re-checks the deletion receipt before declaring: `<Armor Purge>` accepted
+means no deletion and no attack; declined means the deletion committed under
+the receipt and the attack follows. (Open, non-blocking: the parked attack is
+declared after the pool's remaining entries, §11-1-4 --
+G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL.) The resumed attack re-finds
 the Overclock source by its stable `CardHandle`, not by the pre-cost
 battle-area index, so lower-slot sacrifices and observer-driven field changes
 do not stale the attacker handle.
@@ -4942,7 +5064,7 @@ lives in `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`.
 | `security_place_top_stacked_card` | `carrier`, `of`, `position`, `face` | `EffectContext::security_place_top_stacked_card(...)` |
 | `return_all_trash_to_deck_bottom` | `of` | `EffectContext::return_all_trash_to_deck_bottom(player)` |
 | `trash_top_n_digivolution_cards_of_each` | `of`, `n` formula | `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)` |
-| `trash_bottom_face_down_source_under_tamer` | `of` | Installs `select_own_permanent { kind: tamer, has_face_down_source: true }`, then `EffectContext::trash_bottom_face_down_source(pick)`. Skips remaining clause steps (unpayable cost) when no eligible Tamer exists. See "DSL Tamer Face-Down Stash Substrate". |
+| `trash_bottom_face_down_source_under_tamer` | `of` | Installs `select_own_permanent` over your Tamers with a face-down card under them, then `EffectContext::trash_bottom_face_down_source(pick)` (the lowest face-down card; `Permanent::face_down_source_indices`). Skips remaining clause steps (unpayable cost) when no eligible Tamer exists. See "DSL Tamer Face-Down Stash Substrate". |
 | `trash_opponent_hand_to_count` | `opponent`, `target_count` formula | `EffectContext::trash_opponent_hand_to_count(opponent, target_count)` |
 | `search_own_security_stack` | `filter`, `prompt`, optional `bind_as`, `optional`, `on_select`, optional `on_no_match` | `EffectContext::search_own_security_stack(...)`; `bind_as` exposes the selected security card handle to `on_select` |
 

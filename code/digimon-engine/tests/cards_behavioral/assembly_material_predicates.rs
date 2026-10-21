@@ -88,7 +88,12 @@ fn named_filters(seat:u8){
 fn named_decline(seat:u8){
     let mut r=runner("BT24-081",seat,vec![witness("TITA","Titamon",CardKind::Digimon,Some(6),&[]),witness("SKULL","SkullBaluchimon",CardKind::Digimon,Some(5),&[])]);
     trash(&mut r,seat,"TITA");trash(&mut r,seat,"SKULL");act(&mut r,seat,PLAY_HAND_START);prompt(&r,seat,&[TRASH_EFFECT_START]);
-    act(&mut r,seat,PASS);assert!(r.pending_selection().is_none());assert_eq!(sources(&r,seat),vec!["BT24-081"]);assert_eq!(r.trash_size(seat),2);
+    act(&mut r,seat,PASS);
+    // Declining Assembly pays the full cost (memory below 0), so the turn ends and the
+    // played Digimon's own optional <Execute> is offered at the end of the turn (§16-38).
+    let p=r.pending_selection_view().expect("the turn ended at memory below 0: <Execute> is offered");
+    assert!(p.is_optional&&p.prompt.starts_with("<Execute>")&&p.selecting_player==seat,"{p:?}");
+    assert_eq!(sources(&r,seat),vec!["BT24-081"]);assert_eq!(r.trash_size(seat),2);
 }
 macro_rules! single_test {($name:ident,$id:literal,$seat:expr,$kind:ident,$t:literal)=>{#[test]fn $name(){one($id,$seat,CardKind::$kind,$t);}};}
 macro_rules! named_test {($name:ident,$seat:expr,$first:ident,$second:ident)=>{#[test]fn $name(){named($seat,CardKind::$first,CardKind::$second);}};}

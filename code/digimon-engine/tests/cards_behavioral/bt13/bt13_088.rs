@@ -328,7 +328,10 @@ fn bt13_088_on_play_places_rage_and_grants_cannot_attack_plus_immunity() {
         EffectSourceKind::Digimon,
         EffectSourceKind::Tamer,
         EffectSourceKind::Option,
-        EffectSourceKind::Rule,
+        // No `Rule` arm: "your opponent's effects" are Digimon / Tamer /
+        // Option effects (§15-2-1); a token's effect is a Digimon effect
+        // (§15-2-1-1), so the Rule kind no longer stands in for tokens.
+        // G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE.
     ] {
         assert!(
             runner
@@ -502,6 +505,8 @@ fn bt13_088_opp_attack_with_one_hand_card_does_not_install_prompt() {
         .add_card(make_filler("SECURITY"))
         .hand(0, &["HAND1"])
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_on_field(0, "BT13-088", Some(0));
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
@@ -536,6 +541,8 @@ fn bt13_088_opp_attack_trash_two_ends_attack() {
         .add_card(make_filler("SECURITY"))
         .hand(0, &["HAND1", "HAND2"])
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_on_field(0, "BT13-088", Some(0));
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
@@ -598,6 +605,8 @@ fn bt13_088_opp_attack_decline_lets_attack_resolve() {
         .add_card(make_filler("SECURITY"))
         .hand(0, &["HAND1", "HAND2"])
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_on_field(0, "BT13-088", Some(0));
     let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
@@ -634,6 +643,8 @@ fn bt13_088_opp_attack_opt_locks_second_attack_same_turn() {
         .add_card(make_filler("SEC2"))
         .hand(0, &["HAND1", "HAND2", "HAND3", "HAND4"])
         .security(0, &["SEC1", "SEC2"])
+        .deck(0, &["SEC1"; 8])
+        .deck(1, &["SEC1"; 8])
         .start();
     runner.place_on_field(0, "BT13-088", Some(0));
     let attacker1 = runner.place_on_field(1, "ATTACKER1", Some(0));

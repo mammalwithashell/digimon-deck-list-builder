@@ -46,7 +46,10 @@ fn bt19_026_de_digivolves_then_returns_level_four_when_two_opponent_digimon() {
     runner
         .execute_action(0, encode_attack(0, stacked.index as u16))
         .expect("choose stacked target");
-    runner.auto_resolve().expect("resolve follow-up return");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    runner
+        .auto_resolve_declaring_max()
+        .expect("declare 2, resolve follow-up return");
 
     assert_eq!(
         runner.game.players[1].battle_area[stacked.index as usize]

@@ -169,6 +169,10 @@ pub struct TriggerContext {
     pub security_check_face_generation: Option<u64>,
     /// Physical members of one simultaneous play event. Each member has no nested group.
     pub simultaneous_play_members: Vec<TriggerContext>,
+    /// Transient stamp: this entry was enqueued by the source-move event that
+    /// is still open (`Game::source_move_event_open`). Cleared when the event
+    /// closes and its entries are coalesced; never set between steps.
+    pub(crate) in_source_move_event: bool,
     /// Captured physical eligible subjects for one paid deletion-prevention effect.
     pub replacement_deletion_members: Vec<(PlayerId, u16, u64)>,
     /// Immutable effect lookup retained while its physical payer leaves.
@@ -220,7 +224,7 @@ pub struct TriggerContext {
     /// TOP CARD of the Digimon the deleted carrier was battling, captured when
     /// its `[On Deletion]` entries are ENQUEUED on a `Battle`-cause deletion
     /// (`Game::enqueue_batch_on_deletion`, while `pending_attack` is still
-    /// live). general_rule.pdf 16-12: <Retaliation> "delete[s] the Digimon it
+    /// live). general_rule.pdf 16-13: <Retaliation> "delete[s] the Digimon it
     /// battled" -- who that is, is a fact of the TRIGGER. Reading it from the
     /// live `pending_attack` at RESOLUTION time is wrong whenever resolution is
     /// deferred: a second [On Deletion] trigger on the same stack opens a
@@ -251,18 +255,96 @@ pub struct TriggerContext {
     /// (BT7-056 "one of YOUR effects": `EffectSourceCard.Owner == card.Owner`).
     /// `event_caused_by_own_effect` reads it. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
     pub event_cause_effect: Option<EffectAttribution>,
+    /// Last-known information of the event Digimon (`event_permanent`), taken
+    /// when the effect triggered (`Game::trigger_context_for_source`), in the
+    /// `deleted_object` shape. Read only by a clause-level gate whose event
+    /// Digimon has since LEFT the field (`Game::gate_trigger_context`): the
+    /// event happened and the references the trigger made keep their
+    /// last-known values. Shared (`Arc`) by every context of one event.
+    /// Derived from the trigger-time board (whose identity is already in
+    /// `event_permanent_identity`), so it is left out of `Debug` and the
+    /// verification digest built from it.
+    pub(crate) event_snapshot: Option<std::sync::Arc<DeletedObjectSnapshot>>,
+    /// Identity of the battle WINNER (`battle_winner`), recorded when the
+    /// battle was compared (`PendingBattleResolution::winner_identity`) and
+    /// carried on every `EndOfBattle` firing even when the winner has left
+    /// the field before the event was emitted. The `event_winner_*` reads
+    /// resolve the winner by it (never by the slot `battle_winner` named at
+    /// enqueue, which a lower-index departure shifts) and, once it no longer
+    /// resolves, read the winner's last-known information: the battle's
+    /// `event_snapshot` (the winner is the event Digimon), exposed as
+    /// `deleted_object` by `Game::gate_trigger_context` (§15-8-3-1,
+    /// §15-8-3-8, §15-4-4-5; G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
+    /// Equal to `event_permanent_identity` on these firings, so it is left
+    /// out of `Debug` and the verification digest built from it.
+    pub(crate) battle_winner_identity: Option<(PlayerId, u64)>,
 }
 
 impl TriggerContext {
     /// Resolve the captured event object, never a later occupant of its old slot.
     /// Legacy contexts without a captured token retain their compatibility handle.
     pub fn resolve_event_permanent(&self, game: &crate::game::Game) -> Option<PermanentHandle> {
-        if let Some((player, identity)) = self.event_permanent_identity {
-            return game.player(player).battle_area.iter()
-                .position(|permanent| permanent.battle_identity == Some(identity))
-                .map(|index| PermanentHandle { player, index: index as u8 });
+        match self.event_permanent_identity {
+            Some(identity) => resolve_battle_identity(game, identity),
+            None => self.event_permanent,
         }
-        self.event_permanent
+    }
+
+    /// The battle winner of an `EndOfBattle` firing while it is on the field:
+    /// found by identity, so a lower-index departure that shifted its slot
+    /// does not redirect the read to the Digimon that slid in. `None` once it
+    /// has left the field (read `deleted_object` -- its last-known
+    /// information -- then), on a tie, or on any other event. Legacy contexts
+    /// without a captured identity keep the compatibility handle.
+    pub fn resolve_battle_winner(&self, game: &crate::game::Game) -> Option<PermanentHandle> {
+        match self.battle_winner_identity {
+            Some(identity) => resolve_battle_identity(game, identity),
+            None => self.battle_winner,
+        }
+    }
+
+    /// Whether the battle winner carries `trait_name` (case-insensitive): read
+    /// live by identity while it is on the field (§15-4-4-5), and from its
+    /// last-known information once it has left -- the snapshot a clause-level
+    /// gate exposes as `deleted_object` (`Game::gate_trigger_context`;
+    /// §15-8-3-1 / §15-8-3-8). The one reader behind the DSL
+    /// `event_winner_trait_has` and `EffectContext::battle_winner_has_trait`.
+    /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX.
+    ///
+    /// Both branches read the winner's TOP card (with trait-changing effects),
+    /// never its digivolution cards: the live read is
+    /// `Permanent::has_trait_for_rules` (the DSL `trait_has` reading) and the
+    /// snapshot's `traits` are its synthesized identity's
+    /// (`Game::build_snapshot_for_handle`). §4-7-7; official Q&A Q3225; DCGO
+    /// `BT25_020.cs` `permanent.TopCard.HasTSTraits`.
+    /// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
+    pub fn battle_winner_has_trait(&self, game: &crate::game::Game, trait_name: &str) -> bool {
+        match self.resolve_battle_winner(game) {
+            Some(winner) => game
+                .player(winner.player)
+                .battle_area
+                .get(winner.index as usize)
+                .is_some_and(|perm| {
+                    perm.has_trait_for_rules(trait_name, &game.card_data, &game.modifiers, winner)
+                }),
+            None => {
+                self.battle_winner_identity.is_some()
+                    && self.deleted_object.as_ref().is_some_and(|snapshot| {
+                        snapshot
+                            .traits
+                            .iter()
+                            .any(|t| t.eq_ignore_ascii_case(trait_name))
+                    })
+            }
+        }
+    }
+
+    /// The controller of the battle winner (whether or not it is still on the
+    /// field), or `None` when the event has no winner.
+    pub fn battle_winner_controller(&self) -> Option<PlayerId> {
+        self.battle_winner_identity
+            .map(|(player, _)| player)
+            .or_else(|| self.battle_winner.map(|winner| winner.player))
     }
 
     /// The cards an effect just trashed from the event player's hand
@@ -293,6 +375,19 @@ impl TriggerContext {
             .map(|set| set.cards.as_slice())
             .unwrap_or(&[])
     }
+}
+
+/// The battle-area permanent carrying `identity` (`Permanent::battle_identity`),
+/// or `None` once it has left the field (or become a new Digimon by DNA).
+fn resolve_battle_identity(
+    game: &crate::game::Game,
+    (player, identity): (PlayerId, u64),
+) -> Option<PermanentHandle> {
+    game.player(player)
+        .battle_area
+        .iter()
+        .position(|permanent| permanent.battle_identity == Some(identity))
+        .map(|index| PermanentHandle { player, index: index as u8 })
 }
 
 impl From<crate::option_lifecycle::OptionTrashCause> for EventCause {
@@ -370,6 +465,7 @@ impl std::fmt::Debug for TriggerContext {
         if let Some(value)=&self.replacement_paid_prevention { d.field("replacement_paid_prevention", value); }
         if let Some(value)=&self.replacement_deletion_cause { d.field("replacement_deletion_cause", value); }
         if !self.simultaneous_play_members.is_empty() { d.field("simultaneous_play_members", &self.simultaneous_play_members); }
+        if self.in_source_move_event { d.field("in_source_move_event", &self.in_source_move_event); }
         d.finish()
     }
 }

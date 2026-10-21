@@ -83,9 +83,9 @@ effects:
   - when: on_digivolution_card_trashed
     optional: true
     active_when:
-      all_of:
-        - your_turn: true
-        - event_host_permanent_is_source: true
+      your_turn: true
+    trigger_if:
+      event_host_permanent_is_source: true
     summary: "[Your Turn] When effects trash cards from under this Tamer, by suspending this Tamer, 1 [DATA SQUAD] Digimon gains <Jamming> for the turn"
     process:
       - activation_cost: { suspend_self: true }

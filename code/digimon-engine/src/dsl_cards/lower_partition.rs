@@ -5,7 +5,7 @@
 //! behaviour. The per-slot `sources:` specs are NOT consumed here — they reach
 //! that body through [`crate::effect::CardEffect::partition_slots`], which
 //! `DslCardEffect` answers from this same clause, and are enforced there
-//! (general_rule.pdf 16-28-5/-6; was `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED`).
+//! (general_rule.pdf 16-3 / 16-29-4; was `G-ENGINE-PARTITION-SLOT-ENFORCEMENT-DEFERRED`).
 //! `active_when` is still accepted and ignored. A configured process body is
 //! emitted as an `OnDeletion` body at the partition event.
 

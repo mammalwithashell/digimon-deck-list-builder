@@ -96,13 +96,13 @@ effects:
   - when: on_add_to_deck
     once_per_turn: true
     active_when:
-      all_of:
-        - your_turn: true
-        - event_caused_by_own_effect: true
+      your_turn: true
     condition:
       any_field_permanent:
         of: you
         kind: digimon
+    trigger_if:
+      event_caused_by_own_effect: true
     summary: "[Your Turn][OPT] When your effects add to decks, 1 of your Digimon may get +3000 DP until your opponent's turn ends and attack"
     process:
       - select_own_permanent:
@@ -134,13 +134,13 @@ effects:
     when: on_add_to_deck
     once_per_turn: true
     optional: true
-    active_when:
-      event_caused_by_own_effect: true
     condition:
       any_field_permanent:
         is_source: true
         is_suspended: true
         in_text_contains: "Chronomon"
+    trigger_if:
+      event_caused_by_own_effect: true
     summary: "Inherited [All Turns][OPT] When your effects add to decks, this Digimon with [Chronomon] in its text may unsuspend"
     process:
       - unsuspend: { target: source }

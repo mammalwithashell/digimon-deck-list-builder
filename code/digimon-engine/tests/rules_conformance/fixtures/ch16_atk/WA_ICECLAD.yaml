@@ -1,0 +1,18 @@
+# WA_ICECLAD -- Digimon, Lv.4, red, 2000 DP, play cost 5.
+#   [When Attacking] This Digimon gains <Iceclad> for the turn.
+# An <Iceclad> gained mid-attack changes the battle at once (§16-35-2).
+card: WA_ICECLAD
+name: Lateicemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 2000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon gains <Iceclad> for the turn."
+    process:
+      - grant_keyword:
+          target: source
+          keyword: Iceclad
+          expiry: end_of_turn

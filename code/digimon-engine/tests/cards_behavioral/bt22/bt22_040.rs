@@ -126,7 +126,7 @@ fn bt22_040_refire_clause_is_all_turns_opt_on_any_deletion() {
         "printed [All Turns] means the refire is active on both players' turns"
     );
     assert!(
-        refire.condition.is_some(),
+        refire.trigger_if.is_some(),
         "refire must gate on the deleted object being your OTHER Digimon"
     );
     // The printed "you may activate" optionality is asserted behaviorally —

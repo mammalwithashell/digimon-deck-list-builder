@@ -17,13 +17,13 @@ effects:
     active_when: { your_turn: true }
     summary: "[Your Turn] When one of your Digimon attacks an opponent Digimon, suspend this Tamer to change the target"
     condition:
-      all_of:
-        - event_target_is_player: false
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "ST18-14"
-            is_unsuspended: true
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: ST18-14
+        is_unsuspended: true
+    trigger_if:
+      event_target_is_player: false
     process:
       - suspend: { target: source }
       - redirect_attack_target:

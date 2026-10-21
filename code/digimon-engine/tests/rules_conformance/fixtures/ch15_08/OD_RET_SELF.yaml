@@ -1,0 +1,14 @@
+# OD_RET_SELF -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [On Deletion] Return this card from your trash to the hand.
+card: OD_RET_SELF
+name: Homingmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Return this card from your trash to the hand."
+    process:
+      - add_to_hand_from_trash: { of: you, card: self }

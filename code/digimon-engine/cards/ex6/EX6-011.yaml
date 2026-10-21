@@ -58,11 +58,6 @@ effects:
           source_kind: option
           source_controller: opponent
           expiry: end_of_opponents_turn
-      - grant_effect_immunity:
-          target: self
-          source_kind: rule
-          source_controller: opponent
-          expiry: end_of_opponents_turn
       - if:
           condition: { dna_origin: true }
           then:

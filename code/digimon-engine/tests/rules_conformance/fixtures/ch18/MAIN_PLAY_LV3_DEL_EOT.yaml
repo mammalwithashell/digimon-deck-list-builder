@@ -1,0 +1,24 @@
+# MAIN_PLAY_LV3_DEL_EOT -- Option, red, use cost 0.
+#   [Main] Play 1 level 3 Digimon card from your hand without paying the
+#   cost. At the end of the turn, delete the Digimon this effect played.
+# The deletion is pending processing (§18-1-1), keyed to the played card.
+card: MAIN_PLAY_LV3_DEL_EOT
+name: Borrowed Three
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Play 1 level 3 Digimon card from your hand without paying the cost. At the end of the turn, delete the Digimon this effect played."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          prompt: "Play 1 level 3 Digimon card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick, bind_as: played }
+      - schedule_delete_played_at_turn_end:
+          binding: played

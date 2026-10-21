@@ -1,0 +1,21 @@
+# BLOCKER_WAKES -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   <Blocker> (When an opponent's Digimon attacks, you may suspend this
+#   Digimon to force the opponent to attack it instead.)
+#   [All Turns] When an opponent's Digimon attacks, unsuspend this Digimon.
+# Attacked while suspended, it is unsuspended before the block timing, so it
+# is an unsuspended <Blocker> that is also the attack target (§12-1-5).
+card: BLOCKER_WAKES
+name: Wakemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker> (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead.)"
+  - when: on_opponent_attack
+    summary: "[All Turns] When an opponent's Digimon attacks, unsuspend this Digimon."
+    process:
+      - unsuspend: { target: source }

@@ -25,17 +25,18 @@
 //!     └── re-filter cancelled
 //! Snapshotting
 //!     └── build DeletedObjectSnapshot for each survivor
+//!     └── enqueue OnDeletion per survivor (snapshot in trigger context),
+//!         inside a deferred-drain scope, while the carriers stand
 //! Trashing
 //!     └── linked-card cascade per survivor
 //!     └── trash top + sources
-//! OnDeletionDrain
-//!     └── enqueue OnDeletion per survivor (snapshot in trigger context)
-//!     └── drain (handler parks unwind through pending_selection;
-//!         active_deletion_batch state persists across the park)
-//! OnAnyDeletionDrain
-//!     └── enqueue OnAnyDeletion + OnLeaveField per survivor
-//!     └── drain
-//!     └── batch slot cleared
+//!     └── ONE <Overflow> pass for every leaving card, turn player first
+//!         (§4-19-5)
+//!     └── enqueue OnAnyDeletion + OnLeaveField per survivor (snapshot)
+//! TriggerFlush
+//!     └── one flush: OnDeletion + observers drain as ONE simultaneous
+//!         trigger pool (§16-13-2 / §15-4-3-2); handler parks unwind
+//!         through pending_selection with the rest still queued
 //! ```
 
 use crate::card_source::CardHandle;
@@ -121,11 +122,10 @@ pub enum BatchStage {
     Snapshotting,
     /// Move top + sources to trash; cascade linked cards.
     Trashing,
-    /// Enqueue OnDeletion per survivor; drain.
-    OnDeletionDrain,
-    /// Enqueue OnAnyDeletion + OnLeaveField; drain. Batch is closed
-    /// when this stage completes.
-    OnAnyDeletionDrain,
+    /// One flush of the batch's OnDeletion + OnAnyDeletion / OnLeaveField
+    /// entries as a single simultaneous trigger pool (§16-13-2). Batch is
+    /// closed when this stage completes.
+    TriggerFlush,
 }
 
 /// Returned by `Game::delete_permanents_batch` to let callers introspect

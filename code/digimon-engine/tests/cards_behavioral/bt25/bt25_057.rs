@@ -342,14 +342,29 @@ fn bt25_057_digimon_wd_installs_opponent_field_selection() {
 
     fire_when_digivolving(&mut r, me);
 
+    // No Tamer holds a face-down card, so the [WD][WA] De-Digivolve's "by
+    // trashing the bottom face-down card" can't be executed and is not offered
+    // (Comprehensive Rules Ver. 4.3 §15-7-4); this used to be a TriggerOrder
+    // beside the may-battle. The WD's decision is now the may-battle's own
+    // "you may" gate, which leads to the opponent-field battle pick.
     let sel = r
         .game
         .pending_selection
         .as_ref()
         .expect("a WD selection installs");
-    assert!(
-        sel.kind == SelectionKind::OppField || sel.kind == SelectionKind::TriggerOrder,
-        "WD installs an opponent-field selection (battle / de-digivolve), got {:?}",
+    if sel.kind == SelectionKind::Replacement {
+        assert!(sel.is_optional, "the may-battle is a \"you may\"");
+        r.accept_optional_trigger().expect("accept the may-battle");
+    }
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the battle target pick installs");
+    assert_eq!(
+        sel.kind,
+        SelectionKind::OppField,
+        "WD installs an opponent-field selection (battle), got {:?}",
         sel.kind
     );
     let _ = opp;
@@ -382,6 +397,70 @@ fn bt25_057_wd_wa_dedigivolve_needs_face_down_under_tamer() {
         "no Tamer face-down cost available → no free De-Digivolve"
     );
     let _ = (Expiry::EndOfTurn, ModifierType::ChangeDp);
+}
+
+/// A Tamer that can host a face-down stash.
+fn plain_tamer(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.colors = vec![CardColor::Green];
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c
+}
+
+/// Comprehensive Rules Ver. 4.3 §15-7-1: "By trashing the bottom face-down
+/// card under any of your Tamers, <De-Digivolve 1> 1 of your opponent's
+/// Digimon" is an optional processing condition -- the player chooses whether
+/// to execute it. With a face-down card under a Tamer, [When Attacking] offers
+/// an optional decision (it used to force the payment), and declining keeps the
+/// face-down card and leaves the opponent's Digimon alone.
+#[test]
+fn bt25_057_wa_dedigivolve_condition_is_optional_when_payable() {
+    let mut r = builder()
+        .add_card(plain_tamer("TAMER"))
+        .add_card(make_test_card("STASH", "Stash"))
+        .memory(8)
+        .start();
+    let me = r.place_stack(0, &["GD-BASE", CARD_ID]);
+    let opp = r.place_stack(1, &["OPP-2", "OPP-1"]);
+    let tamer = r.place_stack(0, &["STASH", "TAMER"]);
+    r.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down = true;
+    r.game.enter_main_phase();
+    let opp_stack_before = r.game.player(1).battle_area[opp.index as usize].stack_size();
+
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(me),
+    );
+    r.game.drain_effect_queue();
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the payable condition is offered");
+    assert!(
+        sel.is_optional,
+        "\"by trashing the bottom face-down card\" is a choice (§15-7-1): {:?}",
+        sel.kind
+    );
+    r.execute_action(0, PASS).expect("decline the condition");
+    let _ = r.auto_resolve();
+
+    assert!(
+        r.game.players[0].battle_area[tamer.index as usize]
+            .card_sources
+            .iter()
+            .any(|s| s.face_down),
+        "declined: the face-down card stays under the Tamer"
+    );
+    assert_eq!(
+        r.game.player(1).battle_area[opp.index as usize].stack_size(),
+        opp_stack_before,
+        "declined: no <De-Digivolve 1>"
+    );
 }
 
 // ─── Printed digivolution routes (cheaper-than-printed guard, per card) ───────

@@ -1,4 +1,4 @@
-//! Official general_rule.pdf p6 3-1-3-9-1/-2; Mother Q3281/Q3284.
+//! Official general_rule.pdf p.7 3-1-3-9-1/-2; Mother Q3281/Q3284.
 //! Real Mother metadata, no incomplete card-effect implementation.
 use digimon_engine::debug_runner::{DebugRunner,make_test_egg,make_test_card};
 use digimon_engine::enums::{CardColor,CardSourceRef,StackPosition};

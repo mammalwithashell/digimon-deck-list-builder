@@ -30,7 +30,11 @@ use std::collections::BTreeSet;
 // simultaneous-member target continuations. Rebuild packs.
 // 0.19.0 distinguishes explicit plural paid prevention from singular choice.
 // 0.20.0 adds explicit grouped returns and captured remaining ForEach iterations.
-pub const PACK_FORMAT_VERSION: &str = "0.21.0";
+// 0.22.0 adds triggered-clause trigger qualifiers (`trigger_if:`). Rebuild packs.
+// 0.23.0 adds `to_owner` to the cancel-via-bottom-security replacement step and
+// the engine-only `SecurityPlacementCancelFinalize` continuation, and the
+// `owner_can_add_security` permanent predicate.
+pub const PACK_FORMAT_VERSION: &str = "0.23.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {
@@ -173,6 +177,9 @@ fn collect_clause_raw_rust_fns(clause: &CompiledClause, names: &mut BTreeSet<Str
             }
             if let Some(condition) = &triggered.condition {
                 collect_predicate_raw_rust_fns(condition, names);
+            }
+            if let Some(trigger_if) = &triggered.trigger_if {
+                collect_predicate_raw_rust_fns(trigger_if, names);
             }
             for step in &triggered.process {
                 collect_step_raw_rust_fns(step, names);
@@ -675,6 +682,7 @@ mod tests {
                     scope: CompiledScope::FaceUp,
                     active_when: None,
                     condition: None,
+                    trigger_if: None,
                     timing_conditions: Vec::new(),
                     optional: false,
                     outer_prompt: false,

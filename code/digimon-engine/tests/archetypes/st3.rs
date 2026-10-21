@@ -31,7 +31,7 @@ use super::support::{dsl_builder, snapshot};
 // ─── Combo 1: −DP-to-0 deletion → inherited payoff chain ─────────────────────
 
 /// Happy path — the deck's core engine loop. Seven Heavens (ST3-16, −10000) drops
-/// a 3000-DP opponent Digimon to −7000 → 0-DP deletion (rule 17-1-3-1). The
+/// a 3000-DP opponent Digimon to −7000 → 0-DP deletion (rule 17-1-3-1-1). The
 /// carrier has BOTH inherited observers stacked beneath it: Patamon (ST3-04)
 /// grants +1 memory and Tokomon (ST3-01) grants the carrier +1000 DP for the turn.
 /// We assert the full system: opp field −1, opp trash +1, memory +1, carrier DP
@@ -100,7 +100,7 @@ fn dp_zero_deletion_fires_both_inherited_observers() {
 ///
 /// - Card text: ST3-14 [Main] "−2000 DP".
 /// - Rules basis: the inherited observers' `event_target_dp_lte: 0` condition is
-///   not met (rule 17-1-3-1 deletion never occurs).
+///   not met (rule 17-1-3-1-1 deletion never occurs).
 /// - DCGO: `$BASE_DCGO/Assets/Scripts/CardEffect/ST3/Yellow/ST3_14.cs`.
 #[test]
 fn dp_reduction_not_reaching_zero_fires_no_observer() {
@@ -280,7 +280,7 @@ fn security_wall_stacks_tk_and_heavens_gate() {
 
 /// Seven Heavens (ST3-16, −10000) is huge but not infinite: against a 12000-DP
 /// Mega it only reaches 2000 (survives). Adding Heaven's Charm (ST3-14, −2000)
-/// pushes the Mega to exactly 0 → deleted (rule 17-1-3-1), which fires Patamon's
+/// pushes the Mega to exactly 0 → deleted (rule 17-1-3-1-1), which fires Patamon's
 /// inherited +1 memory. Two stacked −DP sources turn an un-killable Mega into a
 /// deletion that powers the engine.
 ///

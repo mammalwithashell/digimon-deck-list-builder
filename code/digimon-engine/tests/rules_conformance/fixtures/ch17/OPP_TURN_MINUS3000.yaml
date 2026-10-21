@@ -1,0 +1,18 @@
+# OPP_TURN_MINUS3000 -- Tamer, purple, play cost 3.
+#   [Opponent's Turn] All of your opponent's Digimon get -3000 DP.
+# A persistent effect that switches on when the opponent's turn starts: an
+# opponent's 3000 DP Digimon has 0 DP from the start of that turn (§15-4-3-3).
+card: OPP_TURN_MINUS3000
+name: Dusk Warden
+kind: tamer
+color: [purple]
+cost: 3
+effects:
+  - kind: aura
+    summary: "[Opponent's Turn] All of your opponent's Digimon get -3000 DP."
+    active_when: { opponents_turn: true }
+    target:
+      owner: opponent
+      zone: [battle_area]
+      kind: digimon
+    dp_modifier: -3000

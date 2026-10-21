@@ -50,6 +50,8 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT25-069 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("TS-IN-TRASH", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         .add_card(make_digimon("TS-IN-TRASH", 3, 2000, 3, &["TS"]))
         .add_card(make_digimon("MY-HOST", 4, 4000, 4, &["Beast"]))

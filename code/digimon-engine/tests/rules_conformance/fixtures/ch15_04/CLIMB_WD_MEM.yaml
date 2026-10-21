@@ -1,0 +1,22 @@
+# CLIMB_WD_MEM -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   Digivolve: red Lv.4, cost 3.
+#   [When Digivolving] Gain 1 memory.
+# The FlameWizardmon (EX13-029) of the WD_DIGIVOLVE_HAND_THEN_MEM shape: the
+# card an effect digivolves into, whose [When Digivolving] waits for that
+# effect (§15-8-3-2).
+card: CLIMB_WD_MEM
+name: Climbmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Gain 1 memory."
+    process:
+      - gain_memory: 1

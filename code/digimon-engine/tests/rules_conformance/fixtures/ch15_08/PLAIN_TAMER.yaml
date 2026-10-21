@@ -1,0 +1,7 @@
+# PLAIN_TAMER -- Tamer, red, play cost 2. No text.
+# A Tamer to hold face-down cards underneath it (the §15-8-3-2 test).
+card: PLAIN_TAMER
+name: Plain Tamer
+kind: tamer
+color: [red]
+cost: 2

@@ -134,7 +134,7 @@ fn seed_security(runner: &mut DebugRunner, player: usize, base_id: &str, count: 
 /// - Rules/keyword basis: "By trashing … digivolution card" = cost; the source
 ///   trash dispatches the trashed source's inherited `OnDigivolutionCardTrashed`
 ///   trigger (gated on `host_permanent_trait_has: Mineral|Rock`). Keyword grants:
-///   Collision §16-29, Piercing §16-6, Reboot. Impl:
+///   Collision §16-30, Piercing §16-7, Reboot. Impl:
 ///   `code/digimon-engine/cards/ex8/EX8-070.yaml` (Main trash + buff),
 ///   inherited delete `code/digimon-engine/cards/ex8/EX8-047.yaml`.
 ///
@@ -310,7 +310,7 @@ fn c1_zofr_kabus_non_inherited_source_buffs_but_does_not_fan_out_delete() {
 ///   trash); hand +up to 2 search cards (minus the Gravel Hearts that left hand);
 ///   Gravel Hearts → battle area (OnSuspend Delay armed).
 /// - Rules/keyword basis: "play … without paying the cost" (free-play, no memory
-///   for the body); Delay placement §16-16. Impl:
+///   for the body); Delay placement §16-17. Impl:
 ///   `code/digimon-engine/cards/ex10/EX10-069.yaml` (`play_from_trash_free`);
 ///   On-Play search `code/digimon-engine/cards/ex8/EX8-047.yaml`.
 ///
@@ -476,7 +476,7 @@ fn c2_gravel_hearts_free_plays_sunarizamon_from_trash_and_searches() {
 ///   correct against the real evo cost of 3); Black Scramble → battle area as a
 ///   Delay. Total memory drop = Black Scramble's own cost (2) + 0 = 2.
 /// - Rules/keyword basis: effect-initiated digivolve + cost reduction; Delay
-///   §16-16. Impl: `code/digimon-engine/cards/lm/LM-031.yaml` (Clause A
+///   §16-17. Impl: `code/digimon-engine/cards/lm/LM-031.yaml` (Clause A
 ///   `effect_initiated_digivolve cost {reduce:3}`, `color_is: black` filters);
 ///   EX10-033 evo cost from `data/cards.json` (`evo_costs: [{color:5, level:5,
 ///   memory_cost:3}]`).
@@ -611,7 +611,7 @@ fn c3_black_scramble_non_black_base_does_not_digivolve() {
 ///   max(0, evoCost − 2) = max(0, 3 − 2) = 1 (EX10-033's real Lv.5 black evo
 ///   cost is 3 per `data/cards.json`); the new Digimon's `[When Digivolving]`
 ///   fires.
-/// - Rules/keyword basis: Delay §16-16 (activated by trashing the placed card on
+/// - Rules/keyword basis: Delay §16-17 (activated by trashing the placed card on
 ///   a later main phase); effect-initiated digivolve −2. Impl:
 ///   `code/digimon-engine/cards/p/P-107.yaml` (`kind: delay`,
 ///   `effect_initiated_digivolve cost {reduce:2}`).
@@ -638,7 +638,7 @@ fn c4_defense_training_delay_cost_reduced_digivolve() {
     let base = runner.place_on_field(0, "BT4-072", Some(0));
 
     // Install Defense Training as an armed Delay Option with its placing turn in
-    // the PAST (turn 0) so §16-16 ("after the placing turn") permits activation
+    // the PAST (turn 0) so §16-17 ("after the placing turn") permits activation
     // on the current turn (turn 1). `install_field_option_as_delay` reads P-107's
     // own delay_trigger (MainPhaseActivated) from its compiled effects.
     let dt = {
@@ -654,12 +654,12 @@ fn c4_defense_training_delay_cost_reduced_digivolve() {
     };
     // The placing turn (0) is strictly before the current turn (1) — activation
     // is now legal. (The same-turn-placement unhappy path — a Delay cannot fire
-    // on its placing turn, §16-16 — is asserted for Gravel Hearts in rocks.rs C5;
+    // on its placing turn, §16-17 — is asserted for Gravel Hearts in rocks.rs C5;
     // the gating function `delayed_option_main_activation_available` returns false
     // when `turn_count == placed_on_turn`, which is the same rule applied here.)
     assert!(
         runner.game.delayed_option_main_activation_available(dt),
-        "Defense Training's <Delay> must be activatable after its placing turn (§16-16)"
+        "Defense Training's <Delay> must be activatable after its placing turn (§16-17)"
     );
 
     let before = snapshot(&runner);
@@ -734,7 +734,7 @@ fn c4_defense_training_delay_cost_reduced_digivolve() {
 ///   Mineral, same cost-≤4 inherited body) as the stacked payload and asserts
 ///   EX8-047 carries the rule-granted Mineral trait.
 /// - Rules/keyword basis: "by trashing 3 … sources" = cost; source trash
-///   dispatches each inherited `OnDigivolutionCardTrashed`; Fragment(3) §16-36.
+///   dispatches each inherited `OnDigivolutionCardTrashed`; Fragment(3) §16-37.
 ///   Impl: `cards/ex10/EX10-036.yaml`, inherited `cards/ex8/EX8-047.yaml`.
 #[test]
 fn c5_magneticdramon_source_trash_double_removal() {

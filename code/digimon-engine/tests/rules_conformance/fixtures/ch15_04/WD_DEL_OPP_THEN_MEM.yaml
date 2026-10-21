@@ -1,0 +1,24 @@
+# WD_DEL_OPP_THEN_MEM -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   [When Digivolving] Delete 1 of your opponent's Digimon. Then, gain 1
+#   memory.
+# A deleting effect with more processing after the deletion: an immediate
+# replacement of that deletion that digivolves the Digimon (DELAY_SHIFT_GUARD,
+# the Return to the Primogenitor BT17-097 shape) raises a [When Digivolving]
+# that waits for the rest of this effect (§15-8-3-2).
+card: WD_DEL_OPP_THEN_MEM
+name: Cullmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 of your opponent's Digimon. Then, gain 1 memory."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }
+      - gain_memory: 1

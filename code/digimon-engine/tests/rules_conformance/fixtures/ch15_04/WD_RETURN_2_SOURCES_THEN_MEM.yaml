@@ -1,0 +1,31 @@
+# WD_RETURN_2_SOURCES_THEN_MEM -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [When Digivolving] Return 2 of this Digimon's digivolution cards to the
+#   bottom of the deck. Then, gain 1 memory.
+# The shape of Zenith (BT18-092)'s "returning 2 [Vemmon] from that Digimon's
+# digivolution cards to the bottom of the deck, <De-Digivolve 1> ...": ONE
+# return of 2 digivolution cards (one event, §15-5-2) inside an effect that
+# resumes after its source pick, followed by more of the same effect. Its
+# return-to-deck-bottom observers and deck-add observers wait for the whole
+# effect and pend in ONE pool (§15-8-3-2, §15-4-3-2).
+card: WD_RETURN_2_SOURCES_THEN_MEM
+name: Twinreturnmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Return 2 of this Digimon's digivolution cards to the bottom of the deck. Then, gain 1 memory."
+    process:
+      - select_own_sources:
+          from: source
+          bind_as: returned
+          min: 2
+          max: 2
+          filter: {}
+          prompt: "Return 2 of this Digimon's digivolution cards to the bottom of the deck"
+      - return_selected_sources_to_deck:
+          source_refs: returned
+          position: bottom
+      - gain_memory: 1

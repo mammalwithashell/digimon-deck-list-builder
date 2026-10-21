@@ -1,0 +1,19 @@
+# OPP_ATK_TRASH_OPP_SEC -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [All Turns] When an opponent's Digimon attacks, trash the top card of your
+#   opponent's security stack.
+# An opponent's effect that affects the attacking player, not the attacking
+# Digimon (<Progress> doesn't stop it): it can take the attacker's controller
+# below a security-count condition in the middle of the attack (with
+# `TAMER_PROGRESS_SEC4`: the attacker loses <Progress>, §15-15-5-2).
+card: OPP_ATK_TRASH_OPP_SEC
+name: Wallbreakmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: on_opponent_attack
+    summary: "[All Turns] When an opponent's Digimon attacks, trash the top card of your opponent's security stack."
+    process:
+      - trash_top_security: { of: opponent }

@@ -143,14 +143,20 @@ fn reduced_link_cost(
 /// Per-card link gates beyond the author's `filter` (BT26 Appmon slice):
 /// - `cost_reduce`: the controller must be able to pay the reduced link cost
 ///   (DCGO `CanLink(payCost: true)`).
-/// - `self_host`: for `to: self`, a card that carries its own `<Link>`
-///   condition may only be linked if that condition accepts the host (and the
-///   host has link room) — DCGO `CanLinkToTargetPermanent(host, ...)`. A card
-///   with no link condition is unrestricted (legacy behaviour).
+/// - the card's link requirement (Q4533: an effect can't link a card without
+///   `[Link]`; DCGO `CanLinkToTargetPermanent(host, ...)`), the same test the
+///   §17-1-3-2-6 / -7 rule check applies (`Game::link_card_qualifies_for`):
+///   for `to: self` against the effect's own permanent (`self_host`); for
+///   `to: own_digimon` against at least one standing own Digimon
+///   (`own_hosts`, minus the source when `exclude_source`). A host at its
+///   link limit qualifies; the link replaces (§4-9-5).
 #[derive(Debug, Clone, Copy)]
 struct LinkGate {
     cost_reduce: Option<u8>,
     self_host: Option<PermanentHandle>,
+    /// `to: own_digimon` (the controller's Digimon): the excluded source
+    /// permanent, if `exclude_source`.
+    own_hosts: Option<Option<PermanentHandle>>,
 }
 
 impl LinkGate {
@@ -160,6 +166,8 @@ impl LinkGate {
             self_host: matches!(spec.to, CompiledLinkTo::SelfPermanent)
                 .then_some(source_permanent)
                 .flatten(),
+            own_hosts: matches!(spec.to, CompiledLinkTo::OwnDigimon)
+                .then(|| source_permanent.filter(|_| spec.exclude_source)),
         }
     }
 
@@ -176,17 +184,23 @@ impl LinkGate {
             }
         }
         if let Some(host) = self.self_host {
-            let effects = game
-                .card_data_for_handle(card)
-                .and_then(|d| game.effects_for_card(&d.card_id, card));
-            if let Some(effects) = effects {
-                if effects.iter().any(|e| e.link_cost.is_some())
-                    && !game
-                        .link_host_candidates(host.player, card, &effects)
-                        .contains(&host)
-                {
-                    return false;
-                }
+            if !game.link_card_qualifies_for(host, card) {
+                return false;
+            }
+        }
+        if let Some(excluded) = self.own_hosts {
+            let owner = player;
+            let any = (0..game.player(owner).battle_area.len()).any(|i| {
+                let host = PermanentHandle {
+                    player: owner,
+                    index: i as u8,
+                };
+                Some(host) != excluded
+                    && game.player(owner).battle_area[i].option_state == OptionState::Standard
+                    && game.link_card_qualifies_for(host, card)
+            });
+            if !any {
+                return false;
             }
         }
         true
@@ -1051,7 +1065,9 @@ fn install_host_select(
                     && matches!(p.option_state, OptionState::Standard)
             })
             .unwrap_or(false);
-        if !base_ok {
+        // The chosen card's own link requirement (Q4533; DCGO
+        // `CanLinkToTargetPermanent`), as the rule check reads it.
+        if !base_ok || !game.link_card_qualifies_for(handle, card) {
             return false;
         }
         match &auth_host_filter {
@@ -1120,7 +1136,11 @@ fn install_host_select(
 }
 
 /// Pay the per-card cost, attach the card to the host via the primitive, then
-/// install the next pick.
+/// install the next pick. At the host's link limit with a choice (2+ existing
+/// link cards), the linking player first picks the replaced ones (§4-9-5,
+/// §10-1-3-1): the shared `LinkCardTrashChoice` frame parks with this pick's
+/// continuation (`LinkTrashPurpose::EffectLink`), and the attach and the rest
+/// of the loop run from [`resume_effect_link`] after the picks.
 #[allow(clippy::too_many_arguments)]
 fn attach_and_continue(
     ctx: &mut EffectContext<'_>,
@@ -1130,7 +1150,7 @@ fn attach_and_continue(
     card: CardHandle,
     source: LinkCardSource,
     tail: Arc<Vec<CompiledStep>>,
-    mut bindings: Bindings,
+    bindings: Bindings,
     runtime: StepRuntime,
 ) {
     // Pay the per-card cost (currently always 0 for the cards this serves; the
@@ -1144,6 +1164,52 @@ fn attach_and_continue(
         let _ = ctx.game.pay_memory(pay);
     }
 
+    if ctx.game.link_replacement_is_a_choice(host) {
+        let resume = EffectLinkResume {
+            prov: crate::resume::ResumeProvenance {
+                source_card: ctx.source_card,
+                source_permanent: ctx.source_permanent,
+                source_kind: ctx.source_kind,
+                controller: ctx.player,
+                override_pin: ctx.override_selecting_player(),
+            },
+            spec: Arc::clone(&spec),
+            pick_index,
+            host,
+            card,
+            source,
+            tail: Arc::clone(&tail),
+            bindings: bindings.clone(),
+            runtime: runtime.clone(),
+            trigger_context: ctx.game.current_trigger_context.clone(),
+        };
+        let purpose = crate::game_actions::LinkTrashPurpose::EffectLink(Box::new(resume));
+        if ctx
+            .game
+            .park_link_replacement_choice(ctx.player, host, purpose)
+        {
+            return;
+        }
+    }
+
+    link_and_continue(ctx, spec, pick_index, host, card, source, tail, bindings, runtime);
+}
+
+/// The attach half of [`attach_and_continue`] (the cost is paid and any
+/// replaced link cards are trashed): link the card, bind it, install the next
+/// pick.
+#[allow(clippy::too_many_arguments)]
+fn link_and_continue(
+    ctx: &mut EffectContext<'_>,
+    spec: Arc<LinkCardsSpec>,
+    pick_index: u8,
+    host: PermanentHandle,
+    card: CardHandle,
+    source: LinkCardSource,
+    tail: Arc<Vec<CompiledStep>>,
+    mut bindings: Bindings,
+    runtime: StepRuntime,
+) {
     let _ = ctx.link_chosen_card_into_host(host, card, source);
 
     // Capture the just-linked card into the optional `bind_as` CardList. The
@@ -1157,6 +1223,57 @@ fn attach_and_continue(
     }
 
     install_pick(ctx, spec, pick_index + 1, tail, bindings, runtime);
+}
+
+/// A `link_cards` pick paused at its §4-9-5 replacement choice (plain data,
+/// rule 28): the cost is paid and the card, host and source are chosen; the
+/// attach and the rest of the pick loop resume from here.
+#[derive(Debug, Clone)]
+pub(crate) struct EffectLinkResume {
+    prov: crate::resume::ResumeProvenance,
+    spec: Arc<LinkCardsSpec>,
+    pick_index: u8,
+    host: PermanentHandle,
+    card: CardHandle,
+    source: LinkCardSource,
+    tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<crate::trigger_context::TriggerContext>,
+}
+
+/// Resume a `link_cards` pick after its replacement choice's picks were
+/// trashed: link the card and continue the loop, under the trigger context
+/// the step parked with.
+pub(crate) fn resume_effect_link(game: &mut crate::game::Game, resume: EffectLinkResume) {
+    let EffectLinkResume {
+        prov,
+        spec,
+        pick_index,
+        host,
+        card,
+        source,
+        tail,
+        bindings,
+        runtime,
+        trigger_context,
+    } = resume;
+    let previous_trigger_context =
+        std::mem::replace(&mut game.current_trigger_context, trigger_context);
+    {
+        let mut ctx = EffectContext::new_with_source_kind_and_override(
+            game,
+            prov.source_card,
+            prov.source_permanent,
+            prov.source_kind,
+            prov.controller,
+            prov.override_pin,
+        );
+        link_and_continue(
+            &mut ctx, spec, pick_index, host, card, source, tail, bindings, runtime,
+        );
+    }
+    game.current_trigger_context = previous_trigger_context;
 }
 
 /// Run the steps that followed the whole `link_cards` step, preserving the
@@ -1224,9 +1341,14 @@ pub fn try_run_relink(
     let source_card = ctx.source_card;
     let source_kind = ctx.source_kind;
     let fbinds = bindings.clone();
+    // The relinked top card's own link requirement (Q4533; DCGO
+    // `CanLinkToTargetPermanent`), as the rule check reads it.
+    let source_top = ctx.game.player(source.player).battle_area[source.index as usize]
+        .top_card()
+        .handle();
     let host_filter_fn = move |game: &crate::game::Game, handle: PermanentHandle| -> bool {
         // "1 of your OTHER Digimon" — never the source itself.
-        if handle == source {
+        if handle == source || !game.link_card_qualifies_for(handle, source_top) {
             return false;
         }
         let base_ok = game
@@ -1284,7 +1406,10 @@ pub fn try_run_relink(
     let override_pin = ctx.override_selecting_player();
     let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_own_permanent(&prompt_str, false, host_filter_fn, move |cb_ctx, host| {
-        cb_ctx.game.absorb_standing_digimon_as_link(source, host);
+        let chooser = cb_ctx.player;
+        cb_ctx
+            .game
+            .link_standing_digimon_by_effect(chooser, source, host);
     });
     // make-engine-cloneable: park a data frame alongside the closure (coexistence).
     // `select_own_permanent` installs a FieldPermanent(OwnField) select over the

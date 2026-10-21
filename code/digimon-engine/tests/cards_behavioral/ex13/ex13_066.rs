@@ -22,7 +22,7 @@
 //!
 //! # DCGO C# reference
 //! None at the submodule (no EX13_066.cs at b9a0638cd). Printed text +
-//! general_rule.pdf (16-35 <Decode>, <De-Digivolve>) govern.
+//! general_rule.pdf (16-36 <Decode>, <De-Digivolve>) govern.
 //!
 //! # Pattern rows
 //! - G-DSL-DUAL-PER-FACE-EFFECTS, G-DSL-ARTS-DIGIVOLVE

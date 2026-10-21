@@ -1,0 +1,24 @@
+# PIERCE_EOA -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   <Piercing> (When this Digimon attacks and deletes your opponent's Digimon
+#   in battle, it checks security before the attack ends.)
+#   [End of Attack] Gain 1 memory.
+#   Digivolve: red Lv.4, cost 3.
+card: PIERCE_EOA
+name: Lancemon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing> (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
+  - when: end_of_attack
+    summary: "[End of Attack] Gain 1 memory."
+    process:
+      - gain_memory: 1

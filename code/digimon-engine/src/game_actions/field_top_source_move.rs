@@ -1,4 +1,4 @@
-//! A field top becomes a source: rule 4-5-7 removes its permanent, not just a card.
+//! A field top becomes a source: rule 4-7-7 removes its permanent, not just a card.
 use super::*;
 use crate::game::PendingFieldTopSourceMove;
 use crate::replacement::{ReplacementCause, ReplacementOutcome, ReplacementSubject};
@@ -313,26 +313,28 @@ impl Game {
             .cloned()
             .collect::<Vec<_>>();
         for card in donor_perm.card_sources {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
         }
         let linked = !donor_perm.linked_cards.is_empty();
         for card in donor_perm.linked_cards {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
         }
         self.apply_ace_overflow_for_sources(&overflow);
         self.tick_declarative_effects();
-        for card in source_handles {
-            self.enqueue_triggered(
-                EffectTiming::OnDigivolutionCardTrashed,
-                TriggerSource::SourceTrashedFromStack {
+        // The donor's digivolution cards are trashed at the same time: one
+        // event (§15-5-2).
+        self.enqueue_digivolution_cards_trashed(
+            source_handles
+                .into_iter()
+                .map(|card| super::TrashedSource {
                     player: donor.player,
                     host: donor,
                     host_card: top_card,
                     card,
-                    cause: EventCause::Rule,
-                },
-            );
-        }
+                })
+                .collect(),
+            EventCause::Rule,
+        );
         if linked {
             for player in 0..self.players.len() {
                 self.enqueue_triggered(

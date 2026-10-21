@@ -22,6 +22,38 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
+    /// Remove the digivolution source at `source_index` from `target`'s stack
+    /// and trash it to its own owner's trash, firing
+    /// `OnDigivolutionCardTrashed` once for it with the standard effect cause.
+    ///
+    /// The single Tier-2 "remove one below-top source and trash+fire" operation
+    /// for the facade's `trash_bottom_face_down_source`. The host card is read
+    /// AFTER the removal (the permanent keeps its top, so it is unchanged by the
+    /// removal). The caller validated `target` / `source_index` and the trash
+    /// protections; returns `false` (no mutation) if either is stale.
+    pub(crate) fn trash_source_at_index_and_fire(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+    ) -> bool {
+        let Some(permanent) = self
+            .player_mut(target.player)
+            .battle_area
+            .get_mut(target.index as usize)
+        else {
+            return false;
+        };
+        // Never the top card: the permanent must keep its own top (a source is
+        // always below it).
+        if source_index + 1 >= permanent.card_sources.len() {
+            return false;
+        }
+        let removed = permanent.card_sources.remove(source_index);
+        let host_card = permanent.top_card().handle();
+        self.trash_source_and_fire(removed.owner, target, removed, host_card);
+        true
+    }
+
     pub(crate) fn commit_digixros_material_sources(
         &mut self,
         mut target: PermanentHandle,
@@ -237,23 +269,23 @@ impl Game {
             CardSourceRef::Hand(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.hand.len());
-                player.hand.insert(idx, taken.card);
+                player.insert_in_hand(idx, taken.card);
                 true
             }
             CardSourceRef::Trash(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.trash.len());
-                player.trash.insert(idx, taken.card);
+                player.insert_in_trash(idx, taken.card);
                 true
             }
             CardSourceRef::DeckTop(p) => {
-                self.player_mut(p).deck.push(taken.card);
+                self.player_mut(p).put_on_deck_top(taken.card);
                 true
             }
             CardSourceRef::Security(p, i) => {
                 let player = self.player_mut(p);
                 let idx = i.min(player.security.len());
-                player.security.insert(idx, taken.card);
+                player.insert_in_security(idx, taken.card);
                 true
             }
             CardSourceRef::PendingSecurity => {
@@ -483,19 +515,8 @@ impl Game {
         // Deck routing (deck bottom = index 0; Digi-Eggs -> digitama deck).
         let owner = removed.owner;
         let is_egg = removed.card_kind(&self.card_data) == CardKind::DigiEgg;
-        {
-            let player = self.player_mut(owner);
-            let deck = if is_egg {
-                &mut player.digitama_deck
-            } else {
-                &mut player.deck
-            };
-            if to_bottom {
-                deck.insert(0, removed);
-            } else {
-                deck.push(removed);
-            }
-        }
+        self.player_mut(owner)
+            .put_in_deck_or_digi_egg_deck(removed, is_egg, to_bottom);
         if !is_egg {
             self.note_effect_deck_add_if_resolving();
         }

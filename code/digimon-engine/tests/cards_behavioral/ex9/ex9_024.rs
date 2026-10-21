@@ -385,6 +385,8 @@ fn ex9_024_inherited_deletes_other_digimon_and_ends_opponent_attack() {
         .add_card(make_filler("ATTACKER"))
         .add_card(make_filler("SECURITY"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     // EX9-024 inherited under CARRIER — the carrier is the live Digimon.
     runner.place_stack(0, &["EX9-024", "CARRIER"]);
@@ -455,6 +457,8 @@ fn ex9_024_inherited_decline_keeps_digimon_and_lets_attack_resolve() {
         .add_card(make_filler("ATTACKER"))
         .add_card(make_filler("SECURITY"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX9-024", "CARRIER"]);
     runner.place_on_field(0, "OTHER", Some(0));
@@ -491,6 +495,8 @@ fn ex9_024_inherited_lone_carrier_does_not_end_attack_for_free() {
         .add_card(make_filler("ATTACKER"))
         .add_card(make_filler("SECURITY"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     // Only the EX9-024 carrier stack — no OTHER Digimon to delete.
     runner.place_stack(0, &["EX9-024", "CARRIER"]);
@@ -533,6 +539,8 @@ fn ex9_024_inherited_opt_locks_second_attack_same_turn() {
         .add_card(make_filler("SECURITY1"))
         .add_card(make_filler("SECURITY2"))
         .security(0, &["SECURITY1", "SECURITY2"])
+        .deck(0, &["CARRIER"; 8])
+        .deck(1, &["CARRIER"; 8])
         .start();
     runner.place_stack(0, &["EX9-024", "CARRIER"]);
     runner.place_on_field(0, "OTHER1", Some(0));

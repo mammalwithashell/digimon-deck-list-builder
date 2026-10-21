@@ -730,7 +730,7 @@ fn p_106_main_placement_dispatches_on_option_placed() {
 /// The Delay clause is present as a declarative Delay with the standard printed
 /// `<Delay>` trigger (`delayed` → CompiledTiming::Delayed → DelayTrigger::
 /// MainPhaseActivated). DCGO: OnDeclaration is CanDeclareOptionDelayEffect — a
-/// player-initiated [Main]-phase activation per RULES_CONTEXT 16-16, not an
+/// player-initiated [Main]-phase activation per RULES_CONTEXT 16-17, not an
 /// engine-scheduled auto-fire.
 #[test]
 fn p_106_delay_clause_is_declarative_delay() {
@@ -908,7 +908,7 @@ fn p_106_delay_body_digivolves_with_cost_reduction_2() {
 /// Drives the real option-play path (`play_option_from_hand`) and the real
 /// `[Main]`-phase activation (`decode_action` on the `FIELD_EFFECT` bit) — the
 /// player-initiated `<Delay>` route, not `enqueue_triggered` force-firing.
-/// RULES_CONTEXT 16-16-3: the `<Delay>` cannot be activated on the placing turn.
+/// RULES_CONTEXT 16-17-3: the `<Delay>` cannot be activated on the placing turn.
 #[test]
 fn p_106_delay_activation_digivolves_via_main_phase_action() {
     let mut runner = DebugRunner::builder()
@@ -961,7 +961,7 @@ fn p_106_delay_activation_digivolves_via_main_phase_action() {
         .expect("playing P-106 must park it as a MainPhaseActivated delayed option");
 
     // Lockout check: same turn as placement → activation is NOT legal
-    // (RULES_CONTEXT 16-16-3: cannot activate on the placing turn).
+    // (RULES_CONTEXT 16-17-3: cannot activate on the placing turn).
     let bit = (FIELD_EFFECT_START
         + delay_idx as u16 * EFFECTS_PER_PERMANENT
         + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;

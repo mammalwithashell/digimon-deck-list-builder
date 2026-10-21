@@ -320,7 +320,9 @@ def _table() -> list[tuple[str, str, str]]:
 def test_optional_keywords_match_the_rules_table():
     table_optional = {k for k, kind, _ in _table() if kind in ("Optional", "Opt-cost→Mand")}
     assert table_optional <= OPTIONAL_KEYWORDS
-    assert OPTIONAL_KEYWORDS - table_optional == {"blocker", "ascension"}
+    # Ver. 4.3 made <Ascension> a table row (16-43); only blocker stays a
+    # deliberate addition beyond the table's kind column.
+    assert OPTIONAL_KEYWORDS - table_optional == {"blocker"}
 
 
 def test_would_keywords_match_the_rules_tables_when_column():

@@ -1,0 +1,21 @@
+# TAMER_MINUS_3K -- Tamer, red, play cost 3.
+#   [On Play] 1 of your opponent's Digimon gets -3000 DP until the end of
+#   their turn.
+# A Tamer effect (§15-2-1-2).
+card: TAMER_MINUS_3K
+name: Hex Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_play
+    summary: "[On Play] 1 of your opponent's Digimon gets -3000 DP until the end of their turn."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP until the end of their turn"
+      - add_dp_modifier:
+          target: victim
+          value: -3000
+          expiry: end_of_opponents_turn

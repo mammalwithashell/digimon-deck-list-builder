@@ -1,0 +1,20 @@
+# DEDIGI1X2_OPT -- Option, red, use cost 0.
+#   [Main] Choose 1 of your opponent's Digimon. <De-Digivolve 1> it, then
+#   <De-Digivolve 1> it again.
+# Two separate instances of <De-Digivolve> in a single effect (§16-12-7,
+# §16-12-8; the BT19-073 LordKnightmon (X Antibody) shape).
+card: DEDIGI1X2_OPT
+name: Unwind Twice
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Choose 1 of your opponent's Digimon. <De-Digivolve 1> it, then <De-Digivolve 1> it again."
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon"
+      - de_digivolve: { target: target, amount: 1 }
+      - de_digivolve: { target: target, amount: 1 }

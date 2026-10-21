@@ -1,6 +1,7 @@
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    encode_attack, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, TRASH_EFFECT_START,
+    encode_attack, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, SOURCES_PER_FIELD,
+    SOURCE_SELECT_START,
 };
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -136,6 +137,12 @@ fn material_save_decline_leaves_sources_in_trash() {
     assert!(saved_source_ids.iter().any(|id| id == "SRC-BALLISTA"));
 }
 
+// general_rule.pdf Ver. 4.3 §16-21-2: <Material Save> is an IMMEDIATE-type
+// effect ("when the Digimon with this effect WOULD be deleted"), so it is
+// offered while the carrier still stands (slot 0, the Tamer in slot 1) and
+// the cards are picked from the carrier's live digivolution cards, not from
+// the trash. (This test used to pin the post-deletion, from-trash timing:
+// G-ENGINE-MATERIAL-SAVE-AFTER-DELETION.)
 #[test]
 fn material_save_filters_recipe_sources_and_enforces_cap() {
     let mut runner = runner_with_material_save(1, true);
@@ -150,12 +157,19 @@ fn material_save_filters_recipe_sources_and_enforces_cap() {
         .pending_selection()
         .expect("Material Save should ask for a Tamer destination");
     assert!(tamer_prompt.is_optional);
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "MS-TEST",
+        "the carrier still stands while Material Save is offered (§16-21-2)"
+    );
     assert!(
-        tamer_prompt.valid_action_ids.contains(&encode_attack(0, 0)),
-        "remaining Tamer should be selectable after the carrier leaves"
+        tamer_prompt.valid_action_ids.contains(&encode_attack(0, 1)),
+        "the Tamer (slot 1, beside the still-standing carrier) is selectable"
     );
     runner
-        .execute_action(0, encode_attack(0, 0))
+        .execute_action(0, encode_attack(0, 1))
         .expect("choose Tamer destination");
 
     let source_prompt = runner
@@ -169,8 +183,14 @@ fn material_save_filters_recipe_sources_and_enforces_cap() {
         .valid_action_ids
         .iter()
         .map(|action| {
-            let trash_index = action.saturating_sub(TRASH_EFFECT_START) as usize;
-            runner.game.players[0].trash[trash_index]
+            let k = action - SOURCE_SELECT_START;
+            assert_eq!(
+                k / SOURCES_PER_FIELD,
+                carrier.index as u16,
+                "picked from the carrier's own digivolution cards"
+            );
+            runner.game.players[0].battle_area[carrier.index as usize].card_sources
+                [(k % SOURCES_PER_FIELD) as usize]
                 .card_id(&runner.game.card_data)
                 .to_string()
         })
@@ -197,6 +217,25 @@ fn material_save_filters_recipe_sources_and_enforces_cap() {
         .count();
     assert_eq!(saved_count, 1);
     assert!(!tamer_sources.iter().any(|id| id == "SRC-OTHER"));
+    // Non-cancelling: the deletion then proceeds with the rest of the stack.
+    let trash_ids: Vec<_> = runner.game.players[0]
+        .trash
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(trash_ids.iter().any(|id| id == "MS-TEST"), "{trash_ids:?}");
+    assert!(
+        trash_ids.iter().any(|id| id == "SRC-OTHER"),
+        "{trash_ids:?}"
+    );
+    assert_eq!(
+        trash_ids
+            .iter()
+            .filter(|id| *id == "SRC-SHOUT" || *id == "SRC-BALLISTA")
+            .count(),
+        1,
+        "the unplaced recipe card is trashed with the carrier: {trash_ids:?}"
+    );
 }
 
 #[test]
@@ -293,4 +332,193 @@ fn material_save_skips_when_no_tamer_or_no_eligible_source_exists() {
         .game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
     assert!(no_eligible.pending_selection().is_none());
+}
+
+/// The card of the carrier's digivolution stack a `SOURCE_SELECT` pick action
+/// names, asserting the action addresses `carrier`'s own slot.
+fn picked_source_id(
+    runner: &DebugRunner,
+    carrier: digimon_engine::permanent::PermanentHandle,
+    action: u16,
+) -> String {
+    let k = action - SOURCE_SELECT_START;
+    assert_eq!(
+        k / SOURCES_PER_FIELD,
+        carrier.index as u16,
+        "pick {action} addresses the carrier's own digivolution cards"
+    );
+    runner.game.players[0].battle_area[carrier.index as usize].card_sources
+        [(k % SOURCES_PER_FIELD) as usize]
+        .card_id(&runner.game.card_data)
+        .to_string()
+}
+
+/// The field-pick action for the (only non-token) `TAMER`.
+fn tamer_action(runner: &DebugRunner) -> u16 {
+    let slot = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "TAMER")
+        .expect("Tamer on field");
+    encode_attack(0, slot as u16)
+}
+
+/// general_rule.pdf Ver. 4.3 §16-21-3: "... if <Material Save> will be
+/// processed, the number of cards specified by this effect must be placed
+/// under your Tamer WHENEVER POSSIBLE." With <Material Save 2> and only one
+/// specified card among the digivolution cards, exactly that one card is
+/// placed: the card pick is `min = max = 1`, not optional, and still a
+/// prompt (no auto-selection).
+#[test]
+fn material_save_places_every_eligible_card_when_n_exceeds_them() {
+    let mut runner = runner_with_material_save(2, true);
+    let carrier = runner.place_stack(0, &["SRC-SHOUT", "SRC-OTHER", "MS-TEST"]);
+    runner.place_on_field(0, "TAMER", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    let tamer = tamer_action(&runner);
+    runner
+        .execute_action(0, tamer)
+        .expect("choose Tamer destination");
+
+    let card_prompt = runner
+        .pending_selection()
+        .expect("the single specified card is still a prompt");
+    assert!(
+        matches!(
+            card_prompt.kind,
+            SelectionKind::CountCappedMultiSelect { min: 1, max: 1, .. }
+        ),
+        "exactly min(2, 1) = 1 card: {:?}",
+        card_prompt.kind
+    );
+    assert!(!card_prompt.is_optional, "the card pick is mandatory");
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PASS as usize],
+        0.0,
+        "no PASS once the Tamer is chosen"
+    );
+    let actions = card_prompt.valid_action_ids.clone();
+    assert_eq!(actions.len(), 1, "{actions:?}");
+    assert_eq!(picked_source_id(&runner, carrier, actions[0]), "SRC-SHOUT");
+    runner
+        .execute_action(0, actions[0])
+        .expect("place the specified card");
+
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(
+        top_ids_under_tamer(&runner),
+        vec!["SRC-SHOUT".to_string(), "TAMER".to_string()]
+    );
+}
+
+/// §16-21-2 / §15-8-5: two <Material Save> carriers deleted by one effect
+/// each raise their own immediate-type effect. The player orders them (the
+/// window's non-optional order prompt); each offer reads ITS OWN carrier's
+/// live digivolution cards while both carriers still stand, and the batch
+/// deletion then trashes the rest of both stacks.
+#[test]
+fn material_save_two_carriers_in_one_batch_each_offer_their_own_stack() {
+    let mut runner = runner_with_material_save(1, true);
+    let a = runner.place_stack(0, &["SRC-SHOUT", "SRC-OTHER", "MS-TEST"]);
+    let b = runner.place_stack(0, &["SRC-BALLISTA", "SRC-OTHER", "MS-TEST"]);
+    runner.place_on_field(0, "TAMER", Some(0));
+    let top_b = runner.game.players[0].battle_area[b.index as usize]
+        .top_card()
+        .handle();
+
+    runner
+        .game
+        .delete_permanents_batch(vec![a, b], ReplacementCause::OpponentEffect);
+
+    let order = runner.pending_selection().expect("order the two offers");
+    assert_eq!(order.kind, SelectionKind::EffectChoice);
+    assert!(!order.is_optional);
+    let choices = order.effect_choices.clone().expect("order choices");
+    assert_eq!(choices.len(), 2, "one immediate effect per carrier");
+    assert!(choices.iter().all(|c| c.label == "<Material Save 1>"));
+    // Process B's first: the order is the player's.
+    let b_first = choices
+        .iter()
+        .find(|c| c.source_card == Some(top_b))
+        .expect("B's <Material Save> is offered")
+        .action_id;
+    runner.execute_action(0, b_first).expect("order B first");
+
+    for (carrier, expected) in [(b, "SRC-BALLISTA"), (a, "SRC-SHOUT")] {
+        let offer = runner.pending_selection().expect("the Tamer pick");
+        assert_eq!(offer.kind, SelectionKind::OwnField);
+        assert!(offer.is_optional);
+        assert_eq!(offer.source_permanent, Some(carrier));
+        let tamer = tamer_action(&runner);
+        runner.execute_action(0, tamer).expect("choose Tamer");
+        let pick = runner.pending_selection().expect("the card pick");
+        assert_eq!(pick.source_permanent, Some(carrier));
+        let actions = pick.valid_action_ids.clone();
+        assert_eq!(actions.len(), 1, "{actions:?}");
+        assert_eq!(picked_source_id(&runner, carrier, actions[0]), expected);
+        runner.execute_action(0, actions[0]).expect("place it");
+    }
+
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(
+        top_ids_under_tamer(&runner),
+        vec![
+            "SRC-SHOUT".to_string(),
+            "SRC-BALLISTA".to_string(),
+            "TAMER".to_string()
+        ],
+        "B's card placed first, A's then placed beneath it"
+    );
+    let mut trash: Vec<_> = runner.game.players[0]
+        .trash
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    trash.sort();
+    assert_eq!(trash, ["MS-TEST", "MS-TEST", "SRC-OTHER", "SRC-OTHER"]);
+}
+
+/// §4-21-3 "Cards can't be stacked with tokens": a token Tamer can't receive
+/// the cards (DCGO `MaterialSaveEffect`: `permanent.IsTamer &&
+/// !permanent.IsToken`). With only a token Tamer nothing is offered; beside
+/// a real Tamer, only the real one is a legal destination. (No Tamer token
+/// exists in today's pool; the token flag is set on a test Tamer.)
+#[test]
+fn material_save_never_offers_a_token_tamer() {
+    let mut only_token = runner_with_material_save(1, true);
+    let carrier = place_material_save_stack(&mut only_token);
+    let token = only_token.place_on_field(0, "TAMER", Some(0));
+    only_token.game.players[0].battle_area[token.index as usize]
+        .card_sources
+        .last_mut()
+        .unwrap()
+        .is_token = true;
+    only_token
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert!(
+        only_token.pending_selection().is_none(),
+        "a token Tamer is no destination: nothing to offer"
+    );
+
+    let mut both = runner_with_material_save(1, true);
+    let carrier = place_material_save_stack(&mut both);
+    let token = both.place_on_field(0, "TAMER", Some(0));
+    let real = both.place_on_field(0, "TAMER", Some(0));
+    both.game.players[0].battle_area[token.index as usize]
+        .card_sources
+        .last_mut()
+        .unwrap()
+        .is_token = true;
+    both.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    let offer = both.pending_selection().expect("the real Tamer is offered");
+    assert_eq!(
+        offer.valid_action_ids,
+        vec![encode_attack(0, real.index as u16)],
+        "only the non-token Tamer"
+    );
 }

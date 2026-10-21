@@ -1,0 +1,15 @@
+# AREA_LV4 -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   Digivolve: red Lv.3, cost 2. No text.
+# The card stashed face-down under the Tamer, then digivolved into from the
+# hand.
+card: AREA_LV4
+name: Areagreymon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2

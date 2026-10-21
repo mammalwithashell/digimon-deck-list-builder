@@ -84,7 +84,7 @@ fn plain_digimon(id: &str) -> CardData {
 
 /// Delete `h` as if an effect controlled by player 1 (the Decoy carrier's
 /// opponent in these fixtures) were resolving — Decoy only replaces a
-/// deletion caused by an OPPONENT's effect (rules 16-17; DCGO
+/// deletion caused by an OPPONENT's effect (rules 16-18; DCGO
 /// `Decoy.cs:51-70` `IsByEffect(... EffectSourceCard.Owner == card.Owner.Enemy)`).
 fn opp_effect_delete(r: &mut DebugRunner, h: digimon_engine::permanent::PermanentHandle) {
     r.game.set_effect_source_player_for_test(Some(1));
@@ -491,7 +491,7 @@ fn decoy_multi_color_filter_matches_any_in_set() {
 
 // ─── Test 8: cause gate — own-effect / non-effect deletions are NOT replaced ─
 
-/// Rules 16-17 (`<Decoy (X)>`: "another of your (X) Digimon would be deleted
+/// Rules 16-18 (`<Decoy (X)>`: "another of your (X) Digimon would be deleted
 /// by an opponent's effect"); DCGO `Decoy.cs:55-61` gates `CanUseCondition`
 /// on `IsByEffect(hashtable, EffectSourceCard.Owner == card.Owner.Enemy)`.
 /// A deletion caused by the Decoy controller's OWN effect, or by no effect

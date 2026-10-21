@@ -1,0 +1,22 @@
+# SHIFT_WD_MEM -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   Digivolve: red Lv.4, cost 3.
+#   [When Digivolving] Gain 1 memory.
+# The Imperialdramon (BT12-031 / BT16-027) of the DELAY_SHIFT_GUARD shape:
+# the card the replacement digivolves into, whose [When Digivolving] waits for
+# the deleting effect (§15-8-3-2).
+card: SHIFT_WD_MEM
+name: Shiftmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Gain 1 memory."
+    process:
+      - gain_memory: 1

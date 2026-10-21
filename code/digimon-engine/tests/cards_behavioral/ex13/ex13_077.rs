@@ -611,3 +611,99 @@ fn ex13_077_no_attacker_prompt_when_none_can_attack_and_then_still_runs() {
         "no attacker prompt; the 'Then' (1 effect for 2 colors) is offered directly"
     );
 }
+
+// ─── §15-8-3-2 / §15-4-3-2: the battle's triggers wait for the effect ───────
+
+/// §15-8-3-2 "Trigger-type effects can't activate during the processing for a
+/// rule or effect"; §15-4-3-2 "If multiple effects are triggered before a
+/// single rule or effect is resolved, they all trigger simultaneously";
+/// §15-4-3-5-1 the turn player activates theirs first.
+///
+/// 4 colors give Omnimon: Merciful Mode two effects: "return 5 cards from your
+/// opponent's trash to the bottom of the deck, <Recovery +1>" (a deck add for
+/// Butenmon BT26-015's "[Your Turn] [Once Per Turn] When your effects add to
+/// decks, ...") and then "This Digimon may battle 1 of your opponent's
+/// Digimon", which deletes P1's Digimon carrying BT23-064 (inherited "[On
+/// Deletion] Gain 1 memory."). The
+/// battle is part of the effect (DCGO `IBattle(..., IsWithoutAttack: true)`
+/// skips `AutoProcessCheck`, so its triggers stay stacked until the effect
+/// returns): that [On Deletion] does not activate inside it, and once the
+/// effect has finished the turn player's Butenmon reaction comes first.
+/// G-ENGINE-EFFECT-BATTLE-DRAIN-RUNS-TRIGGERS-MID-EFFECT.
+#[test]
+fn ex13_077_battle_triggers_wait_for_the_effect_and_pool_with_its_deck_add() {
+    let mut runner = builder()
+        .dsl_card("BT26-015")
+        .expect("BT26-015 in the embedded pack")
+        .dsl_card("BT23-064")
+        .expect("BT23-064 in the embedded pack")
+        .start();
+    runner.skip_mulligan();
+    let omni = runner.place_stack(0, &["ADV-R", "ADV-B", CARD_ID]);
+    runner.place_on_field(0, "TAMER-Y", Some(0));
+    runner.place_on_field(0, "BT26-015", Some(0));
+    let opp = runner.place_stack(1, &["BT23-064", "OPP"]);
+    inject_all(&mut runner, 1, &["PAD"; 5]);
+    runner.game.tick_declarative_effects();
+    let cp = runner.event_checkpoint();
+    let memory_gains = |r: &DebugRunner| -> Vec<(u8, String)> {
+        r.events_since(cp)
+            .iter()
+            .filter_map(|e| match e {
+                digimon_engine::events::GameEvent::MemoryChange {
+                    player,
+                    source_card_id: Some(id),
+                    ..
+                } => Some((*player, id.clone())),
+                _ => None,
+            })
+            .collect()
+    };
+
+    fire(&mut runner, EffectTiming::WhenDigivolving, omni);
+    pass(&mut runner); // decline the attack
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
+    runner.execute_branch(1).expect("return mode");
+    runner.execute_branch(0).expect("return 5");
+    for _ in 0..5 {
+        assert!(has_trash_pick(&runner), "{:?}", runner.pending_selection_view());
+        let pick = non_pass(&runner)[0];
+        runner.execute_action(0, pick).expect("trash pick");
+    }
+    assert_eq!(runner.trash_size(1), 0, "the 5 cards were returned");
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "the second effect: {:?}",
+        runner.pending_selection_view()
+    );
+    runner.execute_branch(0).expect("battle mode");
+    pick_field(&mut runner, opp);
+
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "the battle deleted P1's Digimon"
+    );
+    assert!(
+        memory_gains(&runner).is_empty(),
+        "BT23-064's inherited [On Deletion] did not activate inside the effect: {:?}",
+        memory_gains(&runner)
+    );
+    let sel = runner
+        .pending_selection()
+        .expect("the turn player's Butenmon reaction comes first");
+    assert_eq!(sel.selecting_player, 0, "{sel:?}");
+    assert_eq!(
+        runner
+            .game
+            .card_data_for_handle(sel.source_card)
+            .map(|c| c.card_id.clone())
+            .as_deref(),
+        Some("BT26-015"),
+        "{sel:?}"
+    );
+    // Decline Butenmon's optional reaction; the [On Deletion] follows.
+    pass(&mut runner);
+    let _ = runner.auto_resolve();
+    assert_eq!(memory_gains(&runner), vec![(1, "BT23-064".to_string())]);
+}

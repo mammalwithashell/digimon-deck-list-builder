@@ -1,0 +1,14 @@
+# OD_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Deletion] Gain 1 memory.
+card: OD_MEM
+name: Memdeletemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_deletion
+    summary: "[On Deletion] Gain 1 memory."
+    process:
+      - gain_memory: 1

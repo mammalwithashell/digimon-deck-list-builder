@@ -1,0 +1,17 @@
+# OBS_OWN_DEL_MEM -- Tamer, red, play cost 3.
+#   [All Turns] When one of your Digimon is deleted, gain 1 memory.
+# Triggers on the same deletion as <Retaliation> (§16-13-2).
+card: OBS_OWN_DEL_MEM
+name: Mourning Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_deletion
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "[All Turns] When one of your Digimon is deleted, gain 1 memory."
+    process:
+      - gain_memory: 1

@@ -33,6 +33,12 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(ID)
         .expect("BT26-084 compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("SC-LINK", 0)
+        .link_requirement("SC-DIGI", 0)
+        .link_requirement("SC-L4", 0)
+        .link_requirement("WHITE-SYS", 0)
+        .link_requirement("SYS-L5", 0)
         .add_card(digimon(
             "APP-HOST",
             "AppHost",
@@ -165,6 +171,8 @@ fn bt26_084_when_linking_links_eligible_trash_card() {
     let mut r = base().hand(0, &[ID]).memory(5).start();
     r.game.enter_main_phase();
     let host = r.place_on_field(0, "APP-HOST", Some(0));
+    // Two link cards need <Link +1> (base limit 1, §4-9-5).
+    r.give_link_plus(host, 1);
     push_trash(&mut r, 0, "WHITE-SYS");
     push_trash(&mut r, 0, "SYS-L5");
     push_trash(&mut r, 0, "SC-L4");

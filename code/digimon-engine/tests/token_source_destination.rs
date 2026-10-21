@@ -1,4 +1,4 @@
-//! Rule 4-18-3: cards cannot be stacked with tokens. Unexecuted staged TDD.
+//! Rule 4-21-3: cards cannot be stacked with tokens. Unexecuted staged TDD.
 use digimon_engine::debug_runner::{DebugRunner,make_test_card};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor,CardSourceRef};

@@ -38,7 +38,7 @@
 //! ((IsDigimon || IsTamer) && Appmon trait). The YAML's belt-and-braces flood
 //! gate was aligned to that battle+breeding scan (was battle-only). New tests:
 //! color-requirement-alone positive, breeding-Appmon Use-Req positive, and the
-//! placing-turn <Delay> negative (16-16).
+//! placing-turn <Delay> negative (16-17).
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledCostDelta, CompiledDeclarativeClause, CompiledScope,
@@ -397,7 +397,7 @@ fn bt25_098_main_with_no_appmon_revealed_trashes_all_three_and_still_places() {
 
 /// Seat BT25-098 as a standard <Delay> Option placed on the current turn, then
 /// advance to the controller's next main phase so the placing-turn gate
-/// (16-16-3) is satisfied and the <Delay> [Main] activation becomes legal.
+/// (16-17-3) is satisfied and the <Delay> [Main] activation becomes legal.
 fn seat_and_advance_to_activatable_delay(
     runner: &mut DebugRunner,
 ) -> digimon_engine::permanent::PermanentHandle {
@@ -532,7 +532,7 @@ fn bt25_098_delay_play_can_be_declined() {
     );
 }
 
-/// Placing-turn gate negative (rule 16-16: a <Delay> can't be activated the
+/// Placing-turn gate negative (rule 16-17: a <Delay> can't be activated the
 /// turn the card entered the battle area). Seat BT25-098 as a delayed Option
 /// placed THIS turn and confirm the [Main] activation is refused, the card
 /// stays parked, and nothing is trashed.
@@ -562,7 +562,7 @@ fn bt25_098_delay_not_activatable_on_placing_turn() {
 
     assert!(
         !runner.game.activate_field_main(0, handle.index as usize),
-        "the standard <Delay> must NOT be activatable on the placing turn (16-16)"
+        "the standard <Delay> must NOT be activatable on the placing turn (16-17)"
     );
     assert!(
         field_contains(&runner, 0, "BT25-098"),

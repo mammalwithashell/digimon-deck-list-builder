@@ -231,8 +231,11 @@ fn bt26_033_option_main_deletes_all_lowest_dp_then_recovers() {
 }
 
 /// G-ENGINE-DUAL-END-OF-TURN-WINDOW: a board-resident DUAL card is
-/// `CardKind::Dual`; the end-of-turn keyword gate must still count it as a
-/// Digimon so `<Engage>` parks the EndOfTurnAction attack window.
+/// `CardKind::Dual`; the end-of-turn keyword must still count it as a
+/// Digimon so `<Engage>` offers its attack. Since 2026-10-18 (§16-44-2,
+/// G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS) <Engage> triggers at the
+/// end of the turn and offers the attack as its own decision inside the
+/// `[End of Your Turn]` pool, not in an `EndOfTurnAction` window.
 #[test]
 fn bt26_033_engage_parks_end_of_turn_attack_window_for_dual_card() {
     use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
@@ -241,14 +244,13 @@ fn bt26_033_engage_parks_end_of_turn_attack_window_for_dual_card() {
     let mut r = setup();
     let jupi = r.place_on_field(0, CARD_ID, Some(0));
     assert_eq!(r.game.turn_player(), 0);
-    assert!(r.game.has_end_of_turn_keywords(0));
 
     r.game.end_turn();
-    assert_eq!(
-        r.game.current_phase,
-        GamePhase::EndOfTurnAction,
-        "<Engage> on a DUAL top card must open the end-of-turn attack window"
-    );
+    assert_ne!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    let sel = r
+        .pending_selection()
+        .expect("<Engage> on a DUAL top card must offer its end-of-turn attack");
+    assert_eq!(sel.selecting_player, 0);
     let mask = digimon_engine::build_action_mask(&r.game, 0);
     assert_eq!(
         mask[encode_attack(jupi.index as u16, SECURITY_TARGET) as usize],

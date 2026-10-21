@@ -396,7 +396,7 @@ fn place_lm_032_as_start_delay(runner: &mut DebugRunner) {
 }
 
 /// Advance from P0's turn to the start of P0's next turn (P0 -> P1 -> P0).
-/// Accept the §16-16-2 `<Delay>` cost confirm that now precedes the body.
+/// Accept the §16-17-2 `<Delay>` cost confirm that now precedes the body.
 ///
 /// Added 2026-08-24: the scheduled window used to auto-pay the trash-this-card
 /// cost and run the body straight away. It is optional processing, so the
@@ -483,7 +483,7 @@ fn lm_032_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
     );
 }
 
-/// §16-16-1 / §15-7: `<Delay>` is "By trashing this card, activate the effect
+/// §16-17-1 / §15-7: `<Delay>` is "By trashing this card, activate the effect
 /// below" -- the trash is the processing condition, so it is paid BEFORE the
 /// body runs. DCGO LM_032.cs `ActivateCoroutine` trashes the card
 /// (`DeletePeremanentAndProcessAccordingToResult`) and only on success opens
@@ -569,7 +569,7 @@ fn lm_032_delay_does_not_fire_when_opponent_has_no_digimon() {
 /// (`card.Owner.Enemy.GetBattleAreaDigimons().Count >= 1`): when the printed
 /// gate ("If your opponent has a Digimon") is FALSE at the scheduled window,
 /// the `<Delay>` is simply not activatable this turn. The trash of this card
-/// is the Delay's ACTIVATION COST (§16-16-1), so an un-activated Delay must
+/// is the Delay's ACTIVATION COST (§16-17-1), so an un-activated Delay must
 /// not pay it: LM-032 stays in the battle area and is offered again at the
 /// controller's next [Start of Your Turn].
 ///
@@ -658,7 +658,7 @@ fn lm_032_condition_false_reschedules_the_delay_to_the_next_window() {
 
     let view = runner
         .pending_selection_view()
-        .expect("the rescheduled <Delay> must offer its §16-16-2 cost confirm at the next window");
+        .expect("the rescheduled <Delay> must offer its §16-17-2 cost confirm at the next window");
     assert!(
         view.valid_action_ids.iter().any(|a| *a != PASS),
         "the accept branch must be offered at the rescheduled window"

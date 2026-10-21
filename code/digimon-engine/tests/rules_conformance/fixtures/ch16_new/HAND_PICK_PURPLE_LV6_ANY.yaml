@@ -1,0 +1,23 @@
+# HAND_PICK_PURPLE_LV6_ANY -- Option, red, use cost 0.
+#   [Main] Trash 1 purple Lv.6 card from your hand.
+# An UNQUALIFIED reference: both properties are read on a DUAL card's Digimon
+# information (§4-6-1, §4-6-5-2; owner ruling W5 (b)): DUAL_ARTS' Digimon
+# information is Lv.6 but red (its purple Option information is not read).
+card: HAND_PICK_PURPLE_LV6_ANY
+name: Any purple Lv.6 Audit
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash 1 purple Lv.6 card from your hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - color_is: purple
+              - level_eq: 6
+          prompt: "Trash 1 purple Lv.6 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: pick }

@@ -58,6 +58,8 @@ fn runner() -> DebugRunner {
         .add_card(digimon("MAGNAMON", "Magnamon", &["Royal Knight"]))
         .add_card(make_test_card("DRAW", "Draw Filler"))
         .memory(10)
+        .deck(0, &["DRAW"; 8])
+        .deck(1, &["DRAW"; 8])
         .start()
 }
 
@@ -173,6 +175,8 @@ fn bt13_110_delay_plays_royal_knight_from_breeding_sources_with_rush() {
         .add_card(digimon("MAGNAMON", "Magnamon", &["Royal Knight"]))
         .hand(0, &["BT13-110"])
         .memory(10)
+        .deck(0, &["KING"; 8])
+        .deck(1, &["KING"; 8])
         .start();
     runner.register_effect("MAGNAMON", Arc::new(OnPlayGainMemory));
     install_breeding_stack(&mut runner, &["MAGNAMON"]);

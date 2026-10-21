@@ -1,0 +1,21 @@
+# OBS_OPP_PLAY_GE4 -- Tamer, red, play cost 3.
+#   [All Turns] When your opponent plays a Digimon, if that Digimon is level 4
+#   or higher, gain 1 memory.
+# The single-branch §15-8-3-9-1 witness: the trigger condition is "your
+# opponent plays a Digimon"; "if that Digimon is level 4 or higher" is a
+# processing condition (§15-6-1), checked when the effect activates.
+card: OBS_OPP_PLAY_GE4
+name: Lookout Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_digimon_played
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_target_level_gte: 4
+    summary: "[All Turns] When your opponent plays a Digimon, if that Digimon is level 4 or higher, gain 1 memory."
+    process:
+      - gain_memory: 1

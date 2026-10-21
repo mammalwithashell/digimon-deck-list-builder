@@ -1,0 +1,17 @@
+# ACE -- Digimon ACE, Lv.5, red, 7000 DP, play cost 5.
+#   Digivolve: red Lv.4, cost 3.
+#   <Overflow <-3>> (As this card moves from the field or from under one of
+#   your cards to another area, lose 3 memory.)
+# The §4-19 card: no effect text, only the <Overflow> rule.
+card: ACE
+name: Acemon ACE
+kind: digimon
+level: 5
+color: [red]
+cost: 5
+dp: 7000
+ace_overflow: -3
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3

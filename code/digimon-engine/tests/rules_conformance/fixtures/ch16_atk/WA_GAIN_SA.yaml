@@ -1,0 +1,19 @@
+# WA_GAIN_SA -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [When Attacking] This Digimon gains <Security A. +1> for the turn.
+# The §16-4-2 example: a <Security A. +1> gained before the check applies.
+card: WA_GAIN_SA
+name: Lategainmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon gains <Security A. +1> for the turn."
+    process:
+      - grant_keyword:
+          target: source
+          keyword: SecurityAttackPlus
+          value: 1
+          expiry: end_of_turn

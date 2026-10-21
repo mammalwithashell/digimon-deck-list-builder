@@ -1,0 +1,22 @@
+# MAIN_DEL_FRAG -- Option, red, use cost 0.
+#   [Main] Delete 1 of your opponent's Digimon with <Fragment>.
+# A reference to a keyword by name only: every <Fragment (N)> is the same
+# keyword type (§16-2), so a <Fragment (1)> and a <Fragment (2)> Digimon both
+# qualify.
+card: MAIN_DEL_FRAG
+name: Shatter
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your opponent's Digimon with <Fragment>."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - has_keyword: Fragment
+          prompt: "Delete 1 of your opponent's Digimon with <Fragment>"
+      - delete_permanent: { target: victim }

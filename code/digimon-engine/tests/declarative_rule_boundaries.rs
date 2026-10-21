@@ -1,4 +1,4 @@
-//! Continuous DP refresh at completed-effect rule boundaries (17-1-3-1).
+//! Continuous DP refresh at completed-effect rule boundaries (17-1-3-1-1).
 //! Like judge_quiz/b_deferred_rules_check Q6/Q13/Q14/Q24, a parked
 //! sub-choice is not the completion of the effect which installed it.
 

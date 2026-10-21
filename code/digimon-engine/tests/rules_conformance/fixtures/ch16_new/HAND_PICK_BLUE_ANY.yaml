@@ -1,0 +1,20 @@
+# HAND_PICK_BLUE_ANY -- Option, red, use cost 0.
+#   [Main] Trash 1 blue card from your hand.
+# An UNQUALIFIED color reference (no "Digimon card" / "Option card"): a DUAL
+# card in the hand matches if its Digimon information is blue (§4-6-1,
+# §4-6-5-2; owner ruling W5 (b)).
+card: HAND_PICK_BLUE_ANY
+name: Any blue Audit
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash 1 blue card from your hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter: { color_is: blue }
+          prompt: "Trash 1 blue card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: pick }

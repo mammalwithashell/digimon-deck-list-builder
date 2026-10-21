@@ -1,0 +1,37 @@
+# DUALSRC_TRASH_USE -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   [When Attacking] By trashing 1 Option card from any of your Digimon's
+#   digivolution cards, you may use 1 [Artsy] trait Option card from your
+#   trash with the cost reduced by 1.
+# Modelled on LadyDevimon (BT25-083), authored with its YAML idiom (clause
+# `optional`, a mandatory material union pick, `trash_union_bound`, then
+# `use_option_from_trash`). "Option card from ... digivolution cards" references
+# the cards there AS Option cards, so a DUAL card among them reads its Option
+# information (§4-6-6-2; official Q&A Q6395: BT25-083 may trash the DUAL
+# BT25-085 from digivolution cards and use it).
+card: DUALSRC_TRASH_USE
+name: Source Option Trasher
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] By trashing 1 Option card from any of your Digimon's digivolution cards, you may use 1 [Artsy] trait Option card from your trash with the cost reduced by 1."
+    process:
+      - select_union_zone:
+          of: you
+          zones: [material]
+          bind_as: option_source
+          filter: { kind: option }
+          prompt: "Trash 1 Option card from any of your Digimon's digivolution cards"
+      - trash_union_bound:
+          binding: option_source
+      - use_option_from_trash:
+          of: you
+          filter: { trait_has: Artsy }
+          cost:
+            reduce: 1
+          optional: true
+          prompt: "You may use 1 [Artsy] trait Option card from your trash with the cost reduced by 1"

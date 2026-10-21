@@ -125,7 +125,7 @@ fn guard_accept_saves_all_simultaneous_matching_digimon_and_keeps_indices_stable
 
 #[test]
 fn guard_protected_carrier_allows_attempt_but_failed_payment_saves_no_ally() {
-    // Official15-7-4: impossible payment does not suppress optional attempt.
+    // Official 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: impossible payment does not suppress optional attempt (3.6 reading; 4.3 §15-7-4 says an impossible cost can't be chosen).
     for action in [REPLACEMENT_ACCEPT, PASS] {
         let mut r=DebugRunner::builder().add_card(guard_card("GUARD"))
             .add_card(plain_digimon("ALLY")).start();

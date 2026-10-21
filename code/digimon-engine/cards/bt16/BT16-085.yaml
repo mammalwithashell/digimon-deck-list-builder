@@ -198,7 +198,7 @@ effects:
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn][OPT] On own Digimon digivolve into blue/green, suspend self → +1 memory; if DNA, trash 3 opp digi-cards"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon

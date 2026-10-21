@@ -57,7 +57,7 @@ fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
 /// Sources:
 /// - Printed text: ST1-11 "[Your Turn] for every 2 digivolution cards this
 ///   Digimon has, it gains ＜Security A. +1＞"; ST1-07 inherited ＜Security A. +1＞.
-/// - Rules: `general_rule.pdf` §16-3 (Security Attack keyword — multiple grants
+/// - Rules: `general_rule.pdf` §16-4 (Security Attack keyword — multiple grants
 ///   stack additively; inherited effects resolve from below the top card).
 /// - DCGO: `$BASE_DCGO/Assets/Scripts/CardEffect/ST1/Red/ST1_11.cs`, `ST1_07.cs`.
 #[test]
@@ -102,7 +102,7 @@ fn wargreymon_over_greymon_source_stacks_both_security_attack_bonuses() {
         runner.game.dynamic_security_attack_aura_bonus(stack),
         Some(3),
         "WarGreymon's [Your Turn] formula aura is BASE-INCLUSIVE: 1 + floor(4/2) = 3 \
-         (per general_rule.pdf 16-3; DCGO ST1_11.cs computes the floor(n/2) bonus, the \
+         (per general_rule.pdf 16-4; DCGO ST1_11.cs computes the floor(n/2) bonus, the \
          engine folds in the base-1)"
     );
 

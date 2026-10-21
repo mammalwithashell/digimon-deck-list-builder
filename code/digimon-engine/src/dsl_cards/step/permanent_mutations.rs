@@ -11,6 +11,51 @@ use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::effect_context::EffectContext;
 
+/// A formula-valued `de_digivolve` amount is printed "<De-Digivolve 1> for
+/// each …" / "for every 2 …" (BT19-073, BT21-060, BT24-041, BT25-075,
+/// EX13-066): that many SEPARATE `<De-Digivolve 1>` instances, each processed
+/// separately with the chosen card's state confirmed after each (§16-12-7 /
+/// §16-12-8), and each trashing exactly 1 card so no number is declared
+/// (§16-12-1 applies per instance). Expand it into that many literal
+/// `amount: 1` steps so every instance runs (and may park) through the normal
+/// step executor. A literal `amount: N` stays one `<De-Digivolve N>` whose
+/// count the controller declares. G-DEDIGIVOLVE-NO-DECLARATION.
+pub fn expand_de_digivolve_instances(
+    step: &CompiledStep,
+    ctx: &mut EffectContext<'_>,
+    bindings: &Bindings,
+) -> Option<Vec<CompiledStep>> {
+    let CompiledStep::DeDigivolve {
+        target,
+        amount_fn: Some(formula),
+        stop_at_level,
+        ..
+    } = step
+    else {
+        return None;
+    };
+    let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings) else {
+        return None;
+    };
+    let instances = crate::dsl_cards::formula_eval::evaluate_with_bindings(
+        formula,
+        ctx,
+        h,
+        Some(bindings),
+    )
+    .clamp(0, i32::from(u8::MAX)) as usize;
+    Some(
+        (0..instances)
+            .map(|_| CompiledStep::DeDigivolve {
+                target: target.clone(),
+                amount: Some(1),
+                amount_fn: None,
+                stop_at_level: *stop_at_level,
+            })
+            .collect(),
+    )
+}
+
 /// Returns `true` if `step` is a permanent-mutation family handled here.
 /// Unknown steps fall through (the caller may try other families).
 pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) -> bool {

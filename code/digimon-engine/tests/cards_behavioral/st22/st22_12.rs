@@ -105,9 +105,11 @@ fn opp_strong(id: &str) -> CardData {
     make_digimon_colored(id, 5, 6000, 6, &["Dragon"], CardColor::Red)
 }
 
-/// A generic host Digimon for P0 (no special traits).
+/// A host Digimon for P0 that meets ST22-12's link requirement ([Appmon]
+/// trait): a link card on a host that doesn't is trashed at the rule check
+/// (§17-1-3-2-6).
 fn host_digimon(id: &str) -> CardData {
-    make_digimon_colored(id, 4, 5000, 5, &["Dragon"], CardColor::Red)
+    make_digimon_colored(id, 4, 5000, 5, &["Dragon", "Appmon"], CardColor::Red)
 }
 
 // ─── Base fixture builder ─────────────────────────────────────────────────────
@@ -116,6 +118,11 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST22-12 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("SOCIAL", 0)
+        .link_requirement("NAVI", 0)
+        .link_requirement("TOOL", 0)
+        .link_requirement("BEAST", 0)
         .add_card(filler())
         .add_card(social_linkee("SOCIAL"))
         .add_card(navi_linkee("NAVI"))

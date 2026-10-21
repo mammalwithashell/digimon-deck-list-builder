@@ -133,7 +133,9 @@ fn bt10_042_when_digivolving_gives_all_opponent_digimon_security_attack_minus_on
 
 #[test]
 fn bt10_042_only_security_attack_changed_digimon_cannot_attack_venusmon() {
-    let mut runner = venusmon_runner().start();
+    let mut runner = venusmon_runner().deck(0, &["VANILLA"; 8])
+    .deck(1, &["VANILLA"; 8])
+    .start();
     let venusmon = runner.place_on_field(0, "BT10-042", Some(0));
     let changed_attacker = runner.place_on_field(1, "TEST-EFFECT-DIGIMON", Some(0));
     let plain_attacker = runner.place_on_field(1, "VANILLA", Some(0));

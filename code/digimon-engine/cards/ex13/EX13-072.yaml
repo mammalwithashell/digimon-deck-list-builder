@@ -59,8 +59,6 @@ effects:
       all_of:
         - your_turn: true
         - source_is_unsuspended: true
-        - event_target_owner: you
-        - event_target_trait_has: Chronicle
     condition:
       count_gte:
         filter:
@@ -72,6 +70,10 @@ effects:
                 - name_is: X Antibody
                 - trait_has: Chronicle
         n: 1
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_trait_has: Chronicle
     summary: "[Your Turn] When one of your [Chronicle] Digimon attacks, by suspending this Tamer, you may use 1 [X Antibody] or 1 [Chronicle] trait Option card from your hand with the cost reduced by 1"
     process:
       - activation_cost: { suspend_self: true }

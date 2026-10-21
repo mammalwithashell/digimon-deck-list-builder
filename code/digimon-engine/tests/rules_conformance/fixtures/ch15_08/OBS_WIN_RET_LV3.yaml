@@ -1,0 +1,23 @@
+# OBS_WIN_RET_LV3 -- Tamer, red, play cost 3.
+#   [All Turns] When any of your Digimon win a battle, return all of your
+#   level 3 Digimon to the hand.
+# Removes a Digimon from the battle area between the battle and the
+# activation of a sibling "wins a battle" observer (the §15-8-3-8 slot test).
+card: OBS_WIN_RET_LV3
+name: Recaller
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_ally_won_battle
+    trigger_if:
+      all_of:
+        - event_winner_owner: you
+    summary: "[All Turns] When any of your Digimon win a battle, return all of your level 3 Digimon to the hand."
+    process:
+      - return_all_to_hand:
+          over:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            level_eq: 3

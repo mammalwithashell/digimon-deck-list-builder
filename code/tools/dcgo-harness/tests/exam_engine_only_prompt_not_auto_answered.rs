@@ -1,15 +1,18 @@
 //! A scenario's OWN row must be the thing that answers an ENGINE-ONLY prompt.
 //!
-//! `ReplayDriver::auto_answer_option_trash_order` exists for the DCGO corpus:
-//! our engine parks the 9-1-5 / 18-1-2 -> 15-4-3-5-1 "trash the used Option, or
-//! resolve one of your own triggers first" pick, DCGO makes no such decision,
-//! and no recording can carry an answer — so the driver answers it the way DCGO
-//! behaves (entry 0, trash now).
+//! `ReplayDriver::auto_answer_option_trash_order` used to exist for the DCGO
+//! corpus: our engine parked a "trash the used Option, or resolve one of your
+//! own triggers first" pick, DCGO made no such decision, and no recording could
+//! carry an answer -- so the driver answered it the way DCGO behaves. §9-1-5
+//! (Ver. 4.3) makes the used Option's trash uninterrupted, so that prompt and the
+//! auto-answer are both gone (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE), and
+//! so is the scenario's `sim_only` "Trash the used Option" row. This test now
+//! pins the line WITHOUT that row: Monica's decline gate (step 8) now directly
+//! follows Iron Slash's own target pick, and her target pick is step 9.
 //!
-//! An exam scenario is the opposite case: the author writes that decision
-//! explicitly as a `sim_only:` row. When the driver ALSO answered it, the row
-//! landed on whatever our engine parked NEXT and spent it, shifting every later
-//! row one decision forward.
+//! An exam scenario writes every one of our prompts itself. When the driver
+//! ALSO answered one, the row landed on whatever our engine parked NEXT and
+//! spent it, shifting every later row one decision forward.
 //!
 //! Measured witness, and what this test pins: `BT25-091-effect2.yaml`. Monica
 //! Simmons' `[Your Turn] When you use [TS] trait Option cards, **by suspending
@@ -33,9 +36,9 @@ use dcgo_harness::exam::{ordered_deck, DeckBook};
 
 /// Scenario step index of `select: { yes: true }` — the §15-7-4 decline gate.
 /// `projections[N]` is the state BEFORE step N's decision is submitted.
-const DECLINE_GATE_STEP: usize = 9;
+const DECLINE_GATE_STEP: usize = 8;
 /// Scenario step index of the mandatory `1 of your opponent's Digimon` pick.
-const TARGET_PICK_STEP: usize = 10;
+const TARGET_PICK_STEP: usize = 9;
 
 fn repo_root() -> std::path::PathBuf {
     std::path::Path::new(env!("CARGO_MANIFEST_DIR"))

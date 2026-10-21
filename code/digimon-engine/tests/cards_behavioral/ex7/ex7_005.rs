@@ -196,7 +196,7 @@ fn ex7_005_single_inherited_opt_your_turn_on_add_digivolution_cards_clause() {
     );
     let gate = t.active_when.as_ref().expect("[Your Turn] gate");
     assert_eq!(gate.your_turn, Some(true));
-    let cond = t.condition.as_ref().expect("host + added-card gate");
+    let cond = t.trigger_if.as_ref().expect("host + added-card gate");
     let leaves = &cond.all_of;
     assert!(!leaves.is_empty(), "all_of");
     assert!(

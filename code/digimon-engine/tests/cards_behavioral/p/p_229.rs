@@ -701,7 +701,7 @@ fn p_229_delay_triggers_after_mirai_is_played_and_offers_reduced_cost_digivolve(
     );
 
     // The <Delay> timing is reached: first the optional ACTIVATION choice
-    // (16-16-2) — accept it to activate the Delay.
+    // (16-17-2) — accept it to activate the Delay.
     {
         let view = runner
             .pending_selection_view()
@@ -709,7 +709,7 @@ fn p_229_delay_triggers_after_mirai_is_played_and_offers_reduced_cost_digivolve(
         assert_eq!(view.kind, SelectionKind::Replacement);
         assert!(
             runner.pending_is_optional(),
-            "the <Delay> activation itself is optional (16-16-2)"
+            "the <Delay> activation itself is optional (16-17-2)"
         );
         runner
             .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
@@ -778,7 +778,7 @@ fn p_229_delay_triggers_after_mirai_is_played_and_offers_reduced_cost_digivolve(
 }
 
 /// Negative gate (placing turn): the `<Delay>` is only activatable "after the
-/// placing turn" (RULES_CONTEXT 16-16-3). A [Mirai Kinosaki] played on the same
+/// placing turn" (RULES_CONTEXT 16-17-3). A [Mirai Kinosaki] played on the same
 /// turn P-229 was placed must NOT fire the Delay body.
 #[test]
 fn p_229_delay_does_not_fire_on_the_placing_turn() {
@@ -921,7 +921,7 @@ fn p_229_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
     let mirai_idx = hand_index_of(&runner, 0, "MIRAI");
     assert!(runner.game.play_from_hand(0, mirai_idx).is_some());
 
-    // ACCEPT the (optional, 16-16-2) Delay activation itself...
+    // ACCEPT the (optional, 16-17-2) Delay activation itself...
     let view = runner
         .pending_selection_view()
         .expect("playing Mirai after the placing turn offers the Delay activation");

@@ -23,6 +23,10 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(ID)
         .expect("BT26-037 compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("NAVI-L3", 0)
+        .link_requirement("NAVI-L4", 0)
+        .link_requirement("SC-LINK", 0)
         .dsl_card(MAIL)
         .expect("BT26-019 compiles")
         .add_card(digimon(

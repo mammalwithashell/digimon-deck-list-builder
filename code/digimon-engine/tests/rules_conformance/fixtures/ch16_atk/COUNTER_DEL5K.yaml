@@ -1,0 +1,22 @@
+# COUNTER_DEL5K -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [Counter] Delete 1 of your opponent's Digimon with 5000 DP or less.
+# Removes the Digimon <Alliance> suspended during the attack (§16-24-5).
+card: COUNTER_DEL5K
+name: Cutparrymon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: counter
+    summary: "[Counter] Delete 1 of your opponent's Digimon with 5000 DP or less."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 5000
+          prompt: "Delete 1 of your opponent's Digimon with 5000 DP or less"
+      - delete_permanent: { target: victim }

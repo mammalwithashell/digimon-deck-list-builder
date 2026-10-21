@@ -344,7 +344,7 @@ fn bt24_101_when_own_security_is_removed_trashes_opponent_top_security_once() {
 /// G-ENGINE-ALL-TURNS-TRIGGER-FROM-TRASH: when Jupitermon is ITSELF the
 /// security card being removed, its `[All Turns]` clause is not live — the
 /// card is not a battle-area permanent (a card leaving security only has its
-/// `[Security]` effects active, §15-14-5 / §13-1-5) — so the opponent's
+/// `[Security]` effects active, §15-14-5 / §13-1-6) — so the opponent's
 /// security is untouched and nothing is queued.
 #[test]
 fn bt24_101_all_turns_does_not_fire_when_it_is_the_removed_security_card() {
@@ -379,7 +379,7 @@ fn bt24_101_all_turns_does_not_fire_when_it_is_the_removed_security_card() {
 }
 
 /// Same, via a security check: Jupitermon flipped as a Security Digimon is
-/// "in no area" (§13-1-5/13-1-6), not a battle-area permanent.
+/// "in no area" (§13-1-6/13-1-7), not a battle-area permanent.
 #[test]
 fn bt24_101_all_turns_does_not_fire_when_flipped_by_security_check() {
     let mut runner = DebugRunner::builder()

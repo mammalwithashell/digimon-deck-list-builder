@@ -108,10 +108,13 @@ pub const BREEDING_SELECT_PLAYER_1: u16 = BREEDING_TARGET + 1;
 /// Matches Python's `action_mask.py` layout (offset `+ 2` per permanent).
 pub const FIELD_EFFECT_SLOT_FOR_MAIN: u16 = 2;
 
-/// Sub-slot 0 of the per-permanent effect range is the Overclock
-/// sacrifice-and-attack action in the `EndOfTurnAction` phase (§4.6c).
-/// Matches Python's `action_mask.py:354-361` bit layout
-/// `1000 + i * EFFECTS_PER_PERM + 0`.
+/// Sub-slot 0 of the per-permanent effect range: RESERVED. It was the
+/// Overclock sacrifice-and-attack action of the `EndOfTurnAction` phase
+/// (Python's `action_mask.py:354-361`, `1000 + i * EFFECTS_PER_PERM + 0`);
+/// since Task 21 the engine neither emits nor decodes it -- <Overclock> is a
+/// trigger whose cost pick parks inside the `[End of Your Turn]` pool
+/// (§16-34-2, `Game::install_overclock_selection`). Kept so the action-space
+/// layout (and DCGO's generated `ActionSpace.cs`) does not shift.
 pub const FIELD_EFFECT_SLOT_FOR_OVERCLOCK: u16 = 0;
 
 /// Sub-slot 3 of the per-permanent effect range is the DigiLink Shape-B

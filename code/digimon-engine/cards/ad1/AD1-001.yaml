@@ -94,11 +94,11 @@ effects:
     active_when: { all_turns: true }
     summary: "[All Turns] On Garurumon/Tai Kamiya play or digivolve, may free-digivolve self into a Greymon-named hand card"
     condition:
-      all_of:
-        - event_target_owner: you
-        - any_of:
-            - event_card_name_contains: "Garurumon"
-            - event_card_name_contains: "Tai Kamiya"
+      any_of:
+        - event_card_name_contains: Garurumon
+        - event_card_name_contains: Tai Kamiya
+    trigger_if:
+      event_target_owner: you
     process:
       - select_hand:
           of: you

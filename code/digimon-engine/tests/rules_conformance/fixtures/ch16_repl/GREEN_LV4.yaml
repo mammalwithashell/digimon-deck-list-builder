@@ -1,0 +1,9 @@
+# GREEN_LV4 -- Digimon, Lv.4, green, 4000 DP, play cost 4. No text.
+# A "green Lv.4" specified card of PARTITION.
+card: GREEN_LV4
+name: Greenmon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000

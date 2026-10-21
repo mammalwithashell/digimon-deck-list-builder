@@ -1,0 +1,77 @@
+name: Engine Binary Rot Guard (nightly)
+
+# Runs every top-level `tests/*.rs` regression binary of `digimon-engine`
+# (~176 one-file binaries; Cargo auto-discovers them, each links its own
+# executable, so a cold build is far too slow to gate every PR). Discovery is by
+# GLOB, so a regression file added tomorrow is covered by the next nightly /
+# main-push run with no workflow edit. The PR gate for the rules deliverable and
+# the curated binaries is engine-rules-conformance.yml.
+#
+# Triggers: nightly schedule, push to main (engine paths), manual dispatch.
+# Sharded 4 ways; fail-fast is off so a red shard never hides the others.
+
+on:
+  schedule:
+    - cron: '41 7 * * *'
+  push:
+    branches: ["main"]
+    paths:
+      - 'code/digimon-engine/**'
+      - 'code/digimon-dsl/**'
+      - '.github/workflows/engine-binary-rot.yml'
+  workflow_dispatch:
+
+jobs:
+  # Every top-level tests/*.rs file is its own integration binary (Cargo
+  # auto-discovers them), discovered by glob here.
+  top-level-regression-binaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CARGO_INCREMENTAL: "0"
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v5
+        with:
+          # Registry/git only -- no `target`: four multi-GB per-shard target
+          # entries would evict engine-clone-safety.yml's cache from the
+          # shared 10 GB repo cache, and a nightly gains little from it.
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-engine-binaries-shard${{ matrix.shard }}-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
+
+      - name: Top-level regression binaries (shard ${{ matrix.shard }} of 4)
+        env:
+          RUST_MIN_STACK: "268435456"
+          SHARD: ${{ matrix.shard }}
+          SHARDS: "4"
+        shell: bash
+        run: |
+          # Excluded top-level files (space-delimited):
+          #   bench_engine_throughput -- a `--release` benchmark, not a test
+          #   timing_dispatch, blocker_current_defender,
+          #   force_attack_effect_tail_order -- run by the other job
+          # A file known RED on head is listed here with its reason; delete
+          # the name when it is fixed.
+          EXCLUDE=" bench_engine_throughput timing_dispatch blocker_current_defender force_attack_effect_tail_order "
+          i=0
+          args=()
+          for f in $(ls code/digimon-engine/tests/*.rs | sort); do
+            n=$(basename "$f" .rs)
+            case "$EXCLUDE" in *" $n "*) continue ;; esac
+            if [ $((i % SHARDS)) -eq "$SHARD" ]; then args+=(--test "$n"); fi
+            i=$((i + 1))
+          done
+          echo "shard $SHARD: $(( ${#args[@]} / 2 )) binaries"
+          cargo test -p digimon-engine "${args[@]}" --no-fail-fast -- --test-threads=8

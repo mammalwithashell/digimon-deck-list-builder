@@ -170,6 +170,30 @@ pub enum GameEvent {
         /// Printed name of the trashed card, captured at emission.
         card_name: String,
     },
+    /// A card moved to `player`'s hand by a replacement outcome instead of
+    /// the zone it was headed for -- today a used Option whose trash a
+    /// `WhenWouldBeTrashed` effect cancelled or redirected to the hand
+    /// (§9-1-5 replacement; F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE
+    /// residual). `source` names the processing that moved it
+    /// (`"option_use"`).
+    CardToHand {
+        seq: u64,
+        player: PlayerId,
+        card_id: String,
+        card_name: String,
+        source: String,
+    },
+    /// A card moved to `player`'s deck by a replacement outcome instead of
+    /// the zone it was headed for -- today a used Option redirected to the
+    /// bottom of the deck. `position` is `"bottom"` or `"top"`.
+    CardToDeck {
+        seq: u64,
+        player: PlayerId,
+        card_id: String,
+        card_name: String,
+        position: String,
+        source: String,
+    },
 
     /// A card was milled (deck→trash from the top of the deck).
     Mill {
@@ -211,6 +235,25 @@ pub enum GameEvent {
         card_id: String,
         card_name: String,
         source_zone: RevealZone,
+    },
+
+    /// §18-3-2 (Comprehensive Rules Ver. 4.3): an infinite loop that neither
+    /// player can stop was detected, so the game ends in a draw. Emitted
+    /// immediately before the `GameOver { winner: None, reason:
+    /// InfiniteLoopDraw }` it causes. `player` / `card_id` / `card_name` name
+    /// the newest pending effect of the loop (`None` when the loop ran
+    /// through a rule-processing window with nothing queued). `repetitions`
+    /// is how many times the repeating state was seen (`backstop == false`,
+    /// see `game::infinite_loop::LOOP_SIGNATURE_REPEATS`), or the number of
+    /// resolutions the far `MAX_CHAIN_DEPTH` backstop counted
+    /// (`backstop == true`).
+    InfiniteLoop {
+        seq: u64,
+        player: Option<PlayerId>,
+        card_id: Option<String>,
+        card_name: Option<String>,
+        repetitions: u16,
+        backstop: bool,
     },
 
     /// The game ended. `winner` is `None` on a draw.
@@ -259,10 +302,13 @@ impl GameEvent {
             | GameEvent::Digivolve { seq, .. }
             | GameEvent::Attack { seq, .. }
             | GameEvent::Trash { seq, .. }
+            | GameEvent::CardToHand { seq, .. }
+            | GameEvent::CardToDeck { seq, .. }
             | GameEvent::Mill { seq, .. }
             | GameEvent::SecurityReveal { seq, .. }
             | GameEvent::EffectTarget { seq, .. }
             | GameEvent::Reveal { seq, .. }
+            | GameEvent::InfiniteLoop { seq, .. }
             | GameEvent::GameOver { seq, .. }
             | GameEvent::Concede { seq, .. }
             | GameEvent::EffectFizzled { seq, .. } => *seq,
@@ -281,10 +327,13 @@ impl GameEvent {
             GameEvent::Digivolve { .. } => "Digivolve",
             GameEvent::Attack { .. } => "Attack",
             GameEvent::Trash { .. } => "Trash",
+            GameEvent::CardToHand { .. } => "CardToHand",
+            GameEvent::CardToDeck { .. } => "CardToDeck",
             GameEvent::Mill { .. } => "Mill",
             GameEvent::SecurityReveal { .. } => "SecurityReveal",
             GameEvent::EffectTarget { .. } => "EffectTarget",
             GameEvent::Reveal { .. } => "Reveal",
+            GameEvent::InfiniteLoop { .. } => "InfiniteLoop",
             GameEvent::GameOver { .. } => "GameOver",
             GameEvent::Concede { .. } => "Concede",
             GameEvent::EffectFizzled { .. } => "EffectFizzled",

@@ -770,7 +770,7 @@ fn ex12_031_decode_plays_matching_tb_source_on_non_battle_leave() {
 }
 
 /// TDD RED — task_69f10a66 ruling, EX12-031#effect#1 sub-finding: `<Decode>`
-/// is SELF-scoped. Rule 16-35-1: "When the Digimon WITH THIS EFFECT would
+/// is SELF-scoped. Rule 16-36-1: "When the Digimon WITH THIS EFFECT would
 /// leave the battle area other than by a battle, you may play 1 Digimon card
 /// specified by this effect FROM THAT DIGIMON'S digivolution cards" —
 /// another permanent leaving is not this Digimon's trigger. DCGO gates the
@@ -819,7 +819,7 @@ fn ex12_031_decode_does_not_open_a_window_for_another_permanents_leave() {
 
     assert!(
         runner.game.pending_selection.is_none(),
-        "no replacement window may open: <Decode> is self-scoped (16-35-1); \
+        "no replacement window may open: <Decode> is self-scoped (16-36-1); \
          the leaving Digimon has no Decode and MarineBullmon is not leaving \
          (got: {:?})",
         runner

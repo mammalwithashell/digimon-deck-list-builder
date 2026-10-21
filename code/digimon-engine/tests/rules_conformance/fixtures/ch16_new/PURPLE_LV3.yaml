@@ -1,0 +1,10 @@
+# PURPLE_LV3 -- Digimon, Lv.3, purple, 2000 DP, play cost 3. No text.
+# A purple card on the field: meets a purple Option's color requirement
+# (§1-3-11-1) without any <Use Req.>.
+card: PURPLE_LV3
+name: Violetmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000

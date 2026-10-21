@@ -4,8 +4,9 @@
 //! RUST_PYTHON_PARITY.md so that regressions are caught immediately.
 //!
 //! §4.2 — Option card color requirement
-//! §4.3 — Blitz attack exception (memory < 0)
-//! §4.4 — Raid + CAN_ATTACK_UNSUSPENDED target rule (unsuspended targets)
+//! §4.3 — no Blitz attack exception (memory < 0; §16-16-2)
+//! §4.4 — CAN_ATTACK_UNSUSPENDED target rule (unsuspended targets); <Raid>
+//!         adds no declaration target (§11-2-7-1, §16-23-1)
 
 use digimon_engine::action::{
     build_action_mask, encode_attack, DNA_DIGIVOLVE_START, SECURITY_TARGET,
@@ -172,11 +173,15 @@ fn mask_option_color_check_accepts_tamer() {
 
 // ─── §4.3 Blitz under negative memory ──────────────────────────────────
 
-/// A Digimon that digivolved this turn and has modifier-granted Blitz can
-/// attack even when memory < 0 (§4.3 parity with Python's action_mask.py
-/// lines 107-114).
+/// §16-16-2 (Ver. 4.3) "<Blitz> effects execute processing": the <Blitz>
+/// attack is offered as its own decision inside the effect that executes it
+/// (`ResumeFrame::AttackDeclarationDecision`), never through the Main-phase mask.
+/// So a Digimon that digivolved this turn and merely HAS <Blitz> gets no
+/// Main-phase attack bit while the memory is on the opponent's side. (This
+/// test used to pin the retired "Blitz + digivolved this turn" carve-out;
+/// G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK.)
 #[test]
-fn mask_blitz_can_attack_under_negative_memory() {
+fn mask_blitz_keyword_does_not_unlock_main_phase_attack_under_negative_memory() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("ATK", CardColor::Red))
         .add_card(make_digimon("DEF", CardColor::Red))
@@ -196,36 +201,25 @@ fn mask_blitz_can_attack_under_negative_memory() {
     r.game.enter_main_phase();
     r.game.set_memory(-3);
 
-    // Baseline: no Blitz → no attack bit while memory<0.
-    let mask_no_blitz = build_action_mask(&r.game, tp);
     let sec_bit = encode_attack(attacker.index as u16, SECURITY_TARGET) as usize;
     let dig_bit = encode_attack(attacker.index as u16, 0) as usize;
-    assert_eq!(
-        mask_no_blitz[sec_bit], 0.0,
-        "no Blitz + memory<0 → no security attack"
-    );
-    assert_eq!(
-        mask_no_blitz[dig_bit], 0.0,
-        "no Blitz + memory<0 → no digimon attack"
-    );
-
-    // Grant Blitz → both attack bits should light up.
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Blitz, Expiry::EndOfTurn, tp);
     let mask_blitz = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask_blitz[sec_bit], 1.0,
-        "Blitz + digivolved this turn → security"
+        mask_blitz[sec_bit], 0.0,
+        "§16-16: having <Blitz> is no Main-phase memory exemption (security)"
     );
     assert_eq!(
-        mask_blitz[dig_bit], 1.0,
-        "Blitz + digivolved this turn → digimon"
+        mask_blitz[dig_bit], 0.0,
+        "§16-16: having <Blitz> is no Main-phase memory exemption (Digimon)"
     );
 }
 
-/// Blitz only exempts memory<0 when the attacker digivolved *this* turn.
-/// A Blitz Digimon that wasn't freshly digivolved still can't attack.
+/// There is no Blitz exemption from the Main-phase memory gate at all
+/// (§16-16-2): a Blitz Digimon that wasn't freshly digivolved can't attack
+/// under memory<0 either.
 #[test]
 fn mask_blitz_without_digivolving_does_not_attack_under_negative_memory() {
     let mut r = DebugRunner::builder()
@@ -256,10 +250,16 @@ fn mask_blitz_without_digivolving_does_not_attack_under_negative_memory() {
 
 // ─── §4.4 Raid + CAN_ATTACK_UNSUSPENDED target rules ───────────────────
 
-/// With Raid, an attacker can target unsuspended enemies tied for the
-/// highest effective DP. Lower-DP unsuspended enemies remain off-limits.
+/// §11-2-7-1: the attack declaration targets the opponent or a SUSPENDED
+/// Digimon. <Raid> switches the target AFTER the declaration (§16-23-1 /
+/// §16-23-2, the attack's [When Attacking] pool), so it is not a
+/// declaration-time permission: with <Raid> the unsuspended enemies, the
+/// highest-DP one included, stay off-limits in the mask. (Inverted from the
+/// Python-parity pin `mask_raid_targets_highest_dp_unsuspended`;
+/// G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED. DCGO
+/// `Permanent.CanAttackTargetDigimon` has no <Raid> arm.)
 #[test]
-fn mask_raid_targets_highest_dp_unsuspended() {
+fn mask_raid_adds_no_unsuspended_declaration_target() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon_dp("ATK", CardColor::Red, 5000))
         .add_card(make_digimon_dp("WEAK", CardColor::Blue, 2000))
@@ -292,25 +292,33 @@ fn mask_raid_targets_highest_dp_unsuspended() {
         "no Raid → unsuspended strong is off-limits"
     );
 
-    // Grant Raid → only the highest-DP unsuspended target (STRONG) lights up.
+    // Grant Raid → still no unsuspended target; the player stays legal.
     r.game
         .modifiers
         .grant_keyword(attacker, Keyword::Raid, Expiry::EndOfTurn, tp);
     let raid_mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        raid_mask[strong_bit], 1.0,
-        "Raid → highest-DP unsuspended is attackable"
+        raid_mask[strong_bit], 0.0,
+        "Raid → the highest-DP unsuspended Digimon is NOT a declaration target (§11-2-7-1)"
     );
     assert_eq!(
         raid_mask[weak_bit], 0.0,
         "Raid → lower-DP unsuspended is NOT attackable"
     );
+    assert_eq!(
+        raid_mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
+        "Raid → the opponent is a declaration target"
+    );
 }
 
-/// When multiple unsuspended enemies share the highest DP, Raid allows
-/// attacking any of them (matches Python's `any(... == max(...))`).
+/// §11-2-7-1 / §16-23-1: unsuspended enemies tied for the highest DP are
+/// <Raid>'s SWITCH candidates (§16-23-4), not declaration targets: none of
+/// them lights up in the mask. (Inverted from the Python-parity pin
+/// `mask_raid_allows_all_tied_for_highest`;
+/// G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED.)
 #[test]
-fn mask_raid_allows_all_tied_for_highest() {
+fn mask_raid_tied_highest_are_not_declaration_targets() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon_dp("ATK", CardColor::Red, 5000))
         .add_card(make_digimon_dp("TWIN", CardColor::Blue, 4000))
@@ -333,13 +341,13 @@ fn mask_raid_allows_all_tied_for_highest() {
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
         mask[encode_attack(attacker.index as u16, twin_a as u16) as usize],
-        1.0,
-        "Raid → first tied-for-max target is attackable",
+        0.0,
+        "Raid → first tied-for-max target is not a declaration target",
     );
     assert_eq!(
         mask[encode_attack(attacker.index as u16, twin_b as u16) as usize],
-        1.0,
-        "Raid → second tied-for-max target is also attackable",
+        0.0,
+        "Raid → second tied-for-max target is not a declaration target either",
     );
 }
 

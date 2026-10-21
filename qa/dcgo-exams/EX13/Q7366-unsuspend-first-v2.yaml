@@ -128,6 +128,17 @@ steps:
   do:
     select:
       'yes': true
+# RE-LOWERED 2026-10-19: <Piercing> now pends in this battle-result pool
+# (§16-7-2, §15-4-3-5-1; Task 28, 055806250), so after EX13-021 the remaining
+# [win effect, <Piercing>] pair is ordered too: the win effect, named by
+# excluding <Piercing> (DCGO's EffectName 'Pierce'). DCGO's stack shape here
+# is unmeasured (no oracle run of this interaction yet).
+- actor: 0
+  do:
+    select:
+      cards:
+      - EX13-045
+      trigger_not: Pierce
 - actor: 0
   do:
     select:
@@ -152,12 +163,12 @@ expect_ruling:
       - card_id: EX13-045
         suspended: true
       p1.field: []
-  - at: 16
+  - at: 17
     that:
       p0.field:
       - card_id: EX13-045
         suspended: false
-  - at: 17
+  - at: 18
     that:
       p0.field:
       - card_id: EX13-045

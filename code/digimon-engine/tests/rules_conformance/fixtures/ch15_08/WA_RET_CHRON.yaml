@@ -1,0 +1,15 @@
+# WA_RET_CHRON -- Digimon, Lv.5, red, 7000 DP, play cost 7, [Chronicle] trait.
+#   [When Attacking] Return this Digimon to the hand.
+card: WA_RET_CHRON
+name: Chronimon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Chronicle]
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Return this Digimon to the hand."
+    process:
+      - return_to_hand: { target: source }

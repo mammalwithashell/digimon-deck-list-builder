@@ -23,7 +23,7 @@ use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{
     CardColor, CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType,
 };
-use digimon_engine::modifiers::PlayerModifierEntry;
+use digimon_engine::modifiers::{ModifierEntry, PlayerModifierEntry};
 
 // ─── Helper card factories ────────────────────────────────────────────────────
 
@@ -282,36 +282,40 @@ fn cannot_attack_player_on_attacker_zeroes_only_security_attack_bit() {
     );
 }
 
-/// CannotAttack (player-scoped) must also gate attack bits in EndOfTurnAction.
+/// CannotAttack (player-scoped) must also gate end-of-turn attacks.
 ///
 /// Regression guard for the §4.7e fix that extended the CannotAttack gate from
-/// the Main-phase attack loop into the EndOfTurnAction Vortex / MayAttack /
-/// ForceAttack window. Without this fix, a Digimon with Vortex would still
-/// expose attack bits under CannotAttack (e.g. EX8-026 MetalSeadramon Ace).
+/// the Main-phase attack loop to the end-of-turn attacks (e.g. EX8-026
+/// MetalSeadramon Ace). Since 2026-10-18 <Vortex> offers its attack as its
+/// own decision inside the `[End of Your Turn]` pool (§16-33-2): without
+/// CannotAttack the decision offers the Digimon-target attack; under
+/// CannotAttack <Vortex> has no legal declaration, so it does not activate
+/// and no attack bit is ever offered. The `EndOfTurnAction` window's
+/// MayAttack bits are gated the same way.
 #[test]
 fn cannot_attack_also_gates_end_of_turn_attack_bits() {
-    let mut r = DebugRunner::builder()
-        .add_card(make_digimon("ATCK", 3000))
-        .add_card(make_digimon("DEF", 2000))
-        .start();
+    let board = || {
+        let mut r = DebugRunner::builder()
+            .add_card(make_digimon("ATCK", 3000))
+            .add_card(make_digimon("DEF", 2000))
+            .start();
+        let tp = r.game.turn_player();
+        let opp = 1 - tp;
+        // A Vortex-granted attacker (turn_played = 0, not summoning-sick).
+        let attacker = r.place_on_field(tp, "ATCK", Some(0));
+        let defender = r.place_on_field(opp, "DEF", Some(0));
+        // A <Vortex> attack targets only a suspended Digimon (§11-2-7-1,
+        // §16-33-1; G-ENGINE-VORTEX-ATTACKS-UNSUSPENDED-DIGIMON).
+        r.game.players[opp as usize].battle_area[defender.index as usize].is_suspended = true;
+        r.game
+            .modifiers
+            .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+        (r, tp, opp, attacker, defender)
+    };
 
-    let tp = r.game.turn_player();
-    let opp = 1 - tp;
-
-    // Place a Vortex-granted attacker (turn_played = 0, not summoning-sick).
-    let attacker = r.place_on_field(tp, "ATCK", Some(0));
-    let defender = r.place_on_field(opp, "DEF", Some(0));
-
-    // Grant Vortex keyword so the EndOfTurnAction arm would normally emit attack bits.
-    r.game
-        .modifiers
-        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
-
-    // Enter EndOfTurnAction.
-    r.game.current_phase = GamePhase::EndOfTurnAction;
-
-    // Confirm a Vortex Digimon-target bit is lit before blocking (validates
-    // the test setup without relying on the separate player-target extension).
+    // Without CannotAttack: the <Vortex> decision offers the Digimon target.
+    let (mut r, tp, _opp, attacker, defender) = board();
+    r.game.end_turn();
     let mask_before = build_action_mask(&r.game, tp);
     assert_eq!(
         mask_before[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
@@ -321,20 +325,44 @@ fn cannot_attack_also_gates_end_of_turn_attack_bits() {
     assert_eq!(
         mask_before[encode_attack(attacker.index as u16, defender.index as u16) as usize],
         1.0,
-        "Vortex should emit digimon-attack bit in EndOfTurnAction before CannotAttack"
+        "Vortex should offer the digimon-attack bit at the end of turn before CannotAttack"
     );
 
-    // Install player-scoped CannotAttack on the turn player.
+    // Under player-scoped CannotAttack: nothing is offered.
+    let (mut r, tp, opp, _attacker, _defender) = board();
     r.game.modifiers.add_player_modifier(
         tp,
         PlayerModifierEntry::simple(ModifierType::CannotAttack, 0, Expiry::Permanent, None, opp),
     );
-
-    // All attack bits must now be zero — CannotAttack overrides Vortex.
+    r.game.end_turn();
+    assert!(
+        r.game.pending_selection.is_none(),
+        "CannotAttack: <Vortex> has no legal declaration and does not activate"
+    );
     let mask_blocked = build_action_mask(&r.game, tp);
     for i in ATTACK_START..ATTACK_END {
         assert_eq!(
             mask_blocked[i as usize], 0.0,
+            "attack bit {} should be zero at the end of turn under CannotAttack",
+            i
+        );
+    }
+
+    // The EndOfTurnAction window (a MayAttack grant) is gated too.
+    let (mut r, tp, opp, attacker, _defender) = board();
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
+    );
+    r.game.modifiers.add_player_modifier(
+        tp,
+        PlayerModifierEntry::simple(ModifierType::CannotAttack, 0, Expiry::Permanent, None, opp),
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+    let mask_window = build_action_mask(&r.game, tp);
+    for i in ATTACK_START..ATTACK_END {
+        assert_eq!(
+            mask_window[i as usize], 0.0,
             "attack bit {} should be zero in EndOfTurnAction under CannotAttack",
             i
         );

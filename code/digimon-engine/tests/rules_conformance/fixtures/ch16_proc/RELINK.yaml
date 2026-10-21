@@ -1,0 +1,22 @@
+# RELINK -- Digimon, Lv.3, red, 2000 DP, play cost 3.
+#   [On Play] Link this Digimon to 1 of your other Digimon without paying the
+#   cost.
+#   [Link] Link requirement: 1 level 4 Digimon. Link cost: 1.
+# An effect relinking its own standing Digimon (production idiom: EX11-027's
+# `relink_self_to_own_digimon`), for the §4-9-5 replacement at a host's link
+# limit. Its link requirement is LINK_A's ("level 4").
+card: RELINK
+name: Relinkmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: link_condition
+    cost: 1
+    filter: { level_eq: 4 }
+  - when: on_play
+    summary: "[On Play] Link this Digimon to 1 of your other Digimon without paying the cost."
+    process:
+      - relink_self_to_own_digimon: {}

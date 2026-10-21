@@ -454,6 +454,8 @@ fn ex11_021_inherited_deletes_other_digimon_to_end_opponent_attack() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     // EX11-021 is a digivolution source under CARRIER — its inherited
     // effect is active.
@@ -514,6 +516,8 @@ fn ex11_021_inherited_decline_keeps_digimon_and_resolves_attack() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX11-021", "CARRIER"]);
     runner.place_on_field(0, "OTHER", Some(0));
@@ -546,6 +550,8 @@ fn ex11_021_inherited_cannot_fire_without_another_digimon() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     // Only the EX11-021 carrier stack — no other Digimon to delete.
     runner.place_stack(0, &["EX11-021", "CARRIER"]);
@@ -598,6 +604,8 @@ fn ex11_021_inherited_does_not_fire_on_your_own_turn() {
         .add_card(make_test_card("OTHER", "Other Digimon"))
         .add_card(make_tamer("SECURITY", "Security"))
         .security(1, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX11-021", "CARRIER"]);
     let mine = runner.place_on_field(0, "OTHER", Some(0));
@@ -633,6 +641,8 @@ fn ex11_021_inherited_once_per_turn_locks_out_second_attack() {
         .add_card(make_test_card("SECURITY-A", "Security A"))
         .add_card(make_test_card("SECURITY-B", "Security B"))
         .security(0, &["SECURITY-A", "SECURITY-B"])
+        .deck(0, &["CARRIER"; 8])
+        .deck(1, &["CARRIER"; 8])
         .start();
     runner.place_stack(0, &["EX11-021", "CARRIER"]);
     runner.place_on_field(0, "OTHER-1", Some(0));
@@ -687,6 +697,8 @@ fn ex11_021_inherited_delete_cost_removes_exactly_the_chosen_digimon() {
         .add_card(make_test_card("ATTACKER", "Attacker"))
         .add_card(make_test_card("SECURITY", "Security"))
         .security(0, &["SECURITY"])
+        .deck(0, &["SECURITY"; 8])
+        .deck(1, &["SECURITY"; 8])
         .start();
     runner.place_stack(0, &["EX11-021", "CARRIER"]);
     runner.place_on_field(0, "SACRIFICE", Some(0));

@@ -233,6 +233,20 @@ fn ex13_015_when_attacking_fires_when_unused() {
     let me = runner.place_on_field(0, CARD_ID, Some(0));
     let big = runner.place_on_field(1, "BIG", Some(0));
     runner.attack_player(me, 1, false);
+    // §16-23-2: the card's <Raid> is a trigger-type effect pending with its
+    // [When Attacking] effect in one TriggerOrder; activate the
+    // [When Attacking] first.
+    let order = runner.pending_selection_view().expect("TriggerOrder");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder);
+    let when_attacking = order
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|c| c.keyword.is_none())
+        .expect("the [When Attacking] branch")
+        .action_id;
+    runner.execute_action(0, when_attacking).expect("[When Attacking] first");
     pick_field(&mut runner, big);
     let _ = runner.auto_resolve();
     assert!(!field_ids(&runner, 1).contains(&"BIG".to_string()));

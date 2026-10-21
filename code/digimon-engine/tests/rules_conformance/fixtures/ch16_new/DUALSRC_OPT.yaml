@@ -1,0 +1,27 @@
+# DUALSRC_OPT -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   [When Attacking] If this Digimon has an Option card in its digivolution cards,
+#   gain 3 memory.
+# Counts its own digivolution cards (`self_source_count`). A DUAL card among
+# them is an Option card to this "Option card" reference: §4-6-3 makes only the
+# DUAL card that IS the permanent (its top card) a Digimon; one lying in the
+# digivolution cards is referenced as an Option card (§4-6-6-2; official Q&A
+# Q6395).
+card: DUALSRC_OPT
+name: Source Counter OPT
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] If this Digimon has an Option card in its digivolution cards, gain 3 memory."
+    process:
+      - if:
+          condition:
+            self_source_count:
+              filter: { kind: option }
+              op: gte
+              value: 1
+          then:
+            - gain_memory: 3

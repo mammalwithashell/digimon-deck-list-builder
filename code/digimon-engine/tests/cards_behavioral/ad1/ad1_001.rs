@@ -83,6 +83,8 @@ fn greymon_runner() -> DebugRunner {
         .add_card(make_named_digimon("LV3-PLAT", "Lv3Platform", 3, 3000))
         .add_card(make_named_digimon("FILL", "Filler", 4, 4000))
         .memory(12)
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
         .start()
 }
 
@@ -728,8 +730,10 @@ fn ad1_001_all_turns_observer_accept_free_digivolves_into_greymon() {
     );
     assert_eq!(
         runner.hand_size(0),
-        hand_before - 2,
-        "hand decreased by 2: Garurumon played, GREY-LV5 free-digivolved"
+        // -2 for the two cards that left the hand, +1 for the card the
+        // digivolution drew (the runner now has a deck to draw from).
+        hand_before - 2 + 1,
+        "hand decreased by 2: Garurumon played, GREY-LV5 free-digivolved, digivolution drew 1"
     );
 }
 

@@ -493,6 +493,19 @@ pub struct QueuedEffect {
     /// resolved) — derived triggers resolve before the still-pending ones
     /// (DCGO `MultipleSkills.cs` nested `TriggeredSkillProcess`).
     pub trigger_batch: u32,
+    /// §18-1-2 — when `Some`, this entry is PENDING PROCESSING (a
+    /// `schedule_delayed` body, or a provenance-keyed turn-end deletion) that
+    /// joined its timing's simultaneous pool (`Game::enqueue_scheduled_for_timing`,
+    /// `Game::enqueue_provenance_deletions_at_turn_end`, …). The drainer orders
+    /// it like any trigger, then performs it
+    /// (`scheduled_effects::run_pending_processing`) instead of looking up
+    /// `effects_for_card(card_id)[effect_slot]`: it has no `Effect` metadata
+    /// (no condition, cost, OPT or optionality) and no source-liveness gate,
+    /// since pending processing is performed at its timing even when its
+    /// source has left (§18-1-1). `card_id` only labels the `TriggerOrder`
+    /// branch, which names it as pending processing. Plain data, so
+    /// `Game: Clone` stays faithful.
+    pub pending_processing: Option<crate::scheduled_effects::PendingProcessing>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a
@@ -691,6 +704,20 @@ pub enum TriggerSource {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     },
+    /// Observer timing (`OnTopCardTrashed`) fired ONCE after one event trashed
+    /// the TOP card(s) of `host`'s stack: every card of one <De-Digivolve>
+    /// instance (§16-12-1 / §16-12-5) or <Armor Purge>'s top card. Scans all
+    /// players' battle areas (and event-gated `<Delay>` Options) while carrying
+    /// the host (`host` / `host_card`, the host's new top card) and the trashed
+    /// `cards`. DCGO `EffectTiming.WhenTopCardTrashed` +
+    /// `CanTriggerWhenTopCardTrashed`. G-DSL-TOP-CARD-TRASHED-TIMING.
+    TopCardsTrashed {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        cards: Vec<CardHandle>,
+        cause: crate::trigger_context::EventCause,
+    },
     /// Observer timing (`OnLinkedCardTrashed`) fired after an EFFECT trashes a
     /// link card from a host that stays in the battle area
     /// (`Game::trash_specific_link_card`). Scans all players' battle areas
@@ -762,6 +789,15 @@ pub enum TriggerSource {
         /// Immutable identities of every combatant that actually deleted
         /// its battle opponent, including both sides of mutual deletion.
         deleters: Vec<crate::trigger_context::BattleCombatantSnapshot>,
+        /// The winner's identity and last-known information, taken when the
+        /// battle was compared (on the security-battle path, at this enqueue:
+        /// nothing is deleted in between, §14-2-3). Present whenever the battle had a permanent
+        /// winner, including one that left the field (e.g. to the loser's
+        /// `[On Deletion]`) before this event was emitted, when `winner` is
+        /// `None` (§15-8-3-1, §15-8-3-8;
+        /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
+        winner_identity: Option<(PlayerId, u64)>,
+        winner_snapshot: Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
     },
     /// `OnDiscardHand` observer fan-out fired after an EFFECT trashes one or
     /// more cards from a player's hand (G-ENGINE-ON-DISCARD-HAND). Scans EVERY
@@ -956,40 +992,52 @@ pub enum OptionResolutionPhase {
 /// `pending_selection` installed inside a `SecuritySkill` process can pause
 /// the flow and resume from the same phase after the selection resolves.
 ///
-/// Official rule 13-1-7 and Q6813: immediate Security, then captured
-/// simultaneous check/removal observers, then security battle and disposal.
-/// The security battle and all of its triggered/scheduled processing finish
-/// before check disposal or the next check (general_rule.pdf 13-1-7 / 14-2).
+/// Phase order follows Comprehensive Rules §13-1-8 (Ver. 4.3; §13-1-7 in the
+/// Ver. 3.6 PDF): reveal → effects triggered by the check (the `[Security]`
+/// effect first, immediately and without pending activation per §15-16-10-2,
+/// then the check / removal observers on both battle areas, captured at the
+/// reveal as one simultaneous pool — Q6813) → battle vs a Security Digimon →
+/// trash → next check. The security battle and all of its triggered/scheduled
+/// processing finish before check disposal or the next check (§13-1-8-3 /
+/// §14-2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SecurityPhase {
-    /// Enqueue + drain `SecuritySkill` effects on the revealed card.
+    /// Enqueue + drain `SecuritySkill` effects on the revealed card
+    /// (§13-1-8-2 + §15-16-10-2).
     SecuritySkillDrain,
-    /// Digimon-vs-security DP battle (skipped for non-Digimon security).
+    /// Drain the check / removal observers captured at the reveal over BOTH
+    /// players' battle areas (one simultaneous pool, turn player first —
+    /// §13-1-8-2, Q6813) plus anything derived from them; no rescan occurs
+    /// here. Precedes the battle so an observer's DP/keyword grant shapes it.
+    OnSecurityCheckDrain,
+    /// Digimon-vs-security DP battle (§13-1-8-3-1; skipped for non-Digimon
+    /// security per §13-1-8-3-2).
     BattleResolved,
-    /// Finish deletion/replacement processing, then notify battle observers
-    /// before disposing of the revealed card or starting another check.
+    /// Finish deletion/replacement processing, then resolve the effects
+    /// triggered by the battle (`BattleResult`, §14-2-4) before the end of
+    /// the battle timing, disposing of the revealed card or starting another
+    /// check.
     /// The comparison is captured once; a paused effect must not rerun it.
     EndOfSecurityBattleDrain {
         attacker: PermanentHandle,
         attacker_top: Option<CardHandle>,
         winner: Option<PermanentHandle>,
     },
-    /// Scheduled battle effects wait for ordinary battle observers and have
-    /// their own one-shot enqueue guard across parked choices.
-    EndOfSecurityBattleScheduledDrain,
-    /// Drain the occurrence-captured check/removal batch and derived effects,
-    /// before the security DP battle. No rescan occurs here.
-    OnSecurityCheckDrain,
+    /// The end of the battle timing (§14-2-5) once the battle's triggered
+    /// effects (`EndOfSecurityBattleDrain`, §14-2-4) have resolved: enqueue +
+    /// drain `EndOfBattle` with the pending processing due at the end of the
+    /// battle (§18-1-2), reading the winner referent the previous phase took
+    /// (`Game::security_battle_end_referent`).
+    EndOfSecurityBattleTimingDrain,
     /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
     /// finally removed from the security stack.
     WhenWouldLoseSecurity,
-    /// Enqueue + drain `OnLoseSecurity` on the revealed card (observer timing).
+    /// Retained pass-through: `OnLoseSecurity` observers are captured at the
+    /// reveal and resolve in `OnSecurityCheckDrain` (Q6813).
     OnLoseSecurityDrain,
-    /// Trash the card (unless `pending_security.played` is set), then fire
-    /// `OnOpponentSecurityRemoved` observers in the attacker's battle area.
-    /// If that observer drain installs a pending selection, the state
-    /// machine parks with phase advanced to `DisposeFinalize` so the resume
-    /// path doesn't re-enqueue the observer on re-entry (§2.5j residual).
+    /// Retained pass-through: the security-removed observers are captured at
+    /// the reveal and resolve in `OnSecurityCheckDrain` (§13-1-6, Q6813); the
+    /// trash push happens in `DisposeFinalize` (§13-1-8-4).
     Dispose,
     /// Post-observer finalization: extract `SecurityResolutionState`,
     /// decide terminal outcome vs. loop to next security card.
@@ -1071,9 +1119,8 @@ pub enum AttackState {
     /// Phase 9 Task 4 — post-Block / pre-Battle checkpoint. The state
     /// machine lands here unconditionally once the Block window closes
     /// (whether a block was declared, declined, or no candidate existed).
-    /// The PostBlock arm tests whether `effective_target` is still valid;
-    /// if not, it considers Raid-driven retarget before either transitioning
-    /// to Battle or fizzling to Cleanup. Spec §4.2.
+    /// The PostBlock arm transitions to Battle; a removed target is not
+    /// retargeted (§11-2-6) and Battle ends the attack as not successful.
     PostBlock,
     /// No further interrupts pending. `resolve_pending_battle` will fire.
     Battle,
@@ -1090,6 +1137,16 @@ pub enum AttackState {
     PostBattle,
     /// Post-battle: clear EndOfAttack modifiers, fire EndOfAttack triggers.
     Cleanup,
+    /// §11-6-2 (Ver. 4.3): "For the end of the attack timing, the attack
+    /// won't end until all processing has been resolved." The End of Attack
+    /// timing's pool (printed `[End of Attack]` / "at the end of an attack"
+    /// effects and the pending processing due then, e.g. `<Execute>`'s
+    /// deletion, §16-38-4) parked on a decision. The attack is still in
+    /// progress: `pending_attack` and the attacker's `is_attacking` stay set
+    /// and the "for the attack" modifiers still apply. The post-selection
+    /// resume (`advance_pending_attack`) finishes the attack once the pool
+    /// has resolved and returns the carried outcome.
+    EndOfAttackDrain(crate::combat::AttackResult),
 }
 
 /// The target of an attack. Counter effects can redirect by rewriting the
@@ -1107,9 +1164,14 @@ pub struct PendingAttack {
     pub attacker: PermanentHandle,
     pub original_target: AttackTarget,
     pub effective_target: AttackTarget,
-    /// DNA made the effective target a new Digimon despite retaining its slot.
-    /// A later explicit redirect/block/Raid selection installs a new live target.
-    pub effective_target_removed_by_dna: bool,
+    /// §11-2-6 (Ver. 4.3): the effective Digimon target was removed from the
+    /// battle area (or became a new Digimon through DNA, §8-2-2-1). It
+    /// remains the attack target, but the attack fails; `effective_target`
+    /// then names no Digimon, whatever now occupies that slot. A later
+    /// block / redirect / `<Raid>` switch installs a new live target and
+    /// clears it. `Game::live_attack_target_digimon` reads it together with
+    /// the target's stack identity.
+    pub effective_target_removed: bool,
     pub is_blocked: bool,
     pub blocker: Option<PermanentHandle>,
     pub is_vortex: bool,
@@ -1145,8 +1207,16 @@ pub struct PendingAttack {
     /// shifts down into its slot, so re-probing `effective_target` with
     /// `handle_valid` misreads the bystander as a surviving defender.
     pub battle_defender_deleted: bool,
-    /// A battle caused by an effect earned Piercing for this attacking Digimon.
-    /// Processing waits until immediately before the attack ends (16-6-4).
+    /// A `<Piercing>` of this attacking Digimon ACTIVATED in a battle's
+    /// trigger pool (the attack's own battle or an effect battle it won
+    /// during the attack): its security check is pending processing,
+    /// performed immediately before the End of Attack timing (§16-7-4) even
+    /// if the keyword is lost afterwards (official Q&A Q3931).
+    ///
+    /// The name predates that: the flag once covered only effect battles.
+    /// It is kept because the `PendingAttack` `Debug` text feeds the
+    /// verification digest (`tests/pending_attack_debug_compat.rs` pins it)
+    /// and the DCGO exam harness builds `PendingAttack` literals by name.
     pub effect_battle_piercing_pending: bool,
     /// Only one transition to security checking is allowed during one attack,
     /// including ordinary checks and any number of Piercing activations.
@@ -1169,7 +1239,7 @@ pub struct PendingAttack {
 impl std::fmt::Debug for PendingAttack {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // Exhaustive destructuring makes future state additions a review point.
-        let Self { attacker, original_target, effective_target, effective_target_removed_by_dna, is_blocked, blocker, is_vortex, is_overclock, declaration_committed, cancelled, battle_occurred, battle_defender_deleted, effect_battle_piercing_pending, security_check_started, return_phase, state, counter_depth } = self;
+        let Self { attacker, original_target, effective_target, effective_target_removed, is_blocked, blocker, is_vortex, is_overclock, declaration_committed, cancelled, battle_occurred, battle_defender_deleted, effect_battle_piercing_pending, security_check_started, return_phase, state, counter_depth } = self;
         let mut debug = f.debug_struct("PendingAttack");
         debug.field("attacker", attacker);
         debug.field("original_target", original_target);
@@ -1187,8 +1257,11 @@ impl std::fmt::Debug for PendingAttack {
         debug.field("return_phase", return_phase);
         debug.field("state", state);
         debug.field("counter_depth", counter_depth);
-        if *effective_target_removed_by_dna {
-            debug.field("effective_target_removed_by_dna", effective_target_removed_by_dna);
+        // The label predates the generalisation from DNA to every removal
+        // (§11-2-6); it is kept so a DNA-removed target hashes as before
+        // (`tests/pending_attack_debug_compat.rs`).
+        if *effective_target_removed {
+            debug.field("effective_target_removed_by_dna", effective_target_removed);
         }
         debug.finish()
     }
@@ -1213,12 +1286,16 @@ pub enum SelectionError {
     /// Selection plumbing exists but the resolver has not landed yet.
     /// Temporary — removed when PR3 lands the full decoder.
     NotYetImplemented,
+    /// The game is over: no decision but the between-games play-order choice
+    /// is accepted any more.
+    GameOver,
 }
 
 impl std::fmt::Display for SelectionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NoPendingSelection => write!(f, "no pending selection to resolve"),
+            Self::GameOver => write!(f, "the game is over; no further decision is accepted"),
             Self::WrongPlayer => write!(f, "wrong player for this selection"),
             Self::InvalidAction => write!(f, "action is not in valid_action_ids"),
             Self::NotYetImplemented => {

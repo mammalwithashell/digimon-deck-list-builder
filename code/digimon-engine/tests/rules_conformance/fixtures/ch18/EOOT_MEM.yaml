@@ -1,0 +1,12 @@
+# EOOT_MEM -- Tamer, red, play cost 3.
+#   [End of Opponent's Turn] Gain 1 memory.
+card: EOOT_MEM
+name: Night Watch Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: end_of_opponents_turn
+    summary: "[End of Opponent's Turn] Gain 1 memory."
+    process:
+      - gain_memory: 1

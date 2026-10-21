@@ -269,7 +269,10 @@ pub(crate) fn active_count_page(stack: &crate::resume::ResumeStack) -> Option<&C
     use crate::resume::{ResumeFrame as F, ResumeSelectKind as K};
     match stack.frames.last()? {
         F::RunTail {
-            select_kind: K::CountChoice(page) | K::SourcePrefixCount { page, .. },
+            select_kind:
+                K::CountChoice(page)
+                | K::SourcePrefixCount { page, .. }
+                | K::DeDigivolveCount { page, .. },
             ..
         } => Some(page),
         F::ReplacementBody { inner, .. }
@@ -291,7 +294,10 @@ pub(crate) fn active_count_page_mut(
     use crate::resume::{ResumeFrame as F, ResumeSelectKind as K};
     match stack.frames.last_mut()? {
         F::RunTail {
-            select_kind: K::CountChoice(page) | K::SourcePrefixCount { page, .. },
+            select_kind:
+                K::CountChoice(page)
+                | K::SourcePrefixCount { page, .. }
+                | K::DeDigivolveCount { page, .. },
             ..
         } => Some(page),
         F::ReplacementBody { inner, .. }

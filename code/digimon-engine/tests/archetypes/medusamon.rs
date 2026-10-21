@@ -402,7 +402,7 @@ fn owen_digivolve_does_not_buff_non_trait_ally() {
 // A Raid attacker (BT24-011 Cyclonemon) switching its attack target fires
 // BT21-025 Lamiamon's [Your Turn][OPT] clause to trash the opponent's top
 // security. Gated on having a [Reptile]/[Dragonkin] Digimon on your field.
-// (general_rule.pdf §16-22 Raid; DCGO BT21_025.cs / BT24_011.cs.)
+// (general_rule.pdf §16-23 Raid; DCGO BT21_025.cs / BT24_011.cs.)
 // ═════════════════════════════════════════════════════════════════════════════
 
 /// Happy path: with Lamiamon (Dragonkin) on the field, a real Raid attacker

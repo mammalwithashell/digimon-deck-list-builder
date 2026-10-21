@@ -31,6 +31,30 @@ pub enum EffectSourceKind {
     DigimonAndTamer,
 }
 impl EffectSourceKind {
+    /// The §15-2-1 category of an effect activated by a card of `kind` (its
+    /// native effects; inherited and link effects are classified by the
+    /// callers as Digimon effects, §15-3-2 / §4-3-5).
+    ///
+    /// A Digimon token is a Digimon with card information (§4-21-1), so its
+    /// effects are Digimon effects (§15-2-1-1, "An effect activated by a
+    /// Digimon card, Digimon, or Security Digimon is considered a Digimon
+    /// effect"); DCGO agrees (`AutoProcessing.cs` sets `IsDigimonEffect` for a
+    /// token permanent's effects). `Rule` is kept for genuinely card-less
+    /// processing only. G-ENGINE-TOKEN-EFFECT-SOURCE-KIND-IS-RULE.
+    ///
+    /// `CardKind::Token` means a Digimon token: every registered token prints
+    /// as a Digimon (`token_registry.rs`; no Tamer token exists). A future
+    /// non-Digimon token needs its own kind, not this arm.
+    pub fn for_card_kind(kind: CardKind) -> Self {
+        match kind {
+            CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual | CardKind::Token => {
+                Self::Digimon
+            }
+            CardKind::Tamer => Self::Tamer,
+            CardKind::Option => Self::Option,
+        }
+    }
+
     /// Whether this activated origin belongs to a requested effect category.
     pub fn includes(self, expected: Self) -> bool {
         self == expected || (self == Self::DigimonAndTamer
@@ -206,8 +230,11 @@ pub enum EffectTiming {
     /// `security` flag on the `Effect` struct (builder: `.security_flag()`).
     SecuritySkill,
     /// Observer timing fired once per security reveal **after** the revealed
-    /// card's own effects resolve. Consumed by other-zone effects that watch
-    /// for security checks (e.g. "When security is checked, gain 1 memory").
+    /// card's own effects resolve (§15-16-10-2) and **before** the battle
+    /// against a Security Digimon (§13-1-8-2 precedes §13-1-8-3). Collected
+    /// from BOTH players' battle areas, turn player first. Consumed by
+    /// effects that watch for security checks (e.g. "When security is
+    /// checked, gain 1 memory"; BT20-005's attacker-side "gain <Jamming>").
     /// Mirrors Python's `OnSecurityCheck`.
     OnSecurityCheck,
     /// Attacker-side observer timing fired when one of the controller's
@@ -236,9 +263,21 @@ pub enum EffectTiming {
     EndOfOpponentsNextTurn,
     UntilNextUnsuspend,
     EndOfAttack,
-    /// Fires when a battle resolves (DP comparison complete) but before
-    /// `EndOfAttack`. Used for "if this Digimon wins/loses a battle" effects.
+    /// The end of the battle timing (§14-2-5): "[All Turns] At the end of a
+    /// battle, …". Fires once a battle's triggered effects (`BattleResult`,
+    /// the loser's `[On Deletion]`) have all resolved, before `EndOfAttack`,
+    /// together with the pending processing due at the end of the battle
+    /// (§18-1-1 / §18-1-2).
     EndOfBattle,
+    /// An effect triggered BY the battle (§14-2-4): "When this Digimon wins a
+    /// battle", "When your Digimon deletes an opponent's Digimon in battle"
+    /// (DSL `on_ally_won_battle`) and `<Piercing>` (§16-7-2). It triggers in
+    /// the battle's deletion and pends with the loser's `[On Deletion]` and
+    /// the deletion observers as ONE simultaneous pool, the turn player's
+    /// first (§15-4-3-2, §15-4-3-5-1, §16-7-4; official Q&A Q3931).
+    /// Dispatched with `TriggerSource::BattleResolved`, like `EndOfBattle`.
+    /// G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+    BattleResult,
 
     // Triggered by game events
     OnAllyAttack,
@@ -397,6 +436,19 @@ pub enum EffectTiming {
     /// (cost payment, source-displacement effects, etc.). Rocks core
     /// archetype observer.
     OnDigivolutionCardTrashed,
+    /// Fires when the TOP stacked card of a Digimon is trashed -- ONCE per
+    /// <De-Digivolve> instance carrying every card that instance trashed
+    /// (§16-12-1 "trashed ... starting with the top card"; §16-12-5 "all of
+    /// the cards are considered to be trashed at the same time"), and once by
+    /// <Armor Purge> (§16-19). A top card is not a digivolution card (§4-8-1
+    /// "A digivolution card refers to a card placed under a Digimon"), so these
+    /// trashes do NOT fire `OnDigivolutionCardTrashed`. Mirrors DCGO
+    /// `EffectTiming.WhenTopCardTrashed` (`CardController.cs` `IDegeneration`,
+    /// `ArmorPurge.cs`). The `TriggerContext` carries the host
+    /// (`event_host_permanent` / `event_host_card`) and the trashed cards
+    /// (`moved_card_sets[0].cards`). G-DSL-TOP-CARD-TRASHED-TIMING,
+    /// G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED.
+    OnTopCardTrashed,
     /// Fires ONCE per host permanent after an EFFECT places one or more cards
     /// into that permanent's digivolution cards (the source-ADDED sibling of
     /// `OnDigivolutionCardTrashed`). Mirrors DCGO `EffectTiming.
@@ -408,7 +460,7 @@ pub enum EffectTiming {
     /// consumption and App Fusion (all `cardEffect: null` in DCGO) never fire
     /// it. Rule 15-5-2 (`general_rule.pdf` p.23): one trigger condition met
     /// several times at once triggers once — hence the per-host batch. Rule
-    /// 15-5-3 (p.23-24, whose worked example IS this timing): the placed
+    /// 15-5-3 (p.26, whose worked example IS this timing): the placed
     /// card's own inherited effect triggers when it is itself placed. The
     /// `TriggerContext` carries the host (`event_host_permanent` /
     /// `event_host_card`), the added cards (`moved_card_sets[0].cards` →
@@ -459,7 +511,7 @@ pub enum EffectTiming {
 /// When a Delay Option's body fires relative to the play.
 ///
 /// `MainPhaseActivated` is the standard printed `<Delay>` (RULES_CONTEXT
-/// 16-16): a player-visible `[Main]`-phase action — "By trashing this card
+/// 16-17): a player-visible `[Main]`-phase action — "By trashing this card
 /// after the placing turn, activate the effect below." The body NEVER
 /// auto-fires; the controller takes a `FIELD_EFFECT` action on a later main
 /// phase, trashing the Option as the cost. The remaining variants are
@@ -494,7 +546,7 @@ pub enum DelayTrigger {
     ///     while its `place_self_as_delay_option` step is live. So the name of
     ///     this variant OVERSTATES that card: nothing gates it, and it now
     ///     parks inert for the rest of the game instead of being auto-trashed.
-    ///     That is still the better of the two wrongs -- 16-16-1 says the card
+    ///     That is still the better of the two wrongs -- 16-17-1 says the card
     ///     stays in the battle area, and the missing activation is the
     ///     pre-existing BLOCKED gap, not something introduced here -- but it is
     ///     untested behaviour on a card this change never opened. Do not read
@@ -510,10 +562,10 @@ pub enum DelayTrigger {
     /// `MainPhaseActivated`), and must not be event-dispatched
     /// (`enqueue_event_gated_delayed_options` matches only `OnEvent`).
     ///
-    /// Rules manual 16-16-1 (`general_rule.pdf` p.35): "＜Delay＞ is a keyword
+    /// Rules manual 16-17-1 (`general_rule.pdf` p.38): "＜Delay＞ is a keyword
     /// effect. While a card with this effect is in the battle area, by trashing
     /// that card, the effect specified in ＜Delay＞ will activate." Availability
-    /// is bounded by presence in the battle area and by nothing else — 16-16
+    /// is bounded by presence in the battle area and by nothing else — 16-17
     /// prints no expiry. The previous fallback (`EndOfYourNextTurn`) invented
     /// one and silently trashed the carrier a turn later, taking the printed
     /// option away from the player. G-DELAY-EVENT-WINDOW-AUTOTRASHED.
@@ -537,13 +589,22 @@ pub enum Keyword {
     Alliance,
     BlastDigivolve,
     Save,
-    /// Printed `<Material Save N>` — optional deletion/removal-timed source
-    /// rescue that moves up to N recipe-eligible sources under a Tamer.
+    /// Printed `<Material Save N>` — immediate-type ("would be deleted",
+    /// §16-21-2) optional source rescue that moves exactly `min(N, eligible)`
+    /// recipe-eligible sources under a Tamer (§16-21-3).
     MaterialSave(u8),
     /// Printed `<Digi-Burst N>` — an active effect cost marker. The keyword
     /// parser carries the parameter; card bodies still author the "effect
     /// below" through DSL `digi_burst` or equivalent scripts.
     DigiBurst(u8),
+    /// Printed `<Digisorption -N>` (§16-10). An immediate-type effect of the
+    /// card in the HAND: when a digivolution into it would occur, by
+    /// suspending 1 of your Digimon (optional; the base may be the one,
+    /// §16-10-5) the digivolution cost is reduced by N (floored at 0).
+    /// Each printed instance is offered separately (§16-10-4), so the
+    /// printed-keyword parse keeps duplicates of this variant. Consumed by
+    /// the digivolve reducer chain (`try_prompt_digivolve_reducer_chain_mode`).
+    Digisorption(u8),
     Fortitude,
     Overclock,
     Barrier,
@@ -579,7 +640,7 @@ pub enum Keyword {
     Progress,
 
     /// DCGO `Retaliation` — when this Digimon is deleted in battle, delete
-    /// the battled opponent Digimon. Mandatory trigger (RULES_CONTEXT 16-12).
+    /// the battled opponent Digimon. Mandatory trigger (RULES_CONTEXT 16-13).
     /// Wire-up Phase E §E1 — auto-installed `OnDeletion` trigger gated on
     /// `deletion_cause() == Some(Battle)` that calls
     /// `ctx.battle_opponent_of(self)` to find the winner.
@@ -589,12 +650,12 @@ pub enum Keyword {
     /// other than its own controller's effect, optionally delete another of
     /// the controller's permanents to cancel the deletion. Wire-up Phase E
     /// §E2 — auto-installed `WhenWouldBeDeleted` substitute replacement.
-    /// RULES_CONTEXT 16-31.
+    /// RULES_CONTEXT 16-32.
     Scapegoat,
 
     /// DCGO `Execute` — at end of your turn, this Digimon may attack
     /// (including unsuspended Digimon); when the attack ends, this
-    /// Digimon is deleted. Trigger-type, Optional (RULES_CONTEXT 16-37).
+    /// Digimon is deleted. Trigger-type, Optional (RULES_CONTEXT 16-38).
     /// Wire-up Phase F §F1 — auto-installed `EndOfYourTurn` triggered
     /// effect that grants `MayAttack` + `CanAttackUnsuspended` for the
     /// upcoming attack window and queues an `EndOfAttack` self-deletion.
@@ -610,14 +671,14 @@ pub enum Keyword {
     /// Digimon from leaving.
     Guard,
 
-    /// DCGO `Iceclad` — passive (RULES_CONTEXT 16-34). When this Digimon
+    /// DCGO `Iceclad` — passive (RULES_CONTEXT 16-35). When this Digimon
     /// is in a Digimon-vs-Digimon battle (NOT a security-Digimon battle),
     /// compare digivolution-card count instead of DP. Higher count wins;
     /// equal count = mutual destruction. No `keyword_to_auto_effect` arm —
     /// consumed directly in `combat::resolve_battle` via `has_keyword`.
     Iceclad,
 
-    /// DCGO `MindLink` — active skill on Tamers (RULES_CONTEXT 16-27).
+    /// DCGO `MindLink` — active skill on Tamers (RULES_CONTEXT 16-28).
     /// `[Main]` activation: place this Tamer at the bottom of an own
     /// Digimon's digivolution stack. Target Digimon must have NO Tamer
     /// digivolution sources (DCGO `cardSource.IsTamer && !cardSource.IsFlipped`
@@ -626,7 +687,7 @@ pub enum Keyword {
     /// Wire-up Phase F §F3.
     MindLink,
 
-    /// DCGO `Training` — active skill (RULES_CONTEXT 16-40). `[Main]`
+    /// DCGO `Training` — active skill (RULES_CONTEXT 16-41). `[Main]`
     /// activation usable from battle area OR breeding area: suspend self
     /// (cost) + place top deck card under self at stack bottom, face-down.
     /// Cost requires `is_suspended == false`. Wire-up Phase F §F4.
@@ -643,6 +704,18 @@ pub enum Keyword {
     /// rescued from trash to the TOP of the owner's security stack
     /// (`AddSecurityCard(card, toTop: true)`). BT25-034, BT25-040.
     Ascension,
+}
+
+impl Keyword {
+    /// Whether `other` is the same keyword TYPE, ignoring any numerical value
+    /// or specified card in the icon's brackets (Comprehensive Rules 4.3
+    /// §16-2): `<Fragment (1)>` and `<Fragment (2)>`, `<Decoy>` and
+    /// `<Decoy (Black)>` are the same type. Exact-value equality (`==`) stays
+    /// the right compare wherever the parameter matters (replacement
+    /// resolution, the observation tensor).
+    pub fn same_type(&self, other: &Keyword) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
 }
 
 /// Zone where a card can exist.

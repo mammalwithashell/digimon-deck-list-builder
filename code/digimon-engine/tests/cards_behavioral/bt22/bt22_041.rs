@@ -117,7 +117,7 @@ fn bt22_041_has_cost_reduction_and_self_suspend_unsuspend_clauses() {
     );
     assert!(
         on_suspend
-            .condition
+            .trigger_if
             .as_ref()
             .is_some_and(predicate_has_event_permanent_is_source),
         "OnSuspend must be gated to the suspending event permanent being this Kentaurosmon"

@@ -128,6 +128,36 @@ impl Game {
         None
     }
 
+    /// Whether `handle` is the TOP card of a permanent -- of a battle-area
+    /// stack or of the breeding area -- i.e. the card that IS the permanent.
+    ///
+    /// §4-6-3: "A DUAL card placed on the field is treated as a Digimon. It
+    /// can't be referenced as an Option card placed on the field." That is the
+    /// DUAL card as a permanent (its example: digivolved on top of a card). A
+    /// card lying in a permanent's digivolution cards or link cards is not
+    /// that permanent: referenced AS an Option card ("1 Option card from any of
+    /// your Digimon's digivolution cards") a DUAL card there reads its Option
+    /// information (§4-6-6-2; official Q&A Q6395 -- LadyDevimon BT25-083
+    /// trashes BeelStarmon BT25-085 from digivolution cards and uses it --
+    /// and Q6404).
+    pub(crate) fn card_is_permanent_top_card(
+        &self,
+        handle: crate::card_source::CardHandle,
+    ) -> bool {
+        let target_index = handle.0;
+        self.players.iter().any(|player| {
+            player
+                .battle_area
+                .iter()
+                .chain(player.breeding_area.iter())
+                .any(|perm| {
+                    perm.card_sources
+                        .last()
+                        .is_some_and(|c| c.card_index == target_index)
+                })
+        })
+    }
+
     /// Resolve a `CardHandle` to its live `CardSource` instance.
     pub fn card_source_for_handle(
         &self,

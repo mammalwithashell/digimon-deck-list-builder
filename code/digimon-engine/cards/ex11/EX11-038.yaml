@@ -48,7 +48,7 @@ effects:
             - draw: { of: you, count: 1 }
 
   - when: on_move
-    condition:
+    trigger_if:
       event_permanent_is_source: true
     summary: "[When Moving] Trash 1 Mineral/Rock from hand or own Digimon sources to Draw 1"
     process:
@@ -70,9 +70,10 @@ effects:
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:
+      trashed_source_card_id_is: EX11-038
+    trigger_if:
       all_of:
         - event_target_owner: you
-        - trashed_source_card_id_is: EX11-038
         - any_of:
             - host_permanent_trait_has: Mineral
             - host_permanent_trait_has: Rock

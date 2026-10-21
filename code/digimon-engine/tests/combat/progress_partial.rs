@@ -47,7 +47,7 @@ fn progress_attacker_does_not_suppress_security_skill_drain() {
     // Sanity check: an attacker with Progress still causes the defender's
     // SecuritySkill phase to run. No revealed card carries a SecuritySkill
     // effect in this fixture — this test verifies the phase transitions
-    // through SecuritySkillDrain → BattleResolved normally, as a regression
+    // through SecuritySkillDrain → OnSecurityCheckDrain → BattleResolved normally, as a regression
     // guard against accidentally re-adding a gate there.
     let mut r = DebugRunner::builder()
         .add_card(fighter_with_keywords("ATK", 6000, vec![Keyword::Progress]))
@@ -97,11 +97,19 @@ fn progress_attacker_does_not_suppress_security_skill_drain() {
 }
 
 #[test]
-fn select_opponent_permanent_excludes_progress_attacker() {
+fn select_opponent_permanent_offers_progress_attacker() {
     // Setup: own player P0 attacks with a Progress carrier. The
     // defending side (P1) tries to select one of P0's Digimon via
-    // `select_opponent_permanent`. The Progress carrier must be
-    // filtered out; the non-Progress sibling must still be selectable.
+    // `select_opponent_permanent`. Both the Progress carrier and the
+    // non-Progress sibling are selectable.
+    //
+    // Inverted 2026-10-16 (Plan 4 Task 24 fix round 2, controller ruling):
+    // this test used to assert the attacker was filtered out. §15-15-5-3
+    // ("'Isn't affected by effects' cards can still be chosen for effects")
+    // keeps it choosable; <Progress> (§16-39-1) only makes the chosen
+    // attacker unaffected (one-shot processing skipped by
+    // `can_affect_permanent`, a modifier held until the attack ends).
+    // DCGO `SelectPermanentEffect` has no `CanNotBeAffected` candidacy filter.
 
     use digimon_engine::card_source::CardHandle;
     use digimon_engine::effect_context::EffectContext;
@@ -123,7 +131,7 @@ fn select_opponent_permanent_excludes_progress_attacker() {
         attacker: progress,
         original_target: AttackTarget::Player(1),
         effective_target: AttackTarget::Player(1),
-        effective_target_removed_by_dna: false,
+        effective_target_removed: false,
         is_blocked: false,
         blocker: None,
         is_vortex: false,
@@ -140,8 +148,7 @@ fn select_opponent_permanent_excludes_progress_attacker() {
     });
 
     // Opponent (P1) installs a selection whose filter accepts ALL P0 Digimon.
-    // After Task 4's gate, the Progress attacker should not appear in the
-    // candidate list.
+    // The Progress attacker is a candidate like any other (§15-15-5-3).
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, 1); // selecting player = 1
         ctx.select_opponent_permanent(
@@ -157,9 +164,7 @@ fn select_opponent_permanent_excludes_progress_attacker() {
 
     // `PendingSelection.valid_action_ids` holds the decoder-accepted
     // action IDs for the installed selection. Its length is the count
-    // of selectable candidates. With Progress gating the attacker out
-    // of the opponent's candidate pool, we should see exactly one
-    // selectable permanent (the sibling).
+    // of selectable candidates: the Progress attacker and the sibling.
     let pending = r
         .game
         .pending_selection
@@ -167,8 +172,8 @@ fn select_opponent_permanent_excludes_progress_attacker() {
         .expect("selection should be installed");
     assert_eq!(
         pending.valid_action_ids.len(),
-        1,
-        "exactly one candidate should remain after Progress exclusion; \
+        2,
+        "the Progress attacker and the sibling are both candidates (§15-15-5-3); \
          got {} action IDs: {:?}",
         pending.valid_action_ids.len(),
         pending.valid_action_ids,

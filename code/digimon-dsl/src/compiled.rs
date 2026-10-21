@@ -483,6 +483,9 @@ pub struct CompiledPredicate {
     /// Direction-specific legality; see PredicateSpec::can_unsuspend.
     #[serde(default)]
     pub can_unsuspend: Option<bool>,
+    /// See `PredicateSpec::owner_can_add_security` (BT24-040).
+    #[serde(default)]
+    pub owner_can_add_security: Option<bool>,
     /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
     #[serde(default)]
     pub can_attack: Option<CompiledCanAttack>,
@@ -565,6 +568,9 @@ pub struct CompiledPredicate {
     pub source_is_unsuspended: Option<bool>,
     pub is_source_permanent: Option<bool>,
     pub source_name_contains: Option<String>,
+    /// Exact match on the carrier's top-card rules names (synthesized
+    /// identity). See `PredicateSpec::source_name_is`.
+    pub source_name_is: Option<String>,
     pub source_permanent_trait_has: Option<String>,
     pub is_face_down: Option<bool>,
     pub is_bottom_source: Option<bool>,
@@ -1158,6 +1164,11 @@ pub struct CompiledTriggeredClause {
     pub scope: CompiledScope,
     pub active_when: Option<CompiledPredicate>,
     pub condition: Option<CompiledPredicate>,
+    /// The trigger qualifier (`trigger_if:`), decided when the event triggers
+    /// the effect (§15-8-3-1, §15-8-3-4) and re-checked at activation
+    /// (§15-4-4-5). See `TriggeredClause::trigger_if`.
+    #[serde(default)]
+    pub trigger_if: Option<CompiledPredicate>,
     /// Per-timing condition overrides (G-SHARED-OPT-HETEROGENEOUS-TIMING).
     /// When this clause fires from timing `T`, the matching entry's condition
     /// is AND-ed onto the clause-level gates; timings with no entry use only
@@ -1405,7 +1416,8 @@ pub enum CompiledTiming {
     OnDeletion,
     OnAnyDeletion,
     /// Board-wide battle-winner observer (`when: on_ally_won_battle`); lowers to
-    /// `EffectTiming::EndOfBattle` with NO forced self-filter. Scope-gate via
+    /// `EffectTiming::BattleResult` (§14-2-4: pends with the loser's
+    /// [On Deletion]) with NO forced self-filter. Scope-gate via
     /// `active_when:` (`event_winner_owner`, `event_winner_trait_has`).
     /// G-DSL-BATTLE-WINNER-BOARDWIDE.
     OnAllyWonBattle,
@@ -1430,6 +1442,10 @@ pub enum CompiledTiming {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// The TOP stacked card of a Digimon was trashed (<De-Digivolve>, once per
+    /// instance; <Armor Purge>) -- `when: on_top_card_trashed`; lowers to
+    /// `EffectTiming::OnTopCardTrashed`. G-DSL-TOP-CARD-TRASHED-TIMING.
+    OnTopCardTrashed,
     /// An EFFECT placed cards into a permanent's digivolution cards
     /// (`when: on_add_digivolution_cards`); lowers to
     /// `EffectTiming::OnAddDigivolutionCards`. Scope-gate via `active_when:`
@@ -1875,7 +1891,8 @@ pub enum CompiledStep {
     /// Multi-count / multi-Tamer sibling of
     /// `TrashBottomFaceDownSourceUnderTamer`. Trash `count` bottom-face-down
     /// digivolution sources total, distributed across `of`'s Tamers, each pick
-    /// surfaced as a real selection. Compiled from
+    /// surfaced as a real selection; the chosen cards are trashed together as
+    /// one event after the last pick (§15-5-2). Compiled from
     /// `trash_bottom_face_down_sources_under_tamers`; used as an activation cost
     /// by BT25-035 Cougarmon. `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER`.
     TrashBottomFaceDownSourcesUnderTamers {
@@ -2219,6 +2236,10 @@ pub enum CompiledStep {
     PlacePermanentBottomSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
         target: CompiledBindingRef,
+        /// Place into the placed card's OWNER's security (ignores `of`;
+        /// §3-1-3-8). BT24-040 Venusmon.
+        #[serde(default)]
+        to_owner: bool,
     },
     PlacePermanentOnSecurity {
         of: CompiledPlayerRef,
@@ -3066,6 +3087,17 @@ pub enum CompiledStep {
     DeleteReceiptFinalize {
         receipt: u64,
     },
+    /// Engine-only: after a "by placing X as the bottom security card, it
+    /// doesn't leave" payment (`PlacePermanentBottomSecurityAndCancelReplacement`),
+    /// cancel the current replacement only if card `card` actually reached
+    /// `player`'s security stack (§15-7-1 / §15-7-2), or was processed under
+    /// Digi-Egg / token rules (§15-1-9) — read from the open
+    /// `Game::security_placement_receipts` entry for `card`. Runs behind any
+    /// prompt the placement parked on (the placed Digimon's own would-leave
+    /// shield).
+    SecurityPlacementCancelFinalize {
+        card: u16,
+    },
     /// Engine-only paid prevention, matched to the carrier's actual physical deletion.
     PaidDeletionPreventionFinalize {
         receipt: u64,
@@ -3312,6 +3344,7 @@ mod tests {
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 condition: None,
+                trigger_if: None,
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
@@ -3373,6 +3406,7 @@ mod tests {
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 condition: Some(pred),
+                trigger_if: None,
                 timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,

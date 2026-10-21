@@ -111,9 +111,9 @@ effects:
     active_when: { your_turn: true }
     summary: "[Your Turn] When your Digimon are played/digivolve and any are blue, this Digimon may digivolve into [Apollomon] in hand with cost -2"
     condition:
-      all_of:
-        - event_target_owner: you
-        - event_card_color_has: [blue]
+      event_card_color_has: [blue]
+    trigger_if:
+      event_target_owner: you
     process:
       - select_hand:
           of: you

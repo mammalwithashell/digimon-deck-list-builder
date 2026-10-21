@@ -90,9 +90,12 @@ fn base_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(digimon("APP-HOST", CardColor::Black, &["Appmon"]))
         .add_card(digimon("APP-OTHER", CardColor::Black, &["Appmon"]))
         .add_card(digimon("APP-LINKED", CardColor::Black, &["Appmon"]))
+        .link_requirement("APP-LINKED", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(digimon("APP-LINK", CardColor::Black, &["Appmon"]))
+        .link_requirement("APP-LINK", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(digimon("RED-PLAIN", CardColor::Red, &["Beast"]))
         .add_card(digimon("PLAIN", CardColor::Black, &["Beast"]))
+        .link_requirement("PLAIN", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(appmon_tamer("APP-TAMER"))
         .add_card(make_test_card("FILL", "Fill"))
 }
@@ -240,7 +243,7 @@ fn ex10_070_delay_links_appmon_from_trash_to_that_host_free() {
         .pending_selection_view()
         .expect("effect-trashed link card offers the optional <Delay>");
     assert_eq!(view.kind, SelectionKind::Replacement);
-    assert!(runner.pending_is_optional(), "16-16-2");
+    assert!(runner.pending_is_optional(), "16-17-2");
     runner
         .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
         .expect("accept");
@@ -332,7 +335,7 @@ fn ex10_070_delay_not_offered_when_host_is_deleted() {
     assert!(delay_perm_state(&runner, 0).is_some(), "stays parked");
 }
 
-/// 16-16-2: the <Delay> is optional; declining keeps EX10-070 parked.
+/// 16-17-2: the <Delay> is optional; declining keeps EX10-070 parked.
 #[test]
 fn ex10_070_delay_declined_stays_parked() {
     let (mut runner, _host) = stage_link_trash();

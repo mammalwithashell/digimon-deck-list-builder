@@ -37,10 +37,10 @@ impl Game {
         taken.clear_reveal_overlay();
         match position {
             crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).deck.push(taken);
+                self.player_mut(player_id).put_on_deck_top(taken);
             }
             crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).deck.insert(0, taken);
+                self.player_mut(player_id).insert_in_deck(0, taken);
             }
             crate::enums::StackPosition::Random => {
                 use rand::Rng;
@@ -50,7 +50,7 @@ impl Game {
                 } else {
                     self.rng.gen_range(0..=deck_len)
                 };
-                self.player_mut(player_id).deck.insert(idx, taken);
+                self.player_mut(player_id).insert_in_deck(idx, taken);
             }
         }
         true
@@ -215,15 +215,19 @@ impl Game {
         let top_is_egg = top.card_kind(&self.card_data) == CardKind::DigiEgg;
         if top_is_egg {
             // Rule 3-1-3-9-2: a Digi-Egg cannot enter hand.
-            self.player_mut(top_owner).digitama_deck.insert(0, top);
+            self.player_mut(top_owner).insert_in_digi_egg_deck(0, top);
         } else {
-            self.player_mut(top_owner).hand.push(top);
+            self.player_mut(top_owner).put_in_hand(top);
         }
 
         // Sources below the top go to each source's owner's trash and fire
         // OnDigivolutionCardTrashed (digivolution stack sources only — not
         // linked_cards which are Tamer equipment and separate semantic
         // category). Owner-routed.
+        // All of them are trashed at the same time: ONE event (§15-5-2),
+        // enqueued without draining — the leave-field observers below belong
+        // to the same return and nothing activates mid-process (§15-8-3-2).
+        let mut trashed = Vec::new();
         for card in sources {
             let source_card = card.handle();
             // Owner-routed: each source returns to its OWN owner's trash,
@@ -231,20 +235,23 @@ impl Game {
             // attribution still uses `handle.player` (the host's controller)
             // for event-source-player binding.
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
-            self.fire_digivolution_card_trashed(
-                handle.player,
-                handle,
-                top_handle,
-                source_card,
-                crate::trigger_context::EventCause::Rule,
-            );
+            self.player_mut(owner).put_in_trash(card);
+            trashed.push(super::TrashedSource {
+                player: handle.player,
+                host: handle,
+                host_card: top_handle,
+                card: source_card,
+            });
         }
+        self.enqueue_digivolution_cards_trashed(
+            trashed,
+            crate::trigger_context::EventCause::Rule,
+        );
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
             // Owner-routed: linked cards return to their own owner's trash.
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
         }
         // Phase 8 Task 4: fire OnLinkedCardTrashed if the returning host was
         // carrying any linked cards (they cannot ride the host back to hand).
@@ -255,7 +262,6 @@ impl Game {
                     crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
                 );
             }
-            self.drain_effect_queue();
         }
 
         self.mark_until_condition_dirty();
@@ -263,6 +269,8 @@ impl Game {
         // OnLeaveField: the permanent left the battle area by return-to-hand.
         if let Some(snapshot) = leave_snapshot {
             self.fire_on_leave_field(handle, snapshot);
+        } else {
+            self.maybe_drain_effect_queue();
         }
         // OnAddToHand: the returned top card entered its owner's hand by effect.
         // (Digivolution sources went to trash, not hand, so only the top card
@@ -500,28 +508,33 @@ impl Game {
             let host_card = top.handle();
             self.insert_card_into_deck(top_owner, top, position);
 
-            // Sources below the top → each source's OWN owner's trash.
-            // Trigger uses Track A's fire_digivolution_card_trashed helper
-            // which carries the EventCause for downstream payload binding.
+            // Sources below the top → each source's OWN owner's trash, all
+            // at the same time: ONE event (§15-5-2), enqueued without
+            // draining (§15-8-3-2; the leave-field observers below belong to
+            // the same return).
+            let mut trashed = Vec::new();
             for card in perm.card_sources {
                 let source_card = card.handle();
                 let owner = card.owner;
-                self.player_mut(owner).trash.push(card);
-                self.fire_digivolution_card_trashed(
-                    handle.player,
-                    handle,
+                self.player_mut(owner).put_in_trash(card);
+                trashed.push(super::TrashedSource {
+                    player: handle.player,
+                    host: handle,
                     host_card,
-                    source_card,
-                    crate::trigger_context::EventCause::Rule,
-                );
+                    card: source_card,
+                });
             }
+            self.enqueue_digivolution_cards_trashed(
+                trashed,
+                crate::trigger_context::EventCause::Rule,
+            );
         }
 
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
             // Owner-routed: linked cards return to their own owner's trash.
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
         }
         // Phase 8 Task 4: fire OnLinkedCardTrashed if the returning host was
         // carrying any linked cards.
@@ -532,12 +545,13 @@ impl Game {
                     crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
                 );
             }
-            self.drain_effect_queue();
         }
 
         // OnLeaveField: the permanent left the battle area by return-to-deck.
         if let Some(snapshot) = leave_snapshot {
             self.fire_on_leave_field(handle, snapshot);
+        } else {
+            self.maybe_drain_effect_queue();
         }
         true
     }

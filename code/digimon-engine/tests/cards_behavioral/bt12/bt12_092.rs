@@ -274,7 +274,7 @@ fn bt12_092_clause2_gates_on_event_permanent_is_source() {
         .next()
         .expect("clause 2 must exist");
     let cond = clause2
-        .condition
+        .trigger_if
         .as_ref()
         .expect("clause 2 must gate on the suspended permanent being this card");
     assert!(

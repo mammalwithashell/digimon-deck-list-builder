@@ -4,9 +4,9 @@
 //! Rules sources:
 //! - `docs/RULES_CONTEXT.md` section 7: ordinary Options resolve and trash
 //!   unless an effect places them elsewhere.
-//! - `docs/RULES_CONTEXT.md` section 16-16: Delay Options stay in the battle
+//! - `docs/RULES_CONTEXT.md` section 16-17: Delay Options stay in the battle
 //!   area and activate by trashing themselves.
-//! - `docs/RULES_CONTEXT.md` sections 4-7 and 8: Link/Plug-In cards attach to
+//! - `docs/RULES_CONTEXT.md` sections 4-9 and 8: Link/Plug-In cards attach to
 //!   a carrier and are not ordinary standalone battle-area permanents while
 //!   linked.
 
@@ -108,10 +108,9 @@ impl Game {
         else {
             return false;
         };
-        let insert_at = link_index as usize;
-        let link_max =
-            (5 + self.modifiers.link_max_delta(carrier)).clamp(0, u8::MAX as i32) as usize;
-        insert_at <= host.linked_cards.len() && host.linked_cards.len() < link_max
+        // §4-9-5: a carrier at its link limit (`Game::link_limit`, base 1)
+        // still takes a Plug-In; the install replaces a link card.
+        (link_index as usize) <= host.linked_cards.len()
     }
 
     /// Install an Option as a Delay field permanent.
@@ -125,7 +124,7 @@ impl Game {
         // Same narrowing as `place_self_as_delay_option_permanent` — see the
         // long comment there. A card with no `kind: delay` clause has its
         // `<Delay>` window owned elsewhere (a `kind: replacement` clause), so
-        // the carrier parks indefinitely (16-16-1) instead of inheriting a
+        // the carrier parks indefinitely (16-17-1) instead of inheriting a
         // fabricated `EndOfYourNextTurn` auto-trash.
         // G-DELAY-EVENT-WINDOW-AUTOTRASHED.
         let trigger = self
@@ -156,7 +155,8 @@ impl Game {
                 card: placed_card,
             },
         );
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         handle
     }
 
@@ -183,7 +183,8 @@ impl Game {
                 card: placed_card,
             },
         );
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         handle
     }
 
@@ -197,6 +198,7 @@ impl Game {
         if !self.can_insert_plug_in_at(carrier, link_index) {
             return false;
         }
+        self.trash_forced_link_replacement(carrier);
         let Some(host) = self
             .player_mut(carrier.player)
             .battle_area
@@ -204,7 +206,7 @@ impl Game {
         else {
             return false;
         };
-        let insert_at = link_index as usize;
+        let insert_at = (link_index as usize).min(host.linked_cards.len());
         let placed_card = card.handle();
         host.linked_cards.insert(insert_at, card);
         self.enqueue_triggered(
@@ -216,7 +218,8 @@ impl Game {
                 card: placed_card,
             },
         );
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         for pid in 0..self.players.len() {
             self.enqueue_triggered(
                 EffectTiming::OnLink,
@@ -227,7 +230,8 @@ impl Game {
                 },
             );
         }
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         true
     }
 
@@ -298,16 +302,45 @@ impl Game {
         if option_handle == new_carrier {
             return false;
         }
-        if option_handle.player == new_carrier.player && option_handle.index < new_carrier.index {
-            new_carrier.index = new_carrier.index.saturating_sub(1);
-        }
+        // Validated against the carrier as it stands now (the orphan has not
+        // left yet, so `new_carrier` still addresses it).
         if !self.can_insert_plug_in_at(new_carrier, link_index) {
             return false;
         }
+        // §4-9-5 / §10-1-3-1: at the carrier's link limit with a choice, its
+        // controller (the linking player) picks the replaced link cards first;
+        // the relink resumes after the picks (`LinkTrashPurpose::RelinkPlugIn`).
+        let purpose = crate::game_actions::LinkTrashPurpose::RelinkPlugIn {
+            option: option_handle,
+            carrier: new_carrier,
+            link_index,
+        };
+        if self.park_link_replacement_choice(new_carrier.player, new_carrier, purpose) {
+            return true;
+        }
+        // A replacement with nothing to choose may have trashed link cards.
+        let link_index = link_index.min(
+            self.player(new_carrier.player).battle_area[new_carrier.index as usize]
+                .linked_cards
+                .len() as u8,
+        );
+        if option_handle.player == new_carrier.player && option_handle.index < new_carrier.index {
+            new_carrier.index = new_carrier.index.saturating_sub(1);
+        }
+        // The orphan's slot leaves the battle area: clear its identity and
+        // re-key every later slot's modifiers, pending attack and queued
+        // effects (the canonical removal sequence), so a carrier above it
+        // keeps its own <Link +> after the Vec compacts.
+        self.clear_permanent_full(option_handle);
+        self.modifiers.expire_player_on_permanent_leave(option_handle);
         let permanent = self
             .player_mut(option_handle.player)
             .battle_area
             .remove(option_handle.index as usize);
+        self.modifiers
+            .shift_after_battle_area_remove(option_handle.player, option_handle.index);
+        self.shift_pending_attack_after_battle_area_remove(option_handle.player, option_handle.index);
+        self.shift_effect_queue_after_battle_area_remove(option_handle.player, option_handle.index);
         let card = permanent
             .card_sources
             .into_iter()
@@ -395,7 +428,7 @@ impl Game {
         // Any sources beneath the Option's top (not expected for a single-card
         // Option) route to trash — they are not part of the moved card.
         for source in cards {
-            self.player_mut(source.owner).trash.push(source);
+            self.player_mut(source.owner).put_in_trash(source);
         }
 
         // Seat the moved card under the target (re-resolved by stable identity;
@@ -418,7 +451,7 @@ impl Game {
     /// trash observers — the card MOVES into the stack, it is not trashed.
     ///
     /// Returns `false` (routing `card` to its owner's trash) if `target` is not
-    /// a live battle-area permanent or is a token (general_rule 4-18-3 forbids
+    /// a live battle-area permanent or is a token (general_rule 4-21-3 forbids
     /// stacking cards with tokens). Selecting a token may still be legal; the
     /// attempted placement fails and the resolving Option goes to trash.
     pub(crate) fn seat_card_source_under_permanent(
@@ -437,7 +470,7 @@ impl Game {
             .filter(|perm| !perm.top_card().is_token)
             .map(|perm| perm.top_card().handle())
         else {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
             return false;
         };
         let target_now = self.players.iter().enumerate().find_map(|(pid, player)| {
@@ -451,7 +484,7 @@ impl Game {
                 })
         });
         let Some(target_now) = target_now else {
-            self.player_mut(card.owner).trash.push(card);
+            self.player_mut(card.owner).put_in_trash(card);
             return false;
         };
         card.face_down = face_down;
@@ -497,9 +530,9 @@ impl Game {
         };
         let card = top.handle();
         for source in cards {
-            self.player_mut(source.owner).trash.push(source);
+            self.player_mut(source.owner).put_in_trash(source);
         }
-        self.player_mut(top.owner).trash.push(top);
+        self.player_mut(top.owner).put_in_trash(top);
         self.enqueue_triggered(
             EffectTiming::OnOptionTrashed,
             TriggerSource::OptionTrashed {
@@ -509,7 +542,8 @@ impl Game {
                 last_state,
             },
         );
-        self.drain_effect_queue();
+        // §15-8-3-2: held while an effect placing/trashing this Option resolves.
+        self.maybe_drain_effect_queue();
         true
     }
 
@@ -519,8 +553,8 @@ impl Game {
     // auto-fired by the start/end-of-turn scan. Its controller takes a
     // player-visible `[Main]`-phase `FIELD_EFFECT` action — "By trashing this
     // card after the placing turn, activate the effect below" (RULES_CONTEXT
-    // 16-16). The activation is optional (16-16-2) and unavailable on the
-    // placing turn (16-16-3).
+    // 16-17). The activation is optional (16-17-2) and unavailable on the
+    // placing turn (16-17-3).
 
     /// True when the permanent at `option` is a standard `<Delay>` Option
     /// whose placing turn has passed — i.e. its `<Delay>` body may be

@@ -78,7 +78,7 @@ effects:
   - when: on_ally_played
     active_when: { your_turn: true }
     summary: "[Your Turn] When you play another Lucemon/Royal Knight Digimon, delete all opponent level 4 or lower Digimon"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon

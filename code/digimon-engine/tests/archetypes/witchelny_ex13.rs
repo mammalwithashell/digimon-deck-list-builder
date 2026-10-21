@@ -216,7 +216,7 @@ fn fire(r: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
 /// **C1 Witchelny discount route** — EX13-025 Candlemon + EX13-029
 /// FlameWizardmon. Candlemon's (Rule) Trait [Witchelny] unlocks the printed
 /// "[Digivolve] Lv.3 w/[Witchelny] in text: Cost 2" route. FlameWizardmon's
-/// [When Digivolving] then pays its top security (4 → 3, 15-7-4), gives
+/// [When Digivolving] then pays its top security (4 → 3, 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]), gives
 /// Magnadramon -4000 (12000 → 8000) and — now at 3 security — deletes the
 /// 4000-DP Tapirmon.
 #[test]
@@ -554,15 +554,14 @@ fn c5_candlemon_main_phase_trash_triggers_mistymon_and_recycles_flamewizardmon()
 /// (4 → 3), Magnadramon -4000, then deletes Tapirmon. The attack then checks
 /// 1 opponent security.
 ///
-/// FAILS today: FlameWizardmon's [WD] resolves INSIDE DemiMeramon's body —
-/// before its "if this effect digivolved, trash your top security card" — so
-/// the [WD] sees 4 security (no delete) instead of 3. general_rule.pdf
-/// 15-8-3-2 and DCGO (EX13_004.cs `successProcess` runs right after
-/// `PlayCardClass.PlayCard()` merely *stacks* the [WD] via
-/// `autoProcessing.StackSkillInfos`) both put the trash first. Filed as
-/// G-ENGINE-EFFECT-DIGIVOLVE-WD-DRAINS-MID-BODY (docs/RUST_ENGINE_GAPS.md).
+/// FlameWizardmon's [WD] waits for DemiMeramon's whole body -- including its
+/// "if this effect digivolved, trash your top security card" -- so it sees 3
+/// security and deletes. general_rule.pdf 15-8-3-2 and DCGO (EX13_004.cs
+/// `successProcess` runs right after `PlayCardClass.PlayCard()` merely
+/// *stacks* the [WD] via `autoProcessing.StackSkillInfos`) both put the trash
+/// first. G-ENGINE-EFFECT-DIGIVOLVE-WD-DRAINS-MID-BODY (resolved; it used to
+/// resolve the [WD] inside the body, at 4 security, with no delete).
 #[test]
-#[ignore = "G-ENGINE-EFFECT-DIGIVOLVE-WD-DRAINS-MID-BODY: effect-initiated digivolve drains [When Digivolving] mid-body (15-8-3-2)"]
 fn c6_demimeramon_attack_climbs_into_flamewizardmon_for_1_and_chains_its_wd() {
     let mut r = start(builder(5).hand(0, &[FLAMEWIZ]).memory(5));
     let atk = r.place_stack(0, &[DEMIMERAMON, CANDLEMON]);

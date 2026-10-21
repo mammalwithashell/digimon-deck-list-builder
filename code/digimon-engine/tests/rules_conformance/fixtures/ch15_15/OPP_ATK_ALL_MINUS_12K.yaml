@@ -1,0 +1,27 @@
+# OPP_ATK_ALL_MINUS_12K -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   [All Turns] When an opponent's Digimon attacks, all of your opponent's
+#   Digimon get -12000 DP until the end of their turn.
+# An opponent's effect that reaches a <Progress> attacker without choosing it
+# (`for_each` over the opponent's Digimon, the AD1-025 idiom).
+card: OPP_ATK_ALL_MINUS_12K
+name: Crushfieldmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: on_opponent_attack
+    summary: "[All Turns] When an opponent's Digimon attacks, all of your opponent's Digimon get -12000 DP until the end of their turn."
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: victim
+          body:
+            - add_dp_modifier:
+                target: victim
+                value: -12000
+                expiry: end_of_opponents_turn

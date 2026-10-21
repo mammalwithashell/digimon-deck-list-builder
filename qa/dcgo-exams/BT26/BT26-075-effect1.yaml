@@ -104,7 +104,9 @@ steps:
   # End of attack: <Execute> deletes Scourge; <Ascension> alone -> yes.
   - actor: 0
     do: { select: { yes: true } }
-  # Sim-only phase exit (our EndOfTurnAction park; nothing on the wire).
+  # Retired window-exit PASS: <Execute>'s attack is its own decision in the
+  # [End of Your Turn] pool (Comprehensive Rules 4.3 §16-38-2), so the end of
+  # turn continues by itself after it; the harness lowers this step to nothing.
   - actor: 0
     do: { pass: {} }
   # One step past: P1's turn-6 breeding decision.
@@ -125,10 +127,11 @@ assert:
   # THE CLAUSE: the <Execute> attack checked p1's top security (5 -> 4,
   # ST1-02 trashed); at the end of that attack Scourge was deleted and its
   # <Ascension> put it on top of p0's security (5 -> 6). Liollmon's add was
-  # declined.
+  # declined. Read after the attack: the end of turn has already continued
+  # into turn 6 (§16-38-2 / §16-44-1).
   - at: 16
     that:
-      turn: 5
+      turn: 6
       p0.security: 6
       p1.security: 4
       p1.trash: [ST1-02]

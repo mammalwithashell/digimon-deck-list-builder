@@ -557,6 +557,34 @@ pub(crate) fn active_candidate_identities(
         .collect()
 }
 
+/// Whether a passive "can't be deleted" restriction (`CannotBeDestroyed` /
+/// `CannotBeDestroyedByEffect` / ..., a mandatory `PassiveCancel` candidate)
+/// would stop `handle`'s deletion by `cause`: the deletion can't be executed
+/// at all. Read-only (no side effects; the dispatcher's own collection).
+///
+/// Used for the payability of a "by deleting" optional processing condition
+/// (§15-7-4, Ver. 4.3: "If executing an optional processing condition's
+/// contents isn't possible, then the player can't choose to execute them"),
+/// e.g. `<Overclock>`'s cost candidates. An optional or effect-based
+/// prevention (`<Armor Purge>`, a "would be deleted, instead" effect) does
+/// not make the deletion impossible: it is a replacement of an executable
+/// deletion (§15-8-5-2), so it is not excluded here and the caller reads the
+/// deletion's outcome instead.
+pub(crate) fn deletion_passively_prevented(
+    game: &crate::game::Game,
+    handle: PermanentHandle,
+    cause: ReplacementCause,
+) -> bool {
+    collect_candidates(
+        game,
+        EffectTiming::WhenWouldBeDeleted,
+        ReplacementSubject::Permanent(handle),
+        cause,
+    )
+    .iter()
+    .any(|c| matches!(c.kind, CandidateKind::PassiveCancel))
+}
+
 fn collect_candidates(
     game: &crate::game::Game,
     timing: EffectTiming,
@@ -648,7 +676,7 @@ fn collect_candidates_inner(
                     continue;
                 }
                 // A link effect (`.linked()`) applies to the Digimon this card
-                // is linked to (general_rule.pdf 4-2-6) — `push_linked_from_perm`
+                // is linked to (general_rule.pdf 4-3-5) — `push_linked_from_perm`
                 // offers it there — never to the card's own permanent. Mirrors
                 // the top-card skip in `enqueue_from_permanent`.
                 if effect.linked {
@@ -694,7 +722,7 @@ fn collect_candidates_inner(
                 // Phase F Task 1: cause-aware candidate filter for WhenWouldBe*
                 // timings. Runs AFTER `condition`. Used by `<Scapegoat>` to drop
                 // the candidate before the outer accept dialog parks on
-                // `ReplacementCause::OwnEffect` (RULES_CONTEXT 16-31) and on the
+                // `ReplacementCause::OwnEffect` (RULES_CONTEXT 16-32) and on the
                 // no-substitute case (DCGO `HasMatchConditionPermanent`).
                 if let Some(rcond) = &effect.replacement_condition {
                     let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)

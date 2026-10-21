@@ -118,10 +118,10 @@ fn ex12_035_on_play_bottom_decks_opponent_with_lte_source_count() {
 /// `<Decode>` is SELF-scoped: another permanent leaving is not this Digimon's
 /// trigger, and its digivolution cards are not this Digimon's payload.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 scopes the
 /// trigger the same way. DCGO agrees:
 /// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
 /// `CanTriggerWhenRemoveField`, which
@@ -156,7 +156,7 @@ fn ex12_035_decode_does_not_open_a_window_for_another_permanents_leave() {
 
     assert!(
         runner.game.pending_selection.is_none(),
-        "16-35-1: <Decode> triggers only when the Digimon WITH THIS EFFECT          would leave the battle area — MetalGarurumon is still on the field          and the leaving Digimon carries no Decode (got: {:?})",
+        "16-36-1: <Decode> triggers only when the Digimon WITH THIS EFFECT          would leave the battle area — MetalGarurumon is still on the field          and the leaving Digimon carries no Decode (got: {:?})",
         runner
             .game
             .pending_selection
@@ -169,17 +169,17 @@ fn ex12_035_decode_does_not_open_a_window_for_another_permanents_leave() {
     );
     assert!(
         !field_contains(&runner, 0, "VB-SRC"),
-        "16-35-1: the Decode payload comes from THAT DIGIMON'S digivolution          cards — MetalGarurumon's Decode may not reach into another          permanent's stack"
+        "16-36-1: the Decode payload comes from THAT DIGIMON'S digivolution          cards — MetalGarurumon's Decode may not reach into another          permanent's stack"
     );
 }
 
 /// POSITIVE control — the carrier's OWN non-battle leave must still open its
 /// `<Decode>` window and play the named source.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 scopes the
 /// trigger the same way. DCGO agrees:
 /// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
 /// `CanTriggerWhenRemoveField`, which
@@ -202,7 +202,7 @@ fn ex12_035_decode_plays_matching_source_on_its_own_non_battle_leave() {
 
     assert!(
         field_contains(&runner, 0, "VB-SRC"),
-        "16-35-1: the carrier's own non-battle leave plays 1 named Digimon          card from THAT DIGIMON'S digivolution cards"
+        "16-36-1: the carrier's own non-battle leave plays 1 named Digimon          card from THAT DIGIMON'S digivolution cards"
     );
     assert!(
         hand_contains(&runner, 0, CARD_ID),
@@ -213,10 +213,10 @@ fn ex12_035_decode_plays_matching_source_on_its_own_non_battle_leave() {
 /// NEGATIVE control on the other axis — a leave BY A BATTLE opens no `<Decode>`
 /// window at all.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 scopes the
 /// trigger the same way. DCGO agrees:
 /// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
 /// `CanTriggerWhenRemoveField`, which
@@ -243,7 +243,7 @@ fn ex12_035_decode_does_not_trigger_on_a_battle_leave() {
 
     assert!(
         runner.game.pending_selection.is_none(),
-        "16-35-1: <Decode> fires only when the carrier would leave the battle          area OTHER THAN BY A BATTLE (got: {:?})",
+        "16-36-1: <Decode> fires only when the carrier would leave the battle          area OTHER THAN BY A BATTLE (got: {:?})",
         runner
             .game
             .pending_selection
@@ -252,6 +252,6 @@ fn ex12_035_decode_does_not_trigger_on_a_battle_leave() {
     );
     assert!(
         !field_contains(&runner, 0, "VB-SRC"),
-        "16-35-1: a battle leave Decodes nothing — the source goes to trash          with the stack"
+        "16-36-1: a battle leave Decodes nothing — the source goes to trash          with the stack"
     );
 }

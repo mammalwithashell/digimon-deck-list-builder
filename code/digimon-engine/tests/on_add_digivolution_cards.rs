@@ -13,12 +13,12 @@
 //! - BT25-005 Pagumon — "When [Three Musketeers] trait cards are placed in
 //!   this Digimon's digivolution cards, it may digivolve ... cost reduced by 2".
 //!
-//! Rules (`general_rule.pdf`, Comprehensive Rules Manual Ver.3.6):
-//! - 15-5-2 (p.23): "A triggering from 1 trigger condition is considered to
+//! Rules (`general_rule.pdf`, Comprehensive Rules Manual Ver.4.3):
+//! - 15-5-2 (p.26): "A triggering from 1 trigger condition is considered to
 //!   only trigger once, even if it occurred multiple times at the same time"
 //!   → an effect that places SEVERAL cards under one host fires the observer
 //!   ONCE (batch), not once per card.
-//! - 15-5-3 (p.23-24), whose worked example IS this timing: "If a card has a
+//! - 15-5-3 (p.26), whose worked example IS this timing: "If a card has a
 //!   '[Your Turn] [Once Per Turn] When your effect places a digivolution card
 //!   under this Digimon, gain 1 memory' inherited effect, the trigger
 //!   conditions will be met even when that card itself is placed in

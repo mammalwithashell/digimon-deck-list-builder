@@ -39,11 +39,10 @@
 //!   printed timing header is [End of Your Turn], NOT [Main], so no
 //!   main-phase activation action may be exposed)
 //! - Scheduled <Delay>: fires at the end of the owner's NEXT turn (first
-//!   legal window per rule 16-16-3), self-trash + optional "you may link 1
-//!   card from hand to own Digimon free". The mandatory-scan residual
-//!   (decline cannot keep the Option parked) is the OPEN engine gap
-//!   G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN — pinned by an `#[ignore]`d
-//!   faithful test below.
+//!   legal window per rule 16-17-3), self-trash + optional "you may link 1
+//!   card from hand to own Digimon free". Declining keeps the Option parked
+//!   (G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN, resolved in 73733429d) —
+//!   pinned by the faithful test below.
 //! - Inherited [Security] places self in battle area (behavioral, via a real
 //!   security check)
 
@@ -261,7 +260,7 @@ fn bt21_097_has_scheduled_end_of_turn_delay_clause_with_link_cards_step() {
     // (MainPhaseActivated) would expose a main-phase activation, letting the
     // link land before attacks; the faithful engine trigger is the scheduled
     // owner-turn-end scan, whose first legal window is the end of the owner's
-    // next turn (rule 16-16-3).
+    // next turn (rule 16-17-3).
     assert_eq!(
         *delay.0,
         CompiledTiming::EndOfYourNextTurn,
@@ -366,7 +365,7 @@ fn bt21_097_main_adds_appmon_trashes_rest_then_parks_as_delay() {
 
     // "Then, place this card in the battle area" — parked as a scheduled
     // [End of Your Turn] <Delay> Option. Placed on the owner's own turn, the
-    // first legal activation window (16-16-3: not the placing turn) is the
+    // first legal activation window (16-17-3: not the placing turn) is the
     // end of the owner's NEXT turn = placing_turn + 2 in 2-player rotation.
     let placed = runner
         .game
@@ -389,7 +388,7 @@ fn bt21_097_main_adds_appmon_trashes_rest_then_parks_as_delay() {
             assert_eq!(
                 trash_on_turn,
                 placing_turn + 2,
-                "the <Delay> is scheduled for the end of the owner's next turn (16-16-3)"
+                "the <Delay> is scheduled for the end of the owner's next turn (16-17-3)"
             );
         }
         other => panic!("BT21-097 must park as OptionState::Delayed; got {other:?}"),
@@ -526,7 +525,7 @@ fn bt21_097_use_requirement_targets_appmon_digimon_or_tamer() {
 
 /// Seat BT21-097 on P0's field as a scheduled [End of Your Turn] <Delay>
 /// Option placed THIS turn. In 2-player rotation the first legal activation
-/// window (16-16-3: not the placing turn) is the end of P0's next turn =
+/// window (16-17-3: not the placing turn) is the end of P0's next turn =
 /// `turn_count + 2` (skip P1's turn) — the same schedule
 /// `place_self_as_delay_option` computes for a [Main] placement.
 fn seat_as_scheduled_end_delay(runner: &mut DebugRunner) {
@@ -542,7 +541,7 @@ fn seat_as_scheduled_end_delay(runner: &mut DebugRunner) {
 }
 
 /// The full printed timing arc: the <Delay> does NOT fire at the end of the
-/// placing turn (16-16-3), exposes NO main-phase activation action (the
+/// placing turn (16-17-3), exposes NO main-phase activation action (the
 /// printed timing header is [End of Your Turn], not [Main]), then fires at
 /// the end of the owner's next turn and links 1 hand card to 1 own Digimon
 /// for free.
@@ -553,6 +552,7 @@ fn bt21_097_delay_fires_at_end_of_owners_next_turn_and_links_hand_card_free() {
         .expect("BT21-097 YAML loads")
         .add_card(appmon_digimon("APP-FIELD", 5))
         .add_card(appmon_digimon("APP-LINK", 4))
+        .link_requirement("APP-LINK", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(plain_digimon("FILL", 3))
         .hand(0, &["APP-LINK"])
         .deck(0, &["FILL"; 6])
@@ -563,11 +563,11 @@ fn bt21_097_delay_fires_at_end_of_owners_next_turn_and_links_hand_card_free() {
     let field_digimon = runner.place_on_field(0, "APP-FIELD", Some(0));
     seat_as_scheduled_end_delay(&mut runner);
 
-    // 16-16-3 gate: ending the PLACING turn must not fire the <Delay>.
+    // 16-17-3 gate: ending the PLACING turn must not fire the <Delay>.
     runner.end_turn();
     assert!(
         runner.game.pending_selection.is_none(),
-        "the <Delay> must not fire at the end of the placing turn (16-16-3)"
+        "the <Delay> must not fire at the end of the placing turn (16-17-3)"
     );
     assert!(
         field_contains(&runner, 0, CARD_ID),
@@ -690,6 +690,7 @@ fn bt21_097_delay_link_can_be_declined() {
         .expect("BT21-097 YAML loads")
         .add_card(appmon_digimon("APP-FIELD", 5))
         .add_card(appmon_digimon("APP-LINK", 4))
+        .link_requirement("APP-LINK", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(plain_digimon("FILL", 3))
         .hand(0, &["APP-LINK"])
         .deck(0, &["FILL"; 6])
@@ -707,7 +708,7 @@ fn bt21_097_delay_link_can_be_declined() {
     assert_eq!(runner.game.turn_player(), 0);
     runner.end_turn();
 
-    // The scheduled window now offers the §16-16-2 cost FIRST. Accept it here —
+    // The scheduled window now offers the §16-17-2 cost FIRST. Accept it here —
     // this test is about declining the body's own inner "may", not the cost.
     let outer = runner
         .pending_selection_view()
@@ -737,7 +738,7 @@ fn bt21_097_delay_link_can_be_declined() {
         "declined target stays in hand"
     );
     // The Option IS trashed — and this is now correct for a stated reason
-    // rather than an engine limitation. The player ACCEPTED the §16-16-2 cost
+    // rather than an engine limitation. The player ACCEPTED the §16-17-2 cost
     // above; §15-7-2 only bars the processing after a condition when the
     // condition itself wasn't executed. Declining the body's separate inner
     // "may" does not refund a cost that was already paid.
@@ -753,20 +754,20 @@ fn bt21_097_delay_link_can_be_declined() {
     );
 }
 
-/// FAITHFUL (§16-16-2, DCGO OnEndTurn isOptional: true): declining the
+/// FAITHFUL (§16-17-2, DCGO OnEndTurn isOptional: true): declining the
 /// <Delay> at the owner's turn end must keep the Option parked in the battle
-/// area, re-offerable at a later owner turn end. Blocked on the OPEN engine
-/// gap G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN (the scheduled scan fires
-/// mandatorily and trashes the Option); un-ignore when the scan routes
-/// through the outer accept/decline prompt.
+/// area, re-offerable at a later owner turn end. Was blocked on
+/// G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN (the scheduled scan fired
+/// mandatorily and trashed the Option), resolved in 73733429d (the scan now
+/// routes through the outer accept/decline prompt).
 #[test]
-#[ignore = "G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN — scheduled <Delay> scan is mandatory; decline cannot keep the Option parked yet"]
 fn bt21_097_declining_delay_keeps_option_parked_for_a_later_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT21-097 YAML loads")
         .add_card(appmon_digimon("APP-FIELD", 5))
         .add_card(appmon_digimon("APP-LINK", 4))
+        .link_requirement("APP-LINK", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(plain_digimon("FILL", 3))
         .hand(0, &["APP-LINK"])
         .deck(0, &["FILL"; 6])
@@ -794,7 +795,7 @@ fn bt21_097_declining_delay_keeps_option_parked_for_a_later_turn() {
     }
     runner.auto_resolve().expect("finish the turn boundary");
 
-    // Rules 16-16-2: the processing from <Delay> is optional — declining
+    // Rules 16-17-2: the processing from <Delay> is optional — declining
     // keeps the Option in the battle area for a later owner turn end.
     assert!(
         field_contains(&runner, 0, CARD_ID),
@@ -870,9 +871,9 @@ fn bt21_097_security_check_places_self_in_battle_area_as_delay_option() {
     }
 }
 
-/// §16-16-2: "The processing from <Delay> is optional." The scheduled window
+/// §16-17-2: "The processing from <Delay> is optional." The scheduled window
 /// must OFFER the trash-this-card cost, and declining it must leave the Option
-/// on the field with its window moved forward — §16-16-1 keeps a Delay
+/// on the field with its window moved forward — §16-17-1 keeps a Delay
 /// available "while a card with this effect is in the battle area", and
 /// BT21-097's printed [End of Your Turn] window comes round every own turn.
 ///
@@ -886,6 +887,7 @@ fn bt21_097_delay_cost_may_be_declined_leaving_the_option_on_the_field() {
         .expect("BT21-097 YAML loads")
         .add_card(appmon_digimon("APP-FIELD", 5))
         .add_card(appmon_digimon("APP-LINK", 4))
+        .link_requirement("APP-LINK", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(plain_digimon("FILL", 3))
         .hand(0, &["APP-LINK"])
         .deck(0, &["FILL"; 6])
@@ -908,7 +910,7 @@ fn bt21_097_delay_cost_may_be_declined_leaving_the_option_on_the_field() {
         .expect("the scheduled window must offer the <Delay> cost (rule 17)");
     assert!(
         outer.is_optional,
-        "the <Delay> cost confirm must expose PASS (§16-16-2)"
+        "the <Delay> cost confirm must expose PASS (§16-17-2)"
     );
     runner
         .execute_action(outer.selecting_player, PASS)

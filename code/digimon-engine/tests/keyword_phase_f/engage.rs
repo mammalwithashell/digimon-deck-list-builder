@@ -1,10 +1,14 @@
 //! EX12 keyword behavior: `<Engage>`.
 //!
-//! Official rules 16-44 define Engage as an optional end-of-your-turn trigger:
-//! this Digimon may attack. Unlike Execute, Engage does not say it can attack
-//! unsuspended Digimon, does not self-delete, and does not bypass normal attack
-//! legality. The Rust port surfaces the optional "may" at the existing
-//! EndOfTurnAction PASS/attack choice, matching the Execute substrate.
+//! Comprehensive Rules Ver. 4.3 §16-44: "<Engage> is a keyword effect where a
+//! Digimon with this effect may attack at the end of your turn" (§16-44-1);
+//! a trigger-type effect at the End of Your Turn timing (§16-44-2); optional
+//! (§16-44-3). Unlike Execute, Engage does not say it can attack unsuspended
+//! Digimon, does not self-delete, and does not bypass normal attack legality.
+//! Its processing is its own decision inside the `[End of Your Turn]` pool:
+//! one optional prompt over the carrier's legal attack declarations (PASS =
+//! decline), not a post-drain `EndOfTurnAction` window
+//! (G-ENGINE-ENGAGE-ATTACK-AFTER-END-OF-TURN-TRIGGERS).
 
 use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::card_data::CardData;
@@ -21,7 +25,7 @@ fn engage_card(id: &str, dp: i32) -> CardData {
 }
 
 #[test]
-fn engage_parks_normal_end_of_turn_attack_against_security() {
+fn engage_offers_normal_end_of_turn_attack_against_security() {
     let mut r = DebugRunner::builder()
         .add_card(engage_card("ENGAGE", 5000))
         .start();
@@ -32,31 +36,23 @@ fn engage_parks_normal_end_of_turn_attack_against_security() {
     r.game.end_turn();
 
     assert!(
-        r.game.modifiers.has(engage, ModifierType::MayAttack),
-        "Engage should grant MayAttack for the EOT attack window"
+        !r.game.modifiers.has(engage, ModifierType::MayAttack),
+        "§16-44-2: Engage offers its attack itself, it grants no MayAttack window"
     );
-    assert!(
-        !r.game
-            .modifiers
-            .has(engage, ModifierType::CanAttackUnsuspended),
-        "Engage must not grant Execute's unsuspended-target permission"
-    );
-    assert_eq!(
-        r.game.current_phase,
-        GamePhase::EndOfTurnAction,
-        "Engage should park the turn in EndOfTurnAction when normal attack legality passes"
-    );
+    assert_ne!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    let sel = r
+        .pending_selection()
+        .expect("§16-44-2: Engage's attack decision inside the end-of-turn pool");
+    assert_eq!(sel.selecting_player, 0);
+    assert!(sel.is_optional, "§16-44-3: optional");
 
     let mask = digimon_engine::build_action_mask(&r.game, 0);
     assert_eq!(
         mask[encode_attack(engage.index as u16, SECURITY_TARGET) as usize],
         1.0,
-        "security attack should be exposed by the EOT-action mask"
+        "the security attack is offered"
     );
-    assert_eq!(
-        mask[PASS as usize], 1.0,
-        "PASS remains the optional decline path for Engage"
-    );
+    assert_eq!(mask[PASS as usize], 1.0, "PASS declines Engage");
 }
 
 #[test]
@@ -78,7 +74,7 @@ fn engage_does_not_allow_unsuspended_digimon_targets() {
     );
 
     r.game.end_turn();
-    assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
+    assert!(r.pending_selection().is_some(), "Engage's decision");
 
     let mask = digimon_engine::build_action_mask(&r.game, 0);
     assert_eq!(
@@ -86,10 +82,14 @@ fn engage_does_not_allow_unsuspended_digimon_targets() {
         0.0,
         "Engage must use normal attack targeting and not attack unsuspended Digimon"
     );
+    assert_eq!(
+        mask[encode_attack(engage.index as u16, SECURITY_TARGET) as usize],
+        1.0
+    );
 }
 
 #[test]
-fn aura_granted_engage_parks_normal_end_of_turn_attack() {
+fn aura_granted_engage_offers_normal_end_of_turn_attack() {
     let yaml = r#"
 card: TEST-ENGAGE-AURA-SRC
 name: Engage Aura Source
@@ -123,24 +123,18 @@ effects:
         r.game.has_keyword(engage, Keyword::Engage),
         "aura should grant Engage to the ME carrier"
     );
-    assert!(
-        !r.game.modifiers.has(engage, ModifierType::MayAttack),
-        "the aura test should prove Engage works through the granted keyword, not a preinstalled MayAttack modifier"
-    );
 
     r.game.end_turn();
 
-    assert_eq!(
-        r.game.current_phase,
-        GamePhase::EndOfTurnAction,
-        "aura-granted Engage should park the turn for a normal optional attack"
+    assert!(
+        r.pending_selection().is_some(),
+        "aura-granted Engage triggers at the end of the turn and offers its attack"
     );
-
     let mask = digimon_engine::build_action_mask(&r.game, 0);
     assert_eq!(
         mask[encode_attack(engage.index as u16, SECURITY_TARGET) as usize],
         1.0,
-        "security attack should be exposed by the EOT-action mask"
+        "the security attack is offered"
     );
     assert_eq!(mask[PASS as usize], 1.0);
 }

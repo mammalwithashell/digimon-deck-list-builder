@@ -35,14 +35,17 @@
 #      digivolution happens (cost paid for nothing). The printed "may
 #      digivolve into" only admits cards this Digimon can digivolve into;
 #      expect DCGO's candidate list to omit the Lv.6s.
-#   2. ST23-13's "When effects trash cards from under this Tamer" fires once
-#      PER CARD (twice here) and the first copy resolves BETWEEN the two
-#      trashes (mid-effect). One effect trashing two cards is one event, and
-#      a trigger waits until the effect finishes. Probed: if the first copy is
-#      accepted (Tamer suspended), the second is still offered and does
-#      nothing. Second copy is a sim_only row; the first may sit at a
-#      different position in DCGO's sequence (after the digivolve, possibly
-#      batched with BT25-041's [When Digivolving] as MultipleSkills).
+#   2. RESOLVED 2026-10-19 (Plan 4 Task 40,
+#      G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS):
+#      ST23-13's "When effects trash cards from under this Tamer" used to fire
+#      once PER CARD (twice here). The cost's two cards are now trashed
+#      together after the last Tamer pick as ONE event (§15-5-2), so ST23-13
+#      triggers once, like DCGO's one selection / one trigger; it still waits
+#      for the causing effect (§15-8-3-2) and pends beside BT25-041.
+#      HELD DCGO QUIRK: for "1 from each of two Tamers" DCGO raises one trash
+#      event per Tamer, so a global "under your Tamers" observer would trigger
+#      twice there; §15-5-2 counts once per trigger condition and the PDF wins
+#      (owner sign-off item 18). Expect an oracle divergence on that shape.
 #
 # PROMPT SHAPE (BT25-035.yaml DCGO crosscheck): -3000 pick is
 # SelectPermanentEffect canNoSelect: false. The "Then" is a trash-2 cost over
@@ -134,25 +137,33 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-041] } }
     expect: { prompt: SelectHandEffect }
-  # The cost: our engine asks the Tamer once per trashed card.
+  # The cost: our engine asks the Tamer once per card to trash (which Tamers
+  # pay is the player's decision), then trashes both cards together.
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
-  # suspending this Tamer, ..." fires off the FIRST trashed card, mid-cost.
-  # Declined.
-  - actor: 0
-    do: { select: { decline: true } }
-    expect: { prompt: OptionalSkill }
   # SIM-ONLY: the 2nd per-card Tamer pick. With one Tamer holding >=2
   # face-down cards DCGO's single Tamer selection covers both (BT25-035.yaml:
   # CanEndSelectCondition "2 from one Tamer").
   - actor: 0
     do: { select: { targets: [own.field.0], sim_only: true } }
-  # SIM-ONLY: ST23-13 fires AGAIN for the second card (one effect trashing two
-  # cards is one trigger event) -- see ENGINE FINDING in the header.
+  # ST23-13 "[Your Turn] When effects trash cards from under this Tamer, by
+  # suspending this Tamer, ..." -- RE-LOWERED 2026-10-19: it no longer fires
+  # mid-cost; it waits until BT25-035's effect (the digivolve) finishes
+  # (§15-8-3-2; G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS, 0870820d1) and pends
+  # beside BT25-041's [When Digivolving]. The turn player picks ST23-13's
+  # first, then declines.
+  # RE-LOWERED 2026-10-19 (Task 40): BT25-035's "by trashing 2 bottom
+  # face-down cards" is ONE processing condition, so its two cards leave in
+  # one event and ST23-13 pends ONCE (§15-5-2;
+  # G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS
+  # resolved). Before the fix it pended twice and this line failed here.
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+    do: { select: { cards: [ST23-13] } }
+    expect: { prompt: MultipleSkills, candidates: [ST23-13, BT25-041] }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
   # Free digivolve into Murasamemon done; BT25-041's optional [When
   # Digivolving] -> decline.
   - actor: 0

@@ -21,6 +21,8 @@ effects:
     active_when: { all_turns: true }
     summary: "[All Turns] When your Token/Puppet is deleted, suspend self -> Draw 1; if by Overclock, may play a level 4 Puppet"
     condition:
+      source_is_unsuspended: true
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:
@@ -28,7 +30,6 @@ effects:
             - all_of:
                 - event_target_kind: digimon
                 - event_target_trait_has: Puppet
-        - source_is_unsuspended: true
     process:
       - select_effect_choice:
           labels: ["Suspend this Tamer", "Decline"]

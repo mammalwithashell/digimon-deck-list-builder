@@ -1,0 +1,14 @@
+# PROGRESS -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   <Progress> (While attacking, your opponent's effects don't affect this
+#   Digimon.)
+card: PROGRESS
+name: Marchmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - kind: grant_keyword
+    keyword: Progress
+    summary: "<Progress> (While attacking, your opponent's effects don't affect this Digimon.)"

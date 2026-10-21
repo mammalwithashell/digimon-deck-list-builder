@@ -23,7 +23,8 @@ alt_paths:
 effects:
   - when: on_suspend
     once_per_turn: true
-    condition: { event_target_is_source: true }
+    trigger_if:
+      event_target_is_source: true
     summary: "[All Turns][Once Per Turn] When this Digimon suspends, unsuspend it"
     process:
       - unsuspend: { target: source }

@@ -1,0 +1,28 @@
+# GREY_DIGICARD_DP -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   Digivolve: red Lv.4, cost 3.
+#   [All Turns] While [Greymon] is in this Digimon's digivolution cards, this
+#   Digimon gets +1000 DP.
+# Its own name is [Greymon]: the top card is not a digivolution card (§4-8-1,
+# §4-8-2), so it never satisfies its own condition. Production idiom
+# `self_digivolution_sources_contain_name` (BT16-027 / BT20-020 / BT20-102
+# shape).
+card: GREY_DIGICARD_DP
+name: Greymon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+effects:
+  - kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - self_digivolution_sources_contain_name: "Greymon"
+    target: {}
+    dp_modifier: 1000
+    summary: "[All Turns] While [Greymon] is in this Digimon's digivolution cards, this Digimon gets +1000 DP."

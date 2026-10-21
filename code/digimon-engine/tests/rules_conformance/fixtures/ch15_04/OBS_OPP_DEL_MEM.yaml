@@ -1,0 +1,16 @@
+# OBS_OPP_DEL_MEM -- Tamer, red, play cost 3.
+#   [All Turns] When one of your opponent's Digimon is deleted, gain 1 memory.
+card: OBS_OPP_DEL_MEM
+name: Witness Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_deletion
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[All Turns] When one of your opponent's Digimon is deleted, gain 1 memory."
+    process:
+      - gain_memory: 1

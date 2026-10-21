@@ -1,0 +1,39 @@
+# DECODE -- Digimon, Lv.5, blue, 5000 DP, play cost 7.
+#   <Decode (blue Lv.4)> (When this Digimon would leave the battle area other
+#   than in battle, you may play 1 blue Lv.4 Digimon card from its
+#   digivolution cards without paying the cost.)
+# The §16-36 keyword card, with the rule's own example parenthetical. There is
+# no keyword-generic <Decode> body (`keyword_effects.rs`: `Keyword::Decode =>
+# Vec::new()`): the keyword is authored with the production idiom (EX12-031),
+# a `replacement` clause on `when_would_leave_battle_area` excluding the battle
+# cause. One optional decision (the clause); once accepted the source pick is
+# mandatory (the EX12-031 shape; see G-DECODE-DOUBLE-OPTIONAL).
+card: DECODE
+name: Codemon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 5000
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (blue Lv.4)> (When this Digimon would leave the battle area other than in battle, you may play 1 blue Lv.4 Digimon card from its digivolution cards without paying the cost.)"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 4
+              - color_is: blue
+          prompt: "Choose a blue Lv.4 Digimon card to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free

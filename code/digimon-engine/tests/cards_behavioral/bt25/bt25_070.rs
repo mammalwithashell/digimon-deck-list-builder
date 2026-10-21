@@ -67,6 +67,9 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT25-070 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("TOOL-IN-TRASH", 0)
+        .link_requirement("GAME-FODDER", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         .add_card(make_digimon("TOOL-IN-TRASH", 4, 4000, 4, &["Tool"]))
         .add_card(make_digimon("GAME-FODDER", 3, 1000, 2, &["Game"]))
@@ -117,6 +120,14 @@ fn fire_main(runner: &mut DebugRunner, player: PlayerId, field_index: usize) -> 
 /// plain fodder card as a linked card onto `host` (the Logamon permanent)
 /// and dispatching OnLink, then draining. (BT24-067/BT25-052 idiom.)
 fn fire_link_onto_host(runner: &mut DebugRunner, host: PermanentHandle) {
+    // Repeated synthetic links stack past the base link limit of 1 (§4-9-5);
+    // grant <Link +1> per extra card so the §17-1-3-2-5 trim stays out of it.
+    let held = runner.game.player(host.player).battle_area[host.index as usize]
+        .linked_cards
+        .len();
+    if held >= runner.game.link_limit(host) {
+        runner.give_link_plus(host, 1);
+    }
     let linked_handle = runner.push_linked_owned(host, "GAME-FODDER", 0);
     for pid in 0..2usize {
         runner.game.enqueue_triggered(

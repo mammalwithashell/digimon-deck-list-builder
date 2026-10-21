@@ -48,7 +48,7 @@ fn bt23_064_has_play_digivolve_and_inherited_deletion_clauses() {
 /// level 4 or lower Digimon" is an OPTIONAL PROCESSING CONDITION.
 ///
 /// §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions, regardless of whether or not the content
 /// of the conditions can be executed."
 ///
@@ -80,7 +80,7 @@ fn bt23_064_shared_clause_is_an_optional_processing_condition() {
     assert!(
         shared.optional,
         "\"By deleting 1 of your Digimon\" is an optional processing condition \
-         (§15-7-1/§15-7-4): the player may decline to pay it"
+         (§15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]): the player may decline to pay it"
     );
     assert!(
         shared.outer_prompt,
@@ -145,7 +145,7 @@ fn bt23_064_on_play_deletes_own_digimon_then_level4_opponent() {
     );
 }
 
-/// DECLINE path — §15-7-4: "A player can choose whether or not to execute the
+/// DECLINE path — §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the
 /// content of optional processing conditions." Refusing "By deleting 1 of your
 /// Digimon" must leave BOTH halves undone: no own Digimon is deleted (the cost
 /// is not paid) and no opponent Digimon is deleted, because §15-7-2 says that

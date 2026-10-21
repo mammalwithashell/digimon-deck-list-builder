@@ -57,32 +57,36 @@ fn grant_force_attack(
     );
 }
 
+/// A forced attack only restricts choices already legal in Main, so the
+/// Main-phase memory gate holds for forced attackers too. A printed <Blitz>
+/// digivolved this turn is no exemption: §16-16-2 (Ver. 4.3) "<Blitz> effects
+/// execute processing", offered inside the effect that executes it
+/// (`ResumeFrame::AttackDeclarationDecision`), never through the Main-phase mask.
+/// (This test used to pin the retired "Blitz + digivolved this turn"
+/// carve-out as a legal forced attack; G-ENGINE-BLITZ-TURN-ENDS-BEFORE-ATTACK.)
 #[test]
-fn forced_mask_preserves_normal_memory_and_blitz_eligibility() {
+fn forced_mask_preserves_normal_memory_gate_without_blitz_exemption() {
     let mut blitz = make_digimon("BLITZ", CardColor::Red, 5000);
     blitz.keywords.push(Keyword::Blitz);
     let mut r = DebugRunner::builder().add_card(blitz)
         .add_card(make_digimon("FORCED", CardColor::Red, 5000)).start();
     let tp = r.game.turn_player();
     let forced = r.place_on_field(tp, "FORCED", Some(0));
-    let eligible = r.place_on_field(tp, "BLITZ", Some(0));
-    r.game.players[tp as usize].battle_area[eligible.index as usize].turn_digivolved = r.game.turn_count;
+    let blitz = r.place_on_field(tp, "BLITZ", Some(0));
+    r.game.players[tp as usize].battle_area[blitz.index as usize].turn_digivolved = r.game.turn_count;
     r.game.enter_main_phase();
     // Inspect the Main boundary before end-turn advancement; no chooser is
     // installed, so this compares the same normal and forced mask contract.
     r.game.memory = -1;
     let normal = build_action_mask(&r.game, tp);
-    let illegal = encode_attack(forced.index as u16, SECURITY_TARGET) as usize;
-    let legal = encode_attack(eligible.index as u16, SECURITY_TARGET) as usize;
-    assert_eq!(normal[illegal], 0.0);
-    assert_eq!(normal[legal], 1.0);
+    let forced_bit = encode_attack(forced.index as u16, SECURITY_TARGET) as usize;
+    let blitz_bit = encode_attack(blitz.index as u16, SECURITY_TARGET) as usize;
+    assert_eq!(normal[forced_bit], 0.0);
+    assert_eq!(normal[blitz_bit], 0.0, "§16-16: <Blitz> is no Main-phase memory exemption");
     grant_force_attack(&mut r, forced, tp);
     assert_eq!(build_action_mask(&r.game, tp), normal, "ineligible forced attacker preserves the normal choices");
-    grant_force_attack(&mut r, eligible, tp);
-    let mask = build_action_mask(&r.game, tp);
-    assert_eq!(mask[illegal], 0.0);
-    assert_eq!(mask[legal], 1.0);
-    assert_eq!(mask[PASS as usize], 0.0);
+    grant_force_attack(&mut r, blitz, tp);
+    assert_eq!(build_action_mask(&r.game, tp), normal, "a forced <Blitz> Digimon gains no attack under memory<0");
 }
 
 #[test]
@@ -289,10 +293,14 @@ fn force_attack_respects_cannot_attack_target() {
 }
 
 #[test]
-fn force_attack_respects_raid_on_unsuspended_enemies() {
-    // Forced attacker with Raid can target unsuspended enemies tied for
-    // highest DP. Same semantics as normal Main-phase Raid at §4.4, carried
-    // through the replacement.
+fn force_attack_with_raid_declares_on_no_unsuspended_enemy() {
+    // §11-2-7-1: the declaration targets the opponent or a suspended
+    // Digimon; <Raid> switches the target AFTER the declaration (§16-23-1 /
+    // §16-23-2), so a forced <Raid> attacker gets no unsuspended declaration
+    // target, the highest-DP one included; the forced attack goes to the
+    // player and <Raid> may switch it then. (Inverted from the Python-parity
+    // pin `force_attack_respects_raid_on_unsuspended_enemies`;
+    // G-ENGINE-RAID-DECLARATION-TARGET-UNSUSPENDED.)
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("RAIDER", CardColor::Red, 6000))
         .add_card(make_digimon("HIGH", CardColor::Blue, 5000))
@@ -314,12 +322,17 @@ fn force_attack_respects_raid_on_unsuspended_enemies() {
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
         mask[encode_attack(raider.index as u16, high.index as u16) as usize],
-        1.0,
-        "Raid targets tied-for-highest unsuspended DP enemy",
+        0.0,
+        "Raid adds no declaration target: not the highest-DP unsuspended enemy",
     );
     assert_eq!(
         mask[encode_attack(raider.index as u16, low.index as u16) as usize],
         0.0,
         "Raid must not include the lower-DP unsuspended enemy",
+    );
+    assert_eq!(
+        mask[encode_attack(raider.index as u16, SECURITY_TARGET) as usize],
+        1.0,
+        "the forced attack declares on the player",
     );
 }

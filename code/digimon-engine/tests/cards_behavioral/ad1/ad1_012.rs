@@ -542,6 +542,8 @@ fn ad1_012_opponents_turn_dna_into_omnimon_alters_then_redirects() {
         .hand(0, &["AD1-012-OMNI-ALTERS"])
         .security(0, &["AD1-012-SEC", "AD1-012-SEC"])
         .memory(12)
+        .deck(0, &["AD1-012-SEC"; 8])
+        .deck(1, &["AD1-012-SEC"; 8])
         .start();
 
     // P0's field: CresGarurumon + two DNA materials + a redirect ally.

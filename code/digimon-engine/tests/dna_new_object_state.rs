@@ -106,7 +106,7 @@ fn physical_cards(g:&Game)->Vec<u16>{
 fn rejected_dna_does_not_reset_materials(){
     let mut a=make_test_card("A","A");a.level=Some(6);
     let result=make_test_dna_card("RESULT","Result",7,7,0);
-    let mut r=DebugRunner::builder().add_card(a).add_card(result).add_card(make_test_card("SOURCE","Source")).add_card(make_test_card("LINK","Link"))
+    let mut r=DebugRunner::builder().add_card(a).add_card(result).add_card(make_test_card("SOURCE","Source")).add_card(make_test_card("LINK","Link")).link_requirement("LINK",0) /* [Link]: §17-1-3-2-6/-7 */
         .hand(0,&["RESULT","SOURCE","LINK"]).memory(10).start();
     let a=r.place_on_field(0,"A",None);let b=r.place_on_field(0,"A",None);seed(&mut r.game,a);
     let before=r.game.verification_digest();
@@ -125,7 +125,7 @@ fn ordinary_evolution_retains_suspension_links_opt_and_gained_effects() {
     let mut result=make_test_card("ORDINARY","Ordinary");result.level=Some(7);
     result.evo_costs=vec![EvoCost{card_color:0,level:6,memory_cost:0}];
     let mut r=DebugRunner::builder().add_card(base).add_card(result)
-        .add_card(make_test_card("LINK","Link")).add_card(make_test_card("SOURCE","Source"))
+        .add_card(make_test_card("LINK","Link")).link_requirement("LINK",0) /* [Link]: §17-1-3-2-6/-7 */.add_card(make_test_card("SOURCE","Source"))
         .add_card(make_test_card("DRAW","Draw"))
         .hand(0,&["ORDINARY","SOURCE","LINK"]).deck(0,&["DRAW";4]).memory(5).start();
     let host=r.place_on_field(0,"BASE",None);seed(&mut r.game,host);

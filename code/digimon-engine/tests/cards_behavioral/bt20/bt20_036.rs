@@ -65,7 +65,9 @@ fn bt20_036_on_play_de_digivolves_2_then_minus_5000() {
     r.fire_on_play(0, bancho.index as usize);
 
     // De-Digivolve target pick, then the −5000 target pick.
-    r.auto_resolve().expect("both opponent picks resolve");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    r.auto_resolve_declaring_max()
+        .expect("both opponent picks resolve, declaring 2");
 
     assert_eq!(
         r.game.players[1].battle_area[opp.index as usize]

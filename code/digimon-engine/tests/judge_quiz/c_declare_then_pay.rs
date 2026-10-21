@@ -489,7 +489,7 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
     // card left that can fill the other printed parenthetical
     // (<Partition (Yellow Lv.6 & Green/Black Lv.6)> — Medieval is black/green,
     // Bancho yellow/black), so it is taken WITHOUT a prompt: general_rule.pdf
-    // §16-28-6 ("a player can't choose to only play one or some of the
+    // §16-29-4 ("a player can't choose to only play one or some of the
     // specified cards") leaves no choice, and DCGO likewise skips the
     // SelectCardEffect for a single-candidate slot (`Partition.cs:89,117`).
     let view = r

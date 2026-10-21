@@ -1,0 +1,60 @@
+# WD_TRASH2_UNSUSPEND_THEN -- Digimon, Lv.6, red, 11000 DP, play cost 11.
+#   Digivolve: red Lv.5, cost 3.
+# The §15-7-2 example text:
+#   [When Digivolving] By trashing 2 cards in your hand, this Digimon
+#   unsuspends. After, if [WereGarurumon] or [X Antibody] is in this
+#   Digimon's digivolution cards, you may return 1 Digimon card with
+#   [Garurumon] or [X Antibody] in its name from your trash to the hand.
+# "By trashing 2 cards in your hand" is the optional processing condition:
+# the first hand pick is optional with `cost: true` (declining aborts
+# everything after it, including the "After" sentence); once it is taken the
+# second pick is part of the same condition.
+card: WD_TRASH2_UNSUSPEND_THEN
+name: Steelwolfmon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] By trashing 2 cards in your hand, this Digimon unsuspends. After, if [WereGarurumon] or [X Antibody] is in this Digimon's digivolution cards, you may return 1 Digimon card with [Garurumon] or [X Antibody] in its name from your trash to the hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: paid1
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "By trashing 2 cards in your hand (1st card)"
+      - trash_from_hand_by_index: { of: you, hand_index: paid1 }
+      - select_hand:
+          of: you
+          bind_as: paid2
+          filter: {}
+          prompt: "By trashing 2 cards in your hand (2nd card)"
+      - trash_from_hand_by_index: { of: you, hand_index: paid2 }
+      - unsuspend: { target: source }
+      - if:
+          condition:
+            any_of:
+              - self_digivolution_sources_contain_name: "WereGarurumon"
+              - self_digivolution_sources_contain_name: "X Antibody"
+          then:
+            - select_trash:
+                of: you
+                bind_as: back
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: "Garurumon"
+                        - name_contains: "X Antibody"
+                prompt: "You may return 1 Digimon card with [Garurumon] or [X Antibody] in its name from your trash to the hand"
+            - add_to_hand_from_trash: { of: you, card: back }

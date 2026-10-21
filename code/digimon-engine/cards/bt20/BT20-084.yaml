@@ -21,7 +21,7 @@ effects:
     optional: true
     active_when: { all_turns: true }
     summary: "[Trash] When any of your Digimon are played, may digivolve 1 Sistermon Ciel into this card for free"
-    condition:
+    trigger_if:
       event_target_kind: digimon
     process:
       - select_own_permanent:

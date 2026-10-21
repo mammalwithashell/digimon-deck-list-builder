@@ -94,11 +94,11 @@ effects:
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When your D-Brigade/ACCEL Digimon are played, this Digimon may digivolve into a D-Brigade/ACCEL Digimon in hand with cost -2"
-    condition:
+    trigger_if:
       all_of:
         - event_target_kind: digimon
         - any_of:
-            - event_card_trait_has: "D-Brigade"
+            - event_card_trait_has: D-Brigade
             - event_card_trait_has: ACCEL
     process:
       - select_hand:

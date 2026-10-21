@@ -1,0 +1,10 @@
+# LINK_HOST_LV4 -- Digimon, Lv.4, red, 5000 DP, play cost 5. No text.
+# A link host with no <Link +N>, so its link limit is 1 (§4-9-5). It meets the
+# "level 4 Digimon" link requirement of LINK_A / LINK_B.
+card: LINK_HOST_LV4
+name: Hostmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000

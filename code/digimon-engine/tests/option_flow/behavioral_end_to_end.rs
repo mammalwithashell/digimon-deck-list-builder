@@ -438,6 +438,8 @@ fn rocks_plug_in_host_deletion_cascade() {
     );
 
     let host = r.place_on_field(0, "HOST", Some(0));
+    // Two Plug-Ins need <Link +1> on the host (base limit 1, §4-9-5).
+    r.give_link_plus(host, 1);
     r.place_on_field(0, "P0-WATCHER", Some(0));
 
     // Attach PLUG-A.

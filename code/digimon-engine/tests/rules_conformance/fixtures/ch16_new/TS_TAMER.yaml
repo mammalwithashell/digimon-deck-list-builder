@@ -1,0 +1,8 @@
+# TS_TAMER -- Tamer, red, play cost 2. Trait: [TS]. No text.
+# A red Tamer that satisfies <Use Req. ([TS] trait)>.
+card: TS_TAMER
+name: Codetamer
+kind: tamer
+color: [red]
+cost: 2
+traits: [TS]

@@ -48,9 +48,9 @@ fn ex12_057_ally_played_de_digivolves_then_dp_minus() {
 
     runner.fire_play_event_triggers(ally.player, ally.index as usize, true, false);
     select_first_non_pass(&mut runner);
-    select_first_non_pass(&mut runner);
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
     runner
-        .auto_resolve()
+        .auto_resolve_declaring_max()
         .expect("resolve de-digivolve and DP minus");
 
     assert_eq!(

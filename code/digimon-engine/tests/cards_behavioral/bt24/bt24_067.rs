@@ -303,7 +303,7 @@ fn bt24_067_linked_retaliation_reaches_host() {
 
 /// The linked <Retaliation> works in battle: the host (4000 + 2000 link DP)
 /// attacks an 8000 DP Digimon, loses, and the Digimon it battled is deleted
-/// (general_rule.pdf 16-12, 4-2-6).
+/// (general_rule.pdf 16-13, 4-3-5).
 #[test]
 fn bt24_067_linked_host_retaliates_when_deleted_in_battle() {
     let mut r = base()

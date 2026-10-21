@@ -1,0 +1,10 @@
+# GARU_LV4 -- Digimon, Lv.4, red, 5000 DP, play cost 5. No text.
+# A Digimon card with [Garurumon] in its name, for the §15-7-2 example's
+# return-from-trash clause.
+card: GARU_LV4
+name: Garurumon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000

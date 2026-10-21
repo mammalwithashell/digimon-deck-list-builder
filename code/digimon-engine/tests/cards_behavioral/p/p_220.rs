@@ -131,6 +131,7 @@ fn p220_runner() -> DebugRunner {
         .dsl_card("P-220")
         .expect("P-220 must be in embedded DSL pack")
         .add_card(composite_digimon("FILLER-L3", "Filler", 3, 4000))
+        .add_card(composite_digimon("FILLER-L5", "Filler Five", 5, 6000))
         .memory(20)
         .start()
 }
@@ -432,9 +433,12 @@ fn p_220_on_play_skips_de_digivolve_when_opponent_has_no_digimon() {
 fn p_220_on_play_de_digivolves_selected_opponent_digimon_by_two() {
     let mut runner = p220_runner();
     push_to_hand(&mut runner, 0, "P-220");
-    let bottom = runner.place_on_field(1, "FILLER-L3", None);
+    // Stack [FILLER-L3, FILLER-L5, FILLER-L5 (top)]: level 5 cards above the
+    // level 3 base, since a level 3 top card can't be trashed (§16-12-4).
+    // (`push_source` inserts directly under the top card.)
+    let bottom = runner.place_on_field(1, "FILLER-L5", None);
     runner.push_source(bottom, "FILLER-L3");
-    runner.push_source(bottom, "FILLER-L3");
+    runner.push_source(bottom, "FILLER-L5");
     let sources_before = runner.game.players[1].battle_area[bottom.index as usize]
         .card_sources
         .len();
@@ -453,6 +457,8 @@ fn p_220_on_play_de_digivolves_selected_opponent_digimon_by_two() {
     runner
         .execute_action(v1.selecting_player, pick)
         .expect("pick the opponent Digimon");
+    // §16-12-1: the controller declares how many cards <De-Digivolve> trashes.
+    assert!(runner.declare_max_count().expect("declare 2"));
     runner.game.drain_effect_queue();
 
     // Decline the follow-up optional delete so the De-Digivolve delta is

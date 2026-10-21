@@ -62,7 +62,7 @@ fn bt24_004_yaml_has_printed_metadata_and_inherited_iliad_play_draw_clause() {
         "printed [Your Turn] must compile as active_when: your_turn"
     );
     assert_eq!(
-        clause.condition,
+        clause.trigger_if,
         Some(CompiledPredicate {
             all_of: vec![
                 CompiledPredicate {

@@ -150,17 +150,16 @@ fn ex7_030_runtime_overclock_masks_only_token_or_other_puppet_costs() {
     runner.place_on_field(0, "COST-TOKEN", Some(0));
     runner.place_on_field(0, "NON-PUPPET", Some(0));
     runner.place_on_field(0, "PUPPET-ALLY", Some(0));
-    runner.game.current_phase = GamePhase::EndOfTurnAction;
-
     assert!(runner.game.has_keyword(cendrill, Keyword::Overclock));
 
+    // §16-34-2: <Overclock> triggers at the end of the turn and offers its
+    // condition's pick inside the end-of-turn pool (no separate activation
+    // bit).
+    runner.game.end_turn();
+
     let effect_bit = encode_field_effect(0, FIELD_EFFECT_SLOT_FOR_OVERCLOCK);
-    let mask = build_action_mask(&runner.game, 0);
-    assert_eq!(mask[effect_bit as usize], 1.0, "Overclock action is legal");
-
-    runner.game.decode_action(effect_bit, 0);
-
     let cost_mask = build_action_mask(&runner.game, 0);
+    assert_eq!(cost_mask[effect_bit as usize], 0.0, "no activation bit");
     assert_eq!(
         cost_mask[encode_attack(0, 1) as usize],
         1.0,
@@ -291,7 +290,7 @@ fn ex7_030_when_attacking_gives_one_opponent_digimon_minus_6000_dp() {
         .expect("choose opponent Digimon");
     runner.auto_resolve().expect("finish DP modifier");
 
-    // -6000 DP drops the 3000 DP target below 0. Per rule 17-1-3-1 ("a Digimon
+    // -6000 DP drops the 3000 DP target below 0. Per rule 17-1-3-1-1 ("a Digimon
     // in the battle area whose DP is 0 is deleted"), the target is deleted by the
     // rule check that follows the effect — it does not linger at negative DP.
     assert_eq!(
@@ -302,7 +301,7 @@ fn ex7_030_when_attacking_gives_one_opponent_digimon_minus_6000_dp() {
     assert_eq!(
         runner.battle_area_size(1),
         0,
-        "opponent Digimon reduced to <= 0 DP by -6000 is deleted (rule 17-1-3-1)"
+        "opponent Digimon reduced to <= 0 DP by -6000 is deleted (rule 17-1-3-1-1)"
     );
     assert_eq!(
         runner.trash_size(1),

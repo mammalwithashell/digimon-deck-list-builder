@@ -318,7 +318,7 @@ fn p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3() {
     assert_eq!(
         view.kind,
         SelectionKind::Replacement,
-        "16-16-2 accept/decline"
+        "16-17-2 accept/decline"
     );
     assert!(r.pending_is_optional());
     r.execute_action(view.selecting_player, REPLACEMENT_ACCEPT)

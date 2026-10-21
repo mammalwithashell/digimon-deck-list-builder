@@ -1,0 +1,32 @@
+# MAIN_OPP_DISCARD_MINUS3000 -- Option, red, use cost 0.
+#   [Main] Your opponent trashes 1 card in their hand. Then, 1 of your
+#   opponent's Digimon gets -3000 DP for the turn.
+# A hand trash (a batch-window event) by an effect whose -3000 DP leaves a
+# Digimon at 0 DP for the rule check after it (§17-1-2-2): the §15-4-3-3
+# rule-check pool test.
+card: MAIN_OPP_DISCARD_MINUS3000
+name: Squeeze and Sap
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Your opponent trashes 1 card in their hand. Then, 1 of your opponent's Digimon gets -3000 DP for the turn."
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_hand:
+                of: opponent
+                bind_as: discarded
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discarded }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP for the turn"
+      - add_dp_modifier:
+          target: victim
+          value: -3000
+          expiry: end_of_turn

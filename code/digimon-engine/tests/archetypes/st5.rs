@@ -503,7 +503,7 @@ fn blitzgreymon_digi_burst_buffs_an_agumon_blocker() {
 ///
 /// Fix: `first_step_candidate_guard` builds an `outer_optional_guard` for a
 /// `SelectOwnSources` (digi_burst) leading step, and `field_main_match` now
-/// honors that guard. Sources: ST5-13 text; `general_rule.pdf` §16-13 ＜Digi-Burst＞.
+/// honors that guard. Sources: ST5-13 text; `general_rule.pdf` §16-14 ＜Digi-Burst＞.
 #[test]
 fn blitzgreymon_digi_burst_main_gated_on_source_count() {
     use digimon_engine::action::build_action_mask;

@@ -1,0 +1,14 @@
+# ICECLAD -- Digimon, Lv.4, red, 2000 DP, play cost 5.
+#   <Iceclad> (When this Digimon battles, other than against Security
+#   Digimon, compare the number of digivolution cards instead of DP.)
+card: ICECLAD
+name: Frostmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 2000
+effects:
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (When this Digimon battles, other than against Security Digimon, compare the number of digivolution cards instead of DP.)"

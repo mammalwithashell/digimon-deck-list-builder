@@ -30,7 +30,7 @@ fn opponent(p: PlayerId) -> PlayerId {
 // ─────────────────────────────────────────────────────────────────────────────
 // MP-19 — "Is it possible for a Digimon's DP to be negative? No, zero is the
 // minimum. A Digimon with a DP of zero is deleted." (General Rules/FAQ, Main
-// Phase.) Rules manual §1-7-3 / §17-1-3-1: a Digimon at ≤0 DP is deleted by the
+// Phase.) Rules manual §1-7-3 / §17-1-3-1-1: a Digimon at ≤0 DP is deleted by the
 // state-based rules-check.
 // ─────────────────────────────────────────────────────────────────────────────
 

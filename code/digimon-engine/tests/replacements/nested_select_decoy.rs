@@ -5,7 +5,7 @@
 //!
 //! This synthetic fixture tests deferred `Substituted` commits, not the native
 //! Decoy keyword. Native Decoy pays deletion and then prevents the original
-//! deletion (rule 16-17); substitution is a distinct engine primitive.
+//! deletion (rule 16-18); substitution is a distinct engine primitive.
 //! A single-candidate inner selection parks this synthetic replacement before
 //! committing substitution. Candidate eligibility excludes its own carrier,
 //! including when the substituted deletion starts a fresh replacement window.

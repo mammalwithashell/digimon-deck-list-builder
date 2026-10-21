@@ -1,0 +1,22 @@
+# OWN_MINUS_3K -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] 1 of your Digimon gets -3000 DP for the turn.
+# An effect its controller aims at their own Digimon.
+card: OWN_MINUS_3K
+name: Selfhexmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] 1 of your Digimon gets -3000 DP for the turn."
+    process:
+      - select_own_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gets -3000 DP for the turn"
+      - add_dp_modifier:
+          target: victim
+          value: -3000
+          expiry: end_of_turn

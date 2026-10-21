@@ -1,10 +1,10 @@
-//! 4-19 Option COLOR REQUIREMENTS -- the "all of its colors" rule.
+//! 4-22 Option COLOR REQUIREMENTS -- the "all of its colors" rule.
 //!
-//! 4-19-2 "To meet color requirements, you must have a Digimon or Tamer on your
+//! 4-22-2 "To meet color requirements, you must have a Digimon or Tamer on your
 //! field that's the same color as the Option card you want to use."
-//! 4-19-3 "An Option card with multiple colors can't be used unless the color
+//! 4-22-3 "An Option card with multiple colors can't be used unless the color
 //! requirements are met for ALL of its colors."
-//! 4-19-4 "A multicolor Digimon or multicolor Tamer can meet the color
+//! 4-22-4 "A multicolor Digimon or multicolor Tamer can meet the color
 //! requirements for multiple colors."
 //!
 //! `action::mask::option_color_match_available` used to ask whether any SINGLE
@@ -43,7 +43,7 @@ fn option_is_playable(r: &DebugRunner) -> bool {
     build_action_mask(&r.game, 0)[PLAY_HAND_START as usize] > 0.0
 }
 
-/// THE BUG: a RED-only board must NOT satisfy a RED/BLUE Option (4-19-3).
+/// THE BUG: a RED-only board must NOT satisfy a RED/BLUE Option (4-22-3).
 #[test]
 fn multicolor_option_needs_every_color_not_just_one() {
     let mut r = DebugRunner::builder()
@@ -56,7 +56,7 @@ fn multicolor_option_needs_every_color_not_just_one() {
 
     assert!(
         !option_is_playable(&r),
-        "4-19-3: a red/blue Option can't be used off a red-only board -- the \
+        "4-22-3: a red/blue Option can't be used off a red-only board -- the \
          requirement must be met for ALL of its colors, not any one of them"
     );
 }
@@ -83,7 +83,7 @@ fn multicolor_option_is_playable_once_every_color_is_present() {
     );
 }
 
-/// 4-19-4: ONE multicolor Digimon may cover several of the Option's colors, so
+/// 4-22-4: ONE multicolor Digimon may cover several of the Option's colors, so
 /// the fix must not have become "one permanent per color".
 #[test]
 fn one_multicolor_digimon_covers_several_option_colors() {
@@ -97,7 +97,7 @@ fn one_multicolor_digimon_covers_several_option_colors() {
 
     assert!(
         option_is_playable(&r),
-        "4-19-4: a multicolor Digimon meets the color requirements for multiple \
+        "4-22-4: a multicolor Digimon meets the color requirements for multiple \
          colors, so one red/blue Digimon alone satisfies a red/blue Option"
     );
 }
@@ -133,13 +133,13 @@ fn mono_color_option_still_rejected_by_a_different_colored_board() {
 
     assert!(
         !option_is_playable(&r),
-        "4-19-2: a red Option needs a red Digimon or Tamer on the field"
+        "4-22-2: a red Option needs a red Digimon or Tamer on the field"
     );
 }
 
-/// 3-4-5: "The field is divided into the breeding area and the battle area", so
-/// a Digimon in the BREEDING area is on your field and satisfies 4-19-2. The
-/// 3-4-6 restrictions ("can't be affected by effects", "can't be chosen for
+/// 3-4-6: "The field is divided into the breeding area and the battle area", so
+/// a Digimon in the BREEDING area is on your field and satisfies 4-22-2. The
+/// 3-4-7 restrictions ("can't be affected by effects", "can't be chosen for
 /// effects") are scoped to EFFECTS; a color requirement is a rules gate on
 /// USING a card.
 ///
@@ -165,7 +165,7 @@ fn a_breeding_area_digimon_satisfies_the_color_requirement() {
     );
     assert!(
         option_is_playable(&r),
-        "4-19-2 + 3-4-5: a red Digimon in the breeding area is on your field, \
+        "4-19-2 + 3-4-6: a red Digimon in the breeding area is on your field, \
          so it meets a red Option's color requirement"
     );
 }

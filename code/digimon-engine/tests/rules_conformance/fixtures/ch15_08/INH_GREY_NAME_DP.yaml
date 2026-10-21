@@ -1,0 +1,23 @@
+# INH_GREY_NAME_DP -- Digimon, Lv.3, red, 1000 DP, play cost 2.
+#   Inherited Effect: [All Turns] While this Digimon has [Greymon] in its
+#   name, it gets +1000 DP.
+# "this Digimon" is the Digimon this card is a digivolution card of; its name
+# is its top card's (Q3225; DCGO `PermanentOfThisCard().TopCard`), read with
+# the production idiom `source_name_contains` (BT12-059 / AD1-004 shape).
+card: INH_GREY_NAME_DP
+name: Pupmon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - source_name_contains: "Greymon"
+    target: {}
+    dp_modifier: 1000
+    summary: "[All Turns] While this Digimon has [Greymon] in its name, it gets +1000 DP."

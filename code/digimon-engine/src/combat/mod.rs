@@ -8,9 +8,12 @@
 //!    in `AttackState::Declared`, fires OnAttack.
 //! 2. `advance_pending_attack` drives the state machine:
 //!    `Declared → RaidOpen → AllianceOpen → CounterOpen → BlockOpen → Battle → Cleanup`.
-//!    At each open-window state the attempt helper (`try_enter_*`) either
-//!    installs a `PendingSelection` and pauses, or auto-advances when no
-//!    candidates exist.
+//!    `RaidOpen` / `AllianceOpen` are pass-through: `<Raid>` and `<Alliance>`
+//!    are trigger-type effects resolved in the declaration's trigger pool
+//!    (`fire_on_attack`, §16-23-2 / §16-24-2). At each remaining open-window
+//!    state the attempt helper (`try_enter_*`) either installs a
+//!    `PendingSelection` and pauses, or auto-advances when no candidates
+//!    exist.
 //! 3. When a selection resolves, its callback mutates `PendingAttack.state`
 //!    and re-enters `advance_pending_attack` to continue.
 //! 4. `resolve_pending_battle` reads `effective_target` (which Counter or
@@ -18,11 +21,15 @@
 //! 5. `cleanup_attack` clears `is_attacking`, expires end-of-attack
 //!    modifiers, and drops `pending_attack`.
 //!
-//! Alliance, Counter, Raid, and Blocker windows all park through
-//! `PendingSelection` when they create player-visible choices.
+//! Counter and Blocker windows, and the `<Alliance>` / `<Raid>` trigger
+//! bodies, all park through `PendingSelection` when they create
+//! player-visible choices.
 //!
-//! Vortex short-circuits directly from `Declared` to `Battle` after OnAttack
-//! — Vortex attacks are uninterruptible per Digimon TCG rules.
+//! A `<Vortex>` attack runs this same state machine: §11-1-5 "Once an attack
+//! declaration has been made, all of the timings that follow will occur", and
+//! nothing in §16-33 exempts it (Q3869, EX7-064: after the <Vortex> attack
+//! declaration "the counter timing will occur"). `AttackInitiator::Vortex`
+//! only relaxes the played-this-turn check (§16-33-1).
 
 use crate::card_source::CardHandle;
 use crate::enums::{CardKind, EffectTiming, Expiry, GamePhase, Keyword, ModifierType, PlayerId};
@@ -84,6 +91,7 @@ mod queue_handle_rekey_tests {
                         granted_effect_id: None,
                         keyword_effect: None,
                         trigger_batch: 0,
+                        pending_processing: None,
                     });
                     game.shift_effect_queue_after_battle_area_remove(player, 0);
                     let expected_source = Some(PermanentHandle {
@@ -217,22 +225,6 @@ pub struct AttackOpen {
     pub cost_upgrade: Option<AttackCostUpgrade>,
 }
 
-/// Phase 9 Task 4 — result of the PostBlock Raid retarget rider.
-/// Crate-private; the state machine arm routes on this.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum RaidRetargetOutcome {
-    /// Rider didn't apply (target still valid, no Raid, or Player target).
-    /// Caller transitions to `Battle`.
-    Proceed,
-    /// A retarget `PendingSelection` was installed. Caller yields —
-    /// `advance_pending_attack` exits on `pending_selection.is_some()`.
-    SelectionInstalled,
-    /// Rider applied (Raid attacker + invalid target) but no legal
-    /// retarget candidate exists. `cleanup_attack` has already run;
-    /// caller returns the terminal result directly.
-    Fizzled,
-}
-
 /// Phase 9 internal dispatcher result for the pair of attack-declaration
 /// replacements (`WhenWouldAttack` + `WhenWouldBeAttackTarget`). Kept
 /// crate-private; callers route back into the public `AttackResult` enum.
@@ -295,6 +287,12 @@ pub enum AttackResult {
     AttackerDeletedBySecurity,
     /// Attack connected on a defenseless player — game over.
     GameWon,
+    /// §11-5-1-4 / §11-5-1-4-1 (Ver. 4.3): the attack is not successful --
+    /// the attack target was removed before the battle (§11-2-6), or the
+    /// attacking Digimon left the battle area after its declaration
+    /// (§11-1-5). No battle and no security check; the end of attack timing
+    /// still occurs.
+    Unsuccessful,
     /// Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget` replacement
     /// cancelled the attack before any battle state was observable. No
     /// memory swing, no battle, no security check — but `EndOfAttack` still
@@ -319,8 +317,17 @@ pub(crate) struct PendingBattleResolution {
     attacker_deleted: bool,
     defender_deleted: bool,
     winner_identity: Option<(PlayerId, u64)>,
+    /// The winner's last-known information at the comparison (§15-8-3-8:
+    /// the battle is the state the "wins a battle" trigger references),
+    /// read by the `event_winner_*` qualifiers once the winner has left.
+    winner_snapshot: Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
     is_attack: bool,
     in_call: bool,
+    /// The effects triggered by this battle (`EffectTiming::BattleResult`:
+    /// "wins a battle" / "deletes in battle" / <Piercing>) have been enqueued
+    /// -- into the battle deletion's trigger pool, or, when no loser was
+    /// deleted, by `resume_pending_battle_resolutions` (§14-2-4).
+    result_enqueued: bool,
 }
 
 // Deletion lifecycle + DP split out of the attack state machine (rule 25).
@@ -471,16 +478,19 @@ impl Game {
 
     /// Attack another Digimon on the opponent's field.
     ///
-    /// Returns the terminal battle outcome — **unless** an interrupt
-    /// (Block, Alliance, Counter) parks the attack on a `PendingSelection`,
+    /// Returns the terminal battle outcome — **unless** a decision parks the
+    /// attack on a `PendingSelection` (an interrupt such as Block or
+    /// Counter, an effect's pick, or a decision in the End of Attack pool,
+    /// §11-6-2, which keeps the attack in `AttackState::EndOfAttackDrain`),
     /// in which case `AttackResult::InProgress` is returned and the caller
-    /// continues resolving via `Game::resolve_selection`. The attack
-    /// resumes automatically inside that callback and will eventually
-    /// return a terminal outcome — inspect it via `last_attack_result`
-    /// after the selection chain clears.
+    /// continues resolving via `Game::resolve_selection`. The attack resumes
+    /// automatically in the post-selection tail; once the chain clears,
+    /// `pending_attack` is `None` and the result shows in the game state
+    /// (no result value is stored).
     ///
-    /// `vortex` — see [`Game::can_attack`]. Vortex attacks bypass all
-    /// interrupt windows per Digimon TCG rules.
+    /// `vortex` — see [`Game::can_attack`]. It only exempts the
+    /// played-this-turn check (§16-33-1); a Vortex attack still runs the
+    /// counter and block timings (§11-1-5; Q3869).
     pub fn attack_digimon(
         &mut self,
         attacker: PermanentHandle,
@@ -525,7 +535,7 @@ impl Game {
     /// two Digimon's digivolution-card counts instead of DP ("Compare the
     /// number of digivolution cards instead of DP in this battle." — EX13-076
     /// Imperialdramon: Paladin Mode; G-ENGINE-BATTLE-COMPARE-SOURCE-COUNT).
-    /// It is the battle-scoped twin of `<Iceclad>` (16-34): DCGO routes both
+    /// It is the battle-scoped twin of `<Iceclad>` (16-35): DCGO routes both
     /// through the same `IBattle.CompareStats` branch
     /// (`HasIceclad || CompareDigivolutionCards`). Everything else is a
     /// standard battle — ties delete both, battle deletions run the normal
@@ -572,13 +582,13 @@ impl Game {
     }
 
     /// Declare an `<Overclock>` attack. The sacrifice must already have been
-    /// paid by the caller ([`Game::activate_overclock`] drives this via a
+    /// paid by the caller ([`Game::install_overclock_selection`] drives this via a
     /// `PendingSelection`). Identical to [`Game::begin_attack`] except:
     ///
     /// - The attacker is **not** suspended on declaration (§4.6c-residual
     ///   parity — matches Python `resolve_attack(..., without_suspend=True)`).
-    /// - Interrupts (Alliance / Counter / Block) still fire normally; per
-    ///   DCGO only Vortex is uninterruptible.
+    /// - Interrupts (Alliance / Counter / Block) still fire normally, as
+    ///   for every attack (§11-1-5).
     pub fn begin_attack_overclock(
         &mut self,
         attacker: PermanentHandle,
@@ -605,9 +615,34 @@ impl Game {
             allow_cancel: _,
             cost_upgrade,
         } = open;
+        // A finished game declares no attack.
+        if self.game_over {
+            return AttackResult::Invalid;
+        }
+        // §18-3: a player-declared attack is a decision (an effect-forced
+        // attack is not); the loop watch starts over (see
+        // `drain_effect_queue`).
+        if matches!(
+            initiator,
+            AttackInitiator::NaturalMainPhase | AttackInitiator::Vortex | AttackInitiator::Overclock
+        ) {
+            self.reset_loop_watch();
+        }
         let TargetConstraint::Forced(target) = target_constraint else {
             return AttackResult::Invalid;
         };
+        // §11-2-4 (Ver. 4.3) "A new attack declaration can't be made during
+        // an attack." An attack is in progress from its declaration until it
+        // has ended -- including while its End of Attack timing's pool is
+        // resolving (§11-6-2, `AttackState::EndOfAttackDrain`; G-ENGINE-ATTACK-ENDS-BEFORE-END-OF-ATTACK-EFFECTS-RESOLVE).
+        // A new declaration would overwrite its `pending_attack`, so its end
+        // (is_attacking clear, end-of-attack expiry, End of Attack timing)
+        // would never run. Refuse it; an end-of-turn attack keyword's offer or
+        // a paid `<Overclock>` attack waits for the attack to end instead
+        // (`deferred_end_of_turn_attack_offers`, `parked_overclock_attacks`).
+        if self.pending_attack.is_some() {
+            return AttackResult::Invalid;
+        }
         let vortex = matches!(initiator, AttackInitiator::Vortex);
         let skips_suspend_cost = !suspend_attacker;
 
@@ -687,7 +722,7 @@ impl Game {
             attacker,
             original_target: target,
             effective_target: target,
-            effective_target_removed_by_dna: false,
+            effective_target_removed: false,
             is_blocked: false,
             blocker: None,
             is_vortex: vortex,
@@ -702,6 +737,16 @@ impl Game {
             state: AttackState::Declared,
             counter_depth: 0,
         });
+        // A new attack: the previous attack's stack identity no longer names
+        // its attacker (`fire_on_attack` captures this one's). §16-39-3:
+        // `<Progress>` applies from the declaration.
+        self.attack_attacker_identity = None;
+        self.attack_attacker_card = None;
+        // §11-2-6: the declared target is tracked by its stack identity, so
+        // a Digimon that compacts into its slot after it leaves is never read
+        // as the target.
+        self.capture_attack_target_identity();
+        self.refresh_progress_shield();
 
         // `GameEvent::Attack` emission — spec
         // `engine-event-emission` requires emission at declaration time,
@@ -785,12 +830,10 @@ impl Game {
             return result;
         }
 
-        // Vortex short-circuits interrupts.
-        if vortex {
-            self.transition_attack_state(AttackState::Battle);
-        } else {
-            self.transition_attack_state(AttackState::RaidOpen);
-        }
+        // Every attack, a <Vortex> attack included, runs the counter and
+        // block timings (§11-1-5, §11-4-1; Q3869). `vortex` only exempted
+        // the played-this-turn check above (§16-33-1).
+        self.transition_attack_state(AttackState::RaidOpen);
 
         self.advance_pending_attack()
     }
@@ -804,6 +847,18 @@ impl Game {
     /// `pending_attack.state` (e.g. to `Battle` after a block declaration)
     /// and re-invokes this method to continue.
     pub fn advance_pending_attack(&mut self) -> AttackResult {
+        // §1-2-2: once the game has ended -- a drain inside this attack
+        // (e.g. its [When Attacking] effects) ended it in the §18-3-2 draw or
+        // by a §1-2-6 win/lose effect, or a security check won it -- no later
+        // attack timing, battle or security check runs and no prompt is
+        // installed (it could not be answered: `SelectionError::GameOver`).
+        // `GameWon` is the engine's "game over" result, as in the
+        // security-check guard; the terminal outcome itself is `Game::winner`
+        // / `terminal_outcome_reason`, and every terminal outcome is final
+        // (`finish_game` keeps the first one).
+        if self.game_over {
+            return AttackResult::GameWon;
+        }
         // A declaration made while resolving an effect is only declared here.
         // Finish that effect's remaining steps before attack interrupts/battle.
         if self.draining_deferred > 0 {
@@ -823,6 +878,14 @@ impl Game {
             let attacker = pa.attacker;
             let cancelled = pa.cancelled;
             let declaration_committed = pa.declaration_committed;
+            let security_check_started = pa.security_check_started;
+
+            // §11-6-2: the End of Attack timing's pool parked on a decision
+            // and has now resolved (the loop-top guard yields while anything
+            // is pending): only now does the attack end.
+            if let AttackState::EndOfAttackDrain(outcome) = state {
+                return self.finish_attack_after_end_of_attack_timing(outcome);
+            }
 
             // Phase 9: a `WhenWouldAttack` / `WhenWouldBeAttackTarget`
             // replacement (or a `ctx.cancel_attack()` from a later phase)
@@ -843,7 +906,36 @@ impl Game {
                     // require the slot to still be the in-flight attacker
                     // rather than merely any valid Digimon.
                     if !self.handle_still_attacking(attacker) {
-                        return self.cleanup_attack(AttackResult::Invalid);
+                        match state {
+                            // §11-1-5 (Ver. 4.3): "Once an attack declaration
+                            // has been made, all of the timings that follow
+                            // will occur. (Example: Even if an attacking
+                            // Digimon leaves the battle area, the non-turn
+                            // player's counter timing and block timing will
+                            // still occur.)" The counter timing runs on the
+                            // stored attack context (`try_enter_counter`);
+                            // the block timing offers no block (§12-1-6,
+                            // `try_enter_block`). DCGO `AttackProcess.cs`
+                            // `CounterTiming()` checks only `IsEndAttack`.
+                            AttackState::Declared
+                            | AttackState::RaidOpen
+                            | AttackState::AllianceOpen
+                            | AttackState::CounterOpen
+                            | AttackState::BlockOpen => {}
+                            // After the block timing with no attacking
+                            // Digimon: the attack is not successful
+                            // (§11-5-1-4-1), no
+                            // other action is taken and the end of attack
+                            // timing occurs. A battle already resolved or a
+                            // security check in flight keeps its own path.
+                            AttackState::PostBlock | AttackState::Battle
+                                if self.security_resolution.is_none()
+                                    && !security_check_started =>
+                            {
+                                return self.end_attack_unsuccessful();
+                            }
+                            _ => return self.cleanup_attack(AttackResult::Invalid),
+                        }
                     }
                 } else if !self.handle_valid(attacker) {
                     // Pre-observable replacement resume: the attacker has not
@@ -864,15 +956,16 @@ impl Game {
                     // immediately. If we're still here, fall through.
                     self.transition_attack_state(AttackState::RaidOpen);
                 }
+                // Pass-through: `<Raid>` and `<Alliance>` are trigger-type
+                // effects resolved in the attack declaration's trigger pool
+                // (`fire_on_attack`; §16-23-2, §16-24-2), not windows. The
+                // states stay in the enum for serialization / tensor
+                // compatibility.
                 AttackState::RaidOpen => {
-                    if !self.try_enter_raid_switch() {
-                        self.transition_attack_state(AttackState::AllianceOpen);
-                    }
+                    self.transition_attack_state(AttackState::AllianceOpen);
                 }
                 AttackState::AllianceOpen => {
-                    if !self.try_enter_alliance() {
-                        self.transition_attack_state(AttackState::CounterOpen);
-                    }
+                    self.transition_attack_state(AttackState::CounterOpen);
                 }
                 AttackState::CounterOpen => {
                     if !self.try_enter_counter() {
@@ -888,31 +981,23 @@ impl Game {
                     }
                 }
                 AttackState::PostBlock => {
-                    // Phase 9 Task 4 — post-Block Raid retarget rider. If
-                    // `effective_target` became invalid during the Block
-                    // window (OnAttack side-effects, Counter bodies, block
-                    // redirects, etc.) AND the attacker has `<Raid>` AND at
-                    // least one legal retarget exists, install a retarget
-                    // selection. Otherwise fall through to Battle (which
-                    // handles its own trivial-connect for invalid targets).
-                    match self.try_enter_raid_retarget() {
-                        RaidRetargetOutcome::Proceed => {
-                            self.transition_attack_state(AttackState::Battle);
-                        }
-                        RaidRetargetOutcome::SelectionInstalled => {
-                            // Selection parked — next loop iteration yields
-                            // on `pending_selection.is_some()`.
-                        }
-                        RaidRetargetOutcome::Fizzled => {
-                            // Raid applies, no retarget candidates —
-                            // cleanup_attack already ran; exit the state
-                            // machine with a terminal Cancelled result.
-                            return AttackResult::Cancelled;
-                        }
-                    }
+                    // §11-2-6 (Ver. 4.3): a removed attack target remains the
+                    // target and the attack fails; nothing retargets it.
+                    // `<Raid>` is a trigger-type effect that triggers once,
+                    // when the Digimon attacks, and is optional (§16-23-2 /
+                    // §16-23-3) -- it is resolved in the declaration's
+                    // trigger pool (`install_raid_switch_selection`), never
+                    // here. DCGO `AttackProcess.cs` goes from the block
+                    // timing straight to `DetermineAttackOutcome`.
+                    self.transition_attack_state(AttackState::Battle);
                 }
                 AttackState::Battle => {
                     let outcome = self.resolve_pending_battle();
+                    if outcome == AttackResult::Unsuccessful {
+                        // §11-2-6 / §11-5-1-4-1: the target was removed; the
+                        // same not-successful end as an attacker that left.
+                        return self.end_attack_unsuccessful();
+                    }
                     if matches!(outcome, AttackResult::InProgress) {
                         // Paused mid-security (a SecuritySkill effect
                         // installed a pending_selection). Keep
@@ -923,63 +1008,26 @@ impl Game {
                         return AttackResult::InProgress;
                     }
 
-                    // Phase 9 Task 6 — `<Piercing>` post-battle security
-                    // check. Fires iff the just-resolved battle was a
-                    // Digimon-vs-Digimon match in which the attacker
-                    // survived, the defender was DELETED in the battle
-                    // (`battle_defender_deleted` — recorded by
-                    // `resolve_battle` from the deletion-batch outcome;
-                    // never re-probed via the defender's slot-based handle,
-                    // which a bystander may have shifted into), AND the
-                    // attacker has `<Piercing>`. Survival is re-checked
-                    // here because OnDeletion / EndOfBattle triggers that
-                    // ran inside `resolve_battle` may have deleted the
-                    // attacker. Applies to both attack shapes: declared on
-                    // a Digimon, or declared on the player and blocked
-                    // (glossary: "This effect also works if an attack is
-                    // blocked"; §16-6-2).
-                    //
-                    // The security pipeline may park on a
-                    // `PendingSelection`; in that case we return
-                    // `InProgress` and `advance_security_resolution`
+                    // `<Piercing>` triggered in the battle's pool with the
+                    // loser's `[On Deletion]` (§16-7-4; `EffectTiming::
+                    // BattleResult`, keyword body in `keyword_effects.rs`);
+                    // its activation left the check pending
+                    // (`effect_battle_piercing_pending`). It applies to both
+                    // attack shapes -- declared on a Digimon, or declared on
+                    // the player and blocked (glossary: "This effect also
+                    // works if an attack is blocked"; §16-7-2) -- and to an
+                    // effect battle the attacking Digimon wins during the
+                    // attack. `cleanup_attack` processes it immediately
+                    // before the End of Attack timing, after every effect
+                    // triggered by the battle has resolved (the
+                    // post-selection resume re-enters through the
+                    // `PostBattle` arm below); `fire_piercing_or_finish`
+                    // re-checks that the attacker is still attacking
+                    // (§16-7-6), and the check is performed even if
+                    // <Piercing> was lost after it activated (official Q&A
+                    // Q3931). The security pipeline may park on a
+                    // `PendingSelection`; `advance_security_resolution` then
                     // finalizes via `cleanup_attack` when the chain clears.
-                    if outcome == AttackResult::AttackerWins {
-                        // Refresh declarative state before the keyword gate:
-                        // a conditional aura's `<Piercing>` may turn ON at
-                        // this exact timing (EX11-016's inherited "[Your
-                        // Turn] while your opponent has no Digimon with
-                        // digivolution cards" becomes true when the battle
-                        // deletes that last sourced Digimon — official Q&A:
-                        // the freshly gained keyword DOES trigger). Same
-                        // staleness rationale as `current_security_strike`.
-                        self.tick_declarative_effects();
-                        if let Some(pa) = self.pending_attack.as_ref() {
-                            let attacker_h = pa.attacker;
-                            let defender_deleted = pa.battle_defender_deleted;
-                            if defender_deleted
-                                && !pa.security_check_started
-                                && self.handle_still_attacking(attacker_h)
-                                && self.has_keyword(attacker_h, Keyword::Piercing)
-                            {
-                                self.transition_attack_state(AttackState::PostBattle);
-                                // §16-6-4: `<Piercing>` is pending processing
-                                // that resolves AFTER effects triggered by
-                                // the battle. If the battle's OnDeletion /
-                                // EndOfBattle chain parked a selection or
-                                // still has queued effects, yield; the
-                                // post-selection resume hook re-enters
-                                // `advance_pending_attack`, and the
-                                // `PostBattle` arm below fires the check
-                                // once the chain has cleared.
-                                if self.pending_selection.is_some() || !self.effect_queue.is_empty()
-                                {
-                                    return AttackResult::InProgress;
-                                }
-                                return self.fire_piercing_or_finish(attacker_h);
-                            }
-                        }
-                    }
-
                     return self.cleanup_attack(outcome);
                 }
                 AttackState::PostBattle => {
@@ -989,11 +1037,11 @@ impl Game {
                     //    flight — `advance_security_resolution` owns
                     //    completion and finalizes via `cleanup_attack`.
                     //    Yield.
-                    // 2. The Battle arm deferred an owed `<Piercing>` check
-                    //    because battle-triggered effects were still
-                    //    resolving (§16-6-4). Those have now cleared (the
-                    //    loop-top guard yields while a selection or queued
-                    //    effect is pending), so fire the check now.
+                    // 2. `cleanup_attack` deferred the check an activated
+                    //    `<Piercing>` left pending, because effects were
+                    //    still resolving (§16-7-4). Those have now cleared
+                    //    (the loop-top guard yields while a selection or
+                    //    queued effect is pending), so fire the check now.
                     if self.security_resolution.is_some() {
                         return AttackResult::InProgress;
                     }
@@ -1003,6 +1051,14 @@ impl Game {
                     // Shouldn't normally reach here — cleanup_attack is
                     // called on transition into Cleanup. Defensive exit.
                     return self.cleanup_attack(AttackResult::Invalid);
+                }
+                AttackState::EndOfAttackDrain(outcome) => {
+                    // Unreachable: handled by the early arm above, which must
+                    // precede the cancel / liveness checks (an attacker
+                    // deleted in the pool, e.g. by <Execute>, must not divert
+                    // to `cleanup_attack` and run the End of Attack again).
+                    // Kept only for exhaustiveness; same single finish.
+                    return self.finish_attack_after_end_of_attack_timing(outcome);
                 }
             }
         }
@@ -1243,16 +1299,24 @@ impl Game {
         reason: AttackTargetChangeReason,
     ) {
         // No active attack — silent no-op (callers should have checked).
-        let Some(pa) = self.pending_attack.as_mut() else {
-            return;
-        };
-        let old_target = pa.effective_target;
-        // Firing-guard: a redirect to the current effective target is a
-        // no-op — don't re-fire OnAttackTargetChange.
-        if old_target == new_target && !pa.effective_target_removed_by_dna {
+        if self.pending_attack.is_none() {
             return;
         }
-        let attacker = pa.attacker;
+        // The attacking Digimon by identity: once it has left the battle area
+        // its slot may hold another Digimon, and there is no attacking
+        // Digimon whose target could switch (DCGO `AttackProcess.cs`
+        // `SwitchDefender` yields when `AttackingPermanent.TopCard == null`).
+        let Some(attacker) = self.live_attack_attacker() else {
+            return;
+        };
+        let target_removed = self.attack_target_removed();
+        let old_target = self.pending_attack.as_ref().map_or(new_target, |pa| pa.effective_target);
+        // Firing-guard: a redirect to the current effective target is a
+        // no-op — don't re-fire OnAttackTargetChange. A removed target
+        // (§11-2-6) is never the current one.
+        if old_target == new_target && !target_removed {
+            return;
+        }
 
         // Track C: `CannotSwitchAttackTarget` on the attacker locks the
         // target — silently drop the substitution. Covers both the
@@ -1277,8 +1341,14 @@ impl Game {
             }
         }
 
+        let Some(pa) = self.pending_attack.as_mut() else {
+            return;
+        };
+        // A block (§12-1-7), redirect or `<Raid>` switch installs a NEW
+        // attack target: the removed one (§11-2-6) no longer matters.
         pa.effective_target = new_target;
-        pa.effective_target_removed_by_dna = false;
+        pa.effective_target_removed = false;
+        self.capture_attack_target_identity();
 
         self.fire_attack_target_change_observers(attacker, old_target, new_target, reason);
     }
@@ -1309,7 +1379,13 @@ impl Game {
                 reason,
             },
         );
-        self.drain_effect_queue();
+        // Deferred while an effect is resolving (e.g. the `<Raid>` body's
+        // switch pick, resolved inside the declaration's trigger pool): the
+        // derived OnAttackTargetChange observers wait for that effect to
+        // finish (§15-8-3-2) and then resolve before the effects still
+        // pending from the pool (§15-4-5-2), instead of draining those
+        // pending siblings mid-body.
+        self.maybe_drain_effect_queue();
     }
 
     /// Validate whether `target` is a legal attack target for `attacker`.
@@ -1381,6 +1457,11 @@ impl Game {
         Ok(())
     }
 
+    /// Resolve the `<Alliance>` ally pick (resume frame
+    /// `ResumeFrame::AllianceSelection`). PASS = the optional processing
+    /// condition is not executed (§16-24-3); nothing else happens. The attack
+    /// state machine is resumed by the selection resolver once the trigger
+    /// pool has drained.
     pub(crate) fn run_alliance_selection_step(
         &mut self,
         attacker: PermanentHandle,
@@ -1388,25 +1469,33 @@ impl Game {
         is_pass: bool,
     ) {
         if is_pass {
-            if let Some(pa) = self.pending_attack.as_mut() {
-                pa.state = AttackState::CounterOpen;
-            }
-            self.advance_pending_attack();
             return;
         }
-
         use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
-        use crate::enums::{Expiry, ModifierType};
-        use crate::modifiers::ModifierEntry;
-
-        let attacker_player = attacker.player;
-        let offset = action_id.saturating_sub(ATTACK_START);
-        let ally_index = (offset % TARGETS_PER_ATTACKER) as u8;
         let ally = PermanentHandle {
-            player: attacker_player,
-            index: ally_index,
+            player: attacker.player,
+            index: (action_id.saturating_sub(ATTACK_START) % TARGETS_PER_ATTACKER) as u8,
         };
+        self.apply_alliance_ally(attacker, ally);
+    }
 
+    /// `<Alliance>` after its ally is chosen (§16-24-1), in DCGO
+    /// `AllianceProcess` order (judge-quiz Q24):
+    ///   1. Suspend the ally THROUGH the canonical chokepoint — a keyword
+    ///      effect's "by suspending" condition is effect-initiated, so OnSuspend
+    ///      observers ("when an EFFECT suspends…", EX6-004) see the event. The
+    ///      deferred-drain scope parks those observers (and the ≤0-DP rules
+    ///      check) until the grant below completes.
+    ///   2. Read the ally's DP AFTER suspension (§16-24-4: the value upon the
+    ///      suspension) — a suspended-Digimon debuff (BT16-101's −4000)
+    ///      applies first and `effective_dp` floors at 0 (judge Q24).
+    ///   3. Grant the attacker +DP and <Security A. +1> until end of attack
+    ///      (the <Security A. +1> lands even when the DP added is 0).
+    ///      §16-24-5: both stay if the ally later leaves.
+    /// Flushing afterwards lets the rules check delete a ≤0-DP ally BEFORE its
+    /// parked OnSuspend observers activate (judge Q24).
+    pub(crate) fn apply_alliance_ally(&mut self, attacker: PermanentHandle, ally: PermanentHandle) {
+        let attacker_player = attacker.player;
         self.enter_deferred_drain();
         self.suspend_with_cause(ally, true);
         let ally_dp = self.effective_dp(ally).unwrap_or(0);
@@ -1429,161 +1518,80 @@ impl Game {
             ),
         );
         self.exit_deferred_drain_and_flush();
-
-        if let Some(pa) = self.pending_attack.as_mut() {
-            pa.state = AttackState::CounterOpen;
-        }
-        self.advance_pending_attack();
     }
 
-    /// If the ATTACKER has `<Alliance>`, scan its side for unsuspended
-    /// allies to declare. Install a `PendingSelection` in `AllianceTiming`
-    /// if any candidate exists. Returns `true` if a selection was installed.
-    ///
-    /// Official keyword (16-x / DCGO `AllianceSelfEffect`): the keyword is
-    /// on the ATTACKING Digimon — "When this Digimon attacks, by suspending
-    /// 1 of your OTHER Digimon, add the suspended Digimon's DP to this
-    /// Digimon and it gains <Security Attack +1> for the attack." Any other
-    /// unsuspended own Digimon is a legal ally (DCGO
-    /// `CanSelectPermanentCondition` requires only own battle-area Digimon ≠
-    /// carrier + `CanActivateSuspendCostEffect`); the ally itself does NOT
-    /// need the keyword. (The pre-judge-quiz-Q24 model had this inverted —
-    /// gating on the ALLY carrying Alliance.)
-    fn try_enter_alliance(&mut self) -> bool {
+    /// Field indices of the `<Alliance>` ally candidates for `attacker`: empty
+    /// unless `attacker` is the Digimon currently attacking (the grant is "for
+    /// the attack"; DCGO `CanTriggerOnPermanentAttack`); otherwise any OTHER
+    /// unsuspended Digimon of its controller that can be suspended (DCGO
+    /// `CanActivateAlliance` / `CanSelectPermanentCondition`: own battle-area
+    /// Digimon ≠ carrier + `CanActivateSuspendCostEffect`). The ally itself
+    /// does NOT need the keyword (judge-quiz Q24). A `CannotSuspend` ally
+    /// can't pay the suspension (prohibition precedence 15-1-3).
+    pub(crate) fn alliance_ally_candidates(&self, attacker: PermanentHandle) -> Vec<u8> {
+        // The attacker by stack identity (as `raid_switch_options`), never a
+        // Digimon that compacted into the attacker's slot.
+        if self.live_attack_attacker() != Some(attacker) {
+            return Vec::new();
+        }
+        let Some(player) = self.players.get(attacker.player as usize) else {
+            return Vec::new();
+        };
+        (0..player.battle_area.len() as u8)
+            .filter(|&i| i != attacker.index)
+            .filter(|&i| {
+                let h = PermanentHandle {
+                    player: attacker.player,
+                    index: i,
+                };
+                !player.battle_area[i as usize].is_suspended
+                    && self.permanent_is_digimon_for_rules(h)
+                    && !self.modifiers.has(h, ModifierType::CannotSuspend)
+            })
+            .collect()
+    }
+
+    /// `<Alliance>`'s trigger body (`keyword_to_auto_effect`): park the
+    /// optional ally pick for the attacker's controller. PASS = the optional
+    /// processing condition is not executed (§16-24-3). No candidates → no
+    /// prompt (the trigger's condition normally keeps it out of the pool).
+    pub(crate) fn install_alliance_ally_selection(&mut self, attacker: PermanentHandle) {
         use crate::action::space::encode_attack;
 
-        let Some(pa) = self.pending_attack.as_ref() else {
-            return false;
-        };
-        let attacker = pa.attacker;
-        let attacker_player = attacker.player;
-
-        // The keyword lives on the attacker.
-        if !self.has_keyword(attacker, Keyword::Alliance) {
-            return false;
-        }
-
-        let battle_area_len = self.player(attacker_player).battle_area.len();
-        let mut candidates: Vec<u8> = Vec::new();
-        for i in 0..battle_area_len {
-            // Attacker can't ally with itself.
-            if (i as u8) == attacker.index {
-                continue;
-            }
-            let h = PermanentHandle {
-                player: attacker_player,
-                index: i as u8,
-            };
-            let perm = &self.player(attacker_player).battle_area[i];
-            if perm.is_suspended {
-                continue;
-            }
-            if !self.permanent_is_digimon_for_rules(h) {
-                continue;
-            }
-            // The ally's suspension is a COST — a CannotSuspend ally can't
-            // pay it (DCGO `Alliance.cs:18` `CanActivateSuspendCostEffect`
-            // → `CanSuspend`; prohibition precedence 15-1-3).
-            if self.modifiers.has(h, ModifierType::CannotSuspend) {
-                continue;
-            }
-            candidates.push(i as u8);
-        }
-
+        let candidates = self.alliance_ally_candidates(attacker);
         if candidates.is_empty() {
-            return false;
+            return;
         }
-
-        let valid_action_ids: Vec<u16> = candidates
-            .iter()
-            .map(|&i| encode_attack(0, i as u16))
-            .collect();
-        let source_card = self.player(attacker_player).battle_area[attacker.index as usize]
-            .top_card()
-            .handle();
-
+        let Some(source_card) = self
+            .player(attacker.player)
+            .battle_area
+            .get(attacker.index as usize)
+            .map(|p| p.top_card().handle())
+        else {
+            return;
+        };
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::AllianceTiming;
-
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
             kind: SelectionKind::OwnField,
-            selecting_player: attacker_player,
+            selecting_player: attacker.player,
             previous_phase,
-            valid_action_ids,
-            is_optional: true, // Alliance is always a "may" declaration.
+            valid_action_ids: candidates
+                .iter()
+                .map(|&i| encode_attack(0, i as u16))
+                .collect(),
+            is_optional: true,
             prompt: "Declare an ally (Alliance)".to_string(),
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
             source_kind: crate::enums::EffectSourceKind::Digimon,
+            // Resume-driven (frame below); the closures mirror it.
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
-                use crate::enums::{Expiry, ModifierType};
-                use crate::modifiers::ModifierEntry;
-
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let ally_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                let ally = PermanentHandle {
-                    player: attacker_player,
-                    index: ally_index,
-                };
-
-                // DCGO `AllianceProcess` order (judge-quiz Q24):
-                //   1. Suspend the ally THROUGH the canonical chokepoint —
-                //      a keyword effect's "by suspending" cost is
-                //      effect-initiated, so OnSuspend observers ("when an
-                //      EFFECT suspends…", EX6-004) see the event. The
-                //      deferred-drain scope parks those observers (and the
-                //      ≤0-DP rules check) until the Alliance grant below
-                //      completes — official timing: rule processing and
-                //      trigger activation wait for the resolving effect.
-                //   2. Read the ally's DP AFTER suspension — a
-                //      suspended-Digimon debuff (BT16-101's −4000) applies
-                //      first, and `effective_dp` floors at 0, so a debuffed
-                //      ally can contribute +0 (judge Q24: "Tentomon won't
-                //      give any DP to Hudiemon").
-                //   3. Grant the attacker +DP and <Security Attack +1>
-                //      until end of attack (the Sec.A.+1 lands even when
-                //      the DP contribution is 0 — judge Q24 bonus tip).
-                game.enter_deferred_drain();
-                game.suspend_with_cause(ally, true);
-                let ally_dp = game.effective_dp(ally).unwrap_or(0);
-                game.modifiers.add(
-                    attacker,
-                    ModifierEntry::simple(
-                        ModifierType::ChangeDp,
-                        ally_dp,
-                        Expiry::EndOfAttack,
-                        attacker_player,
-                    ),
-                );
-                game.modifiers.add(
-                    attacker,
-                    ModifierEntry::simple(
-                        ModifierType::SecurityAttackChange,
-                        1,
-                        Expiry::EndOfAttack,
-                        attacker_player,
-                    ),
-                );
-                // Alliance has fully resolved — flush: the rules check
-                // deletes a ≤0-DP ally BEFORE its parked OnSuspend
-                // observers activate (judge Q24: Kokomon's trigger fires
-                // but the carrier dies before the inherited effect runs).
-                game.exit_deferred_drain_and_flush();
-
-                if let Some(pa) = game.pending_attack.as_mut() {
-                    pa.state = AttackState::CounterOpen;
-                }
-                game.advance_pending_attack();
+                game.run_alliance_selection_step(attacker, action_id, false);
             }),
-            on_decline: Some(Box::new(move |game: &mut Game| {
-                if let Some(pa) = game.pending_attack.as_mut() {
-                    pa.state = AttackState::CounterOpen;
-                }
-                game.advance_pending_attack();
-            })),
+            on_decline: Some(Box::new(|_game: &mut Game| {})),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::AllianceSelection(
@@ -1593,8 +1601,6 @@ impl Game {
                 },
             )],
         });
-
-        true
     }
 
     /// Scan the defender's hand + battle area for Counter-window
@@ -1823,6 +1829,36 @@ impl Game {
         let resume_valid_action_ids = valid_action_ids.clone();
         let resume_candidates = candidate_snapshot.clone();
 
+        // §11-1-5: the counter timing occurs even after the attacker left the
+        // battle area. Its slot may be empty or reused by then, so read the
+        // attacking card from the declaration context, never from the slot.
+        // Before the declaration commits (an effect-opened window) the slot
+        // handle is still the attacker, as in `live_attack_attacker`.
+        let declaration_committed = self
+            .pending_attack
+            .as_ref()
+            .is_some_and(|pa| pa.declaration_committed);
+        let attacker_present =
+            !declaration_committed || self.handle_still_attacking(attacker);
+        let source_card = if attacker_present {
+            match self
+                .player(attacker.player)
+                .battle_area
+                .get(attacker.index as usize)
+            {
+                Some(perm) => perm.top_card().handle(),
+                None => return false,
+            }
+        } else {
+            match self.attack_attacker_card {
+                Some(card) => card,
+                // No declaration context: nothing names the attacking card.
+                // Returned before the depth bump, so no window is consumed.
+                None => return false,
+            }
+        };
+        let source_permanent = attacker_present.then_some(attacker);
+
         // Increment the counter-depth guard — subsequent nested attacks
         // launched by the counter body will see `counter_depth >= 1` and
         // skip their own Counter windows.
@@ -1830,9 +1866,6 @@ impl Game {
             pa.counter_depth = pa.counter_depth.saturating_add(1);
         }
 
-        let source_card = self.player(attacker.player).battle_area[attacker.index as usize]
-            .top_card()
-            .handle();
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::CounterTiming;
 
@@ -1850,7 +1883,7 @@ impl Game {
             prompt: "Counter (blast / option / field ability)".to_string(),
             effect_choices: None,
             source_card,
-            source_permanent: Some(attacker),
+            source_permanent,
             source_kind: crate::enums::EffectSourceKind::Digimon,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 // Match the resolved action_id back to a candidate.
@@ -1867,14 +1900,13 @@ impl Game {
                 }
 
                 // WhenDigivolving / field-counter bodies may have deleted
-                // the attacker. If so skip Block + Battle; jump to
-                // Cleanup (mirrors DCGO AttackProcess.cs:301).
-                let next_state = match game.pending_attack.as_ref() {
-                    Some(pa) if game.handle_valid(pa.attacker) => AttackState::BlockOpen,
-                    Some(_) => AttackState::Cleanup,
-                    None => return,
-                };
-                game.transition_attack_state(next_state);
+                // the attacker. §11-1-5: the block timing still occurs; it
+                // offers no block without an attacking Digimon (§12-1-6)
+                // and the attack then ends as not successful (§11-5-1-4-1).
+                if game.pending_attack.is_none() {
+                    return;
+                }
+                game.transition_attack_state(AttackState::BlockOpen);
                 game.advance_pending_attack();
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
@@ -1926,12 +1958,12 @@ impl Game {
             return;
         }
 
-        let next_state = match self.pending_attack.as_ref() {
-            Some(pa) if self.handle_valid(pa.attacker) => AttackState::BlockOpen,
-            Some(_) => AttackState::Cleanup,
-            None => return,
-        };
-        self.transition_attack_state(next_state);
+        // §11-1-5: the block timing follows even if a counter body removed
+        // the attacker; `try_enter_block` then offers no block (§12-1-6).
+        if self.pending_attack.is_none() {
+            return;
+        }
+        self.transition_attack_state(AttackState::BlockOpen);
         self.advance_pending_attack();
     }
 
@@ -2022,7 +2054,7 @@ impl Game {
 
         // §8-1-3-3: the digivolution procedure "places the Digimon ... on top
         // of the chosen card, draws 1 card"; <Blast Digivolve> "is an effect
-        // that digivolves the chosen Digimon" (16-25-4), so it draws like any
+        // that digivolves the chosen Digimon" (16-26-4), so it draws like any
         // other digivolution (DCGO `PlayCardClass`: `if (isEvolution) ...
         // DrawClass(card.Owner, 1)`, CardController.cs ~1762). Lands after the
         // stack mutation and BEFORE the WhenDigivolving fan-out, mirroring
@@ -2247,7 +2279,7 @@ impl Game {
             } else {
                 perm.card_sources.push(material_card);
             }
-            perm.digivolve(result_card, turn);
+            perm.push_top(result_card);
             perm.turn_digivolved = turn;
         }
 
@@ -2275,10 +2307,9 @@ impl Game {
     }
 
     /// Scan the defender's battle area for unsuspended Digimon with the
-    /// Blocker keyword (modifier-granted or native — native/static parsing
-    /// still pending §4.3b/§2.1b; only granted Blocker keywords are
-    /// honored today). Install a `PendingSelection` in `BlockTiming` if
-    /// any candidate exists. Returns `true` if a selection was installed,
+    /// Blocker keyword (`Game::has_keyword`: printed, inherited, modifier-
+    /// granted, or the live `<Collision>` grant of §16-30-1). Install a
+    /// `PendingSelection` in `BlockTiming` if any candidate exists. Returns `true` if a selection was installed,
     /// `false` if no candidates and the caller should auto-advance to
     /// Battle.
     fn try_enter_block(&mut self) -> bool {
@@ -2296,6 +2327,16 @@ impl Game {
         };
         let attacker = pa.attacker;
 
+        // §12-1-6 (Ver. 4.3): "A block can only be performed if an attacking
+        // Digimon is in the battle area." Once declared, the attacker is
+        // judged by its live attacking state (its slot may be reused after it
+        // left); the block timing itself still occurs (§11-1-5) but offers no
+        // block. DCGO `AttackProcess.cs` `BlockTiming()` ends the attack when
+        // `AttackingPermanent.TopCard == null || !IsDigimon`.
+        if pa.declaration_committed && !self.handle_still_attacking(attacker) {
+            return false;
+        }
+
         // Track C: `CannotSwitchAttackTarget` on the attacker locks the
         // declared target — Block (and any redirect path that routes
         // through here) is suppressed. Mirrors BT24-062 MasterBlimpmon's
@@ -2312,11 +2353,15 @@ impl Game {
         // would be the same permanent.
         let attacker_is_defender = attacker.player == defender_player;
 
-        // §Collision: when the attacker has `Keyword::Collision`, every
-        // opponent Digimon is treated as having Blocker for this attack.
-        // Mirrors Python's `_is_collision` check in
-        // `permanent.py::can_be_blocker`.
+        // §16-30-1 / §16-30-4: <Collision> makes the block mandatory (the
+        // forcing affects the opponent PLAYER); the <Blocker> every affected
+        // opponent Digimon gains is granted declaratively in
+        // `Game::has_keyword` (`collision_grants_blocker`), not here.
         let attacker_has_collision = self.has_keyword(attacker, Keyword::Collision);
+        // §12-1-5: the attack target can't block. Found by identity: a
+        // removed target (§11-2-6) is not on the field, and the Digimon that
+        // compacted into its slot is not the attack target.
+        let live_target = self.live_attack_target_digimon();
 
         let battle_area_len = self.player(defender_player).battle_area.len();
         let mut candidates: Vec<u8> = Vec::new();
@@ -2334,7 +2379,7 @@ impl Game {
             // Official rule 12-1-5: the current attack target cannot block.
             // Use the effective target after Raid/Counter redirects, not the
             // originally declared target. Other unsuspended blockers remain legal.
-            if !pa.effective_target_removed_by_dna && pa.effective_target == AttackTarget::Digimon(h) {
+            if live_target == Some(h) {
                 continue;
             }
             let perm = &self.player(defender_player).battle_area[i];
@@ -2345,9 +2390,9 @@ impl Game {
                 continue;
             }
             // `CannotBlock` (Phase 6 restriction) short-circuits
-            // candidacy regardless of Collision — Collision promotes
-            // every opponent Digimon to "has Blocker" but does NOT
-            // override a printed/modifier `CannotBlock` gate.
+            // candidacy regardless of Collision -- the <Collision> grant
+            // gives the Digimon <Blocker> but does NOT override a
+            // printed/modifier `CannotBlock` gate.
             if self.modifiers.has(h, ModifierType::CannotBlock) {
                 continue;
             }
@@ -2369,9 +2414,12 @@ impl Game {
             {
                 continue;
             }
-            // Blocker required UNLESS the attacker has Collision, which
-            // grants Blocker to every opponent Digimon for this attack.
-            if !attacker_has_collision && !self.has_keyword(h, Keyword::Blocker) {
+            // §16-30-1 / §16-30-4: <Collision> grants <Blocker> to every
+            // opponent Digimon its effects can affect, declaratively inside
+            // `has_keyword` (`collision_grants_blocker`) -- so candidacy is
+            // just "has <Blocker>" and a Digimon unaffected by the attacker's
+            // effects is a candidate only through a Blocker it already has.
+            if !self.has_keyword(h, Keyword::Blocker) {
                 continue;
             }
             // Blocker declaration rewrites the attack target, so it must
@@ -2485,10 +2533,9 @@ impl Game {
                 game.advance_pending_attack();
             }),
             on_decline: Some(Box::new(move |game: &mut Game| {
-                // Block declined — advance to PostBlock (Raid retarget
-                // rider, then Battle). Attack proceeds against its
-                // original target unless the target became invalid
-                // during the Block window.
+                // Block declined — advance to PostBlock, then Battle. The
+                // attack proceeds against its target; a target removed
+                // meanwhile makes it fail (§11-2-6).
                 if let Some(pa) = game.pending_attack.as_mut() {
                     pa.state = AttackState::PostBlock;
                 }
@@ -2573,37 +2620,26 @@ impl Game {
         self.advance_pending_attack();
     }
 
-    /// Open Raid's printed optional attack-target switch immediately after
-    /// attack declaration. This is distinct from the post-Block Raid retarget
-    /// rider below, which only rescues an attack whose Digimon target became
-    /// invalid before battle.
-    fn try_enter_raid_switch(&mut self) -> bool {
-        let Some(pa) = self.pending_attack.as_ref() else {
-            return false;
-        };
-        let attacker = pa.attacker;
-        if !self.has_keyword(attacker, Keyword::Raid) {
-            return false;
+    /// `<Raid>`'s switch options for `attacker` (§16-23-1 / §16-23-4): empty
+    /// unless `attacker` is the Digimon currently attacking and its target can
+    /// be switched. Gates the `<Raid>` trigger (DCGO `CanActivateRaid`) and
+    /// feeds its body. There is no other `<Raid>` retarget: a removed attack
+    /// target makes the attack fail (§11-2-6).
+    pub(crate) fn raid_switch_options(&self, attacker: PermanentHandle) -> Vec<u8> {
+        // `attacker` must be the attacking Digimon, found by identity.
+        if self.live_attack_attacker() != Some(attacker) {
+            return Vec::new();
         }
         // Track C: `CannotSwitchAttackTarget` locks the attack onto its
-        // declared target. Raid's printed switch window would rewrite that
-        // target, so suppress the optional selection entirely.
+        // declared target, so <Raid> has nothing to switch to.
         if self
             .modifiers
             .has(attacker, ModifierType::CannotSwitchAttackTarget)
         {
-            return false;
+            return Vec::new();
         }
-
-        let candidates = self.raid_switch_candidates(
-            attacker, pa.effective_target, pa.effective_target_removed_by_dna,
-        );
-        if candidates.is_empty() {
-            return false;
-        }
-
-        self.install_raid_switch_selection(attacker, candidates);
-        true
+        let (current_target, current_removed) = self.attack_target_for_switch();
+        self.raid_switch_candidates(attacker, current_target, current_removed)
     }
 
     /// Enumerate Raid's printed candidates: opponent unsuspended Digimon tied
@@ -2656,19 +2692,27 @@ impl Game {
             .collect()
     }
 
-    fn install_raid_switch_selection(&mut self, attacker: PermanentHandle, candidates: Vec<u8>) {
-        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
+    /// `<Raid>`'s trigger body (`keyword_to_auto_effect`): park the optional
+    /// switch pick for the attacker's controller (§16-23-3: optional; PASS
+    /// keeps the target). No options → no prompt (the trigger's condition
+    /// normally keeps it out of the pool).
+    pub(crate) fn install_raid_switch_selection(&mut self, attacker: PermanentHandle) {
+        use crate::action::space::encode_attack;
 
+        let candidates = self.raid_switch_options(attacker);
+        if candidates.is_empty() {
+            return;
+        }
         let attacker_player = attacker.player;
         let opp_id = 1 - attacker_player;
-        let valid_action_ids: Vec<u16> = candidates
-            .iter()
-            .map(|&index| encode_attack(0, index as u16))
-            .collect();
-
-        let source_card = self.player(attacker_player).battle_area[attacker.index as usize]
-            .top_card()
-            .handle();
+        let Some(source_card) = self
+            .player(attacker_player)
+            .battle_area
+            .get(attacker.index as usize)
+            .map(|p| p.top_card().handle())
+        else {
+            return;
+        };
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
 
@@ -2677,38 +2721,27 @@ impl Game {
             kind: SelectionKind::OppField,
             selecting_player: attacker_player,
             previous_phase,
-            valid_action_ids,
+            valid_action_ids: candidates
+                .iter()
+                .map(|&index| encode_attack(0, index as u16))
+                .collect(),
             is_optional: true,
             prompt: "Raid - switch attack target".to_string(),
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
             source_kind: crate::enums::EffectSourceKind::Digimon,
+            // Resume-driven (frame below); the closures mirror it.
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let new_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                let new_target = PermanentHandle {
-                    player: opp_id,
-                    index: new_index,
-                };
-                if game
-                    .validate_attack_redirect_target(attacker, AttackTarget::Digimon(new_target))
-                    .is_ok()
-                {
-                    game.apply_attack_target_substitution_with_reason(
-                        AttackTarget::Digimon(new_target),
-                        AttackTargetChangeReason::Raid,
-                    );
-                }
-                game.transition_attack_state(AttackState::AllianceOpen);
-                game.advance_pending_attack();
+                game.run_raid_selection_step(
+                    attacker,
+                    opp_id,
+                    crate::resume::CombatRaidSelectionMode::Switch,
+                    action_id,
+                    false,
+                );
             }),
-            on_decline: Some(Box::new(move |game: &mut Game| {
-                if let Some(pa) = game.pending_attack.as_mut() {
-                    pa.state = AttackState::AllianceOpen;
-                }
-                game.advance_pending_attack();
-            })),
+            on_decline: Some(Box::new(|_game: &mut Game| {})),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RaidSelection(
@@ -2726,17 +2759,15 @@ impl Game {
         &mut self,
         attacker: PermanentHandle,
         opponent_player: PlayerId,
-        mode: crate::resume::CombatRaidSelectionMode,
+        // Single-variant since the post-Block retarget was removed; kept so
+        // the `ResumeFrame::RaidSelection` shape is unchanged.
+        _mode: crate::resume::CombatRaidSelectionMode,
         action_id: u16,
         is_pass: bool,
     ) {
+        // Switch (the `<Raid>` trigger body): PASS keeps the target; the
+        // attack state machine resumes once the trigger pool has drained.
         if is_pass {
-            if mode == crate::resume::CombatRaidSelectionMode::Switch {
-                if let Some(pa) = self.pending_attack.as_mut() {
-                    pa.state = AttackState::AllianceOpen;
-                }
-                self.advance_pending_attack();
-            }
             return;
         }
 
@@ -2756,254 +2787,143 @@ impl Game {
                 AttackTarget::Digimon(new_target),
                 AttackTargetChangeReason::Raid,
             );
-        } else if mode == crate::resume::CombatRaidSelectionMode::Retarget {
-            self.cleanup_attack(AttackResult::Cancelled);
-            return;
         }
-
-        match mode {
-            crate::resume::CombatRaidSelectionMode::Switch => {
-                self.transition_attack_state(AttackState::AllianceOpen);
-            }
-            crate::resume::CombatRaidSelectionMode::Retarget => {
-                self.transition_attack_state(AttackState::Battle);
-            }
-        }
-        self.advance_pending_attack();
     }
 
-    /// Phase 9 Task 4 — Raid target-switch rider. Evaluates the
-    /// post-Block checkpoint:
+    /// Park an effect-offered attack declaration for `state.attacker`'s
+    /// controller: one optional prompt whose choices are
+    /// `state.valid_action_ids` (the carrier's legal `encode_attack`
+    /// declarations) and PASS. Resume-driven
+    /// (`ResumeFrame::AttackDeclarationDecision`); the closures only mirror the
+    /// frame. A declinable decision, so it marks the §18-3 loop watch
+    /// (`mark_pending_selection_as_optional_decision`). The selecting player
+    /// is always the attacker's controller (the Digimon "may attack" for its
+    /// controller), whatever selecting-player override the enclosing effect
+    /// runs under. Returns whether a prompt was installed (none on a finished
+    /// game, when nothing is offered, or when a decision is already parked).
     ///
-    /// 1. Only fires for Digimon-shaped targets. Direct player attacks
-    ///    do not retarget via Raid (spec §4.2 — the attack was already
-    ///    aimed at a player, Raid's "pick a new Digimon" semantics
-    ///    don't apply).
-    /// 2. Only fires when `effective_target` is INVALID — i.e. the
-    ///    handle no longer resolves to a legal attack target.
-    /// 3. Only fires when the attacker has `<Raid>` (modifier-granted
-    ///    or native). Mirrors the mask-layer Raid check (see
-    ///    `action/mask.rs:137`).
-    /// 4. Candidate list uses the Raid-mask prioritization:
-    ///    unsuspended opposing Digimon first (tied on max DP),
-    ///    falling back to any legal opposing Digimon if no unsuspended
-    ///    candidates exist. Legality excludes `CannotAttackTarget`
-    ///    (Phase 6 restriction) and requires `OptionState::Standard`.
-    ///
-    /// Returns `true` iff a selection was installed (and the state
-    /// machine must yield). Returns `false` when the rider doesn't
-    /// apply OR when no candidates exist; the `false` path leaves the
-    /// state machine to transition to Battle, whose existing
-    /// "invalid defender → AttackerWins" fallback preserves Phase 4
-    /// semantics for the no-Raid / no-Raid-candidate case.
-    ///
-    /// When Raid candidates exist but the legal set is empty (all
-    /// opposing Digimon carry `CannotAttackTarget`, for instance), this
-    /// helper runs `cleanup_attack` directly and returns `Fizzled` —
-    /// the attack terminates with no battle resolution.
-    fn try_enter_raid_retarget(&mut self) -> RaidRetargetOutcome {
-        let Some(pa) = self.pending_attack.as_ref() else {
-            return RaidRetargetOutcome::Proceed;
-        };
-        // Raid retarget only applies to Digimon targets. Player attacks
-        // don't gain a new target via Raid.
-        let target_handle = match pa.effective_target {
-            AttackTarget::Digimon(h) => h,
-            AttackTarget::Player(_) => return RaidRetargetOutcome::Proceed,
-        };
-        // If the target is still valid, fall through to Battle — no
-        // retarget needed.
-        if !pa.effective_target_removed_by_dna && self.handle_valid(target_handle) {
-            return RaidRetargetOutcome::Proceed;
-        }
-        let attacker = pa.attacker;
-        if !self.has_keyword(attacker, Keyword::Raid) {
-            return RaidRetargetOutcome::Proceed;
-        }
-        // Track C: `CannotSwitchAttackTarget` on the attacker suppresses
-        // Raid retarget. The attack proceeds with its (now-invalid)
-        // effective_target — `resolve_pending_battle` treats a deleted
-        // defender as a clean attacker-wins, matching the no-Raid path.
-        // Without this gate the engine would still install the mandatory
-        // retarget selection, then `apply_attack_target_substitution`
-        // would silently no-op when the user picks — confusing UX.
-        if self
-            .modifiers
-            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+    /// Offered by `<Blitz>` (§16-16-3, inside the effect that executes it)
+    /// and by the `[End of Your Turn]` trigger bodies of `<Engage>`,
+    /// `<Execute>` and `<Vortex>` (§16-44-2, §16-38-2, §16-33-2), inside the
+    /// end-of-turn pool. While parked, `check_turn_end` is a no-op (a
+    /// selection is pending) and the mask exposes only this prompt's choices.
+    pub(crate) fn install_attack_declaration_decision(
+        &mut self,
+        state: crate::resume::AttackDeclarationDecisionState,
+        prompt: &str,
+    ) -> bool {
+        // A finished game offers no decisions (§1-2-2; G-ENGINE-GAME-OVER-NOT-TERMINAL):
+        // the drainer stops on `game_over`, and so does this installer.
+        if self.game_over || state.valid_action_ids.is_empty() || self.pending_selection.is_some()
         {
-            return RaidRetargetOutcome::Proceed;
+            return false;
         }
-
-        let candidates = self.raid_retarget_candidates(attacker);
-        if candidates.is_empty() {
-            // Raid applies but no legal retarget — fizzle the attack.
-            self.cleanup_attack(AttackResult::Cancelled);
-            return RaidRetargetOutcome::Fizzled;
-        }
-
-        self.install_raid_retarget_selection(attacker, candidates);
-        RaidRetargetOutcome::SelectionInstalled
-    }
-
-    /// Enumerate legal Raid retarget candidates on the opposing side.
-    /// Priority mirrors the mask-layer Raid selection (see
-    /// `action/mask.rs:137`): unsuspended Digimon tied at max effective
-    /// DP, falling back to any legal opposing Digimon when no
-    /// unsuspended candidate exists.
-    ///
-    /// Legality filters:
-    /// - Must be a Digimon (not Tamer/Option/DigiEgg).
-    /// - Must be in `OptionState::Standard` (excludes Delayed/Training/
-    ///   Linked option permanents).
-    /// - Must pass shared attack-retarget validation, including
-    ///   `CannotAttackTarget`, `CannotBeRedirectedAsAttackTarget` on
-    ///   the candidate, and `CanNotSwitchAttackTarget` on the attacker.
-    ///
-    /// Returns permanent indices on the opposing side (same ordering
-    /// as battle_area).
-    fn raid_retarget_candidates(&self, attacker: PermanentHandle) -> Vec<u8> {
-        let opp_id = 1 - attacker.player;
-        if (opp_id as usize) >= self.players.len() {
-            return Vec::new();
-        }
-        let opp = self.player(opp_id);
-        let max_opp = opp.battle_area.len();
-
-        // First pass: unsuspended candidates + track max DP.
-        let mut unsuspended: Vec<(u8, i32)> = Vec::new();
-        for j in 0..max_opp {
-            let t = &opp.battle_area[j];
-            if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
-                continue;
-            }
-            let t_handle = PermanentHandle {
-                player: opp_id,
-                index: j as u8,
-            };
-            if !self.permanent_is_digimon_for_rules(t_handle) {
-                continue;
-            }
-            if self
-                .validate_attack_redirect_target(attacker, AttackTarget::Digimon(t_handle))
-                .is_err()
-            {
-                continue;
-            }
-            if t.is_suspended {
-                continue;
-            }
-            let dp = self.effective_dp(t_handle).unwrap_or(0);
-            unsuspended.push((j as u8, dp));
-        }
-
-        if !unsuspended.is_empty() {
-            let max_dp = unsuspended.iter().map(|&(_, dp)| dp).max().unwrap_or(0);
-            return unsuspended
-                .into_iter()
-                .filter(|&(_, dp)| dp == max_dp)
-                .map(|(j, _)| j)
-                .collect();
-        }
-
-        // Fallback: any legal opposing Digimon (suspended or otherwise)
-        // when no unsuspended candidates exist. Raid rules permit this
-        // — "highest DP if no unsuspended available".
-        let mut fallback: Vec<u8> = Vec::new();
-        for j in 0..max_opp {
-            let t = &opp.battle_area[j];
-            if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
-                continue;
-            }
-            let t_handle = PermanentHandle {
-                player: opp_id,
-                index: j as u8,
-            };
-            if !self.permanent_is_digimon_for_rules(t_handle) {
-                continue;
-            }
-            if self
-                .validate_attack_redirect_target(attacker, AttackTarget::Digimon(t_handle))
-                .is_err()
-            {
-                continue;
-            }
-            fallback.push(j as u8);
-        }
-        fallback
-    }
-
-    /// Install the Raid retarget `PendingSelection`. The selecting
-    /// player is the attacker's controller. On resolution the selection
-    /// routes through `apply_attack_target_substitution` — reusing the
-    /// Task 2 entry point that fires `OnAttackTargetChange` globally —
-    /// then transitions to `AttackState::Battle` and re-enters the state
-    /// machine.
-    fn install_raid_retarget_selection(&mut self, attacker: PermanentHandle, candidates: Vec<u8>) {
-        use crate::action::space::{encode_attack, ATTACK_START, TARGETS_PER_ATTACKER};
-
-        let attacker_player = attacker.player;
-        let opp_id = 1 - attacker_player;
-        let valid_action_ids: Vec<u16> = candidates
-            .iter()
-            .map(|&j| encode_attack(0, j as u16))
-            .collect();
-
-        let source_card = self.player(attacker_player).battle_area[attacker.index as usize]
-            .top_card()
-            .handle();
+        let attacker = state.attacker;
+        let source_card = state.source_card;
+        let source_kind = state.source_kind;
+        let valid_action_ids = state.valid_action_ids.clone();
+        let callback_state = state.clone();
         let previous_phase = self.current_phase;
-
+        self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
             zone_owner: None,
-            kind: SelectionKind::OppField,
-            selecting_player: attacker_player,
+            kind: SelectionKind::Target,
+            selecting_player: attacker.player,
             previous_phase,
             valid_action_ids,
-            // Raid retarget is mandatory: once a legal retarget exists,
-            // the attacker must pick one (the alternative — fizzling —
-            // is reserved for the no-candidates path, which never
-            // installs a selection).
-            is_optional: false,
-            prompt: "Raid — pick a new target".to_string(),
+            is_optional: true,
+            prompt: prompt.to_string(),
             effect_choices: None,
             source_card,
             source_permanent: Some(attacker),
-            source_kind: crate::enums::EffectSourceKind::Digimon,
+            source_kind,
+            // Resume-driven (frame below); the closures mirror it.
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let new_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                let new_target = PermanentHandle {
-                    player: opp_id,
-                    index: new_index,
-                };
-                if game
-                    .validate_attack_redirect_target(attacker, AttackTarget::Digimon(new_target))
-                    .is_err()
-                {
-                    game.cleanup_attack(AttackResult::Cancelled);
-                    return;
-                }
-                // Reuse the shared entry point — rewrites
-                // `effective_target` and fires OnAttackTargetChange.
-                game.apply_attack_target_substitution_with_reason(
-                    AttackTarget::Digimon(new_target),
-                    AttackTargetChangeReason::Raid,
-                );
-                game.transition_attack_state(AttackState::Battle);
-                game.advance_pending_attack();
+                game.run_attack_declaration_decision_step(&callback_state, action_id, false);
             }),
-            on_decline: None,
+            on_decline: Some(Box::new(|_game: &mut Game| {})),
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::RaidSelection(
-                crate::resume::CombatRaidSelectionState {
-                    attacker,
-                    opponent_player: opp_id,
-                    mode: crate::resume::CombatRaidSelectionMode::Retarget,
-                    outer_conts: Vec::new(),
-                },
-            )],
+            frames: vec![crate::resume::ResumeFrame::AttackDeclarationDecision(state)],
         });
+        self.mark_pending_selection_as_optional_decision();
+        true
+    }
+
+    /// The `AttackTarget` an effect-offered attack declaration `action_id`
+    /// (`encode_attack(attacker, target)`) names for `attacker`, or `None`
+    /// when the id is another Digimon's declaration. `SECURITY_TARGET` is the
+    /// opposing player; any other target index is that opponent's Digimon.
+    /// Shared by every effect-offered declaration decode
+    /// (`run_attack_declaration_decision_step`, `ResumeSelectKind::BeginAttack`).
+    ///
+    /// TODO: three decode-to-attack copies still bypass this helper -- the
+    /// redirect and may-attack closures in `effect_context/action/combat.rs`
+    /// (~L250, ~L467) and the `ResumeSelectKind::AttackTarget` redirect in
+    /// `dsl_cards/step/selections.rs` (~L1081) -- and `ResumeSelectKind::BeginAttack`
+    /// is still its own DSL frame rather than `ResumeFrame::AttackDeclarationDecision`.
+    pub(crate) fn decode_effect_attack_target(
+        &self,
+        attacker: PermanentHandle,
+        action_id: u16,
+    ) -> Option<AttackTarget> {
+        use crate::action::space::{decode_attack, SECURITY_TARGET};
+        let (decoded_attacker, decoded_target) = decode_attack(action_id);
+        if decoded_attacker as u8 != attacker.index {
+            return None;
+        }
+        let opponent = self.next_clockwise(attacker.player);
+        Some(if decoded_target == SECURITY_TARGET {
+            AttackTarget::Player(opponent)
+        } else {
+            AttackTarget::Digimon(PermanentHandle {
+                player: opponent,
+                index: decoded_target as u8,
+            })
+        })
+    }
+
+    /// Resolve a parked effect-offered attack declaration: PASS declares
+    /// nothing; a pick among the offered declarations declares the attack
+    /// through the normal procedure (§11-1-5: every following timing occurs),
+    /// opened as `state` says (initiator, suspension, upgrade). The attack
+    /// does not re-check the memory gate that let the effect offer it
+    /// (§16-16-4 for `<Blitz>`). The caller runs the frame's `outer_conts`.
+    ///
+    /// An end-of-turn keyword's declaration (`state.end_of_turn_keyword`) is
+    /// made inside the `[End of Your Turn]` pool: the declaration's own
+    /// triggers and the pool's remaining entries resolve before the counter
+    /// timing (§11-1-4; Q3869), because `advance_pending_attack` yields while
+    /// the queue is non-empty and the `resolve_selection` tail resumes it once
+    /// the pool has drained. The keyword is recorded for the attack
+    /// (`end_of_turn_attack_keyword`, cleared when the attack ends).
+    pub(crate) fn run_attack_declaration_decision_step(
+        &mut self,
+        state: &crate::resume::AttackDeclarationDecisionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if is_pass || !state.valid_action_ids.contains(&action_id) {
+            return;
+        }
+        let Some(target) = self.decode_effect_attack_target(state.attacker, action_id) else {
+            return;
+        };
+        let previous_keyword = self.end_of_turn_attack_keyword;
+        self.end_of_turn_attack_keyword = state.end_of_turn_keyword;
+        let result = self.begin_attack_open(AttackOpen {
+            attacker: state.attacker,
+            initiator: state.initiator,
+            suspend_attacker: state.suspend_attacker,
+            ignore_summoning_sickness: state.ignore_summoning_sickness,
+            target_constraint: TargetConstraint::Forced(target),
+            allow_cancel: true,
+            cost_upgrade: state.cost_upgrade,
+        });
+        // No attack was installed (an illegal declaration): nothing to tag.
+        if result == AttackResult::Invalid && self.pending_attack.is_none() {
+            self.end_of_turn_attack_keyword = previous_keyword;
+        }
     }
 
     /// Resolve the battle once all interrupt windows have cleared.
@@ -3014,6 +2934,9 @@ impl Game {
         if let Some(outcome) = self.pending_attack_battle_result.take() {
             return outcome;
         }
+        // Re-key both handles by identity first (a DNA / DigiXros field
+        // removal skips the slot shift), and record a removed target.
+        self.sync_attack_target();
         let Some(pa) = self.pending_attack.as_ref() else {
             return AttackResult::Invalid;
         };
@@ -3025,12 +2948,20 @@ impl Game {
         }
 
         match target {
-            AttackTarget::Digimon(defender) => {
-                if pa.effective_target_removed_by_dna || !self.handle_valid(defender) {
-                    // Defender was deleted between declaration and battle —
-                    // attack connects trivially. Matches Python behavior.
-                    return AttackResult::AttackerWins;
-                }
+            AttackTarget::Digimon(_) => {
+                // §11-2-6 (Ver. 4.3): "Even if the attack target Digimon is
+                // removed during an attack, that Digimon remains the attack
+                // target, but the attack fails." Keyed on the recorded
+                // removal, never on whatever now occupies the target's slot
+                // (DCGO `DetermineAttackOutcome` battles only when
+                // `IsPermanentExistsOnBattleAreaDigimon(DefendingPermanent)`).
+                let defender = match self.live_attack_target_digimon() {
+                    // A target still on the field that is no longer a
+                    // Digimon in the standard state can't be battled either.
+                    Some(defender) if self.handle_valid(defender) => defender,
+                    // The attack is not successful (§11-5-1-4-1).
+                    _ => return AttackResult::Unsuccessful,
+                };
                 self.resolve_battle(attacker, defender)
             }
             AttackTarget::Player(defender_player) => {
@@ -3047,11 +2978,13 @@ impl Game {
     /// Fire the owed `<Piercing>` follow-up security check, or finish the
     /// attack when the check can no longer be performed.
     ///
+    /// The check is owed once a `<Piercing>` ACTIVATED in the battle's
+    /// trigger pool (`effect_battle_piercing_pending`, §16-7-4); losing the
+    /// keyword afterwards does not cancel it (official Q&A Q3931).
     /// Preconditions re-validated here (they may have changed while
-    /// battle-triggered effects resolved, §16-6-4):
-    /// - the attacker is still the in-flight attacking Digimon;
-    /// - it still has `<Piercing>`;
-    /// - the defending player has ≥ 1 security card — §16-6-6: with 0
+    /// battle-triggered effects resolved, §16-7-4):
+    /// - the attacker is still the in-flight attacking Digimon (§16-7-6);
+    /// - the defending player has ≥ 1 security card — §16-6-6 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md]: with 0
     ///   security the check "can't be performed" at all, and in particular
     ///   Piercing must NOT win the game (the 0-security game-win arm is
     ///   exclusive to unblocked player attacks, §11-5-1-2; DCGO parity:
@@ -3060,17 +2993,18 @@ impl Game {
     ///   no-defender arm).
     fn fire_piercing_or_finish(&mut self, attacker: PermanentHandle) -> AttackResult {
         // Keyword state may have changed while battle-triggered effects
-        // resolved — refresh the materialized aura grants before the gate
-        // (same rationale as `current_security_strike`).
+        // resolved — refresh the materialized aura grants before the
+        // security-check pipeline reads them (same rationale as
+        // `current_security_strike`).
         self.tick_declarative_effects();
-        let earned_by_effect_battle = self.pending_attack.as_mut().is_some_and(|pa| {
+        let piercing_activated = self.pending_attack.as_mut().is_some_and(|pa| {
             let pending = pa.effect_battle_piercing_pending;
             pa.effect_battle_piercing_pending = false;
             pending
         });
         let defender_player: PlayerId = 1 - attacker.player;
         if self.handle_still_attacking(attacker)
-            && (earned_by_effect_battle || self.has_keyword(attacker, Keyword::Piercing))
+            && piercing_activated
             && self.pending_attack.as_ref().is_some_and(|pa| !pa.security_check_started)
             && !self.player(defender_player).security.is_empty()
         {
@@ -3080,6 +3014,55 @@ impl Game {
             }
         } else {
             self.cleanup_attack(AttackResult::AttackerWins)
+        }
+    }
+
+    /// `<Piercing>`'s trigger condition and activation gate (§16-7-1 /
+    /// §16-7-2; DCGO `CanTriggerPierce` + `CanActivatePierce`), read with
+    /// the battle's `BattleResolved` trigger context installed: `carrier`
+    /// won the battle (found by identity, §15-8-3-8) and deleted its battle
+    /// opponent; it is still the in-flight attacking Digimon and still has
+    /// <Piercing>; the attack has checked no security yet and owes no
+    /// <Piercing> check already (§16-7-5: one check per attack, so a second
+    /// instance does not activate); the opponent has security to check.
+    /// Covers the attack's own battle and an effect battle the attacking
+    /// Digimon fights during the attack (Bandai CRM4 "May battle" notes).
+    pub(crate) fn piercing_trigger_applies(&self, carrier: PermanentHandle) -> bool {
+        let Some(trigger) = self.current_trigger_context.as_ref() else {
+            return false;
+        };
+        let Some((winner_controller, winner_identity)) = trigger.battle_winner_identity else {
+            return false;
+        };
+        if trigger.resolve_battle_winner(self) != Some(carrier) {
+            return false;
+        }
+        let deleted_its_opponent = trigger.battle_deleters.iter().any(|deleter| {
+            deleter.controller == winner_controller && deleter.battle_identity == winner_identity
+        });
+        let Some(pa) = self.pending_attack.as_ref() else {
+            return false;
+        };
+        deleted_its_opponent
+            && pa.attacker == carrier
+            && !pa.cancelled
+            && !pa.security_check_started
+            && !pa.effect_battle_piercing_pending
+            && self.handle_still_attacking(carrier)
+            && self.has_keyword(carrier, Keyword::Piercing)
+            && !self.player(1 - carrier.player).security.is_empty()
+    }
+
+    /// `<Piercing>`'s activation (§16-7-4; DCGO `PierceProcess`
+    /// `DoSecurityCheck = true`): the security check becomes pending
+    /// processing, performed immediately before the End of Attack timing by
+    /// `fire_piercing_or_finish`, whether or not the attacker keeps the
+    /// keyword (official Q&A Q3931).
+    pub(crate) fn activate_piercing(&mut self, carrier: PermanentHandle) {
+        if let Some(pa) = self.pending_attack.as_mut() {
+            if pa.attacker == carrier && !pa.security_check_started {
+                pa.effect_battle_piercing_pending = true;
+            }
         }
     }
 
@@ -3469,10 +3452,10 @@ impl Game {
     ///   `Some(...)` with its current `phase`. Resume via
     ///   `advance_security_resolution`.
     ///
-    /// Rule 13-1-7: immediate Security, captured simultaneous observers,
+    /// Rule 13-1-8 (Q6813): immediate Security, captured simultaneous observers,
     /// security battle, then disposal. Security choices pause the barrier.
     /// A security battle's triggered and scheduled effects finish before
-    /// disposal or another check (general_rule.pdf 13-1-7 / 14-2).
+    /// disposal or another check (general_rule.pdf 13-1-8 / 14-2).
     fn drive_security_resolution(&mut self) -> Option<AttackResult> {
         loop {
             // Safety rail: if `declare_winner` fired mid-drain, unwind.
@@ -3530,9 +3513,22 @@ impl Game {
                     if self.pending_selection.is_some() {
                         return None;
                     }
+                    // §13-1-8-2: every effect triggered by the security
+                    // check resolves -- the [Security] effect first
+                    // (§15-16-10-2, just drained: it activates immediately
+                    // without pending activation, Q6813), then the check /
+                    // removal observers captured at the reveal -- BEFORE the
+                    // §13-1-8-3 battle against a Security Digimon. DCGO:
+                    // `ISecurityCheck.SecurityCheck` drains
+                    // `triggeredSkillInfos` (OnSecurityCheck) through
+                    // `AutoProcessCheck` and only then enters
+                    // `#region battle with security Digimon`.
                     self.set_security_phase(SecurityPhase::OnSecurityCheckDrain);
                 }
                 SecurityPhase::BattleResolved => {
+                    // §16-39-1: the security battle compares the attacker's DP
+                    // as it is now, as `resolve_battle_with` does.
+                    self.refresh_progress_shield();
                     // Only Digimon security runs the DP battle; Option /
                     // Tamer / DigiEgg skip straight through.
                     let Some(state) = self.security_resolution.as_ref() else {
@@ -3571,7 +3567,7 @@ impl Game {
                                     .saturating_add(
                                         self.defender_security_dp_adjustment(state.defender),
                                     );
-                                // Rules 13-1-7-3 / 14-2: this is a battle even
+                                // Rules 13-1-8-3 / 14-2: this is a battle even
                                 // though the security Digimon cannot be deleted.
                                 // Save the comparison before deletion can park on
                                 // a replacement or an On Deletion choice.
@@ -3604,7 +3600,7 @@ impl Game {
                                     // on ReplacementCause::Battle and were
                                     // therefore filtered out before ever being
                                     // offered. Losing to a Security Digimon is
-                                    // a battle deletion: rule 16-8 <Jamming>
+                                    // a battle deletion: rule 16-9 <Jamming>
                                     // names it outright ("not deleted as a
                                     // result of a battle with a Security
                                     // Digimon"), and the Jamming check directly
@@ -3655,13 +3651,27 @@ impl Game {
                         if let Some(st) = self.security_resolution.as_mut() {
                             st.phase_enqueue_done = true;
                         }
+                        let (winner_identity, winner_snapshot) =
+                            self.battle_winner_referent(winner);
+                        // §14-2-4: the effects triggered by the battle
+                        // ("wins a battle") resolve first; the end of the
+                        // battle timing (§14-2-5) follows in
+                        // `EndOfSecurityBattleTimingDrain`, which reads the
+                        // same winner referent.
+                        self.security_battle_end_referent =
+                            Some((winner_identity, winner_snapshot.clone()));
+                        // §15-8-3-1 / §15-8-3-4: only the effects whose trigger
+                        // qualifier this battle met trigger
+                        // (`enqueue_triggered` -> `discard_entries_not_triggered`).
                         self.enqueue_triggered(
-                            EffectTiming::EndOfBattle,
+                            EffectTiming::BattleResult,
                             TriggerSource::BattleResolved {
                                 winner,
                                 // Rule 14-2-3: beating a Security Digimon does
                                 // not delete it, so no permanent is a deleter.
                                 deleters: Vec::new(),
+                                winner_identity,
+                                winner_snapshot,
                             },
                         );
                     }
@@ -3669,18 +3679,32 @@ impl Game {
                     if self.pending_selection.is_some() {
                         return None;
                     }
-                    self.set_security_phase(SecurityPhase::EndOfSecurityBattleScheduledDrain);
+                    self.set_security_phase(SecurityPhase::EndOfSecurityBattleTimingDrain);
                 }
-                SecurityPhase::EndOfSecurityBattleScheduledDrain => {
-                    let enqueue_done = state.phase_enqueue_done;
-                    if !enqueue_done {
+                SecurityPhase::EndOfSecurityBattleTimingDrain => {
+                    // §14-2-5: the end of the battle timing, once the effects
+                    // triggered by the battle have resolved.
+                    if !state.phase_enqueue_done {
                         if let Some(st) = self.security_resolution.as_mut() {
                             st.phase_enqueue_done = true;
                         }
-                        crate::scheduled_effects::fire_scheduled_for_timing(
-                            self,
+                        let (winner_identity, winner_snapshot) =
+                            self.security_battle_end_referent.take().unwrap_or((None, None));
+                        let winner = winner_identity
+                            .and_then(|identity| self.permanent_by_battle_identity(identity));
+                        self.enqueue_triggered(
                             EffectTiming::EndOfBattle,
+                            TriggerSource::BattleResolved {
+                                winner,
+                                deleters: Vec::new(),
+                                winner_identity,
+                                winner_snapshot,
+                            },
                         );
+                        // §18-1-2: pending processing due at the end of the
+                        // battle pools with the end-of-battle effects
+                        // (enqueued once: the guard above survives a park).
+                        self.enqueue_scheduled_for_timing(EffectTiming::EndOfBattle);
                     }
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
@@ -3689,8 +3713,16 @@ impl Game {
                     self.set_security_phase(SecurityPhase::WhenWouldLoseSecurity);
                 }
                 SecurityPhase::OnSecurityCheckDrain => {
-                    // Eligible entries were captured once at reveal. Derived
-                    // Security events have newer batch ids and activate first.
+                    // §13-1-8-2 / Q6813: the check and removal observers
+                    // (OnSecurityCheck, OnCheckFaceUpSecurity, OnLoseSecurity,
+                    // On{Own,Opponent}SecurityRemoved) triggered
+                    // simultaneously at the reveal and were captured there
+                    // as one pool (`freeze_security_check_entries`); the
+                    // turn player's bundle activates first (§15-4-3-2). No
+                    // rescan here: a Digimon the [Security] effect played did
+                    // not exist at the check. Effects derived from the
+                    // [Security] body carry newer batch ids and activate
+                    // first (G-ENGINE-TRIGGER-ORDER-DERIVED-FIRST).
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
                         return None;
@@ -3723,12 +3755,15 @@ impl Game {
                     self.commit_pending_security_loss_replacement(outcome);
                 }
                 SecurityPhase::OnLoseSecurityDrain | SecurityPhase::Dispose => {
-                    // Check-driven removal effects already activated before
-                    // battle. Do not rescan or duplicate them at disposal.
+                    // Check-driven removal effects (§13-1-6: the checked card
+                    // left the security stack at the check) already activated
+                    // in `OnSecurityCheckDrain`, before the battle (Q6813). Do
+                    // not rescan or duplicate them at disposal; the trash
+                    // push stays in `DisposeFinalize` (§13-1-8-4).
                     self.set_security_phase(SecurityPhase::DisposeFinalize);
                 }
                 SecurityPhase::DisposeFinalize => {
-                    // §13-1-7-4, the last step of the check: the revealed card
+                    // §13-1-8-4, the last step of the check: the revealed card
                     // is placed in the trash "unless it belongs to an area" --
                     // i.e. unless an effect raised the `played` bit via
                     // `EffectContext::play_pending_security` (or otherwise
@@ -3743,7 +3778,7 @@ impl Game {
                     if let Some(defender) = self.security_resolution.as_ref().map(|s| s.defender) {
                         if let Some(pending) = self.pending_security.take() {
                             if !pending.played {
-                                self.player_mut(defender).trash.push(pending.card);
+                                self.player_mut(defender).put_in_trash(pending.card);
                             }
                         }
                     }
@@ -3878,15 +3913,14 @@ impl Game {
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Hand) => {
                 if let Some(pending) = self.pending_security.take() {
-                    self.player_mut(pending.defender).hand.push(pending.card);
+                    self.player_mut(pending.defender).put_in_hand(pending.card);
                 }
                 self.set_security_phase(SecurityPhase::DisposeFinalize);
             }
             ReplacementOutcome::Redirected(crate::enums::Zone::Deck) => {
                 if let Some(pending) = self.pending_security.take() {
                     self.player_mut(pending.defender)
-                        .deck
-                        .insert(0, pending.card);
+                        .insert_in_deck(0, pending.card);
                 }
                 self.set_security_phase(SecurityPhase::DisposeFinalize);
             }
@@ -3906,7 +3940,7 @@ impl Game {
             return;
         };
         let card_index = pending.card.card_index;
-        self.player_mut(defender).security.push(pending.card);
+        self.player_mut(defender).put_on_security_top(pending.card);
         if was_face_up {
             self.player_mut(defender)
                 .face_up_security
@@ -3957,14 +3991,29 @@ impl Game {
         }
     }
 
-    /// End-of-attack cleanup: clear `is_attacking`, expire EndOfAttack
-    /// modifiers, drop `pending_attack`, and pass `outcome` through to the
-    /// caller. Called from both `begin_attack` (early-exit paths) and
-    /// `advance_pending_attack` (normal terminal paths).
+    /// The End of Attack timing, then the end of the attack. Called from
+    /// both `begin_attack` (early-exit paths) and `advance_pending_attack`
+    /// (normal terminal paths).
+    ///
+    /// §11-6-2 (Ver. 4.3): "For the end of the attack timing, the attack
+    /// won't end until all processing has been resolved." The timing's pool
+    /// is drained while the attack is still in progress; if it parks on a
+    /// decision, `pending_attack` stays set in
+    /// `AttackState::EndOfAttackDrain(outcome)` and this returns
+    /// `InProgress`. The post-selection resume (`advance_pending_attack`)
+    /// then calls `finish_attack_after_end_of_attack_timing`, which clears
+    /// `is_attacking`, expires the end-of-attack modifiers, drops
+    /// `pending_attack` and returns `outcome`. DCGO `AttackProcess.cs`
+    /// `EndAttack()` likewise yields on the `OnEndAttack` stack before its
+    /// clean-up step.
     fn cleanup_attack(&mut self, outcome: AttackResult) -> AttackResult {
-        // Effect battles can remove the declared target before the attack's
-        // normal battle. Their earned Piercing still resolves before EndOfAttack,
-        // after battle rewards, but never after an ordinary security transition.
+        // A `<Piercing>` that activated in a battle's trigger pool -- the
+        // attack's own battle, or an effect battle the attacking Digimon won
+        // during the attack (which can also remove the declared target before
+        // the attack's normal battle) -- left its check pending (§16-7-4). It
+        // is processed here, immediately before the End of Attack timing,
+        // after the battle's triggered effects, but never after an ordinary
+        // security transition (§16-7-5).
         if let Some(pa) = self.pending_attack.as_ref() {
             if pa.effect_battle_piercing_pending && !pa.security_check_started && !pa.cancelled
                 && self.handle_still_attacking(pa.attacker)
@@ -3990,8 +4039,68 @@ impl Game {
                     .unwrap_or(false)),
             "pre-declaration cancellation cannot have reached battle"
         );
-        if let Some(pa) = self.pending_attack.as_ref() {
-            let h = pa.attacker;
+        // EndOfAttack: observer timing, fires in every player's battle area.
+        // Used by "at the end of an attack" effects. The attack is still in
+        // progress (§11-6-2): the attacker is still attacking, the modifiers
+        // "for the attack" still apply and `pending_attack` is still set, so
+        // every effect in the pool sees the attack context.
+        for pid in 0..self.players.len() {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::EndOfAttack,
+                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+            );
+        }
+        // §18-1-2: pending processing due at the end of the attack joins the
+        // printed `EndOfAttack` effects in one simultaneous pool (ordered by
+        // the turn player), before modifier expiry / the `pending_attack`
+        // clear, so both see the same attack context.
+        self.enqueue_scheduled_for_timing(crate::enums::EffectTiming::EndOfAttack);
+        self.transition_attack_state(AttackState::EndOfAttackDrain(outcome));
+        self.drain_effect_queue();
+        // §11-6-2: a decision in the pool (a `TriggerOrder`, an optional
+        // effect, a body's own pick) holds the attack open; the resume
+        // re-enters `advance_pending_attack`, whose `EndOfAttackDrain` arm
+        // finishes it. (No `pending_attack` means no attack to hold open:
+        // finish at once, as before.)
+        //
+        // Park on a selection ONLY, not on a non-empty queue: the resume is
+        // the `resolve_selection` tail, so only a selection re-enters
+        // `advance_pending_attack`; parking on a queue with no selection would
+        // strand the attack. `drain_effect_queue` returns with a non-empty
+        // queue and no selection only when the game halted (the queue is
+        // cleared then), so the two predicates agree in practice. Do not
+        // "align" this with the resume's loop-top guard.
+        if self.pending_selection.is_some() && self.pending_attack.is_some() {
+            return AttackResult::InProgress;
+        }
+        self.finish_attack_after_end_of_attack_timing(outcome)
+    }
+
+    /// The end of the attack, once the End of Attack timing's processing has
+    /// all resolved (§11-6-2): the attacker stops attacking, the
+    /// end-of-attack modifiers expire, `pending_attack` clears, the rule
+    /// check and the turn-end check run, and an end-of-turn attack lets the
+    /// end of turn continue. Returns `outcome`.
+    pub(crate) fn finish_attack_after_end_of_attack_timing(
+        &mut self,
+        outcome: AttackResult,
+    ) -> AttackResult {
+        // An end-of-turn attack: declared inside the `[End of Your Turn]`
+        // pool (`EndTurn`: `<Engage>` / `<Execute>` / `<Vortex>` /
+        // `<Overclock>`, §16-44-2 / §16-38-2 / §16-33-2 / §16-34-2, or any
+        // other end-of-turn effect's attack) or in the `EndOfTurnAction`
+        // window (a `MayAttack` grant).
+        let end_of_turn_attack = self.pending_attack.as_ref().is_some_and(|pa| {
+            matches!(
+                pa.return_phase,
+                crate::enums::GamePhase::EndOfTurnAction | crate::enums::GamePhase::EndTurn
+            )
+        });
+        // The attacker by identity: a DNA / DigiXros field removal does not
+        // re-key `pa.attacker`, and a Digimon that compacted into its slot is
+        // not the attacker. Nothing to clear once it has left (e.g. deleted
+        // by `<Execute>` in the End of Attack pool).
+        if let Some(h) = self.live_attack_attacker() {
             if let Some(perm) = self
                 .player_mut(h.player)
                 .battle_area
@@ -4001,29 +4110,25 @@ impl Game {
             }
         }
 
-        // EndOfAttack: observer timing, fires in every player's battle area.
-        // Used by "at the end of an attack" effects. Fires before modifiers
-        // are expired and pending_attack is cleared, so effects can still
-        // inspect the attack context.
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::EndOfAttack,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
-        self.drain_effect_queue();
-
-        // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for
-        // EndOfAttack after the printed-observer fan-out. Fires before
-        // modifier expiry / pending_attack clear so scheduled bodies see
-        // the same attack context as printed observers.
-        crate::scheduled_effects::fire_scheduled_for_timing(
-            self,
-            crate::enums::EffectTiming::EndOfAttack,
-        );
-
         self.modifiers.expire_end_of_attack();
         self.pending_attack = None;
+        self.end_of_turn_attack_keyword = None;
+        self.attack_attacker_identity = None;
+        self.attack_attacker_card = None;
+        self.attack_target_identity = None;
+        // `expire_end_of_attack` dropped the `<Progress>` shield; keep the
+        // registry in step with `progress_shield_target` (now `None`).
+        self.refresh_progress_shield();
+
+        // §17-1-3-1-1 / §15-15-5-2: ending the attack can change DP -- an
+        // opponent's effect hidden by a `<Progress>` attacker's shield starts
+        // applying (`expire_end_of_attack` dropped it), and "until the end of the
+        // attack" buffs expire. Run the rule check now (the outermost drain
+        // does it; a nested drain defers to its parent) instead of leaving a
+        // 0-DP Digimon on the field until some later drain.
+        if self.pending_selection.is_none() {
+            self.drain_effect_queue();
+        }
 
         // An attack-time effect — e.g. ST1-06 Coredramon's [When Attacking]
         // "Lose 2 memory" — can push memory across to the opponent's side. The
@@ -4037,6 +4142,14 @@ impl Game {
         // unless memory < 0 with no pending selection.
         if self.current_phase == crate::enums::GamePhase::Main {
             self.check_turn_end();
+        }
+        // §16-44-1 / §16-38-1 / §16-33-1 / §16-34-1: an end-of-turn attack is
+        // over; the end of turn continues (a waiting keyword offer, then the
+        // rest of the end of turn; no PASS-only step). Settled once nothing is
+        // resolving (`settle_end_of_turn_attack`).
+        if end_of_turn_attack {
+            self.end_of_turn_attack_settle_pending = true;
+            self.settle_end_of_turn_attack();
         }
         outcome
     }
@@ -4204,24 +4317,193 @@ impl Game {
         player: PlayerId,
         removed_index: u8,
     ) {
+        if let Some(pa) = self.pending_attack.as_mut() {
+            let shift = |h: &mut PermanentHandle| {
+                if h.player == player && h.index > removed_index {
+                    h.index -= 1;
+                }
+            };
+            shift(&mut pa.attacker);
+            if let AttackTarget::Digimon(h) = &mut pa.original_target {
+                shift(h);
+            }
+            if let AttackTarget::Digimon(h) = &mut pa.effective_target {
+                // §11-2-6 (Ver. 4.3): the removed Digimon remains the attack
+                // target and the attack fails. Record the removal instead of
+                // leaving a handle that the next permanent shifts into. A
+                // blocker is the effective target once it blocks (§12-1-7),
+                // so a removed blocker is covered here too.
+                if h.player == player && h.index == removed_index {
+                    pa.effective_target_removed = true;
+                } else {
+                    shift(h);
+                }
+            }
+            if let Some(h) = pa.blocker.as_mut() {
+                shift(h);
+            }
+        }
+        // Every caller re-keyed the modifier registry first (which carried
+        // the `<Progress>` shield along); re-derive it from the attacker's
+        // identity so a removed attacker is never replaced by the Digimon
+        // that slid into its slot.
+        self.refresh_progress_shield();
+    }
+
+    /// The in-flight attack's attacker, or `None` once it has left the
+    /// battle area. `PendingAttack::attacker` is a slot handle: after the
+    /// attacker leaves, field compaction can put another permanent in that
+    /// slot. Observers that the declaration triggered stay pending and still
+    /// activate (§15-4-3-2; the attack happened), but must not read a later
+    /// occupant of the slot as the attacker.
+    ///
+    /// Judged by the attacker's stack identity captured at declaration, not
+    /// by `is_attacking` (which `finish_attack_after_end_of_attack_timing`
+    /// clears once the End of Attack timing has resolved, §11-6-2).
+    pub(crate) fn live_attack_attacker(&self) -> Option<PermanentHandle> {
+        let pa = self.pending_attack.as_ref()?;
+        if !pa.declaration_committed {
+            return Some(pa.attacker);
+        }
+        let Some((player, identity)) = self.attack_attacker_identity else {
+            return self.handle_still_attacking(pa.attacker).then_some(pa.attacker);
+        };
+        self.player(player)
+            .battle_area
+            .iter()
+            .position(|perm| perm.battle_identity == Some(identity))
+            .map(|index| PermanentHandle {
+                player,
+                index: index as u8,
+            })
+    }
+
+    /// §11-2-6 (Ver. 4.3): whether the in-flight attack's Digimon target (the
+    /// declared one, or the Digimon a block, redirect or `<Raid>` switched it
+    /// to) has been removed from the battle area. It remains the attack
+    /// target and the attack fails. Recorded by
+    /// `shift_pending_attack_after_battle_area_remove` and by DNA
+    /// (`PendingAttack::effective_target_removed`); the target's stack
+    /// identity (`Game::attack_target_identity`) also catches a removal that
+    /// did not re-key the pending attack's handles. Never true for a player
+    /// target.
+    pub(crate) fn attack_target_removed(&self) -> bool {
+        self.pending_attack
+            .as_ref()
+            .is_some_and(|pa| matches!(pa.effective_target, AttackTarget::Digimon(_)))
+            && self.live_attack_target_digimon().is_none()
+    }
+
+    /// The in-flight attack's Digimon target on the current board, found by
+    /// its stack identity when one was captured. `None` with no attack, on a
+    /// player target, or once the target was removed (§11-2-6): a Digimon
+    /// that compacted into the target's slot is never returned.
+    pub(crate) fn live_attack_target_digimon(&self) -> Option<PermanentHandle> {
+        let pa = self.pending_attack.as_ref()?;
+        let AttackTarget::Digimon(handle) = pa.effective_target else {
+            return None;
+        };
+        if pa.effective_target_removed {
+            return None;
+        }
+        match self.attack_target_identity {
+            Some((player, identity)) => self.resolve_digivolve_host_identity(player, identity),
+            None => Some(handle),
+        }
+    }
+
+    /// The in-flight attack's target as effects see it: the player, or the
+    /// live Digimon target; `None` with no attack or once the Digimon target
+    /// was removed (§11-2-6).
+    pub(crate) fn live_attack_target(&self) -> Option<AttackTarget> {
+        match self.pending_attack.as_ref()?.effective_target {
+            AttackTarget::Player(player) => Some(AttackTarget::Player(player)),
+            AttackTarget::Digimon(_) => self.live_attack_target_digimon().map(AttackTarget::Digimon),
+        }
+    }
+
+    /// The current target a switch compares against, and whether it was
+    /// removed (§11-2-6: a removed target is never "the current target", so
+    /// any candidate is a switch). Callers must have a pending attack.
+    pub(crate) fn attack_target_for_switch(&self) -> (AttackTarget, bool) {
+        let fallback = self
+            .pending_attack
+            .as_ref()
+            .map_or(AttackTarget::Player(0), |pa| pa.effective_target);
+        let current = self
+            .live_attack_target_digimon()
+            .map_or(fallback, AttackTarget::Digimon);
+        (current, self.attack_target_removed())
+    }
+
+    /// Record the effective Digimon target's stack identity (allocating one if
+    /// the permanent has none yet) for `live_attack_target_digimon`; `None`
+    /// for a player target.
+    fn capture_attack_target_identity(&mut self) {
+        let target = self.pending_attack.as_ref().and_then(|pa| match pa.effective_target {
+            AttackTarget::Digimon(h) if !pa.effective_target_removed => Some(h),
+            _ => None,
+        });
+        let target = target.filter(|h| {
+            self.players
+                .get(h.player as usize)
+                .is_some_and(|p| p.battle_area.get(h.index as usize).is_some())
+        });
+        let identity = target.map(|h| (h.player, self.capture_digivolve_host_identity(h)));
+        self.attack_target_identity = identity;
+    }
+
+    /// Bring the pending attack's slot handles in line with the stack
+    /// identities: re-key `attacker` to where the attacking Digimon is now
+    /// (left alone once it has left, §11-1-5), and for a Digimon target
+    /// record its removal (§11-2-6) or re-key `effective_target`.
+    fn sync_attack_target(&mut self) {
+        let attacker = self.live_attack_attacker();
+        let removed = self.attack_target_removed();
+        let live = self.live_attack_target_digimon();
         let Some(pa) = self.pending_attack.as_mut() else {
             return;
         };
-        let shift = |h: &mut PermanentHandle| {
-            if h.player == player && h.index > removed_index {
-                h.index -= 1;
+        if let Some(attacker) = attacker {
+            pa.attacker = attacker;
+        }
+        if !matches!(pa.effective_target, AttackTarget::Digimon(_)) {
+            return;
+        }
+        if removed {
+            pa.effective_target_removed = true;
+        } else if let Some(handle) = live {
+            pa.effective_target = AttackTarget::Digimon(handle);
+        }
+    }
+
+    /// Record the declared attacker's stack identity (allocating one if the
+    /// permanent has none yet) for `live_attack_attacker`.
+    fn capture_attack_attacker_identity(&mut self, attacker: PermanentHandle) {
+        let Some(perm) = self
+            .players
+            .get(attacker.player as usize)
+            .and_then(|p| p.battle_area.get(attacker.index as usize))
+        else {
+            self.attack_attacker_identity = None;
+            self.attack_attacker_card = None;
+            return;
+        };
+        // §11-1-5: the declaration context the counter timing reads once the
+        // attacker has left the battle area.
+        self.attack_attacker_card = Some(perm.top_card().handle());
+        let identity = match perm.battle_identity {
+            Some(identity) => identity,
+            None => {
+                let identity = self.next_battle_identity;
+                self.next_battle_identity =
+                    identity.checked_add(1).expect("stack identity exhausted");
+                self.player_mut(attacker.player).battle_area[attacker.index as usize]
+                    .battle_identity = Some(identity);
+                identity
             }
         };
-        shift(&mut pa.attacker);
-        if let AttackTarget::Digimon(h) = &mut pa.original_target {
-            shift(h);
-        }
-        if let AttackTarget::Digimon(h) = &mut pa.effective_target {
-            shift(h);
-        }
-        if let Some(h) = pa.blocker.as_mut() {
-            shift(h);
-        }
+        self.attack_attacker_identity = Some((attacker.player, identity));
     }
 
     fn handle_still_attacking(&self, handle: PermanentHandle) -> bool {
@@ -4272,89 +4554,86 @@ impl Game {
             return Some(AttackResult::InProgress);
         }
 
-        // OnAttack may have deleted or moved the attacker, and field indices
-        // can shift into the old handle. Bail unless the handle still points
-        // at a live attacking permanent. This intentionally allows legal
-        // same-permanent stack changes such as digivolution/de-digivolution.
-        if !self.handle_still_attacking(attacker) {
-            return Some(self.cleanup_attack(AttackResult::Invalid));
-        }
-
+        // OnAttack may have deleted or moved the attacker. §11-1-5 (Ver. 4.3):
+        // the declaration has been made, so the timings that follow still
+        // occur -- `advance_pending_attack` runs the counter timing, offers no
+        // block (§12-1-6) and ends the attack as not successful
+        // (§11-5-1-4-1) when the attacker is gone.
         None
     }
 
-    /// Fire OnAttack effects for the attacker, then WhenAttacking for every
-    /// permanent in the attacker's battle area (observer timing).
+    /// §11-5-1-4-1 (Ver. 4.3): the attack is not successful -- "no other
+    /// actions are taken and the end of attack timing occurs." Reached when
+    /// the attacking Digimon left the battle area after its declaration
+    /// (§11-1-5: the counter and block timings already ran). Ends through
+    /// `cleanup_attack` exactly like the removed-target unsuccessful attack
+    /// (`resolve_pending_battle`'s defender-gone arm), with the same terminal
+    /// result, `AttackResult::Unsuccessful` (`Invalid` means the attack could
+    /// not be declared at all).
+    fn end_attack_unsuccessful(&mut self) -> AttackResult {
+        self.cleanup_attack(AttackResult::Unsuccessful)
+    }
+
+    /// Enqueue every effect the attack declaration triggers, then drain once.
     ///
-    /// Thin wrapper over the effect-queue drainer. Single-trigger cases
-    /// fire in one step; multi-trigger cases park on a `TriggerOrder`
-    /// selection for the attacker's controller to order.
+    /// §15-4-3-2 (Ver. 4.3): effects triggered before a single rule or effect
+    /// is resolved trigger simultaneously and pend together; §15-4-3-5-1/-2:
+    /// the turn player orders all of theirs, then the non-turn player orders
+    /// theirs. So the attacker's `OnAttack` and `[When Attacking]` effects
+    /// (incl. the synthesized `<Alliance>` / `<Raid>` bodies, §16-24-2 /
+    /// §16-23-2), the declaration suspension's `OnSuspend` observers, the
+    /// attacker's allies' "when one of your Digimon attacks" observers and the
+    /// opponent's "when an opponent's Digimon attacks" observers form ONE
+    /// bundle drained by a single `maybe_drain_effect_queue` — DCGO
+    /// `AttackProcess.cs` stacks them in one `StackSkillInfos(...,
+    /// EffectTiming.OnAllyAttack)` batch. Draining between fan-outs used to
+    /// lose every later observer as soon as an earlier one parked a prompt
+    /// (G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS) and kept
+    /// `<Alliance>` / `<Raid>` out of the pool
+    /// (G-ENGINE-ALLIANCE-OUTSIDE-TRIGGER-POOL).
     ///
     /// `suspend_event` is the attacker's declaration-suspension `OnSuspend`
-    /// event card (None for Overclock / an already-suspended attacker). It is
-    /// enqueued in the SAME batch as `[When Attacking]` -- both trigger on the
-    /// attack declaration (11-2-1 / 11-1-4), so the turn player orders them
-    /// together -- rather than drained ahead of the attack triggers.
+    /// event card (None for Overclock / an already-suspended attacker).
     fn fire_on_attack(
         &mut self,
         handle: PermanentHandle,
         suspend_event: Option<crate::card_source::CardHandle>,
     ) {
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnAttack,
-            crate::selection::TriggerSource::Permanent(handle),
-        );
-        // G-DSL-OUTER-TAIL-NESTED-PARK: defer when inside select/outer-tail scope.
-        self.maybe_drain_effect_queue();
-        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
-            return;
-        }
+        use crate::selection::TriggerSource;
 
-        // WhenAttacking: the `[When Attacking]` keyword is carrier-scoped
-        // ("when THIS Digimon attacks") — it must fire ONLY for the attacker's
-        // own stack (its top card + inherited digivolution sources), exactly
-        // like OnAttack. Cross-Digimon "when one of your (other) Digimon
-        // attacks" observers are a DIFFERENT timing (OnAllyAttack, fanned out
-        // below). Scoping to the attacker via `Permanent(handle)` (not the
-        // battle-area-wide `PlayerBattleArea`) prevents a non-attacking stack's
-        // inherited `[When Attacking]` from firing on a different Digimon's
-        // attack. Fires before the Alliance window opens.
+        self.capture_attack_attacker_identity(handle);
+        // The shield now follows the attacker by identity.
+        self.refresh_progress_shield();
+        self.enqueue_triggered(EffectTiming::OnAttack, TriggerSource::Permanent(handle));
         if let Some(card) = suspend_event {
             self.enqueue_on_suspend(handle, card, false);
         }
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::WhenAttacking,
-            crate::selection::TriggerSource::Permanent(handle),
-        );
-        self.maybe_drain_effect_queue();
-        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
-            return;
-        }
+        // `[When Attacking]` is carrier-scoped ("when THIS Digimon attacks"):
+        // only the attacker's own stack (top card + inherited sources), never
+        // a battle-area-wide scan — other Digimon observe via OnAllyAttack.
+        self.enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(handle));
 
-        // Phase 9 Task 8 — OnAllyAttack fan-out. Observer timing firing on
-        // every permanent in the attacker-controller's battle area EXCEPT
-        // the attacker itself. We piggyback on the PlayerBattleArea scan
-        // and filter the attacker's own slot from the queue after enqueue.
-        let attacker_queue_start = self.effect_queue.len();
         let attacker_card = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
             .map(|perm| perm.top_card().handle());
-        self.enqueue_triggered(
-            crate::enums::EffectTiming::OnAllyAttack,
-            attacker_card.map_or(
-                crate::selection::TriggerSource::PlayerBattleArea(handle.player),
-                |card| crate::selection::TriggerSource::PlayerBattleAreaAttack {
-                    player: handle.player,
+        let attack_source = |player: PlayerId| {
+            attacker_card.map_or(TriggerSource::PlayerBattleArea(player), |card| {
+                TriggerSource::PlayerBattleAreaAttack {
+                    player,
                     attacker: handle,
                     card,
-                },
-            ),
-        );
-        // Drop any entries whose source_permanent is the attacker itself
-        // — the attacker does not fire its own OnAllyAttack observer.
-        let mut i = attacker_queue_start;
+                }
+            })
+        };
+
+        // OnAllyAttack: every permanent of the attacker's controller EXCEPT
+        // the attacker itself — drop the attacker's own entries from this
+        // fan-out only (its own OnAttack / [When Attacking] above stay).
+        let ally_fanout_start = self.effect_queue.len();
+        self.enqueue_triggered(EffectTiming::OnAllyAttack, attack_source(handle.player));
+        let mut i = ally_fanout_start;
         while i < self.effect_queue.len() {
             if self.effect_queue[i].source_permanent == Some(handle) {
                 self.effect_queue.remove(i);
@@ -4362,28 +4641,14 @@ impl Game {
                 i += 1;
             }
         }
-        self.maybe_drain_effect_queue();
-        if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {
-            return;
-        }
 
-        // Phase 9 Task 8 — OnOpponentAttack fan-out. Observer timing on
-        // every permanent in the non-attacker controller's battle area.
         let opp = 1 - handle.player;
         if (opp as usize) < self.players.len() {
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::OnOpponentAttack,
-                attacker_card.map_or(
-                    crate::selection::TriggerSource::PlayerBattleArea(opp),
-                    |card| crate::selection::TriggerSource::PlayerBattleAreaAttack {
-                        player: opp,
-                        attacker: handle,
-                        card,
-                    },
-                ),
-            );
-            self.maybe_drain_effect_queue();
+            self.enqueue_triggered(EffectTiming::OnOpponentAttack, attack_source(opp));
         }
+
+        // G-DSL-OUTER-TAIL-NESTED-PARK: defer when inside select/outer-tail scope.
+        self.maybe_drain_effect_queue();
     }
 
     /// Resolve battle between two permanents by DP comparison.
@@ -4409,10 +4674,13 @@ impl Game {
         if let Some(pa) = self.pending_attack.as_mut() {
             pa.battle_occurred = true;
         }
+        // §16-39-1: the battle compares DP as it is now -- `<Progress>` may
+        // have been gained or lost since the last refresh.
+        self.refresh_progress_shield();
         let a_dp = self.effective_dp(attacker).unwrap_or(0);
         let d_dp = self.effective_dp(defender).unwrap_or(0);
 
-        // Phase F §F2 — Iceclad (RULES_CONTEXT 16-34): when EITHER
+        // Phase F §F2 — Iceclad (RULES_CONTEXT 16-35): when EITHER
         // combatant has Iceclad in a Digimon-vs-Digimon battle, compare
         // digivolution-card stack lengths (`card_sources.len()`) instead
         // of DP. The security-battle exception is naturally honored:
@@ -4476,33 +4744,17 @@ impl Game {
         };
         let is_attack = self.pending_attack.as_ref().is_some_and(|pa| {
             pa.state == AttackState::Battle
-                && !pa.effective_target_removed_by_dna
+                && !pa.effective_target_removed
                 && pa.attacker == attacker
                 && pa.effective_target == AttackTarget::Digimon(defender)
         });
         let attacker_snapshot = snapshot(attacker);
         let defender_snapshot = snapshot(defender);
-        let winner_identity = match outcome {
-            AttackResult::AttackerWins => Some(attacker),
-            AttackResult::DefenderWins => Some(defender),
-            _ => None,
-        }
-        .map(|winner| {
-            let identity = match self.player(winner.player).battle_area[winner.index as usize]
-                .battle_identity
-            {
-                Some(identity) => identity,
-                None => {
-                    let identity = self.next_battle_identity;
-                    self.next_battle_identity =
-                        identity.checked_add(1).expect("battle identity exhausted");
-                    self.player_mut(winner.player).battle_area[winner.index as usize]
-                        .battle_identity = Some(identity);
-                    identity
-                }
-            };
-            (winner.player, identity)
-        });
+        let (winner_identity, winner_snapshot) = match outcome {
+            AttackResult::AttackerWins => self.battle_winner_referent(Some(attacker)),
+            AttackResult::DefenderWins => self.battle_winner_referent(Some(defender)),
+            _ => (None, None),
+        };
         let state = PendingBattleResolution {
             attacker: attacker_snapshot,
             defender: defender_snapshot,
@@ -4510,8 +4762,10 @@ impl Game {
             attacker_deleted: false,
             defender_deleted: false,
             winner_identity,
+            winner_snapshot,
             is_attack,
             in_call: true,
+            result_enqueued: false,
         };
         let index = self.pending_battle_resolutions.len();
         self.pending_battle_resolutions.push(state);
@@ -4532,6 +4786,49 @@ impl Game {
         } else {
             outcome
         }
+    }
+
+    /// The battle winner's identity (allocated if it has none yet) and its
+    /// last-known information, taken at the comparison. Every `EndOfBattle`
+    /// firing carries both, so a "wins a battle" qualifier resolves the
+    /// winner by identity and, once it has left the field, still reads what
+    /// it was when the battle was won (§15-8-3-1, §15-8-3-8, §15-4-4-5;
+    /// DCGO keeps a copy of each winner in the battle hashtable's
+    /// `WinnerPermanents`). `(None, None)` when there is no permanent winner.
+    /// The Digimon-vs-Digimon battle calls this at the comparison; the
+    /// security-battle path calls it when it enqueues `EndOfBattle`, which is
+    /// equivalent: it has a permanent winner only when the attacker's DP was
+    /// strictly higher, and nothing is deleted between (§14-2-3).
+    pub(crate) fn battle_winner_referent(
+        &mut self,
+        winner: Option<PermanentHandle>,
+    ) -> (
+        Option<(PlayerId, u64)>,
+        Option<std::sync::Arc<crate::trigger_context::DeletedObjectSnapshot>>,
+    ) {
+        let Some(winner) = winner else {
+            return (None, None);
+        };
+        let Some(permanent) = self
+            .player(winner.player)
+            .battle_area
+            .get(winner.index as usize)
+        else {
+            return (None, None);
+        };
+        let identity = match permanent.battle_identity {
+            Some(identity) => identity,
+            None => {
+                let identity = self.next_battle_identity;
+                self.next_battle_identity =
+                    identity.checked_add(1).expect("battle identity exhausted");
+                self.player_mut(winner.player).battle_area[winner.index as usize]
+                    .battle_identity = Some(identity);
+                identity
+            }
+        };
+        let snapshot = self.build_snapshot_for_handle(winner).map(std::sync::Arc::new);
+        (Some((winner.player, identity)), snapshot)
     }
 
     /// Record only a committed battle-cause deletion of an original combatant.
@@ -4579,8 +4876,141 @@ impl Game {
         }
     }
 
+    /// Whether the Digimon whose top card was `deleted_top` was `carrier`'s
+    /// opponent in the battle being resolved, read from the battle's own
+    /// record (combatant identities + top cards at the comparison). `None`
+    /// when no battle is being resolved or `carrier` is not one of its
+    /// combatants. A deleted combatant has no battle-area handle, and since
+    /// §11-2-6 the attack no longer names the Digimon that compacted into
+    /// its slot, so "this Digimon deleted its battle opponent" is answered
+    /// here rather than through a slot comparison.
+    pub(crate) fn battle_record_opponent_was(
+        &self,
+        carrier: PermanentHandle,
+        deleted_top: CardHandle,
+    ) -> Option<bool> {
+        let state = self.pending_battle_resolutions.last()?;
+        let identity = self
+            .player(carrier.player)
+            .battle_area
+            .get(carrier.index as usize)?
+            .battle_identity?;
+        let is = |c: &crate::trigger_context::BattleCombatantSnapshot| {
+            c.controller == carrier.player && c.battle_identity == identity
+        };
+        if is(&state.attacker) {
+            Some(state.defender.top_card == deleted_top)
+        } else if is(&state.defender) {
+            Some(state.attacker.top_card == deleted_top)
+        } else {
+            None
+        }
+    }
+
+    /// The battle-area Digimon whose stack carries battle identity
+    /// `(controller, identity)` on the current board, if it is still there.
+    fn permanent_by_battle_identity(
+        &self,
+        (controller, identity): (PlayerId, u64),
+    ) -> Option<PermanentHandle> {
+        self.player(controller)
+            .battle_area
+            .iter()
+            .position(|perm| perm.battle_identity == Some(identity))
+            .map(|index| PermanentHandle {
+                player: controller,
+                index: index as u8,
+            })
+    }
+
+    /// The `TriggerSource::BattleResolved` payload of `state` on the current
+    /// board: the winner found by identity (`None` on a tie or once it has
+    /// left the field), every combatant that deleted its battle opponent, and
+    /// the winner's identity + last-known information from the comparison --
+    /// carried even when `winner` no longer resolves, so a "wins a battle"
+    /// qualifier reads what the winner was (§15-8-3-8;
+    /// G-ENGINE-BATTLE-WINNER-QUALIFIER-STALE-INDEX).
+    fn battle_resolved_source(&self, state: &PendingBattleResolution) -> TriggerSource {
+        let winner = state
+            .winner_identity
+            .and_then(|identity| self.permanent_by_battle_identity(identity));
+        let mut deleters = Vec::new();
+        if state.defender_deleted {
+            deleters.push(state.attacker.clone());
+        }
+        if state.attacker_deleted {
+            deleters.push(state.defender.clone());
+        }
+        TriggerSource::BattleResolved {
+            winner,
+            deleters,
+            winner_identity: state.winner_identity,
+            winner_snapshot: state.winner_snapshot.clone(),
+        }
+    }
+
+    /// Enqueue the effects triggered BY the innermost pending battle (§14-2-4)
+    /// -- the "wins a battle" / "deletes in battle" observers and <Piercing>
+    /// (`EffectTiming::BattleResult`) -- once.
+    ///
+    /// The battle's deletion batch calls this after its trash stage and before
+    /// its single trigger flush (`complete_deletion_batch_after_replacements`
+    /// stage 4d), so these effects pend in ONE pool with the loser's
+    /// `[On Deletion]` and the deletion observers: they trigger simultaneously
+    /// (§15-4-3-2, §16-7-4), the turn player activates theirs first and a
+    /// player with 2+ orders them in a `TriggerOrder` (§15-4-3-5-1; official
+    /// Q&A Q3931, EX8-045 Callismon). A battle in which no Digimon was
+    /// deleted (a replacement cancelled every deletion) never reaches that
+    /// flush; `resume_pending_battle_resolutions` enqueues it then.
+    /// G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+    pub(crate) fn enqueue_pending_battle_result_triggers(&mut self) {
+        let Some(state) = self.pending_battle_resolutions.last() else {
+            return;
+        };
+        if state.result_enqueued {
+            return;
+        }
+        // Declarative state reflects the deletion before the trigger scan: a
+        // keyword gained at this exact timing triggers (EX11-016's inherited
+        // "[Your Turn] while your opponent has no Digimon with digivolution
+        // cards" <Piercing> turns on when the battle deletes that last
+        // sourced Digimon -- official Q&A: the freshly gained keyword DOES
+        // trigger).
+        self.tick_declarative_effects();
+        let Some(state) = self.pending_battle_resolutions.last_mut() else {
+            return;
+        };
+        state.result_enqueued = true;
+        let state = state.clone();
+        let source = self.battle_resolved_source(&state);
+        // §15-8-3-1 / §15-8-3-4: an effect whose trigger qualifier is not met
+        // by this battle never triggers, even if a sibling in the pool (the
+        // loser's [On Deletion]) makes it true before it would activate
+        // (`enqueue_triggered` -> `discard_entries_not_triggered`).
+        let first = self.effect_queue.len();
+        self.enqueue_triggered(EffectTiming::BattleResult, source);
+        // §16-7-5: one <Piercing> check per attack however many instances the
+        // attacker has; DCGO stacks exactly one (`CardController.cs`
+        // `PutStackedSkill(skillInfos_Pierce[0])`). Keep one <Piercing> entry
+        // per Digimon so identical instances are not offered as distinct
+        // ordering branches.
+        self.collapse_duplicate_keyword_triggers(first, Keyword::Piercing);
+    }
+
     /// Finish the event after every replacement/rest-of-batch choice has settled.
     /// Pop before fanout: nested battles get their own payload and one fanout.
+    ///
+    /// §14-2-4 then §14-2-5: the effects triggered by the battle -- the
+    /// loser's `[On Deletion]` and the `BattleResult` effects, one pool (see
+    /// `enqueue_pending_battle_result_triggers`) -- all resolve before the
+    /// end of the battle timing (`EndOfBattle`), which pools with the pending
+    /// processing due at the end of the battle (§18-1-1 / §18-1-2). That
+    /// sequencing holds for an attack's battle. A battle an effect performs is
+    /// part of that effect's processing (§15-8-3-2): its battle-triggered
+    /// effects, its end-of-battle effects and the pending processing all wait
+    /// for the effect to finish and then pend in ONE pool with whatever else
+    /// it triggered (§15-4-3-2; DCGO `IBattle(..., IsWithoutAttack: true)`
+    /// stacks them and skips `AutoProcessCheck`).
     pub(crate) fn resume_pending_battle_resolutions(&mut self) {
         while self.pending_selection.is_none() && self.pending_deletion_batch_rest.is_empty() {
             if !self
@@ -4590,59 +5020,47 @@ impl Game {
             {
                 return;
             }
-            let mut state = self.pending_battle_resolutions.pop().unwrap();
-            let winner = state.winner_identity.and_then(|(controller, identity)| {
-                self.player(controller)
-                    .battle_area
-                    .iter()
-                    .position(|perm| perm.battle_identity == Some(identity))
-                    .map(|index| PermanentHandle {
-                        player: controller,
-                        index: index as u8,
-                    })
-            });
-            let mut deleters = Vec::new();
-            if state.defender_deleted {
-                deleters.push(state.attacker);
+            // Normally enqueued (and drained) by the battle deletion's flush;
+            // a no-op then.
+            self.enqueue_pending_battle_result_triggers();
+            // A battle an effect performs (EX13-077 "This Digimon may battle
+            // 1 of your opponent's Digimon") is part of that effect's
+            // processing: its triggers -- and the end-of-battle ones below --
+            // wait for the effect to finish (§15-8-3-2) and pend with the rest
+            // of what it triggered (§15-4-3-2). DCGO agrees: `IBattle` with
+            // `IsWithoutAttack` stacks them and skips `AutoProcessCheck`. An
+            // attack's battle resolves them before the attack continues
+            // (§14-2-4), so it keeps the direct drain.
+            // G-ENGINE-EFFECT-BATTLE-DRAIN-RUNS-TRIGGERS-MID-EFFECT.
+            let is_attack = self
+                .pending_battle_resolutions
+                .last()
+                .is_some_and(|state| state.is_attack);
+            if is_attack {
+                self.drain_effect_queue();
+            } else {
+                self.maybe_drain_effect_queue();
             }
-            if state.attacker_deleted {
-                deleters.push(state.defender);
+            if self.pending_selection.is_some() {
+                return;
             }
+            let state = self.pending_battle_resolutions.pop().unwrap();
+            let source = self.battle_resolved_source(&state);
             if state.is_attack && self.pending_attack.is_some() {
                 self.pending_attack_battle_result = Some(state.outcome);
                 if let Some(pa) = self.pending_attack.as_mut() {
                     pa.battle_defender_deleted = state.defender_deleted;
                 }
             }
-            // §16-6-2/4, clarified by Bandai's CRM4 "May battle" notes:
-            // an effect battle during an attack also earns Piercing, but only
-            // for the surviving attacking Digimon that actually deleted its
-            // opponent. Stable winner identity excludes removed/replayed bodies.
-            if !state.is_attack {
-                if let Some(winner) = winner {
-                    let deleted_opponent = match state.outcome {
-                        AttackResult::AttackerWins => state.defender_deleted,
-                        AttackResult::DefenderWins => state.attacker_deleted,
-                        _ => false,
-                    };
-                    self.tick_declarative_effects();
-                    if deleted_opponent && self.handle_still_attacking(winner)
-                        && self.has_keyword(winner, Keyword::Piercing)
-                    {
-                        if let Some(pa) = self.pending_attack.as_mut() {
-                            if pa.attacker == winner && !pa.security_check_started {
-                                pa.effect_battle_piercing_pending = true;
-                            }
-                        }
-                    }
-                }
+            self.enqueue_triggered(EffectTiming::EndOfBattle, source);
+            // §18-1-2: pending processing due at the end of the battle pools
+            // with the end-of-battle effects.
+            self.enqueue_scheduled_for_timing(EffectTiming::EndOfBattle);
+            if state.is_attack {
+                self.drain_effect_queue();
+            } else {
+                self.maybe_drain_effect_queue();
             }
-            self.enqueue_triggered(
-                EffectTiming::EndOfBattle,
-                TriggerSource::BattleResolved { winner, deleters },
-            );
-            self.drain_effect_queue();
-            crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfBattle);
         }
     }
 
@@ -4682,16 +5100,10 @@ impl Game {
         let prior_cause = self.current_deletion_cause;
         self.current_deletion_cause = Some(cause);
 
+        // Snapshot → trash → one flush pooling `[On Deletion]` with the
+        // deletion observers (§16-13-2), the same tail as an ordinary batch.
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            self.capture_batch_snapshots();
-            self.enter_deferred_drain();
-            self.enqueue_batch_on_deletion();
-            self.trash_batch_survivors();
-            self.exit_deferred_drain_and_flush();
-            if self.pending_selection.is_some() {
-                return;
-            }
-            self.drain_batch_on_any_deletion();
+            self.complete_deletion_batch_after_replacements();
         }));
 
         self.current_deletion_cause = prior_cause;
@@ -4700,5 +5112,130 @@ impl Game {
         if let Err(payload) = result {
             std::panic::resume_unwind(payload);
         }
+    }
+}
+
+#[cfg(test)]
+mod pre_declaration_counter_window_tests {
+    //! `open_counter_window_from_effect_checked` before the declaration
+    //! commits: the slot handle is still the attacker (as in
+    //! `live_attack_attacker`), so the window opens naming the attacker's card
+    //! -- never a stale `attack_attacker_card` from an earlier attack -- and a
+    //! missing declaration context never consumes the window.
+
+    use crate::debug_runner::DebugRunner;
+    use crate::enums::GamePhase;
+    use crate::selection::{AttackState, AttackTarget, PendingAttack};
+
+    const ATK: &str = r#"
+card: PRE-ATK
+name: Pre Attacker
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 5000
+"#;
+    const COUNTER: &str = r#"
+card: PRE-COUNTER
+name: Pre Counter
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: counter
+    summary: "[Counter] Gain 1 memory."
+    process:
+      - gain_memory: 1
+"#;
+
+    #[test]
+    fn effect_opened_counter_window_before_declaration_names_the_attacker() {
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(ATK)
+            .expect("attacker loads")
+            .from_dsl_yaml(COUNTER)
+            .expect("counter card loads")
+            .start();
+        let earlier = r.place_on_field(0, "PRE-ATK", Some(0));
+        let atk = r.place_on_field(0, "PRE-ATK", Some(0));
+        let _counter = r.place_on_field(1, "PRE-COUNTER", Some(0));
+        let atk_card = r.game.player(0).battle_area[atk.index as usize]
+            .top_card()
+            .handle();
+        // A stale declaration context from an earlier attack must not name
+        // this window's source.
+        let stale = r.game.player(0).battle_area[earlier.index as usize]
+            .top_card()
+            .handle();
+        r.game.attack_attacker_card = Some(stale);
+        r.game.pending_attack = Some(PendingAttack {
+            attacker: atk,
+            original_target: AttackTarget::Player(1),
+            effective_target: AttackTarget::Player(1),
+            effective_target_removed: false,
+            is_blocked: false,
+            blocker: None,
+            is_vortex: false,
+            is_overclock: false,
+            declaration_committed: false,
+            cancelled: false,
+            battle_occurred: false,
+            battle_defender_deleted: false,
+            effect_battle_piercing_pending: false,
+            security_check_started: false,
+            return_phase: GamePhase::Main,
+            state: AttackState::Declared,
+            counter_depth: 0,
+        });
+
+        assert_eq!(r.game.open_counter_window_from_effect_checked(), Ok(true));
+        let sel = r.game.pending_selection.as_ref().expect("the counter window");
+        assert_eq!(r.game.current_phase, GamePhase::CounterTiming);
+        assert_eq!(sel.selecting_player, 1);
+        assert!(sel.is_optional, "the counter timing is declinable");
+        assert_eq!(sel.source_card, atk_card, "names the attacker's card");
+        assert_eq!(sel.source_permanent, Some(atk));
+        assert_eq!(r.game.pending_attack.as_ref().map(|pa| pa.counter_depth), Some(1));
+    }
+
+    #[test]
+    fn committed_attack_without_attacker_or_context_does_not_consume_the_window() {
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(ATK)
+            .expect("attacker loads")
+            .from_dsl_yaml(COUNTER)
+            .expect("counter card loads")
+            .start();
+        let _counter = r.place_on_field(1, "PRE-COUNTER", Some(0));
+        // The declared attacker's slot is empty and no declaration context
+        // was captured: no card names the window, so it does not open and the
+        // depth guard is untouched.
+        r.game.attack_attacker_card = None;
+        r.game.pending_attack = Some(PendingAttack {
+            attacker: crate::permanent::PermanentHandle { player: 0, index: 0 },
+            original_target: AttackTarget::Player(1),
+            effective_target: AttackTarget::Player(1),
+            effective_target_removed: false,
+            is_blocked: false,
+            blocker: None,
+            is_vortex: false,
+            is_overclock: false,
+            declaration_committed: true,
+            cancelled: false,
+            battle_occurred: false,
+            battle_defender_deleted: false,
+            effect_battle_piercing_pending: false,
+            security_check_started: false,
+            return_phase: GamePhase::Main,
+            state: AttackState::CounterOpen,
+            counter_depth: 0,
+        });
+
+        assert_eq!(r.game.open_counter_window_from_effect_checked(), Ok(false));
+        assert!(r.game.pending_selection.is_none());
+        assert_eq!(r.game.pending_attack.as_ref().map(|pa| pa.counter_depth), Some(0));
     }
 }

@@ -49,7 +49,8 @@ effects:
 
   - when: on_suspend
     active_when: { all_turns: true }
-    condition: { event_permanent_is_source: true }
+    trigger_if:
+      event_permanent_is_source: true
     summary: "[All Turns] When this Digimon suspends, suspend 1 of your opponent's Digimon or Tamers"
     process:
       - select_opponent_permanent:

@@ -1,0 +1,43 @@
+# WD_RETURN_TRASH_THEN_BATTLE -- Digimon, Lv.6, red, 12000 DP, play cost 12.
+#   [When Digivolving] Return 1 card from your trash to the bottom of your
+#   deck. Then, this Digimon may battle 1 of your opponent's Digimon.
+# The shape of Omnimon: Merciful Mode (EX13-077) choosing "return 5 cards to
+# the bottom of the deck" and then "This Digimon may battle 1 of your
+# opponent's Digimon": a deck add (a batch-window event) and a battle inside
+# ONE effect. The battle's triggers wait for the effect like every other
+# trigger it raises (§15-8-3-2) and pend with the deck add's (§15-4-3-2).
+card: WD_RETURN_TRASH_THEN_BATTLE
+name: Duelmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Return 1 card from your trash to the bottom of your deck. Then, this Digimon may battle 1 of your opponent's Digimon."
+    process:
+      - as_selecting_player:
+          of: you
+          body:
+            - select_count_capped_multi:
+                of: you
+                zone: trash
+                min: 1
+                max: 1
+                filter: {}
+                bind_as: returned_cards
+                optional_zero: false
+                prompt: "Return 1 card from your trash to the bottom of your deck"
+            - return_trash_list_to_deck_bottom:
+                of: you
+                cards: returned_cards
+      - select_opponent_permanent:
+          bind_as: battle_target
+          optional: true
+          continue_on_decline: true
+          filter: { kind: digimon }
+          prompt: "This Digimon may battle 1 of your opponent's Digimon"
+      - battle:
+          attacker: this
+          defender: battle_target

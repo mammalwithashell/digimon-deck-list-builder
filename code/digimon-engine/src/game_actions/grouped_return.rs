@@ -80,23 +80,23 @@ impl Game {
                 }
             } else if !token {
                 if top.card_kind(&self.card_data) == CardKind::DigiEgg {
-                    self.player_mut(owner).digitama_deck.insert(0, top);
+                    self.player_mut(owner).insert_in_digi_egg_deck(0, top);
                 } else {
-                    self.player_mut(owner).hand.push(top);
+                    self.player_mut(owner).put_in_hand(top);
                     completed.push((card, true));
                     hand_events.push(owner);
                 }
             }
             for source in p.card_sources {
                 let source_card = source.handle();
-                self.player_mut(source.owner).trash.push(source);
+                self.player_mut(source.owner).put_in_trash(source);
                 source_events.push((original, card, source_card));
             }
             if !p.linked_cards.is_empty() {
                 linked_events += 1;
             }
             for linked in p.linked_cards {
-                self.player_mut(linked.owner).trash.push(linked);
+                self.player_mut(linked.owner).put_in_trash(linked);
             }
             leave_events.push((original, snapshot));
         }
@@ -112,9 +112,20 @@ impl Game {
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         self.apply_ace_overflow_for_sources(&overflow);
-        for (h, host, source) in source_events {
-            self.enqueue_digivolution_card_trashed(h.player, h, host, source, EventCause::Rule);
-        }
+        // Every returned stack's digivolution cards are trashed at the same
+        // time: one event (§15-5-2).
+        self.enqueue_digivolution_cards_trashed(
+            source_events
+                .into_iter()
+                .map(|(h, host, card)| super::TrashedSource {
+                    player: h.player,
+                    host: h,
+                    host_card: host,
+                    card,
+                })
+                .collect(),
+            EventCause::Rule,
+        );
         for _ in 0..linked_events {
             for player in 0..self.players.len() {
                 self.enqueue_triggered(

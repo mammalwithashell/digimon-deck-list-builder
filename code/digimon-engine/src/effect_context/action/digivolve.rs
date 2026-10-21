@@ -49,19 +49,25 @@ impl<'a> EffectContext<'a> {
         let card = self.game.player_mut(self.player).hand.remove(hand_index);
         self.game.digivolve_permanent_in_place(target, card);
 
+        // This digivolution is the processing of an immediate replacement
+        // inside the effect or rule process that tried to delete the Digimon
+        // (Return to the Primogenitor BT17-097's <Delay>). Its
+        // [When Digivolving] and "when digivolves" triggers wait for that
+        // processing to finish (§15-8-3-2) and then pend with everything else
+        // it triggered (§15-4-3-2): enqueue both, and drain only when no
+        // effect is resolving around us.
+        // G-ENGINE-RESIDUAL-INLINE-DRAINS-OUTSIDE-SOURCE-TRASH.
         self.game.enqueue_triggered(
             EffectTiming::WhenDigivolving,
             crate::selection::TriggerSource::Permanent(target),
         );
-        self.game.drain_effect_queue();
-
         for pid in 0..self.game.players.len() {
             self.game.enqueue_triggered(
                 EffectTiming::OnDigivolve,
                 crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
             );
         }
-        self.game.drain_effect_queue();
+        self.game.maybe_drain_effect_queue();
         true
     }
 
@@ -71,12 +77,14 @@ impl<'a> EffectContext<'a> {
     /// Rules:
     ///   * Never pops the base card — `Permanent` must always retain at
     ///     least one `CardSource`.
-    ///   * `stop_at_level = Some(L)` — stop early if popping would leave
-    ///     a top whose level is strictly less than `L`. For standard
-    ///     De-Digivolve N use `Some(3)` (card text: "You can't trash
-    ///     past level 3 cards").
+    ///   * `stop_at_level = Some(L)` — a TOP card whose level is `<= L` is
+    ///     never trashed (§16-12-4). For standard De-Digivolve N use
+    ///     `Some(3)` ("can't trash cards from level 3 cards or lower").
     ///   * `stop_at_level = None` — no level floor; pop until the base.
-    ///   * `amount = Some(N)` — cap pops at N.
+    ///   * `amount = Some(N)` — a printed <De-Digivolve N>: when at least 2
+    ///     cards are trashable the controller declares 1..=min(N, trashable)
+    ///     through a parked count choice (§16-12-1 / §16-12-3) and this
+    ///     returns 0; the declared cards are trashed when it resolves.
     ///   * `amount = None` — unbounded (equivalent to `Some(u8::MAX)`).
     ///
     /// Returns the actual number of cards popped.
@@ -106,11 +114,21 @@ impl<'a> EffectContext<'a> {
         // immunity halts the remaining pops. The core also re-ticks
         // declarative effects after each pop so the entry guard of any
         // FOLLOW-UP de_digivolve call sees the refreshed registry.
+        // §16-12-1: a printed <De-Digivolve N> is declared by this effect's
+        // controller; the core parks the count choice under this provenance.
+        let declaration = crate::resume::ResumeProvenance {
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
+            controller: self.player,
+            override_pin: self.override_selecting_player(),
+        };
         self.game.de_digivolve_core(
             target,
             stop_at_level,
             amount,
             Some((self.player, self.source_kind)),
+            Some(declaration),
         )
     }
 

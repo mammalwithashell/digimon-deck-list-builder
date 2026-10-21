@@ -122,6 +122,15 @@ export function formatEvent(
       if (!card) return [];
       return [`${actor} milled ${card}.`];
     }
+    case 'card_to_hand': {
+      if (!card) return [];
+      return [`${actor} returned ${card} to their hand.`];
+    }
+    case 'card_to_deck': {
+      if (!card) return [];
+      const position = event.meta.position === 'top' ? 'top' : 'bottom';
+      return [`${actor} placed ${card} on the ${position} of their deck.`];
+    }
     case 'reveal': {
       if (!card) return [];
       const zone = event.meta.source_zone as string | undefined;
@@ -166,6 +175,14 @@ export function formatEvent(
       const phase = event.meta.phase;
       return typeof phase === 'string' ? [`${actor} entered ${phase}.`] : [];
     }
+    case 'infinite_loop':
+      // §18-3-2: an infinite loop neither player can stop; the GameOver
+      // (a draw) follows.
+      return [
+        card
+          ? `An infinite loop no player can stop (${card}): the game is a draw.`
+          : 'An infinite loop no player can stop: the game is a draw.',
+      ];
     case 'game_over': {
       const winner = event.meta.winner as number | null | undefined;
       if (winner == null) return ['The game ended in a draw.'];

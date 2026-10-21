@@ -1,0 +1,28 @@
+# OBS_EFFPLAY_DEL_LE -- Tamer, red, play cost 3.
+# The §15-8-3-8 example text:
+#   [All Turns] When an effect plays another of your Digimon, delete 1 of your
+#   opponent's Digimon with a level less than or equal to the played Digimon.
+# "the played Digimon" refers to the state named by the trigger condition, so
+# its level is read as of the trigger (§15-8-3-8).
+card: OBS_EFFPLAY_DEL_LE
+name: Herald Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_any_digimon_played
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+    summary: "[All Turns] When an effect plays another of your Digimon, delete 1 of your opponent's Digimon with a level less than or equal to the played Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: { formula: { event_target_level: {} } }
+          prompt: "Delete 1 of your opponent's Digimon with a level less than or equal to the played Digimon"
+      - delete_permanent: { target: victim }

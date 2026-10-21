@@ -493,14 +493,13 @@ fn c7_dorimon_inherited_unsuspends_the_raptordramon_that_attacked() {
 /// Option at -1 (3 → 2), and Raptordramon digivolves into Grademon from hand
 /// (3) whose rider then applies.
 ///
-/// FAILS today — engine gap `G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS`
-/// (`docs/RUST_ENGINE_GAPS.md`): `Game::fire_on_attack` drains the attacker's
-/// own `[When Attacking]` batch first and returns as soon as it parks a prompt,
-/// so the OnAllyAttack fan-out (Kota) is never enqueued. Kota is never offered,
-/// stays unsuspended, and the Option stays in hand. DCGO stacks both in ONE
-/// `EffectTiming.OnAllyAttack` batch (`Script/AttackProcess.cs` ~L197).
+/// Reproducer for `G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS`
+/// (resolved): `Game::fire_on_attack` used to drain the attacker's own
+/// `[When Attacking]` batch first and return as soon as it parked a prompt, so
+/// Kota's OnAllyAttack trigger was never enqueued. Both now pend in one
+/// TriggerOrder, as DCGO stacks them in ONE `EffectTiming.OnAllyAttack` batch
+/// (`Script/AttackProcess.cs` ~L197).
 #[test]
-#[ignore = "engine gap G-ENGINE-WHEN-ATTACKING-PARK-DROPS-ALLY-ATTACK-OBSERVERS — un-ignore when fixed"]
 fn c8_kota_option_use_and_raptordramon_climb_both_resolve_from_one_attack() {
     let mut r = start(
         builder()
@@ -517,7 +516,11 @@ fn c8_kota_option_use_and_raptordramon_climb_both_resolve_from_one_attack() {
         SelectionKind::UnionZone { .. } => hand_action(r, v, 0, GRADEMON),
         SelectionKind::Hand => hand_action(r, v, 0, CHRON_OPT),
         SelectionKind::OwnField => field_action(v, rap),
-        SelectionKind::TriggerOrder => None,
+        // Both triggers pend in one TriggerOrder (§15-4-3-2): activate them
+        // in the offered order rather than declining the all-optional bundle.
+        SelectionKind::TriggerOrder => {
+            v.effect_choices.as_ref().and_then(|c| c.first()).map(|c| c.action_id)
+        }
         _ if v.is_optional && v.source_card == kota_card => {
             v.valid_action_ids.iter().copied().find(|&a| a != PASS)
         }

@@ -1,0 +1,8 @@
+# BIG_LV6 -- Digimon, Lv.6, red, 12000 DP, play cost 12. No text.
+card: BIG_LV6
+name: Bigmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000

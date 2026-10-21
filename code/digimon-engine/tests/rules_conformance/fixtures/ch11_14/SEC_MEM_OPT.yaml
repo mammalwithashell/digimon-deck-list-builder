@@ -1,0 +1,17 @@
+# SEC_MEM_OPT -- Option, red, use cost 1.
+#   [Main] Gain 1 memory.
+#   [Security] Gain 1 memory.
+card: SEC_MEM_OPT
+name: Tripwire
+kind: option
+color: [red]
+cost: 1
+effects:
+  - when: main_from_hand
+    summary: "[Main] Gain 1 memory."
+    process:
+      - gain_memory: 1
+  - when: on_security
+    summary: "[Security] Gain 1 memory."
+    process:
+      - gain_memory: 1

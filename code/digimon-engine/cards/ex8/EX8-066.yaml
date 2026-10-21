@@ -121,10 +121,12 @@ effects:
     summary: "[All Turns][OPT] When your Ice-Snow Digimon are played or digivolve, by suspending this Tamer, trash any 1 digivolution card from the opponent's Digimon"
     condition:
       all_of:
-        - event_target_owner: you
-        - event_target_kind: digimon
         - event_target_trait_has: Ice-Snow
         - source_is_unsuspended: true
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
     process:
       # Cost: suspend this Tamer (paid on accepting the optional prompt).
       - activation_cost: { suspend_self: true }

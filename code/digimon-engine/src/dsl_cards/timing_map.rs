@@ -19,11 +19,14 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnOpponentAttack => EffectTiming::OnOpponentAttack,
         CompiledTiming::OnDeletion => EffectTiming::OnDeletion,
         CompiledTiming::OnAnyDeletion => EffectTiming::OnAnyDeletion,
-        // Board-wide battle-winner observer rides the `EndOfBattle` dispatch
+        // Board-wide battle-winner observer rides the `BattleResult` dispatch
         // (fired via `TriggerSource::BattleResolved`, carrying the winner). No
         // forced self-filter — scope is gated by `active_when:` (`event_winner_*`).
-        // G-DSL-BATTLE-WINNER-BOARDWIDE.
-        CompiledTiming::OnAllyWonBattle => EffectTiming::EndOfBattle,
+        // G-DSL-BATTLE-WINNER-BOARDWIDE. A battle-result trigger is triggered
+        // by the battle (§14-2-4) and pends with the loser's `[On Deletion]`
+        // (§15-4-3-5-1, Q3931), not at the end of the battle timing (§14-2-5).
+        // G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+        CompiledTiming::OnAllyWonBattle => EffectTiming::BattleResult,
         // Hand-discard observer maps 1:1 to the new engine timing.
         // G-ENGINE-ON-DISCARD-HAND.
         CompiledTiming::OnDiscardHand => EffectTiming::OnDiscardHand,
@@ -44,6 +47,8 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnOpponentSecurityRemoved => EffectTiming::OnOpponentSecurityRemoved,
         CompiledTiming::OnOwnSecurityRemoved => EffectTiming::OnOwnSecurityRemoved,
         CompiledTiming::OnDigivolutionCardTrashed => EffectTiming::OnDigivolutionCardTrashed,
+        // G-DSL-TOP-CARD-TRASHED-TIMING (§4-8-1, §16-12-1).
+        CompiledTiming::OnTopCardTrashed => EffectTiming::OnTopCardTrashed,
         // Source-ADDED observer maps 1:1. G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
         CompiledTiming::OnAddDigivolutionCards => EffectTiming::OnAddDigivolutionCards,
         CompiledTiming::OnDigivolutionCardReturnedToDeckBottom => {

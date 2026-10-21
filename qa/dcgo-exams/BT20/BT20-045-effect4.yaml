@@ -74,13 +74,15 @@ steps:
       target: security
   expect:
     prompt: main_phase
+# RE-LOWERED 2026-10-19: shared (was dcgo_only). <Raid> now pends in the
+# attack-declaration trigger pool beside the [All Turns] unsuspend trigger
+# (§16-23-2, §15-4-3-2; Task 1, ab044bb9f), so our engine asks this order too.
 - actor: 0
   do:
     select:
       cards:
       - BT20-045
       trigger_not: Raid
-      dcgo_only: true
   expect:
     prompt: MultipleSkills
 - actor: 0

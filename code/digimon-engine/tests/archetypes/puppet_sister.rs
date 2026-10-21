@@ -31,7 +31,7 @@
 //! semantics) + DCGO C# (battle-tested) outrank the card-text JSON. DCGO base
 //! copy: `$BASE_DCGO/Assets/Scripts/CardEffect/<SET>/<COLOR>/<CARD_ID>.cs`
 //! (underscores in filenames). The `<Delay>` not-on-placing-turn rule is
-//! `general_rule.pdf` §16-16; Overclock is §16-33.
+//! `general_rule.pdf` §16-17; Overclock is §16-34.
 //!
 //! Fixtures: `support.rs` (`dsl_builder`, `snapshot`/`BoardSnapshot`); pattern
 //! reference: `tests/archetypes/rocks.rs` and the sibling `puppets.rs`.
@@ -40,7 +40,7 @@
 
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{DelayTrigger, EffectTiming, GamePhase, Keyword};
+use digimon_engine::enums::{DelayTrigger, EffectTiming, Keyword};
 use digimon_engine::permanent::{OptionState, PermanentHandle};
 use digimon_engine::selection::OptionPlayResult;
 
@@ -153,7 +153,7 @@ fn is_parked_delay(runner: &DebugRunner, player: usize, id: &str) -> bool {
 ///   cost (3); the free-played Arisa adds no further drain (proves "without
 ///   paying the cost").
 /// - Rules/keyword basis: union-zone free-play (no cost paid) + `<Delay>`
-///   placement (`general_rule.pdf` §16-16). Printed text + DCGO gate:
+///   placement (`general_rule.pdf` §16-17). Printed text + DCGO gate:
 ///   `cards/bt22/BT22-098.yaml` (Delay `active_when.event_card_name_contains:
 ///   "Arisa Kinosaki"`); DCGO C#:
 ///   `$BASE_DCGO/Assets/Scripts/CardEffect/BT22/Yellow/BT22_098.cs`
@@ -249,7 +249,7 @@ fn combo1_fable_waltz_main_free_plays_arisa_and_arms_delay() {
 
 /// Shared setup for the C1 full-chain tests: place a Lv.4 [Puppet] base + the
 /// real EX11-060 Arisa, play Fable Waltz to arm its `OnSuspend` Delay, then
-/// advance PAST the placing turn back to player 0's main phase (so §16-16 no
+/// advance PAST the placing turn back to player 0's main phase (so §16-17 no
 /// longer blocks the Delay). The EX11-022 Karakurumon ([Puppet]+[LIBERATOR])
 /// hand body is the only legal armed-Delay evolution body. Returns the runner
 /// and the Arisa handle whose later suspend fires the Delay.
@@ -298,7 +298,7 @@ fn combo1_chain_runner() -> (DebugRunner, PermanentHandle) {
         "Fable Waltz must be parked as a Delay Option after [Main]"
     );
 
-    // Advance past the placing turn (general_rule.pdf §16-16) back to P0's main.
+    // Advance past the placing turn (general_rule.pdf §16-17) back to P0's main.
     runner.end_turn();
     runner.game.enter_main_phase();
     runner.end_turn();
@@ -334,7 +334,7 @@ fn combo1_fable_waltz_delay_fires_on_later_arisa_suspend() {
     // Suspend the real Arisa — the gating OnSuspend event for the armed Delay.
     runner.game.suspend(arisa);
 
-    // Rules manual 16-16-2: the <Delay> activation itself is optional — the
+    // Rules manual 16-17-2: the <Delay> activation itself is optional — the
     // event first opens the outer accept/decline prompt. Accept it.
     let activation_view = runner
         .pending_selection_view()
@@ -342,7 +342,7 @@ fn combo1_fable_waltz_delay_fires_on_later_arisa_suspend() {
     assert_eq!(
         activation_view.kind,
         SelectionKind::Replacement,
-        "the armed Delay opens on the optional activation prompt (16-16-2)"
+        "the armed Delay opens on the optional activation prompt (16-17-2)"
     );
     runner
         .execute_action(
@@ -433,7 +433,7 @@ fn combo1_fable_waltz_delay_digivolves_base_into_ex11_022() {
     let before = snapshot(&runner);
 
     runner.game.suspend(arisa);
-    // Activation accept (16-16-2) → base pick → EX11-022 hand pick →
+    // Activation accept (16-17-2) → base pick → EX11-022 hand pick →
     // cost-reduced digivolve.
     {
         let view = runner
@@ -506,12 +506,12 @@ fn combo1_fable_waltz_delay_digivolves_base_into_ex11_022() {
     );
 }
 
-/// Combo C1 unhappy path (general_rule.pdf §16-16): the `<Delay>` cannot
+/// Combo C1 unhappy path (general_rule.pdf §16-17): the `<Delay>` cannot
 /// activate on the turn Fable Waltz is placed. Suspending the real EX11-060
 /// Arisa — the *named* gating Tamer (the Delay is gated on
 /// `event_card_name_contains: "Arisa Kinosaki"`) — on the SAME turn must NOT arm
 /// the digivolve. Suspending the named enabler is what makes this exercise
-/// §16-16 specifically (a non-Arisa suspend could never fire the Delay for an
+/// §16-17 specifically (a non-Arisa suspend could never fire the Delay for an
 /// unrelated reason, so it would not test the placing-turn rule). Fable Waltz
 /// stays parked and no selection fires.
 #[test]
@@ -559,7 +559,7 @@ fn combo1_fable_waltz_delay_does_not_fire_on_placing_turn() {
     assert!(
         runner.pending_selection().is_none(),
         "the Fable Waltz <Delay> must NOT fire on its placing turn even on a real Arisa \
-         Kinosaki suspend (general_rule.pdf §16-16)"
+         Kinosaki suspend (general_rule.pdf §16-17)"
     );
     assert!(
         is_parked_delay(&runner, 0, "BT22-098"),
@@ -924,14 +924,14 @@ fn combo3_without_fodder_no_cheat_digivolve_and_no_death_fanout() {
 ///   delete 1 opponent lowest-level Digimon") + BT22-002 Kyaromon (inherited
 ///   [Your Turn] Draw 1 on your Token/other-Puppet deletion).
 /// - Expected mechanical outcome: driven through the *real* <Overclock> keyword
-///   path (`activate_overclock` at end of turn), Nyabootmon's extra-attack cost
+///   path (its `[End of Your Turn]` trigger, §16-34-2), Nyabootmon's extra-attack cost
 ///   deletes a [Puppet] fodder — a DEATH event that fans out the controller's
 ///   death triggers in one shot. With Kaguyamon on field, that death fires its
 ///   "delete opponent lowest-level Digimon" removal (opp field −1), and
 ///   Kyaromon's inherited Draw 1 fires off the same Puppet death (hand +1). Diff:
 ///   own field −1 (the fodder), opponent field −1 (Kaguyamon's lowest-level
 ///   removal), controller hand +1 (Kyaromon draw).
-/// - Rules/keyword basis: <Overclock> (`general_rule.pdf` §16-33) — at end of
+/// - Rules/keyword basis: <Overclock> (`general_rule.pdf` §16-34) — at end of
 ///   your turn, by deleting 1 of your Tokens/other [Puppet] Digimon, attack a
 ///   player without suspending; the keyword cost deletion is a real deletion
 ///   event that dispatches on-deletion observers. Card text:
@@ -988,21 +988,32 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
     runner.place_on_field(opp, "ST5-05", Some(0));
     runner.place_on_field(opp, "ST5-10", Some(0));
 
-    // Drive into the EndOfTurnAction window (where <Overclock> activates).
-    runner.game.end_turn();
-    assert_eq!(runner.game.current_phase, GamePhase::EndOfTurnAction);
-
     let before = snapshot(&runner);
 
-    // Activate Nyabootmon's <Overclock> through its OWN keyword path.
+    // Activate Nyabootmon's <Overclock> through its OWN keyword path: a
+    // trigger-type effect at the end of the turn (§16-34-2) whose condition's
+    // pick is offered inside the end-of-turn pool.
     assert!(
         runner.game.has_keyword(nyaboot, Keyword::Overclock),
         "Nyabootmon must carry <Overclock> to pay the sacrifice cost"
     );
-    runner
-        .game
-        .activate_overclock(nyaboot.index as usize)
-        .expect("Nyabootmon <Overclock> with a Puppet sacrifice available");
+    runner.game.end_turn();
+    // If other `[End of Your Turn]` effects pend with it, activate
+    // Nyabootmon's <Overclock> first.
+    while let Some(sel) = runner.pending_selection_view() {
+        if sel.kind != digimon_engine::selection::SelectionKind::TriggerOrder {
+            break;
+        }
+        let action = sel
+            .effect_choices
+            .as_ref()
+            .and_then(|cs| cs.iter().find(|c| c.label.starts_with("BT22-042")))
+            .map(|c| c.action_id)
+            .expect("Nyabootmon's <Overclock> in the TriggerOrder");
+        runner
+            .execute_action(sel.selecting_player, action)
+            .expect("activate <Overclock> first");
+    }
 
     // The sacrifice prompt is installed: choose the Puppet fodder (its death is
     // what fans out). Kaguyamon is also a legal Puppet sacrifice, so target the
@@ -1072,13 +1083,12 @@ fn combo4_overclock_cost_deletion_fans_out_to_kaguyamon_and_kyaromon() {
 
 /// Combo C4 unhappy path: with NO Token/other-Puppet fodder besides the
 /// Overclock body itself, the keyword's deletion cost cannot be paid —
-/// `activate_overclock` rejects with `NoSacrifice`, so no extra attack, no death
+/// <Overclock> does not activate at the end of the turn (no legal candidate;
+/// DCGO `CanActivateOverclock`), so no extra attack, no death
 /// event, and neither Kaguyamon's removal nor Kyaromon's draw fires. The whole
 /// closing line is *gated on a payable sacrifice*.
 #[test]
 fn combo4_without_fodder_overclock_unpayable_no_fanout() {
-    use digimon_engine::game::OverclockError;
-
     // Same real cast as the happy path, minus the Puppet fodder.
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -1112,21 +1122,19 @@ fn combo4_without_fodder_overclock_unpayable_no_fanout() {
     runner.place_on_field(opp, "ST5-05", Some(0));
     runner.place_on_field(opp, "ST5-10", Some(0));
 
-    // With no sacrifice available, set the EOT <Overclock> window directly —
-    // mirroring the per-card Overclock tests (ex7_030.rs).
-    runner.game.current_phase = GamePhase::EndOfTurnAction;
-
     let before = snapshot(&runner);
 
-    // Overclock has no legal sacrifice (no Token / no *other* Puppet Digimon).
-    let err = runner
-        .game
-        .activate_overclock(nyaboot.index as usize)
-        .expect_err("Overclock must reject when no sacrifice is available");
-    assert_eq!(
-        err,
-        OverclockError::NoSacrifice,
+    // Overclock has no legal sacrifice (no Token / no *other* Puppet Digimon):
+    // ending the turn offers nothing for it.
+    assert!(runner.game.has_keyword(nyaboot, Keyword::Overclock));
+    assert!(
+        !runner.game.has_overclock_sacrifice(tp, nyaboot.index as usize),
         "with no spare Token/Puppet fodder, the Overclock cost is unpayable"
+    );
+    runner.game.end_turn();
+    assert!(
+        runner.pending_selection().is_none(),
+        "<Overclock> does not activate without a legal candidate"
     );
 
     let after = snapshot(&runner);

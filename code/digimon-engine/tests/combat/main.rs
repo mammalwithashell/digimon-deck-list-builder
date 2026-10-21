@@ -2,6 +2,7 @@
 //! security pipeline, Rush exemption, Force-Attack mask, and Overclock.
 
 mod alliance_interrupt;
+mod blitz_attack_decision;
 mod block_interrupt;
 mod cannot_suspend_enforcement;
 mod collision_mandatory;
@@ -10,6 +11,8 @@ mod counter_interrupt;
 mod deletion_cause_observer;
 mod effect_battle;
 mod effect_granted_attack;
+mod end_of_attack_drain;
+mod end_of_turn_keyword_pool;
 mod force_attack_mask;
 mod group6_keywords;
 mod group6_overclock;
@@ -24,9 +27,11 @@ mod progress_partial;
 mod raid_retarget;
 mod reboot_unsuspend;
 mod redirect_and_cancel;
+mod removed_target;
 mod rush_exemption;
 mod scenarios;
 mod security_attack_keyword;
+mod security_check_order;
 mod security_effects;
 mod track_c_deferred_modifiers;
 mod track_c_modifiers;

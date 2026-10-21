@@ -1,0 +1,14 @@
+# REC_OPT -- Option, red, use cost 0.
+#   [Main] <Recovery +2 (Deck)> (Place the top 2 cards of your deck on top of
+#   your security stack.)
+# The §16-6 keyword card (production idiom: the `recover` step, BT1-087).
+card: REC_OPT
+name: Restore Shield
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] <Recovery +2 (Deck)> (Place the top 2 cards of your deck on top of your security stack.)"
+    process:
+      - recover: { of: you, count: 2 }

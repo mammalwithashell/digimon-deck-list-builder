@@ -100,7 +100,7 @@ fn royal_knight(id: &str) -> CardData {
 fn seat_delay(runner: &mut DebugRunner, player: u8) -> usize {
     let perm = runner.place_on_field(player, "ST12-15", Some(0));
     let idx = perm.index as usize;
-    // Placed on turn 0; current turn is later — activatable (16-16-3).
+    // Placed on turn 0; current turn is later — activatable (16-17-3).
     runner.game.player_mut(player).battle_area[idx].option_state = OptionState::Delayed {
         owner: player,
         trash_on_turn: u16::MAX,

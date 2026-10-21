@@ -1,0 +1,31 @@
+# WA_BORROW_OP_THEN_MEM -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   [When Attacking] Place 1 card with the [Lender] trait from your trash as
+#   this Digimon's bottom digivolution card. Activate 1 of that card's
+#   [On Play] effects as an effect of this Digimon. Then, gain 2 memory.
+# WA_BORROW_OP with a step AFTER the activated effect: declining the
+# activated effect's optional processing condition drops that effect alone,
+# and the activating effect's "Then, gain 2 memory" still runs (§15-15-7-4).
+card: WA_BORROW_OP_THEN_MEM
+name: Borrowmon Then
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Place 1 card with the [Lender] trait from your trash as this Digimon's bottom digivolution card. Activate 1 of that card's [On Play] effects as an effect of this Digimon. Then, gain 2 memory."
+    process:
+      - select_trash:
+          of: you
+          bind_as: lent
+          filter: { trait_has: Lender }
+          prompt: "Place 1 card with the [Lender] trait from your trash as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: lent
+          target: source
+          bind_placed_as: lent_card
+      - refire_card_effect:
+          card: lent_card
+          timing: on_play
+      - gain_memory: 2

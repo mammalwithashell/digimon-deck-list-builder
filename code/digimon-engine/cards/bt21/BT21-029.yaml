@@ -67,7 +67,7 @@ effects:
   # When any of your opponent's Digimon are deleted → opponent plays Petrification Token.
   - when: on_any_deletion
     once_per_turn: true
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: opponent
         - event_target_kind: digimon

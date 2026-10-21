@@ -177,7 +177,7 @@ fn ex11_023_has_optional_opt_on_any_deletion_observer_with_self_exclusion() {
         "printed observer is [Once Per Turn]"
     );
     let condition = observer
-        .condition
+        .trigger_if
         .as_ref()
         .expect("observer must inspect the deleted-object event context");
     assert!(
@@ -488,6 +488,29 @@ fn ex11_023_other_deletion_recursion_fires_on_familiar_token_deletion() {
 
     runner.game.delete_permanent_with_effects(token);
     runner.game.drain_effect_queue();
+
+    // §16-13-2 / §15-4-3-2 / §15-4-3-5: the token's own `[On Deletion]` and
+    // Kaguyamon's "when other Digimon are deleted" observer trigger on the
+    // same deletion and pend in ONE pool, both P0's, so P0 orders them
+    // (G-ENGINE-ON-DELETION-DRAINED-BEFORE-DELETION-OBSERVERS). Take
+    // Kaguyamon's first.
+    {
+        let order = runner
+            .pending_selection()
+            .expect("the token's [On Deletion] and Kaguyamon's observer pend together");
+        assert_eq!(order.kind, SelectionKind::TriggerOrder);
+        let kaguyamon = order
+            .effect_choices
+            .as_ref()
+            .expect("TriggerOrder branches")
+            .iter()
+            .find(|c| c.label.starts_with("EX11-023"))
+            .expect("Kaguyamon's observer is one of the pooled triggers")
+            .action_id;
+        runner
+            .execute_action(0, kaguyamon)
+            .expect("order Kaguyamon's observer first");
+    }
 
     let target = runner
         .pending_selection_view()

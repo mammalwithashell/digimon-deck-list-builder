@@ -3,7 +3,7 @@
 //!
 //! Phase E §E2 left a known UX divergence: the outer "may" dialog parks
 //! unconditionally for `WhenWouldBeDeleted` triggers, even when the
-//! deletion cause is `OwnEffect` (RULES_CONTEXT 16-31 says Scapegoat
+//! deletion cause is `OwnEffect` (RULES_CONTEXT 16-32 says Scapegoat
 //! ignores own-effect deletions) and even when the controller has no
 //! other own permanents to substitute (mirrors DCGO `CanActivateScapegoat`'s
 //! `HasMatchConditionPermanent` gate). Task 1 closes this by moving the
@@ -34,7 +34,7 @@ fn scapegoat_card(id: &str) -> CardData {
 
 // ─── Test 1: OwnEffect cause must skip the outer accept dialog ──────────────
 
-/// `<Scapegoat>` ignores own-effect deletions per RULES_CONTEXT 16-31.
+/// `<Scapegoat>` ignores own-effect deletions per RULES_CONTEXT 16-32.
 /// With a viable ALLY substitute on the field and an OwnEffect-caused
 /// deletion of the SCAP carrier, the outer "may" dialog must NOT park —
 /// the cause-aware candidate filter should drop the candidate before
@@ -55,7 +55,7 @@ fn scapegoat_skips_outer_dialog_on_own_effect_cause() {
     assert!(
         r.game.pending_selection.is_none(),
         "OwnEffect-caused deletion of a Scapegoat carrier must NOT park the \
-         outer accept dialog (RULES_CONTEXT 16-31). Cause-aware \
+         outer accept dialog (RULES_CONTEXT 16-32). Cause-aware \
          replacement_condition should drop the candidate before \
          install_optional_selection."
     );

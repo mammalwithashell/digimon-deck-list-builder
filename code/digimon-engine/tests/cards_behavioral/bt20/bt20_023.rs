@@ -1,6 +1,6 @@
 //! Official observation 064fe77ff3f21af1997ea928feb09f4244c849274d76e03e4c3624ce001de64d,
 //! actual BT20-023 card image, and Q4312/Q4313. Base-repo DCGO BT20_023.cs agrees.
-//! Rules: general_rule.pdf p16, 8-1-2-1/8-1-3; p34, 16-8 (Jamming).
+//! Rules: general_rule.pdf p.18, 8-1-2-1/8-1-3; p.36, 16-9 (Jamming).
 use digimon_engine::action::space::{encode_digivolve, HAND_EFFECT_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::EvoCost;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};

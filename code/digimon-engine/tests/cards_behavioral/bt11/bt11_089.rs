@@ -269,7 +269,7 @@ fn bt11_089_your_turn_observer_gates_on_suspend_self_activation_cost() {
     // §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
     // BT11-089 prints "…, by suspending this Tamer, that Digimon gains <Rush>
     // for the turn" — the "by suspending this Tamer" half IS that condition.
-    // §15-7-4: "A player can choose whether or not to execute the content of
+    // §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
     // optional processing conditions, regardless of whether or not the content
     // of the conditions can be executed." The clause must therefore be
     // `optional`, so `effect_queue.rs`'s `needs_pre_cost_prompt` branch
@@ -278,7 +278,7 @@ fn bt11_089_your_turn_observer_gates_on_suspend_self_activation_cost() {
     // DCGO agrees: BT11_089.cs:82 passes isOptional = true.
     assert!(
         observer.optional,
-        "the suspend cost is an optional processing condition (§15-7-1/§15-7-4): \
+        "the suspend cost is an optional processing condition (§15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]): \
          the player may decline it"
     );
     // No `outer_prompt:` — a cost-bearing optional trigger gets its decline
@@ -442,7 +442,7 @@ fn stage_hand_card(runner: &mut DebugRunner, card_id: &str) {
 
 /// The ACCEPT half of Akiho's optional processing condition.
 ///
-/// §15-7-1 names "by X, Y" an OPTIONAL PROCESSING CONDITION, and §15-7-4 lets
+/// §15-7-1 names "by X, Y" an OPTIONAL PROCESSING CONDITION, and §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] lets
 /// the player choose whether to execute it — so with `optional: true` on an
 /// `activation_cost:` clause the engine installs a `TriggerOrder` prompt WITH
 /// PASS *before* running the cost closure (`effect_queue.rs`
@@ -460,7 +460,7 @@ fn accept_suspend_cost(runner: &mut DebugRunner) {
     );
     assert!(
         view.is_optional,
-        "the prompt must accept PASS — §15-7-4 lets the player decline the cost"
+        "the prompt must accept PASS — §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] lets the player decline the cost"
     );
     let action = *view
         .valid_action_ids
@@ -513,7 +513,7 @@ fn bt11_089_effect_play_of_red_avian_grants_rush_via_suspend_cost() {
     );
 }
 
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions." Declining "by suspending this Tamer" must
 /// leave BOTH halves undone — Akiho stays unsuspended AND the played Digimon
 /// gains no <Rush> — because §15-7-2 says that when the optional condition's
@@ -541,7 +541,7 @@ fn bt11_089_suspend_cost_may_be_declined_leaving_akiho_unsuspended_and_no_rush()
         .expect("the optional processing condition must surface a prompt (rule 17)");
     assert!(
         view.is_optional,
-        "the prompt must accept PASS — §15-7-4 lets the player decline the cost"
+        "the prompt must accept PASS — §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] lets the player decline the cost"
     );
     runner
         .execute_action(view.selecting_player, PASS)

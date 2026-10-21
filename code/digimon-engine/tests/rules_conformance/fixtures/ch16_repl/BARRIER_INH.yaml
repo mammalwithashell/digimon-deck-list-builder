@@ -1,0 +1,18 @@
+# BARRIER_INH -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   Inherited Effect: <Barrier> (When this Digimon would be deleted in
+#   battle, by trashing the top card of your security stack, it isn't
+#   deleted.)
+# Under BARRIER it gives the Digimon a SECOND <Barrier> instance (§16-1,
+# §16-2, §15-8-5-4).
+card: BARRIER_INH
+name: Wallbabymon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+    scope: inherited
+    summary: "[Inherited] <Barrier> (When this Digimon would be deleted in battle, by trashing the top card of your security stack, it isn't deleted.)"

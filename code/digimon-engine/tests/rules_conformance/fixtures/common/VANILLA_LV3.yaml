@@ -1,0 +1,9 @@
+# VANILLA_LV3 -- Digimon, Lv.3, red, 1000 DP, play cost 2. No text.
+# Deck / security / hand filler and a plain body for <Alliance> or deletion.
+card: VANILLA_LV3
+name: Plainmon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000

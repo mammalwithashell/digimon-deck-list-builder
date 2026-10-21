@@ -100,6 +100,14 @@ pub struct StepRuntime {
     /// The running clause is inherited/linked-scope: its OPT key is never
     /// moved onto a `<Succession>` adopted-copy counter.
     opt_key_inherited: bool,
+    /// The effect category (§15-2-1) of the context this clause started
+    /// under, captured by the lowering from the live `EffectContext` and
+    /// cloned into parked tails: a tail rebuilt after a selection
+    /// (`drain_or_rewrap_pending_tail`) resolves as the same category, even
+    /// when its source card has left every zone (a deleted token, §4-21-5)
+    /// and can no longer be looked up. `None` = infer from the zones.
+    /// G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE.
+    source_kind: Option<crate::enums::EffectSourceKind>,
 }
 
 impl Default for StepRuntime {
@@ -115,7 +123,19 @@ impl StepRuntime {
             dna_origin: None,
             opt_key: None,
             opt_key_inherited: false,
+            source_kind: None,
         }
+    }
+
+    /// Record the effect category the clause runs under (see the field).
+    pub fn with_source_kind(mut self, source_kind: crate::enums::EffectSourceKind) -> Self {
+        self.source_kind = Some(source_kind);
+        self
+    }
+
+    /// The effect category the clause started under, if captured.
+    pub fn source_kind(&self) -> Option<crate::enums::EffectSourceKind> {
+        self.source_kind
     }
 
     pub fn raw(&self) -> &EngineRawRustRegistry {
@@ -270,7 +290,14 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     game.effect_source_player = Some(player);
     game.effect_source_card = Some(source_card);
     game.effect_source_permanent = live_source;
-    let mut ctx = EffectContext::new(game, source_card, live_source, player);
+    // The rebuilt context keeps the category the clause started under
+    // (§15-2-1-1): a zone lookup would miss a source that has left play (a
+    // deleted token is removed from the game, §4-21-5) and fall back to a rule
+    // effect. G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE.
+    let mut ctx = match runtime.source_kind() {
+        Some(kind) => EffectContext::new_with_source_kind(game, source_card, live_source, kind, player),
+        None => EffectContext::new(game, source_card, live_source, player),
+    };
     run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
     (game.effect_source_player, game.effect_source_card, game.effect_source_permanent) = previous_source;
     game.current_trigger_context = previous;
@@ -377,7 +404,6 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DigiXrosMaterialSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OuterOptionalTrigger(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::TriggerOrderSelection(s)) => s.outer_conts.push(cont),
-            Some(ResumeFrame::OptionTrashOrder(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OptionalReplacement(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ReplacementBody {outer_conts,..}) => outer_conts.push(cont),
             Some(ResumeFrame::FieldTopSourceBatch { outer_conts, .. }) => outer_conts.push(cont),
@@ -404,6 +430,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkOptionHostSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::LinkCardTrashChoice(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigimonLinkHostSelection(_))
             | Some(ResumeFrame::OptionHandLinkHostSelection(_)) => unreachable!(
                 "Link declaration prompts are top-level player actions, never nested in a DSL clause"
@@ -418,6 +445,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::AllianceSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::BlockSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::RaidSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::AttackDeclarationDecision(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::CounterSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::CounterBlastDnaFieldMaterial(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::CounterBlastDnaHandMaterial(s)) => s.outer_conts.push(cont),
@@ -628,14 +656,17 @@ fn run_steps_with_runtime_inner(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) -> RunOutcome {
-    // A selection is ALREADY pending before the first step runs. This happens
-    // when a tail resumes inside a selection callback whose synchronous work
-    // fired an observer that drained inline and parked — a source trashed from
-    // under a Tamer (`fire_digivolution_card_trashed` drains synchronously by
-    // design, see EX10-036). Installing this slice's next selection now would
-    // overwrite — silently drop — the observer's prompt, so park the whole
-    // slice behind it, exactly as the post-step check below does after a
-    // synchronous step. G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION.
+    // A selection is ALREADY pending before the first step runs: park the
+    // whole slice behind it, exactly as the post-step check below does after
+    // a synchronous step, so installing this slice's next selection cannot
+    // overwrite (silently drop) it. Source-trash observers no longer drain
+    // inline (§15-8-3-2), so they are not a cause any more
+    // (G-DSL-TAIL-CLOBBERS-INLINE-OBSERVER-SELECTION's origin,
+    // G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS), but the park stays
+    // load-bearing: `DeleteReceiptFinalize` re-enters this function with
+    // `steps[i..]` after a deletion-batch member parks, and without the park
+    // that re-entry recurses on the same slice forever (EX13-065
+    // <Guard> + nested <Decode>).
     if !steps.is_empty() && ctx.game.pending_selection.is_some() {
         let tail_trigger_context = ctx.game.current_trigger_context.clone();
         wrap_pending_selection_with_tail(
@@ -667,6 +698,9 @@ fn run_steps_with_runtime_inner(
         if ctx.game.dsl_clause_aborted {
             for remaining in &steps[i..] {
                 if let CompiledStep::ReturnReceiptFinalize {receipt} = remaining { ctx.game.return_receipts.retain(|(id,_)|id!=receipt); }
+                if let CompiledStep::SecurityPlacementCancelFinalize { card } = remaining {
+                    ctx.game.security_placement_receipts.retain(|(c, _)| c != card);
+                }
                 if let CompiledStep::FieldSourceFinalize { receipt, .. } = remaining {
                     ctx.game
                         .field_source_receipts
@@ -709,6 +743,14 @@ fn run_steps_with_runtime_inner(
             return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         }
         if let Some(mut expanded) = source_play_batch::expand(step, ctx, bindings) {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
+        // "<De-Digivolve 1> for each ..." -> that many separate instances
+        // (§16-12-7 / §16-12-8). G-DEDIGIVOLVE-NO-DECLARATION.
+        if let Some(mut expanded) =
+            permanent_mutations::expand_de_digivolve_instances(step, ctx, bindings)
+        {
             expanded.extend_from_slice(&steps[i + 1..]);
             return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         }
@@ -846,6 +888,10 @@ pub fn run_step_with_runtime(
         return;
     }
     if source_play_batch::try_run(step, ctx, bindings, runtime) {
+        return;
+    }
+    if let Some(expanded) = permanent_mutations::expand_de_digivolve_instances(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         return;
     }
     if let CompiledStep::RawRust { fn_name, .. } = step {
@@ -994,7 +1040,7 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
         // effects" — the card is then the one resolving from security
         // (`Game::pending_security`), not a `pending_option`. DCGO links it
         // straight out of the security stack (`Permanent.AddLinkCard` →
-        // `RemoveFromAllArea`), and §13-1-7-4 trashes a checked security
+        // `RemoveFromAllArea`), and §13-1-8-4 trashes a checked security
         // card only "unless it belongs to an area", so the link is legal.
         // G-ENGINE-SECURITY-OPTION-LINK-TO-OWN-DIGIMON (BT25-100 / BT25-093).
         return try_run_link_step_from_security(ctx, *optional, filter);
@@ -1019,7 +1065,11 @@ fn try_run_link_step(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
                 player: owner,
                 index: i as u8,
             };
-            eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle)).then_some(handle)
+            // The card's own link requirement (Q4533; DCGO
+            // `CanLinkToTargetPermanent`), as the rule check reads it.
+            (eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && ctx.game.link_card_qualifies_for(handle, source_card))
+            .then_some(handle)
         })
         .collect();
 
@@ -1086,7 +1136,11 @@ fn try_run_link_step_from_security(
                 player: owner,
                 index: i as u8,
             };
-            eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle)).then_some(handle)
+            // The card's own link requirement (Q4533; DCGO
+            // `CanLinkToTargetPermanent`), as the rule check reads it.
+            (eval_predicate(filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && ctx.game.link_card_qualifies_for(handle, source_card))
+            .then_some(handle)
         })
         .collect();
 

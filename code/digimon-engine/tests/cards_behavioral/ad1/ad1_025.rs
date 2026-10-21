@@ -19,7 +19,7 @@
 //! DCGO/Assets/Scripts/CardEffect/AD1/Red/AD1_025.cs
 //!
 //! # Source priority
-//! Per CLAUDE.md: printed text > RULES_CONTEXT.md (§16-28 Partition) > fandom > DCGO.
+//! Per CLAUDE.md: printed text > RULES_CONTEXT.md (§16-29 Partition) > fandom > DCGO.
 //!
 //! # Patterns this audit exercises
 //! - H5  GrantKeyword Blocker (face-up declarative)
@@ -259,7 +259,7 @@ fn ad1_025_has_partition_with_wargreymon_and_metalgarurumon() {
 }
 
 /// Partition `exclude_cause` must contain at least `battle` per RULES_CONTEXT
-/// §16-28 ("not by battle"). The current YAML also adds `own_effect`. Audit:
+/// §16-29 ("not by battle"). The current YAML also adds `own_effect`. Audit:
 /// printed text only excludes battle, but DCGO confirms own-effect is also
 /// excluded; the YAML's `[own_effect, battle]` matches DCGO behavior.
 #[test]
@@ -276,7 +276,7 @@ fn ad1_025_partition_excludes_battle() {
     let xs = exclude.expect("Partition clause must exist");
     assert!(
         xs.iter().any(|s| s == "battle"),
-        "Partition must exclude `battle` per Rules Manual §16-28; got {xs:?}"
+        "Partition must exclude `battle` per Rules Manual §16-29; got {xs:?}"
     );
 }
 

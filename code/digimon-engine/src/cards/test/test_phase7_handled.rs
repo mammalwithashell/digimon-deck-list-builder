@@ -18,7 +18,7 @@ impl CardEffect for TestP7Handled {
                 let owner = rctx.effect.player;
                 let game = &mut *rctx.effect.game;
                 if let Some(card) = game.players[owner as usize].deck.pop() {
-                    game.players[owner as usize].trash.push(card);
+                    game.players[owner as usize].put_in_trash(card);
                 }
                 rctx.handled();
             })

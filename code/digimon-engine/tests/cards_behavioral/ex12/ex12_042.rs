@@ -90,7 +90,7 @@ fn ex12_042_inherited_barrier_prevents_a_lethal_battle_deletion() {
     // 7000 into a 12000 security Digimon: lethal unless Barrier intervenes.
     let _ = runner.attack_player(carrier, 1, false);
 
-    // Barrier is Opt-cost -> Mand (rules 16-24): paying is optional, so the
+    // Barrier is Opt-cost -> Mand (rules 16-25): paying is optional, so the
     // engine must PROMPT rather than auto-apply or auto-decline.
     if let Some(offer) = runner.pending_selection_view() {
         assert!(

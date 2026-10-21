@@ -87,6 +87,8 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT25-036 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("APPMON-HAND", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         // Appmon trash fodder for the [When Linking] / inherited cost.
         .add_card(make_digimon("APPMON-HAND", 3, 2000, 3, &["Appmon"]))
@@ -95,6 +97,7 @@ fn base() -> DebugRunnerBuilder {
         // App-Fusion named cards.
         .add_card(named("KABEMON", "Kabemon"))
         .add_card(named("GOMIMON", "Gomimon"))
+        .link_requirement("GOMIMON", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(named("ECOMON", "Ecomon"))
         .add_card(named("PUZZLEMON", "Puzzlemon"))
 }

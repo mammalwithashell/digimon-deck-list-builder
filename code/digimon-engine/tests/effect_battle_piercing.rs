@@ -1,4 +1,4 @@
-//! Official 16-6 and Bandai CRM4 clarification: an effect battle during an
+//! Official 16-7 and Bandai CRM4 clarification: an effect battle during an
 //! attack can earn Piercing, but there is only one security transition.
 //! https://en.digimoncard.com/rule/revised/ ("May battle" Effects and Piercing).
 //! Ending an attack skips to EndOfAttack: 15-15-1-1; official Q5804.

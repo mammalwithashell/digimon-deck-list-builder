@@ -1,0 +1,14 @@
+# WA_DRAW -- Digimon, Lv.4, red, 6000 DP, play cost 5.
+#   [When Attacking] <Draw 1> (Draw 1 card from your deck.)
+card: WA_DRAW
+name: Drawattackmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 6000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] <Draw 1> (Draw 1 card from your deck.)"
+    process:
+      - draw: { of: you, count: 1 }

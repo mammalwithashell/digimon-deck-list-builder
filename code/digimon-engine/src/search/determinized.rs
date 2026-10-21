@@ -549,7 +549,7 @@ fn canonicalize_player_hidden(p: &mut Player, include_hand: bool) {
 
     let mut cards = pool.into_iter();
     if include_hand {
-        p.hand.extend(cards.by_ref().take(hand_count));
+        p.put_all_in_hand(cards.by_ref().take(hand_count));
     }
     for slot in slots.iter_mut() {
         if slot.is_none() {

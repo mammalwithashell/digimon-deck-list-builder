@@ -126,3 +126,36 @@ fn ace_overflow_loses_memory_when_source_leaves_via_return_to_deck_stack_cleanup
     );
     assert_eq!(runner.game.memory, -1);
 }
+
+/// §4-19-5: <Overflow> instances processed simultaneously go turn player
+/// first, then the non-turn player — also when ONE rule check (§17-1-3) both
+/// deletes and trashes ACE stacks. The turn player's ACE is at 0 DP (deleted,
+/// §17-1-3-1-1); the non-turn player's ACE has no DP (trashed, §17-1-3-2-1).
+/// Memory 9: turn player first gives 9 -> 6 (P0 loses 3) -> 9 (P1 loses 3).
+/// Non-turn player first would clamp at 10 (9 -> 10 -> 7).
+#[test]
+fn rule_check_deleted_and_trashed_aces_overflow_turn_player_first() {
+    let mut deleted = ace_card("ACE-ZERO-DP", "Ace Zero DP");
+    deleted.ace_overflow = Some(-3);
+    deleted.dp = Some(0);
+    let mut trashed = ace_card("ACE-NO-DP", "Ace No DP");
+    trashed.ace_overflow = Some(-3);
+    trashed.dp = None;
+    let mut runner = DebugRunner::builder()
+        .add_card(deleted)
+        .add_card(trashed)
+        .memory(9)
+        .start();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.place_on_field(0, "ACE-ZERO-DP", Some(0));
+    runner.place_on_field(1, "ACE-NO-DP", Some(0));
+
+    runner.game.drain_effect_queue();
+
+    assert!(runner.game.players[0].battle_area.is_empty(), "0 DP ACE deleted");
+    assert!(runner.game.players[1].battle_area.is_empty(), "DP-less ACE trashed");
+    assert_eq!(
+        runner.game.memory, 9,
+        "turn player's <Overflow> first (9 -> 6 -> 9), not clamped at 10"
+    );
+}

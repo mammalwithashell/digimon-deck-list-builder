@@ -69,7 +69,7 @@ use digimon_engine::selection::SelectionKind;
 /// to fire WITHOUT incidentally running a security-DP battle that would
 /// mutual-destruct same-DP attacker + Digimon security (post-fix per
 /// RULES_CONTEXT 14-2-1-3, see `equal_dp_security_battle_deletes_attacker`).
-/// Non-Digimon security skips the battle compare (13-1-7-3 / 14-2-3).
+/// Non-Digimon security skips the battle compare (13-1-8-3 / 14-2-3).
 fn make_non_digimon_security_filler(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Tamer;
@@ -1013,7 +1013,7 @@ fn inject_p189_as_attacker(
         attacker,
         original_target: AttackTarget::Player(1 - attacker.player),
         effective_target: AttackTarget::Player(1 - attacker.player),
-        effective_target_removed_by_dna: false,
+        effective_target_removed: false,
         is_blocked: false,
         blocker: None,
         is_vortex: false,

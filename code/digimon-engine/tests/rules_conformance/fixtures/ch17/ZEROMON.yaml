@@ -1,0 +1,19 @@
+# ZEROMON -- Digimon, Lv.3, red, 0 DP, play cost 2.
+#   [All Turns] When this Digimon would be deleted, you may gain 1 memory.
+# A Digimon whose printed DP is 0: a §17-1-3-1-1 deletion target as soon as a
+# rule check sees it. The optional immediate-type effect parks a decision
+# right before its deletion, so a test can read the board at that moment.
+card: ZEROMON
+name: Zeromon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 0
+effects:
+  - kind: replacement
+    timing: when_would_be_deleted
+    optional: true
+    summary: "[All Turns] When this Digimon would be deleted, you may gain 1 memory."
+    process:
+      - gain_memory: 1

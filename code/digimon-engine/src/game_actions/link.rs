@@ -32,9 +32,10 @@ impl Game {
     /// link-condition. Mirrors DCGO `LinkEffect`'s `CanUseCondition` +
     /// `CanSelectPermanentCondition`: the linking Digimon is excluded as its
     /// own host, and each host is filtered through the printed link filter and
-    /// the shared `link_host_candidates` eligibility (Digimon, Standard state,
-    /// link-max). Cost is the printed cost before `ChangeLinkCost` modifiers,
-    /// which the initiation applies at pay time via `link_cost_delta_for_player`.
+    /// the shared `link_host_candidates` eligibility (Digimon, Standard state;
+    /// a host at its link limit included, §4-9-5). Cost is the printed cost
+    /// before `ChangeLinkCost` modifiers, which the initiation applies at pay
+    /// time via `link_cost_delta_for_player`.
     pub fn digimon_link_condition_targets(
         &self,
         handle: PermanentHandle,
@@ -70,8 +71,9 @@ impl Game {
     /// Mirrors DCGO `LinkEffect`'s `CanUseCondition` for the
     /// `IsExistOnHand(card)` branch: every standing Digimon of the owner that
     /// passes the printed link filter and `link_host_candidates`' shared
-    /// eligibility (Digimon, Standard state, link-max). No self-exclusion is
-    /// needed — the card is not on the field. Cost is the printed cost before
+    /// eligibility (Digimon, Standard state; at the limit the link replaces,
+    /// §4-9-5). No self-exclusion is needed — the card is not on the field.
+    /// Cost is the printed cost before
     /// `ChangeLinkCost` modifiers, applied at pay time like the field origin.
     pub fn hand_digimon_link_condition_targets(
         &self,
@@ -108,7 +110,7 @@ impl Game {
     /// read as one) carrying a `LinkCondition` effect, return its link cost
     /// and the legal hosts it may plug into right now.
     ///
-    /// `general_rule.pdf` (Ver.3.6) §10-1-1: "A card from the hand or battle
+    /// `general_rule.pdf` (Ver.4.3) §10-1-1: "A card from the hand or battle
     /// area can be linked to a Digimon in the battle area by paying the cost
     /// **as part of the main phase actions**" — and §6-5-1 lists "use an
     /// Option card from the hand" (§6-5-1-3) and "link a card from the hand or
@@ -204,7 +206,7 @@ impl Game {
         // resolution machinery — see `hand_option_link_condition_targets`.
         //
         // `G-ENGINE-OPTION-HAND-LINK-COST-TIMING`: the HOST PICK COMES FIRST.
-        // `general_rule.pdf` (Ver.3.6) §10-1-3, p.19, orders the link
+        // `general_rule.pdf` (Ver.4.3) §10-1-3, p.21, orders the link
         // procedure 10-1-3-1 "the player chooses 1 of their Digimon that meets
         // the requirement" -> 10-1-3-2 "The specified link cost is paid." ->
         // 10-1-3-3 "The card to link is plugged in sideways into the chosen
@@ -659,21 +661,63 @@ impl Game {
             self.check_turn_end();
             return;
         }
-        match p.origin {
+        // §4-9-5 / §10-1-3-3: at the link limit the new card replaces existing
+        // link cards; with a choice, the linking player picks them first.
+        let purpose = LinkTrashPurpose::DigimonLink {
+            origin: p.origin,
+            host: p.host,
+            card: p.card,
+        };
+        if self.park_link_replacement_choice(owner, p.host, purpose) {
+            return;
+        }
+        self.finish_digimon_link_attach(p.origin, p.host, p.card);
+    }
+
+    /// §10-1-3-3: plug the paid-for linking card into `host` (the attach
+    /// primitives trim a forced single replaced link card, §4-9-5).
+    pub(crate) fn finish_digimon_link_attach(
+        &mut self,
+        origin: crate::game::DigimonLinkOrigin,
+        host: PermanentHandle,
+        card: crate::card_source::CardHandle,
+    ) {
+        use crate::game::DigimonLinkOrigin;
+        match origin {
             DigimonLinkOrigin::Standing(source) => {
-                self.absorb_standing_digimon_as_link(source, p.host);
+                self.absorb_standing_digimon_as_link(source, host);
             }
             // Hand origin — DCGO `Permanent.AddLinkCard`: the card is lifted
             // out of the hand and attached; `OnLink` fires inside.
             DigimonLinkOrigin::Hand(owner) => {
                 let _ = self.link_chosen_card_into_host(
-                    p.host,
-                    p.card,
+                    host,
+                    card,
                     crate::enums::LinkCardSource::Hand(owner),
                 );
             }
         }
         self.check_turn_end();
+    }
+
+    /// An effect links its own standing Digimon `source` onto `host`
+    /// (`relink_self_to_own_digimon`, EX11-027; DCGO
+    /// `IPlacePermanentToLinkCards`). At the link limit with a choice, the
+    /// linking player `chooser` first picks the replaced link cards (§4-9-5,
+    /// §10-1-3-1), and the absorb runs after the picks; otherwise it absorbs
+    /// now. Returns `true` when the choice was parked.
+    pub(crate) fn link_standing_digimon_by_effect(
+        &mut self,
+        chooser: PlayerId,
+        source: PermanentHandle,
+        host: PermanentHandle,
+    ) -> bool {
+        let purpose = LinkTrashPurpose::RelinkStanding { source, host };
+        if self.park_link_replacement_choice(chooser, host, purpose) {
+            return true;
+        }
+        self.absorb_standing_digimon_as_link(source, host);
+        false
     }
 
     /// Absorb a standing Digimon `source` into `host`'s linked cards. The
@@ -709,24 +753,30 @@ impl Game {
         };
         let top_handle = top.handle();
         let top_owner = top.owner;
-        // Digivolution sources under the top → owner's trash + trigger.
+        // Digivolution sources under the top → owner's trash + trigger, all
+        // at the same time: ONE event (§15-5-2), enqueued without draining —
+        // nothing activates before the link has finished (§15-8-3-2).
+        let mut trashed = Vec::new();
         for card in sources {
             let scard = card.handle();
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
-            self.fire_digivolution_card_trashed(
-                source.player,
-                source,
-                top_handle,
-                scard,
-                crate::trigger_context::EventCause::OwnEffect,
-            );
+            self.player_mut(owner).put_in_trash(card);
+            trashed.push(super::TrashedSource {
+                player: source.player,
+                host: source,
+                host_card: top_handle,
+                card: scard,
+            });
         }
+        self.enqueue_digivolution_cards_trashed(
+            trashed,
+            crate::trigger_context::EventCause::OwnEffect,
+        );
         // The source's own linked cards (rare) → trash + OnLinkedCardTrashed.
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
             let owner = card.owner;
-            self.player_mut(owner).trash.push(card);
+            self.player_mut(owner).put_in_trash(card);
         }
         if had_linked {
             for pid in 0..self.players.len() {
@@ -735,10 +785,16 @@ impl Game {
                     TriggerSource::PlayerBattleArea(pid as PlayerId),
                 );
             }
-            self.drain_effect_queue();
         }
         // Fix the host handle after the Vec shift, then attach the top card.
         let host_adj = Game::shift_handle_after_soft_remove(source, host);
+        // §4-9-5: every caller parks the replacement choice first
+        // (`park_link_replacement_choice`); only a forced trim is left here.
+        debug_assert!(
+            !self.link_replacement_is_a_choice(host_adj),
+            "§4-9-5: park_link_replacement_choice before absorbing onto a host at its limit"
+        );
+        self.trash_forced_link_replacement(host_adj);
         match self
             .player_mut(host_adj.player)
             .battle_area
@@ -747,7 +803,7 @@ impl Game {
             Some(hp) => hp.linked_cards.push(top),
             None => {
                 // Host vanished — route the top card to its owner's trash.
-                self.player_mut(top_owner).trash.push(top);
+                self.player_mut(top_owner).put_in_trash(top);
                 return;
             }
         }
@@ -763,7 +819,9 @@ impl Game {
                 },
             );
         }
-        self.drain_effect_queue();
+        // The link has finished: its trash and link observers activate now,
+        // unless an effect is still resolving around it (§15-8-3-2).
+        self.maybe_drain_effect_queue();
     }
 
     /// Facet #9 — link a **chosen card** from a non-battle-area zone (hand,
@@ -866,6 +924,7 @@ impl Game {
         // Attach onto the host. If the host vanished between the validity
         // check and here (it cannot in synchronous flow, but be defensive),
         // route the lifted card to its owner's trash.
+        self.trash_forced_link_replacement(host);
         match self
             .player_mut(host.player)
             .battle_area
@@ -873,7 +932,7 @@ impl Game {
         {
             Some(hp) => hp.linked_cards.push(moved),
             None => {
-                self.player_mut(moved_owner).trash.push(moved);
+                self.player_mut(moved_owner).put_in_trash(moved);
                 return false;
             }
         }
@@ -921,7 +980,7 @@ impl Game {
         let host_card = perm.top_card().handle();
         let removed = perm.linked_cards.remove(pos);
         let owner = removed.owner;
-        self.player_mut(owner).trash.push(removed);
+        self.player_mut(owner).put_in_trash(removed);
 
         // Fire OnLinkedCardTrashed globally (every battle area + event-gated
         // Delays) carrying the host, the trashed card and the cause — an
@@ -1024,5 +1083,453 @@ impl Game {
         perm.push_under(moved);
         self.note_effect_added_sources(host, vec![card], cause);
         true
+    }
+}
+
+// ─────────── §4-9-5 link limit, link-time replacement, §17-1-3-2-5..7 ───────────
+
+/// A §17-1-3-2-5..7 rule-check target on one link host, collected by
+/// [`Game::collect_link_rule_targets`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LinkRuleTarget {
+    /// §17-1-3-2-5: the host holds this many link cards over its link limit,
+    /// counted after its `Unqualified` cards leave (DCGO runs
+    /// `DigimonLackLinkConditionProcess` before `DigimonLackLinkMaxCountProcess`).
+    /// The host's controller chooses which (Q6370).
+    Excess(usize),
+    /// §17-1-3-2-6 / -7: link cards whose link requirement the host doesn't
+    /// meet, or with no `[Link]` at all (no `<Link>` note names their
+    /// category). Trashed with no choice.
+    Unqualified(Vec<CardHandle>),
+}
+
+/// What runs after a link-card trash choice's picks are trashed. Every link
+/// entry point that can replace link cards (§4-9-5) parks the same
+/// `LinkCardTrashChoice` frame through [`Game::park_link_replacement_choice`]
+/// and finishes its own attach here.
+#[derive(Debug, Clone)]
+pub(crate) enum LinkTrashPurpose {
+    /// §17-1-3-2-5 rule-check trim; nothing else follows.
+    RuleExcess,
+    /// §4-9-5 replacement in a declared Digimon link (cost already paid):
+    /// attach `card` from `origin` onto `host`.
+    DigimonLink {
+        origin: crate::game::DigimonLinkOrigin,
+        host: PermanentHandle,
+        card: CardHandle,
+    },
+    /// §4-9-5 replacement in a Plug-In Option link: resume
+    /// `commit_linked_card_no_replace`.
+    OptionLink(crate::game::PendingWouldLinkResume),
+    /// §4-9-5 replacement in an effect's `link_cards` pick (cost already
+    /// paid): attach the chosen card, then continue the step's pick loop.
+    EffectLink(Box<crate::dsl_cards::step::link_cards::EffectLinkResume>),
+    /// §4-9-5 replacement in an effect relinking its own standing Digimon
+    /// (`relink_self_to_own_digimon`): absorb `source` onto `host`.
+    RelinkStanding {
+        source: PermanentHandle,
+        host: PermanentHandle,
+    },
+    /// §4-9-5 replacement in an orphaned Plug-In's relink onto `carrier`:
+    /// resume [`Game::relink_plug_in`].
+    RelinkPlugIn {
+        option: PermanentHandle,
+        carrier: PermanentHandle,
+        link_index: u8,
+    },
+}
+
+/// Resumable state of a link-card trash choice (rule 28: plain data). The
+/// `chooser` picks one of `remaining` per decision until `picks_left` is 0;
+/// the picked cards are trashed together after the last pick.
+#[derive(Debug, Clone)]
+pub(crate) struct LinkCardTrashChoiceState {
+    pub(crate) chooser: PlayerId,
+    pub(crate) host: PermanentHandle,
+    pub(crate) remaining: Vec<CardHandle>,
+    pub(crate) picks_left: usize,
+    pub(crate) chosen: Vec<CardHandle>,
+    pub(crate) purpose: LinkTrashPurpose,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+impl Game {
+    /// §4-9-5 "1 card can have a maximum of 1 link card", plus every
+    /// `<Link +N>` instance (§16-40-1, -3; the `ChangeLinkMax` modifiers).
+    /// DCGO `Permanent.LinkedMax` starts at 1 likewise.
+    pub fn link_limit(&self, host: PermanentHandle) -> usize {
+        (1 + self.modifiers.link_max_delta(host)).clamp(0, u8::MAX as i32) as usize
+    }
+
+    /// §4-9-5: how many of `host`'s existing link cards one more link card
+    /// replaces ("the same number of the existing link cards are trashed at
+    /// the same time as the newly linked cards"); 0 below the limit.
+    pub(crate) fn link_replacement_excess(&self, host: PermanentHandle) -> usize {
+        let len = self
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+            .map_or(0, |p| p.linked_cards.len());
+        (len + 1).saturating_sub(self.link_limit(host)).min(len)
+    }
+
+    /// §4-9-5 / §10-1-3-1: whether one more link card onto `host` replaces
+    /// some but not all of its link cards, so the linking player chooses
+    /// which (2+ existing link cards at the limit).
+    pub(crate) fn link_replacement_is_a_choice(&self, host: PermanentHandle) -> bool {
+        let len = self
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+            .map_or(0, |p| p.linked_cards.len());
+        let excess = self.link_replacement_excess(host);
+        excess > 0 && excess < len
+    }
+
+    /// Whether `card`, linked to `host`, still qualifies (§17-1-3-2-6 / -7):
+    /// the host is a Digimon and meets one of the card's link requirements
+    /// (a `link_cost` effect's `link_filter`, the predicate
+    /// `link_host_candidates` offers hosts by). A card with no `[Link]` has no
+    /// requirement to meet and no `<Link>` note naming its category. DCGO
+    /// `AutoProcessing.IsDigimonLackLinkCondition` (`CanLinkToTargetPermanent`).
+    pub(crate) fn link_card_meets_requirements(
+        &self,
+        host: PermanentHandle,
+        card: &CardSource,
+    ) -> bool {
+        self.link_card_qualifies_for(host, card.handle())
+    }
+
+    /// [`Self::link_card_meets_requirements`] by handle, for a card not yet
+    /// linked (Q4533: an effect can't link a card without `[Link]`; DCGO
+    /// `CanLinkToTargetPermanent`). Shared by the rule check, the declared
+    /// link's host candidates and the effect-driven link gates.
+    pub fn link_card_qualifies_for(&self, host: PermanentHandle, card: CardHandle) -> bool {
+        if !self.permanent_is_digimon_for_rules(host) {
+            return false;
+        }
+        let Some(card_id) = self.card_data_for_handle(card).map(|d| d.card_id.clone()) else {
+            return false;
+        };
+        let effects = self.effects_for_card(&card_id, card).unwrap_or_default();
+        self.link_requirement_met_by(card, &effects[..], host, host.player)
+    }
+
+    /// Whether `host` meets one of `card`'s link requirements (`effects` are
+    /// its effects; `reader` the controller the filters read as). A card
+    /// whose printed Link box exists (`CardData::link_text`) but whose
+    /// requirement isn't lowered in the engine counts as meeting it (unknown
+    /// isn't unmet; `G-DATA-LINK-REQUIREMENT-NOT-LOWERED`); a card with no
+    /// `[Link]` at all meets none (§17-1-3-2-7).
+    pub(crate) fn link_requirement_met_by(
+        &self,
+        card: CardHandle,
+        effects: &[crate::effect::Effect],
+        host: PermanentHandle,
+        reader: PlayerId,
+    ) -> bool {
+        let mut requirements = effects.iter().filter(|e| e.link_cost.is_some()).peekable();
+        if requirements.peek().is_none() {
+            return self
+                .card_data_for_handle(card)
+                .is_some_and(|d| !d.link_text.trim().is_empty());
+        }
+        let read_ctx = EffectReadContext::new(self, card, None, reader);
+        // `any`, not the chosen requirement: a card with two link requirements
+        // at different costs could be offered a host only the second admits
+        // while the declared link pays the first one's cost (§10-1-3-1 has the
+        // player choose 1 requirement). No lowered card has two today.
+        requirements.any(|e| e.link_filter.as_ref().map_or(true, |f| f(&read_ctx, host)))
+    }
+
+    /// The §17-1-3-2-5..7 targets on every player's battle area, in
+    /// (player, index) order. Read-only; `run_state_based_rules_check`
+    /// applies them.
+    pub fn collect_link_rule_targets(&self) -> Vec<(PermanentHandle, LinkRuleTarget)> {
+        let mut out = Vec::new();
+        for (pid, player) in self.players.iter().enumerate() {
+            for (idx, perm) in player.battle_area.iter().enumerate() {
+                if perm.linked_cards.is_empty() || perm.card_sources.is_empty() {
+                    continue;
+                }
+                let host = PermanentHandle {
+                    player: pid as PlayerId,
+                    index: idx as u8,
+                };
+                let unqualified: Vec<CardHandle> = perm
+                    .linked_cards
+                    .iter()
+                    .filter(|c| !self.link_card_meets_requirements(host, c))
+                    .map(|c| c.handle())
+                    .collect();
+                let kept = perm.linked_cards.len() - unqualified.len();
+                if !unqualified.is_empty() {
+                    out.push((host, LinkRuleTarget::Unqualified(unqualified)));
+                }
+                let limit = self.link_limit(host);
+                if kept > limit {
+                    out.push((host, LinkRuleTarget::Excess(kept - limit)));
+                }
+            }
+        }
+        out
+    }
+
+    /// Trash `cards` off `host`'s link cards together, by rule (§4-9-5
+    /// replacement, §17-1-3-2-5..7): each goes to its owner's trash and an
+    /// `OnLinkedCardTrashed` (cause `Rule`) is enqueued. Does not drain, so the
+    /// triggers resolve with whatever the caller enqueues next (§4-9-5 "at the
+    /// same time as the newly linked cards").
+    pub(crate) fn trash_link_cards_by_rule(&mut self, host: PermanentHandle, cards: &[CardHandle]) {
+        let Some(perm) = self
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+        else {
+            return;
+        };
+        if perm.card_sources.is_empty() {
+            return;
+        }
+        let host_card = perm.top_card().handle();
+        let mut removed = Vec::new();
+        for card in cards {
+            if let Some(pos) = perm.linked_cards.iter().position(|c| c.handle() == *card) {
+                removed.push(perm.linked_cards.remove(pos));
+            }
+        }
+        for card in removed {
+            let handle = card.handle();
+            let owner = card.owner;
+            self.player_mut(owner).put_in_trash(card);
+            self.enqueue_triggered(
+                EffectTiming::OnLinkedCardTrashed,
+                TriggerSource::LinkCardTrashed {
+                    player: host.player,
+                    host,
+                    host_card,
+                    card: handle,
+                    cause: EventCause::Rule,
+                },
+            );
+        }
+    }
+
+    /// §4-9-5 with nothing to choose: one more link card replaces every one
+    /// of `host`'s link cards (a lone card at the limit, DCGO
+    /// `Permanent.AddLinkCard`'s `LinkedMax == 1` branch; or every card when
+    /// the excess covers them all). Called by every attach primitive just
+    /// before the push. Where a choice exists, every link entry point (the
+    /// declared Digimon and Option links, the effect `link_cards` pick, the
+    /// effect relinks) parks [`Self::park_link_replacement_choice`] before it
+    /// reaches the primitive, so a choice is never left here.
+    pub(crate) fn trash_forced_link_replacement(&mut self, host: PermanentHandle) {
+        let cards: Vec<CardHandle> = match self
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+        {
+            Some(p) => p.linked_cards.iter().map(|c| c.handle()).collect(),
+            None => return,
+        };
+        let excess = self.link_replacement_excess(host);
+        if !cards.is_empty() && excess >= cards.len() {
+            self.trash_link_cards_by_rule(host, &cards);
+        }
+    }
+
+    /// §4-9-5 / §10-1-3-1 for every link (declared, Plug-In Option, or made
+    /// by an effect): when the new card replaces existing link cards and there
+    /// is a choice (fewer to trash than there are), park the linking player's
+    /// choice of exactly that many; `purpose` finishes the link after the
+    /// picks are trashed. Returns `false` when nothing needs choosing: every
+    /// existing card goes (trashed here, e.g. a host already over its limit),
+    /// or a lone card the attach primitive trims, or nothing could be parked;
+    /// the caller then attaches directly.
+    pub(crate) fn park_link_replacement_choice(
+        &mut self,
+        chooser: PlayerId,
+        host: PermanentHandle,
+        purpose: LinkTrashPurpose,
+    ) -> bool {
+        let excess = self.link_replacement_excess(host);
+        let cards: Vec<CardHandle> = self
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+            .map(|p| p.linked_cards.iter().map(|c| c.handle()).collect())
+            .unwrap_or_default();
+        if excess == 0 || cards.len() <= 1 {
+            // Nothing, or a lone card the attach primitive trims.
+            return false;
+        }
+        if !self.link_replacement_is_a_choice(host) {
+            // No choice: every existing link card is replaced.
+            self.trash_link_cards_by_rule(host, &cards);
+            return false;
+        }
+        self.install_link_card_trash_choice(LinkCardTrashChoiceState {
+            chooser,
+            host,
+            remaining: cards,
+            picks_left: excess,
+            chosen: Vec::new(),
+            purpose,
+            outer_conts: Vec::new(),
+        })
+    }
+
+    /// §17-1-3-2-5 (Q6370): the first host over its link limit has its
+    /// controller choose exactly the excess (never a tail trim). When every
+    /// removable card is excess (a lone card, or a limit of 0) they are
+    /// trashed directly: there is nothing to choose. Returns `true` if it
+    /// acted.
+    pub(crate) fn park_first_link_excess_trim(&mut self) -> bool {
+        let targets = self.collect_link_rule_targets();
+        let Some((host, excess)) = targets.iter().find_map(|(h, t)| match t {
+            LinkRuleTarget::Excess(n) => Some((*h, *n)),
+            LinkRuleTarget::Unqualified(_) => None,
+        }) else {
+            return false;
+        };
+        let unqualified: Vec<CardHandle> = targets
+            .iter()
+            .filter(|(h, _)| *h == host)
+            .flat_map(|(_, t)| match t {
+                LinkRuleTarget::Unqualified(c) => c.clone(),
+                LinkRuleTarget::Excess(_) => Vec::new(),
+            })
+            .collect();
+        let remaining: Vec<CardHandle> = self.player(host.player).battle_area[host.index as usize]
+            .linked_cards
+            .iter()
+            .map(|c| c.handle())
+            .filter(|c| !unqualified.contains(c))
+            .collect();
+        if excess >= remaining.len() {
+            self.trash_link_cards_by_rule(host, &remaining);
+            return !remaining.is_empty();
+        }
+        self.install_link_card_trash_choice(LinkCardTrashChoiceState {
+            chooser: host.player,
+            host,
+            remaining,
+            picks_left: excess,
+            chosen: Vec::new(),
+            purpose: LinkTrashPurpose::RuleExcess,
+            outer_conts: Vec::new(),
+        })
+    }
+
+    /// Park one pick of a link-card trash choice: an `EffectChoice` over
+    /// `remaining` (each entry carries its card, so the choice reaches the RL
+    /// action space), resumed by the `LinkCardTrashChoice` frame. Returns
+    /// `false` (nothing installed) when the host is gone or has no stack.
+    fn install_link_card_trash_choice(&mut self, state: LinkCardTrashChoiceState) -> bool {
+        use crate::action::space::{HAND_EFFECT_START, HAND_MAIN_LIMIT};
+        let Some(host_card) = self
+            .player(state.host.player)
+            .battle_area
+            .get(state.host.index as usize)
+            .filter(|p| !p.card_sources.is_empty())
+            .map(|p| p.top_card().handle())
+        else {
+            return false;
+        };
+        let mut valid_action_ids = Vec::new();
+        let mut choices = Vec::new();
+        for (i, card) in state.remaining.iter().take(HAND_MAIN_LIMIT).enumerate() {
+            let action_id = HAND_EFFECT_START + i as u16;
+            valid_action_ids.push(action_id);
+            choices.push(EffectChoiceEntry {
+                count_choice: None,
+                label: self
+                    .card_data_for_handle(*card)
+                    .map(|d| d.card_name.clone())
+                    .unwrap_or_else(|| "Link card".to_string()),
+                action_id,
+                source_card: Some(*card),
+                source_kind: Some(EffectSourceKind::Rule),
+                timing: None,
+                is_optional: false,
+                keyword: None,
+                observation_metadata: Default::default(),
+            });
+        }
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::EffectChoice,
+            selecting_player: state.chooser,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: format!("Choose a link card to trash ({} more)", state.picks_left),
+            effect_choices: Some(choices),
+            source_card: host_card,
+            source_permanent: Some(state.host),
+            source_kind: EffectSourceKind::Rule,
+            callback: Box::new(|_, _| {
+                panic!("link-card trash choice requires its typed resume frame")
+            }),
+            on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::LinkCardTrashChoice(state)],
+        });
+        true
+    }
+
+    /// Resume a link-card trash choice: record the pick, ask again until the
+    /// count is met (when every remaining card must go there is no choice),
+    /// then trash every pick together and finish `purpose`.
+    pub(crate) fn run_link_card_trash_choice_step(
+        &mut self,
+        mut state: LinkCardTrashChoiceState,
+        action_id: u16,
+    ) {
+        let idx = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+        if idx < state.remaining.len() {
+            state.chosen.push(state.remaining.remove(idx));
+            state.picks_left = state.picks_left.saturating_sub(1);
+        }
+        if state.picks_left > 0 && !state.remaining.is_empty() {
+            if state.picks_left < state.remaining.len()
+                && self.install_link_card_trash_choice(state.clone())
+            {
+                return;
+            }
+            state.chosen.append(&mut state.remaining);
+        }
+        let outer_conts = std::mem::take(&mut state.outer_conts);
+        self.trash_link_cards_by_rule(state.host, &state.chosen);
+        match state.purpose {
+            LinkTrashPurpose::RuleExcess => {}
+            LinkTrashPurpose::DigimonLink { origin, host, card } => {
+                self.finish_digimon_link_attach(origin, host, card);
+            }
+            LinkTrashPurpose::OptionLink(resume) => self.commit_linked_card_no_replace(resume),
+            LinkTrashPurpose::EffectLink(resume) => {
+                crate::dsl_cards::step::link_cards::resume_effect_link(self, *resume);
+            }
+            LinkTrashPurpose::RelinkStanding { source, host } => {
+                self.absorb_standing_digimon_as_link(source, host);
+            }
+            LinkTrashPurpose::RelinkPlugIn {
+                option,
+                carrier,
+                link_index,
+            } => {
+                // The picks shortened the carrier's link cards.
+                let len = self
+                    .player(carrier.player)
+                    .battle_area
+                    .get(carrier.index as usize)
+                    .map_or(0, |p| p.linked_cards.len());
+                let _ = self.relink_plug_in(option, carrier, link_index.min(len as u8));
+            }
+        }
+        crate::dsl_cards::step::selections::run_outer_conts(self, outer_conts);
     }
 }

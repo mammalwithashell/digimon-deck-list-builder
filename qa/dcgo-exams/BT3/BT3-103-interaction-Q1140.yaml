@@ -65,11 +65,9 @@ steps:
 - { actor: 0, do: { select: { yes: true } }, expect: { prompt: OptionalSkill } }
 - { actor: 0, do: { select: { targets: [own.field.1] } }, expect: { prompt: SelectPermanentEffect } }
 # Groundramon's own [When Digivolving]: suspend Agumon; Agumon can't unsuspend.
-# The simulator labels its generic completion branch "Trash the used Option".
-# For LM-030 this calls dispose_option with subtype Delay and PLACES it in battle
-# area (game_actions/mod.rs), as printed; the label does not mean it is trashed.
-# Choose mandatory placement before the evolution triggers; row20 must retain LM-030.
-- { actor: 0, do: { select: { choice: "Trash the used Option", sim_only: true } } }
+# LM-030 (a <Delay> Option) is PLACED in the battle area as its disposal, before
+# the evolution triggers and with no decision (§9-1-5; formerly a sim-only
+# "Trash the used Option" ordering row); row19 must retain LM-030.
 - { actor: 0, do: { select: { targets: [opp.field.0] } } }
 - { actor: 0, do: { select: { targets: [opp.field.0] } } }
 # LM-030 now sits in P0's battle area; official costs imply memory 1 after the accepted reduction; pass.
@@ -82,7 +80,7 @@ expect_ruling:
   - at: 14
     that:
       memory: 1
-  - at: 20
+  - at: 19
     that:
       memory: 1
       p0.field:

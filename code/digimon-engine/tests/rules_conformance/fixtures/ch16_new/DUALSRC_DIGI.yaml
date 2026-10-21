@@ -1,0 +1,24 @@
+# DUALSRC_DIGI -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   [When Attacking] If this Digimon has a Digimon card in its digivolution cards,
+#   gain 3 memory.
+# Counts its own digivolution cards (`self_source_count`). A DUAL card among
+# them is a Digimon card to this "Digimon card" reference (§4-6-5-2).
+card: DUALSRC_DIGI
+name: Source Counter DIGI
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] If this Digimon has a Digimon card in its digivolution cards, gain 3 memory."
+    process:
+      - if:
+          condition:
+            self_source_count:
+              filter: { kind: digimon }
+              op: gte
+              value: 1
+          then:
+            - gain_memory: 3

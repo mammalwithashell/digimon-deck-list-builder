@@ -1,0 +1,28 @@
+# IMM_COND -- Digimon, Lv.4, yellow, 5000 DP, play cost 5.
+#   [All Turns] When this Digimon would be deleted, if you have 4 or more
+#   security cards, it isn't deleted.
+#   [All Turns] When this Digimon would be deleted, <Recovery +1 (Deck)>
+#   (Place the top card of your deck on top of your security stack.)
+# Two immediate-type effects ("would", §15-8-5-1) that trigger on the same
+# deletion. With 3 security cards the first one's processing condition is not
+# met when it triggers; the second one meets it (§15-8-5-5-2). The first is
+# listed first on purpose: it is the first collected.
+card: IMM_COND
+name: Bulwarkmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+effects:
+  - kind: replacement
+    timing: when_would_be_deleted
+    active_when: { security_count_gte: 4 }
+    summary: "[All Turns] When this Digimon would be deleted, if you have 4 or more security cards, it isn't deleted."
+    process:
+      - cancel_replacement: {}
+  - kind: replacement
+    timing: when_would_be_deleted
+    summary: "[All Turns] When this Digimon would be deleted, <Recovery +1 (Deck)> (Place the top card of your deck on top of your security stack.)"
+    process:
+      - recover: { of: you, count: 1 }

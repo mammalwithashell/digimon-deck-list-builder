@@ -1,0 +1,26 @@
+# DIGI_GRANT_SA_MINUS1 -- Digimon, Lv.4, red, 4000 DP, play cost 4.
+#   [On Play] 1 of your opponent's Digimon gains <Security A. -1> until the
+#   end of their turn.
+# The §15-15-5-4 example effect, with the production idiom for a gained
+# <Security A. -1> (`add_modifier: SecurityAttackChange`, as BT13-106 and
+# `ch17/OP_MINUS3000_SA_MINUS1` author it).
+card: DIGI_GRANT_SA_MINUS1
+name: Shortstrikemon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+effects:
+  - when: on_play
+    summary: "[On Play] 1 of your opponent's Digimon gains <Security A. -1> until the end of their turn."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gains <Security A. -1> until the end of their turn"
+      - add_modifier:
+          target: victim
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn

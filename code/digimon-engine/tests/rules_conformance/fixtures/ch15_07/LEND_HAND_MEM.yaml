@@ -1,0 +1,26 @@
+# LEND_HAND_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3. Trait [Lender].
+#   [On Play] By trashing 1 card in your hand, gain 1 memory.
+# A borrowed effect of the §15-15-7-4 test: its optional processing
+# condition is an optional hand pick (`cost: true`, the BT18-013 idiom).
+card: LEND_HAND_MEM
+name: Lendhandmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+traits: [Lender]
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing 1 card in your hand, gain 1 memory."
+    process:
+      - select_hand:
+          of: you
+          bind_as: paid
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "By trashing 1 card in your hand, gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: paid }
+      - gain_memory: 1

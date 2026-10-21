@@ -29,11 +29,13 @@ impl<'a> EffectContext<'a> {
     /// Task 3) for card text like "at the end of your next turn, do X".
     ///
     /// The effect's `body`, `captured_bindings`, source card, and source
-    /// permanent are stored on `Game::scheduled_effects`. When
-    /// `scheduled_effects::fire_scheduled_for_timing(game, when)` drains the
-    /// queue, a fresh `EffectContext` is constructed against the captured
-    /// `(controller, source_card, source_permanent)` and the body runs
-    /// through `run_steps` with the captured bindings replayed.
+    /// permanent are stored on `Game::scheduled_effects`. When the `when`
+    /// timing occurs, `Game::enqueue_scheduled_for_timing` moves the entry
+    /// into the effect queue beside that timing's printed triggers (one
+    /// simultaneous pool, §18-1-2); when it resolves, a fresh `EffectContext`
+    /// is constructed against the captured `(controller, source_card,
+    /// source_permanent)` and the body runs through `run_steps` with the
+    /// captured bindings replayed.
     pub fn schedule_delayed(
         &mut self,
         when: EffectTiming,
@@ -74,7 +76,8 @@ impl<'a> EffectContext<'a> {
     /// / `play_union_bound_free` / etc.); this captures the top card's
     /// `ProvenanceToken` *now*, while the handle is still valid.
     ///
-    /// At turn end `fire_scheduled_provenance_deletions` resolves the token:
+    /// At turn end the deletion joins that timing's pool (pending processing,
+    /// §18-1-2; `Game::enqueue_provenance_deletions_at_turn_end`) and resolves the token:
     /// if the played permanent is still on the battle area it is deleted (as
     /// the controller's own effect); if it already left, the entry is a
     /// silent no-op. A handle that does not currently point at a live
@@ -88,8 +91,8 @@ impl<'a> EffectContext<'a> {
     ///
     /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
     /// that token"). Analogous to `schedule_delete_at_end_of_turn` but the
-    /// deletion fires from `rotate_turn_player` rather than
-    /// `fire_end_of_your_turn`.
+    /// deletion joins the `EndOfOpponentsTurn` pool built in
+    /// `rotate_turn_player` (§18-1-2) rather than the `EndOfYourTurn` one.
     pub fn schedule_delete_at_end_of_opponents_turn(&mut self, permanent: PermanentHandle) {
         self.schedule_provenance_deletion(permanent, true);
     }
@@ -112,6 +115,8 @@ impl<'a> EffectContext<'a> {
         let entry = crate::scheduled_effects::ScheduledProvenanceDeletion {
             token,
             controller: self.player,
+            source_card: self.source_card,
+            source_kind: self.source_kind,
         };
         if opponents_turn {
             self.game.scheduled_provenance_deletions_opp.push(entry);
@@ -183,7 +188,7 @@ impl<'a> EffectContext<'a> {
         // This fallback used to be `EndOfYourNextTurn`, which invented a
         // turn-scheduled auto-trash the printed card never prints: 16-16-1
         // (`general_rule.pdf` p.35) bounds a `<Delay>`'s availability by
-        // presence in the battle area and nothing else, and 16-16-2 makes the
+        // presence in the battle area and nothing else, and 16-17-2 makes the
         // processing optional, so the engine was silently taking a printed
         // option away one turn after placement. DCGO agrees — its Delay gate
         // (`CardEffectCommons.CanDeclareOptionDelayEffect`) is
@@ -224,7 +229,8 @@ impl<'a> EffectContext<'a> {
                 card: placed_card,
             },
         );
-        self.game.drain_effect_queue();
+        // §15-8-3-2: held until the placing effect has finished.
+        self.game.maybe_drain_effect_queue();
     }
 
     /// Relocate THIS effect's source Option (an in-battle-area field Option)
@@ -527,17 +533,9 @@ impl<'a> EffectContext<'a> {
     ) {
         let owner = card.owner;
         let is_egg = card.card_kind(&self.game.card_data) == CardKind::DigiEgg;
-        let player = self.game.player_mut(owner);
-        let deck = if is_egg {
-            &mut player.digitama_deck
-        } else {
-            &mut player.deck
-        };
-        if to_bottom {
-            deck.insert(0, card);
-        } else {
-            deck.push(card);
-        }
+        self.game
+            .player_mut(owner)
+            .put_in_deck_or_digi_egg_deck(card, is_egg, to_bottom);
         // G-ENGINE-ON-ADD-TO-DECK: Digi-Eggs routed to the Digi-Egg deck do
         // not fire "when effects add to decks" (DCGO ruling).
         if !is_egg {

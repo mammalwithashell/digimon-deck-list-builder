@@ -287,6 +287,14 @@ pub struct PredicateSpec {
     /// Unlike can_change_orientation, this never consults CannotSuspend.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_unsuspend: Option<bool>,
+    /// Permanent-subject leaf: the OWNER of the permanent's top card can have
+    /// security cards added by effects (no `CannotAddSecurityByEffect` on that
+    /// player). Use it to filter out a cost body that can't be placed in its
+    /// owner's security (§3-1-3-8): choosing it would make the optional
+    /// processing condition impossible, so it can't be chosen (§15-7-4).
+    /// Driver BT24-040 Venusmon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub owner_can_add_security: Option<bool>,
     /// Permanent-subject leaf: the permanent can attack right now via an
     /// effect-granted attack â€” i.e. the engine would offer at least one legal
     /// attack target for `may_attack_now` with the same `targets` /
@@ -475,6 +483,16 @@ pub struct PredicateSpec {
     pub is_source_permanent: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_name_contains: Option<String>,
+    /// Exact-name sibling of `source_name_contains`: true when one of "this
+    /// Digimon"'s names — its TOP card's rules names in the synthesized
+    /// identity (printed name, "also treated as" names, and names gained from
+    /// effects such as BT17-102's "gains all the names of level 3 or lower
+    /// cards in its digivolution cards") — equals the value exactly. Never a
+    /// substring match; digivolution cards are not read (§4-8-2). For printed
+    /// "this Digimon is [X]" / "this Digimon's name is [X]" (DCGO
+    /// `TopCard.EqualsCardName`). G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_name_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

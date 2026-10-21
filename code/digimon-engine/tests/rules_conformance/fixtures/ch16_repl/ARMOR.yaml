@@ -1,0 +1,15 @@
+# ARMOR -- Digimon, Lv.5, red, 6000 DP, play cost 6.
+#   <Armor Purge> (When this Digimon would be deleted, by trashing the top
+#   card of this Digimon, it isn't deleted.)
+# The §16-19 keyword card.
+card: ARMOR
+name: Armormon
+kind: digimon
+level: 5
+color: [red]
+cost: 6
+dp: 6000
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge> (When this Digimon would be deleted, by trashing the top card of this Digimon, it isn't deleted.)"

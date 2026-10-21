@@ -23,7 +23,7 @@
 //! - Cost-gated [Main] ("By trashing 1 ... from your hand") gating draw AND
 //!   placement (EX12-071 idiom).
 //! - Event-gated <Delay> on any Digimon deletion (`trigger: on_any_deletion`),
-//!   optional activation (16-16-2), placing-turn lockout (16-16-3).
+//!   optional activation (16-17-2), placing-turn lockout (16-17-3).
 //! - Delay body: optional free link from trash (`link_cards from: [trash]`).
 //! - [Security] place self as a Delay Option.
 
@@ -113,7 +113,9 @@ fn base_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(digimon("APP-FIELD", 5, &["Appmon"]))
         .add_card(appmon_tamer("APP-COST"))
         .add_card(digimon("APP-LINK", 4, &["Appmon"]))
+        .link_requirement("APP-LINK", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(digimon("PLAIN", 3, &["Beast"]))
+        .link_requirement("PLAIN", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .add_card(digimon("OPP-VICTIM", 3, &["Beast"]))
         .add_card(appmon_tamer("APP-TAMER"))
         .add_card(make_test_card("FILL", "Fill"))
@@ -342,7 +344,7 @@ fn bt24_099_delay_not_offered_on_placing_turn() {
         .delete_permanent_with_cause(victim, ReplacementCause::OwnEffect);
     assert!(
         runner.game.pending_selection.is_none(),
-        "<Delay> can't activate the turn it was placed (16-16-3)"
+        "<Delay> can't activate the turn it was placed (16-17-3)"
     );
     assert!(delay_perm_state(&runner, 0).is_some());
 }
@@ -370,7 +372,7 @@ fn bt24_099_delay_on_deletion_links_appmon_from_trash_free() {
         .pending_selection_view()
         .expect("deletion offers the optional <Delay> activation");
     assert_eq!(view.kind, SelectionKind::Replacement);
-    assert!(runner.pending_is_optional(), "16-16-2");
+    assert!(runner.pending_is_optional(), "16-17-2");
     runner
         .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
         .expect("accept");

@@ -248,11 +248,14 @@ pub enum StepSpec {
     /// G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER (2026-06-15) — the multi-count /
     /// multi-Tamer sibling of `TrashBottomFaceDownSourceUnderTamer`. Pays a
     /// `count`-total bottom-face-down trash cost distributed across the
-    /// controller's Tamers: each pick installs a real `select_own_permanent`
-    /// over `{ kind: tamer, has_face_down_source: true }` and trashes that
-    /// Tamer's bottom face-down source, re-evaluating eligibility before the
-    /// next pick — so "2 from one Tamer" and "1 from each of two Tamers" are
-    /// both reachable, every pick surfaced (no auto-resolve). When fewer than
+    /// controller's Tamers: each card is one real `select_own_permanent` pick
+    /// over your Tamers (a Tamer stays eligible while it has more face-down
+    /// cards under it than picks; each pick takes its lowest face-down card,
+    /// face-up cards below it stay) — so "2
+    /// from one Tamer" and "1 from each of two Tamers" are both reachable,
+    /// every pick surfaced (no auto-resolve). After the last pick the chosen
+    /// cards are trashed together as ONE event, so each "when effects trash
+    /// cards from under ..." observer triggers once (§15-5-2). When fewer than
     /// `count` face-down sources exist across all Tamers the cost is unpayable
     /// and the clause's remaining steps are skipped (`TailAlreadyRan`). Drives
     /// BT25-035 Cougarmon's "by trashing 2 bottom face-down cards from under any
@@ -1715,7 +1718,7 @@ pub struct ActivationCostArgs {
     pub return_self_to_deck_bottom: bool,
     /// "by trashing this card ..." — pays the cost by trashing the source
     /// permanent (the `<Delay>` Option). Declinable, per Comprehensive Rules
-    /// 16-16-2. G-ACTIVATION-COST-TRASH-SELF.
+    /// 16-17-2. G-ACTIVATION-COST-TRASH-SELF.
     #[serde(default, skip_serializing_if = "is_false")]
     pub trash_self: bool,
     /// "by placing this Digimon as the bottom security card ..." — pays the
@@ -2259,6 +2262,12 @@ pub struct DeDigivolveArgs {
     /// `amount_fn` key survives as a deserialize alias. At compile time a
     /// literal routes to the compiled `amount` integer and any other formula to
     /// `amount_fn`, byte-identical to the pre-unification form.
+    ///
+    /// Semantics (§16-12): a literal `amount: N` is one `<De-Digivolve N>`,
+    /// whose count the effect's controller declares (1..=min(N, trashable),
+    /// non-optional) when 2 or more cards are trashable. A formula is printed
+    /// "`<De-Digivolve 1>` for each …" and runs as that many SEPARATE
+    /// `<De-Digivolve 1>` instances (§16-12-7 / §16-12-8), with no declaration.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "amount_fn")]
     pub amount: Option<FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2311,12 +2320,14 @@ pub struct PlaceOnSecurityArgs {
     pub disposition: SecurityReplacementDisposition,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_sources: bool,
-    /// `source: permanent`, `disposition: none` only: place the card into its
-    /// OWNER's security stack instead of `of`'s (DCGO
+    /// `source: permanent`, `disposition: none` or `cancel` only: place the
+    /// card into its OWNER's security stack instead of `of`'s (§3-1-3-8: text
+    /// that names no player's area places the card in its owner's; DCGO
     /// `CardObjectController.AddSecurityCard` adds to
     /// `cardSource.Owner.SecurityCards`). For printed text with no "your"
     /// whose target may be either player's Digimon — BT25-044 Junomon "By
-    /// placing 1 other Digimon as the top security card".
+    /// placing 1 other Digimon as the top security card"; BT24-040 Venusmon's
+    /// leave-replacement cost (`disposition: cancel`).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub to_owner: bool,
     /// `source: permanent`, `disposition: none` only: on a SUCCESSFUL

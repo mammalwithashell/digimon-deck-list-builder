@@ -1,4 +1,4 @@
-//! Official general_rule.pdf p21, 13-1-7-3 and 14-2: security Digimon
+//! Official general_rule.pdf pp.23-24, 13-1-8-3 and 14-2: security Digimon
 //! participate in battles, but losing security Digimon are never deleted.
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
@@ -309,8 +309,36 @@ fn examon_security_win_exposes_source_card_free_play() {
     );
 }
 
+/// Resolve the pending `TriggerOrder` by picking its first branch whose
+/// optionality is `optional`.
+fn pick_order(r: &mut DebugRunner, optional: bool) {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::selection::SelectionKind;
+    let (player, action) = {
+        let sel = r.pending_selection().expect("an ordering choice");
+        assert_eq!(sel.kind, SelectionKind::TriggerOrder, "{sel:?}");
+        let entry = sel
+            .effect_choices
+            .as_ref()
+            .expect("TriggerOrder branches")
+            .iter()
+            .find(|c| c.is_optional == optional)
+            .unwrap_or_else(|| panic!("no branch with optional={optional}: {sel:?}"));
+        (sel.selecting_player, entry.action_id)
+    };
+    assert!(build_action_mask(&r.game, player)[action as usize] > 0.5);
+    r.execute_action(player, action).unwrap();
+}
+
+/// §18-1-2: the pending processing due at the end of the battle (two
+/// `EndOfBattle` `ScheduledEffect`s) and the ordinary optional battle
+/// observer are ONE simultaneous pool that the turn player orders
+/// (§15-4-3-5-1). (Before G-ENGINE-PENDING-PROCESSING-OUTSIDE-TRIGGER-POOL
+/// the scheduled bodies ran only after the observer's choice.) Every choice
+/// inside the pool survives a clone, each entry resolves exactly once, and
+/// the observer keeps its own accept / decline choice.
 #[test]
-fn scheduled_battle_effects_wait_for_ordinary_choice_and_resume_once_after_clone() {
+fn scheduled_battle_effects_pool_with_ordinary_choice_and_resume_once_after_clone() {
     use digimon_dsl::compiled::CompiledStep;
     use digimon_engine::dsl_cards::bindings::Bindings;
     use digimon_engine::effect_context::EffectContext;
@@ -339,24 +367,35 @@ fn scheduled_battle_effects_wait_for_ordinary_choice_and_resume_once_after_clone
         Bindings::new(),
     );
     r.attack_player(atk, 1, false);
-    assert!(r.pending_selection().is_some());
-    assert_eq!(
-        r.game.scheduled_effects.len(),
-        2,
-        "scheduled effects must not replace the ordinary optional choice"
+    {
+        let sel = r.pending_selection().expect("the end-of-battle pool");
+        let choices = sel.effect_choices.as_ref().expect("TriggerOrder branches");
+        assert_eq!(
+            choices.iter().map(|c| c.is_optional).collect::<Vec<_>>(),
+            vec![true, false, false],
+            "the observer and both pending processings share one ordering choice: {sel:?}"
+        );
+    }
+    assert!(
+        r.game.scheduled_effects.is_empty(),
+        "both scheduled effects joined the pool"
     );
     let mut clone = DebugRunner::wrap(r.game.clone());
     for (game, decline) in [(&mut r, false), (&mut clone, true)] {
-        choose(game, decline);
-        assert!(
-            game.pending_selection().is_some(),
-            "scheduled choice runs only after ordinary observer"
-        );
+        // The choice-bearing pending processing first; its body parks.
+        pick_order(game, false);
         assert_eq!(game.trash_size(1), 0);
         choose(game, false);
+        assert_eq!(game.memory(), 1);
+        // The observer and the other pending processing remain.
+        pick_order(game, false);
         assert_eq!(game.memory(), 3, "both scheduled effects run exactly once");
+        // The observer, now alone, keeps its accept / decline choice.
+        assert_eq!(game.trash_size(1), 0);
+        choose(game, decline);
+        assert_eq!(game.memory(), 3);
         assert_eq!(game.trash_size(1), 1);
-        assert!(game.game.scheduled_drain_tail.is_none());
+        assert!(game.game.effect_queue.is_empty());
         assert!(game.game.scheduled_effects.is_empty());
         assert!(game.game.security_resolution.is_none());
     }

@@ -98,14 +98,14 @@ impl Game {
 
                 // Route to correct deck based on card kind
                 if card_data.card_kind == crate::enums::CardKind::DigiEgg {
-                    player.digitama_deck.push(card);
+                    player.put_on_digi_egg_deck_top(card);
                     let entry = original_deck_counts
                         .entry(card_id.clone())
                         .or_insert((0, true));
                     entry.0 += 1;
                     entry.1 = true;
                 } else {
-                    player.deck.push(card);
+                    player.put_on_deck_top(card);
                     let entry = original_deck_counts
                         .entry(card_id.clone())
                         .or_insert((0, false));
@@ -226,6 +226,9 @@ impl Game {
             pending_option_placed_link_resume: None,
             security_resolution: None,
             effect_chain_depth: 0,
+            loop_watch: std::collections::BTreeMap::new(),
+            loop_watch_steps: 0,
+            optional_decision_mark: None,
             trigger_batch_seq: 0,
             effect_drain_depth: 0,
             logger: Box::new(SilentLogger),
@@ -249,6 +252,7 @@ impl Game {
             pending_would_link_resume: None,
             pending_field_top_source_moves: Vec::new(),
             pending_security_moves: Vec::new(),
+            security_placement_receipts: Vec::new(),
             pending_option_link_host: None,
             pending_digimon_link: None,
             pending_link_host: None,
@@ -261,7 +265,8 @@ impl Game {
             interactive_option_use_reducer_prompted: false,
             on_use_option_armed: None,
             option_body_pending: false,
-            option_trash_order_deferred: false,
+            option_body_outer_deferred: 0,
+            option_first_main_resolved: false,
             pending_cost_reduction_amount_override: None,
             cost_payment_receipts: Vec::new(),
             next_cost_payment_receipt: 1,
@@ -278,7 +283,7 @@ impl Game {
             current_trigger_context: None,
             current_deletion_cause: None,
             current_deletion_event_cause_override: None,
-            pending_overclock_attack: None,
+            parked_overclock_attacks: Vec::new(),
             declined_overclock_this_eot: HashSet::new(),
             current_dna_origin: None,
             parked_replacement: Vec::new(),
@@ -289,7 +294,12 @@ impl Game {
             active_deletion_batch: None,
             pending_battle_resolutions: Vec::new(),
             pending_attack_battle_result: None,
+            security_battle_end_referent: None,
             next_battle_identity: 1,
+            attack_attacker_identity: None,
+            attack_attacker_card: None,
+            attack_target_identity: None,
+            event_snapshot_cache: None,
             native_play_observation: None,
             pending_deletion_batch_rest: Vec::new(),
             pending_deletion_batch_parked: None,
@@ -297,15 +307,19 @@ impl Game {
             dsl_resolved_tail_bindings: None,
             dsl_clause_aborted: false,
             scheduled_effects: Vec::new(),
-            scheduled_drain_tail: None,
             scheduled_provenance_deletions: Vec::new(),
             scheduled_provenance_deletions_opp: Vec::new(),
             pending_delayed_option_lifecycle: None,
             declined_delay_option: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             pending_end_turn_resume: None,
+            pending_turn_boundary_resume: None,
             pending_enter_main_after_selection: false,
+            end_of_turn_attack_settle_pending: false,
+            end_of_turn_attack_keyword: None,
+            deferred_end_of_turn_attack_offers: Vec::new(),
             draining_deferred: 0,
+            source_move_event_open: false,
             turn_end_check_deferred: false,
             selection_resolution_depth: 0,
             play_enters_suspended: false,
@@ -406,6 +420,12 @@ impl Game {
         self.pending_option_placed_link_resume = None;
         self.security_resolution = None;
         self.effect_chain_depth = 0;
+        self.loop_watch.clear();
+        self.loop_watch_steps = 0;
+        self.optional_decision_mark = None;
+        self.pending_hand_discard = None;
+        self.pending_deck_add = None;
+        self.pending_added_sources.clear();
         // logger intentionally preserved (session owns the logger choice).
         self.events = Vec::new();
         self.event_seq = 0;
@@ -426,6 +446,7 @@ impl Game {
         self.pending_field_top_source_moves.clear();
         self.field_source_receipts.clear();
         self.pending_security_moves.clear();
+        self.security_placement_receipts.clear();
         self.pending_option_link_host = None;
         self.pending_digimon_link = None;
         self.pending_link_host = None;
@@ -438,7 +459,8 @@ impl Game {
         self.interactive_option_use_reducer_prompted = false;
         self.on_use_option_armed = None;
         self.option_body_pending = false;
-        self.option_trash_order_deferred = false;
+        self.option_body_outer_deferred = 0;
+        self.option_first_main_resolved = false;
         self.pending_cost_reduction_amount_override = None;
         self.cost_payment_receipts.clear();
         self.next_cost_payment_receipt = 1;
@@ -453,7 +475,7 @@ impl Game {
         self.current_trigger_context = None;
         self.current_deletion_cause = None;
         self.current_deletion_event_cause_override = None;
-        self.pending_overclock_attack = None;
+        self.parked_overclock_attacks.clear();
         self.declined_overclock_this_eot = HashSet::new();
         self.current_dna_origin = None;
         self.parked_replacement.clear();
@@ -463,7 +485,12 @@ impl Game {
         self.active_deletion_batch = None;
         self.pending_battle_resolutions.clear();
         self.pending_attack_battle_result = None;
+        self.security_battle_end_referent = None;
         self.next_battle_identity = 1;
+        self.attack_attacker_identity = None;
+        self.attack_attacker_card = None;
+        self.attack_target_identity = None;
+        self.event_snapshot_cache = None;
         self.native_play_observation = None;
         self.pending_deletion_batch_rest.clear();
         self.pending_deletion_batch_parked = None;
@@ -471,15 +498,19 @@ impl Game {
         self.dsl_resolved_tail_bindings = None;
         self.dsl_clause_aborted = false;
         self.scheduled_effects = Vec::new();
-        self.scheduled_drain_tail = None;
         self.scheduled_provenance_deletions = Vec::new();
         self.scheduled_provenance_deletions_opp = Vec::new();
         self.pending_delayed_option_lifecycle = None;
         self.declined_delay_option = None;
         self.pending_delayed_option_lifecycle_stack = Vec::new();
         self.pending_end_turn_resume = None;
+        self.pending_turn_boundary_resume = None;
         self.pending_enter_main_after_selection = false;
+        self.end_of_turn_attack_settle_pending = false;
+        self.end_of_turn_attack_keyword = None;
+        self.deferred_end_of_turn_attack_offers.clear();
         self.draining_deferred = 0;
+        self.source_move_event_open = false;
         self.turn_end_check_deferred = false;
         self.selection_resolution_depth = 0;
         self.until_condition_dirty = false;
@@ -750,8 +781,7 @@ impl Game {
             let card_index = self.next_card_index;
             self.next_card_index += 1;
             self.players[pid as usize]
-                .security
-                .push(CardSource::new_opaque_security_placeholder(pid, card_index));
+                .put_on_security_top(CardSource::new_opaque_security_placeholder(pid, card_index));
         }
         Ok(())
     }

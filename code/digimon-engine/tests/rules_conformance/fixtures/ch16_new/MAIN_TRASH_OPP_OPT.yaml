@@ -1,0 +1,23 @@
+# MAIN_TRASH_OPP_OPT -- Option, red, use cost 0.
+#   [Main] Trash 1 of your opponent's Option cards in the battle area.
+# The §4-6-3 example effect. Production idiom (AD1-025): a battle-area
+# `kind: option` pick, removed with `delete_permanent` (the engine's
+# battle-area-to-trash verb; an Option has no [On Deletion]).
+card: MAIN_TRASH_OPP_OPT
+name: Plan Breaker
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash 1 of your opponent's Option cards in the battle area."
+    process:
+      - select_opponent_permanent:
+          bind_as: plan
+          filter: { kind: option }
+          prompt: "Trash 1 of your opponent's Option cards in the battle area"
+      # Printed "trash", authored as `delete_permanent`: the DSL has no
+      # dedicated battle-area-Option trash step (AD1-025 uses the same
+      # substitution). Moving an Option permanent to the trash this way is
+      # mechanically a trash (no [On Deletion], not a Digimon deletion).
+      - delete_permanent: { target: plan }

@@ -114,6 +114,17 @@ impl Game {
     /// asserts the materialized state matches. `DIGIMON_FORCE_FULL_DECLARATIVE_REBUILD`
     /// forces the always-rebuild path (oracle baseline / fallback).
     pub fn tick_declarative_effects(&mut self) {
+        // §16-39-1 / §15-15-5-2: `<Progress>` can be gained or lost mid-attack
+        // (a printed condition, a changed stack, a grant that expired). The
+        // shield is part of the fingerprint (it changes what a declarative
+        // condition reads), so settle it before fingerprinting and again after
+        // the rebuild, which may have granted or removed `<Progress>` itself.
+        self.refresh_progress_shield();
+        self.tick_declarative_effects_inner();
+        self.refresh_progress_shield();
+    }
+
+    fn tick_declarative_effects_inner(&mut self) {
         let fingerprint = self.declarative_fingerprint();
         let can_skip = !force_full_declarative_rebuild()
             && self.modifiers.declarative_memo() == Some(fingerprint);

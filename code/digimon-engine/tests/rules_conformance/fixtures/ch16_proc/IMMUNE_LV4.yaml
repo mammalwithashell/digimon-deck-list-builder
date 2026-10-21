@@ -1,0 +1,17 @@
+# IMMUNE_LV4 -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [All Turns] This Digimon isn't affected by your opponent's effects.
+# The §16-12-8 example's "unaffected by effects" card, exposed by the first of
+# two <De-Digivolve 1> instances.
+card: IMMUNE_LV4
+name: Standoffmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: aura
+    target: {}
+    effect_immunity:
+      source_controller: opponent
+    summary: "[All Turns] This Digimon isn't affected by your opponent's effects."

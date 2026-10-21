@@ -332,6 +332,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentSecurityRemoved => CompiledTiming::OnOpponentSecurityRemoved,
         S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
+        S::OnTopCardTrashed => CompiledTiming::OnTopCardTrashed,
         S::OnAddDigivolutionCards => CompiledTiming::OnAddDigivolutionCards,
         S::OnSourceReturnedToDeckBottom => CompiledTiming::OnDigivolutionCardReturnedToDeckBottom,
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,
@@ -1086,6 +1087,7 @@ fn compile_predicate(
         is_unsuspended: p.is_unsuspended,
         can_change_orientation: p.can_change_orientation,
         can_unsuspend: p.can_unsuspend,
+        owner_can_add_security: p.owner_can_add_security,
         can_attack: p.can_attack.map(|c| crate::compiled::CompiledCanAttack {
             targets: compile_attack_target_spec(c.targets),
             without_suspending: c.without_suspending,
@@ -1180,6 +1182,7 @@ fn compile_predicate(
         source_is_unsuspended: p.source_is_unsuspended,
         is_source_permanent: p.is_source_permanent,
         source_name_contains: p.source_name_contains.clone(),
+        source_name_is: p.source_name_is.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
         is_face_down: p.is_face_down,
         is_bottom_source: p.is_bottom_source,
@@ -1952,6 +1955,10 @@ fn compile_triggered(
             .condition
             .as_ref()
             .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
+        trigger_if: t
+            .trigger_if
+            .as_ref()
+            .map(|p| compile_predicate(p, &format!("{prefix}.trigger_if"), card_id, errors)),
         timing_conditions: t
             .timing_conditions
             .iter()
@@ -3107,15 +3114,20 @@ fn compile_step(
                     message: "include_sources is only valid with disposition: observed".to_string(),
                 });
             }
-            if (a.to_owner || a.bind_placed_as.is_some())
-                && !(is_permanent && matches!(a.disposition, D::None))
-            {
+            if a.bind_placed_as.is_some() && !(is_permanent && matches!(a.disposition, D::None)) {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.place_on_security"),
-                    message:
-                        "to_owner / bind_placed_as require source: permanent with no disposition"
-                            .to_string(),
+                    message: "bind_placed_as requires source: permanent with no disposition"
+                        .to_string(),
+                });
+            }
+            if a.to_owner && !(is_permanent && matches!(a.disposition, D::None | D::Cancel)) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.place_on_security"),
+                    message: "to_owner requires source: permanent with disposition none or cancel"
+                        .to_string(),
                 });
             }
             match &a.source {
@@ -3166,6 +3178,7 @@ fn compile_step(
                             CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
                                 of,
                                 target,
+                                to_owner: a.to_owner,
                             }
                         }
                         D::Observed => CompiledStep::PlacePermanentOnSecurityObserved {

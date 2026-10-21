@@ -1,0 +1,12 @@
+# EOT_MEM -- Tamer, red, play cost 3.
+#   [End of Your Turn] Gain 2 memory.
+card: EOT_MEM
+name: Dusk Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: end_of_your_turn
+    summary: "[End of Your Turn] Gain 2 memory."
+    process:
+      - gain_memory: 2

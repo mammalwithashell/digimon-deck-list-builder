@@ -84,7 +84,7 @@
 #   for this card — see docs/RUST_ENGINE_GAPS.md / battle_winner_boardwide.rs),
 #   once_per_turn: true, active_when: { all_of: [event_winner_owner: you,
 #   event_winner_trait_has: TS] }, process: trash_top_security { of: opponent }.
-#   `on_ally_won_battle` rides the EndOfBattle dispatch, which is inherently
+#   `on_ally_won_battle` rides the BattleResult dispatch, which is inherently
 #   turn-agnostic (no `active_when: all_turns` needed — mirrors the
 #   `on_any_deletion` win-battle idiom on BT25-054/051, which also omit it).
 #
@@ -201,7 +201,7 @@ effects:
   # Marsmon itself. A tie (mutual destruction) has no winner and never fires.
   - when: on_ally_won_battle
     once_per_turn: true
-    active_when:
+    trigger_if:
       all_of:
         - event_winner_owner: you
         - event_winner_trait_has: TS

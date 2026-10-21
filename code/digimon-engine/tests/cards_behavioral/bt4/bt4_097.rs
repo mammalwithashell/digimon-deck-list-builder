@@ -63,14 +63,14 @@ fn bt4_097_has_own_security_removed_and_security_clauses() {
     );
     // §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
     // Kari's "you may suspend this Tamer to gain 1 memory" is exactly that
-    // shape, so §15-7-4 gives the player the choice of whether to pay it.
+    // shape, so §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] gives the player the choice of whether to pay it.
     // DCGO agrees (BT4_097.cs:19 passes isOptional = true). Rule 17 requires
     // the decline to be reachable from the action space, which means the
     // clause must be `optional: true` + `outer_prompt: true` (the body's first
     // step, a bare `suspend:`, is not itself declinable).
     assert!(
         own_sec.optional,
-        "Kari's suspend cost is an optional processing condition (§15-7-1/§15-7-4)"
+        "Kari's suspend cost is an optional processing condition (§15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
 
     assert!(
@@ -190,7 +190,7 @@ fn advance_to_kari_optional_prompt(runner: &mut DebugRunner) -> bool {
     false
 }
 
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions." Kari's "you may suspend this Tamer to gain
 /// 1 memory" is that condition (§15-7-1's "by X, Y" shape), so DECLINING must
 /// leave BOTH halves undone — Kari stays unsuspended AND no memory is gained,
@@ -229,7 +229,7 @@ fn bt4_097_optional_suspend_cost_may_be_declined() {
 
     assert!(
         !runner.game.players[1].battle_area[kari.index as usize].is_suspended,
-        "declining the optional processing condition must NOT suspend Kari (§15-7-4)"
+        "declining the optional processing condition must NOT suspend Kari (§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md])"
     );
     assert_eq!(
         runner.memory(),

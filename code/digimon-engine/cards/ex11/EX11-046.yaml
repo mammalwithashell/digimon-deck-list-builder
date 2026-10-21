@@ -81,9 +81,10 @@
 #      + a `CanNotAffectedClass` gated on `EffectSourceCard.Owner ==
 #      card.Owner.Enemy` (i.e. "isn't affected by THEIR [opponent's]
 #      effects") for the same duration. Modeled as `grant_keyword: Blocker`
-#      (expiry: end_of_opponents_turn) + the 4-source-kind opponent-only
-#      immunity idiom (`grant_effect_immunity` x4 over
-#      digimon/tamer/option/rule, source_controller: opponent, expiry:
+#      (expiry: end_of_opponents_turn) + the opponent-only immunity idiom
+#      over every effect kind (`grant_effect_immunity` x3 over
+#      digimon/tamer/option -- §15-2-1; a token's effect is a Digimon
+#      effect, §15-2-1-1 -- source_controller: opponent, expiry:
 #      end_of_opponents_turn) — BT13-088 precedent, same "isn't affected by
 #      your opponent's effects until end of opp turn" shape.
 #
@@ -216,11 +217,6 @@ effects:
             - grant_effect_immunity:
                 target: source
                 source_kind: option
-                source_controller: opponent
-                expiry: end_of_opponents_turn
-            - grant_effect_immunity:
-                target: source
-                source_kind: rule
                 source_controller: opponent
                 expiry: end_of_opponents_turn
 

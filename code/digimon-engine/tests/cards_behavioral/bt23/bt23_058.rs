@@ -160,7 +160,7 @@ fn bt23_058_has_self_scoped_on_suspend_delete_clause() {
         .expect("self-suspend lowest-play-cost delete clause should be authored");
     assert!(
         on_suspend
-            .condition
+            .trigger_if
             .as_ref()
             .is_some_and(predicate_has_event_permanent_is_source),
         "OnSuspend must be gated to the suspending event permanent being this Craniamon"

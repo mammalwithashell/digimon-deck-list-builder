@@ -166,6 +166,16 @@ fn lint_file(
         }
     }
 
+    lint_observer_event_conditions(&spec, &file, diags);
+    for f in check_carrier_name_stack_scan(&spec) {
+        diags.push(Diagnostic {
+            file: file.clone(),
+            severity: Severity::Warning,
+            path: f.path,
+            message: f.message,
+        });
+    }
+
     if let Some(sections) = printed.and_then(|p| p.get(&spec.card)) {
         for f in check_security_icons(&spec, sections) {
             diags.push(Diagnostic {
@@ -186,6 +196,240 @@ fn lint_file(
                 message: e.message,
             });
         }
+    }
+}
+
+/// True for a timing whose effect triggers on an EVENT the clause qualifies
+/// ("When one of your Digimon with 4000 DP or less is played", "When any of
+/// your [TS] trait Digimon win a battle"), as opposed to the card's own
+/// timings ([On Play], [When Digivolving], [On Deletion], ...), the phase
+/// timings and activation-type timings, whose trigger is fixed.
+fn is_observer_timing(t: digimon_engine::dsl::clause::Timing) -> bool {
+    use digimon_engine::dsl::clause::Timing as T;
+    !matches!(
+        t,
+        T::OnPlay
+            | T::WhenDigivolving
+            | T::WhenAttacking
+            | T::OnAttack
+            | T::EndOfAttack
+            | T::EndOfBattle
+            | T::OnBlock
+            | T::OnDeletion
+            | T::OnSecurity
+            | T::Main
+            | T::MainFromHand
+            | T::MainOnField
+            | T::MainFromTrash
+            | T::Counter
+            | T::StartOfYourTurn
+            | T::StartOfOpponentsTurn
+            | T::StartOfYourMainPhase
+            | T::StartOfOpponentsMainPhase
+            | T::EndOfYourTurn
+            | T::EndOfOpponentsTurn
+            | T::EndOfYourNextTurn
+            | T::EndOfOpponentsNextTurn
+            | T::UntilNextUnsuspend
+            | T::BeforePayCost
+            | T::BeforePayCostObserve
+            | T::Delayed
+            | T::WhenLinked
+            | T::WhenCardLinkedToThis
+            | T::WhenWouldLinkToThis
+    )
+}
+
+/// Predicate keys that read the triggering EVENT rather than the board or
+/// the effect's own card: every `event_*` key, plus the event-host key
+/// `host_permanent_trait_has` (the host the event trashed digivolution cards
+/// from -- `EffectReadContext::event_host_permanent` / `event_host_card`;
+/// "When effects trash this card from a [Mineral] or [Rock] trait Digimon's
+/// digivolution cards"). `host_kind_is` is NOT one: it filters a selected
+/// digivolution card by its own host (a `select_own_sources` filter), not
+/// the event.
+fn is_event_facing_key(key: &str) -> bool {
+    key.starts_with("event_") || key == "host_permanent_trait_has"
+}
+
+/// Warn when an observer clause's `condition` / `active_when` reads the
+/// event (`is_event_facing_key`): `condition` / `active_when` are PROCESSING conditions,
+/// read when the effect activates (§15-8-3-9-1 / §15-8-3-9-3), while a
+/// qualifier of the event ("When one of your Digimon **with 4000 DP or
+/// less** is played") is the trigger qualifier, decided when the event
+/// triggers the effect (§15-8-3-1, §15-8-3-4) and authored in `trigger_if:`.
+/// A genuine processing condition on the event ("..., if that Digimon is
+/// level 4 or higher, ...") stays where it is; the warning asks the author to
+/// decide from the printed text.
+/// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
+fn lint_observer_event_conditions(
+    spec: &digimon_engine::dsl::spec::CardSpec,
+    file: &str,
+    diags: &mut Vec<Diagnostic>,
+) {
+    use digimon_engine::dsl::clause::TimingSet;
+    fn event_keys(value: &serde_json::Value, out: &mut Vec<String>) {
+        let Some(map) = value.as_object() else {
+            return;
+        };
+        for (key, v) in map {
+            let absent = v.is_null() || v.as_array().is_some_and(|a| a.is_empty());
+            if absent {
+                continue;
+            }
+            match key.as_str() {
+                "all_of" | "any_of" | "none_of" => {
+                    for p in v.as_array().into_iter().flatten() {
+                        event_keys(p, out);
+                    }
+                }
+                "not" => event_keys(v, out),
+                k if is_event_facing_key(k) && !out.iter().any(|o| o == k) => {
+                    out.push(key.clone())
+                }
+                _ => {}
+            }
+        }
+    }
+    for (i, clause) in spec.effects.iter().enumerate() {
+        let Some(t) = clause.as_triggered() else {
+            continue;
+        };
+        let observer = match &t.when {
+            TimingSet::Single(w) => is_observer_timing(*w),
+            TimingSet::Multi(ws) => ws.iter().any(|w| is_observer_timing(*w)),
+        };
+        if !observer {
+            continue;
+        }
+        for (field, pred) in [("active_when", &t.active_when), ("condition", &t.condition)] {
+            let Some(pred) = pred else {
+                continue;
+            };
+            let mut keys = Vec::new();
+            if let Ok(value) = serde_json::to_value(pred) {
+                event_keys(&value, &mut keys);
+            }
+            for key in keys {
+                diags.push(Diagnostic {
+                    file: file.to_string(),
+                    severity: Severity::Warning,
+                    path: format!("effects[{i}].{field}"),
+                    message: format!(
+                        "observer clause's {field} reads `{key}`: is this a trigger qualifier? use \
+                         `trigger_if:` -- a qualifier of the event (\"When one of your Digimon with \
+                         4000 DP or less is played\") is decided when the event triggers the effect \
+                         (§15-8-3-1, §15-8-3-4); `{field}` is a processing condition read at \
+                         activation (\"..., if that Digimon is level 4 or higher, ...\", \
+                         §15-8-3-9-3) (G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER)"
+                    ),
+                });
+            }
+        }
+    }
+}
+
+/// Clauses confirmed to use `self_digivolution_contains_name` for a printed
+/// "[X] in its name or with [X] in its digivolution cards" condition (the one
+/// shape that reads the top card AND the digivolution cards), as
+/// `(card id, clause summary, printed clause)`. An entry exempts only the
+/// clause whose `summary:` equals its summary, never the whole card.
+///
+/// Empty today: no authored card uses that shape. Its future legitimate users
+/// are the unauthored BT9-096 ([Jellymon]), BT10-102 ([Angoramon]) and
+/// BT11-034 ([Dorulumon]), which print "a Digimon in play with [X] in its name
+/// or with [X] in its digivolution cards" (a candidate Digimon in play, read
+/// inside a permanent filter): add each here with its printed clause when it
+/// is authored.
+const SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST: &[(&str, &str, &str)] = &[];
+
+#[derive(Debug, PartialEq, Eq)]
+struct LintFinding {
+    path: String,
+    message: String,
+}
+
+/// G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS: `self_digivolution_contains_name`
+/// scans the top card AND every digivolution card. A Digimon's name is its top
+/// card's (§4-7-7 ruling; Q3225; DCGO `TopCard`), and digivolution cards are
+/// read only when the text references them (§4-8-2). So:
+/// - "this Digimon has [X] in its name" -> `source_name_contains`;
+/// - "this Digimon is [X]" / "this Digimon's name is [X]" -> `source_name_is`;
+/// - "[X] is in this Digimon's digivolution cards" -> `self_digivolution_sources_contain_name`;
+/// - only "[X] in its name or with [X] in its digivolution cards" (BT9-096,
+///   BT10-102, BT11-034) may keep the stack scan.
+///
+/// The linter cannot tell these apart reliably from the summary, so every use
+/// outside `SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST` is a warning that names
+/// the clause summary for the reviewer.
+fn check_carrier_name_stack_scan(spec: &digimon_engine::dsl::spec::CardSpec) -> Vec<LintFinding> {
+    let Ok(value) = serde_json::to_value(spec) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    walk_for_stack_name_scan(&spec.card, &value, String::new(), None, &mut out);
+    out
+}
+
+fn stack_name_scan_allowlisted(card: &str, summary: Option<&str>) -> bool {
+    SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST
+        .iter()
+        .any(|(id, clause_summary, _printed)| *id == card && summary == Some(*clause_summary))
+}
+
+fn walk_for_stack_name_scan(
+    card: &str,
+    v: &serde_json::Value,
+    path: String,
+    summary: Option<&str>,
+    out: &mut Vec<LintFinding>,
+) {
+    match v {
+        serde_json::Value::Object(map) => {
+            let summary = map
+                .get("summary")
+                .and_then(|s| s.as_str())
+                .or(summary);
+            for (k, child) in map {
+                let child_path = if path.is_empty() {
+                    k.clone()
+                } else {
+                    format!("{path}.{k}")
+                };
+                if k == "self_digivolution_contains_name"
+                    && !child.is_null()
+                    && !stack_name_scan_allowlisted(card, summary)
+                {
+                    out.push(LintFinding {
+                        path: child_path.clone(),
+                        message: format!(
+                            concat!(
+                                "carrier-name/stack-scan: `self_digivolution_contains_name: {}` ",
+                                "reads the top card AND every digivolution card. Use ",
+                                "`source_name_contains` for \"this Digimon has [X] in its name\", ",
+                                "`source_name_is` for \"this Digimon is [X]\" and ",
+                                "`self_digivolution_sources_contain_name` for \"[X] is in this ",
+                                "Digimon's digivolution cards\" (§4-7-7, §4-8-2; ",
+                                "G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS). Only an \"[X] in ",
+                                "its name or with [X] in its digivolution cards\" clause (BT9-096, ",
+                                "BT10-102, BT11-034) may keep it: add the clause to ",
+                                "SELF_DIGIVOLUTION_CONTAINS_NAME_ALLOWLIST with its summary and ",
+                                "printed clause. Clause summary: {}"
+                            ),
+                            child,
+                            summary.unwrap_or("<none>")
+                        ),
+                    });
+                }
+                walk_for_stack_name_scan(card, child, child_path, summary, out);
+            }
+        }
+        serde_json::Value::Array(items) => {
+            for (i, child) in items.iter().enumerate() {
+                walk_for_stack_name_scan(card, child, format!("{path}[{i}]"), summary, out);
+            }
+        }
+        _ => {}
     }
 }
 
@@ -294,5 +538,79 @@ fn real_main() -> ExitCode {
         ExitCode::from(2)
     } else {
         ExitCode::SUCCESS
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Parse a test card through the same `loader::load_file` the CLI uses.
+    fn spec(yaml: &str) -> digimon_engine::dsl::spec::CardSpec {
+        let dir = std::env::temp_dir().join(format!(
+            "dsl_lint_carrier_name_{}_{}",
+            std::process::id(),
+            yaml.len()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("card.yaml");
+        std::fs::write(&path, yaml).unwrap();
+        let s = loader::load_file(&path).expect("test card loads");
+        let _ = std::fs::remove_dir_all(&dir);
+        s
+    }
+
+    #[test]
+    fn stack_name_scan_is_flagged_with_its_clause_summary() {
+        let s = spec(
+            r#"
+card: LINT_PROBE
+name: Probemon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - self_digivolution_contains_name: "Greymon"
+    target: {}
+    dp_modifier: 1000
+    summary: "[All Turns] While this Digimon has [Greymon] in its name, it gets +1000 DP."
+"#,
+        );
+        let f = check_carrier_name_stack_scan(&s);
+        assert_eq!(f.len(), 1, "{f:?}");
+        assert!(f[0].path.ends_with("self_digivolution_contains_name"), "{}", f[0].path);
+        assert!(f[0].message.contains("has [Greymon] in its name"), "{}", f[0].message);
+    }
+
+    #[test]
+    fn top_card_and_sources_only_predicates_are_not_flagged() {
+        let s = spec(
+            r#"
+card: LINT_PROBE_OK
+name: Probemon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - kind: aura
+    active_when:
+      any_of:
+        - source_name_contains: "Greymon"
+        - self_digivolution_sources_contain_name: "Greymon"
+    target: {}
+    dp_modifier: 1000
+    summary: "probe"
+"#,
+        );
+        assert!(check_carrier_name_stack_scan(&s).is_empty());
     }
 }

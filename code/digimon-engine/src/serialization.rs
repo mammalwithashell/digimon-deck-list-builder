@@ -378,7 +378,9 @@ fn perm_data(
         for (kw, name) in DISPLAY_KEYWORDS {
             if game.has_keyword(h, *kw) {
                 keywords.push(name);
-                if game.modifiers.has_keyword(h, *kw) {
+                if game.modifiers.has_keyword(h, *kw)
+                    || (*kw == Keyword::Blocker && game.collision_grants_blocker(h))
+                {
                     gained.push(name);
                 } else {
                     innate.push(name);
@@ -469,9 +471,9 @@ fn perm_data(
 
     let linked_card_ids: Vec<&str> = perm.linked_cards.iter().map(|c| c.card_id(data)).collect();
 
-    // ── Link effects conferred by linked cards (general_rule.pdf 4-2-6) ──
+    // ── Link effects conferred by linked cards (general_rule.pdf 4-3-5) ──
     // A link card's link effect applies to this Digimon only while the card is
-    // linked; as one of the digivolution cards it confers nothing (4-7-2).
+    // linked; as one of the digivolution cards it confers nothing (4-9-2).
     let link_effects: Vec<Value> = perm
         .linked_cards
         .iter()
@@ -584,10 +586,13 @@ fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
 ///   attacker_slot: index of the attacker in the turn-player's battle_area.
 ///   target_slot: index in enemy battle_area (Digimon target) or
 ///     SECURITY_TARGET for a direct/player attack.
-fn pending_attack_data(pa: &PendingAttack, _game: &Game) -> Value {
-    let attacker_slot = pa.attacker.index as i64;
+/// Both slots are found by identity; -1 once the attacker has left
+/// (§11-1-5) or the target was removed (§11-2-6), so the UI never points at
+/// a Digimon that compacted into the slot.
+fn pending_attack_data(pa: &PendingAttack, game: &Game) -> Value {
+    let attacker_slot = game.live_attack_attacker().map_or(-1, |h| h.index as i64);
     let target_slot: i64 = match pa.effective_target {
-        AttackTarget::Digimon(ph) => ph.index as i64,
+        AttackTarget::Digimon(_) => game.live_attack_target_digimon().map_or(-1, |h| h.index as i64),
         AttackTarget::Player(_) => SECURITY_TARGET as i64,
     };
     json!({

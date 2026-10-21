@@ -86,6 +86,9 @@ fn lifecycle_entry_points_install_queryable_linked_and_orphaned_plug_in_states()
         .add_card(digimon_card("HOST"))
         .hand(0, &["PLUGIN"])
         .start();
+    // A Plug-In carries [Link]; without one the rule check trashes it
+    // (§17-1-3-2-6 / -7).
+    r.give_link_requirement("PLUGIN", 0);
 
     let host = r.place_on_field(0, "HOST", Some(0));
     let plugin = r.game.player_mut(0).hand.remove(0);
@@ -124,73 +127,201 @@ fn lifecycle_entry_points_install_queryable_linked_and_orphaned_plug_in_states()
     );
 }
 
+/// §4-9-5 "1 card can have a maximum of 1 link card. When linking to a
+/// Digimon that has already reached the link limit, the same number of the
+/// existing link cards are trashed at the same time as the newly linked
+/// cards." Inverted from the old base-5 capacity refusal: a carrier with no
+/// <Link +> at its limit of 1 still takes a Plug-In, which replaces the one
+/// it holds.
 #[test]
-fn plug_in_install_respects_link_capacity() {
-    let plugin_ids = [
-        "PLUGIN0", "PLUGIN1", "PLUGIN2", "PLUGIN3", "PLUGIN4", "PLUGIN5",
-    ];
+fn plug_in_install_at_link_limit_replaces_the_link_card() {
+    let plugin_ids = ["PLUGIN0", "PLUGIN1"];
     let mut builder = DebugRunner::builder().add_card(digimon_card("HOST"));
     for id in plugin_ids {
         builder = builder.add_card(option_card(id));
     }
     let mut r = builder.hand(0, &plugin_ids).start();
-
-    let host = r.place_on_field(0, "HOST", Some(0));
-    for link_index in 0..5 {
-        let plugin = r.game.player_mut(0).hand.remove(0);
-        assert!(r
-            .game
-            .install_field_option_as_plug_in(plugin, host, link_index));
+    for id in plugin_ids {
+        r.give_link_requirement(id, 0);
     }
 
-    let over_capacity = r.game.player_mut(0).hand.remove(0);
-    assert!(!r
-        .game
-        .install_field_option_as_plug_in(over_capacity, host, 5));
-    assert_eq!(
-        r.game.player(0).battle_area[host.index as usize]
-            .linked_cards
-            .len(),
-        5,
-        "failed install must not exceed the carrier's link capacity"
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let first = r.game.player_mut(0).hand.remove(0);
+    let first_handle = first.handle();
+    assert!(r.game.install_field_option_as_plug_in(first, host, 0));
+    let second = r.game.player_mut(0).hand.remove(0);
+    let second_handle = second.handle();
+    assert!(r.game.install_field_option_as_plug_in(second, host, 1));
+
+    let linked: Vec<_> = r.game.player(0).battle_area[host.index as usize]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked, vec![second_handle], "the new Plug-In replaced the old one");
+    assert!(
+        r.game.player(0).trash.iter().any(|c| c.handle() == first_handle),
+        "the replaced Plug-In is trashed"
     );
 }
 
+/// §4-9-5 (as above). Inverted from the old base-5 refusal: relinking an
+/// orphaned Plug-In onto a carrier at its limit of 1 succeeds and replaces
+/// the carrier's link card.
 #[test]
-fn relink_preserves_orphan_when_carrier_is_at_link_capacity() {
-    let plugin_ids = [
-        "PLUGIN0", "PLUGIN1", "PLUGIN2", "PLUGIN3", "PLUGIN4", "ORPHAN",
-    ];
+fn relink_onto_carrier_at_link_limit_replaces_the_link_card() {
+    let plugin_ids = ["PLUGIN0", "ORPHAN"];
     let mut builder = DebugRunner::builder().add_card(digimon_card("HOST"));
     for id in plugin_ids {
         builder = builder.add_card(option_card(id));
     }
     let mut r = builder.hand(0, &plugin_ids).start();
+    for id in plugin_ids {
+        r.give_link_requirement(id, 0);
+    }
 
     let host = r.place_on_field(0, "HOST", Some(0));
-    for link_index in 0..5 {
-        let plugin = r.game.player_mut(0).hand.remove(0);
-        assert!(r
-            .game
-            .install_field_option_as_plug_in(plugin, host, link_index));
-    }
+    let plugin = r.game.player_mut(0).hand.remove(0);
+    let plugin_handle = plugin.handle();
+    assert!(r.game.install_field_option_as_plug_in(plugin, host, 0));
     let orphan_card = r.game.player_mut(0).hand.remove(0);
+    let orphan_handle = orphan_card.handle();
     let orphan = r.game.install_field_option_as_ordinary(orphan_card, 0);
     assert!(r.game.orphan_plug_in(orphan, host.player));
 
-    assert!(!r.game.relink_plug_in(orphan, host, 5));
+    assert!(r.game.relink_plug_in(orphan, host, 1));
+    let linked: Vec<_> = r.game.player(0).battle_area[host.index as usize]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked, vec![orphan_handle], "the relinked Plug-In replaced the old one");
+    assert!(
+        r.game.player(0).trash.iter().any(|c| c.handle() == plugin_handle),
+        "the replaced Plug-In is trashed"
+    );
+}
+
+/// §4-9-5 / §10-1-3-1: relinking an orphaned Plug-In onto a carrier at its
+/// link limit with 2 link cards asks the carrier's controller (the linking
+/// player) which existing link card is replaced, before the orphan moves; the
+/// relink completes after the pick (the shared `LinkCardTrashChoice` path).
+#[test]
+fn relink_onto_carrier_at_link_limit_offers_the_replacement_choice() {
+    let plugin_ids = ["PLUGIN0", "PLUGIN1", "ORPHAN"];
+    let mut builder = DebugRunner::builder().add_card(digimon_card("HOST"));
+    for id in plugin_ids {
+        builder = builder.add_card(option_card(id));
+    }
+    let mut r = builder.hand(0, &plugin_ids).start();
+    for id in plugin_ids {
+        r.give_link_requirement(id, 0);
+    }
+
+    let host = r.place_on_field(0, "HOST", Some(0));
+    r.give_link_plus(host, 1);
+    let mut existing = Vec::new();
+    for slot in 0..2u8 {
+        let plugin = r.game.player_mut(0).hand.remove(0);
+        existing.push(plugin.handle());
+        assert!(r.game.install_field_option_as_plug_in(plugin, host, slot));
+    }
+    let orphan_card = r.game.player_mut(0).hand.remove(0);
+    let orphan_handle = orphan_card.handle();
+    let orphan = r.game.install_field_option_as_ordinary(orphan_card, 0);
+    assert!(r.game.orphan_plug_in(orphan, host.player));
+
+    assert!(r.game.relink_plug_in(orphan, host, 2));
+    let sel = r.game.pending_selection.as_ref().expect("the replacement choice");
+    assert_eq!(sel.selecting_player, 0, "the linking player chooses");
+    let offered: Vec<_> = sel
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .filter_map(|c| c.source_card)
+        .collect();
+    assert_eq!(offered, existing, "exactly the existing link cards are offered");
     assert_eq!(
         r.game.option_field_state(orphan),
         Some(OptionFieldState::OrphanedPlugIn {
             last_carrier_owner: host.player,
         }),
-        "failed relink must keep the orphaned Plug-In on the field"
+        "the orphan has not moved before the choice"
     );
-    assert_eq!(
-        r.game.player(0).battle_area[host.index as usize]
-            .linked_cards
-            .len(),
-        5
+
+    let pick = sel.valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick PLUGIN0");
+    assert!(r.game.pending_selection.is_none());
+    let linked: Vec<_> = r.game.player(0).battle_area[host.index as usize]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked, vec![existing[1], orphan_handle]);
+    assert!(
+        r.game.player(0).trash.iter().any(|c| c.handle() == existing[0]),
+        "the picked Plug-In is trashed"
+    );
+    assert_eq!(r.game.player(0).battle_area.len(), 1, "the orphan left the field");
+}
+
+/// As above with the orphan BELOW the carrier (orphan at index 0, HOST at
+/// index 1): the relink is validated and the choice parked against the
+/// carrier as it stands (index 1), and after the pick the orphan leaves and
+/// the carrier, now at index 0, keeps its <Link +1> and takes the orphan.
+#[test]
+fn relink_from_a_lower_orphan_onto_carrier_at_link_limit_offers_the_choice() {
+    let plugin_ids = ["PLUGIN0", "PLUGIN1", "ORPHAN"];
+    let mut builder = DebugRunner::builder().add_card(digimon_card("HOST"));
+    for id in plugin_ids {
+        builder = builder.add_card(option_card(id));
+    }
+    let mut r = builder.hand(0, &plugin_ids).start();
+    for id in plugin_ids {
+        r.give_link_requirement(id, 0);
+    }
+
+    let orphan_card = r.game.player_mut(0).hand.remove(2);
+    let orphan_handle = orphan_card.handle();
+    let orphan = r.game.install_field_option_as_ordinary(orphan_card, 0);
+    let host = r.place_on_field(0, "HOST", Some(0));
+    assert_eq!((orphan.index, host.index), (0, 1), "orphan below the carrier");
+    r.give_link_plus(host, 1);
+    let mut existing = Vec::new();
+    for slot in 0..2u8 {
+        let plugin = r.game.player_mut(0).hand.remove(0);
+        existing.push(plugin.handle());
+        assert!(r.game.install_field_option_as_plug_in(plugin, host, slot));
+    }
+    assert!(r.game.orphan_plug_in(orphan, host.player));
+
+    assert!(r.game.relink_plug_in(orphan, host, 2));
+    let sel = r.game.pending_selection.as_ref().expect("the replacement choice");
+    assert_eq!(sel.selecting_player, 0, "the linking player chooses");
+    assert_eq!(sel.source_permanent, Some(host), "asked about the carrier at index 1");
+    let offered: Vec<_> = sel
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .filter_map(|c| c.source_card)
+        .collect();
+    assert_eq!(offered, existing, "exactly the carrier's link cards are offered");
+
+    let pick = sel.valid_action_ids[1];
+    r.game.resolve_selection(0, pick).expect("pick PLUGIN1");
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.game.player(0).battle_area.len(), 1, "the orphan left the field");
+    let linked: Vec<_> = r.game.player(0).battle_area[0]
+        .linked_cards
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(linked, vec![existing[0], orphan_handle]);
+    assert!(
+        r.game.player(0).trash.iter().any(|c| c.handle() == existing[1]),
+        "the picked Plug-In is trashed"
     );
 }
 

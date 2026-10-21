@@ -127,9 +127,9 @@ effects:
   - when: [on_enter_field_anyone, on_digivolve]
     once_per_turn: true
     active_when:
-      all_of:
-        - all_turns: true
-        - event_target_kind: digimon
+      all_turns: true
+    trigger_if:
+      event_target_kind: digimon
     summary: "[All Turns][OPT] When any Digimon are played/digivolve, 1 opponent Digimon can't suspend until their turn ends"
     process:
       - select_opponent_permanent:

@@ -72,14 +72,11 @@ steps:
   - actor: 0
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: BT25-041's inherited [End of Attack] "By trashing the bottom
-  # face-down card from under any of your Tamers, ... unsuspends". P0 has NO
-  # Tamer, so the cost is unpayable; our engine still offers the optional
-  # trigger (BT25-041.yaml carries no payability gate). DCGO's sibling clauses
-  # gate CanActivate on "a Tamer with a face-down source" (BT26-031.yaml
-  # crosscheck), so DCGO is expected to ask nothing -> sim_only decline.
-  - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+  # (RE-LOWERED 2026-10-19: BT25-041's inherited [End of Attack] "By trashing
+  # the bottom face-down card from under any of your Tamers, ... unsuspends"
+  # is no longer offered -- with no Tamer its optional processing condition
+  # can't be executed, so it can't be chosen (§15-7-4; Task 8, 82a2bf29c).
+  # The sim-only decline row that answered it is gone.)
   # End T3 (P0, 0 -> P1 3).
   - actor: 0
     do: { pass: {} }
@@ -91,7 +88,7 @@ steps:
     expect: { prompt: breeding_action }
 assert:
   # Before the T3 pass: Atratusmon is suspended from its attack.
-  - at: 11
+  - at: 10
     that:
       turn: 3
       p0.field:
@@ -100,7 +97,7 @@ assert:
           suspended: true
           sources: [BT25-041]
   # At P1's T4 breeding step: unsuspended by <Reboot>.
-  - at: 12
+  - at: 11
     that:
       turn: 4
       p1.memory: 3

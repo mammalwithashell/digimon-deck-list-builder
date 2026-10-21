@@ -275,7 +275,7 @@ fn bt21_044_deletion_observers_gate_on_own_yellow_red_tamer() {
     assert_eq!(deletion.len(), 2);
     for t in &deletion {
         let cond = t
-            .condition
+            .trigger_if
             .as_ref()
             .expect("deletion observer must gate on the deleted object");
         assert!(

@@ -1,0 +1,15 @@
+# OBS_DIGIVOLVE_MEM -- Tamer, red, play cost 2.
+#   [All Turns] When a Digimon digivolves, gain 1 memory.
+# A "when a Digimon digivolves" observer (`on_digivolve`), triggered by the
+# same digivolution as the new card's [When Digivolving]: the two trigger
+# simultaneously (§15-4-3-2).
+card: OBS_DIGIVOLVE_MEM
+name: Evolution Witness
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: on_digivolve
+    summary: "[All Turns] When a Digimon digivolves, gain 1 memory."
+    process:
+      - gain_memory: 1

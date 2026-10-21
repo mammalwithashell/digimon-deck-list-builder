@@ -181,8 +181,8 @@ fn ex1_014_face_up_jamming_installs_on_field() {
 /// The carrier must gain ＜Jamming＞ after a declarative-effect tick.
 ///
 /// Stack layout: [EX1-014 (source 0)] → [IMPERIALDRAMON (top/carrier)]
-/// `self_digivolution_contains_name: "Imperialdramon"` scans the carrier's
-/// digivolution stack — finds "Imperialdramon" at the top — condition passes.
+/// `source_name_contains: "Imperialdramon"` reads the carrier's top-card name
+/// — "Imperialdramon" — condition passes.
 /// `your_turn: true` — game starts at player 0's turn (turn_player_idx = 0).
 #[test]
 fn ex1_014_inherited_jamming_active_when_carrier_is_imperialdramon_on_your_turn() {
@@ -208,7 +208,7 @@ fn ex1_014_inherited_jamming_active_when_carrier_is_imperialdramon_on_your_turn(
 }
 
 /// Negative path — wrong name: carrier is "Paildramon" (no "Imperialdramon"
-/// substring). The `self_digivolution_contains_name` check must fail, so the
+/// substring). The `source_name_contains` check must fail, so the
 /// carrier does NOT gain ＜Jamming＞ from the inherited aura.
 #[test]
 fn ex1_014_inherited_jamming_inactive_when_carrier_name_unrelated() {
@@ -342,5 +342,57 @@ fn ex1_014_inherited_jamming_active_when_carrier_has_free_trait() {
         runner.game.has_keyword(carrier, Keyword::Jamming),
         "Carrier with [Free] trait must gain <Jamming> from EX1-014 inherited aura \
          through the source-permanent trait predicate"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// "this Digimon's name" is the TOP card's name (§4-7-7 / §4-8-2; Q3225;
+// G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A non-matching top card ("Paildramon", no [Free]) over an [Imperialdramon]
+/// digivolution card. Official Q&A Q3225 (EX1-038) treats "[Imperialdramon] in
+/// its name" as the top card's name, and DCGO reads
+/// `PermanentOfThisCard().TopCard.ContainsCardName("Imperialdramon")`, so the
+/// inherited <Jamming> must NOT apply.
+#[test]
+fn ex1_014_inherited_jamming_ignores_imperialdramon_digivolution_card_under_unrelated_top() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX1-014")
+        .expect("EX1-014 in embedded pack")
+        .add_card(imperialdramon_carrier())
+        .add_card(unrelated_carrier())
+        .memory(0)
+        .start();
+
+    let carrier = runner.place_stack(0, &["EX1-014", "IMPERIALDRAMON", "UNRELATED"]);
+    runner.game.turn_player_idx = 0;
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        !runner.game.has_keyword(carrier, Keyword::Jamming),
+        "an [Imperialdramon] digivolution card under a [Paildramon] top card does not put \
+         [Imperialdramon] in this Digimon's name"
+    );
+}
+
+/// Positive control: the same cards with the Imperialdramon card on top.
+#[test]
+fn ex1_014_inherited_jamming_applies_when_imperialdramon_card_is_the_top_card() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX1-014")
+        .expect("EX1-014 in embedded pack")
+        .add_card(imperialdramon_carrier())
+        .add_card(unrelated_carrier())
+        .memory(0)
+        .start();
+
+    let carrier = runner.place_stack(0, &["EX1-014", "UNRELATED", "IMPERIALDRAMON"]);
+    runner.game.turn_player_idx = 0;
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner.game.has_keyword(carrier, Keyword::Jamming),
+        "an [Imperialdramon] top card gives this Digimon [Imperialdramon] in its name"
     );
 }

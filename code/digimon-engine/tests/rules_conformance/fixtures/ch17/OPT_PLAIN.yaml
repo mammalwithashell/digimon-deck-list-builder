@@ -1,0 +1,14 @@
+# OPT_PLAIN -- Option, red, use cost 1.
+#   [Main] Gain 1 memory.
+# A vanilla Option: the card a rule check trashes when it is in the battle
+# area without having been placed there by an effect (§17-1-3-2-2).
+card: OPT_PLAIN
+name: Plain Plan
+kind: option
+color: [red]
+cost: 1
+effects:
+  - when: main_from_hand
+    summary: "[Main] Gain 1 memory."
+    process:
+      - gain_memory: 1

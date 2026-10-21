@@ -1,0 +1,15 @@
+# SEC_CHECK_OBS_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] When your opponent's Digimon checks your security, gain 1
+#   memory.
+card: SEC_CHECK_OBS_MEM
+name: Alarmmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_security_check
+    summary: "[All Turns] When your opponent's Digimon checks your security, gain 1 memory."
+    process:
+      - gain_memory: 1

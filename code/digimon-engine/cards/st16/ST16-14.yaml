@@ -62,7 +62,7 @@ effects:
   # two predicates. Declinable activation (ActivateClass), not a forced trigger.
   - when: on_discard_hand
     optional: true
-    active_when:
+    trigger_if:
       all_of:
         - event_discard_player: you
         - event_caused_by_own_effect: true

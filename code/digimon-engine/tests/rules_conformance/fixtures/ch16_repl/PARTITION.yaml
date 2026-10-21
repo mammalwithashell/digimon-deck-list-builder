@@ -1,0 +1,22 @@
+# PARTITION -- Digimon, Lv.6, blue/green, 6000 DP, play cost 10.
+#   <Partition (blue Lv.4 & green Lv.4)> (When this Digimon with a blue Lv.4
+#   and a green Lv.4 card in its digivolution cards would leave the battle
+#   area other than by your effects or in battle, you may play 1 of each of
+#   those cards without paying their costs.)
+# The §16-29 keyword card, with the rule's own example parenthetical. Authored
+# with the production idiom (AD1-011): a `kind: partition` clause whose
+# `sources:` are the specified cards, one predicate per slot.
+card: PARTITION
+name: Splitmon
+kind: digimon
+level: 6
+color: [blue, green]
+cost: 10
+dp: 6000
+effects:
+  - kind: partition
+    summary: "<Partition (blue Lv.4 & green Lv.4)> (When this Digimon with a blue Lv.4 and a green Lv.4 card in its digivolution cards would leave the battle area other than by your effects or in battle, you may play 1 of each of those cards without paying their costs.)"
+    sources:
+      - { level_eq: 4, color_is: blue }
+      - { level_eq: 4, color_is: green }
+    exclude_cause: [own_effect, battle]

@@ -138,3 +138,63 @@ fn bt26_005_no_prompt_without_face_down_source() {
     assert!(r.game.pending_selection.is_none());
     assert!(!field_ids(&r, 0).contains(&"AVIAN5".to_string()));
 }
+
+/// Official Q&A Q6958 (2026-08-18): "Does this card's inherited effect allow me
+/// to play the card under the Tamer after trashing it?" -- "Yes, you can play
+/// it." The bottom face-down card Pinamon's cost trashes from under Keenan
+/// Crier (BT26-094) is Yoshino Fujieda (BT26-091, a cost-3 [DATA SQUAD]
+/// Tamer); it is picked from the trash and played. Keenan's "effects trash
+/// cards from under this Tamer" trigger waits for Pinamon's effect to finish
+/// (§15-8-3-2), so it is PENDING while the play runs, and is offered after.
+#[test]
+fn bt26_005_q6958_plays_the_card_its_cost_just_trashed_from_under_a_tamer() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-005")
+        .dsl_card("BT26-094")
+        .expect("Keenan")
+        .dsl_card("BT26-091")
+        .expect("Yoshino")
+        .add_card(filler("FILLER"))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+    // Keenan with two face-down cards; BT26-091 is the BOTTOM one.
+    let keenan = r.place_stack(0, &["BT26-091", "FILLER", "BT26-094"]);
+    {
+        let stack = &mut r.game.players[0].battle_area[keenan.index as usize].card_sources;
+        stack[0].face_down = true;
+        stack[1].face_down = true;
+    }
+    let carrier = r.place_stack(0, &[CARD_ID, "FILLER"]);
+    fire(&mut r, EffectTiming::OnDeletion, carrier);
+    r.accept_optional_trigger().expect("Pinamon's optional clause");
+    pick_first(&mut r, 0); // Keenan: the only Tamer with a face-down card
+    assert!(
+        trash_ids(&r, 0).contains(&"BT26-091".to_string()),
+        "the bottom face-down card is trashed"
+    );
+    pick_trash(&mut r, 0, "BT26-091");
+    assert!(
+        field_ids(&r, 0).contains(&"BT26-091".to_string()),
+        "Q6958: the card the cost just trashed is played (field {:?}, trash {:?})",
+        field_ids(&r, 0),
+        trash_ids(&r, 0)
+    );
+    assert!(!trash_ids(&r, 0).contains(&"BT26-091".to_string()));
+    // Keenan's source-trash trigger resolves after the play (§15-8-3-2).
+    let v = r
+        .pending_selection_view()
+        .expect("Keenan's pending trigger is offered after Pinamon's effect");
+    assert!(v.is_optional, "Keenan's trigger is a 'by suspending' optional");
+    r.accept_optional_trigger().expect("Keenan's trigger");
+    let _ = r.auto_resolve();
+    let k = r.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&r.game.card_data) == "BT26-094")
+        .expect("Keenan still on the field");
+    assert!(k.is_suspended, "Keenan's trigger resolved: he paid by suspending");
+}

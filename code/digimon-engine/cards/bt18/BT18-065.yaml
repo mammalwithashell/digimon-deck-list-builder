@@ -197,10 +197,10 @@ effects:
     when: on_source_returned_to_deck_bottom
     once_per_turn: true
     active_when: { all_turns: true }
-    condition:
+    trigger_if:
       all_of:
         - event_host_permanent_is_source: true
-        - event_card_name_contains: "Vemmon"
+        - event_card_name_contains: Vemmon
     summary: "[All Turns][OPT] When a [Vemmon] returns to the bottom of the deck from this Digimon's digivolution cards, unsuspend this Digimon and it gains <Blocker> until the end of your opponent's turn"
     process:
       - unsuspend: { target: source }

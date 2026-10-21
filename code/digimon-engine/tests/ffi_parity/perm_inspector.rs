@@ -169,8 +169,8 @@ fn source_and_inherited_effect_text_populated() {
 }
 
 /// A link card's link effect is listed for the Digimon it is linked to
-/// (general_rule.pdf 4-2-6), never as an inherited effect: a link card among
-/// the digivolution cards confers nothing (4-2-4, 4-7-2).
+/// (general_rule.pdf 4-3-5), never as an inherited effect: a link card among
+/// the digivolution cards confers nothing (4-3-3, 4-9-2).
 #[test]
 fn link_effect_text_listed_for_link_cards_only() {
     let mut linked = make_test_card("LNK", "LinkMon");

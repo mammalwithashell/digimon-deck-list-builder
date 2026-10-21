@@ -1,0 +1,17 @@
+# TAMER_PROGRESS_SEC4 -- Tamer, red, play cost 2.
+#   [All Turns] While you have 4 or more security cards, all of your Digimon
+#   gain <Progress> (While attacking, your opponent's effects don't affect
+#   this Digimon.)
+# A <Progress> grant that is lost as soon as the security count drops below 4
+# (a materialized aura grant, refreshed by the declarative tick).
+card: TAMER_PROGRESS_SEC4
+name: Vanguard Tamer
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - kind: aura
+    active_when: { security_count_gte: 4 }
+    target: { of: you, kind: digimon }
+    grant_keyword: { keyword: Progress }
+    summary: "[All Turns] While you have 4 or more security cards, all of your Digimon gain <Progress> (While attacking, your opponent's effects don't affect this Digimon.)"

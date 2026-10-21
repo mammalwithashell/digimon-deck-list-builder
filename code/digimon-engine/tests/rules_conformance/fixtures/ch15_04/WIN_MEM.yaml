@@ -1,0 +1,18 @@
+# WIN_MEM -- Digimon, Lv.5, red, 7000 DP, play cost 5.
+#   [All Turns] When this Digimon wins a battle, gain 1 memory.
+# A battle-result trigger (§14-2-4): it triggers in the battle, together with
+# the loser's [On Deletion] (official Q&A Q3931, EX8-045 Callismon).
+card: WIN_MEM
+name: Victormon
+kind: digimon
+level: 5
+color: [red]
+cost: 5
+dp: 7000
+effects:
+  - when: on_ally_won_battle
+    trigger_if:
+      event_winner_is_source: true
+    summary: "[All Turns] When this Digimon wins a battle, gain 1 memory."
+    process:
+      - gain_memory: 1

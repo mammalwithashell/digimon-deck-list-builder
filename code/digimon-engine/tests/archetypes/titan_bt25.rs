@@ -26,7 +26,7 @@
 #![allow(dead_code)]
 
 use digimon_engine::card_data::CardData;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
 
 use super::support::snapshot;
@@ -346,8 +346,10 @@ fn t2_deltamon_de_digivolve_same_turn_lockout() {
     let mut runner = DebugRunner::builder()
         .dsl_card(DELTAMON)
         .expect("BT25-068 (Deltamon) in embedded DSL pack")
-        .add_card(make_test_card("OPP-LV4", "OppLv4"))
-        .add_card(make_test_card("OPP-LV5", "OppLv5"))
+        // Real levels: <De-Digivolve> can't trash a level 3 top card
+        // (§16-12-4), and `make_test_card` is level 3.
+        .add_card(make_test_card_with_level("OPP-LV4", "OppLv4", 4))
+        .add_card(make_test_card_with_level("OPP-LV5", "OppLv5", 5))
         .deck(0, &["OPP-LV4"; 8])
         .deck(1, &["OPP-LV4"; 8])
         .start();

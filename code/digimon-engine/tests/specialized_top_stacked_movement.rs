@@ -19,11 +19,22 @@ impl CardEffect for EndAttack {
     }
 }
 fn invisimon(tamer: bool) -> DebugRunner {
+    invisimon_with(tamer, false)
+}
+/// `tie`: LOWER keeps make_test_card's 2000 DP, tying the 2000-DP FILL.
+fn invisimon_with(tamer: bool, tie: bool) -> DebugRunner {
     let mut lower = make_test_card("LOWER", "Underlying card");
     if tamer {
         lower.card_kind = CardKind::Tamer;
         lower.level = None;
         lower.dp = None;
+    } else if !tie {
+        // Invisimon's check trigger resolves BEFORE the Security Digimon battle
+        // (§13-1-8-2 then §13-1-8-3-1; b41f3f5f1), so the battle is fought by
+        // the Digimon now topped by LOWER. It must out-DP the 2000-DP FILL
+        // Security Digimon, or both lose and LOWER is deleted (§14-2-1-3,
+        // §14-2-2) before its [End of Attack] can trigger.
+        lower.dp = Some(3000);
     }
     let mut r = DebugRunner::builder()
         .dsl_card("BT20-055")
@@ -71,6 +82,43 @@ fn q4388_new_top_end_attack_effect_triggers_after_invisimon_top_enters_security(
         "Q4388: newly visible End of Attack effect activates"
     );
     assert!(r.game.players[0].trash.is_empty());
+}
+#[test]
+fn security_check_trigger_resolves_first_so_lower_card_ties_security_digimon_and_is_deleted() {
+    // §13-1-8-2-1: Invisimon's face-up-check trigger resolves before
+    // §13-1-8-3-1's Security Digimon battle, so the battle is fought by the
+    // Digimon now topped by the 2000-DP LOWER, not by the 11000-DP Invisimon.
+    // 2000 vs FILL's 2000: both lose (§14-2-1-3); the Digimon is deleted
+    // (§14-2-2), the Security Digimon is not (§14-2-3) and is trashed after
+    // the check (§13-1-8-4). The deleted Digimon's [End of Attack] never fires.
+    let mut r = invisimon_with(false, true);
+    let h = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 0,
+    };
+    let lower = r.game.players[0].battle_area[0].card_sources[0].handle();
+    let top = r.game.players[0].battle_area[0].top_card().handle();
+    let fill = r.game.players[1].security[0].handle();
+    assert_ne!(
+        r.attack_player(h, 1, true),
+        digimon_engine::combat::AttackResult::Invalid
+    );
+    assert_eq!(
+        build_action_mask(&r.game, 0)[REPLACEMENT_ACCEPT as usize],
+        1.0
+    );
+    r.game.resolve_selection(0, REPLACEMENT_ACCEPT).unwrap();
+    r.auto_resolve().unwrap();
+    assert!(r.game.players[0].battle_area.is_empty(), "tied LOWER-topped Digimon deleted");
+    let trash0: Vec<_> = r.game.players[0].trash.iter().map(|c| c.handle()).collect();
+    assert_eq!(trash0, vec![lower], "only LOWER is trashed by the deletion");
+    let trash1: Vec<_> = r.game.players[1].trash.iter().map(|c| c.handle()).collect();
+    assert_eq!(trash1, vec![fill], "checked Security Digimon trashed, not deleted");
+    assert_eq!(r.game.players[0].security.len(), 1);
+    assert_eq!(r.game.players[0].security[0].handle(), top, "Invisimon placed before the battle");
+    assert!(r.game.players[0].face_up_security.contains(&top.0));
+    assert_eq!(r.game.memory, 3, "a deleted Digimon's [End of Attack] does not trigger");
+    assert!(r.game.pending_attack.is_none());
 }
 #[test]
 fn q4723_only_tamer_below_invisimon_survives_as_tamer() {

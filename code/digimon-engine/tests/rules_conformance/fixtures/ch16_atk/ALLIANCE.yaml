@@ -1,0 +1,15 @@
+# ALLIANCE -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   <Alliance> (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#   <Security A. +1> for the attack.)
+card: ALLIANCE
+name: Pactmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance> (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains <Security A. +1> for the attack.)"

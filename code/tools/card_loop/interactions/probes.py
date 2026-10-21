@@ -69,25 +69,25 @@ NEGATIVE = "negative"
 # the derivable ones against that table so the two cannot drift silently.
 # ---------------------------------------------------------------------------
 
-#: Kind `Optional` or `Opt-cost->Mand` in the §16 table.
+#: Kind `Optional` or `Opt-cost->Mand` in the §16 table (Comprehensive Rules
+#: Ver. 4.3; the 4.x keywords <Ascension> 16-43, <Engage> 16-44, <Guard> 16-45,
+#: <Detach> 16-46 are real §16 rows now).
 _TABLE_OPTIONAL_KEYWORDS = frozenset({
     "digisorption", "digi-burst", "blitz", "delay", "decoy", "armor purge", "save",
     "material save", "evade", "raid", "alliance", "barrier", "blast digivolve",
     "partition", "scapegoat", "vortex", "overclock", "decode", "fragment", "execute",
-    "training", "blast dna digivolve",
+    "training", "blast dna digivolve", "ascension", "engage", "guard", "detach",
 })
 #: Deliberate additions beyond the table's kind column:
 #:  - blocker: kind "Persistent", but its semantics are "may suspend to redirect"
-#:    -- not blocking is a decline the engine must offer;
-#:  - ascension: newer than Ver.3.6; "you may place this card as the top
-#:    security card".
-_EXTRA_OPTIONAL_KEYWORDS = frozenset({"blocker", "ascension"})
+#:    -- not blocking is a decline the engine must offer.
+_EXTRA_OPTIONAL_KEYWORDS = frozenset({"blocker"})
 OPTIONAL_KEYWORDS = _TABLE_OPTIONAL_KEYWORDS | _EXTRA_OPTIONAL_KEYWORDS
 
 #: The §16 table's "when" column says "would ..." (immediate replacement).
 WOULD_KEYWORDS = frozenset({
     "decoy", "armor purge", "partition", "evade", "barrier", "scapegoat", "decode",
-    "fragment",
+    "fragment", "guard", "detach",
 })
 
 #: Keywords that fire as their carrier leaves play (or read it after it left).
@@ -101,7 +101,7 @@ IMMUNITY_KEYWORDS = frozenset({"progress"})
 #: Every keyword name some families@1 rule knows. A keyword clause naming one of
 #: these is classified by the tables only; anything else falls back to text.
 KNOWN_KEYWORDS = frozenset({
-    # §16 table (general_rule.pdf Ver.3.6), by base name
+    # §16 table (general_rule.pdf Ver. 4.3), by base name
     "security a", "security attack", "blocker", "recovery", "piercing", "draw",
     "jamming", "digisorption", "reboot", "de-digivolve", "retaliation", "digi-burst",
     "rush", "blitz", "delay", "decoy", "armor purge", "save", "material save",
@@ -109,6 +109,8 @@ KNOWN_KEYWORDS = frozenset({
     "mind link", "partition", "collision", "blast dna digivolve", "scapegoat",
     "vortex", "overclock", "iceclad", "decode", "fragment", "execute", "progress",
     "link", "training",
+    # 4.x keywords (§16-42 .. §16-47)
+    "use req", "ascension", "engage", "guard", "detach", "succession",
 }) | _EXTRA_OPTIONAL_KEYWORDS | LEAVE_KEYWORDS
 
 #: Timings whose activation is itself optional.

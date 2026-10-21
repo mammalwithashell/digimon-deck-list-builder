@@ -1,0 +1,16 @@
+# INH_OD_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   Inherited Effect: [On Deletion] Gain 1 memory.
+# The §15-8-3-5 example text, as a digivolution card.
+card: INH_OD_MEM
+name: Memlegacymon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - scope: inherited
+    when: on_deletion
+    summary: "Inherited: [On Deletion] Gain 1 memory."
+    process:
+      - gain_memory: 1

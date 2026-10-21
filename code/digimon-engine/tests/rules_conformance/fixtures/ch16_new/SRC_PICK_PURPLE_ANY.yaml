@@ -1,0 +1,28 @@
+# SRC_PICK_PURPLE_ANY -- Option, red, use cost 0.
+#   [Main] Trash 1 purple card from the digivolution cards of 1 of your
+#   opponent's Digimon.
+# An UNQUALIFIED color reference over digivolution cards. It names neither
+# category, so a DUAL card under a Digimon is read through its Digimon
+# information only (§4-6-1, §4-6-5-2; owner ruling W5 (b)): red for DUAL_ARTS.
+card: SRC_PICK_PURPLE_ANY
+name: Any purple Source Audit
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash 1 purple card from the digivolution cards of 1 of your opponent's Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: opp_stack
+          filter: { kind: digimon }
+          prompt: "Choose an opponent Digimon"
+      - select_opponent_sources:
+          target: opp_stack
+          min: 1
+          max: 1
+          filter: { color_is: purple }
+          bind_as: picked
+          prompt: "Trash 1 purple digivolution card"
+          then:
+            - trash_selected_sources: { source_refs: picked }

@@ -179,7 +179,11 @@ fn end_of_attack_optional_fires_deletes_target_returns_trash_and_plays_token() {
         .expect("EX11-012 in embedded pack")
         .add_card(weak)
         .add_card(trash_card)
-        .security(1, &[])
+        // P1 keeps one security card: an attack on a player with no security
+        // wins the game at once, and a finished game processes nothing more
+        // (§1-2-2, §1-2-3-1; G-ENGINE-GAME-OVER-NOT-TERMINAL), so [End of Attack] would
+        // never fire. Medusamon's 12000 DP beats the 6000-DP security Digimon.
+        .security(1, &["WEAK"])
         .memory(20)
         .start();
 
@@ -202,8 +206,8 @@ fn end_of_attack_optional_fires_deletes_target_returns_trash_and_plays_token() {
     let trash_before = r.game.players[1].trash.len();
     let deck_before = r.game.players[1].deck.len();
 
-    // Attack P1 directly (no battle kill — EndOfAttack still fires).
-    // P1 has 0 security so the attack wins immediately; EndOfAttack still fires.
+    // Attack P1 directly: the security check deletes the 6000-DP security
+    // Digimon (one more card in P1's trash), then EndOfAttack fires.
     r.attack_player(medusa, 1, false);
 
     // The EndOfAttack clause is optional ("You may delete ...") and its body's
@@ -253,13 +257,14 @@ fn end_of_attack_optional_fires_deletes_target_returns_trash_and_plays_token() {
         "Petrification Token should be on P1's field"
     );
 
-    // Net trash count: WEAK was added (from delete_permanent) and TRASH-CARD
-    // was returned to deck, so net change is 0 relative to trash_before.
-    // WEAK itself remains in trash (only the selected card is returned to deck).
+    // Net trash count: the security WEAK (lost the security battle) and the
+    // field WEAK (deleted) were added, TRASH-CARD was returned to the deck:
+    // +1 relative to trash_before. The WEAKs stay in the trash (only the
+    // selected card is returned to the deck).
     assert_eq!(
         r.game.players[1].trash.len(),
-        trash_before,
-        "P1's trash net count should equal trash_before (WEAK added, TRASH-CARD moved to deck)"
+        trash_before + 1,
+        "P1's trash: two WEAKs added, TRASH-CARD moved to the deck"
     );
     // Deck gained 1 at bottom (the returned card).
     assert_eq!(
@@ -524,7 +529,7 @@ fn fire_when_digivolving_on(r: &mut DebugRunner, h: digimon_engine::permanent::P
 }
 
 /// EX12-065 Kaguyamon carries BOTH <Fortitude> ("play this Digimon from the
-/// trash without paying the cost", 16-26, MANDATORY) and [On Deletion] ("Return
+/// trash without paying the cost", 16-27, MANDATORY) and [On Deletion] ("Return
 /// 1 of your opponent's lowest level Digimon to the bottom of the deck").
 /// Returning it to the deck must cost it both.
 #[test]
@@ -541,7 +546,7 @@ fn when_digivolving_returning_the_corpse_makes_kaguyamon_miss_its_on_deletion() 
         .start();
 
     let medusa = r.place_on_field(0, "EX11-012", None);
-    // <Fortitude> (16-26) only fires for a Digimon deleted WITH digivolution
+    // <Fortitude> (16-27) only fires for a Digimon deleted WITH digivolution
     // cards, so Kaguyamon is stacked over a source. Without one its
     // mandatory trigger legitimately no-ops and could not signal anything.
     r.place_stack(1, &["FODDER-SRC", "EX12-065"]);
@@ -579,7 +584,7 @@ fn when_digivolving_returning_the_corpse_makes_kaguyamon_miss_its_on_deletion() 
     );
     assert!(
         !field_has(&r, 1, "EX12-065"),
-        "Kaguyamon reached the deck, so its MANDATORY <Fortitude> (16-26) must NOT have played it back. The control below proves this is a real signal: leave Kaguyamon in the trash and <Fortitude> DOES return it to the field"
+        "Kaguyamon reached the deck, so its MANDATORY <Fortitude> (16-27) must NOT have played it back. The control below proves this is a real signal: leave Kaguyamon in the trash and <Fortitude> DOES return it to the field"
     );
     assert!(
         field_has(&r, 0, "EX11-012"),
@@ -655,7 +660,7 @@ fn when_digivolving_returning_the_corpse_makes_amaterasumon_miss_both_triggers()
 ///
 /// Kaguyamon therefore STAYS in the trash where the deletion left it, so its
 /// triggers keep their timing and must fire:
-///   * <Fortitude> (16-26, MANDATORY) plays it back from the trash;
+///   * <Fortitude> (16-27, MANDATORY) plays it back from the trash;
 ///   * [On Deletion] returns Medusamon (P0's only, hence lowest-level, Digimon)
 ///     to the bottom of P0's deck.
 ///
@@ -675,7 +680,7 @@ fn when_digivolving_returning_the_decoy_leaves_kaguyamon_triggers_intact() {
         .start();
 
     let medusa = r.place_on_field(0, "EX11-012", None);
-    // <Fortitude> (16-26) only fires for a Digimon deleted WITH digivolution
+    // <Fortitude> (16-27) only fires for a Digimon deleted WITH digivolution
     // cards, so Kaguyamon is stacked over a source. Without one its
     // mandatory trigger legitimately no-ops and could not signal anything.
     r.place_stack(1, &["FODDER-SRC", "EX12-065"]);

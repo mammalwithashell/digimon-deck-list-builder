@@ -189,10 +189,10 @@ effects:
     optional: true
     active_when: { all_turns: true }
     summary: "[All Turns][OPT] When your Marcus Damon is played/suspends, may delete 1 opp Digimon with DP ≤ this DP"
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
-        - event_card_name_contains: "Marcus Damon"
+        - event_card_name_contains: Marcus Damon
     process:
       - select_opponent_permanent:
           bind_as: del_target

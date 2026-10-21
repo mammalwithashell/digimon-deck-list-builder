@@ -42,7 +42,7 @@ fn lv4_digimon(id: &str, dp: i32) -> CardData {
     c
 }
 
-/// A Lv.2 Digi-Egg (no DP) — used to exercise §17-1-3-2 (a DP-less card exposed
+/// A Lv.2 Digi-Egg (no DP) — used to exercise §17-1-3-2-1 (a DP-less card exposed
 /// as the live top of a battle-area permanent can't remain → trashed).
 fn digi_egg(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
@@ -52,7 +52,7 @@ fn digi_egg(id: &str) -> CardData {
     c
 }
 
-/// §17-1-3-2 PROBE — a Digi-Egg exposed as the live top of a battle-area
+/// §17-1-3-2-1 PROBE — a Digi-Egg exposed as the live top of a battle-area
 /// permanent (e.g. a Digimon stack de-digivolved/peeled down to its egg) cannot
 /// remain in the battle area and is TRASHED by the state-based rules-check —
 /// the whole permanent, not a deletion. This is the Q8 final step (Koromon
@@ -79,7 +79,7 @@ fn dp_less_digi_egg_top_trashed_by_rules_check() {
     assert_eq!(
         r.battle_area_size(0),
         0,
-        "§17-1-3-2: a Digi-Egg exposed as the live top can't remain → permanent trashed"
+        "§17-1-3-2-1: a Digi-Egg exposed as the live top can't remain → permanent trashed"
     );
     assert_eq!(
         r.game.player(0).trash.len(),
@@ -143,7 +143,7 @@ fn zero_dp_probe_reduced_digimon_deleted_after_effect_resolves() {
         r.game.effective_dp(victim),
         Some(0),
         "precondition: VICTIM is at 0 effective DP (3000 − 4000, floored at 0 \
-         per rules 17-1-3-1 / DCGO Permanent.DP — judge-quiz Q24 floor)"
+         per rules 17-1-3-1-1 / DCGO Permanent.DP — judge-quiz Q24 floor)"
     );
 
     // The effect has resolved — drain the queue (the post-effect boundary).

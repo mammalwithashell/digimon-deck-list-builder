@@ -59,6 +59,15 @@ fn evolve(r: &mut DebugRunner, player: u8) {
     }
     r.game.drain_effect_queue();
 }
+/// Resolve a pending `TriggerOrder` by picking its first entry (a no-op when
+/// none is pending).
+fn pick_trigger_order_first(r: &mut DebugRunner) {
+    if let Some(v) = r.pending_selection_view() {
+        if v.kind == SelectionKind::TriggerOrder {
+            r.execute_action(0, v.valid_action_ids[0]).unwrap();
+        }
+    }
+}
 fn accept(r: &mut DebugRunner) {
     let v = r
         .pending_selection_view()
@@ -163,11 +172,11 @@ fn two_hinas_refire_separately_and_departed_event_target_is_not_another_slot() {
         r.place_on_field(0, ID, Some(0));
         r.place_on_field(0, ID, Some(0));
         evolve(&mut r, 0);
-        // Simultaneous trigger-order choice, then the selected Hina's optional cost.
-        if !r.pending_is_optional() {
-            let v = r.pending_selection_view().unwrap();
-            r.execute_action(0, v.valid_action_ids[0]).unwrap();
-        }
+        // Simultaneous trigger-order choice (both optional, so it can be
+        // declined as a whole), then the selected Hina's own "you may": the
+        // pick only decides the order (§15-4-3-5-1, §15-7; DCGO asks each
+        // optional effect as it activates).
+        pick_trigger_order_first(&mut r);
         accept(&mut r);
         let v = r.pending_selection_view().unwrap();
         assert_eq!(v.kind, SelectionKind::EffectChoice);
@@ -308,10 +317,7 @@ effects:
     r.place_on_field(0, ID, Some(0));
     r.place_on_field(1, "VICTIM", Some(0));
     evolve(&mut r, 0);
-    if !r.pending_is_optional() {
-        let v = r.pending_selection_view().unwrap();
-        r.execute_action(0, v.valid_action_ids[0]).unwrap();
-    }
+    pick_trigger_order_first(&mut r);
     accept(&mut r);
     let v = r.pending_selection_view().expect("refired On Play target");
     assert_eq!(v.selecting_player, 0);

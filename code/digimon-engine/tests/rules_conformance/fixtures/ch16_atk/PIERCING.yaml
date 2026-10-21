@@ -1,0 +1,14 @@
+# PIERCING -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   <Piercing> (When this Digimon attacks and deletes your opponent's Digimon
+#   in battle, it checks security before the attack ends.)
+card: PIERCING
+name: Drillmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing> (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"

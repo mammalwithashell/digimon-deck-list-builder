@@ -83,7 +83,10 @@ steps:
 # Order pick 2 (two identical Tamers remain): Hina #1 -> (DCGO asks its optional gate here) -> suspend ->
 # Wingdramon's [On Play] activated: delete Biyomon.
 - { actor: 0, do: { select: { cards: [EX3-065], ordinal: 0 } }, expect: { prompt: MultipleSkills, count: 1, candidates: [EX3-065, EX3-065] } }
-- { actor: 0, do: { select: { yes: true, dcgo_only: true } }, expect: { prompt: OptionalSkill } }
+# RE-LOWERED 2026-10-19: shared (was dcgo_only). An optional effect picked
+# from our TriggerOrder now passes through its own you-may gate (§15-7-1;
+# Task 2 fix round, da93979e8) -- the same OptionalSkill DCGO asks here.
+- { actor: 0, do: { select: { yes: true } }, expect: { prompt: OptionalSkill } }
 - { actor: 0, do: { select: { targets: [opp.field.1] } }, expect: { prompt: SelectPermanentEffect } }
 # Hina #2, the lone remaining optional trigger: accept -> suspend -> Wingdramon's [On Play] a second time:
 # delete Agumon. Memory is negative, so P0's turn ends once this resolves.

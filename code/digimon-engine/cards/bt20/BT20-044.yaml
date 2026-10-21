@@ -58,11 +58,13 @@ effects:
           prompt: "Attack with the chosen Digimon?"
   - when: on_ally_won_battle
     once_per_turn: true
-    condition:
+    trigger_if:
       event_battle_deleter:
         owner: you
         kind: digimon
-        any_of: [{ in_text_contains: Dracomon }, { in_text_contains: Examon }]
+        any_of:
+          - in_text_contains: Dracomon
+          - in_text_contains: Examon
     summary: "[All Turns][Once Per Turn] When any of your Dracomon/Examon-text Digimon deletes an opponent Digimon in battle, delete 1 suspended opponent Digimon or Tamer"
     process:
       - select_opponent_permanent:
@@ -75,11 +77,13 @@ effects:
   - scope: inherited
     when: on_ally_won_battle
     once_per_turn: true
-    condition:
+    trigger_if:
       event_battle_deleter:
         owner: you
         kind: digimon
-        any_of: [{ in_text_contains: Dracomon }, { in_text_contains: Examon }]
+        any_of:
+          - in_text_contains: Dracomon
+          - in_text_contains: Examon
     summary: "Inherited [All Turns][Once Per Turn] When any of your Dracomon/Examon-text Digimon deletes an opponent Digimon in battle, delete 1 suspended opponent Digimon or Tamer"
     process:
       - select_opponent_permanent:

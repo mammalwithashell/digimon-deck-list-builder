@@ -309,7 +309,7 @@ fn finish_on_play_declining_attack(runner: &mut DebugRunner) {
         let Some(view) = runner.pending_selection_view() else {
             return;
         };
-        let action = if view.valid_action_ids.contains(&PASS) {
+        let action = if view.valid_action_ids.contains(&PASS) || runner.pending_is_optional() {
             PASS
         } else {
             match view.valid_action_ids.first().copied() {

@@ -67,13 +67,14 @@ effects:
     optional: true
     active_when: { your_turn: true }
     condition:
+      own_memory_lte: -5
+    trigger_if:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
         - any_of:
-            - event_target_in_text_contains: "Chronomon"
+            - event_target_in_text_contains: Chronomon
             - event_target_trait_has: Titan
-        - own_memory_lte: -5
     summary: "[Trash][Your Turn] When any of your [Chronomon] text or [Titan] trait Digimon are played, if your opponent has 5 or more memory, by returning this card to the bottom of the deck, 1 of them gains <Rush> and <Execute> for the turn"
     process:
       - return_trash_list_to_deck_bottom: { of: you, cards: self }

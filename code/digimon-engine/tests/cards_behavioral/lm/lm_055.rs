@@ -211,7 +211,7 @@ fn lm_055_delay_clause_structure_matches_effect_digivolve_cost_reduce_2() {
     // turn-scheduled auto-fire at the end of the controller's next turn.
     // LM-055 prints "[Main] <Delay>", so it is the standard player-activated
     // Delay: `Delayed` -> DelayTrigger::MainPhaseActivated, where NOT
-    // activating is the §16-16-2 decline.
+    // activating is the §16-17-2 decline.
     assert_eq!(delay.0, CompiledTiming::Delayed);
     assert_eq!(delay.1.len(), 3, "delay process shape drifted");
     let CompiledStep::SelectOwnPermanent {

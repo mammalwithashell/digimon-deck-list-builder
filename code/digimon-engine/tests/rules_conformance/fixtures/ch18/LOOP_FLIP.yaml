@@ -1,0 +1,32 @@
+# LOOP_FLIP -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] Suspend this Digimon.
+#   [All Turns] When this Digimon suspends, unsuspend it.
+#   [All Turns] When this Digimon unsuspends, suspend it.
+# A mandatory infinite loop (§18-3-1) that neither player can stop (§18-3-2):
+# the two [All Turns] effects re-trigger each other with no choice.
+card: LOOP_FLIP
+name: Flickermon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Suspend this Digimon."
+    process:
+      - suspend: { target: source }
+  - when: on_suspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon suspends, unsuspend it."
+    process:
+      - unsuspend: { target: source }
+  - when: on_unsuspend
+    active_when: { all_turns: true }
+    condition:
+      event_permanent_is_source: true
+    summary: "[All Turns] When this Digimon unsuspends, suspend it."
+    process:
+      - suspend: { target: source }

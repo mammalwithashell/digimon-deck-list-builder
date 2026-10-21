@@ -1,4 +1,4 @@
-//! Q7274; general_rule.pdf 15-8-5-4, 16-24-4 and 16-28.
+//! Q7274; general_rule.pdf 15-8-5-4, 16-24-4 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md] and 16-29.
 use digimon_engine::action::{
     mask::build_action_mask,
     space::{PASS, REPLACEMENT_ACCEPT},

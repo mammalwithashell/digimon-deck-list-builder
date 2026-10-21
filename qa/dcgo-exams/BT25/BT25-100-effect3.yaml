@@ -137,17 +137,15 @@ steps:
   - actor: 1
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  # DCGO-ONLY: the <De-Digivolve 2> COUNT. SelectPermanentEffect.cs:1008 builds
-  # `new IDegeneration(target, 2, cardEffect)` with no DegenerationCountRuling,
-  # so Degeneration() opens SelectCountEffect "How many cards do you trash?"
-  # with MaxCount = min(3 digivolution cards, 2) and CanNoSelect false:
-  # candidates {1, 2} -- a REAL choice (general_rule 16-11 "trash up to x",
-  # 16-11-6 "the declared number"). Our engine parks nothing and always takes
-  # the maximum (docs/RUST_ENGINE_GAPS.md G-DEDIGIVOLVE-NO-DECLARATION, a
-  # tracked rule-17 gap), so the row is wire-only and declares the SAME 2 ours
-  # trashes. The selecting player is the effect's owner -- P1.
+  # The <De-Digivolve 2> COUNT. DCGO: SelectPermanentEffect.cs:1008 builds
+  # `new IDegeneration(target, 2, cardEffect)`, so Degeneration() opens
+  # SelectCountEffect "How many cards do you trash?" (MaxCount = min(3, 2),
+  # CanNoSelect false): candidates {1, 2}. RE-LOWERED 2026-10-19: our engine
+  # now asks the same declaration (§16-12-1; G-DEDIGIVOLVE-NO-DECLARATION,
+  # 6e5298de5), so this is a SHARED row (it was dcgo_only). Both declare 2.
+  # The selecting player is the effect's owner -- P1.
   - actor: 1
-    do: { select: { value: 2, dcgo_only: true } }
+    do: { select: { value: 2 } }
     expect: { prompt: SelectCountEffect }
   # [Main] step 2: P1 may link Iron Slash to Kamemon, its only Digimon.
   - actor: 1

@@ -1,0 +1,19 @@
+# BLOCKER_CANNOT_SUSPEND -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   <Blocker> (When an opponent's Digimon attacks, you may suspend this
+#   Digimon to force the opponent to attack it instead.)
+#   [All Turns] This Digimon can't suspend.
+card: BLOCKER_CANNOT_SUSPEND
+name: Rootedmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker> (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead.)"
+  - kind: aura
+    target: {}
+    modifier: CannotSuspend
+    summary: "[All Turns] This Digimon can't suspend."

@@ -267,9 +267,9 @@ fn p_206_clause_1_is_delay_end_of_your_next_turn() {
             // `EndOfYourNextTurn` and call that "standard <Delay>" -- backwards.
             // The printed timing is `[Main]`, and DCGO registers the clause at
             // `EffectTiming.OnDeclaration` (its [Main] activated-declaration
-            // timing), so this is a player-activated §16-16 Delay. `Delayed`
+            // timing), so this is a player-activated §16-17 Delay. `Delayed`
             // lowers to `DelayTrigger::MainPhaseActivated`, a [Main] mask bit;
-            // NOT activating is the §16-16-2 decline. `EndOfYourNextTurn` both
+            // NOT activating is the §16-17-2 decline. `EndOfYourNextTurn` both
             // fired it at the wrong time and gave the player no say.
             assert_eq!(
                 *trigger,

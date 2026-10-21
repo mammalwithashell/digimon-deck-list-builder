@@ -13,7 +13,8 @@
 //! Auto-installed: Barrier, Evade, Decode (Phase 7); Fragment(N), ArmorPurge,
 //! Save, Decoy, Fortitude, Partition, MaterialSave(N) (Phase D);
 //! Retaliation, Scapegoat (Phase E); Execute, MindLink, Training (Phase F);
-//! Engage and Guard (EX12).
+//! Engage and Guard (EX12); Vortex and Overclock (Comprehensive Rules 4.3
+//! §16-33-2 / §16-34-2: trigger-type effects).
 //!
 //! Selection-bearing replacements consume Phase C's parked-replacement
 //! substrate via `ctx.cancel_leave / handle_replacement / substitute_replacement`.
@@ -21,11 +22,13 @@
 //! observer pattern. Scapegoat is an optional `WhenWouldBeDeleted` substitute
 //! replacement. Guard is an optional cross-permanent `WhenWouldLeaveBattleArea`
 //! cancel replacement. MindLink and Training are `[Main]` active skills;
-//! MaterialSave(N) is a deletion-timed source rescue trigger. Execute is an
-//! `EndOfYourTurn` triggered effect granting `MayAttack` +
-//! `CanAttackUnsuspended` for the EOT-attack window with an `EndOfAttack`
-//! self-delete observer; Engage grants only normal `MayAttack` for that same
-//! EOT-attack window.
+//! MaterialSave(N) is a non-cancelling `WhenWouldBeDeleted` immediate effect
+//! (§16-21-2) that rescues sources while the carrier stands. Engage, Execute,
+//! Vortex and Overclock are `EndOfYourTurn` trigger-type effects whose
+//! processing offers the attack (Overclock: its optional deletion, then the
+//! attack) as its own resumable decision inside the end-of-turn pool
+//! (`end_of_turn_keyword_attack_process`); Execute adds an `EndOfAttack`
+//! self-delete observer for the attack it declared.
 //!
 //! The legacy DCGO `KeyWordEffects/*.cs` keyword set has matching Rust enum
 //! variants + consumers (auto-install or resolution-site consumption). Later
@@ -56,7 +59,7 @@
 //! consumed directly in `combat::resolve_battle`, which swaps the DP compare
 //! for a `card_sources.len()` compare when either combatant has the keyword.
 //! Security battles route through a different path (`resolve_player_security_loop`)
-//! and are unaffected, matching the RULES_CONTEXT 16-34 exception.
+//! and are unaffected, matching the RULES_CONTEXT 16-35 exception.
 //!
 //! ## Replacement-condition substrate (Phase F)
 //!
@@ -83,26 +86,31 @@
 //! triggers that observe a state change without modifying it. Currently
 //! installed: Fortitude (`OnDeletion`, mandatory; uses the post-deletion
 //! replay substrate to play self from trash after `delete_permanent`
-//! finalizes) and Partition (`OnDeletion` with cause filter, trigger-based
-//! play of digivolution source cards).
+//! finalizes). Partition and Material Save are NOT here: both are
+//! immediate-type ("would leave" / "would be deleted") effects on the
+//! replacement window — see their sections below.
 //!
 //! ## Material Save
 //!
-//! `MaterialSave(N)` is a deletion-timed optional rescue. It reads the deleted
-//! permanent's source snapshot, filters those handles through the carrier's
-//! printed DigiXros recipe when one is authored, then parks an own-Tamer pick
-//! followed by an up-to-N source pick from the moved cards in trash.
+//! `MaterialSave(N)` is an immediate-type effect (general_rule.pdf Ver. 4.3
+//! §16-21-2): a non-cancelling `WhenWouldBeDeleted` replacement offered while
+//! the carrier still stands. Its optional decision is an own-Tamer pick
+//! (§16-21-3); once taken, exactly `min(N, eligible)` cards are picked from
+//! the carrier's LIVE digivolution cards (those the top card's DigiXros
+//! requirements specify, §16-21-1/-5) and placed at the bottom of that Tamer
+//! in the picked order (§16-21-4/-6) before the deletion proceeds. Nothing
+//! passes through the trash and no deletion snapshot is read.
 //!
 //! ## Partition (Phase D Task 9)
 //!
-//! Printed `<Partition>` is a leave-field trigger (not a replacement) that
-//! plays cards from the deleted permanent's digivolution sources back to
-//! the field, free + unsuspended. The auto-install mounts as an
-//! `OnDeletion` trigger with a cause filter (`!Battle && !OwnEffect`) and
-//! a 2-pick selection over the carrier's `card_sources`. Picked cards are
-//! stashed in `Game.pending_post_deletion_replays` so they replay from
-//! trash (via `play_from_trash_free_unsuspended`) AFTER `delete_permanent`
-//! finalizes the carrier but BEFORE the `OnAnyDeletion` broadcast.
+//! Printed `<Partition>` plays cards from the leaving Digimon's digivolution
+//! cards, free + unsuspended. It is an immediate-type effect (§16-29: "when
+//! a Digimon with this effect ... WOULD be removed from the battle area"):
+//! the auto-install is an optional, NON-cancelling `WhenWouldLeaveBattleArea`
+//! replacement with a cause filter (`!Battle && !OwnEffect`) that picks from
+//! the carrier's LIVE stack while it still stands and plays the picks before
+//! the leave proceeds (judge-quiz Q30 re-timing; the earlier post-trash
+//! `OnDeletion` + `pending_post_deletion_replays` model is retired).
 //!
 //! Color grouping (`firstSources`/`secondSources` in DCGO) is per-card and
 //! comes from injected `partitionConditions`. Since
@@ -116,7 +124,6 @@ use crate::card_source::CardHandle;
 use crate::effect::Effect;
 use crate::effect_context::{CountCappedZone, EffectContext, EffectReadContext};
 use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
-use crate::modifiers::ModifierEntry;
 use crate::replacement::{ReplacementCause, ReplacementSubject};
 use crate::resume::{
     KeywordAscensionChoiceState, KeywordMaterialSaveTamerSelectionState,
@@ -224,9 +231,117 @@ fn park_keyword_count_capped_frame(
     }
 }
 
+// ── <Material Save> helpers ─────────────────────────────────────────────────
+//
+// general_rule.pdf Ver. 4.3 §16-21: an immediate-type effect (§16-21-2) that,
+// once the optional Tamer pick is taken, places exactly `min(N, eligible)`
+// digivolution cards under that Tamer (§16-21-3), the cards being those
+// specified in the top card's DigiXros requirements (§16-21-1, §16-21-5).
+
+/// The `<Material Save>` carrier's eligible digivolution cards, read off its
+/// LIVE stack (top card excluded): those the top card's DigiXros
+/// requirements specify (§16-21-1, §16-21-5). A top card with no authored
+/// recipe accepts every digivolution card (`card_matches_digixros_recipe`).
+pub(crate) fn material_save_eligible_sources(
+    game: &crate::game::Game,
+    carrier: crate::permanent::PermanentHandle,
+) -> Vec<CardHandle> {
+    let Some(p) = game
+        .player(carrier.player)
+        .battle_area
+        .get(carrier.index as usize)
+    else {
+        return Vec::new();
+    };
+    let top = p.top_card().handle();
+    p.card_sources[..p.card_sources.len().saturating_sub(1)]
+        .iter()
+        .map(|c| c.handle())
+        .filter(|source| game.card_matches_digixros_recipe(top, *source))
+        .collect()
+}
+
+/// Whether `h` is one of `owner`'s Tamers that can receive the cards: a
+/// non-token Tamer in the battle area (§4-21-3 "Cards can't be stacked with
+/// tokens"; DCGO `MaterialSaveEffect` `CanSelectPermanentCondition`:
+/// `permanent.IsTamer && !permanent.IsToken`).
+fn material_save_tamer_ok(
+    game: &crate::game::Game,
+    owner: crate::enums::PlayerId,
+    h: crate::permanent::PermanentHandle,
+) -> bool {
+    h.player == owner
+        && game
+            .player(h.player)
+            .battle_area
+            .get(h.index as usize)
+            .is_some_and(|p| p.is_tamer(&game.card_data))
+        && !game.is_token_source_destination(h)
+}
+
+/// Whether `player` has a Tamer that can receive the cards.
+fn material_save_has_tamer(game: &crate::game::Game, player: crate::enums::PlayerId) -> bool {
+    (0..game.player(player).battle_area.len()).any(|index| {
+        material_save_tamer_ok(
+            game,
+            player,
+            crate::permanent::PermanentHandle {
+                player,
+                index: index as u8,
+            },
+        )
+    })
+}
+
+/// After the Tamer pick: the mandatory, exact card pick (§16-21-3 "the number
+/// of cards specified by this effect must be placed under your Tamer whenever
+/// possible") — `min = max = min(n, eligible)` from the carrier's live stack,
+/// placed at the bottom of `tamer` in the order picked (§16-21-4, §16-21-6).
+/// Driven by a `NonDslCountCappedStep` frame (clone-safe).
+pub(crate) fn start_material_save_card_pick(
+    ctx: &mut EffectContext<'_>,
+    prov: ResumeProvenance,
+    owner: crate::enums::PlayerId,
+    carrier: crate::permanent::PermanentHandle,
+    tamer: crate::permanent::PermanentHandle,
+    n: u8,
+) {
+    let eligible = material_save_eligible_sources(ctx.game, carrier);
+    let count = (n as usize).min(eligible.len()) as u8;
+    if count == 0 {
+        return;
+    }
+    let zone = CountCappedZone::Material(carrier);
+    ctx.select_count_capped_multi_min(
+        owner,
+        zone,
+        count,
+        count,
+        "select Material Save sources to place under Tamer",
+        /*is_optional_zero=*/ false,
+        /*distinct_by=*/ None,
+        move |_g, src| eligible.contains(&src.handle()),
+        move |ctx, picks| {
+            for source in picks {
+                ctx.place_card_under_permanent_bottom(source, tamer, false);
+            }
+        },
+    );
+    park_keyword_count_capped_frame(
+        ctx,
+        prov,
+        owner,
+        zone,
+        count,
+        count,
+        false,
+        NonDslCountCappedTerminal::KeywordMaterialSave { tamer },
+    );
+}
+
 // ── <Partition> per-slot source enforcement ─────────────────────────────────
 //
-// general_rule.pdf §16-28:
+// general_rule.pdf §16-29:
 //   -1  "When a Digimon with this effect AND 1 OF EACH of the specified cards
 //        in its digivolution cards would be removed from the battle area
 //        other than by one of your effects or a battle, you may play 1 of
@@ -320,10 +435,10 @@ fn partition_source_matches(
 /// Is there an assignment of one DISTINCT stack source to EVERY slot that
 /// uses every card in `picked`?
 ///
-/// §16-28-6 is all-or-nothing, so a pick that strands a slot is not a legal
+/// §16-29-4 is all-or-nothing, so a pick that strands a slot is not a legal
 /// partial answer — it is masked out — and a stack that cannot fill every
-/// slot does not trigger at all (§16-28-1). Slot ORDER is deliberately not
-/// imposed on the picks: §16-28-6 plays the specified cards as one
+/// slot does not trigger at all (§16-29-1). Slot ORDER is deliberately not
+/// imposed on the picks: §16-29-4 plays the specified cards as one
 /// simultaneous action (judge-quiz Q30 — "played out simultaneously", which
 /// our sequential play linearizes in the controller's chosen order), so the
 /// constraint is a perfect matching, not a fixed sequence. This is the same
@@ -393,7 +508,7 @@ fn partition_pick_candidates(
 }
 
 /// Whether the carrier's live stack satisfies the printed `<Partition>` gate
-/// (§16-28-1: "a Digimon with this effect AND 1 of each of the specified
+/// (§16-29-1: "a Digimon with this effect AND 1 of each of the specified
 /// cards in its digivolution cards"). DCGO refuses to activate when any
 /// `PartitionCondition`'s filtered list is empty (`Partition.cs:145-159`).
 fn partition_gate_satisfied(
@@ -413,7 +528,7 @@ fn partition_gate_satisfied(
 /// Take the next `<Partition>` pick and chain: a single remaining candidate is
 /// taken silently (DCGO `Partition.cs:89,117` — a slot with one candidate is
 /// never prompted, because there is no choice to expose), more than one parks
-/// a MANDATORY 1-pick (no PASS: §16-28-6 forbids playing only some of the
+/// a MANDATORY 1-pick (no PASS: §16-29-4 forbids playing only some of the
 /// specified cards), and once one card is held for every slot they are played.
 pub(crate) fn drive_partition_picks(
     game: &mut crate::game::Game,
@@ -438,7 +553,7 @@ pub(crate) fn drive_partition_picks(
         let candidates = partition_pick_candidates(game, prov, subject, &slots, &picked);
         match candidates.len() {
             // The gate is re-checked at process time, so an empty candidate
-            // set here means the stack changed under us mid-chain: §16-28-6
+            // set here means the stack changed under us mid-chain: §16-29-4
             // forbids a partial <Partition>, so nothing is played and the
             // carrier's departure proceeds with whatever is left.
             0 => return,
@@ -514,7 +629,7 @@ fn install_partition_pick_selection(
 /// judge's "played out simultaneously" observable, judge-quiz Q30). Later
 /// plays are chained through `queue_partition_second_play` so each starts only
 /// after the previous play's interrupt chain settles. No `cancel_leave()`:
-/// <Partition> is interruptive, not preventive (§16-28-2).
+/// <Partition> is interruptive, not preventive (§16-29-2).
 pub(crate) fn partition_extract_and_play(
     ctx: &mut EffectContext<'_>,
     subject: crate::permanent::PermanentHandle,
@@ -541,7 +656,7 @@ pub(crate) fn partition_extract_and_play(
             permanent.card_sources.remove(pos)
         };
         let owner = removed.owner;
-        ctx.game.player_mut(owner).trash.push(removed);
+        ctx.game.player_mut(owner).put_in_trash(removed);
         extracted.push(*handle);
     }
     // Sources left the stack without the trash observer (partition trashes are
@@ -559,6 +674,202 @@ pub(crate) fn partition_extract_and_play(
                 .queue_partition_second_play(player, source_card, later);
         }
     }
+}
+
+/// Attack-declaration trigger keywords (`<Alliance>`, `<Raid>`) whose
+/// modifier-registry grants are dispatched from the registry itself when the
+/// attack triggers (`Game::enqueue_from_permanent`'s granted-keyword scan),
+/// rather than through the granted-triggered body store
+/// (`EffectContext::grant_keyword_triggered_auto_effects`). Every registry
+/// grant then fires exactly once, keeps the keyword body's activation
+/// `condition` (the body store drops it), and reaches the trigger pool the
+/// same way whether it came from a runtime grant or a direct registry entry —
+/// the reach the former `AllianceOpen` / `RaidOpen` windows had through
+/// `Game::has_keyword`.
+pub(crate) fn keyword_trigger_dispatched_from_registry(keyword: Keyword) -> bool {
+    // `<Piercing>` (§16-7-2) too: its trigger condition (this Digimon won the
+    // battle and deleted its opponent while attacking) lives in the body's
+    // `condition`, which the granted-triggered store would drop. So do the
+    // end-of-turn attack keywords (§16-44-2, §16-38-2, §16-33-2, §16-34-2):
+    // their activation condition (a legal declaration / candidate) keeps a
+    // carrier that cannot attack out of the end-of-turn pool, and a raw
+    // registry grant reaches the pool the way it reached the former
+    // `EndOfTurnAction` offers (through `Game::has_keyword`).
+    matches!(
+        keyword,
+        Keyword::Alliance
+            | Keyword::Raid
+            | Keyword::Piercing
+            | Keyword::Engage
+            | Keyword::Execute
+            | Keyword::Vortex
+            | Keyword::Overclock
+    )
+}
+
+/// `<Blitz>`'s processing (§16-16), executed when the effect that contains it
+/// activates: a printed "[When Digivolving] <Blitz>" (the `Keyword::Blitz`
+/// auto-effect below) or, in place, an effect that grants it (the DSL idiom
+/// `grant_keyword: { keyword: Blitz }`, EX3-063's "Then, <Blitz>"):
+///
+/// - §16-16-3 / §16-16-5: the processing condition is 1 or more memory on
+///   the opponent's side, read NOW, at activation (after any effect resolved
+///   earlier in the same pool moved it). At 0 or more on the carrier's
+///   controller's side, no attack can be made with it.
+/// - §16-16-3: "This Digimon may attack" is optional processing: one
+///   decision offering the carrier's legal attack declarations (the same
+///   target legality as every effect-offered attack, §11-2-7-1, without the
+///   Main-phase memory gate) and the decline
+///   (`Game::install_attack_declaration_decision`,
+///   `ResumeFrame::AttackDeclarationDecision`). While it is parked the turn cannot
+///   end (a selection is pending) and nothing else is legal.
+/// - §16-16-4: once declared, the attack proceeds through the normal
+///   procedure even if the memory returns to 0 or more.
+///
+/// Like DCGO `CardEffectCommons.CanActivateBlitz`, nothing is offered while
+/// an attack is already in progress, when the carrier is not its
+/// controller's turn-player Digimon on the battle area, or when it cannot
+/// attack (no legal declaration).
+pub(crate) fn blitz_process(
+    ctx: &mut EffectContext<'_>,
+    carrier: crate::permanent::PermanentHandle,
+) {
+    let game = &*ctx.game;
+    // §11-2-4: no new attack declaration with <Blitz> during an attack. The
+    // parked-selection check is defensive: the DSL step runner parks later
+    // steps behind any pending prompt, so it should be unreachable.
+    if game.pending_attack.is_some() || game.pending_selection.is_some() {
+        return;
+    }
+    if carrier.player != game.turn_player() {
+        return;
+    }
+    let Some(source_card) = game
+        .player(carrier.player)
+        .battle_area
+        .get(carrier.index as usize)
+        .map(|p| p.top_card().handle())
+    else {
+        return;
+    };
+    // `game.memory` is kept from the turn player's side; the carrier's
+    // controller is the turn player (above).
+    if game.memory >= 0 {
+        return;
+    }
+    let declarations = crate::action::mask::effect_attack_target_action_ids(
+        game,
+        carrier,
+        crate::effect_context::AttackTargetRestriction::Any,
+        false,
+    );
+    let mut state =
+        crate::resume::AttackDeclarationDecisionState::blitz(carrier, source_card, declarations);
+    state.source_kind = ctx.source_kind;
+    ctx.game
+        .install_attack_declaration_decision(state, "<Blitz> - this Digimon may attack");
+}
+
+/// Whether an end-of-turn attack keyword's trigger can activate for its
+/// carrier (`rctx.source_permanent`): the activation condition of the
+/// `[End of Your Turn]` body (DCGO `CanActivateEngage` / `CanActivateExecute`
+/// / `CanActivateVortex` / `CanActivateOverclock`). `<Engage>`, `<Execute>`
+/// and `<Vortex>` need a legal attack declaration; `<Overclock>` a legal
+/// candidate for its processing condition (§16-34-3). An attack already in
+/// progress does not stop the trigger: its offer waits for that attack to end
+/// (`end_of_turn_keyword_attack_process`).
+pub(crate) fn end_of_turn_keyword_can_activate(
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    keyword: Keyword,
+) -> bool {
+    let Some(carrier) = rctx.source_permanent else {
+        return false;
+    };
+    let game = rctx.game;
+    if carrier.player != game.turn_player() {
+        return false;
+    }
+    match keyword {
+        Keyword::Overclock => game.has_overclock_sacrifice(carrier.player, carrier.index as usize),
+        Keyword::Engage | Keyword::Execute | Keyword::Vortex => {
+            !crate::action::mask::end_of_turn_keyword_attack_action_ids(game, carrier, keyword)
+                .is_empty()
+        }
+        _ => false,
+    }
+}
+
+/// The processing of an end-of-turn attack keyword's `[End of Your Turn]`
+/// trigger (`<Engage>` §16-44-2, `<Execute>` §16-38-2, `<Vortex>` §16-33-2,
+/// `<Overclock>` §16-34-2), run when its entry of the end-of-turn pool
+/// activates (the turn player orders the simultaneous entries, §15-4-3-5-1).
+/// It offers the keyword's attack as its own resumable decision
+/// (`Game::offer_end_of_turn_keyword_attack`): the declaration (or, for
+/// `<Overclock>`, the condition's deletion and then the attack) is made right
+/// here, and the pool's remaining entries then resolve before the attack's
+/// counter timing (§11-1-4: "the counter timing won't begin until any
+/// triggered [When Attacking] effects and other triggered effects have been
+/// resolved"; Q3869). Declining declares nothing.
+///
+/// Only one attack is in progress at a time (§11-2-4). When this activates
+/// while an attack declared earlier in the same pool is waiting for its
+/// counter timing, or while a paid `<Overclock>` attack is queued behind its
+/// cost's parked deletion (`Game::parked_overclock_attacks`, declared first:
+/// it activated first), the offer is queued
+/// (`Game::deferred_end_of_turn_attack_offers`) and made once that attack has
+/// ended (`Game::resume_pending_end_turn`); attacks are never nested.
+pub(crate) fn end_of_turn_keyword_attack_process(ctx: &mut EffectContext<'_>, keyword: Keyword) {
+    let Some(carrier) = ctx.source_permanent else {
+        return;
+    };
+    if carrier.player != ctx.game.turn_player() {
+        return;
+    }
+    let source_card = ctx.source_card;
+    let source_kind = ctx.source_kind;
+    // The drainer activates a pool entry only while nothing is parked, so a
+    // pending selection here is an engine bug: assert it in tests. In a
+    // release build the offer is still not dropped -- it is queued exactly
+    // like one behind an attack in progress and made once the end of turn
+    // resumes (`Game::resume_pending_end_turn`), so the decision is never lost.
+    debug_assert!(
+        ctx.game.pending_selection.is_none(),
+        "an end-of-turn keyword entry activated while a selection was parked"
+    );
+    if ctx.game.pending_attack.is_some()
+        || ctx.game.pending_selection.is_some()
+        || !ctx.game.parked_overclock_attacks.is_empty()
+    {
+        if ctx
+            .game
+            .players
+            .get(carrier.player as usize)
+            .and_then(|p| p.battle_area.get(carrier.index as usize))
+            .is_none()
+        {
+            return;
+        }
+        let carrier_identity = ctx.game.capture_digivolve_host_identity(carrier);
+        ctx.game
+            .deferred_end_of_turn_attack_offers
+            .push(crate::game::DeferredEndOfTurnAttackOffer {
+                player: carrier.player,
+                carrier_identity,
+                keyword,
+                source_card,
+                source_kind,
+            });
+        return;
+    }
+    ctx.game
+        .offer_end_of_turn_keyword_attack(carrier, keyword, source_card, source_kind);
+}
+
+/// Whether the attack in progress is the one `<Execute>` declared for `me`
+/// (§16-38-1 "At the end of the attack, this Digimon is deleted").
+fn execute_attack_is(game: &crate::game::Game, me: crate::permanent::PermanentHandle) -> bool {
+    game.end_of_turn_attack_keyword == Some(Keyword::Execute)
+        && game.pending_attack.as_ref().is_some_and(|pa| pa.attacker == me)
 }
 
 /// Map a printed keyword to zero-or-more synthesized `Effect`s that install
@@ -642,7 +953,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     let owner = subject.player;
                     if rctx.effect.trash_top_security(owner) {
                         // Barrier prevents this deletion; the interrupted cause
-                        // remains pending for other immediate effects (16-24-4).
+                        // remains pending for other immediate effects (16-24-4 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md]).
                         rctx.cancel();
                     }
                 }
@@ -743,7 +1054,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // When the gate fails, the auto-install body returns early without
         // parking and the original deletion proceeds.
         //
-        // Optional ("by [Effect]") per RULES_CONTEXT 16-36 ("Processing:
+        // Optional ("by [Effect]") per RULES_CONTEXT 16-37 ("Processing:
         // Optional (choosing and trashing digi cards); if executed, prevention
         // is mandatory") and DCGO `Fragment.cs:37`
         // `SetUpActivateClass(..., isOptional=true, ...)`. The outer accept
@@ -833,8 +1144,11 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     /*distinct_by=*/ None,
                     move |game, src| !game.source_card_trash_blocked(subject, src.handle(), controller),
                     move |ctx, picks| {
+                        // One event for the N cards (§15-5-2).
+                        let event = ctx.game.begin_source_move_event();
                         let paid = picks.into_iter().filter(|handle| ctx.trash_card_source(subject, *handle)).count();
                         if paid == n as usize { ctx.cancel_leave(); }
+                        ctx.game.end_source_move_event(event);
                     },
                 );
                 park_keyword_count_capped_frame(
@@ -853,11 +1167,11 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // `<Decode (...)>` — NO auto-effect (task_69f10a66 Family 2).
         //
         // The retired legacy pair here ("would be returned to deck/hand →
-        // return to hand instead") was NOT rule 16-35 Decode at all. Per
-        // §16-35-1 Decode triggers when "the Digimon WITH THIS EFFECT would
+        // return to hand instead") was NOT rule 16-36 Decode at all. Per
+        // §16-36-1 Decode triggers when "the Digimon WITH THIS EFFECT would
         // leave the battle area other than by a battle" and plays a Digimon
         // card matching the keyword's PER-CARD parameter from THAT Digimon's
-        // digivolution cards (§16-35-2: immediate-type, on its own leave).
+        // digivolution cards (§16-36-2: immediate-type, on its own leave).
         // Two structural reasons a keyword-generic auto-effect cannot exist:
         //   1. The parameter (`<Decode (Lv.4 or lower Aqua/Sea Animal/TB)>`)
         //      differs per card — the play filter is unknowable here.
@@ -881,7 +1195,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // deleted, by trashing the top card of this Digimon, it isn't
         // deleted." DCGO `ArmorPurge.cs:40-78`.
         //
-        // Optional ("by [cost]") per RULES_CONTEXT 16-18 ("Processing:
+        // Optional ("by [cost]") per RULES_CONTEXT 16-19 ("Processing:
         // Optional ('by trashing the top card of the Digimon')"). The outer
         // accept dialog represents the printed "by trashing" optional cost —
         // declining proceeds with the original deletion. Once accepted, the
@@ -895,9 +1209,10 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // re-check is belt-and-suspenders for an earlier same-chain replacement
         // shrinking the stack between collection and process.)
         //
-        // The event-fire (OnDigivolutionCardTrashed) for the trashed top is
-        // handled by `EffectContext::armor_purge_top` itself; see Phase D
-        // Task 5 commit log.
+        // The event-fire for the trashed top is handled by
+        // `EffectContext::armor_purge_top` itself: `OnTopCardTrashed`, never
+        // `OnDigivolutionCardTrashed` (§4-8-1: the top card is not a
+        // digivolution card; DCGO `ArmorPurge.cs` stacks `WhenTopCardTrashed`).
         Keyword::ArmorPurge => vec![Effect::when_would_be_deleted(card)
             .name("<Armor Purge>")
             .optional()
@@ -951,8 +1266,8 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                     return;
                 }
 
-                // Trash the top card and promote the next source — and fire
-                // OnDigivolutionCardTrashed (handled inside the primitive).
+                // Trash the top card and promote the next source — and enqueue
+                // OnTopCardTrashed (handled inside the primitive, §4-8-1).
                 rctx.effect.armor_purge_top(subject);
                 // Cancel the original deletion synchronously. Honored by
                 // `delete_permanent_with_cause` (`Cancelled` arm — skip the
@@ -1117,7 +1432,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // otherwise a deletion Decoy cannot protect parked a phantom accept
         // prompt (G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED class).
         //   4. Cause gate: the deletion must be caused by an OPPONENT's
-        //      effect (rules 16-17, keyword-semantics.md; DCGO
+        //      effect (rules 16-18, keyword-semantics.md; DCGO
         //      `Decoy.cs:55-61` `IsByEffect(... EffectSourceCard.Owner ==
         //      card.Owner.Enemy)`). The cause is subject-relative and the
         //      subject is always the Decoy controller's, so
@@ -1281,7 +1596,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         //
         // ## Mandatory semantics
         //
-        // DCGO Fortitude has no "may" clause (RULES_CONTEXT 16-26). The
+        // DCGO Fortitude has no "may" clause (RULES_CONTEXT 16-27). The
         // trigger fires unconditionally when the gate passes; this matches
         // a non-`.optional()` `OnDeletion` process (no PASS dialog).
         //
@@ -1467,7 +1782,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 {
                     return false;
                 }
-                // Slot gate (§16-28-1): the stack must hold 1 of EACH
+                // Slot gate (§16-29-1): the stack must hold 1 of EACH
                 // specified card. DCGO refuses to activate when any
                 // `PartitionCondition`'s filtered list is empty
                 // (`CardEffectFactory/.../Partition.cs:145-159`). A card that
@@ -1514,7 +1829,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 let controller = subject.player;
                 let prov = resume_provenance(&rctx.effect);
 
-                // Slot-enforced path (§16-28-5/-6): one pick per printed
+                // Slot-enforced path (§16-3 / §16-29-4): one pick per printed
                 // parenthetical, all-or-nothing, a lone candidate taken
                 // without a prompt. Only a card that publishes no slot specs
                 // falls through to the historical slot-blind pick below.
@@ -1555,79 +1870,79 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             })
             .build()],
 
-        // Xros Heart change 4.x — printed MaterialSave(N) is no longer a
-        // `[Main]` activation. It is an optional deletion-timed source rescue
-        // that uses the pre-removal snapshot because the carrier has already
-        // moved to trash by the time OnDeletion handlers drain.
-        Keyword::MaterialSave(n) => vec![Effect::on_deletion(card)
+        // `<Material Save N>` — an IMMEDIATE-type effect (general_rule.pdf
+        // Ver. 4.3 §16-21-2: "triggers when the Digimon with this effect
+        // WOULD be deleted"; §15-8-5-2: it interrupts right before the
+        // deletion). So it rides the `WhenWouldBeDeleted` replacement window,
+        // NON-cancelling (no `cancel_leave`): it is offered while the carrier
+        // still stands, picks from the carrier's LIVE digivolution cards, and
+        // moves them under the Tamer before the deletion proceeds with the
+        // rest of the stack. The placed cards never pass through the trash.
+        // It sits among the other "would be deleted" immediate effects (the
+        // window's order prompt); if another one then prevents the deletion,
+        // the cards already placed stay placed (§15-8-5-2 processes immediate
+        // effects in the chosen order; nothing is undone).
+        //
+        // Not `.optional()`: §16-21-3's optional decision IS the Tamer pick
+        // (declinable, prompted even with one Tamer). Once a Tamer is chosen
+        // the card pick is mandatory and exact — `min = max = min(N,
+        // eligible)` ("the number of cards specified ... must be placed under
+        // your Tamer whenever possible"; DCGO `MaterialSaveProcess`
+        // `canEndNotMax: false`, `maxCount = Math.Min(materialSaveCount,
+        // matching)`). Eligible = the digivolution cards specified in the top
+        // card's DigiXros requirements (§16-21-1, §16-21-5;
+        // `material_save_eligible_sources`). DCGO `BT11_018.cs` registers
+        // `MaterialSaveEffect` at `WhenPermanentWouldBeDeleted`.
+        Keyword::MaterialSave(n) => vec![Effect::when_would_be_deleted(card)
             .name(&format!("<Material Save {n}>"))
-            .process(move |ctx| {
-                let Some(snapshot) = ctx.deleted_object_snapshot().cloned() else {
+            .replacement_condition(|ctx, subject| {
+                // Self-scope: only the carrier's own deletion.
+                let ReplacementSubject::Permanent(subject) = subject else {
+                    return false;
+                };
+                if ctx.source_permanent != Some(*subject) {
+                    return false;
+                }
+                // DCGO `CanActivateMaterialSave`: >=1 eligible digivolution
+                // card and >=1 own Tamer.
+                !material_save_eligible_sources(ctx.game, *subject).is_empty()
+                    && material_save_has_tamer(ctx.game, subject.player)
+            })
+            .replacement_process(move |rctx| {
+                let me_perm = rctx.effect.source_permanent;
+                let ReplacementSubject::Permanent(carrier) = rctx.subject else {
                     return;
                 };
-                let owner = snapshot.former_controller;
-                let carrier = snapshot.top_card;
-                let eligible_sources = snapshot
-                    .digisources_just_before
-                    .iter()
-                    .copied()
-                    .filter(|source| ctx.game.card_matches_digixros_recipe(carrier, *source))
-                    .collect::<Vec<_>>();
-                if eligible_sources.is_empty() {
+                if Some(carrier) != me_perm {
                     return;
                 }
-                if !ctx
-                    .game
-                    .player(owner)
-                    .battle_area
-                    .iter()
-                    .any(|permanent| permanent.is_tamer(&ctx.game.card_data))
+                // Re-check at process time: an earlier immediate effect in
+                // the same window may have changed the stack or the Tamers.
+                if material_save_eligible_sources(rctx.effect.game, carrier).is_empty()
+                    || !material_save_has_tamer(rctx.effect.game, carrier.player)
                 {
                     return;
                 }
-                let prov = resume_provenance(ctx);
-                let eligible_sources_for_frame = eligible_sources.clone();
-
-                ctx.select_own_permanent(
+                let owner = carrier.player;
+                let prov = resume_provenance(&rctx.effect);
+                // The closure is the legacy fallback; the resume frame below
+                // drives the pick (clone-safe, CLAUDE.md rule 28).
+                rctx.effect.select_own_permanent(
                     "you may place Material Save sources under one of your Tamers",
                     /*is_optional=*/ true,
-                    move |g, h| {
-                        if h.player != owner {
-                            return false;
-                        }
-                        let p = match g.players[h.player as usize]
-                            .battle_area
-                            .get(h.index as usize)
-                        {
-                            Some(p) => p,
-                            None => return false,
-                        };
-                        p.is_tamer(&g.card_data)
-                    },
+                    move |g, h| material_save_tamer_ok(g, owner, h),
                     move |ctx, tamer| {
-                        let eligible_sources = eligible_sources;
-                        ctx.select_snapshot_digisources_from_trash(
-                            owner,
-                            eligible_sources.clone(),
-                            n,
-                            "select Material Save sources to place under Tamer",
-                            /*is_optional_zero=*/ true,
-                            move |_g, source| eligible_sources.contains(&source),
-                            move |ctx, picks| {
-                                for source in picks {
-                                    ctx.place_card_under_permanent_bottom(source, tamer, false);
-                                }
-                            },
-                        );
+                        let prov = resume_provenance(ctx);
+                        start_material_save_card_pick(ctx, prov, owner, carrier, tamer, n);
                     },
                 );
                 park_keyword_frame(
-                    ctx,
+                    &mut rctx.effect,
                     ResumeFrame::KeywordMaterialSaveTamerSelection(
                         KeywordMaterialSaveTamerSelectionState {
                             prov,
                             owner,
-                            eligible_sources: eligible_sources_for_frame,
+                            carrier,
                             max: n,
                             outer_conts: Vec::new(),
                         },
@@ -1642,7 +1957,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         //
         // ## Cause filter
         //
-        //   - `deletion_cause() == Some(Battle)` only — RULES_CONTEXT 16-12
+        //   - `deletion_cause() == Some(Battle)` only — RULES_CONTEXT 16-13
         //     specifies battle deletion. Effect, SecurityCheck, and Cost
         //     causes do NOT trigger Retaliation.
         //
@@ -1657,7 +1972,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         //
         // ## Mandatory semantics
         //
-        // No "may" clause (RULES_CONTEXT 16-12). The trigger fires
+        // No "may" clause (RULES_CONTEXT 16-13). The trigger fires
         // unconditionally when the Battle cause gate passes; no
         // `.optional()` call on the builder.
         //
@@ -1668,7 +1983,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // Retaliation on this carrier). The `source_permanent` guard in
         // the body is belt-and-suspenders.
         //
-        // ## Mutual destruction (RULES_CONTEXT 16-12-4 multi-instance hint)
+        // ## Mutual destruction (RULES_CONTEXT 16-12-4 [3.6 numbering; deleted in 4.3 — see changelog-3.6-to-4.3.md] multi-instance hint)
         //
         // When both combatants have Retaliation and tie in DP, both die in
         // battle (`combat::resolve_battle::MutualDestruction` path). The
@@ -1697,7 +2012,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // `ctx.player` (the loser's controller) is the correct acting player.
         Keyword::Retaliation => vec![Effect::on_deletion(card)
             .name("<Retaliation>")
-            // Cause gate: Battle only (16-12), evaluated as the CONDITION so
+            // Cause gate: Battle only (16-13), evaluated as the CONDITION so
             // the trigger scan never queues it on a non-battle deletion.
             //
             // This used to live in `process` below, which runs only after the
@@ -1800,217 +2115,100 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             })
             .build()],
 
-        // Phase F Task 3 — printed Execute: "At end of your turn, this
-        // Digimon may attack — including unsuspended Digimon — and when
-        // the attack ends it is deleted." DCGO `Execute.cs:18-87`.
-        // RULES_CONTEXT 16-37 (Trigger-type, Optional).
+        // §16-38 <Execute>: "At the end of your turn, the Digimon with this
+        // keyword effect may attack. At the end of the attack, this Digimon is
+        // deleted. This effect also allows for attacking an opponent's
+        // unsuspended Digimon." DCGO `Execute.cs` / `ExecuteProcess`.
         //
-        // ## Two-effect install
-        //
-        // 1. `EndOfYourTurn` triggered effect (NOT `.optional()` — see
-        //    "Where the 'may' lives" below). Body unconditionally
-        //    grants `MayAttack` + `CanAttackUnsuspended` modifiers on
-        //    self with `Expiry::EndOfTurn`. The end-of-turn-attack flow
-        //    in `game_phases::end_turn` reads `has_end_of_turn_keywords`,
-        //    sees the `MayAttack` modifier, and parks the phase in
-        //    `EndOfTurnAction` so the player can spend the granted
-        //    attack via the §4.6 attack mask. The
-        //    `CanAttackUnsuspended` half widens that mask to also offer
-        //    unsuspended-target attack bits — equivalent to DCGO's
-        //    `CanAttackTargetDefendingPermanentClass` with
-        //    `defenderCondition: !defender.IsSuspended`.
-        //
-        // 2. `EndOfAttack` observer. Self-deletes the carrier with
-        //    `ReplacementCause::OwnEffect` when the attack ends — gated
-        //    on `pa.attacker == me` so it only fires for attacks the
-        //    Execute carrier itself initiated, not for other attacks
-        //    that resolve while it's on field. Cause = OwnEffect
-        //    matches the keyword being the carrier's own triggered
-        //    effect (cf. Retaliation's same cause-labeling rationale).
-        //
-        // ## Optionality (RULES_CONTEXT 16-37: Optional)
-        //
-        // The printed "may" surfaces at the EOT-action phase PASS
-        // exit, not at the EndOfYourTurn trigger — see "Where the
-        // 'may' lives" below for the design rationale. PASS at
-        // EOT-action skips the granted attack; the `EndOfAttack`
-        // observer is gated on `pa.attacker == me`, which never holds
-        // when no attack initiates, so a declined Execute leaves the
-        // carrier on field and the `Expiry::EndOfTurn` modifiers expire
-        // cleanly on rotation. DCGO arrives at the same observable
-        // outcome via `UntilEndAttackEffects` only firing when
-        // `SelectAttackEffect` actually runs.
-        //
-        // ## Self-scope
-        //
-        // The `EndOfYourTurn` enqueue path in
-        // `enqueue_from_permanent` keys on the carrier's permanent
-        // handle, so the trigger fires per-carrier (a sibling
-        // permanent's EndOfYourTurn does not trigger this Execute).
-        // The `EndOfAttack` observer additionally checks
-        // `pa.attacker == me` so it only fires for the carrier's own
-        // attack, not for any other end-of-attack on the same field.
+        // 1. §16-38-2: a trigger-type effect at the end of your turn. Its
+        //    processing (optional, §16-38-3) is one attack declaration decision
+        //    over the carrier's legal declarations, the player and every
+        //    opponent's Digimon, suspended or not (§16-38-1), plus the decline
+        //    (`end_of_turn_keyword_attack_process`). The attack is declared
+        //    inside the `[End of Your Turn]` pool: the pool's other entries
+        //    resolve before its counter timing (§11-1-4; Q3868 / Q3869).
+        // 2. §16-38-4: the deletion at the end of THAT attack is pending
+        //    processing: an `EndOfAttack` observer that pools with the other
+        //    End of Attack effects (§18-1-2), gated on the attack being the one
+        //    <Execute> declared (`Game::end_of_turn_attack_keyword`, recorded at
+        //    the declaration). A Main-phase attack by a Digimon that merely HAS
+        //    <Execute> is never deleted (exam witness EX12-036-effect3).
         Keyword::Execute => vec![
-            // (1) EndOfYourTurn — grant attack modifiers unconditionally.
-            //
-            // ## Where the "may" lives
-            //
-            // RULES_CONTEXT 16-37 / DCGO `Execute.cs` describe an
-            // optional trigger: the player may decline the entire
-            // sequence at the OnEndYourTurn dialog, and on decline no
-            // modifiers / attack / self-delete happen.
-            //
-            // The Rust engine's effect-queue drainer auto-fires single
-            // optional triggers without a dedicated may-dialog (see
-            // `effect_queue::drain_effect_queue`, single-trigger fast
-            // path). And nesting an inner `select_own_permanent` as a
-            // makeshift may-prompt doesn't help: when the inner select
-            // parks, control returns to `Game::end_turn` BEFORE the
-            // modifiers land, so `has_end_of_turn_keywords` finds
-            // nothing to park for and the phase rotates straight
-            // through. By the time the player accepts the inner pick
-            // and the modifiers land, the EOT-action phase window has
-            // already passed.
-            //
-            // We therefore push the "may" decision down to the EOT-
-            // action phase itself, which already exposes PASS as the
-            // standard exit. The modifier grant is unconditional in
-            // the EndOfYourTurn body; the player either uses the
-            // granted attack (via the §4.6 mask) or PASSes the
-            // EOT-action phase to decline. PASS skips the attack —
-            // the `EndOfAttack` self-delete observer is gated on
-            // `pa.attacker == me`, which never holds when no attack
-            // initiates, so a declined Execute leaves the carrier on
-            // field. Modifiers carry `Expiry::EndOfTurn` so they
-            // expire cleanly on the eventual turn rotation.
-            //
-            // Observable parity with DCGO:
-            //   - Accept + attack: modifiers granted, attack runs,
-            //     carrier deletes via EndOfAttack observer.
-            //   - Decline (PASS at EOT-action): no attack, no
-            //     self-delete, modifiers expire. Identical
-            //     observable outcome to DCGO's "decline OnEndYourTurn
-            //     trigger" path — `UntilEndAttackEffects` only fires
-            //     when a SelectAttackEffect actually runs in DCGO,
-            //     and the EndOfAttack observer here only fires when
-            //     `pending_attack` actually carries this carrier as
-            //     the attacker.
             Effect::end_of_your_turn(card)
                 .name("<Execute>")
-                .process(|ctx| {
-                    let Some(me) = ctx.source_permanent else {
-                        return;
-                    };
-                    let owner = me.player;
-                    // Grant MayAttack — drives `has_end_of_turn_keywords`
-                    // to park the phase in EOT-action and the §4.6 mask
-                    // emitter to surface attack bits for this permanent.
-                    ctx.game.modifiers.add(
-                        me,
-                        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, owner),
-                    );
-                    // Grant CanAttackUnsuspended — widens the §4.6 mask
-                    // to include unsuspended-target attack bits, matching
-                    // DCGO's `defenderCondition: !defender.IsSuspended`.
-                    ctx.game.modifiers.add(
-                        me,
-                        ModifierEntry::simple(
-                            ModifierType::CanAttackUnsuspended,
-                            1,
-                            Expiry::EndOfTurn,
-                            owner,
-                        ),
-                    );
-                })
+                .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Execute))
+                .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Execute))
                 .build(),
-            // (2) EndOfAttack — self-delete when the carrier was the
-            //     attacker of the just-resolved EXECUTE attack.
             Effect::end_of_attack(card)
                 .name("<Execute> self-delete")
-                // Condition-level phase gate (task_69f10a66): without it the
-                // observer still ENQUEUES for a Main-phase attack and — when
-                // other EndOfAttack triggers are pending — parks a vacuous
-                // TriggerOrder prompt DCGO never shows (its delete registers
-                // only inside the Execute activation). The queue's condition
-                // filter drops it before any ordering prompt.
+                // Without this gate the observer would still ENQUEUE for every
+                // other attack and, with other End of Attack triggers pending,
+                // park a vacuous TriggerOrder prompt DCGO never shows (its
+                // delete registers only inside the Execute activation).
                 .condition(|rctx| {
-                    rctx.game.current_phase == crate::enums::GamePhase::EndOfTurnAction
+                    rctx.source_permanent.is_some_and(|me| execute_attack_is(rctx.game, me))
                 })
                 .process(|ctx| {
                     use crate::replacement::ReplacementCause;
                     let Some(me) = ctx.source_permanent else {
                         return;
                     };
-                    // Gate 1 (task_69f10a66): only the END-OF-TURN attack is
-                    // "that attack" in §16-37's "At the end of that attack,
-                    // delete this Digimon" — the printed text scopes the
-                    // self-delete to the attack Execute itself granted, and
-                    // DCGO registers the delete inside `ExecuteProcess`
-                    // (`UntilEndAttackEffects`), never for ordinary attacks.
-                    // Our EOT attacks resolve while the phase is parked in
-                    // `EndOfTurnAction` (decode_end_of_turn_action →
-                    // execute_attack; `cleanup_attack` fires this observer
-                    // before any phase rotation), so a Main-phase attack by
-                    // a carrier that merely HAS Execute must not self-delete.
-                    // (Exam witness: EX12-036-effect3 — Ryugumon with
-                    // granted Execute attacks security in its MAIN phase and
-                    // must survive; without this gate the observer deleted it
-                    // and cascaded a spurious <Decode> window.)
-                    if ctx.game.current_phase != crate::enums::GamePhase::EndOfTurnAction {
+                    if !execute_attack_is(ctx.game, me) {
                         return;
                     }
-                    // Gate 2: only fire on the Execute carrier's own
-                    // attack. EndOfAttack is a global timing — it
-                    // would otherwise fire for any attack while the
-                    // carrier sits on the field, e.g. an attack
-                    // initiated next turn by some other Digimon.
-                    let attacker_is_me = ctx
-                        .game
-                        .pending_attack
-                        .as_ref()
-                        .map(|pa| pa.attacker == me)
-                        .unwrap_or(false);
-                    if !attacker_is_me {
-                        return;
-                    }
-                    // Cause = OwnEffect — the deletion is driven by the
-                    // carrier's own triggered keyword, not by combat
-                    // resolution or any opponent effect. Matches the
-                    // labeling pattern Retaliation uses (see
-                    // `Keyword::Retaliation` arm above) and is
-                    // accurate per DCGO `Execute.cs:74-83` (the
-                    // `DeleteSelfEffect` is the carrier's own
-                    // queued ICardEffect, not a battle outcome).
+                    // Cause = OwnEffect: the carrier's own keyword deletes it
+                    // (DCGO `DeleteSelfEffect`), not the battle.
                     ctx.game
                         .delete_permanent_with_cause(me, ReplacementCause::OwnEffect);
                 })
                 .build(),
         ],
 
-        // EX12 — printed Engage: "At the end of your turn, this Digimon may
-        // attack." Official rules 16-44. This is intentionally narrower than
-        // Execute/Vortex:
-        //   - normal attack legality (`game.can_attack(..., false)`) controls
-        //     whether `has_end_of_turn_keywords` parks the phase;
-        //   - no `CanAttackUnsuspended` grant, so the action mask offers only
-        //     normal targets;
-        //   - no `EndOfAttack` self-delete observer.
-        //
-        // Optionality follows the same practical shape as Execute: the EOT
-        // trigger grants the temporary attack permission, and PASS in
-        // EndOfTurnAction is the player-facing decline path.
+        // §16-44 <Engage>: "a Digimon with this effect may attack at the end
+        // of your turn." §16-44-2: a trigger-type effect at the End of Your
+        // Turn timing; §16-44-3: optional. Its processing is one attack
+        // declaration decision over the carrier's ordinary legal declarations
+        // (the player, suspended Digimon) plus the decline, made inside the
+        // `[End of Your Turn]` pool (§11-1-4; Q3869 by analogy). DCGO
+        // `Engage.cs` / `EngageProcess`.
         Keyword::Engage => vec![Effect::end_of_your_turn(card)
             .name("<Engage>")
-            .process(|ctx| {
-                let Some(me) = ctx.source_permanent else {
-                    return;
-                };
-                let owner = me.player;
-                ctx.game.modifiers.add(
-                    me,
-                    ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, owner),
-                );
-            })
+            .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Engage))
+            .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Engage))
+            .build()],
+
+        // §16-33 <Vortex>: "allows the Digimon with this effect to attack an
+        // opponent's Digimon at the end of your turn ... also allows a Digimon
+        // to attack in the same turn it was played." §16-33-2: a trigger-type
+        // effect at the end of your turn (it pends with the other `[End of
+        // Your Turn]` effects; Q3868); §16-33-3: optional. Its processing is
+        // one attack declaration decision over the opponent's Digimon it may
+        // attack (§11-2-7-1; the player only under `VortexCanAttackPlayer`)
+        // plus the decline, opened as a `<Vortex>` attack (played-this-turn
+        // exemption). Nothing triggers without a legal declaration (DCGO
+        // `CanActivateVortex`).
+        Keyword::Vortex => vec![Effect::end_of_your_turn(card)
+            .name("<Vortex>")
+            .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Vortex))
+            .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Vortex))
+            .build()],
+
+        // §16-34 <Overclock>: "At the end of your turn, by deleting 1 of your
+        // Tokens or 1 of your other specified Digimon, the Digimon with this
+        // effect attacks a player without suspending." §16-34-2: a
+        // trigger-type effect at the end of your turn; §16-34-3: the deletion
+        // is an optional processing condition, the attack mandatory once it is
+        // executed (`Game::install_overclock_selection`). Nothing triggers
+        // without a legal candidate (DCGO `CanActivateOverclock`): the cost's
+        // payability is this trigger's ACTIVATION condition, not the generic
+        // optional-condition payability guard (`queued_optional_condition_payable`),
+        // so with no candidate the entry is absent from the `TriggerOrder`
+        // rather than present with an unexecutable condition -- the same shape
+        // as the other three keywords' `CanActivate*`.
+        Keyword::Overclock => vec![Effect::end_of_your_turn(card)
+            .name("<Overclock>")
+            .condition(|rctx| end_of_turn_keyword_can_activate(rctx, Keyword::Overclock))
+            .process(|ctx| end_of_turn_keyword_attack_process(ctx, Keyword::Overclock))
             .build()],
 
         // EX12 — printed Guard: "When another of your Digimon would leave the
@@ -2106,8 +2304,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // ## Cost
         //
         // Zero. `[Main]` active skill — `EffectTiming::MainOnField` exposes
-        // the activation in the action mask without any cost gating, mirroring
-        // MaterialSave's parity treatment.
+        // the activation in the action mask without any cost gating.
         //
         // ## Self-scope
         //
@@ -2143,13 +2340,17 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                 let owner = me.player;
                 let prov = resume_provenance(ctx);
 
-                // Optional own-permanent pick (DCGO `canNoSelect: true`).
+                // Mandatory own-permanent pick once activated (§16-28-3: "The
+                // processing from <Mind Link> is mandatory"; the rule governs
+                // over DCGO's `canNoSelect: true`). The player chose WHEN to
+                // activate the [Main]; the activation gate guarantees a
+                // candidate.
                 // Filter mirrors the gate plus a self-exclusion (the
                 // carrier is itself on its controller's battle area; we
                 // must never target it).
                 ctx.select_own_permanent(
                     "select a Digimon to receive the Mind Link Tamer",
-                    /*is_optional=*/ true,
+                    /*is_optional=*/ false,
                     move |g, h| {
                         if h.player != owner || h == me {
                             return false;
@@ -2187,7 +2388,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
             .build()],
 
         // Phase F §F4 — printed Training: `[Main]` active skill, usable from
-        // BATTLE area OR BREEDING area (RULES_CONTEXT 16-40 / DCGO
+        // BATTLE area OR BREEDING area (RULES_CONTEXT 16-41 / DCGO
         // `Training.cs`). Cost: suspend self (must be unsuspended). Effect:
         // place top deck card at the BOTTOM of self's digivolution stack,
         // FACE-DOWN (DCGO `isFacedown: true`).
@@ -2212,7 +2413,7 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // (`effect_queue.rs:524`), not on the synchronous `[Main]` activation
         // path (`activate_field_main`). For `MainOnField` skills the cost
         // must be folded into the body — the precedent here is implicit
-        // since MaterialSave / MindLink are zero-cost; Training is the first
+        // since MindLink is zero-cost; Training is the first
         // `MainOnField` auto-install with a state-cost (suspend).
         //
         // ## Self-scope
@@ -2228,10 +2429,10 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // unchanged. Breeding-area Training requires a parallel mask emitter
         // and dispatcher path (Phase F §F4 substrate work) under the field
         // index `BREEDING_TARGET (=14)` — which is gated to Training-bearing
-        // carriers only, since RULES_CONTEXT 16-40 specifies that ONLY
+        // carriers only, since RULES_CONTEXT 16-41 specifies that ONLY
         // `<Training>` activates from breeding (surfacing all `MainOnField`
-        // effects from breeding would inadvertently expose Save / MaterialSave
-        // / MindLink from breeding too, which would be wrong).
+        // effects from breeding would inadvertently expose MindLink from
+        // breeding too, which would be wrong).
         Keyword::Training => vec![Effect::declarative(card)
             .name("<Training>")
             .timing(EffectTiming::MainOnField)
@@ -2338,6 +2539,9 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
                         );
                     },
                 );
+                // "You may": declining is the player's ability to stop a
+                // loop (§18-3-3-3), though the prompt is a 2-branch choice.
+                ctx.game.mark_pending_selection_as_optional_decision();
                 park_keyword_frame(
                     ctx,
                     ResumeFrame::KeywordAscensionChoice(KeywordAscensionChoiceState {
@@ -2357,6 +2561,122 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         // be strictly worse for the player. Cards using the printed keyword
         // must author the `[Main]` body via DSL or hand-rolled `CardEffect`.
         Keyword::DigiBurst(_) => Vec::new(),
+
+        // §16-24-2 (Ver. 4.3): "<Alliance> is a trigger-type effect that
+        // triggers when a Digimon with this effect attacks", so it pends with
+        // every other effect the attack declaration triggers and the turn
+        // player orders them together (§15-4-3-2, §15-4-3-5-1). DCGO
+        // `CardEffectFactory/KeyWordEffects/Alliance.cs`: a non-optional
+        // `ActivateClass` stacked in the attack's `OnAllyAttack` batch,
+        // activatable only while an ally can pay the suspension
+        // (`CanActivateAlliance`) — hence the condition. §16-24-3: "by
+        // suspending 1 of your other Digimon" is an optional processing
+        // condition, so the body's ally pick is optional (PASS = not
+        // executed) and the DP / <Security A. +1> grant after it is mandatory.
+        Keyword::Alliance => vec![Effect::when_attacking(card)
+            .name("<Alliance>")
+            .condition(|ctx| {
+                ctx.source_permanent
+                    .is_some_and(|attacker| !ctx.game.alliance_ally_candidates(attacker).is_empty())
+            })
+            .process(|ctx| {
+                if let Some(attacker) = ctx.source_permanent {
+                    ctx.game.install_alliance_ally_selection(attacker);
+                }
+            })
+            .build()],
+
+        // §16-23-2 (Ver. 4.3): "<Raid> is a trigger-type effect that triggers
+        // when a Digimon with this effect attacks"; §16-23-3: its processing
+        // is optional. DCGO `CardEffectFactory/KeyWordEffects/Raid.cs`: an
+        // optional `ActivateClass` in the same `OnAllyAttack` batch,
+        // activatable only while a switch target exists (`CanActivateRaid`).
+        // The body is the optional switch pick among the opponent's
+        // unsuspended Digimon with the highest DP (§16-23-4: ties are the
+        // activating player's choice).
+        Keyword::Raid => vec![Effect::when_attacking(card)
+            .name("<Raid>")
+            .optional()
+            .condition(|ctx| {
+                ctx.source_permanent
+                    .is_some_and(|attacker| !ctx.game.raid_switch_options(attacker).is_empty())
+            })
+            .process(|ctx| {
+                if let Some(attacker) = ctx.source_permanent {
+                    ctx.game.install_raid_switch_selection(attacker);
+                }
+            })
+            .build()],
+
+        // §16-7-2 (Ver. 4.3): <Piercing> "is a trigger-type effect that
+        // triggers and activates when a Digimon with this effect battles an
+        // opponent's Digimon and the opponent's Digimon is deleted in battle";
+        // §16-7-1: only while attacking. §16-7-4: it "will trigger
+        // simultaneously with effects triggered by the battle" (the loser's
+        // [On Deletion] among them), so it rides the battle's `BattleResult`
+        // pool and the turn player orders it with their other effects
+        // (§15-4-3-5-1); activating it makes the security check pending
+        // processing, performed immediately before the End of Attack timing
+        // (`Game::fire_piercing_or_finish`). §16-7-3: the check is mandatory,
+        // so the activation is too. Official Q&A Q3931 (EX8-045 Callismon): the
+        // turn player's <Piercing> activates before the opponent's [On
+        // Deletion], and the check is performed "even if <Piercing> is lost
+        // after activation". DCGO `CardEffectFactory/KeyWordEffects/Pierce.cs`
+        // (`CanTriggerPierce` / `CanActivatePierce` / `PierceProcess`): a
+        // non-optional `ActivateClass` stacked with the battle's effects
+        // (`CardController.cs`, one per battle) whose body sets
+        // `DoSecurityCheck`; it activates only while this Digimon is still the
+        // attacking Digimon, the opponent has security and no check is pending
+        // yet -- see `Game::piercing_trigger_applies`.
+        Keyword::Piercing => vec![Effect::battle_result(card)
+            .name("<Piercing>")
+            .condition(|ctx| {
+                ctx.source_permanent
+                    .is_some_and(|carrier| ctx.game.piercing_trigger_applies(carrier))
+            })
+            .process(|ctx| {
+                if let Some(carrier) = ctx.source_permanent {
+                    ctx.game.activate_piercing(carrier);
+                }
+            })
+            .build()],
+
+        // §16-16-2 (Ver. 4.3): "<Blitz> effects execute processing"; it runs
+        // when the effect that contains it activates (§2-3-3-4 lists
+        // "[When Digivolving] <Blitz>" as one effect). Two printed families:
+        //
+        // - Bare "[When Digivolving] <Blitz>" (BT14-017, ST12-10, LM-039, ...
+        //   17 printings): `card_data::parse_printed_keywords` classifies the
+        //   token as innate (its left context ends in `]`), and this arm is
+        //   that card's own [When Digivolving] trigger, whose processing is
+        //   `blitz_process` (memory gate at activation, one resumable
+        //   decision). DCGO `CardEffectFactory.BlitzSelfEffect`.
+        // - Sequenced / conditional "Then, <Blitz>" / "If ..., <Blitz>"
+        //   (EX3-063, BT10-112, BT9-068, BT10-070 [On Play]): the parser does
+        //   NOT make these innate (left context is prose, `card_data.rs`
+        //   `parse_printed_keywords` "Innate iff the left context ..."), so
+        //   this arm never installs for them; the card's own effect runs
+        //   `blitz_process` in place through `grant_keyword: Blitz`
+        //   (`EffectContext::grant_keyword`), which in turn does NOT install
+        //   this trigger (`grant_keyword_triggered_auto_effects` skips
+        //   <Blitz>). DCGO `BlitzProcess` inline (EX3_063.cs).
+        //
+        // The trigger itself is not optional: it always activates, and its
+        // processing offers the attack or PASS (§16-16-3).
+        Keyword::Blitz => vec![Effect::when_digivolving(card)
+            .name("<Blitz>")
+            .process(|ctx| {
+                if let Some(carrier) = ctx.source_permanent {
+                    blitz_process(ctx, carrier);
+                }
+            })
+            .build()],
+
+        // `<Digisorption -N>` acts from the HAND, before the digivolution
+        // cost is paid (§16-10-2): the digivolve reducer chain reads the hand
+        // card's printed instances (`try_prompt_digivolve_reducer_chain_mode`).
+        // Nothing to install on a permanent.
+        Keyword::Digisorption(_) => Vec::new(),
 
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),

@@ -777,27 +777,46 @@ struct SeparateGates {
 }
 impl CardEffect for SeparateGates {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
-        let valid = self.trace.clone();
+        let lapsed = self.trace.clone();
         let invalid = self.trace.clone();
+        let live = self.trace.clone();
         vec![
             Effect::on_security_check(card)
-                .name("eligible occurrence, live processing")
-                .trigger_eligibility(|ctx| ctx.game.memory == 3)
+                .name("met at the capture, lapsed before activation")
+                .trigger_qualifier(|ctx| ctx.game.memory == 3)
                 .condition(|ctx| ctx.game.memory >= 5)
-                .process(move |_| valid.lock().unwrap().push("valid".into()))
+                .process(move |_| lapsed.lock().unwrap().push("lapsed".into()))
                 .build(),
             Effect::on_security_check(card)
                 .name("ineligible occurrence never discovered later")
-                .trigger_eligibility(|ctx| ctx.game.memory >= 5)
+                .trigger_qualifier(|ctx| ctx.game.memory >= 5)
                 .condition(|ctx| ctx.game.memory >= 5)
                 .process(move |_| invalid.lock().unwrap().push("invalid".into()))
+                .build(),
+            Effect::on_security_check(card)
+                .name("still met at activation, processing condition read live")
+                .trigger_qualifier(|ctx| ctx.game.memory >= 3)
+                .condition(|ctx| ctx.game.memory >= 5)
+                .process(move |_| live.lock().unwrap().push("live".into()))
                 .build(),
         ]
     }
 }
 
+/// The trigger qualifier of a captured check observer is decided at the event
+/// and re-read when the effect would activate (§15-4-4-5): while the event's
+/// referent is on the field the re-read is live, once it has left it reads the
+/// referent's snapshot, and the captured event data are kept. The `[Security]`
+/// body raises memory 3 -> 5 between the capture and the activation:
+/// - qualifier `memory == 3`: met at the capture, no longer met when it would
+///   activate, so it can no longer be activated (§15-4-4-5);
+/// - qualifier `memory >= 5`: not met at the event, so it never triggered and
+///   is not discovered later (§15-8-3-1); a trigger condition met again only
+///   triggers again on a new event (§15-4-2-4);
+/// - qualifier `memory >= 3`: still met, and its processing condition
+///   `memory >= 5` is read live at activation, so it activates.
 #[test]
-fn security_check_event_eligibility_frozen_processing_condition_live() {
+fn security_check_trigger_qualifier_decided_at_capture_rechecked_at_activation() {
     both_seats(|seat| {
         let trace = Trace::default();
         let mut r = runner(seat, &["SEC-PLAY"]);
@@ -811,7 +830,11 @@ fn security_check_event_eligibility_frozen_processing_condition_live() {
         let atk = r.place_on_field(seat, "ALLY", Some(0));
         r.place_on_field(seat, "OBSERVER", Some(0));
         attack(&mut r, atk);
-        assert_eq!(*trace.lock().unwrap(), vec!["valid"]);
+        assert_eq!(
+            *trace.lock().unwrap(),
+            vec!["live"],
+            "the lapsed qualifier stops its observer; the never-met one never triggered"
+        );
         assert!(
             r.pending_selection().is_none(),
             "no false source/event trigger choice"
@@ -1164,6 +1187,9 @@ fn security_check_linked_observer_retains_effect_when_host_changes_face() {
                 trace: trace.clone(),
             }),
         );
+        // A linked card needs a [Link] requirement the host meets, or the rule
+        // check trashes it (§17-1-3-2-7) before the check is ever performed.
+        r.give_link_requirement("OBSERVER", 0);
         let atk = r.place_on_field(seat, "ALLY", Some(0));
         let host = r.place_on_field(1 - seat, "ALLY", Some(0));
         r.push_linked_owned(host, "OBSERVER", 1 - seat);
@@ -1623,7 +1649,7 @@ impl CardEffect for BreedingRemovalObserver {
         vec![Effect::inherited(card)
             .timing(EffectTiming::OnOwnSecurityRemoved)
             .name("explicit breeding security-removal observer")
-            .trigger_eligibility(breeding_eligible)
+            .trigger_qualifier(breeding_eligible)
             .condition(breeding_eligible)
             .optional()
             .needs_outer_optional_prompt()

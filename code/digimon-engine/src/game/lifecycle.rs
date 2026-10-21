@@ -72,30 +72,11 @@ impl Game {
         // Remove from turn order
         self.turn_order.retain(|&p| p != player_id);
 
-        // Check if only one player remains
+        // Only one player remains: the game is over. One terminal path
+        // (`finish_game`: the FIRST terminal outcome stands, one `GameOver`).
         if self.turn_order.len() == 1 {
-            self.game_over = true;
-            self.cancel_all_prepared_source_plays();
-        self.source_play_receipts.clear();
-            self.cost_payment_receipts.clear();
-            self.active_cost_payment_receipt = None;
-            self.deletion_receipts.clear();
-            self.return_receipts.clear();
-            self.pending_field_top_source_moves.clear();
-            self.field_source_receipts.clear();
-            self.abort_would_digivolve_declaration();
-            self.abort_effect_digivolve_scopes();
-            self.pending_security_moves.clear();
-            self.current_deletion_receipt = None;
-            self.winner = Some(self.turn_order[0]);
-            self.terminal_outcome_reason = Some(TerminalOutcomeReason::EngineDeclared);
-            self.current_phase = GamePhase::GameOver;
-            let seq = self.next_event_seq();
-            self.events.push(crate::events::GameEvent::GameOver {
-                seq,
-                winner: self.winner,
-                reason: TerminalOutcomeReason::EngineDeclared,
-            });
+            let winner = self.turn_order[0];
+            self.finish_game(Some(winner), TerminalOutcomeReason::EngineDeclared);
         }
 
         // Adjust turn_player_idx if needed
@@ -267,6 +248,26 @@ impl Game {
         winner_id: PlayerId,
         reason: TerminalOutcomeReason,
     ) {
+        self.finish_game(Some(winner_id), reason);
+    }
+
+    /// End the game in a draw (`winner == None`) with an explicit terminal
+    /// reason, e.g. §18-3-2's infinite-loop draw.
+    pub fn declare_draw_with_reason(&mut self, reason: TerminalOutcomeReason) {
+        self.finish_game(None, reason);
+    }
+
+    /// Shared terminal bookkeeping for a win or a draw: drop in-flight
+    /// receipts and declarations, enter `GameOver`, emit `GameEvent::GameOver`.
+    ///
+    /// Idempotent: the FIRST terminal outcome stands. A later call (e.g. a
+    /// security attack still resolving after an effect drain ended the game
+    /// in the §18-3-2 infinite-loop draw) is a no-op and emits no second
+    /// `GameOver`.
+    pub(crate) fn finish_game(&mut self, winner: Option<PlayerId>, reason: TerminalOutcomeReason) {
+        if self.game_over {
+            return;
+        }
         self.game_over = true;
         self.cancel_all_prepared_source_plays();
         self.source_play_receipts.clear();
@@ -279,8 +280,9 @@ impl Game {
         self.abort_would_digivolve_declaration();
         self.abort_effect_digivolve_scopes();
         self.pending_security_moves.clear();
+        self.security_placement_receipts.clear();
         self.current_deletion_receipt = None;
-        self.winner = Some(winner_id);
+        self.winner = winner;
         self.terminal_outcome_reason = Some(reason);
         self.current_phase = GamePhase::GameOver;
         let seq = self.next_event_seq();

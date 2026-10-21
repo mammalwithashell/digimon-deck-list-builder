@@ -236,6 +236,17 @@ pub fn lower_with_formula(
             .unwrap_or(0)
     });
     let pay_cost_self_suspend = pay_cost_is_self_suspend(&pay_cost);
+    // §15-7-4 (Ver. 4.3): an OPTIONAL reducer's "by X, reduce the cost" is an
+    // optional processing condition; when X can't be executed (e.g. "by
+    // trashing the bottom face-down card under a Tamer" with no face-down
+    // card) the reducer can't be chosen, so it is not offered
+    // (`Game::collect_before_pay_cost_reducers`). Same payability guard as the
+    // triggered path. G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+    if optional {
+        if let Some(guard) = crate::dsl_cards::lower_triggered::leading_cost_guard(&pay_cost) {
+            builder = builder.optional_condition_guard(guard);
+        }
+    }
     if !pay_cost.is_empty() {
         // When the `pay_cost` begins with a declinable (PASS-able) selection
         // — e.g. BT12-112's optional "place 1 [Shoutmon]" — running it

@@ -369,12 +369,12 @@ impl<'a> EffectContext<'a> {
         if !perm.card_sources.is_empty() && !perm.top_card().is_token {
             for card in perm.card_sources {
                 let owner = card.owner;
-                self.game.player_mut(owner).trash.push(card);
+                self.game.player_mut(owner).put_in_trash(card);
             }
         }
         for card in perm.linked_cards {
             let owner = card.owner;
-            self.game.player_mut(owner).trash.push(card);
+            self.game.player_mut(owner).put_in_trash(card);
         }
 
         self.game.clear_permanent_full(target);
@@ -394,7 +394,7 @@ impl<'a> EffectContext<'a> {
     /// `delete_permanent` step. Returns `false` if the source permanent has
     /// already left the field.
     ///
-    /// No-approximations note: per Comprehensive Rules 16-16-2 the processing
+    /// No-approximations note: per Comprehensive Rules 16-17-2 the processing
     /// of a `<Delay>` is optional; the player's accept/decline prompt belongs
     /// to [`crate::effect::EffectBuilder::optional`] and runs BEFORE this cost.
     pub fn trash_self_as_cost(&mut self) -> bool {
@@ -541,9 +541,9 @@ impl<'a> EffectContext<'a> {
             .trash_source_and_fire(removed.owner, perm, removed, host_card);
         // Soft-remove the carrier slot if the trash emptied it. Sibling
         // of the digivolve-from-material fix landed in PR #533. The
-        // `fire_digivolution_card_trashed` observer dispatch above runs
-        // BEFORE the slot removal, so observers see the source-trash
-        // event attributed to the correct host. See
+        // `fire_digivolution_card_trashed` observer enqueue above captures
+        // the trigger context BEFORE the slot removal, so observers see the
+        // source-trash event attributed to the correct host. See
         // `G-PERMANENT-EMPTY-DURING-MATERIAL-EXTRACTION` in
         // `qa/archetype-qa/engine-gaps.md`.
         if !self.game.soft_remove_if_emptied(perm) {
@@ -553,7 +553,9 @@ impl<'a> EffectContext<'a> {
     }
 
     /// Trash every digivolution source below `target`'s top card, preserving
-    /// the live permanent and dispatching source-trash observers per source.
+    /// the live permanent. All of them are trashed at the same time: ONE
+    /// source-trash event, so each observer triggers once and only after the
+    /// whole trash (§15-5-2, §15-8-3-2).
     pub fn trash_all_sources(&mut self, target: PermanentHandle) -> bool {
         if self.player != target.player && self.stack_trash_blocked(target) {
             return false;
@@ -573,6 +575,8 @@ impl<'a> EffectContext<'a> {
             .map(|source| source.handle())
             .collect();
 
+        // Every source is trashed at the same time: one event (§15-5-2).
+        let event = self.game.begin_source_move_event();
         for source in source_handles {
             let Some(permanent) = self
                 .game
@@ -580,7 +584,7 @@ impl<'a> EffectContext<'a> {
                 .battle_area
                 .get(target.index as usize)
             else {
-                return true;
+                break;
             };
             let still_below_top = permanent
                 .card_sources
@@ -593,6 +597,7 @@ impl<'a> EffectContext<'a> {
                 let _ = self.trash_card_source(target, source);
             }
         }
+        self.game.end_source_move_event(event);
         true
     }
 
@@ -605,15 +610,64 @@ impl<'a> EffectContext<'a> {
     /// `armor_purge_top` (which is reserved for the `<Armor Purge>` keyword
     /// auto-install body and panics on insufficient stack).
     ///
-    /// Mirrors `armor_purge_top`'s observer dispatch: after the trash, fires
-    /// `OnDigivolutionCardTrashed` and drains the queue, so observers
-    /// (e.g. Rocks-archetype source-trash listeners) see the trashed top with
-    /// source/host event context. The trashed card moves through the standard
-    /// owner trash path.
+    /// The trashed card is the visible TOP card, not a digivolution card
+    /// (§4-8-1), so this enqueues `OnTopCardTrashed` (the timing
+    /// `armor_purge_top` and <De-Digivolve> fire; DCGO
+    /// `EffectTiming.WhenTopCardTrashed`) and never
+    /// `OnDigivolutionCardTrashed`. Enqueue-only: the observers activate once
+    /// the causing effect has finished (§15-4-3-2), like every other
+    /// top-card trash. G-ENGINE-TRASH-TOP-SOURCE-FIRES-DIGIVOLUTION-CARD-
+    /// TRASHED. The trashed card moves to its owner's trash.
     ///
-    /// Reject-before-mutate discipline: invalid handle and empty stack both
-    /// return `false` before any state change.
+    /// §8-3-2-1 (the Burst Digivolve turn-end trash, this primitive's only
+    /// authored user): "if there are no stacked cards or that card is not a
+    /// Digimon, no card is trashed", and §4-7-2 "Only 1 card isn't considered
+    /// 'stacked cards'": a 1-card stack, or one whose top card is not a
+    /// Digimon card, trashes nothing and the permanent stays (DCGO
+    /// `SelectBurstDigivolutionEffect` requires >= 1 digivolution card).
+    ///
+    /// Reject-before-mutate discipline: invalid handle, empty or 1-card stack
+    /// and a non-Digimon top all return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        // §8-3-2-1 / §4-7-2 (the burst turn-end trash's own rule): a lone
+        // card is not a stacked card, and a non-Digimon top trashes nothing.
+        // Checked HERE, not in the shared pop: the generic "trash the top N
+        // stacked cards" (`trash_top_n_stacked_sources`) keeps going past a
+        // Tamer / Option / Digi-Egg it exposes (DCGO `ITrashStack` has no
+        // type check; BT21-030 Q&A "until there are no more stacked cards").
+        let eligible = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .is_some_and(|p| {
+                p.card_sources.len() > 1
+                    && matches!(
+                        p.top_card().card_kind(&self.game.card_data),
+                        crate::enums::CardKind::Digimon | crate::enums::CardKind::Dual
+                    )
+            });
+        if !eligible {
+            return false;
+        }
+        let Some(removed) = self.pop_top_source_for_trash(target) else {
+            return false;
+        };
+        self.trash_popped_top_cards(target, vec![removed]);
+        true
+    }
+
+    /// Guards + pop shared by [`Self::trash_top_source`] and the batched
+    /// `trash_top_n_stacked_sources`: `None` (no mutation) when the slot is
+    /// missing or empty, or a protection blocks the trash
+    /// (`ImmuneFromStackTrashing` on the host, or the top card's own
+    /// source-trash protection). Type- and length-agnostic: the §8-3-2-1 /
+    /// §4-7-2 guards belong to `trash_top_source` alone, and the batch has its
+    /// own `len > 1` stop.
+    fn pop_top_source_for_trash(
+        &mut self,
+        target: PermanentHandle,
+    ) -> Option<crate::card_source::CardSource> {
         if let Some(card) = self
             .game
             .player(target.player)
@@ -622,49 +676,60 @@ impl<'a> EffectContext<'a> {
             .and_then(|p| p.card_sources.last())
         {
             if self.source_card_trash_blocked(target, card.handle()) {
-                return false;
+                return None;
             }
         }
-
         // Track C / D consult site (2026-05-08): `ImmuneFromStackTrashing`
         // on the host permanent blocks the inherited stack-peel mutation.
         // Distinct from `CannotBeDestroyed` (which protects the live top
         // card from deletion) — this protects the digivolution sources
         // sitting beneath the top from being peeled off and trashed.
         if self.stack_trash_blocked(target) {
-            return false;
+            return None;
         }
-        // Validate target slot.
-        let (removed, host_card) = {
-            let permanent = match self
-                .game
-                .player_mut(target.player)
-                .battle_area
-                .get_mut(target.index as usize)
-            {
-                Some(p) => p,
-                None => return false,
-            };
-            // Pop top of card_sources; bail clean if empty.
-            let removed = match permanent.card_sources.pop() {
-                Some(s) => s,
-                None => return false,
-            };
-            let host_card = permanent
-                .card_sources
-                .last()
-                .map(|card| card.handle())
-                .unwrap_or_else(|| removed.handle());
-            (removed, host_card)
-        };
-        // Fire OnDigivolutionCardTrashed for the trashed top card. Mirrors
-        // `armor_purge_top` and the sources-below-top dispatch in
-        // `Game::return_to_hand` / `Game::return_to_deck`. Host known
-        // pre-push → use the shared Tier-2 push+fire primitive.
         self.game
-            .trash_source_and_fire(removed.owner, target, removed, host_card);
-        let _ = self.cleanup_exposed_battle_area_digi_egg(target);
-        true
+            .player_mut(target.player)
+            .battle_area
+            .get_mut(target.index as usize)?
+            .card_sources
+            .pop()
+    }
+
+    /// Move top cards popped from `target` (in pop order) to their owners'
+    /// trash and enqueue ONE `OnTopCardTrashed` for the batch (§16-12-5 /
+    /// DCGO `ITrashStack`: every card trashed by one event in one timing).
+    /// The host is the card now on top (the last popped card when the stack
+    /// is empty); an emptied permanent leaves the battle area.
+    fn trash_popped_top_cards(
+        &mut self,
+        target: PermanentHandle,
+        removed: Vec<crate::card_source::CardSource>,
+    ) {
+        let Some(last) = removed.last() else {
+            return;
+        };
+        let host_card = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .and_then(|p| p.card_sources.last())
+            .map(|card| card.handle())
+            .unwrap_or_else(|| last.handle());
+        let cause = crate::trigger_context::EventCause::from(
+            self.game.infer_effect_cause(target.player),
+        );
+        let handles: Vec<_> = removed.iter().map(|card| card.handle()).collect();
+        for card in removed {
+            self.game.player_mut(card.owner).put_in_trash(card);
+        }
+        self.game
+            .enqueue_top_cards_trashed(target.player, target, host_card, handles, cause);
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
+        if !self.game.soft_remove_if_emptied(target) {
+            let _ = self.cleanup_exposed_battle_area_digi_egg(target);
+        }
     }
 
     /// Trash up to `count` bottom-most digivolution sources from `target`.
@@ -696,10 +761,14 @@ impl<'a> EffectContext<'a> {
                     .collect()
             })
             .unwrap_or_default();
-        cards
+        // The N cards are trashed at the same time: one event (§15-5-2).
+        let event = self.game.begin_source_move_event();
+        let trashed = cards
             .into_iter()
             .filter(|card| self.trash_card_source(target, *card))
-            .count() as u8
+            .count() as u8;
+        self.game.end_source_move_event(event);
+        trashed
     }
 
     /// Trash up to `count` cards from the top of `target`'s stack, one at a
@@ -730,7 +799,9 @@ impl<'a> EffectContext<'a> {
         }
 
         if include_top_card {
-            let mut removed = 0;
+            // One event: every popped top card is trashed together and
+            // `OnTopCardTrashed` fires ONCE for the batch (DCGO `ITrashStack`).
+            let mut removed = Vec::new();
             for _ in 0..count {
                 if !self
                     .game
@@ -741,12 +812,14 @@ impl<'a> EffectContext<'a> {
                 {
                     break;
                 }
-                if !self.trash_top_source(target) {
+                let Some(card) = self.pop_top_source_for_trash(target) else {
                     break;
-                }
-                removed += 1;
+                };
+                removed.push(card);
             }
-            return removed;
+            let n = removed.len();
+            self.trash_popped_top_cards(target, removed);
+            return n;
         }
         let cards: Vec<_> = self
             .game
@@ -768,21 +841,30 @@ impl<'a> EffectContext<'a> {
                     .collect()
             })
             .unwrap_or_default();
-        cards
+        // One effect step: one event (§15-5-2).
+        let event = self.game.begin_source_move_event();
+        let trashed = cards
             .into_iter()
             .filter(|card| self.trash_card_source(target, *card))
-            .count()
+            .count();
+        self.game.end_source_move_event(event);
+        trashed
     }
 
-    /// Trash the bottom-most face-down digivolution source from `target`,
-    /// fire `OnDigivolutionCardTrashed`, and drain the observer queue. Returns
-    /// `true` iff a face-down source was found at `card_sources[0]` and
-    /// trashed; returns `false` with no mutation otherwise (no face-down
-    /// bottom source, or `target` missing).
+    /// Trash "the bottom face-down card" from under `target` -- its LOWEST
+    /// face-down card (`Permanent::face_down_source_indices().next()`),
+    /// whether or not face-up cards sit below it -- and fire
+    /// `OnDigivolutionCardTrashed`. Returns `true` iff such a card existed and
+    /// was trashed; returns `false` with no mutation otherwise (no face-down
+    /// card under the top card, the card is protected from this effect's
+    /// trash, or `target` missing).
     ///
     /// This is the cost-form trash primitive for ST-23 BEATBREAK and ST-24
     /// DATA SQUAD cards whose printed text reads "by trashing the bottom
-    /// face-down card from under any of your Tamers, ...".
+    /// face-down card from under any of your Tamers, ...". The card text and
+    /// DCGO (`BT26_005.cs` `DigivolutionCards.LastOrDefault(IsFlipped)`) read
+    /// "bottom face-down card" as the lowest face-down one; the rules manual
+    /// has no narrower definition.
     ///
     /// The trashed source routes to the source's own `owner` trash, matching
     /// the standard `OnDigivolutionCardTrashed` ownership semantics (mirrors
@@ -796,49 +878,112 @@ impl<'a> EffectContext<'a> {
     /// ST24-01 Koromon, ST24-06 RizeGreymon, ST24-10 Lilamon, ST24-11 Rosemon,
     /// ST24-12 Falcomon.
     pub fn trash_bottom_face_down_source(&mut self, target: PermanentHandle) -> bool {
-        if let Some(card) = self
+        let Some((index, card)) = self
             .game
             .player(target.player)
             .battle_area
             .get(target.index as usize)
-            .and_then(|p| p.card_sources.first())
-        {
-            if self.source_card_trash_blocked(target, card.handle()) {
+            .and_then(|p| {
+                p.face_down_source_indices()
+                    .next()
+                    .map(|i| (i, p.card_sources[i].handle()))
+            })
+        else {
+            return false;
+        };
+        if self.source_card_trash_blocked(target, card) {
+            return false;
+        }
+        // Host = the permanent's top card, read after the removal (a Tamer always
+        // retains its own card as the top). `index` was validated present above.
+        self.game.trash_source_at_index_and_fire(target, index)
+    }
+
+    /// Trash one bottom face-down digivolution card from under each entry of
+    /// `targets` (a Tamer listed twice gives up its two lowest) as ONE
+    /// source-trash event: the cards of one "by trashing N bottom face-down
+    /// cards from under any of your Tamers" condition (§15-7-1) are trashed
+    /// at the same time, so each `OnDigivolutionCardTrashed` observer
+    /// triggers once for the whole payment, whichever Tamers the cards came
+    /// from (§15-5-2). An observer scoped to one Tamer ("under this Tamer",
+    /// ST23-13) triggers once if any card left that Tamer; one scoped to all
+    /// of them ("under your Tamers") once. The event's members are every
+    /// trashed card (`coalesce_source_move_event`).
+    ///
+    /// Each pick takes the lowest face-down card left under that Tamer
+    /// (`trash_bottom_face_down_source`), so a Tamer listed twice gives up its
+    /// two lowest face-down cards; face-up cards stay.
+    ///
+    /// The payment is all or nothing: every pick is checked first (each
+    /// listed Tamer still has that many face-down cards under it, none
+    /// protected from this effect's trash), and on any failure
+    /// nothing moves and `false` is returned. Returns `true` once every card
+    /// is trashed. A trash failing after the check passed is unreachable (see
+    /// the loop); it would stop at that card, `debug_assert!` and return
+    /// `false`.
+    ///
+    /// Used by `trash_bottom_face_down_sources_under_tamers` (BT25-035
+    /// Cougarmon, BT26-070, BT26-082, EX13-071, ST24-06, ST24-10).
+    /// G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+    pub fn trash_bottom_face_down_sources(&mut self, targets: &[PermanentHandle]) -> bool {
+        let mut per_target: Vec<(PermanentHandle, usize)> = Vec::new();
+        for &target in targets {
+            match per_target.iter_mut().find(|(h, _)| *h == target) {
+                Some((_, n)) => *n += 1,
+                None => per_target.push((target, 1)),
+            }
+        }
+        for &(target, n) in &per_target {
+            let Some(permanent) = self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+            else {
+                return false;
+            };
+            // The `n` lowest face-down cards under the top card are the ones
+            // the loop below trashes, one `trash_bottom_face_down_source` at
+            // a time (each takes the lowest one left).
+            let cards: Vec<CardHandle> = permanent
+                .face_down_source_indices()
+                .take(n)
+                .map(|i| permanent.card_sources[i].handle())
+                .collect();
+            if cards.len() < n {
+                return false;
+            }
+            if cards
+                .into_iter()
+                .any(|card| self.source_card_trash_blocked(target, card))
+            {
                 return false;
             }
         }
-
-        // Inspect `card_sources[0]`: it must exist AND be face-down. Reject
-        // before any mutation otherwise (missing target, empty stack, or a
-        // face-up bottom source — e.g. an un-stashed Tamer whose only source
-        // is its own face-up card).
-        let removed = {
-            let permanent = match self
-                .game
-                .player_mut(target.player)
-                .battle_area
-                .get_mut(target.index as usize)
-            {
-                Some(p) => p,
-                None => return false,
-            };
-            match permanent.card_sources.first() {
-                Some(bottom) if bottom.face_down => {}
-                _ => return false,
+        // Unreachable failure: the check above validated exactly the cards
+        // the loop removes (each Tamer's `n` lowest face-down cards, in
+        // order), and nothing
+        // resolves inside the event -- its observers only enqueue (the scope
+        // is a deferred-drain scope, §15-8-3-2) -- so no effect can move a
+        // Tamer, flip a card or protect one between the check and the last
+        // trash. Should that ever break, stop at the first failure (loudly in
+        // dev/test) instead of trashing the rest of a payment that already
+        // failed.
+        let event = self.game.begin_source_move_event();
+        let mut paid = true;
+        for &target in targets {
+            if !self.trash_bottom_face_down_source(target) {
+                debug_assert!(
+                    false,
+                    "trash_bottom_face_down_sources: the trash from {target:?} failed after \
+                     the payment check passed ({targets:?})"
+                );
+                paid = false;
+                break;
             }
-            permanent.card_sources.remove(0)
-        };
-        // Host = the permanent's top card. The below-top source was already
-        // removed above; the perm still exists with its top intact (a Tamer
-        // always retains its own card as the top), so the host is unchanged by
-        // the helper's push-to-trash. Direct index is infallible by
-        // construction (validated present at the top of this function).
-        let host_card = self.game.player(target.player).battle_area[target.index as usize]
-            .top_card()
-            .handle();
-        self.game
-            .trash_source_and_fire(removed.owner, target, removed, host_card);
-        true
+        }
+        self.game.end_source_move_event(event);
+        paid
     }
 
     /// Force `opponent`'s hand size down to `target_count` by surfacing a
@@ -995,9 +1140,14 @@ impl<'a> EffectContext<'a> {
                     .map(move |c| (h, c.handle()))
             })
             .collect();
-        targets
+        // Every Digimon's cards are trashed at the same time: one event
+        // (§15-5-2).
+        let event = self.game.begin_source_move_event();
+        let trashed = targets
             .into_iter()
             .filter(|(host, card)| self.trash_card_source(*host, *card))
-            .count()
+            .count();
+        self.game.end_source_move_event(event);
+        trashed
     }
 }

@@ -300,8 +300,16 @@ fn bt1_090_two_plays_in_same_turn_drain_both_schedules_at_eot() {
     );
 
     // End P0's turn: BOTH schedules fire (each loses 2 → 4-2-2 = 0),
-    // then seesaw flip (0 → 0).
+    // then seesaw flip (0 → 0). The two pending processings are processed
+    // at the same time, so P0 orders them like simultaneous triggers
+    // (§18-1-2, §15-4-3-5-1); the bodies are identical, so either order.
     runner.end_turn();
+    assert_eq!(
+        runner.pending_selection().map(|s| s.kind),
+        Some(digimon_engine::selection::SelectionKind::TriggerOrder),
+        "§18-1-2: the turn player orders the two pending processings"
+    );
+    runner.auto_resolve().expect("order the two pending processings");
 
     assert!(
         runner.game.scheduled_effects.is_empty(),
@@ -393,8 +401,8 @@ fn bt1_090_black_only_support_rejects_option_play() {
     assert!(runner.game.scheduled_effects.is_empty());
 }
 
-/// general_rule.pdf p7, 4-2-1/4-2-2: a hatched Digi-Egg is a Digimon.
-/// Together with p10, 4-19-2, red Koromon alone satisfies this red option.
+/// general_rule.pdf p.9, 4-3-1 (4.3 merged 3.6's 4-2-1/4-2-2): a hatched Digi-Egg is a Digimon.
+/// Together with p.12, 4-22-2, red Koromon alone satisfies this red option.
 /// This must use a real DigiEgg card, not a Digimon fixture named "egg".
 #[test]
 fn bt1_090_hatched_red_digi_egg_enables_legal_option_play() {

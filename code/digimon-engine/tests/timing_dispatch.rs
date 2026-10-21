@@ -17,7 +17,7 @@ use digimon_engine::enums::{
 };
 use digimon_engine::events::GameEvent;
 use digimon_engine::modifiers::ModifierEntry;
-use digimon_engine::permanent::{Permanent, PermanentHandle};
+use digimon_engine::permanent::{OptionState, Permanent, PermanentHandle};
 use digimon_engine::replacement::{ReplacementCause, ReplacementSubject};
 use digimon_engine::selection::{AttackTarget, SelectionKind, TriggerSource};
 use digimon_engine::trigger_context::EventCause;
@@ -841,6 +841,10 @@ fn end_of_attack_fires_for_all_players() {
         .hand(0, &["ATK", "OBS"])
         .deck(0, &filler)
         .deck(1, &filler)
+        // P1 keeps a security card: an attack on a player with 0 security
+        // wins the game at once (§1-2-3-1) and a finished game processes no
+        // [End of Attack] (§1-2-2; G-ENGINE-GAME-OVER-NOT-TERMINAL).
+        .security(1, &["F"])
         .memory(10)
         .start();
     r.register_effect("OBS", Arc::new(EoAttackMemoryGain));
@@ -1639,11 +1643,22 @@ fn on_digivolution_card_trashed_return_to_deck_carries_host_and_trashed_source()
     assert_eq!(r.memory(), before + 1);
 }
 
+/// <De-Digivolve> trashes the TOP card, never a digivolution card (§16-12-1
+/// "trashed ... starting with the top card"; §4-8-1 "A digivolution card
+/// refers to a card placed under a Digimon"), so a source-trash observer does
+/// NOT see it; the instance fires `OnTopCardTrashed` instead (DCGO
+/// `IDegeneration` stacks `WhenTopCardTrashed`). Inverted from the former
+/// `on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source`
+/// (G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED).
 #[test]
-fn on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source() {
+fn on_digivolution_card_trashed_does_not_observe_de_digivolve() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("OBS-DEDE", "Source Trash Observer", 3))
-        .add_card(plain_digimon("TOP-DEDE", "Top", 4))
+        // Level 4: a level 3 top card can't be trashed (§16-12-4).
+        .add_card(CardData {
+            level: Some(4),
+            ..plain_digimon("TOP-DEDE", "Top", 4)
+        })
         .add_card(plain_digimon("UNDER-DEDE", "Under", 3))
         .memory(5)
         .start();
@@ -1679,8 +1694,9 @@ fn on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source() {
         r.game_mut().de_digivolve_from_effect(host, 0, 1),
         "de_digivolve should trash TOP-DEDE and expose UNDER-DEDE"
     );
+    r.game_mut().drain_effect_queue();
 
-    assert_eq!(r.memory(), before + 1);
+    assert_eq!(r.memory(), before, "no digivolution card was trashed");
 }
 
 #[test]
@@ -2194,19 +2210,60 @@ fn on_ally_attack_still_fires_if_attacker_stack_changes_during_on_attack() {
     );
 }
 
+/// An attack observer with no qualifier: records the attacker it can see
+/// (`None` once the attacker has left) and gains memory.
+struct PlainAttackObserver {
+    timing: EffectTiming,
+    memory: i16,
+    seen: Arc<Mutex<Vec<Option<PermanentHandle>>>>,
+}
+
+impl CardEffect for PlainAttackObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = self.seen.clone();
+        let memory = self.memory;
+        vec![EffectBuilder::new(card, self.timing)
+            .name("Plain attack observer")
+            .process(move |ctx| {
+                seen.lock().unwrap().push(ctx.attack_attacker());
+                ctx.gain_memory(memory);
+            })
+            .build()]
+    }
+}
+
+fn no_security_reveal(r: &DebugRunner, cp: usize) -> bool {
+    !r.events_since(cp)
+        .iter()
+        .any(|e| matches!(e, GameEvent::SecurityReveal { .. }))
+}
+
+/// §15-4-3-2: P1's "when an opponent's Digimon attacks" observer triggers on
+/// the declaration together with P0's ally observer; when P0's observer
+/// returns the attacker to hand, P1's pending observer still activates
+/// (§15-8-3-1: a trigger-type effect activates once triggered; the attack
+/// was declared, so its trigger condition was met and does not un-happen).
+/// The attack itself is not successful (§11-1-5, §11-5-1-4-1: the attacking
+/// Digimon left the battle area after the declaration): no battle, no
+/// security check, but the end of attack timing still occurs. The observer
+/// must not read the Digimon that later occupies the attacker's old slot.
 #[test]
-fn on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker() {
+fn on_opponent_attack_observer_still_fires_after_ally_observer_removes_attacker() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("ATTACKER", "Attacker", 3))
         .add_card(plain_digimon("ALLY-REMOVE", "Ally Remove", 3))
         .add_card(plain_digimon("OPP-OBS", "Opponent Observer", 3))
+        .add_card(plain_digimon("SEC", "Security", 3))
+        .security(1, &["SEC"])
         .memory(5)
         .start();
     let opponent_seen = Arc::new(Mutex::new(Vec::new()));
     r.register_effect("ALLY-REMOVE", Arc::new(ReturnAttackerOnAllyAttack));
     r.register_effect(
         "OPP-OBS",
-        Arc::new(OpponentAttackObserver {
+        Arc::new(PlainAttackObserver {
+            timing: EffectTiming::OnOpponentAttack,
+            memory: 2,
             seen: opponent_seen.clone(),
         }),
     );
@@ -2215,6 +2272,7 @@ fn on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker() {
     r.place_on_field(0, "ALLY-REMOVE", None);
     r.place_on_field(1, "OPP-OBS", None);
     let before = r.memory();
+    let cp = r.event_checkpoint();
 
     let result = r.attack_player(attacker, 1, false);
     r.auto_resolve()
@@ -2222,66 +2280,82 @@ fn on_opponent_attack_does_not_fire_if_ally_observer_removes_attacker() {
 
     assert_eq!(
         result,
-        digimon_engine::combat::AttackResult::Invalid,
-        "attack should stop after an ally observer removes the attacker"
+        digimon_engine::combat::AttackResult::Unsuccessful,
+        "the attack is unsuccessful once an ally observer removes the attacker (§11-1-5)"
     );
+    assert_eq!(r.security_count(1), 1, "no security check");
+    assert!(no_security_reveal(&r, cp), "the attack never reached security");
     assert_eq!(
-        r.memory(),
-        before,
-        "opponent observers must not fire after the attacker leaves during ally observer fan-out"
+        *opponent_seen.lock().unwrap(),
+        vec![None],
+        "the opponent observer still activates, with no stale attacker context"
     );
-    assert!(
-        opponent_seen.lock().unwrap().is_empty(),
-        "opponent observers must not receive stale attack context"
-    );
+    assert_eq!(r.memory(), before - 2, "P1's observer gained 2 memory");
 }
 
+/// §15-4-3-2 / §15-4-3-5-1: the attacker's OnAttack ("return this Digimon to
+/// hand") and both allies' "when one of your Digimon attacks" observers
+/// trigger on the same declaration and pend in one TriggerOrder. Activating
+/// the OnAttack first removes the attacker; the two observers stay pending
+/// and still activate (§15-8-3-1), seeing no attacker (ALLY-A now sits in
+/// the attacker's old slot and must not be reported as it). The attack ends:
+/// no battle, no security check.
 #[test]
-fn on_ally_attack_does_not_fire_if_attacker_left_during_on_attack() {
+fn on_ally_attack_observers_still_fire_after_attacker_left_during_on_attack() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("ATTACKER", "Attacker", 3))
         .add_card(plain_digimon("ALLY-A", "Ally A", 3))
         .add_card(plain_digimon("ALLY-B", "Ally B", 3))
+        .add_card(plain_digimon("SEC", "Security", 3))
+        .security(1, &["SEC"])
         .memory(5)
         .start();
     let ally_seen = Arc::new(Mutex::new(Vec::new()));
     r.register_effect("ATTACKER", Arc::new(ReturnSelfOnAttack));
-    r.register_effect(
-        "ALLY-A",
-        Arc::new(AllyAttackObserver {
-            seen: ally_seen.clone(),
-        }),
-    );
-    r.register_effect(
-        "ALLY-B",
-        Arc::new(AllyAttackObserver {
-            seen: ally_seen.clone(),
-        }),
-    );
+    for id in ["ALLY-A", "ALLY-B"] {
+        r.register_effect(
+            id,
+            Arc::new(PlainAttackObserver {
+                timing: EffectTiming::OnAllyAttack,
+                memory: 1,
+                seen: ally_seen.clone(),
+            }),
+        );
+    }
 
     let attacker = r.place_on_field(0, "ATTACKER", Some(0));
     r.place_on_field(0, "ALLY-A", None);
     r.place_on_field(0, "ALLY-B", None);
     let before = r.memory();
+    let cp = r.event_checkpoint();
 
     let result = r.attack_player(attacker, 1, false);
+    assert_eq!(result, digimon_engine::combat::AttackResult::InProgress);
+    let first = r
+        .pending_selection()
+        .filter(|s| s.kind == SelectionKind::TriggerOrder)
+        .and_then(|s| s.effect_choices.as_ref())
+        .and_then(|c| c.first())
+        .and_then(|c| c.timing);
+    assert_eq!(first, Some(EffectTiming::OnAttack), "OnAttack is offered first");
+    // `auto_resolve` takes the first branch each time: the OnAttack, then the
+    // two observers.
     r.auto_resolve()
         .expect("attack prompts should auto-resolve");
 
-    assert_eq!(
-        result,
-        digimon_engine::combat::AttackResult::Invalid,
-        "attack should stop after the attacker leaves during OnAttack"
-    );
-    assert_eq!(
-        r.memory(),
-        before,
-        "OnAllyAttack must not fire after the original attacker leaves"
-    );
+    assert!(r.game.pending_attack.is_none(), "the attack ended");
+    assert_eq!(r.security_count(1), 1, "no security check");
+    assert!(no_security_reveal(&r, cp), "the attack never reached security");
     assert!(
-        ally_seen.lock().unwrap().is_empty(),
-        "shifted battle-area slots must not receive stale attacker context"
+        r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "ATTACKER"),
+        "the attacker returned to hand"
     );
+    assert_eq!(
+        *ally_seen.lock().unwrap(),
+        vec![None, None],
+        "both ally observers activate, with no stale attacker context"
+    );
+    assert_eq!(r.memory(), before + 2);
 }
 
 #[test]
@@ -3484,4 +3558,83 @@ fn inherited_stack_dispatch_fires_each_below_top_source_once() {
          before={before}, after={}",
         r.memory()
     );
+}
+
+/// A `<Delay>` Option keyed to "[Your Turn] When one of your [CS] trait
+/// Digimon attacks" (the BT23-096 shape: `kind: delay`, `trigger:
+/// on_ally_attack`, `attacker_trait_has` in `active_when`).
+const DELAY_CS_YAML: &str = r#"
+card: DELAY-CS
+name: Delay CS
+kind: option
+color: [red]
+cost: 0
+effects:
+  - kind: delay
+    trigger: on_ally_attack
+    active_when:
+      all_of:
+        - your_turn: true
+        - attacker_trait_has: CS
+    summary: "[Your Turn] <Delay> When one of your [CS] trait Digimon attacks, gain 2 memory"
+    process:
+      - gain_memory: 2
+"#;
+
+/// §15-8-3-1: the `<Delay>` observer triggers on the [CS] Digimon's attack
+/// together with the attacker's own "return this Digimon to hand"; the
+/// attacker returning first does not un-happen the attack, so the Delay's
+/// "[CS] trait" qualifier keeps the departed attacker's last-known traits
+/// (the delay path's clause-level gate reads the trigger's snapshot) and the
+/// Delay is still offered.
+#[test]
+fn delay_attacker_trait_qualifier_survives_attacker_leaving() {
+    let mut cs = plain_digimon("CS-ATK", "CS Attacker", 3);
+    cs.traits = vec!["CS".to_string()];
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(DELAY_CS_YAML)
+        .expect("delay option loads")
+        .add_card(cs)
+        .memory(5)
+        .start();
+    r.register_effect("CS-ATK", Arc::new(ReturnSelfOnAttack));
+    if r.game.turn_count == 0 {
+        r.game.turn_count = 1;
+    }
+    let delay = r.place_on_field(0, "DELAY-CS", None);
+    r.game.players[0].battle_area[delay.index as usize].option_state = OptionState::Delayed {
+        owner: 0,
+        trash_on_turn: u16::MAX,
+        trigger: DelayTrigger::OnEvent(EffectTiming::OnAllyAttack),
+        placed_on_turn: r.game.turn_count - 1,
+    };
+    let attacker = r.place_on_field(0, "CS-ATK", Some(0));
+    let before = r.memory();
+
+    r.attack_player(attacker, 1, false);
+    let order = r.pending_selection().expect("both triggered on the attack");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+    let on_attack = order
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|c| c.timing == Some(EffectTiming::OnAttack))
+        .expect("the attacker's return")
+        .action_id;
+    r.execute_action(0, on_attack).expect("return the attacker first");
+    assert!(
+        r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "CS-ATK"),
+        "the attacker returned to hand"
+    );
+    for _ in 0..4 {
+        let Some(sel) = r.pending_selection() else { break };
+        assert!(sel.is_optional, "only the optional <Delay> remains: {sel:?}");
+        r.accept_optional_trigger().expect("activate the <Delay>");
+    }
+    assert!(
+        r.game.players[0].trash.iter().any(|c| c.card_id(&r.game.card_data) == "DELAY-CS"),
+        "the <Delay> was activated (it trashes itself)"
+    );
+    assert_eq!(r.memory(), before + 2, "its body ran");
 }

@@ -3,7 +3,7 @@
 //! Model: `qa/archetype-qa/DNA Omnimon-model.md`. The deck converges two tribes
 //! (Greymon / Garurumon) into [Omnimon]-name Lv.7s via **DNA digivolution**
 //! (`general_rule.pdf` §8-2; the new DNA Digimon may attack the same turn,
-//! §8-2-2-1-6). These interaction tests pin the cross-card combos a per-card
+//! §8-2-2-1-7). These interaction tests pin the cross-card combos a per-card
 //! behavioral test cannot see — exercising the **real card abilities** (no
 //! bypassing engine helper stands in for a named combo card).
 //!
@@ -233,7 +233,7 @@ fn combo_a_standard_digivolve_does_not_grant_immunity() {
 //   Lv.6 [Greymon] (ST1-11 WarGreymon) on field + an [Omnimon]-name Lv.7
 //   (EX4-060 Omnimon Alter-S) in hand + a Lv.6 DNA partner (ST2-10 Plesiomon)
 //   in hand + Red and Blue colour anchors (ST1-04 Dracomon, ST2-04 Bearmon) on
-//   field for the Option-play colour requirement (4-19-3: a multicolour Option
+//   field for the Option-play colour requirement (4-22-3: a multicolour Option
 //   needs ALL of its colours on your field, not any one of them).
 // Expected outcome (model Combo B): BT17-095's [Main] (Clause A) plays no body
 //   here (no [Agumon]/[Gabumon] is eligible to recur — the optional union pick
@@ -367,7 +367,7 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
         .start();
     runner.game.turn_count = 1;
 
-    // Red + Blue colour anchors on field: BT17-095 is Red+Blue, and 4-19-3
+    // Red + Blue colour anchors on field: BT17-095 is Red+Blue, and 4-22-3
     // requires ALL of a multicolour Option's colours on your field (DCGO
     // CardSource.cs `colorsToCheck.Every(...)`), mirroring omnimon_ace combo 1.
     runner.place_on_field(0, "ST1-04", Some(0));
@@ -469,7 +469,7 @@ fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
     runner.game.turn_count = 1;
 
     // Red + Blue colour anchors on field for BT17-095's Option-play colour
-    // requirement (4-19-3: ALL of a multicolour Option's colours).
+    // requirement (4-22-3: ALL of a multicolour Option's colours).
     runner.place_on_field(0, "ST1-04", Some(0));
     runner.place_on_field(0, "ST2-04", Some(0));
     runner.game.enter_main_phase();

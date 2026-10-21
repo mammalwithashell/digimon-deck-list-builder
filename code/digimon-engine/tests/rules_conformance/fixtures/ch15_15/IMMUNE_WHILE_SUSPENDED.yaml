@@ -1,0 +1,19 @@
+# IMMUNE_WHILE_SUSPENDED -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [All Turns] While this Digimon is suspended, this Digimon isn't affected
+#   by the effects of your opponent's Digimon.
+# The §15-15-5-2 example card.
+card: IMMUNE_WHILE_SUSPENDED
+name: Sleepguardmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - kind: aura
+    target: {}
+    active_when: { source_is_unsuspended: false }
+    effect_immunity:
+      source_kind: digimon
+      source_controller: opponent
+    summary: "[All Turns] While this Digimon is suspended, this Digimon isn't affected by the effects of your opponent's Digimon."

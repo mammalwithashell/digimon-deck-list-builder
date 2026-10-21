@@ -1,0 +1,21 @@
+# HAND_PICK_NOT_RED_ANY -- Option, red, use cost 0.
+#   [Main] Trash 1 card that is not red from your hand.
+# An UNQUALIFIED negated reference: it reads a DUAL card's Digimon
+# information only (§4-6-1, §4-6-5-2; owner ruling W5 (b)), so DUAL_ARTS
+# (Digimon information red) does not match; its purple Option information is
+# not read.
+card: HAND_PICK_NOT_RED_ANY
+name: Any non-red Audit
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash 1 card that is not red from your hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter: { not: { color_is: red } }
+          prompt: "Trash 1 card that is not red from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: pick }

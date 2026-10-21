@@ -79,9 +79,8 @@ steps:
   - actor: 0
     do: { select: { cards: [BT25-049] } }
     expect: { prompt: SelectHandEffect }
-  # SIM-ONLY: our 9-1-5 Option-disposal order prompt (no DCGO counterpart).
-  - actor: 0
-    do: { select: { choice: "Trash the used Option", sim_only: true } }
+  # The Option's disposal goes first, with no decision (§9-1-5; formerly a
+  # sim-only "Trash the used Option" ordering row).
   - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
@@ -123,7 +122,7 @@ assert:
   # (with ST23-03 / ST23-04 from T1/T3 and ST23-09 from the Tamer's own SOMP
   # that resolved second); <Draw 1> brought ST23-06; memory 3 -> 4. Nothing
   # was trashed (the Option MOVED).
-  - at: 19
+  - at: 18
     that:
       turn: 5
       p0.memory: 4

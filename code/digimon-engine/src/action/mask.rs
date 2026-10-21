@@ -178,9 +178,13 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // --- Attack (100-399) ---
             // §4.7e CannotAttack (player-scoped) — zero ALL attack bits for
             // this player. Check before entering the per-attacker loop.
-            // Memory gate is per-attacker: baseline requires memory >= 0,
-            // but §4.3 Blitz carves out "Blitz + digivolved this turn" even
-            // when memory < 0. Native/static Blitz parsing remains §4.3b.
+            // Memory gate: a Main-phase attack needs the memory on this
+            // player's side. There is no <Blitz> carve-out: <Blitz> offers its
+            // attack as its own decision inside the effect that executes it
+            // (§16-16-2/-3, `keyword_effects::blitz_process` →
+            // `ResumeFrame::AttackDeclarationDecision`), never through the Main-phase
+            // mask, so a Digimon that merely has <Blitz> cannot attack with the
+            // memory on the opponent's side.
             let attack_blocked = game
                 .modifiers
                 .player_has(player_id, ModifierType::CannotAttack);
@@ -197,11 +201,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 if !can_basic_attack(attacker, handle, game.turn_count, &game.card_data, game) {
                     continue;
                 }
-                let memory_ok = game.memory >= 0 || {
-                    let digivolved_this_turn = attacker.turn_digivolved == game.turn_count;
-                    digivolved_this_turn && game.has_keyword(handle, Keyword::Blitz)
-                };
-                if !memory_ok {
+                if game.memory < 0 {
                     continue;
                 }
 
@@ -210,40 +210,18 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     mask[sec_action as usize] = 1.0;
                 }
 
-                // Digimon attacks (§4.4). Suspended enemies are always valid.
-                // Unsuspended enemies are valid iff attacker has:
-                //   - CAN_ATTACK_UNSUSPENDED modifier (any unsuspended), or
-                //   - Raid keyword (unsuspended enemies tied for highest
-                //     effective DP).
-                // Native `_is_can_attack_unsuspended` keyword awaits §4.5.
+                // Digimon attacks: the declaration targets the opponent or a
+                // suspended Digimon (§11-2-7-1), or an unsuspended one when
+                // the attacker carries a CAN_ATTACK_UNSUSPENDED grant
+                // (§16-38-1 <Execute>; DCGO `Permanent.CanAttackTargetDigimon`).
+                // <Raid> is NOT a declaration-time permission: it switches the
+                // target after the declaration (§16-23-1 / §16-23-2), as a
+                // [When Attacking] trigger in the attack's pool
+                // (`Game::raid_switch_options`).
                 let can_attack_unsuspended = game
                     .modifiers
                     .has(handle, ModifierType::CanAttackUnsuspended);
-                let has_raid = game.has_keyword(handle, Keyword::Raid);
                 let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
-
-                // Precompute max effective DP among unsuspended enemy Digimon
-                // only if Raid is relevant (skip when CAN_ATTACK_UNSUSPENDED
-                // already broadens targeting).
-                let raid_max_dp = if has_raid && !can_attack_unsuspended {
-                    let mut best: Option<i32> = None;
-                    for j in 0..max_opp {
-                        let t = &opp.battle_area[j];
-                        let t_handle = PermanentHandle {
-                            player: opp_id,
-                            index: j as u8,
-                        };
-                        if t.is_suspended || !game.permanent_is_digimon_for_rules(t_handle) {
-                            continue;
-                        }
-                        if let Some(dp) = game.effective_dp(t_handle) {
-                            best = Some(best.map_or(dp, |b| b.max(dp)));
-                        }
-                    }
-                    best
-                } else {
-                    None
-                };
 
                 for j in 0..max_opp {
                     let t_handle = PermanentHandle {
@@ -270,14 +248,6 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     }
                     if can_attack_unsuspended {
                         mask[action_bit] = 1.0;
-                        continue;
-                    }
-                    if let Some(max_dp) = raid_max_dp {
-                        if let Some(dp) = game.effective_dp(t_handle) {
-                            if dp == max_dp {
-                                mask[action_bit] = 1.0;
-                            }
-                        }
                     }
                 }
             }
@@ -437,7 +407,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 // placing turn has passed exposes a player-visible
                 // FIELD_EFFECT activation (slot `+2`) — "By trashing this
                 // card after the placing turn, activate the effect below"
-                // (RULES_CONTEXT 16-16). The choice is optional, so PASS
+                // (RULES_CONTEXT 16-17). The choice is optional, so PASS
                 // remains legal alongside it (emitted below).
                 if game.delayed_option_main_activation_available(perm_handle) {
                     let bit = FIELD_EFFECT_START
@@ -465,10 +435,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // `FIELD_EFFECT_SLOT_FOR_MAIN (=2)` → action_id 1142. This bit
             // is reserved for the breeding-area Training activation; no
             // other `MainOnField` effect surfaces from breeding (RULES_CONTEXT
-            // 16-40 specifies that ONLY `<Training>` activates from breeding
+            // 16-41 specifies that ONLY `<Training>` activates from breeding
             // — surfacing all `MainOnField` effects from breeding would
-            // inadvertently expose Save/MaterialSave/MindLink from breeding
-            // too, which is wrong).
+            // inadvertently expose MindLink from breeding too, which is
+            // wrong).
             //
             // Gate: same `CannotActivateMainEffects` short-circuit as the
             // battle-area emitter, then check that the breeding-area
@@ -521,7 +491,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             if me.breeding_area.is_none() && !me.digitama_deck.is_empty() {
                 mask[HATCH as usize] = 1.0;
             }
-            // Rule 4-15-2: a breeding Digimon may move if it has DP.
+            // Rule 4-17-2: a breeding Digimon may move if it has DP.
             // Level-less Digi-Eggs such as Mother D-Reaper qualify (Q3276).
             if let Some(ref perm) = me.breeding_area {
                 if perm.top_card().digimon_dp(&game.card_data).is_some()
@@ -565,19 +535,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     index: i as u8,
                 };
 
-                // §4.6c Overclock (sub-slot 0 of the per-permanent field
-                // effect range). Mirrors Python action_mask.py:354-361:
-                // emits when the Digimon has Overclock AND at least one
-                // other sacrificeable permanent exists on the battle area.
-                if game.has_keyword(handle, Keyword::Overclock)
-                    && !game.is_overclock_declined_for_action_mask(handle)
-                    && game.has_overclock_sacrifice(player_id, i)
-                {
-                    let bit = FIELD_EFFECT_START
-                        + i as u16 * EFFECTS_PER_PERMANENT
-                        + FIELD_EFFECT_SLOT_FOR_OVERCLOCK;
-                    mask[bit as usize] = 1.0;
-                }
+                // No `<Overclock>` field-effect bit and no `<Vortex>` /
+                // `<Engage>` / `<Execute>` attack bits here: those keywords are
+                // trigger-type effects whose decision is offered inside the
+                // `[End of Your Turn]` pool, as a pending selection (§16-33-2,
+                // §16-34-2, §16-38-2, §16-44-2).
 
                 // §4.7e CannotAttack gate — skip all attack-bit emission
                 // for this permanent when the player-scoped modifier is set.
@@ -593,61 +555,27 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
 
-                // §4.6 attack bits: Vortex / MayAttack / ForceAttack / Engage
-                // all share the 100-399 attack range. Vortex keeps its special
-                // opponent-Digimon targeting; normal MayAttack/ForceAttack and
-                // Engage use the same suspended / Raid / CanAttackUnsuspended
-                // target legality as Main-phase attacks.
-                let vortex = game.has_keyword(handle, Keyword::Vortex);
+                // §4.6 attack bits: MayAttack / ForceAttack share the 100-399
+                // attack range and use the same suspended /
+                // CanAttackUnsuspended target legality as Main-phase attacks
+                // (§11-2-7-1); <Raid> switches the target after the
+                // declaration (§16-23-1), not before.
                 let may_attack = game.modifiers.has(handle, ModifierType::MayAttack);
                 let force_attack = game.modifiers.has(handle, ModifierType::ForceAttack);
-                let engage = game.has_keyword(handle, Keyword::Engage);
-                if !vortex && !may_attack && !force_attack && !engage {
+                if !may_attack && !force_attack {
                     continue;
                 }
-                let vortex_can_attack = vortex && game.can_attack(handle, /* vortex = */ true);
-                let normal_eot_can_attack = (may_attack || force_attack || engage)
-                    && game.can_attack(handle, /* vortex = */ false);
-                if !vortex_can_attack && !normal_eot_can_attack {
+                if !game.can_attack(handle, /* vortex = */ false) {
                     continue;
                 }
 
-                let can_attack_player = normal_eot_can_attack
-                    || (vortex_can_attack
-                        && game
-                            .modifiers
-                            .has(handle, ModifierType::VortexCanAttackPlayer));
-                if can_attack_player
-                    && !game.modifiers.has(handle, ModifierType::CannotAttackPlayer)
-                {
+                if !game.modifiers.has(handle, ModifierType::CannotAttackPlayer) {
                     mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
                 }
 
                 let can_attack_unsuspended = game
                     .modifiers
                     .has(handle, ModifierType::CanAttackUnsuspended);
-                let has_raid = game.has_keyword(handle, Keyword::Raid);
-                let raid_max_dp = if normal_eot_can_attack && has_raid && !can_attack_unsuspended {
-                    let mut best: Option<i32> = None;
-                    for j in 0..max_opp {
-                        let target = &opp.battle_area[j];
-                        let target_handle = PermanentHandle {
-                            player: opp_id,
-                            index: j as u8,
-                        };
-                        if target.is_suspended
-                            || !game.permanent_is_digimon_for_rules(target_handle)
-                        {
-                            continue;
-                        }
-                        if let Some(dp) = game.effective_dp(target_handle) {
-                            best = Some(best.map_or(dp, |b| b.max(dp)));
-                        }
-                    }
-                    best
-                } else {
-                    None
-                };
 
                 for j in 0..max_opp {
                     let t_handle = PermanentHandle {
@@ -667,13 +595,12 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     if game.attack_target_blocked_by_modifier(handle, t_handle) {
                         continue;
                     }
-                    let normal_target_legal = normal_eot_can_attack
-                        && (game.player(opp_id).battle_area[j].is_suspended
-                            || can_attack_unsuspended
-                            || raid_max_dp.is_some_and(|max_dp| {
-                                game.effective_dp(t_handle).is_some_and(|dp| dp == max_dp)
-                            }));
-                    if !vortex_can_attack && !normal_target_legal {
+                    // Either grant (checked above) attacks only a legal
+                    // target: suspended, or one this attacker may attack
+                    // unsuspended (§11-2-7-1).
+                    let target_legal =
+                        game.player(opp_id).battle_area[j].is_suspended || can_attack_unsuspended;
+                    if !target_legal {
                         continue;
                     }
                     mask[encode_attack(i as u16, j as u16) as usize] = 1.0;
@@ -740,31 +667,31 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
-/// 4-19 — can this player meet an Option card's COLOR REQUIREMENTS?
+/// 4-22 — can this player meet an Option card's COLOR REQUIREMENTS?
 ///
-/// 4-19-2: "To meet color requirements, you must have a Digimon or Tamer on
+/// 4-22-2: "To meet color requirements, you must have a Digimon or Tamer on
 /// your field that's the same color as the Option card you want to use."
-/// 4-19-3: "An Option card with multiple colors can't be used unless the color
+/// 4-22-3: "An Option card with multiple colors can't be used unless the color
 /// requirements are met for ALL of its colors."
-/// 4-19-4: "A multicolor Digimon or multicolor Tamer can meet the color
+/// 4-22-4: "A multicolor Digimon or multicolor Tamer can meet the color
 /// requirements for multiple colors."
 ///
 /// So the test is: for EVERY color the Option prints, SOME qualifying permanent
 /// carries that color. Different colors may be covered by different permanents,
-/// and one multicolor permanent may cover several (4-19-4) -- hence a per-color
+/// and one multicolor permanent may cover several (4-22-4) -- hence a per-color
 /// existence check rather than any per-permanent test.
 ///
 /// This used to ask whether any SINGLE permanent shared any ONE of the Option's
-/// colors, which let a mono-color board pay for a multicolor Option -- 4-19-3
+/// colors, which let a mono-color board pay for a multicolor Option -- 4-22-3
 /// says it cannot. 63 Option cards in data/cards.json print more than one
 /// color, so this was reachable, not theoretical. DCGO agrees with the manual:
 /// CardSource.cs:307-310 uses `colorsToCheck.Every(...)`.
 ///
 /// BREEDING AREA COUNTS, and this is SETTLED -- all three sources agree.
-/// 3-4-5: "The field is divided into the breeding area and the battle area",
-/// so a breeding Digimon is literally "on your field" as 4-19-2 words it. The
-/// restrictions on breeding cards (3-4-6-3 "can't be affected by effects",
-/// 3-4-6-5 "can't be chosen for effects") are scoped to EFFECTS; a color
+/// 3-4-6: "The field is divided into the breeding area and the battle area",
+/// so a breeding Digimon is literally "on your field" as 4-22-2 words it. The
+/// restrictions on breeding cards (3-4-7-3 "can't be affected by effects",
+/// 3-4-7-5 "can't be chosen for effects") are scoped to EFFECTS; a color
 /// requirement is a rules gate on USING a card, not an effect targeting the
 /// breeding Digimon.
 ///
@@ -792,7 +719,7 @@ pub(crate) fn option_color_match_available(
     }
 
     // Every color a qualifying permanent contributes. Collected once, because
-    // 4-19-4 lets a single multicolor permanent cover several of the Option's
+    // 4-22-4 lets a single multicolor permanent cover several of the Option's
     // colors and lets different colors come from different permanents.
     let mut covered: Vec<crate::enums::CardColor> = Vec::new();
     for perm in &me.battle_area {
@@ -807,16 +734,16 @@ pub(crate) fn option_color_match_available(
         covered.extend(perm_colors);
     }
     // Breeding area: only Digimon can be there (Tamers cannot). See the
-    // breeding note above -- 3-4-5 puts the breeding area inside the field.
+    // breeding note above -- 3-4-6 puts the breeding area inside the field.
     if let Some(ref breeding) = me.breeding_area {
-        // A hatched Digi-Egg is a Digimon on the field (rules 4-2-1/2),
-        // and therefore supplies its color for an Option under 4-19-2.
+        // A hatched Digi-Egg is a Digimon on the field (rules 4-3-1/2),
+        // and therefore supplies its color for an Option under 4-22-2.
         if breeding.is_digimon(card_data) || breeding.is_digi_egg(card_data) {
             covered.extend(breeding.top_card().digimon_colors(card_data));
         }
     }
 
-    // 4-19-3: ALL of the Option's colors, not any.
+    // 4-22-3: ALL of the Option's colors, not any.
     option_colors.iter().all(|c| covered.contains(c))
 }
 
@@ -995,12 +922,78 @@ pub(crate) fn effect_attack_target_action_ids(
     )
 }
 
+/// The attack declarations an end-of-turn attack keyword's trigger body
+/// offers for `attacker` (`Game::offer_end_of_turn_keyword_attack`), as
+/// `encode_attack` ids; empty when it cannot attack at all.
+///
+/// - `<Engage>` (§16-44-1): an ordinary attack: the opponent, or a suspended
+///   Digimon (§11-2-7-1).
+/// - `<Execute>` (§16-38-1): also an opponent's UNSUSPENDED Digimon.
+/// - `<Vortex>` (§16-33-1): an opponent's Digimon it may attack (suspended,
+///   §11-2-7-1; W2 reading (a)), the player only under
+///   `VortexCanAttackPlayer` (DCGO `PermanentHasVortexCanAttackPlayers`);
+///   it may attack the turn it was played (`can_attack(.., vortex = true)`).
+///
+/// The same player- and permanent-scoped gates as every other offered attack
+/// (`attack_declaration_action_ids`: `CannotAttack`, `CannotAttackPlayer`,
+/// `MayAttackPlayerOnly` and the per-target bans in
+/// `attack_target_blocked_by_modifier`); no Main-phase memory gate.
+pub(crate) fn end_of_turn_keyword_attack_action_ids(
+    game: &Game,
+    attacker: PermanentHandle,
+    keyword: Keyword,
+) -> Vec<u16> {
+    let (restriction, vortex, unsuspended_targets) = match keyword {
+        Keyword::Engage => (AttackTargetRestriction::Any, false, false),
+        Keyword::Execute => (AttackTargetRestriction::Any, false, true),
+        Keyword::Vortex => (
+            if game
+                .modifiers
+                .has(attacker, ModifierType::VortexCanAttackPlayer)
+            {
+                AttackTargetRestriction::Any
+            } else {
+                AttackTargetRestriction::DigimonOnly
+            },
+            true,
+            false,
+        ),
+        _ => return Vec::new(),
+    };
+    attack_declaration_action_ids(game, attacker, restriction, false, false, vortex, unsuspended_targets)
+}
+
 pub(crate) fn effect_attack_target_action_ids_with_options(
     game: &Game,
     attacker: PermanentHandle,
     restriction: AttackTargetRestriction,
     without_suspending: bool,
     ignore_summoning_sickness: bool,
+) -> Vec<u16> {
+    attack_declaration_action_ids(
+        game,
+        attacker,
+        restriction,
+        without_suspending,
+        ignore_summoning_sickness,
+        false,
+        false,
+    )
+}
+
+/// The one target enumeration behind every effect-offered attack
+/// declaration (`effect_attack_target_action_ids*`, the end-of-turn attack
+/// keywords). `vortex` exempts the played-this-turn check (§16-33-1);
+/// `unsuspended_targets` adds the opponent's unsuspended Digimon
+/// (`<Execute>`, §16-38-1) on top of a `CanAttackUnsuspended` grant.
+fn attack_declaration_action_ids(
+    game: &Game,
+    attacker: PermanentHandle,
+    restriction: AttackTargetRestriction,
+    without_suspending: bool,
+    ignore_summoning_sickness: bool,
+    vortex: bool,
+    unsuspended_targets: bool,
 ) -> Vec<u16> {
     if game
         .modifiers
@@ -1019,9 +1012,9 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
     } else if ignore_summoning_sickness {
         game.can_attack_ignoring_summoning_sickness(attacker)
     } else if without_suspending {
-        game.can_attack_without_suspending(attacker, false)
+        game.can_attack_without_suspending(attacker, vortex)
     } else {
-        game.can_attack(attacker, false)
+        game.can_attack(attacker, vortex)
     };
     if !attacker_can_attack {
         return Vec::new();
@@ -1045,30 +1038,11 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
         restriction,
         AttackTargetRestriction::Any | AttackTargetRestriction::DigimonOnly
     ) {
-        let can_attack_unsuspended = game
-            .modifiers
-            .has(attacker, ModifierType::CanAttackUnsuspended);
-        let has_raid = game.has_keyword(attacker, Keyword::Raid);
+        let can_attack_unsuspended = unsuspended_targets
+            || game
+                .modifiers
+                .has(attacker, ModifierType::CanAttackUnsuspended);
         let max_opp = game.player(opponent).battle_area.len().min(FIELD_SLOTS);
-        let raid_max_dp = if has_raid && !can_attack_unsuspended {
-            let mut best: Option<i32> = None;
-            for j in 0..max_opp {
-                let target = &game.player(opponent).battle_area[j];
-                let target_handle = PermanentHandle {
-                    player: opponent,
-                    index: j as u8,
-                };
-                if target.is_suspended || !game.permanent_is_digimon_for_rules(target_handle) {
-                    continue;
-                }
-                if let Some(dp) = game.effective_dp(target_handle) {
-                    best = Some(best.map_or(dp, |b| b.max(dp)));
-                }
-            }
-            best
-        } else {
-            None
-        };
 
         for j in 0..max_opp {
             let target_handle = PermanentHandle {
@@ -1086,12 +1060,10 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
             if game.attack_target_blocked_by_modifier(attacker, target_handle) {
                 continue;
             }
-            let legal = target.is_suspended
-                || can_attack_unsuspended
-                || raid_max_dp.is_some_and(|max_dp| {
-                    game.effective_dp(target_handle)
-                        .is_some_and(|dp| dp == max_dp)
-                });
+            // §11-2-7-1: a suspended Digimon, or any Digimon under a
+            // CAN_ATTACK_UNSUSPENDED grant. <Raid> switches after the
+            // declaration (§16-23-1), so it adds no declaration target.
+            let legal = target.is_suspended || can_attack_unsuspended;
             if legal {
                 action_ids.push(encode_attack(attacker_index, j as u16));
             }
@@ -1103,7 +1075,7 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
 
 /// §4.7d FORCE_ATTACK global mask replacement. If any friendly Digimon
 /// carries `ModifierType::ForceAttack` AND has at least one legal attack
-/// available (respecting summoning sickness, Raid / CanAttackUnsuspended
+/// available (respecting summoning sickness, CanAttackUnsuspended
 /// targeting, and CannotAttackTarget per-target filtering), replace the
 /// passed-in `mask` with a fresh all-zero mask populated only with those
 /// attackers' attack bits.
@@ -1116,7 +1088,7 @@ fn apply_force_attack_mask_replacement(
     player_id: PlayerId,
 ) {
     // A forced attack restricts the choices that are already legal in Main.
-    // Reuse the normal mask so memory/Blitz, player prohibitions, effective
+    // Reuse the normal mask so memory, player prohibitions, effective
     // kind, freshness, suspension and target restrictions cannot drift apart.
     let mut replacement = vec![0.0f32; ACTION_SPACE_SIZE];
     for i in 0..game.player(player_id).battle_area.len().min(FIELD_SLOTS) {

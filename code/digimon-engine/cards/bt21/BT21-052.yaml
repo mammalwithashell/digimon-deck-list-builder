@@ -55,7 +55,8 @@ effects:
       - delete_permanent: { target: victim }
   - when: on_suspend
     once_per_turn: true
-    condition: { event_target_is_source: true }
+    trigger_if:
+      event_target_is_source: true
     summary: "[All Turns][Once Per Turn] When this Digimon suspends, unsuspend it; with Examon or X Antibody in sources, trash opponent top security"
     process:
       - unsuspend: { target: source }

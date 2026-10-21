@@ -1,5 +1,5 @@
 //! LM-034 Wisteria Memory Boost!: official observation 3bbaa1e5...7275f3,
-//! actual card image, base DCGO LM_034.cs, and general rules 4-19/16-16.
+//! actual card image, base DCGO LM_034.cs, and general rules 4-22/16-17.
 //! Exercises printed alternate color access, reveal choices/order, Delay and security.
 
 use digimon_dsl::compiled::{
@@ -216,9 +216,9 @@ fn lm_034_clause_2_is_player_activated_delay() {
             // `EndOfYourNextTurn` and call that "standard <Delay>" -- backwards.
             // The printed timing is `[Main]`, and DCGO registers the clause at
             // `EffectTiming.OnDeclaration` (its [Main] activated-declaration
-            // timing), so this is a player-activated §16-16 Delay. `Delayed`
+            // timing), so this is a player-activated §16-17 Delay. `Delayed`
             // lowers to `DelayTrigger::MainPhaseActivated`, a [Main] mask bit;
-            // NOT activating is the §16-16-2 decline. `EndOfYourNextTurn` both
+            // NOT activating is the §16-17-2 decline. `EndOfYourNextTurn` both
             // fired it at the wrong time and gave the player no say.
             assert_eq!(
                 *trigger,
@@ -540,7 +540,7 @@ fn _unused_silencer() {
     let _ = make_black_digimon("Y", "Y");
 }
 
-// Tail audit: official 3bbaa1e5..., LM-034 image, rules 4-19 / 16-16, DCGO LM_034.cs.
+// Tail audit: official 3bbaa1e5..., LM-034 image, rules 4-22 / 16-17, DCGO LM_034.cs.
 
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{

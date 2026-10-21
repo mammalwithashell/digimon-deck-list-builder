@@ -1,0 +1,23 @@
+# SEC_CHECK_OBS_GE6K_MEM -- Tamer, red, play cost 3.
+#   [Your Turn] When one of your Digimon with 6000 DP or more checks security,
+#   gain 1 memory.
+# "with 6000 DP or more" qualifies the trigger condition (the check), not a
+# processing condition: `trigger_if:`, decided when the check triggers the
+# effect (captured at the reveal, §13-1-8-2 / Q6813) and re-checked when it
+# would activate (§15-4-4-5).
+card: SEC_CHECK_OBS_GE6K_MEM
+name: Lookout Tamer
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_security_check
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_dp_gte: 6000
+    summary: "[Your Turn] When one of your Digimon with 6000 DP or more checks security, gain 1 memory."
+    process:
+      - gain_memory: 1

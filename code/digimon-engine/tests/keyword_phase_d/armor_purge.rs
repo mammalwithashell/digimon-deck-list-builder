@@ -12,11 +12,11 @@
 //!      original deletion proceeds normally.
 //!   4. Self-scope: when a NEIGHBORING permanent is deleted, the ArmorPurge
 //!      carrier's auto-install body MUST NOT mutate any state.
-//!   5. OnDigivolutionCardTrashed fires when the swap actually trashes the
-//!      top.
+//!   5. OnTopCardTrashed (not OnDigivolutionCardTrashed, §4-8-1) fires when
+//!      the swap actually trashes the top.
 //!
 //! Mirrors DCGO `ArmorPurge.cs:40-78`. Optional ("by [cost]") per
-//! RULES_CONTEXT 16-18 — the outer accept dialog represents the optional
+//! RULES_CONTEXT 16-19 — the outer accept dialog represents the optional
 //! "by trashing" cost. Once accepted, the synchronous body trashes the top
 //! and cancels the deletion (no nested player selection — the cost target
 //! is fixed to the visible top).
@@ -385,18 +385,19 @@ fn armor_purge_does_not_fire_on_neighbor_deletion() {
     );
 }
 
-// ─── Test 5: OnDigivolutionCardTrashed fires for the trashed top ────────────
+// ─── Test 5: OnTopCardTrashed fires for the trashed top ─────────────────────
 
 /// When ArmorPurge cancels deletion by trashing the top card, the
-/// `OnDigivolutionCardTrashed` timing MUST fire so that any observers
-/// (e.g. Rocks archetype permanents listening for source-trash events) see
-/// the event. This mirrors the DCGO `WhenTopCardTrashed` dispatch in
-/// `ArmorPurge.cs:65-78`.
+/// `OnTopCardTrashed` timing fires (DCGO `WhenTopCardTrashed`,
+/// `ArmorPurge.cs:65-78`) and `OnDigivolutionCardTrashed` does NOT: the
+/// trashed card is the top card, not a digivolution card (§4-8-1 "A
+/// digivolution card refers to a card placed under a Digimon"). Inverted
+/// from the former `armor_purge_fires_on_digivolution_card_trashed`
+/// (G-ENGINE-DEDIGIVOLVE-FIRES-DIGIVOLUTION-CARD-TRASHED).
 ///
-/// Verified by registering a hand-rolled observer card on the field that
-/// counts `OnDigivolutionCardTrashed` fires by adding a fixed-amount DP
-/// modifier to itself each time it fires, then asserting the counter
-/// advanced by 1 after `armor_purge_top` ran.
+/// Verified by a hand-rolled observer card on the field that adds +100 DP to
+/// itself per `OnTopCardTrashed` fire and +10000 per
+/// `OnDigivolutionCardTrashed` fire, then asserting a +100 delta.
 struct ObserverEffect;
 
 impl digimon_engine::effect::CardEffect for ObserverEffect {
@@ -407,33 +408,42 @@ impl digimon_engine::effect::CardEffect for ObserverEffect {
         use digimon_engine::effect::Effect;
         use digimon_engine::enums::{Expiry, ModifierType};
         use digimon_engine::modifiers::ModifierEntry;
-        vec![Effect::on_digivolution_card_trashed(card)
-            .name("count source-trash fires")
-            .process(|ctx| {
+        let count = |amount: i32| {
+            move |ctx: &mut digimon_engine::effect_context::EffectContext<'_>| {
                 if let Some(perm) = ctx.source_permanent {
                     ctx.game.modifiers.add(
                         perm,
                         ModifierEntry::simple(
                             ModifierType::ChangeDp,
-                            100,
+                            amount,
                             Expiry::Permanent,
                             ctx.player,
                         ),
                     );
                 }
-            })
-            .build()]
+            }
+        };
+        vec![
+            Effect::on_top_card_trashed(card)
+                .name("count top-card-trash fires")
+                .process(count(100))
+                .build(),
+            Effect::on_digivolution_card_trashed(card)
+                .name("count source-trash fires")
+                .process(count(10_000))
+                .build(),
+        ]
     }
 }
 
 #[test]
-fn armor_purge_fires_on_digivolution_card_trashed() {
+fn armor_purge_fires_on_top_card_trashed() {
     use digimon_engine::cards::CardEffectRegistry;
     use digimon_engine::enums::ModifierType;
     use std::sync::Arc;
 
-    // OBSERVER: gains +100 ChangeDp every time OnDigivolutionCardTrashed fires
-    // anywhere on its controller's battle area.
+    // OBSERVER: gains +100 ChangeDp every time OnTopCardTrashed fires (and
+    // +10000 per OnDigivolutionCardTrashed, which must not fire).
     let mut registry = CardEffectRegistry::default();
     registry.insert("OBSERVER", Arc::new(ObserverEffect));
 
@@ -453,7 +463,7 @@ fn armor_purge_fires_on_digivolution_card_trashed() {
 
     // No source-trash events fired yet (nothing observed).
     let dp_before = r.game.modifiers.sum(observer, ModifierType::ChangeDp);
-    assert_eq!(dp_before, 0, "no OnDigivolutionCardTrashed fires before");
+    assert_eq!(dp_before, 0, "no trash event fires before");
 
     // Trigger the deletion → outer accept dialog → on accept, top is trashed
     // → observer fires.
@@ -471,8 +481,8 @@ fn armor_purge_fires_on_digivolution_card_trashed() {
     assert_eq!(
         dp_after,
         100,
-        "OnDigivolutionCardTrashed must fire exactly once when ArmorPurge \
-         trashes the top card; observer DP delta = {}",
+        "OnTopCardTrashed fires exactly once (and OnDigivolutionCardTrashed \
+         never) when ArmorPurge trashes the top card; observer DP delta = {}",
         dp_after - dp_before
     );
 

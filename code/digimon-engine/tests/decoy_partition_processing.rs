@@ -1,5 +1,5 @@
 
-//! Official 16-17, 15-7-4, 15-8-5-4; Decoy is a paid prevention.
+//! Official 16-18, 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md], 15-8-5-4; Decoy is a paid prevention.
 use digimon_engine::{action::{build_action_mask,space::{PASS,REPLACEMENT_ACCEPT}},debug_runner::{DebugRunner,make_test_card},enums::{CardColor,Keyword,ModifierType,Expiry},modifiers::ModifierEntry,permanent::PermanentHandle,selection::SelectionKind};
 fn fixture(partition:bool)->DebugRunner {
     let mut decoy=make_test_card("DECOY-COST","Decoy carrier");
@@ -24,7 +24,7 @@ fn decoy_optional_attempt_only_prevents_after_actual_own_deletion_and_clones(){
         if blocked {r.game.modifiers.add(PermanentHandle{player:0,index:1},ModifierEntry::simple(ModifierType::CannotBeDestroyedByEffect,0,Expiry::Permanent,0));}
         delete_ally(&mut r);
         assert_eq!(r.pending_selection_view().unwrap().kind,SelectionKind::Replacement);
-        // 15-7-4 allows the optional processing attempt even when it cannot succeed.
+        // 15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] allows the optional processing attempt even when it cannot succeed.
         let mask=build_action_mask(&r.game,0);assert_eq!(mask[PASS as usize],1.0);assert_eq!(mask[REPLACEMENT_ACCEPT as usize],1.0);
         let saved=r.game.clone();
         for accept in [false,true]{r.game=saved.clone();act(&mut r,if accept{REPLACEMENT_ACCEPT}else{PASS});r.auto_resolve().unwrap();

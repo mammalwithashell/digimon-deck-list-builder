@@ -84,10 +84,10 @@ effects:
   - when: on_any_link
     optional: true
     active_when:
-      all_of:
-        - your_turn: true
-        - event_target_owner: you
+      your_turn: true
     condition: { source_is_unsuspended: true }
+    trigger_if:
+      event_target_owner: you
     summary: "[Your Turn] When any of your Digimon get linked, suspend self → <Draw 1> and trash 1 from hand"
     process:
       - activation_cost: { suspend_self: true }

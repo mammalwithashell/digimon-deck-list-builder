@@ -1,0 +1,21 @@
+# BLAST -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   Digivolve: red Lv.4, cost 3.
+#   {Hand} [Counter] <Blast Digivolve> (One of your Digimon may digivolve into
+#   this card without paying the cost.)
+# The §16-26 keyword card (production idiom: `grant_keyword: BlastDigivolve`,
+# BT16-027).
+card: BLAST
+name: Countermon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+    summary: "{Hand} [Counter] <Blast Digivolve> (One of your Digimon may digivolve into this card without paying the cost.)"

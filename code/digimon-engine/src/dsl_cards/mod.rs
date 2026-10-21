@@ -585,7 +585,7 @@ impl CardEffect for DslCardEffect {
     /// synthesized `Keyword::Partition` body. See
     /// [`crate::effect::CardEffect::partition_slots`]; the YAML authors them
     /// under `kind: partition` → `sources:`, one predicate per printed
-    /// parenthetical slot (general_rule.pdf §16-28-5).
+    /// parenthetical slot (general_rule.pdf §16-3).
     ///
     /// A card prints the SAME parenthetical on its face and inherited copies
     /// (BT16-025, BT16-077, BT23-102, …), so an exact-scope miss falls back to

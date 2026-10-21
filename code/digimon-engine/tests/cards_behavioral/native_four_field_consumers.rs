@@ -112,7 +112,10 @@ fn membership(id: &str, loaded: bool, seat: u8, kind: &str, query: &str, offered
     let mut on_field = DebugRunner::wrap(r.game.clone());
     let handle = on_field.place_on_field(seat, id, Some(0));
     let perm = &on_field.game.players[seat as usize].battle_area[handle.index as usize];
-    assert_eq!(perm.has_trait(query, &on_field.game.card_data), offered);
+    // The printed reading is the top card's trait line (§4-7-7; the engine's
+    // `Permanent::has_trait` became the crate-private `has_printed_trait`).
+    assert_eq!(perm.top_card().traits(&on_field.game.card_data).iter()
+        .any(|t| t.eq_ignore_ascii_case(query)), offered);
     assert_eq!(perm.has_trait_for_rules(query, &on_field.game.card_data,
         &on_field.game.modifiers, handle), offered);
 

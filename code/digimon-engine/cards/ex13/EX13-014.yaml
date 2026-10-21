@@ -107,7 +107,7 @@ effects:
   - when: on_ally_played
     once_per_turn: true
     active_when: { all_turns: true }
-    condition:
+    trigger_if:
       all_of:
         - event_target_owner: you
         - any_of:

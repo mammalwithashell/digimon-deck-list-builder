@@ -1,0 +1,43 @@
+# OBS_WIN_DIGI_TS -- Tamer, red, play cost 3.
+#   [All Turns] When any of your Digimon win a battle, 1 of your Digimon may
+#   digivolve into a [TS] trait Digimon card in your hand without paying the
+#   cost.
+# Makes a battle winner without [TS] a [TS] Digimon (ordinary evolution: the
+# same Digimon) after the battle and before a sibling "wins a battle"
+# observer would activate (the §15-8-3-1 / §15-4-4-5 test). The "may" lives in
+# the optional hand pick (declining skips the digivolve).
+card: OBS_WIN_DIGI_TS
+name: Promoter
+kind: tamer
+color: [red]
+cost: 3
+effects:
+  - when: on_ally_won_battle
+    trigger_if:
+      all_of:
+        - event_winner_owner: you
+    summary: "[All Turns] When any of your Digimon win a battle, 1 of your Digimon may digivolve into a [TS] trait Digimon card in your hand without paying the cost."
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter:
+            kind: digimon
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: up
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+              - can_digivolve_onto: target
+          prompt: "It may digivolve into a [TS] trait Digimon card in your hand without paying the cost"
+      - if:
+          condition: { binding_present: up }
+          then:
+            - effect_initiated_digivolve:
+                target: target
+                from_hand: up
+                cost: free
+                ignore_requirements: false

@@ -131,6 +131,23 @@ pub(crate) fn field_main_match(
                     continue;
                 }
             }
+            // §15-8-4-4-1 "If an activation-type effect has optional
+            // processing conditions, a player can only declare activation
+            // while the optional processing conditions can be performed."
+            // The leading "by X" steps' payability (e.g. "[Main] By trashing
+            // your top security card, …" with 0 security; <Digi-Burst N>
+            // with fewer than N digivolution cards).
+            // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
+            if let Some(cost_guard) = &effect.optional_condition_guard {
+                if !game.cost_guard_holds_at(
+                    cost_guard,
+                    source.handle(),
+                    Some(perm_handle),
+                    player_id,
+                ) {
+                    continue;
+                }
+            }
             // A printed "By <cost>, …" gate is an OPTIONAL PROCESSING
             // CONDITION (general_rule.pdf 15-7-1); 15-7-2 — if its content
             // isn't executed, the processing after it can't be executed. An

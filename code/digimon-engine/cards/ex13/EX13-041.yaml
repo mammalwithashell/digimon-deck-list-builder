@@ -108,7 +108,7 @@ effects:
   - scope: inherited
     when: on_ally_won_battle
     once_per_turn: true
-    condition:
+    trigger_if:
       event_battle_deleter:
         owner: you
         kind: digimon

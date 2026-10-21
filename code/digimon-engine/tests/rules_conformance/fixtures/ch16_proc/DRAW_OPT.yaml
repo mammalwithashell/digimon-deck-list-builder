@@ -1,0 +1,13 @@
+# DRAW_OPT -- Option, red, use cost 0.
+#   [Main] <Draw 2> (Draw 2 cards from your deck.)
+# The §16-8 keyword card (production idiom: the `draw` step, AD1-010).
+card: DRAW_OPT
+name: Double Draw
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] <Draw 2> (Draw 2 cards from your deck.)"
+    process:
+      - draw: { of: you, count: 2 }

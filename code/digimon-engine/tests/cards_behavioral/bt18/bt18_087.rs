@@ -145,7 +145,7 @@ fn bt18_087_clause2_on_opponent_security_removed_face_up() {
 
     // §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"
     // Owen prints exactly that: "…, by suspending this Tamer, delete 1 of your
-    // opponent's Digimon with 4000 DP or less." §15-7-4: "A player can choose
+    // opponent's Digimon with 4000 DP or less." §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose
     // whether or not to execute the content of optional processing conditions,
     // regardless of whether or not the content of the conditions can be
     // executed." So the payment is the player's choice, and rule 17
@@ -154,12 +154,12 @@ fn bt18_087_clause2_on_opponent_security_removed_face_up() {
     // This assertion used to be inverted, on the theory that "cost-as-suspend
     // is the gate, not an accept/decline prompt". Being unable to pay is
     // indeed a gate (see `bt18_087_clause2_does_not_fire_when_owen_already_
-    // suspended`), but §15-7-4 says the gate is not what makes the payment
+    // suspended`), but §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] says the gate is not what makes the payment
     // MANDATORY when it *can* be paid. DCGO agrees with the manual:
     // BT18_087.cs:37 passes isOptional = true to SetUpActivateClass.
     assert!(
         clause2.optional,
-        "clause 2 is an optional processing condition (§15-7-1/§15-7-4): the player may decline to suspend"
+        "clause 2 is an optional processing condition (§15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]): the player may decline to suspend"
     );
     assert!(
         clause2.outer_prompt,
@@ -602,7 +602,7 @@ fn owen_is_suspended(runner: &DebugRunner) -> bool {
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT18-087" && p.is_suspended)
 }
 
-/// §15-7-4: "A player can choose whether or not to execute the content of
+/// §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: "A player can choose whether or not to execute the content of
 /// optional processing conditions." Declining "by suspending this Tamer" must
 /// leave BOTH halves undone — Owen stays unsuspended AND the opponent's
 /// eligible Digimon survives — because §15-7-2 says that when the optional

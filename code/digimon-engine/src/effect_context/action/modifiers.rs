@@ -24,6 +24,27 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
+    /// Shared epilogue of the continuous modifier installs below
+    /// (`add_modifier` / `add_modifier_with_payload` /
+    /// `add_modifier_with_until_condition`).
+    ///
+    /// §15-15-5-2 "When a card isn't affected by effects, then it can be
+    /// affected again, effects will immediately start affecting that card":
+    /// an immunity never skips the install. The entry is tagged with this
+    /// effect's category (`ModifierEntry::affecting_source_kind`) and
+    /// `ModifierRegistry::get` hides it at read time while a
+    /// `CannotBeAffected` immunity covers it (DCGO `ChangeDP.cs`
+    /// `CanUseCondition`) or while its target is the `<Progress>` shield
+    /// (§16-39-1, `ModifierRegistry::progress_shield`). The shield is
+    /// refreshed once the entry is in, so it is current whenever an effect's
+    /// entry lands on an attacker (and an installed
+    /// `ImmunityToOpponentEffects` shields at once). One-shot processing
+    /// (delete, suspend, return, ...) keeps the `can_affect_permanent` skip:
+    /// there is nothing left to apply later.
+    fn after_recorded_install(&mut self) {
+        self.game.refresh_progress_shield();
+    }
+
     pub fn add_dp_modifier(&mut self, target: PermanentHandle, value: i32, expiry: Expiry) {
         // Single source of truth for the gate lives in `add_modifier`.
         self.add_modifier(target, ModifierType::ChangeDp, value, expiry);
@@ -45,9 +66,6 @@ impl<'a> EffectContext<'a> {
         value: i32,
         expiry: Expiry,
     ) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
         // `*NextTurn` expiries installed during the about-to-end turn must
         // skip that turn-end (otherwise they expire one turn early). The
         // engine knows the current turn at install time, so compute it
@@ -61,9 +79,11 @@ impl<'a> EffectContext<'a> {
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
-                .with_pending_skips(pending_skips),
+                .with_pending_skips(pending_skips)
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
+        self.after_recorded_install();
         // NOTE: a DP reduction to ≤0 does NOT delete the Digimon here. Deletion
         // is a state-based action (rule 17-1-2-2 / `G-NO-GENERAL-ZERO-DP-RULES-CHECK`)
         // that runs only after the ongoing effect or rule action finishes — see
@@ -76,7 +96,7 @@ impl<'a> EffectContext<'a> {
 
     /// Like [`add_modifier`], but carries a structured [`ModifierPayload`]
     /// (e.g. `SynthIdentity` for `TreatAsDigimon`). Honors the same
-    /// `can_affect_permanent` guard and `*NextTurn` pending-skip semantics.
+    /// record-and-suppress immunity gate and `*NextTurn` pending-skip semantics.
     /// Used by the DSL `add_modifier` lowering when a `synth_identity:`
     /// block is present, and available to raw_rust scripts.
     pub fn add_modifier_with_payload(
@@ -87,9 +107,6 @@ impl<'a> EffectContext<'a> {
         expiry: Expiry,
         payload: crate::modifiers::ModifierPayload,
     ) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
         let pending_skips = crate::modifiers::pending_skips_for_install(
             expiry,
             self.player,
@@ -99,9 +116,11 @@ impl<'a> EffectContext<'a> {
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player)
                 .with_payload(payload)
-                .with_pending_skips(pending_skips),
+                .with_pending_skips(pending_skips)
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
+        self.after_recorded_install();
     }
 
     pub fn add_declarative_modifier(
@@ -197,15 +216,14 @@ impl<'a> EffectContext<'a> {
         value: i32,
         predicate: crate::modifiers::UntilConditionFn,
     ) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
         self.game.modifiers.add(
             target,
             ModifierEntry::simple(modifier, value, Expiry::UntilCondition, self.player)
-                .with_until_condition(predicate),
+                .with_until_condition(predicate)
+                .with_affecting_source_kind(self.source_kind),
         );
         self.game.mark_until_condition_dirty();
+        self.after_recorded_install();
     }
 
     /// Track H §4 — grant a keyword scoped to `Expiry::UntilCondition`
@@ -221,16 +239,19 @@ impl<'a> EffectContext<'a> {
         keyword: Keyword,
         predicate: crate::modifiers::UntilConditionFn,
     ) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
-        self.game.modifiers.grant_keyword_with_until_condition(
+        // §15-15-5-2 / §15-15-5-4 record-and-suppress (as `add_modifier`): the
+        // grant is recorded even on an immune or `<Progress>`-shielded target
+        // and is not had until it can be affected again.
+        self.game.modifiers.grant_keyword_with_until_condition_from_effect(
             target,
             keyword,
             predicate,
             self.player,
+            self.source_kind,
         );
         self.game.mark_until_condition_dirty();
+        // §16-39-2: a `<Progress>` gained mid-attack shields at once.
+        self.game.refresh_progress_shield();
     }
 
     /// Track H §3 — grant a triggered effect to `carrier` (DCGO
@@ -249,9 +270,9 @@ impl<'a> EffectContext<'a> {
     /// `expiry` follows the same semantics as `add_modifier`:
     /// `Permanent` for "until carrier leaves the field" (clears via
     /// `clear_permanent`); `EndOfTurn` / `EndOfYourTurn` /
-    /// `EndOfOpponentsTurn` for turn-bound grants. The
-    /// `can_affect_permanent` guard is honored so opponent-effect
-    /// immunities suppress the install.
+    /// `EndOfOpponentsTurn` for turn-bound grants. An effect immunity on the
+    /// carrier does not suppress the install (§15-15-5-2): the dispatcher
+    /// gates the granted trigger at fire time instead.
     pub fn grant_triggered_effect<F>(
         &mut self,
         carrier: PermanentHandle,
@@ -261,9 +282,13 @@ impl<'a> EffectContext<'a> {
     ) where
         F: Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
     {
-        if !self.can_affect_permanent(carrier) {
-            return;
-        }
+        // §15-15-5-2 / §15-15-5-4: an effect gained while immune (including
+        // by a `<Progress>` attacker, §16-39-1) is recorded, not skipped. The
+        // granted-trigger dispatch (`effect_queue.rs`: `progress_excludes`
+        // and `permanent_is_unaffected_by_effect` against the grantor) keeps
+        // it from triggering while the carrier is unaffected, and lets it
+        // trigger once the immunity has ended (official Q&A Q2120 / Q3871 /
+        // Q6179).
         // Phase 4i — allocate a body id and register the closure in the
         // game-level body registry so the queue-based drainer can fetch
         // it at fire time. The same Arc is also stored on the entry for
@@ -584,14 +609,36 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn grant_keyword(&mut self, target: PermanentHandle, keyword: Keyword, expiry: Expiry) {
-        if !self.can_affect_permanent(target) {
-            return;
-        }
-        self.game
-            .modifiers
-            .grant_keyword(target, keyword, expiry, self.player);
+        // §15-15-5-2 / §15-15-5-4 record-and-suppress (as `add_modifier`): a
+        // keyword gained while the target is immune (or `<Progress>`-shielded)
+        // is recorded and not had; it is had as soon as the target can be
+        // affected again, for the rest of the grant's duration (Q6179), and
+        // one gained BEFORE an immunity stops being had while it lasts
+        // (Q6178). The granted TRIGGERED bodies below are fire-time gated.
+        // G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP.
+        self.game.modifiers.grant_keyword_from_effect(
+            target,
+            keyword,
+            expiry,
+            self.player,
+            self.source_kind,
+        );
         self.grant_keyword_triggered_auto_effects(target, keyword, expiry);
         self.game.mark_until_condition_dirty();
+        // §16-39-2: a `<Progress>` gained mid-attack shields at once.
+        self.game.refresh_progress_shield();
+        // §16-16-2: "<Blitz> effects execute processing." The effect that
+        // grants <Blitz> ("[When Digivolving] <Blitz>", "Then, <Blitz>")
+        // executes its processing here, in place: the optional attack
+        // declaration, gated on the opponent's memory at activation. The grant
+        // above is record-and-suppress, but the processing is one-shot: like
+        // delete / suspend it keeps the `can_affect_permanent` skip, so an
+        // immune or `<Progress>`-shielded target gains the (suppressed) keyword
+        // and is NOT offered the attack (§15-15-5-2; merge note from the
+        // G-ENGINE-UNAFFECTED-KEYWORD-GRANT-INSTALL-SKIP review).
+        if keyword == Keyword::Blitz && self.can_affect_permanent(target) {
+            crate::cards::keyword_effects::blitz_process(self, target);
+        }
     }
 
     /// Register the granted keyword's TRIGGERED auto-effect(s) so they fire
@@ -627,6 +674,22 @@ impl<'a> EffectContext<'a> {
             Some(perm) => perm.top_card().handle(),
             None => return,
         };
+        // `<Alliance>` / `<Raid>` grants fire from the keyword registry at the
+        // attack declaration (see `keyword_trigger_dispatched_from_registry`);
+        // a body here would make them fire twice.
+        if crate::cards::keyword_effects::keyword_trigger_dispatched_from_registry(keyword) {
+            return;
+        }
+        // `<Blitz>` granted by an effect executes now, in place
+        // (`grant_keyword` → `blitz_process`, §16-16-2); its [When
+        // Digivolving] auto-effect is the PRINTED family's trigger and must
+        // not be installed by a grant (it would fire again on a later
+        // digivolution). A card that "gains '[When Digivolving] <Blitz>'"
+        // (EX2-056, BT9-102) must be authored as a granted triggered effect,
+        // not with `grant_keyword: Blitz`.
+        if keyword == Keyword::Blitz {
+            return;
+        }
         let autos = crate::cards::keyword_effects::keyword_to_auto_effect(keyword, card);
         for effect in autos {
             // Only plain-process triggered timings route through the

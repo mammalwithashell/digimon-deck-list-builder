@@ -408,6 +408,8 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         "Save" => Keyword::Save,
         "MaterialSave" => Keyword::MaterialSave(value.unwrap_or(1) as u8),
         "DigiBurst" => Keyword::DigiBurst(value.unwrap_or(1) as u8),
+        // `value:` is the N of `<Digisorption -N>` (the cost reduction).
+        "Digisorption" => Keyword::Digisorption(value.unwrap_or(1) as u8),
         "Fortitude" => Keyword::Fortitude,
         "Overclock" => Keyword::Overclock,
         "Barrier" => Keyword::Barrier,

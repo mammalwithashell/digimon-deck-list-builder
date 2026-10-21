@@ -256,7 +256,7 @@ fn bt19_075_has_one_once_per_turn_deletion_observer_without_owner_filter() {
         "the security-trash observer is [Once Per Turn]"
     );
     let cond = del[0]
-        .condition
+        .trigger_if
         .as_ref()
         .expect("observer must gate on the deleted object");
     assert!(

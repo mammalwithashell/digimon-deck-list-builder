@@ -1,7 +1,7 @@
 //! Shared "declare this hand card" helper for the Option-flow suites.
 //!
 //! `G-ENGINE-OPTION-LINK-FROM-HAND` (2026-09-20) split ONE engine entry point
-//! into two main-phase actions, because `general_rule.pdf` (Ver.3.6) §6-5-1
+//! into two main-phase actions, because `general_rule.pdf` (Ver.4.3) §6-5-1
 //! lists them separately: **§6-5-1-3 "Use an Option Card From the Hand"** on
 //! the `PLAY_HAND` bit, and **§6-5-1-4 "Linking a Card in the Hand or Battle
 //! Area"** on the `HAND_EFFECT` bit. §10-1-1: a card is linked from the hand

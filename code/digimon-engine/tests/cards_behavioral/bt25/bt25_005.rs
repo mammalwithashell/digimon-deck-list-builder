@@ -30,7 +30,7 @@
 //! from the host (`CanPlayCardTargetFrame`) and is declinable.
 //!
 //! # Rules
-//! - `general_rule.pdf` 15-14-1-5 (p.29): choosing to activate an [X Per
+//! - `general_rule.pdf` 15-14-1-4 (p.32): choosing to activate an [X Per
 //!   Turn] effect counts as a use even if its processing can't be executed;
 //!   declining the activation itself (DCGO's initial yes/no) does NOT count →
 //!   `optional: true` + `outer_prompt: true` (G-OPT-REFUND-ON-DECLINE).
@@ -271,14 +271,14 @@ fn bt25_005_single_inherited_optional_opt_your_turn_on_add_digivolution_cards_cl
     assert!(t.optional, "\"it may digivolve\" (DCGO isOptional: true)");
     assert!(
         t.outer_prompt,
-        "DCGO's initial yes/no — declining it refunds the OPT (rule 15-14-1-5)"
+        "DCGO's initial yes/no — declining it refunds the OPT (rule 15-14-1-4)"
     );
     assert_eq!(
         t.active_when.as_ref().and_then(|g| g.your_turn),
         Some(true),
         "[Your Turn]"
     );
-    let leaves = &t.condition.as_ref().expect("condition").all_of;
+    let leaves = &t.trigger_if.as_ref().expect("condition").all_of;
     assert!(
         leaves
             .iter()
@@ -388,7 +388,7 @@ fn bt25_005_cost_reduction_clamps_at_zero() {
 }
 
 /// Declining the outer yes/no: nothing happens AND the [Once Per Turn] use is
-/// refunded (rule 15-14-1-5 — the player did not choose to activate), so a
+/// refunded (rule 15-14-1-4 — the player did not choose to activate), so a
 /// second placement in the same turn triggers again.
 #[test]
 fn bt25_005_declining_the_outer_prompt_keeps_the_opt_use() {
@@ -418,7 +418,7 @@ fn bt25_005_declining_the_outer_prompt_keeps_the_opt_use() {
 }
 
 /// Accepting the activation but declining the hand pick: no digivolve, no
-/// cost — and the activation COUNTS (15-14-1-5), so no re-trigger this turn.
+/// cost — and the activation COUNTS (15-14-1-4), so no re-trigger this turn.
 #[test]
 fn bt25_005_accepting_then_declining_the_hand_pick_consumes_the_opt() {
     let mut r = base().hand(0, &["TM-CARD", "TM-CARD", "TS-LV4"]).start();

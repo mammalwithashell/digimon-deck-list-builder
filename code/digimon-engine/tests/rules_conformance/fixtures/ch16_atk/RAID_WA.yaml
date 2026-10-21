@@ -1,0 +1,20 @@
+# RAID_WA -- Digimon, Lv.5, red, 7000 DP, play cost 7.
+#   <Raid> (When this Digimon attacks, you may switch the attack target to 1
+#   of your opponent's unsuspended Digimon with the highest DP.)
+#   [When Attacking] Gain 1 memory.
+# Both trigger when this Digimon attacks (§16-23-2).
+card: RAID_WA
+name: Swoopattackmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid> (When this Digimon attacks, you may switch the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+  - when: when_attacking
+    summary: "[When Attacking] Gain 1 memory."
+    process:
+      - gain_memory: 1

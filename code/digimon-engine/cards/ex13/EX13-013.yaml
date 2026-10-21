@@ -89,10 +89,11 @@ effects:
     once_per_turn: true
     active_when: { all_turns: true }
     condition:
+      source_name_contains: Gallantmon
+    trigger_if:
       all_of:
         - event_target_owner: opponent
         - event_target_kind: digimon
-        - source_name_contains: Gallantmon
     summary: "Inherited [All Turns][OPT] When any of your opponent's Digimon are deleted, if this Digimon has [Gallantmon] in its name, trash their top security card"
     process:
       - trash_top_security: { of: opponent }

@@ -523,7 +523,12 @@ fn bt24_010_on_deletion_resolves_de_digivolve_one_source() {
         .dsl_card("BT24-010")
         .expect("BT24-010 loads")
         .add_card(opp_src_lv4())
-        .add_card(make_test_card("OPP-DIG", "OppDigimon"))
+        // Level 4: <De-Digivolve> can't trash a level 3 top card (§16-12-4).
+        .add_card({
+            let mut c = make_test_card("OPP-DIG", "OppDigimon");
+            c.level = Some(4);
+            c
+        })
         .memory(15)
         .start();
 
@@ -563,15 +568,12 @@ fn bt24_010_on_deletion_resolves_de_digivolve_one_source() {
     );
 }
 
-/// `stop_at_level: 3` halts the pop BEFORE it happens if the card that
-/// would become the new top is below level 3 (`de_digivolve_core` checks
-/// `next_top_level` — `stack[len-2]` — against the floor before popping).
-/// With a stack of [OPP-SRC-LV2, OPP-DIG], popping OPP-DIG's only source
-/// would expose OPP-SRC-LV2 (level 2) as the new top, which is below the
-/// floor — so the printed "You can't trash past level 3 cards" blocks the
-/// pop entirely: De-Digivolve 1 trashes ZERO cards here, matching the
-/// mandatory-but-unpayable-target-shape row in keyword-semantics.md ("stops
-/// at ... Lv.3").
+/// §16-12-4 "<De-Digivolve> can't trash cards from level 3 cards or lower":
+/// the floor tests the TOP card being trashed. With a stack of [OPP-SRC-LV2,
+/// OPP-DIG] the top OPP-DIG is level 3 (`make_test_card`), so De-Digivolve 1
+/// trashes ZERO cards here. (A level 4 top over the level 2 card WOULD be
+/// trashed: the card below the top is not what the floor reads;
+/// G-ENGINE-DEDIGIVOLVE-LEVEL-FLOOR-READS-NEXT-CARD.)
 #[test]
 fn bt24_010_on_deletion_de_digivolve_blocked_when_next_top_below_level_3() {
     let mut runner = DebugRunner::builder()
@@ -603,8 +605,7 @@ fn bt24_010_on_deletion_de_digivolve_blocked_when_next_top_below_level_3() {
     let stack_after = runner.game.player(1).battle_area[target.index as usize].stack_size();
     assert_eq!(
         stack_after, stack_before,
-        "stop_at_level: 3 blocks the pop when the next-would-be-exposed \
-         source is below level 3 — the stack is untouched"
+        "a level 3 top card can't be trashed (§16-12-4) — the stack is untouched"
     );
     assert_eq!(
         runner.trash_size(1),

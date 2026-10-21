@@ -1,0 +1,16 @@
+# EOA_OBS -- Digimon, Lv.3, red, 1000 DP, play cost 2.
+#   [All Turns] At the end of an attack, gain 1 memory.
+# The end-of-attack witness: it resolves whenever the end of attack timing
+# arrives (§11-6), whichever Digimon attacked.
+card: EOA_OBS
+name: Afterattackmon
+kind: digimon
+level: 3
+color: [red]
+cost: 2
+dp: 1000
+effects:
+  - when: end_of_attack
+    summary: "[All Turns] At the end of an attack, gain 1 memory."
+    process:
+      - gain_memory: 1

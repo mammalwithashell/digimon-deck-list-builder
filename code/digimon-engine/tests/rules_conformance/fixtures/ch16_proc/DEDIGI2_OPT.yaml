@@ -1,0 +1,19 @@
+# DEDIGI2_OPT -- Option, red, use cost 0.
+#   [Main] <De-Digivolve 2> 1 of your opponent's Digimon. (Trash up to 2 cards
+#   from the top of one of your opponent's Digimon. If it has no digivolution
+#   cards, or becomes a level 3 Digimon, you can't trash any more cards.)
+# The §16-12 keyword card (production idiom: `de_digivolve`, AD1-009).
+card: DEDIGI2_OPT
+name: Unwind Two
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] <De-Digivolve 2> 1 of your opponent's Digimon. (Trash up to 2 cards from the top of one of your opponent's Digimon. If it has no digivolution cards, or becomes a level 3 Digimon, you can't trash any more cards.)"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 2> 1 of your opponent's Digimon"
+      - de_digivolve: { target: target, amount: 2 }

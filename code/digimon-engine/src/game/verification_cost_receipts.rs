@@ -303,14 +303,6 @@ fn frames(g: &Game, path: &str, stack: &ResumeStack, out: &mut Vec<(String, Rece
                     out,
                 );
             }
-            F::OptionTrashOrder(s) => {
-                outer(
-                    g,
-                    &format!("{path}/OptionTrashOrder/outer"),
-                    &s.outer_conts,
-                    out,
-                );
-            }
             F::OptionalReplacement(s) => {
                 outer(
                     g,

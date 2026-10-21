@@ -135,13 +135,10 @@ effects:
   # (first) turn. Symmetric with the [Start of Your Turn] <Delay> precedents
   # (LM-027/029/030/031/032 → `start_of_your_turn`).
   #
-  # KNOWN residual (engine, tracked): the scheduled scan is MANDATORY — no
-  # accept/decline prompt, and the Option is trashed even if the link is
-  # declined, where DCGO offers an optional prompt each owner turn-end and a
-  # decline keeps the card parked. That is the OPEN engine gap
-  # G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN (docs/RUST_ENGINE_GAPS.md,
-  # 2026-07-09), which covers this whole trigger family; do not route around
-  # it card-side.
+  # The scheduled scan offers an accept/decline prompt each owner turn-end,
+  # as DCGO does, and a decline keeps the card parked
+  # (G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN, 2026-07-09, resolved in
+  # 73733429d; pinned by bt21_097_declining_delay_keeps_option_parked_for_a_later_turn).
   #
   # BODY: printed "・You may link 1 card..." — the link itself is optional,
   # so PASS stays legal on the pick. The link_cards step covers:

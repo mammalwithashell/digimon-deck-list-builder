@@ -470,6 +470,7 @@ fn attack_result_str(r: AttackResult) -> &'static str {
         AttackResult::SecurityCheckSurvived => "SecurityCheckSurvived",
         AttackResult::AttackerDeletedBySecurity => "AttackerDeletedBySecurity",
         AttackResult::GameWon => "GameWon",
+        AttackResult::Unsuccessful => "Unsuccessful",
         AttackResult::InProgress => "InProgress",
         AttackResult::Cancelled => "Cancelled",
     }
@@ -1318,6 +1319,35 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
                 "target_dp": target_dp,
             });
         }
+        GameEvent::CardToHand {
+            player,
+            card_id,
+            card_name,
+            source,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+            dto.meta = serde_json::json!({ "destination": "hand", "source": source });
+        }
+        GameEvent::CardToDeck {
+            player,
+            card_id,
+            card_name,
+            position,
+            source,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+            dto.meta = serde_json::json!({
+                "destination": "deck",
+                "position": position,
+                "source": source,
+            });
+        }
         GameEvent::Trash {
             player,
             card_id,
@@ -1371,6 +1401,24 @@ fn event_to_dto(event: GameEvent) -> GameEventDto {
             dto.source_card_id = Some(card_id);
             dto.source_card_name = Some(card_name);
             dto.meta = serde_json::json!({ "source_zone": format!("{:?}", source_zone) });
+        }
+        GameEvent::InfiniteLoop {
+            player,
+            card_id,
+            card_name,
+            repetitions,
+            backstop,
+            ..
+        } => {
+            if let Some(player) = player {
+                dto.player = py_player_id(player);
+            }
+            dto.source_card_id = card_id;
+            dto.source_card_name = card_name;
+            dto.meta = serde_json::json!({
+                "repetitions": repetitions,
+                "backstop": backstop,
+            });
         }
         GameEvent::GameOver { winner, reason, .. } => {
             dto.meta = serde_json::json!({

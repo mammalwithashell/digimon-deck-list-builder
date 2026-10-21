@@ -100,23 +100,36 @@ impl DebugRunner {
 
     // ─── Action helpers ───────────────────────────────────────────────
 
+    /// §18-3: every DebugRunner action wrapper stands for a player's decision
+    /// (a test drives the game the way a player would), so the loop watch
+    /// starts over before it runs -- as `decode_action` does for a runner's
+    /// action. A test that wants to exercise engine-internal processing with
+    /// no decision in between calls the `Game` method directly.
+    fn player_decision(&mut self) {
+        self.game.reset_loop_watch();
+    }
+
     /// Play a card from a player's hand. Returns the new field index.
     pub fn play(&mut self, player: PlayerId, hand_index: usize) -> Option<usize> {
+        self.player_decision();
         self.game.play_from_hand(player, hand_index)
     }
 
     /// Move from breeding to battle for a player.
     pub fn move_from_breeding(&mut self, player: PlayerId) -> bool {
+        self.player_decision();
         self.game.move_from_breeding(player)
     }
 
     /// End the current turn.
     pub fn end_turn(&mut self) {
+        self.player_decision();
         self.game.end_turn();
     }
 
     /// Pass turn (memory to -3).
     pub fn pass_turn(&mut self) {
+        self.player_decision();
         self.game.pass_turn();
     }
 
@@ -130,6 +143,7 @@ impl DebugRunner {
     /// should migrate to `fire_play_event_triggers` so they match the
     /// production play-flow semantics.
     pub fn fire_on_play(&mut self, player: PlayerId, field_index: usize) {
+        self.player_decision();
         self.game.fire_on_play(player, field_index);
     }
 
@@ -150,6 +164,7 @@ impl DebugRunner {
         effect_initiated: bool,
         suppress_on_play: bool,
     ) {
+        self.player_decision();
         self.game
             .fire_play_event_triggers(player, field_index, effect_initiated, suppress_on_play);
     }
@@ -203,9 +218,9 @@ impl DebugRunner {
         let next_idx = self.game.next_card_index();
         let mut card = CardSource::new(data_idx, player, next_idx);
         card.card_index = next_idx;
-        let hand = &mut self.game.players[player as usize].hand;
-        hand.push(card);
-        hand.len() - 1
+        let p = &mut self.game.players[player as usize];
+        p.put_in_hand(card);
+        p.hand.len() - 1
     }
 
     pub fn place_stack(&mut self, player: PlayerId, card_ids: &[&str]) -> PermanentHandle {
@@ -290,7 +305,7 @@ impl DebugRunner {
         };
         let source_handle = removed.handle();
         let owner = removed.owner;
-        self.game.player_mut(owner).trash.push(removed);
+        self.game.player_mut(owner).put_in_trash(removed);
         self.game.fire_digivolution_card_trashed(
             host.player,
             host,
@@ -594,6 +609,7 @@ impl DebugRunner {
         defender: PermanentHandle,
         vortex: bool,
     ) -> crate::combat::AttackResult {
+        self.player_decision();
         self.game.attack_digimon(attacker, defender, vortex)
     }
 
@@ -603,6 +619,7 @@ impl DebugRunner {
         attacker: PermanentHandle,
         defender: PermanentHandle,
     ) -> crate::combat::AttackResult {
+        self.player_decision();
         self.game.battle_digimon(attacker, defender)
     }
 
@@ -615,6 +632,7 @@ impl DebugRunner {
         defender: PermanentHandle,
         comparison: crate::combat::BattleComparison,
     ) -> crate::combat::AttackResult {
+        self.player_decision();
         self.game.battle_digimon_with(attacker, defender, comparison)
     }
 
@@ -626,6 +644,7 @@ impl DebugRunner {
         defender_player: PlayerId,
         vortex: bool,
     ) -> crate::combat::AttackResult {
+        self.player_decision();
         self.game.attack_player(attacker, defender_player, vortex)
     }
 
@@ -668,6 +687,38 @@ impl DebugRunner {
         effect: std::sync::Arc<dyn crate::effect::CardEffect>,
     ) {
         self.game.effect_registry.insert(card_id, effect);
+    }
+
+    /// Fixture helper: give `card_id` a printed-style link requirement,
+    /// "[Link] Cost `cost`" accepting any Digimon (what a `kind:
+    /// link_condition` clause with no filter lowers to), on top of whatever
+    /// effects it already has. A synthetic card a test links needs one: a card
+    /// with no `[Link]` can't be linked by an effect (Q4533) and is trashed at
+    /// the rule check (§17-1-3-2-6 / -7).
+    pub fn give_link_requirement(&mut self, card_id: &str, cost: u16) {
+        let inner = self.game.effect_registry.get(card_id);
+        self.game
+            .effect_registry
+            .insert(card_id, Arc::new(WithLinkRequirement { inner, cost }));
+        self.game.effects_cache = Default::default();
+    }
+
+    /// Fixture helper: a granted `<Link +n>` on `host` (a permanent
+    /// `ChangeLinkMax` modifier), so a test can stage more than the base 1
+    /// link card (§4-9-5, §16-40-1) without the rule check trimming them
+    /// (§17-1-3-2-5).
+    pub fn give_link_plus(&mut self, host: PermanentHandle, n: i32) {
+        use crate::modifiers::{ModifierEntry, ModifierPayload};
+        self.game.modifiers.add(
+            host,
+            ModifierEntry::simple(
+                crate::enums::ModifierType::ChangeLinkMax,
+                0,
+                crate::enums::Expiry::Permanent,
+                host.player,
+            )
+            .with_payload(ModifierPayload::LinkMax { delta: n }),
+        );
     }
 
     pub fn set_formula_extensions(&mut self, registry: FormulaExtensionRegistry) {
@@ -834,8 +885,113 @@ impl DebugRunner {
         self.execute_action(player, action_id)
     }
 
+    /// Whether the pending decision is an end-of-turn attack keyword's own
+    /// decision inside the `[End of Your Turn]` pool: an `<Engage>` /
+    /// `<Execute>` / `<Vortex>` attack declaration
+    /// (`ResumeFrame::AttackDeclarationDecision` with an end-of-turn keyword)
+    /// or `<Overclock>`'s cost pick (`ResumeFrame::OverclockSelection`)
+    /// (Comprehensive Rules 4.3 §16-44-2, §16-38-2, §16-33-2, §16-34-2).
+    pub fn pending_is_end_of_turn_keyword_decision(&self) -> bool {
+        self.game.pending_end_of_turn_keyword_decision().is_some()
+    }
+
+    /// [`Self::auto_resolve`], except that every end-of-turn attack keyword's
+    /// decision ([`Self::pending_is_end_of_turn_keyword_decision`]) is
+    /// DECLINED instead of taking its first attack / cost candidate. For
+    /// tests that only cross the end of a turn: those decisions used to wait
+    /// in the `EndOfTurnAction` window, which `auto_resolve` never entered.
+    pub fn auto_resolve_declining_end_of_turn_attacks(&mut self) -> Result<(), SelectionError> {
+        while let Some(sel) = self.pending_selection() {
+            let player = sel.selecting_player;
+            let first = sel.valid_action_ids.first().copied();
+            let optional = sel.is_optional;
+            let action_id = if optional && self.pending_is_end_of_turn_keyword_decision() {
+                crate::action::space::PASS
+            } else {
+                match first {
+                    Some(id) => id,
+                    None if optional => crate::action::space::PASS,
+                    None => return Err(SelectionError::InvalidAction),
+                }
+            };
+            self.execute_action(player, action_id)?;
+        }
+        Ok(())
+    }
+
     pub fn auto_resolve(&mut self) -> Result<(), SelectionError> {
         while let Some(sel) = self.pending_selection() {
+            let player = sel.selecting_player;
+            let action_id = match sel.valid_action_ids.first().copied() {
+                Some(id) => id,
+                None if sel.is_optional => crate::action::space::PASS,
+                None => return Err(SelectionError::InvalidAction),
+            };
+            self.execute_action(player, action_id)?;
+        }
+        Ok(())
+    }
+
+    /// Whether the pending selection is a count declaration from the count
+    /// choice VM (e.g. the §16-12-1 `<De-Digivolve N>` declaration).
+    pub fn pending_is_count_declaration(&self) -> bool {
+        self.pending_selection()
+            .and_then(|sel| sel.effect_choices.as_ref())
+            .is_some_and(|choices| choices.iter().any(|c| c.count_choice.is_some()))
+    }
+
+    /// Answer a pending count declaration with its LARGEST value (paging
+    /// forward first when needed). Returns whether a declaration was pending.
+    pub fn declare_max_count(&mut self) -> Result<bool, SelectionError> {
+        use crate::count_choice::CountChoiceOperation;
+        if !self.pending_is_count_declaration() {
+            return Ok(false);
+        }
+        loop {
+            let Some(sel) = self.pending_selection() else {
+                return Ok(true);
+            };
+            let player = sel.selecting_player;
+            let rows: Vec<_> = sel
+                .effect_choices
+                .as_ref()
+                .map(|choices| {
+                    choices
+                        .iter()
+                        .filter_map(|c| c.count_choice.map(|m| (c.action_id, m.operation)))
+                        .collect()
+                })
+                .unwrap_or_default();
+            if let Some((next, _)) = rows
+                .iter()
+                .find(|(_, op)| matches!(op, CountChoiceOperation::NextPage))
+            {
+                self.execute_action(player, *next)?;
+                continue;
+            }
+            let best = rows
+                .iter()
+                .filter_map(|(id, op)| match op {
+                    CountChoiceOperation::Commit(v) => Some((v.declared, *id)),
+                    _ => None,
+                })
+                .max()
+                .map(|(_, id)| id)
+                .ok_or(SelectionError::InvalidAction)?;
+            self.execute_action(player, best)?;
+            return Ok(true);
+        }
+    }
+
+    /// [`Self::auto_resolve`], except that a count declaration (e.g. the
+    /// §16-12-1 `<De-Digivolve N>` declaration) is answered with its largest
+    /// value instead of the first (smallest) one.
+    pub fn auto_resolve_declaring_max(&mut self) -> Result<(), SelectionError> {
+        while let Some(sel) = self.pending_selection() {
+            if self.pending_is_count_declaration() {
+                self.declare_max_count()?;
+                continue;
+            }
             let player = sel.selecting_player;
             let action_id = match sel.valid_action_ids.first().copied() {
                 Some(id) => id,
@@ -890,6 +1046,9 @@ pub struct DebugRunnerBuilder {
     /// Initial memory value applied after `start()`. Useful for tests that
     /// want to play non-zero-cost cards without thinking about the seesaw.
     initial_memory: Option<i16>,
+    /// `(card_id, cost)` fixture link requirements applied once the registry
+    /// is built (see [`DebugRunner::give_link_requirement`]).
+    link_requirements: Vec<(String, u16)>,
 }
 
 impl Default for DebugRunnerBuilder {
@@ -906,6 +1065,7 @@ impl Default for DebugRunnerBuilder {
             registry: None,
             player_count: None,
             initial_memory: None,
+            link_requirements: Vec::new(),
         }
     }
 }
@@ -1005,6 +1165,15 @@ impl DebugRunnerBuilder {
         self
     }
 
+    /// Fixture: give `card_id` a printed-style link requirement ("[Link] Cost
+    /// `cost`", any Digimon) once the runner is built. See
+    /// [`DebugRunner::give_link_requirement`]; a test that registers the
+    /// card's effects after `start()` calls that instead.
+    pub fn link_requirement(mut self, card_id: &str, cost: u16) -> Self {
+        self.link_requirements.push((card_id.to_string(), cost));
+        self
+    }
+
     /// Build the runner and start the game (advances past Mulligan into turn 1).
     pub fn start(mut self) -> DebugRunner {
         let initial_memory = self.initial_memory;
@@ -1096,19 +1265,19 @@ impl DebugRunnerBuilder {
             if let Some(ids) = self.hands.get(&pid) {
                 for card_id in ids {
                     let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
-                    game.players[pid as usize].hand.push(card);
+                    game.players[pid as usize].put_in_hand(card);
                 }
             }
             if let Some(ids) = self.decks.get(&pid) {
                 for card_id in ids {
                     let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
-                    game.players[pid as usize].deck.push(card);
+                    game.players[pid as usize].put_on_deck_top(card);
                 }
             }
             if let Some(ids) = self.securities.get(&pid) {
                 for card_id in ids {
                     let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
-                    game.players[pid as usize].security.push(card);
+                    game.players[pid as usize].put_on_security_top(card);
                 }
             }
             if let Some(ids) = self.digitamas.get(&pid) {
@@ -1117,7 +1286,7 @@ impl DebugRunnerBuilder {
                     if card_data_store[card.data_index].card_kind != CardKind::DigiEgg {
                         // Allow non-eggs in digitama for tests, but warn via debug.
                     }
-                    game.players[pid as usize].digitama_deck.push(card);
+                    game.players[pid as usize].put_on_digi_egg_deck_top(card);
                 }
             }
         }
@@ -1136,11 +1305,15 @@ impl DebugRunnerBuilder {
             let _ = build_registry; // silence unused-import if path changes
         }
 
-        DebugRunner {
+        let mut runner = DebugRunner {
             game,
             #[cfg(feature = "dsl-yaml-loader")]
             compiled_cards: std::mem::take(&mut self.compiled_cards),
+        };
+        for (card_id, cost) in std::mem::take(&mut self.link_requirements) {
+            runner.give_link_requirement(&card_id, cost);
         }
+        runner
     }
 
     fn make_card(
@@ -1194,10 +1367,16 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
     };
 
     // Populate native keywords from face-up `grant_keyword` declarative clauses.
-    // A `GrantKeyword` clause is semantically equivalent to a printed keyword
-    // on the card face, so `has_keyword` can detect it via the native path
-    // without needing the declarative process to run at placement. Inherited
-    // grants are stack text and must stay out of native top-card keywords.
+    // An UNCONDITIONAL `GrantKeyword` clause is semantically equivalent to a
+    // printed keyword on the card face, so `has_keyword` can detect it via the
+    // native path without needing the declarative process to run at placement.
+    // Inherited grants are stack text and must stay out of native top-card
+    // keywords. A CONDITIONAL grant (`active_when`: "[All Turns] While X, this
+    // Digimon gains <KW>") is NOT folded: production parses such prose as a
+    // granted, not innate, keyword (`parse_printed_keywords`), and
+    // `Game::card_source_keyword_matches` evaluates the clause's condition at
+    // read time, so folding it would make the keyword unconditionally on in
+    // every test (G-TEST-DEBUGRUNNER-IGNORES-ACTIVE-WHEN-ON-OWN-GRANT-KEYWORD).
     let mut keywords: Vec<Keyword> = Vec::new();
     // For a DUAL card the printed keywords live on the Digimon face, which is
     // the top card while the card is in play as a Digimon. `face_keywords`
@@ -1217,6 +1396,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
             keyword,
             value,
             scope,
+            active_when,
             ..
         }) = clause
         {
@@ -1225,8 +1405,13 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
             if matches!(scope, CompiledScope::Inherited | CompiledScope::Linked) {
                 continue;
             }
+            // A conditional grant stays a real `active_when` clause.
+            if active_when.is_some() {
+                continue;
+            }
             if let Some(kw) = lookup_keyword(keyword, *value) {
-                if !keywords.contains(&kw) {
+                // Every `<Digisorption>` instance is its own effect (§16-10-4).
+                if matches!(kw, Keyword::Digisorption(_)) || !keywords.contains(&kw) {
                     keywords.push(kw);
                 }
             }
@@ -1424,7 +1609,13 @@ fn material_to_dna_requirement(
         .clone()
         .or_else(|| f.name_contains.clone())
         .unwrap_or_default();
-    let text_contains = f.effect_text_contains.clone().unwrap_or_default();
+    // `in_text_contains` ("w/[X] in text") is the requirement's text match;
+    // `effect_text_contains` keeps its historical mapping.
+    let text_contains = f
+        .in_text_contains
+        .clone()
+        .or_else(|| f.effect_text_contains.clone())
+        .unwrap_or_default();
     Some(DnaRequirement {
         level: f.level_eq.unwrap_or(0),
         card_colors,
@@ -1599,6 +1790,42 @@ mod tests {
     use super::*;
 
     #[test]
+    fn dna_material_in_text_contains_lowers_to_the_requirement_text() {
+        // "[DNA Digivolve] [Fenriloogamon] + yellow Lv.6 w/[Pulsemon] in text":
+        // the text constraint must reach the DNA requirement, not degrade to
+        // "any yellow Lv.6".
+        let r = DebugRunner::builder()
+            .from_dsl_yaml(
+                r#"
+card: TEST-INTEXT-DNA
+name: In Text DNA
+kind: digimon
+level: 7
+color: [yellow, purple]
+cost: 9
+dp: 16000
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { name_is: "Fenriloogamon" }
+      - { level_eq: 6, color_is: yellow, in_text_contains: "Pulsemon" }
+    cost: 0
+"#,
+            )
+            .unwrap()
+            .start();
+        let card = r
+            .game
+            .card_data
+            .iter()
+            .find(|c| c.card_id == "TEST-INTEXT-DNA")
+            .expect("card registered");
+        assert_eq!(card.dna_costs.len(), 1);
+        assert_eq!(card.dna_costs[0].requirement2.text_contains, "Pulsemon");
+        assert_eq!(card.dna_costs[0].requirement2.level, 6);
+    }
+
+    #[test]
     fn builder_starts_in_turn_1() {
         let r = DebugRunner::builder()
             .add_card(make_test_card("TEST-001", "TestOne"))
@@ -1622,5 +1849,37 @@ mod tests {
         r.play(0, 0); // -3 for cost, +1 for OnPlay = net -2
         assert_eq!(r.memory(), m_before - 3 + 1);
         assert_eq!(r.battle_area_size(0), 1);
+    }
+}
+
+/// [`DebugRunner::give_link_requirement`]'s wrapper: the card's registered
+/// effects plus one unfiltered link requirement.
+struct WithLinkRequirement {
+    inner: Option<Arc<dyn crate::effect::CardEffect>>,
+    cost: u16,
+}
+
+impl crate::effect::CardEffect for WithLinkRequirement {
+    fn effects(&self, card: CardHandle) -> Vec<crate::effect::Effect> {
+        let mut out = self
+            .inner
+            .as_ref()
+            .map(|e| e.effects(card))
+            .unwrap_or_default();
+        out.push(
+            crate::effect::Effect::link_condition(card)
+                .link_host(self.cost, |_, _| true)
+                .build(),
+        );
+        out
+    }
+
+    fn partition_slots(
+        &self,
+        inherited: bool,
+    ) -> Option<Arc<Vec<digimon_dsl::compiled::CompiledPredicate>>> {
+        self.inner
+            .as_ref()
+            .and_then(|e| e.partition_slots(inherited))
     }
 }

@@ -263,7 +263,7 @@ fn bt16_101_deletion_observer_gates_on_opponent_digimon_and_cause() {
         })
         .expect("OnAnyDeletion observer must exist");
     let cond = del
-        .condition
+        .trigger_if
         .as_ref()
         .expect("deletion observer must gate on the deleted object + cause");
     assert!(
@@ -607,7 +607,7 @@ fn bt16_101_gains_2_memory_on_opp_zero_dp_deletion() {
         runner.game.effective_dp(opp),
         Some(0),
         "precondition: opp Digimon at 0 DP (5000 − 6000, floored at 0 per \
-         rules 17-1-3-1 / DCGO Permanent.DP — still the deletable state)"
+         rules 17-1-3-1-1 / DCGO Permanent.DP — still the deletable state)"
     );
 
     // Resolution boundary: the state-based rules-check deletes the <=0 DP Digimon

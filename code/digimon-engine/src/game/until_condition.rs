@@ -64,5 +64,9 @@ impl Game {
             .saturating_add(evaluations as u64);
         self.until_condition_reevaluation_cycles =
             self.until_condition_reevaluation_cycles.saturating_add(1);
+        // A removed grant may have been the attacker's `<Progress>` (or its
+        // `ImmunityToOpponentEffects`): §15-15-5-2, the hidden entries apply
+        // at once.
+        self.refresh_progress_shield();
     }
 }

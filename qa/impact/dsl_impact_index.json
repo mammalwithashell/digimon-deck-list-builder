@@ -1382,7 +1382,7 @@
         "any_of",
         "kind",
         "name_contains",
-        "self_digivolution_contains_name"
+        "source_name_contains"
       ],
       "timings": [
         "on_play"
@@ -2433,7 +2433,7 @@
         "materials_count_lte",
         "name_contains",
         "owner",
-        "self_digivolution_contains_name",
+        "self_digivolution_sources_contain_name",
         "zone"
       ],
       "timings": [
@@ -3092,7 +3092,7 @@
         "level_eq",
         "name_contains",
         "owner",
-        "self_digivolution_contains_name",
+        "source_name_is",
         "zone"
       ],
       "timings": [
@@ -4203,7 +4203,7 @@
         "level_eq",
         "name_contains",
         "owner",
-        "self_digivolution_contains_name",
+        "self_digivolution_sources_contain_name",
         "zone"
       ],
       "timings": [
@@ -4587,8 +4587,8 @@
         "name_is",
         "opponents_turn",
         "owner",
-        "self_digivolution_contains_name",
         "self_digivolution_sources_contain_name",
+        "source_name_is",
         "trait_has",
         "zone"
       ],
@@ -5797,7 +5797,6 @@
     "BT21-084": {
       "path": "bt21/BT21-084.yaml",
       "predicates": [
-        "all_of",
         "event_target_owner",
         "memory_lte",
         "source_is_unsuspended",
@@ -6481,13 +6480,11 @@
     "BT22-041": {
       "path": "bt22/BT22-041.yaml",
       "predicates": [
-        "all_of",
         "all_turns",
         "color_is",
         "event_permanent_is_source",
         "level_eq",
         "owner",
-        "security_count_gte",
         "security_count_lte",
         "trait_has",
         "zone"
@@ -7180,7 +7177,6 @@
     "BT23-079": {
       "path": "bt23/BT23-079.yaml",
       "predicates": [
-        "all_of",
         "count_gte",
         "event_target_owner",
         "kind",
@@ -7924,6 +7920,7 @@
         "materials_count_lte",
         "none_of",
         "not_in_binding",
+        "owner_can_add_security",
         "replacement_cause",
         "replacement_subject_is_mine",
         "security_count_lte",
@@ -8464,7 +8461,6 @@
     "BT24-087": {
       "path": "bt24/BT24-087.yaml",
       "predicates": [
-        "all_of",
         "any_of",
         "count_gte",
         "event_target_owner",
@@ -10638,7 +10634,6 @@
     "BT25-075": {
       "path": "bt25/BT25-075.yaml",
       "predicates": [
-        "all_of",
         "color_is",
         "count_gte",
         "event_target_owner",
@@ -10840,7 +10835,6 @@
         "any_of",
         "any_permanent",
         "color_is",
-        "count_gte",
         "dp_gte",
         "event_discard_player",
         "event_is_effect_initiated",
@@ -11425,7 +11419,6 @@
     "BT26-002": {
       "path": "bt26/BT26-002.yaml",
       "predicates": [
-        "all_of",
         "event_host_is_own_tamer",
         "your_turn"
       ],
@@ -14645,7 +14638,7 @@
       "predicates": [
         "all_of",
         "any_of",
-        "self_digivolution_contains_name",
+        "source_name_contains",
         "source_permanent_trait_has",
         "your_turn"
       ],
@@ -20929,7 +20922,6 @@
     "EX7-071": {
       "path": "ex7/EX7-071.yaml",
       "predicates": [
-        "all_of",
         "any_permanent",
         "event_target_owner",
         "kind",
@@ -24171,7 +24163,6 @@
     "ST18-14": {
       "path": "st18/ST18-14.yaml",
       "predicates": [
-        "all_of",
         "any_permanent",
         "card_number_is",
         "event_target_is_player",
@@ -26534,7 +26525,7 @@
       ]
     }
   },
-  "cards_root": "code/digimon-engine/cards",
+  "cards_root": "C:/Users/james/Documents/digimon-deck-list-builder-1/.claude/worktrees/digimon-simulator-validation-4dd340/code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost_reduce": [
       "BT26-084"
@@ -26717,7 +26708,6 @@
       "BT21-081",
       "BT21-082",
       "BT21-083",
-      "BT21-084",
       "BT21-086",
       "BT21-091",
       "BT21-092",
@@ -26739,7 +26729,6 @@
       "BT22-032",
       "BT22-036",
       "BT22-040",
-      "BT22-041",
       "BT22-042",
       "BT22-052",
       "BT22-085",
@@ -26763,7 +26752,6 @@
       "BT23-064",
       "BT23-072",
       "BT23-077",
-      "BT23-079",
       "BT23-096",
       "BT23-101",
       "BT23-102",
@@ -26807,7 +26795,6 @@
       "BT24-083",
       "BT24-084",
       "BT24-085",
-      "BT24-087",
       "BT24-088",
       "BT24-089",
       "BT24-090",
@@ -26881,7 +26868,6 @@
       "BT25-071",
       "BT25-072",
       "BT25-073",
-      "BT25-075",
       "BT25-077",
       "BT25-078",
       "BT25-080",
@@ -26907,7 +26893,6 @@
       "BT25-103",
       "BT25-104",
       "BT26-001",
-      "BT26-002",
       "BT26-005",
       "BT26-007",
       "BT26-008",
@@ -27194,7 +27179,6 @@
       "EX7-059",
       "EX7-066",
       "EX7-070",
-      "EX7-071",
       "EX7-073",
       "EX7-074",
       "EX8-002",
@@ -27292,7 +27276,6 @@
       "ST12-12",
       "ST16-14",
       "ST17-07",
-      "ST18-14",
       "ST19-08",
       "ST19-09",
       "ST19-11",
@@ -29507,7 +29490,6 @@
       "BT25-075",
       "BT25-080",
       "BT25-082",
-      "BT25-084",
       "BT25-085",
       "BT25-089",
       "BT25-092",
@@ -34001,6 +33983,9 @@
       "ST9-04",
       "ST9-09"
     ],
+    "owner_can_add_security": [
+      "BT24-040"
+    ],
     "play_cost": [
       "EX7-008"
     ],
@@ -34234,7 +34219,6 @@
       "BT15-003",
       "BT16-055",
       "BT20-056",
-      "BT22-041",
       "BT23-035",
       "BT24-034",
       "BT24-101",
@@ -34301,18 +34285,12 @@
     "self_color_count_lte": [
       "BT25-084"
     ],
-    "self_digivolution_contains_name": [
-      "BT12-059",
-      "BT16-027",
-      "BT17-102",
-      "BT20-020",
-      "BT20-059",
-      "EX1-014"
-    ],
     "self_digivolution_sources_contain_name": [
+      "BT16-027",
       "BT16-101",
       "BT16-102",
       "BT19-073",
+      "BT20-020",
       "BT20-059",
       "BT20-083",
       "BT20-102",
@@ -34466,6 +34444,7 @@
       "BT12-022",
       "BT12-028",
       "BT12-050",
+      "BT12-059",
       "BT17-015",
       "BT17-027",
       "BT22-013",
@@ -34475,6 +34454,7 @@
       "BT24-075",
       "BT25-027",
       "BT26-044",
+      "EX1-014",
       "EX13-002",
       "EX13-013",
       "EX13-017",
@@ -34484,6 +34464,10 @@
       "EX4-051",
       "ST24-06",
       "ST24-10"
+    ],
+    "source_name_is": [
+      "BT17-102",
+      "BT20-059"
     ],
     "source_permanent_trait_has": [
       "AD1-013",

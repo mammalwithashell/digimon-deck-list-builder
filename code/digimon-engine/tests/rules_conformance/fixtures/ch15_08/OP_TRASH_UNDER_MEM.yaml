@@ -1,0 +1,18 @@
+# OP_TRASH_UNDER_MEM -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [On Play] Trash the bottom face-down card from under 1 of your Tamers.
+#   Then, gain 1 memory.
+# The [On Play] twin of the Option MAIN_TRASH_UNDER_MEM: the same text, but
+# the causing effect is itself a triggered effect (§15-8-3-2).
+card: OP_TRASH_UNDER_MEM
+name: Diggermon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    summary: "[On Play] Trash the bottom face-down card from under 1 of your Tamers. Then, gain 1 memory."
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - gain_memory: 1

@@ -609,7 +609,7 @@ fn lm_054_delay_is_main_phase_action_after_placing_turn() {
         + delay_idx as u16 * EFFECTS_PER_PERMANENT
         + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
 
-    // Same turn it was placed: the Delay activation is NOT legal (16-16-3).
+    // Same turn it was placed: the Delay activation is NOT legal (16-17-3).
     runner.game.enter_main_phase();
     assert_eq!(
         build_action_mask(&runner.game, 0)[bit],

@@ -22,7 +22,7 @@ cost: 4
 dp: 1000
 effects:
   - when: on_ally_won_battle
-    condition:
+    trigger_if:
       event_battle_deleter:
         owner: you
         kind: digimon
@@ -377,33 +377,55 @@ fn declared_attack_evade_outcome_and_attack_cleanup_survive_clone() {
     }
 }
 
+/// §14-2-4 / §15-4-3-2: the "deletes in battle" observer and the deleted
+/// Digimon's [On Deletion] are triggered by the same battle and pend together;
+/// §15-4-3-5-1: the turn player's activate first. Official Q&A Q3931 (EX8-045
+/// Callismon): the battle trigger and the deleted Digimon's [On Deletion]
+/// "will trigger simultaneously, then the turn player's will activate first."
+/// P0 (the turn player under the runner's even seed) owns the optional
+/// observer, P1 the optional [On Deletion]: P0 decides first, then P1. (This
+/// test used to pin the reverse -- P1's [On Deletion] choice before P0's
+/// observer -- G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.)
+/// A clone taken at P0's choice resolves independently of the original.
 #[test]
-fn on_deletion_choice_finishes_before_end_of_battle_observer_after_clone() {
+fn turn_players_battle_observer_choice_precedes_on_deletion_after_clone() {
     let observer = OBSERVER.replace("    summary:", "    optional: true\n    summary:");
     let mut r = runner_with(&observer);
     r.place_on_field(0, "BD-OBS", Some(0));
     let hero = r.place_on_field(0, "BD-HERO", Some(0));
     let dying = r.place_on_field(1, "BD-DYING", Some(0));
+    assert_eq!(r.game.turn_player(), 0, "P0 is the turn player");
+    let memory0 = r.game.memory;
     r.battle_digimon(hero, dying);
     assert_eq!(
         r.battle_area_size(1),
         0,
-        "deletion commits before On Deletion choice"
+        "deletion commits before the battle's triggered choices"
     );
-    assert_eq!(r.pending_selection().unwrap().selecting_player, 1);
+    assert_eq!(
+        r.pending_selection().unwrap().selecting_player,
+        0,
+        "the turn player's battle observer activates before the On Deletion"
+    );
     assert_eq!(r.security_count(1), 4);
+    assert_eq!(r.game.memory, memory0, "the On Deletion waits for the observer");
     let mut cloned = DebugRunner::wrap(r.game.clone());
-    for (game, decline_deletion) in [(&mut r, false), (&mut cloned, true)] {
-        choose(game, decline_deletion);
+    for (game, decline_observer) in [(&mut r, false), (&mut cloned, true)] {
+        choose(game, decline_observer);
+        assert_eq!(
+            game.security_count(1),
+            if decline_observer { 4 } else { 3 },
+            "the observer resolved (or was declined) first"
+        );
         assert_eq!(
             game.pending_selection().unwrap().selecting_player,
-            0,
-            "EndOfBattle waits for the earlier On Deletion choice"
+            1,
+            "then the non-turn player's On Deletion"
         );
-        assert_eq!(game.security_count(1), 4);
+        assert_eq!(game.game.memory, memory0);
         choose(game, false);
-        assert_eq!(game.security_count(1), 3);
         assert!(game.pending_selection().is_none());
+        assert_ne!(game.game.memory, memory0, "the On Deletion resolved last");
     }
 }
 
@@ -463,22 +485,45 @@ impl digimon_engine::effect::CardEffect for ChangeWinnerOnDeletion {
     }
 }
 
+/// §15-8-3-1 / §15-8-3-4: a trigger-type effect triggers when its trigger
+/// condition is met, and not otherwise; §15-8-3-8: what that condition names
+/// is read in the state where the battle triggered it. BD-HERO, which won the
+/// battle, has no [Evolved] trait, so "When your [Evolved] Digimon wins a
+/// battle" never triggers -- even with P1 the turn player, whose [On Deletion]
+/// digivolves the winner into the [Evolved] BD-EVO before P0's pending effects
+/// activate. (Withdraws the Task 28 ratification that it activated.)
+/// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
 #[test]
-fn winner_predicates_follow_ordinary_evolution_during_opponents_on_deletion() {
+fn winner_that_evolves_into_the_trait_during_opponents_on_deletion_did_not_trigger() {
     winner_identity_after_deletion(false, false);
 }
 
+// Since G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER this passes because the non-[Evolved] winner never triggers the observer at the battle (§15-8-3-4), not because of identity tracking.
 #[test]
 fn winner_predicates_do_not_follow_a_reused_slot_after_winner_deletion() {
     winner_identity_after_deletion(true, false);
 }
 
+// Since G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER this passes because the non-[Evolved] winner never triggers the observer at the battle (§15-8-3-4), not because of identity tracking.
 #[test]
 fn winner_predicates_do_not_follow_materials_into_a_new_dna_digimon() {
     winner_identity_after_deletion(false, true);
 }
 
 fn winner_identity_after_deletion(delete_winner: bool, dna_winner: bool) {
+    // P1 the turn player: its [On Deletion] changes the winner first.
+    winner_identity_after_deletion_with_turn(delete_winner, dna_winner, 1);
+    // P0 the turn player: P0's observer activates first (§15-4-3-5-1) and
+    // reads the winner before P1's [On Deletion] changes it. BD-HERO has no
+    // [Evolved] trait, so nothing is trashed in any of the three shapes.
+    winner_identity_after_deletion_with_turn(delete_winner, dna_winner, 0);
+}
+
+fn winner_identity_after_deletion_with_turn(
+    delete_winner: bool,
+    dna_winner: bool,
+    turn_player: usize,
+) {
     let observer = OBSERVER.replace(
         "      event_battle_deleter:\n        owner: you\n        kind: digimon\n        name_is: Hero",
         "      event_winner_owner: you\n      event_winner_trait_has: Evolved");
@@ -514,12 +559,20 @@ fn winner_identity_after_deletion(delete_winner: bool, dna_winner: bool) {
             replay_after_de_digivolve: false,
         }),
     );
+    // P0's observer and P1's [On Deletion] are triggered by the battle and
+    // pend together (§14-2-4, §15-4-3-2); the turn player's activate first
+    // (§15-4-3-5-1). With P1 the turn player (as in
+    // `ch15_08_effect_categories::winner_deleted_by_loser_board`) the
+    // [On Deletion] changes the winner BEFORE the observer reads it; with P0
+    // the turn player the observer reads the unchanged winner.
+    // G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+    r.game.turn_player_idx = turn_player;
     r.battle_digimon(hero, villain);
     r.auto_resolve().unwrap();
-    assert_eq!(
-        r.security_count(1),
-        if delete_winner || dna_winner { 4 } else { 3 }
-    );
+    // No [Evolved] Digimon won the battle: the observer never triggers, in
+    // any shape or turn order (§15-8-3-1, §15-8-3-8;
+    // G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER).
+    assert_eq!(r.security_count(1), 4, "turn player P{turn_player}");
     let first = &r.game.players[0].battle_area[0];
     assert_eq!(
         first.top_card().card_id(&r.game.card_data),
@@ -531,26 +584,70 @@ fn winner_identity_after_deletion(delete_winner: bool, dna_winner: bool) {
     );
 }
 
+/// §15-8-3-1 / §15-8-3-4: a battle-result trigger decides its trigger
+/// condition at the battle, and §15-8-3-8: the winner it reads is the Digimon
+/// as it was then. BD-HERO's top card has no [Evolved] trait at the battle --
+/// the [Evolved] BD-SOURCE is only one of its digivolution cards, and a
+/// Digimon's traits are its top card's (§4-7-7, official Q&A Q3225) -- so the
+/// "[Evolved] Digimon wins a battle" observer never triggers. It stays silent
+/// when P1 (the turn player) de-digivolves the winner first, making BD-SOURCE
+/// its top card, and when P1 replays the de-digivolved body from the trash:
+/// a qualifier that was false at the battle is not revisited once a pooled
+/// sibling makes it true. (Before Tasks 31/32 the no-replay branch pinned the
+/// activation, security 3.) The P0-turn-player branches are
+/// `turn_players_observer_reads_the_winners_top_card_before_de_digivolution`.
+/// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS,
+/// G-ENGINE-BATTLE-RESULT-TRIGGER-CONDITION-NOT-CHECKED-AT-TRIGGER.
 #[test]
-fn winner_predicates_follow_de_digivolution_during_opponents_on_deletion() {
-    winner_after_de_digivolution(false);
+fn observer_never_triggers_when_the_winners_top_card_lacked_the_trait_at_the_battle() {
+    for replay in [false, true] {
+        winner_after_de_digivolution_with_turn(replay, 1, false);
+    }
 }
 
+/// Converse of the test above: with [Evolved] on BD-HERO's own top card the
+/// observer triggers at the battle (§15-8-3-1) and activates whichever player
+/// is the turn player, whether the winner is de-digivolved first (it is still
+/// the same Digimon, now with the [Evolved] BD-SOURCE on top) or replayed
+/// from the trash (the winner has left: the trigger reads it as it last was,
+/// §15-8-3-8, and the trashing needs no winner on the field).
 #[test]
-fn winner_predicates_do_not_follow_a_de_digivolved_body_replayed_from_trash() {
-    winner_after_de_digivolution(true);
+fn observer_triggered_at_the_battle_activates_after_the_winner_de_digivolves() {
+    for replay in [false, true] {
+        for turn_player in [0, 1] {
+            winner_after_de_digivolution_with_turn(replay, turn_player, true);
+        }
+    }
 }
 
-fn winner_after_de_digivolution(replay: bool) {
+/// §15-4-3-5-1: with P0 the turn player, P0's observer activates before P1's
+/// [On Deletion] de-digivolves the winner; §15-8-3-8 / §15-4-4-5: the
+/// winner it reads is BD-HERO, whose top card has no [Evolved] trait -- the
+/// [Evolved] BD-SOURCE is only one of its digivolution cards -- so nothing is
+/// trashed (a Digimon's traits are its top card's: §4-7-7, official Q&A
+/// Q3225). Found by the Task 28 review round;
+/// G-ENGINE-BATTLE-WINNER-TRAIT-READS-DIGIVOLUTION-CARDS.
+#[test]
+fn turn_players_observer_reads_the_winners_top_card_before_de_digivolution() {
+    for replay in [false, true] {
+        winner_after_de_digivolution_with_turn(replay, 0, false);
+    }
+}
+
+fn winner_after_de_digivolution_with_turn(replay: bool, turn_player: usize, hero_evolved: bool) {
     let observer = OBSERVER.replace(
         "      event_battle_deleter:\n        owner: you\n        kind: digimon\n        name_is: Hero",
         "      event_winner_owner: you\n      event_winner_trait_has: Evolved");
     let mut source = card("BD-SOURCE", "Surviving Hero", 7000);
     source.traits = vec!["Evolved".into()];
+    let mut hero_card = card("BD-HERO", "Hero", 8000);
+    if hero_evolved {
+        hero_card.traits = vec!["Evolved".into()];
+    }
     let mut r = DebugRunner::builder()
         .from_dsl_yaml(&observer)
         .unwrap()
-        .add_card(card("BD-HERO", "Hero", 8000))
+        .add_card(hero_card)
         .add_card(card("BD-VILLAIN", "Villain", 5000))
         .add_card(card("BD-PAD", "Pad", 1000))
         .add_card(source)
@@ -584,6 +681,9 @@ fn winner_after_de_digivolution(replay: bool) {
             replay_after_de_digivolve: replay,
         }),
     );
+    // The turn player's effect in the battle's pool activates first
+    // (§15-4-3-5-1; see `winner_identity_after_deletion`).
+    r.game.turn_player_idx = turn_player;
     r.battle_digimon(hero, villain);
     r.auto_resolve().unwrap();
     assert!(r.game.players[0]
@@ -592,7 +692,106 @@ fn winner_after_de_digivolution(replay: bool) {
         .any(|p| p.top_card().card_id(&r.game.card_data) == "BD-SOURCE"));
     assert_eq!(
         r.security_count(1),
-        if replay { 4 } else { 3 },
-        "only the same surviving Digimon retains its battle win"
+        if hero_evolved { 3 } else { 4 },
+        "the observer's trigger condition is decided at the battle from the winner's top card          (hero [Evolved]: {hero_evolved}, turn player P{turn_player}, replay: {replay})"
+    );
+}
+
+/// A <Piercing> [Hero] that the observer watches.
+const PIERCING_HERO: &str = r#"
+card: BD-PIERCE-HERO
+name: Hero
+kind: digimon
+level: 5
+color: [red]
+cost: 5
+dp: 8000
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+"#;
+
+/// §14-2-4 / §15-4-3-2 / §16-7-4: one battle triggers P0's "deletes in
+/// battle" observer, P0's <Piercing> and P1's [On Deletion] -- one pool of
+/// three entries across two players. §15-4-3-5-1: P0 (the turn player) orders
+/// its two in one `TriggerOrder` and both activate before P1's [On Deletion];
+/// the <Piercing> check is pending processing, performed before the End of
+/// Attack timing after the [On Deletion]. A clone taken while P0's
+/// `TriggerOrder` is parked resolves identically to the original.
+#[test]
+fn three_entry_two_player_battle_pool_survives_clone() {
+    use digimon_engine::enums::Keyword;
+    use digimon_engine::selection::SelectionKind;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(OBSERVER)
+        .expect("observer compiles")
+        .from_dsl_yaml(DELETION_TARGET)
+        .expect("deletion target compiles")
+        .from_dsl_yaml(PIERCING_HERO)
+        .expect("piercing hero compiles")
+        .add_card(card("BD-PAD", "Pad", 1000))
+        .deck(0, &["BD-PAD"; 12])
+        .deck(1, &["BD-PAD"; 12])
+        .security(0, &["BD-PAD"; 4])
+        .security(1, &["BD-PAD"; 4])
+        .start();
+    assert_eq!(r.game.turn_player(), 0, "P0 is the turn player");
+    r.place_on_field(0, "BD-OBS", Some(0));
+    let hero = r.place_on_field(0, "BD-PIERCE-HERO", Some(0));
+    let dying = r.place_on_field(1, "BD-DYING", Some(0));
+    r.game.players[1].battle_area[dying.index as usize].is_suspended = true;
+    let memory0 = r.game.memory;
+
+    r.attack_digimon(hero, dying, false);
+
+    assert_eq!(r.battle_area_size(1), 0, "BD-DYING was deleted in battle");
+    let piercing = {
+        let order = r.pending_selection().expect("P0's ordering decision");
+        assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+        assert_eq!(order.selecting_player, 0, "the turn player orders first");
+        let choices = order.effect_choices.as_ref().expect("branches");
+        assert_eq!(choices.len(), 2, "P0's observer and <Piercing>: {choices:?}");
+        choices
+            .iter()
+            .find(|c| c.keyword == Some(Keyword::Piercing))
+            .expect("<Piercing> is in the pool")
+            .action_id
+    };
+    assert_eq!(r.security_count(1), 4, "nothing resolved before the order");
+    assert_eq!(r.game.memory, memory0, "the [On Deletion] is still pending");
+
+    let mut cloned = DebugRunner::wrap(r.game.clone());
+    for game in [&mut r, &mut cloned] {
+        game.execute_action(0, piercing).unwrap();
+        // P0's other entry (the observer) follows; it trashes 1 security.
+        while game
+            .pending_selection()
+            .is_some_and(|s| s.selecting_player == 0)
+        {
+            let view = game.pending_selection_view().unwrap();
+            game.execute_action(0, view.valid_action_ids[0]).unwrap();
+        }
+        assert_eq!(game.security_count(1), 3, "the observer resolved");
+        assert_eq!(game.game.memory, memory0, "the [On Deletion] waits for P0");
+        assert_eq!(
+            game.pending_selection().unwrap().selecting_player,
+            1,
+            "then the non-turn player's optional [On Deletion]"
+        );
+        choose(game, false);
+        game.auto_resolve().unwrap();
+        assert_ne!(game.game.memory, memory0, "the [On Deletion] resolved");
+        assert_eq!(
+            game.security_count(1),
+            2,
+            "the pending <Piercing> check, after the [On Deletion]"
+        );
+        assert!(game.game.pending_attack.is_none(), "the attack ended");
+    }
+    assert_eq!(
+        r.game.verification_digest(),
+        cloned.game.verification_digest(),
+        "the clone resolved identically"
     );
 }

@@ -1,0 +1,17 @@
+# MAIN_MEM_AT_EOONT -- Option, red, use cost 0.
+#   [Main] At the end of your opponent's next turn, gain 2 memory.
+# "At the end of your opponent's next turn, gain 2 memory" is pending
+# processing (§18-1-1).
+card: MAIN_MEM_AT_EOONT
+name: Later Gain
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] At the end of your opponent's next turn, gain 2 memory."
+    process:
+      - schedule_delayed:
+          when: end_of_opponents_next_turn
+          body:
+            - gain_memory: 2

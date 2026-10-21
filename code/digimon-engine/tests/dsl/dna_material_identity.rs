@@ -111,6 +111,12 @@ color: [green, blue]
 cost: 15
 dp: 15000
 alt_paths:
+  # The printed DNA requirement <Blast DNA Digivolve> can't ignore (16-31-5).
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, name_is: Breakdramon }
+      - { level_eq: 6, name_is: Slayerdramon }
+    cost: 0
   - kind: blast_dna_digivolve
     materials:
       - { kind: digimon, name_is: Breakdramon }

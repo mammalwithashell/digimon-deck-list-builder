@@ -242,6 +242,15 @@ pub enum ResumeSelectKind {
         page: crate::count_choice::CountChoicePage,
         state: crate::dsl_cards::step::source_prefix_payment::SourcePrefixCountState,
     },
+    /// §16-12-1 `<De-Digivolve>` count declaration (1..=min(N, trashable),
+    /// non-optional, §16-12-3). On commit the declared number of cards is
+    /// trashed from the top of the declared Digimon
+    /// (`Game::de_digivolve_commit_declared`), then `inner_tail` / outer
+    /// continuations run. G-DEDIGIVOLVE-NO-DECLARATION.
+    DeDigivolveCount {
+        page: crate::count_choice::CountChoicePage,
+        state: crate::game_actions::DeDigivolveCountState,
+    },
     EffectChoice {
         post: Option<EffectChoicePostAction>,
     },
@@ -307,6 +316,17 @@ pub enum FieldPermanentPostAction {
     /// Tamer's bottom face-down digivolution source (`trash_bottom_face_down_source`);
     /// the tail runs ONLY if the trash succeeded (no-approximations cost gate).
     TrashBottomFaceDownSource,
+    /// `install_trash_n_bottom_face_down_sources_under_tamers`: one Tamer pick
+    /// of the multi-card "by trashing N bottom face-down cards from under any
+    /// of your Tamers" cost. `remaining` counts this pick; `picked` holds the
+    /// Tamers chosen before it. The arm records the pick, then parks the next
+    /// one or trashes every chosen card as ONE source-trash event (§15-5-2)
+    /// and runs the cost-gated `inner_tail`.
+    /// G-ENGINE-MULTI-CARD-COST-TRASH-SPLIT-INTO-PER-CARD-TRIGGER-EVENTS.
+    TrashBottomFaceDownSourcesPick {
+        remaining: u8,
+        picked: Vec<PermanentHandle>,
+    },
     /// `try_run_relink` (`relink_self_to_own_digimon`, EX11-027): the picked
     /// permanent is the host; absorb the effect's own standing `source`
     /// permanent onto it as a link card (`absorb_standing_digimon_as_link`).
@@ -560,21 +580,19 @@ pub enum ResumeFrame {
     /// Accept adds one material to the transaction and re-enters the play
     /// finish path; PASS commits with the currently selected materials.
     DigiXrosMaterialSelection(DigiXrosMaterialSelectionState),
-    /// Outer accept/decline prompt for a lone optional triggered effect whose
-    /// body begins with a mandatory choice. Accept runs the queued effect; PASS
-    /// drops it.
+    /// Accept/decline prompt for a lone OPTIONAL effect, parked before its body
+    /// (`Game::install_outer_optional_trigger_selection`): a queued trigger whose
+    /// body begins with a mandatory step (G-OUTER-OPTIONAL-NOT-INSTALLED), and,
+    /// via `Game::install_single_trigger_optional_gate`, a `TriggerOrder` pick or
+    /// a REFIRED effect ("activate … as an effect of this Digimon", §15-15-7-4)
+    /// that needs either that prompt or a pre-cost decline. Accept runs the
+    /// carried `QueuedEffect` through `run_queued_effect` (refire OPT bypass and
+    /// attribution intact); PASS drops it. `outer_conts` run after either.
     OuterOptionalTrigger(OuterOptionalTriggerState),
     /// Trigger-order selection for a controller's queued triggered effects.
     /// Accept runs the chosen queued effect; optional PASS drops every
     /// remaining optional queued effect for that chooser.
     TriggerOrderSelection(TriggerOrderSelectionState),
-    /// Ordering pick between the used Option's PENDING TRASH (9-1-5) and the
-    /// using player's own simultaneously-pending triggered effects. 18-1-2
-    /// performs pending processing that coincides with other processing like
-    /// simultaneously triggering effects (15-4-3), and 15-4-3-5-1 has that
-    /// player choose one of their own items at a time — so the trash is not
-    /// automatically first. G-ENGINE-OPTION-TRASH-TURN-PLAYER-ORDER.
-    OptionTrashOrder(OptionTrashOrderState),
     /// Optional replacement-effect accept/decline prompt. Accept re-runs the
     /// parked replacement process and commits its outcome; PASS commits the
     /// original event with no replacement.
@@ -649,7 +667,7 @@ pub enum ResumeFrame {
         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
         outer_conts: Vec<OuterContinuation>,
     },
-    /// A turn-scheduled / event / `[Main]` `<Delay>` body whose 16-16-1
+    /// A turn-scheduled / event / `[Main]` `<Delay>` body whose 16-17-1
     /// trash-this-card cost parked a selection first. Resolve that inner
     /// selection as data, then run the body iff the carrier reached the trash.
     DelayBodyAfterCost {
@@ -679,6 +697,11 @@ pub enum ResumeFrame {
     /// Field Digimon Link host prompt. Top-level player action; accept begins
     /// the WhenWouldLink window and then commits/resumes the Digimon link.
     DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
+    /// Choice of which link cards to trash: the §4-9-5 replacement in a
+    /// declared link (the linking player) or the §17-1-3-2-5 rule-check trim
+    /// (the host's controller). One pick per decision until the count is met;
+    /// the picks are trashed together, then the link (if any) finishes.
+    LinkCardTrashChoice(crate::game_actions::LinkCardTrashChoiceState),
     /// Interactive play-from-hand cost-reduction accept/decline prompt.
     /// Accept applies the reducer and continues the recursive reducer chain;
     /// PASS skips this reducer and continues the chain.
@@ -701,9 +724,8 @@ pub enum ResumeFrame {
     /// rewrite the attack target when a block is declared, advance combat, then
     /// run/re-wrap any composed DSL outer tails. See [`CombatBlockState`].
     BlockSelection(CombatBlockState),
-    /// Combat Raid target-selection prompt. Covers both the optional printed
-    /// Raid switch before Alliance and the mandatory post-Block invalid-target
-    /// Raid retarget. See [`CombatRaidSelectionState`].
+    /// Combat `<Raid>` target-switch prompt: the optional body of the `<Raid>`
+    /// trigger (§16-23-2 / §16-23-3). See [`CombatRaidSelectionState`].
     RaidSelection(CombatRaidSelectionState),
     /// Combat Counter declaration prompt. Decodes the selected Counter candidate
     /// or PASS, runs the Counter effect path, advances combat, then composes any
@@ -715,17 +737,30 @@ pub enum ResumeFrame {
     /// Second follow-up prompt for Counter-window Blast DNA: pick the hand
     /// material and perform the DNA digivolve.
     CounterBlastDnaHandMaterial(CombatBlastDnaHandMaterialState),
-    /// End-of-turn `<Overclock>` sacrifice prompt. Decode the chosen own-field
-    /// sacrifice or PASS, then continue the keyword attack flow.
+    /// `<Overclock>`'s optional processing condition (§16-34-3), offered by its
+    /// `[End of Your Turn]` trigger body (§16-34-2): pick 1 of your Tokens or
+    /// other specified Digimon to delete, or PASS (decline). A pick deletes it
+    /// and the mandatory attack on a player without suspending follows.
     OverclockSelection(crate::game_phases::OverclockSelectionState),
+    /// An effect-offered optional attack declaration: one prompt whose choices
+    /// are the carrier's legal attack declarations plus PASS (decline). A pick
+    /// declares the attack through the normal procedure (`begin_attack_open`);
+    /// PASS declares nothing. Either way the enclosing effect's remaining steps
+    /// (`outer_conts`) run after. Offered by `<Blitz>`'s processing (§16-16-3)
+    /// and by the end-of-turn attack keywords' trigger bodies (`<Engage>`
+    /// §16-44-2, `<Execute>` §16-38-2, `<Vortex>` §16-33-2), whose attack is
+    /// declared inside the `[End of Your Turn]` pool.
+    /// See [`AttackDeclarationDecisionState`].
+    AttackDeclarationDecision(AttackDeclarationDecisionState),
     /// BO3 between-game play-order prompt (`Game::request_play_order_selection`).
     /// Decode `PLAY_FIRST` / `PLAY_SECOND` and write `Game::last_play_order_choice`.
     /// This is an engine/lifecycle prompt, never nested inside a DSL clause.
     PlayOrderSelection,
     /// `<Save>` Tamer destination prompt.
     KeywordSaveSelection(KeywordSaveSelectionState),
-    /// `<Material Save>` first-stage Tamer destination prompt. Accept installs
-    /// a non-DSL count-capped source prompt.
+    /// `<Material Save>` first-stage Tamer destination prompt (the optional
+    /// decision, §16-21-3). Accept installs the exact `min(N, eligible)`
+    /// non-DSL count-capped pick over the carrier's live stack.
     KeywordMaterialSaveTamerSelection(KeywordMaterialSaveTamerSelectionState),
     /// `<Scapegoat>` inner replacement-substitute prompt.
     KeywordScapegoatSelection(KeywordScapegoatSelectionState),
@@ -806,6 +841,92 @@ pub struct PerColorDeleteState {
     pub outer_conts: Vec<OuterContinuation>,
 }
 
+/// A parked effect-offered attack declaration
+/// (`ResumeFrame::AttackDeclarationDecision`). `valid_action_ids` are the
+/// `encode_attack(attacker, target)` declarations offered when the prompt was
+/// installed (§11-2-7-1 target legality plus whatever the offering effect
+/// widens, e.g. `<Execute>`'s unsuspended Digimon, §16-38-1; no Main-phase
+/// memory gate); PASS declines. The rest says how a pick opens the attack
+/// (`Game::run_attack_declaration_decision_step`). Plain data, no closures.
+#[derive(Debug, Clone)]
+pub struct AttackDeclarationDecisionState {
+    /// The Digimon that may attack.
+    pub attacker: PermanentHandle,
+    /// The card whose effect offered the attack (the attack's initiator).
+    pub source_card: CardHandle,
+    /// The offered declarations (attack action ids of `attacker`).
+    pub valid_action_ids: Vec<u16>,
+    /// The offering effect's source kind (the prompt's `source_kind`).
+    pub source_kind: EffectSourceKind,
+    /// How the declared attack opens (`AttackOpen::initiator`): an effect's
+    /// optional attack, or `<Vortex>` (whose initiator carries the
+    /// played-this-turn exemption, §16-33-1).
+    pub initiator: crate::combat::AttackInitiator,
+    /// Whether the declaration suspends the attacker (§11-2-1).
+    pub suspend_attacker: bool,
+    /// Whether the declaration ignores the played-this-turn restriction.
+    pub ignore_summoning_sickness: bool,
+    /// Modifiers attached for the attack after an optional upgrade cost.
+    pub cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    /// The end-of-turn attack keyword whose `[End of Your Turn]` trigger body
+    /// offered this attack (`<Engage>`, `<Execute>`, `<Vortex>`), if any.
+    /// Recorded on the declared attack (`Game::end_of_turn_attack_keyword`):
+    /// `<Execute>`'s deletion at the end of THAT attack keys on it (§16-38-4).
+    pub end_of_turn_keyword: Option<crate::enums::Keyword>,
+    /// Outer-tail continuations composed when nested inside a DSL clause; run
+    /// after the declaration (or the decline), in push order.
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+impl AttackDeclarationDecisionState {
+    /// `<Blitz>`'s "This Digimon may attack" (§16-16-3): an ordinary
+    /// optional attack of the effect's source card, suspending the attacker.
+    pub fn blitz(attacker: PermanentHandle, source_card: CardHandle, valid_action_ids: Vec<u16>) -> Self {
+        Self {
+            attacker,
+            source_card,
+            valid_action_ids,
+            source_kind: EffectSourceKind::Digimon,
+            initiator: crate::combat::AttackInitiator::Effect {
+                source: Some(source_card),
+                optional: true,
+            },
+            suspend_attacker: true,
+            ignore_summoning_sickness: false,
+            cost_upgrade: None,
+            end_of_turn_keyword: None,
+            outer_conts: Vec::new(),
+        }
+    }
+
+    /// An end-of-turn attack keyword's "this Digimon may attack"
+    /// (`<Engage>` §16-44-1, `<Execute>` §16-38-1, `<Vortex>` §16-33-1),
+    /// declared inside the `[End of Your Turn]` pool (§16-44-2 / §16-38-2 /
+    /// §16-33-2). `<Vortex>` opens with `AttackInitiator::Vortex` (it may
+    /// attack the turn it was played); the others as the keyword's optional
+    /// effect attack. Every one suspends the attacker.
+    pub fn end_of_turn_keyword(
+        attacker: PermanentHandle,
+        source_card: CardHandle,
+        valid_action_ids: Vec<u16>,
+        keyword: crate::enums::Keyword,
+    ) -> Self {
+        let initiator = if keyword == crate::enums::Keyword::Vortex {
+            crate::combat::AttackInitiator::Vortex
+        } else {
+            crate::combat::AttackInitiator::Effect {
+                source: Some(source_card),
+                optional: true,
+            }
+        };
+        Self {
+            initiator,
+            end_of_turn_keyword: Some(keyword),
+            ..Self::blitz(attacker, source_card, valid_action_ids)
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CombatAllianceState {
     pub attacker: PermanentHandle,
@@ -820,9 +941,14 @@ pub struct CombatBlockState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Single-variant since the post-Block retarget mode was removed; kept (and
+/// carried by `CombatRaidSelectionState`) so the resume-frame shape, and the
+/// resume-stack hash that walks it, stay unchanged.
 pub enum CombatRaidSelectionMode {
+    /// The `<Raid>` trigger body's optional switch. (The mandatory post-Block
+    /// "retarget" mode was removed: a removed attack target makes the attack
+    /// fail, §11-2-6; `<Raid>` triggers only on the attack, §16-23-2.)
     Switch,
-    Retarget,
 }
 
 #[derive(Debug, Clone)]
@@ -903,17 +1029,6 @@ pub struct TriggerOrderSelectionState {
     pub(crate) outer_conts: Vec<OuterContinuation>,
 }
 
-/// Data for `ResumeFrame::OptionTrashOrder`: the Option's user picks whether
-/// the card's pending trash or one of their own pending triggered effects
-/// resolves next.
-#[derive(Debug, Clone)]
-pub struct OptionTrashOrderState {
-    /// The player who used the Option — the one whose pending items are being
-    /// ordered (15-4-3-5-1 / -2 bucket owner).
-    pub(crate) owner: PlayerId,
-    pub(crate) outer_conts: Vec<OuterContinuation>,
-}
-
 #[derive(Debug, Clone)]
 pub struct KeywordSaveSelectionState {
     pub prov: ResumeProvenance,
@@ -926,7 +1041,10 @@ pub struct KeywordSaveSelectionState {
 pub struct KeywordMaterialSaveTamerSelectionState {
     pub prov: ResumeProvenance,
     pub owner: PlayerId,
-    pub eligible_sources: Vec<CardHandle>,
+    /// The `<Material Save>` carrier, still in the battle area: the effect is
+    /// immediate-type (general_rule.pdf §16-21-2), so the card pick reads its
+    /// live digivolution cards.
+    pub carrier: PermanentHandle,
     pub max: u8,
     pub outer_conts: Vec<OuterContinuation>,
 }
@@ -1095,7 +1213,7 @@ pub enum NonDslCountCappedTerminal {
         subject: PermanentHandle,
     },
     /// Slot-enforced `<Partition (A & B)>`: ONE pick toward the printed slot
-    /// set (general_rule.pdf §16-28-5/-6 — one card per parenthetical,
+    /// set (general_rule.pdf §16-3 / §16-29-4 — one card per parenthetical,
     /// all-or-nothing). Every pick must keep a complete slot assignment
     /// reachable; the terminal chains to the next pick, or plays
     /// `picked_so_far` once one card is held for every slot. Mirrors the
@@ -1245,8 +1363,9 @@ pub struct SourceMultiState {
     /// are candidates. `target_resolution_failed` rejects all (binding missing).
     pub target_permanent: Option<PermanentHandle>,
     pub target_resolution_failed: bool,
-    /// `select_own_sources` evaluates the predicate on `PredicateSubject::Source`;
-    /// `select_opponent_sources` on `PredicateSubject::Card(source.card)`.
+    /// Both `select_own_sources` and `select_opponent_sources` evaluate the
+    /// predicate on `PredicateSubject::Source` (a digivolution card is on the
+    /// field, §4-6-3); this flag is kept only for frame compatibility.
     pub eval_on_card: bool,
     pub prompt: String,
     // ── data terminal (bind the picked source-ref list, then run the tail) ──

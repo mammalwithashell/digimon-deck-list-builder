@@ -116,7 +116,10 @@ impl CardEffect for InteractiveOptionUseReducer {
                     .enumerate()
                     .filter(|(_, perm)| {
                         perm.top_card().card_kind(&ctx.game.card_data) == CardKind::Tamer
-                            && perm.card_sources.first().is_some_and(|src| src.face_down)
+                            // Any face-down card under the Tamer: the production
+                            // step offers it and trashes its LOWEST face-down card
+                            // (`Permanent::face_down_source_indices`).
+                            && perm.face_down_source_indices().next().is_some()
                     })
                     .map(|(idx, _)| PermanentHandle {
                         player,
@@ -135,7 +138,7 @@ impl CardEffect for InteractiveOptionUseReducer {
                         let trashed = cb_ctx.trash_bottom_face_down_source(handle);
                         debug_assert!(
                             trashed,
-                            "eligibility filter offered a Tamer whose bottom source is not face-down"
+                            "eligibility filter offered a Tamer with no face-down card under it"
                         );
                     },
                 );
@@ -176,7 +179,10 @@ impl CardEffect for InteractiveOptionUseReducerOptional {
                     .enumerate()
                     .filter(|(_, perm)| {
                         perm.top_card().card_kind(&ctx.game.card_data) == CardKind::Tamer
-                            && perm.card_sources.first().is_some_and(|src| src.face_down)
+                            // Any face-down card under the Tamer: the production
+                            // step offers it and trashes its LOWEST face-down card
+                            // (`Permanent::face_down_source_indices`).
+                            && perm.face_down_source_indices().next().is_some()
                     })
                     .map(|(idx, _)| PermanentHandle {
                         player,

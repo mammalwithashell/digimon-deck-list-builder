@@ -38,9 +38,9 @@
 //!   runtime. AD1-025 uses the identical pattern faithfully.
 //!
 //! - Clause 2 ([End of Attack][OPT] unsuspend + conditional return):
-//!   IMPLEMENTED for the Dragon Mode source predicate slice. The source-relative
-//!   `self_digivolution_contains_name` predicate gates the opponent suspended
-//!   Digimon return prompt.
+//!   IMPLEMENTED for the Dragon Mode source predicate slice. The sources-only
+//!   `self_digivolution_sources_contain_name` predicate (§4-8-2) gates the
+//!   opponent suspended Digimon return prompt.
 //!
 //! - Inherited (Ace Overflow -4): Fully implemented via top-level `ace_overflow: -4`.
 //!
@@ -49,7 +49,7 @@
 //! - H13: ACE Overflow -4 via `ace_overflow` top-level field
 //! - `materials_count_lte` + `source_material_count`: dynamic digivolution-card
 //!   count comparison for the [On Play][When Digivolving] return clause
-//! - `self_digivolution_contains_name`: gates the Dragon Mode End of Attack rider
+//! - `self_digivolution_sources_contain_name`: gates the Dragon Mode End of Attack rider
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
@@ -572,5 +572,39 @@ fn bt16_027_end_of_attack_is_once_per_turn() {
     assert!(
         runner.pending_selection().is_none(),
         "OPT lockout must prevent a second same-turn return prompt"
+    );
+}
+
+/// §4-8-2 "When referencing digivolution card information, the information is
+/// referenced on cards that are treated as digivolution cards."
+/// (G-DSL-CARRIER-NAME-READS-DIGIVOLUTION-CARDS). "if [Imperialdramon: Dragon
+/// Mode] is in this Digimon's digivolution cards" reads only the cards UNDER
+/// this Digimon (DCGO `PermanentOfThisCard().DigivolutionCards`). Here the top
+/// card itself is treated as [Imperialdramon: Dragon Mode] (a runtime "also
+/// treated as" name) and no digivolution card is: the return must NOT fire.
+#[test]
+fn bt16_027_end_of_attack_ignores_dragon_mode_name_on_the_top_card() {
+    let mut runner = end_of_attack_runner();
+    let fighter = runner.place_stack(0, &["PLAIN-SOURCE", "BT16-027"]);
+    runner.game.players[0].battle_area[fighter.index as usize]
+        .card_sources
+        .last_mut()
+        .expect("top card")
+        .also_treated_as
+        .push("Imperialdramon: Dragon Mode".to_string());
+    let suspended = runner.place_on_field(1, "OPP-SUSPENDED", Some(0));
+    set_suspended(&mut runner, fighter, true);
+    set_suspended(&mut runner, suspended, true);
+
+    fire_end_of_attack(&mut runner, fighter);
+
+    assert!(
+        !is_suspended(&runner, fighter),
+        "BT16-027 still unsuspends (unconditional first sentence)"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "the top card is not a digivolution card: a [Dragon Mode] name on it must not \
+         satisfy \"is in this Digimon's digivolution cards\""
     );
 }

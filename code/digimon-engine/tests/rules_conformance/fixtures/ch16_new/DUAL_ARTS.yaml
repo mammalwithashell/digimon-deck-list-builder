@@ -1,0 +1,51 @@
+# DUAL_ARTS -- DUAL card. Trait: [Artsy].
+#   Digimon information: Lv.6, red, 12000 DP. Digivolve: red Lv.5, cost 3.
+#     [When Digivolving] Delete 1 of your opponent's Digimon.
+#   Option information: purple, use cost 2.
+#     [Main] Delete 1 of your opponent's Digimon.
+#   DUAL Rule: <Arts Digivolve> (Instead of trashing this card after use, 1 of
+#   your Digimon may digivolve into it without paying the cost.)
+# The §4-6 / §4-20 card, authored like the BT26 DUAL cards (top-level clauses;
+# the `dual:` block carries each face's information).
+card: DUAL_ARTS
+name: Artsmon
+kind: dual
+level: 6
+color: [red]
+dp: 12000
+traits: [Artsy]
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [red]
+    traits: [Artsy]
+    effect_text: "[When Digivolving] Delete 1 of your opponent's Digimon."
+    inherited_text: ""
+  option:
+    use_cost: 2
+    colors: [purple]
+    effect_text: "[Main] Delete 1 of your opponent's Digimon. <Arts Digivolve>"
+    security_text: ""
+    keywords: [ArtsDigivolve]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 of your opponent's Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your opponent's Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }

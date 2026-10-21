@@ -387,7 +387,7 @@ fn inherited_evolution_respects_cannot_digivolve_prohibition() {
 
 #[test]
 fn main_can_choose_token_but_cannot_stack_card_with_it() {
-    // general_rule 4-18-3; DCGO BT9_109 selects the token then skips placement.
+    // general_rule 4-21-3; DCGO BT9_109 selects the token then skips placement.
     use digimon_engine::token_registry::TokenDef;
     let token = TokenDef {
         name: "x_antibody_blue_token".into(),

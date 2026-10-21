@@ -74,6 +74,9 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
     ) -> OptionPlayResult {
+        if self.game_over {
+            return OptionPlayResult::Invalid;
+        }
         // Defensive reset: a manual top-level Option play must never inherit a
         // stuck `effect_driven_option_use` lift from a previously-parked
         // effect-driven use (which keeps the flag set across `Pending` so its
@@ -622,9 +625,14 @@ impl Game {
         // plug-in's work). This split is what keeps a dual-mode Plug-In's
         // Standard `[Main]` body from firing on a Link play, and vice versa.
         // `option_body_pending` makes the drain dispose the Option the moment
-        // this body resolves, before the triggers it caused (9-1-5, 18-1-2;
-        // `complete_option_body_if_done`).
+        // this body resolves, before the rules check and the triggers it
+        // caused (§9-1-5; `complete_option_body_if_done`).
         self.option_body_pending = true;
+        // The body's baseline: an effect-driven use from inside a selection
+        // callback starts with `draining_deferred > 0`; the body has finished
+        // when the drain is back at THIS depth (§9-1-5, see the field).
+        self.option_body_outer_deferred = self.draining_deferred;
+        self.option_first_main_resolved = false;
         self.enqueue_option_main_from_pending(&card_id, card_handle, player_id, mode.is_link());
         self.drain_effect_queue();
 
@@ -1110,6 +1118,7 @@ impl Game {
                 granted_effect_id: None,
                 keyword_effect: None,
                 trigger_batch: 0,
+                pending_processing: None,
             });
         }
     }

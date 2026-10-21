@@ -177,6 +177,10 @@ fn compiled_timing_string_to_effect_timing(s: &str) -> Option<crate::enums::Effe
         "on_attack" => T::OnAttack,
         "end_of_attack" => T::EndOfAttack,
         "end_of_battle" => T::EndOfBattle,
+        // "When this Digimon wins a battle" / "deletes in battle" (§14-2-4):
+        // pends with the loser's [On Deletion], not at the end of the battle
+        // timing. G-ENGINE-BATTLE-WIN-OBSERVERS-SEQUENCED-AFTER-ON-DELETION.
+        "on_ally_won_battle" => T::BattleResult,
 
         // Lifecycle timings
         "on_deletion" => T::OnDeletion,

@@ -110,10 +110,10 @@ fn ex12_036_ally_played_observer_does_not_fire_from_trash() {
 
 /// TDD RED — `<Decode>` is SELF-scoped on BOTH axes.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 repeats
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 repeats
 /// the scoping for the trigger: it "triggers when the Digimon with this effect
 /// would leave the battle area other than by a battle."
 ///
@@ -153,7 +153,7 @@ fn ex12_036_decode_does_not_open_a_window_for_another_permanents_leave() {
 
     assert!(
         runner.game.pending_selection.is_none(),
-        "16-35-1: <Decode> triggers only when the Digimon WITH THIS EFFECT          would leave the battle area — Ryugumon is still on the field and the          leaving Digimon carries no Decode (got: {:?})",
+        "16-36-1: <Decode> triggers only when the Digimon WITH THIS EFFECT          would leave the battle area — Ryugumon is still on the field and the          leaving Digimon carries no Decode (got: {:?})",
         runner
             .game
             .pending_selection
@@ -166,7 +166,7 @@ fn ex12_036_decode_does_not_open_a_window_for_another_permanents_leave() {
     );
     assert!(
         !field_contains(&runner, 0, "TB-SRC"),
-        "16-35-1: the Decode payload comes from THAT DIGIMON'S digivolution          cards — Ryugumon's Decode may not reach into another permanent's stack"
+        "16-36-1: the Decode payload comes from THAT DIGIMON'S digivolution          cards — Ryugumon's Decode may not reach into another permanent's stack"
     );
 }
 
@@ -174,10 +174,10 @@ fn ex12_036_decode_does_not_open_a_window_for_another_permanents_leave() {
 /// non-battle leave must still open its `<Decode>` window and play the named
 /// source.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 scopes the
 /// trigger the same way. DCGO agrees:
 /// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
 /// `CanTriggerWhenRemoveField`, which
@@ -201,7 +201,7 @@ fn ex12_036_decode_plays_matching_source_on_its_own_non_battle_leave() {
 
     assert!(
         field_contains(&runner, 0, "TB-SRC"),
-        "16-35-1: the carrier's own non-battle leave plays 1 named Digimon          card from THAT DIGIMON'S digivolution cards"
+        "16-36-1: the carrier's own non-battle leave plays 1 named Digimon          card from THAT DIGIMON'S digivolution cards"
     );
     assert!(
         hand_contains(&runner, 0, CARD_ID),
@@ -212,10 +212,10 @@ fn ex12_036_decode_plays_matching_source_on_its_own_non_battle_leave() {
 /// NEGATIVE control on the other axis — a leave BY A BATTLE opens no `<Decode>`
 /// window at all.
 ///
-/// `general_rule.pdf` 16-35-1 (p.39): "<Decode> is a keyword effect. When the
+/// `general_rule.pdf` 16-36-1 (p.41): "<Decode> is a keyword effect. When the
 /// Digimon **with this effect** would leave the battle area other than by a
 /// battle, you may play 1 Digimon card specified by this effect from **that
-/// Digimon's** digivolution cards without paying the cost." 16-35-2 scopes the
+/// Digimon's** digivolution cards without paying the cost." 16-36-2 scopes the
 /// trigger the same way. DCGO agrees:
 /// `CardEffectFactory/KeyWordEffects/Decode.cs:51-56` gates on
 /// `CanTriggerWhenRemoveField`, which
@@ -242,7 +242,7 @@ fn ex12_036_decode_does_not_trigger_on_a_battle_leave() {
 
     assert!(
         runner.game.pending_selection.is_none(),
-        "16-35-1: <Decode> fires only when the carrier would leave the battle          area OTHER THAN BY A BATTLE (got: {:?})",
+        "16-36-1: <Decode> fires only when the carrier would leave the battle          area OTHER THAN BY A BATTLE (got: {:?})",
         runner
             .game
             .pending_selection
@@ -251,14 +251,14 @@ fn ex12_036_decode_does_not_trigger_on_a_battle_leave() {
     );
     assert!(
         !field_contains(&runner, 0, "TB-SRC"),
-        "16-35-1: a battle leave Decodes nothing — the source goes to trash          with the stack"
+        "16-36-1: a battle leave Decodes nothing — the source goes to trash          with the stack"
     );
 }
 
 /// TDD RED — a `<Decode>` play must not wake the LEAVING carrier's own
 /// "when any of your Digimon are played" observer.
 ///
-/// `<Decode>` is an immediate-type effect (`general_rule.pdf` 16-35-2 -> 15-8-5):
+/// `<Decode>` is an immediate-type effect (`general_rule.pdf` 16-36-2 -> 15-8-5):
 /// it interrupts right before its cause, so while its body runs the leave has
 /// NOT happened and the carrier is still in the battle area. Two rules then
 /// decide what the Digimon it plays is allowed to wake:
@@ -339,7 +339,7 @@ fn ex12_036_decode_play_does_not_wake_the_leaving_carriers_own_observer() {
     // really happened. Without this the absence of a lock proves nothing.
     assert!(
         field_contains(&runner, 0, "TB-SRC"),
-        "16-35-1: the carrier's non-battle leave plays the named source -- if \
+        "16-36-1: the carrier's non-battle leave plays the named source -- if \
          this is false the test measured a whiffed Decode, not the observer"
     );
     assert!(
@@ -462,9 +462,9 @@ fn ex12_036_decode_play_offers_only_the_played_cards_own_trigger() {
 }
 
 /// Regression — invariant_fuzz seed 20260708005: two Digimon reach ≤0 DP
-/// together and the rules check (general_rule.pdf §17-1-3-1) deletes them.
+/// together and the rules check (general_rule.pdf §17-1-3-1-1) deletes them.
 /// Ryugumon (the higher index, processed first) opens its <Decode> window
-/// (16-35-1: a rule deletion is a leave "other than by a battle"); the check
+/// (16-36-1: a rule deletion is a leave "other than by a battle"); the check
 /// used to keep deleting the OTHER Digimon while that window was parked,
 /// which re-entered the replacement dispatcher at depth 0 and wiped the parked
 /// event's record — so declining <Decode> asked the same question again.

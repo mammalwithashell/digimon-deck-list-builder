@@ -124,7 +124,7 @@ effects:
 
     // `G-ENGINE-OPTION-LINK-FROM-HAND`: the from-hand link is its OWN
     // main-phase action, not a mode of "use this Option". general_rule.pdf
-    // (Ver.3.6) §6-5-1 lists "use an Option card from the hand" (§6-5-1-3) and
+    // (Ver.4.3) §6-5-1 lists "use an Option card from the hand" (§6-5-1-3) and
     // "link a card from the hand or battle area" (§6-5-1-4) separately, so the
     // declaration lives on the `HAND_EFFECT` bit — `play_option_from_hand` no
     // longer offers a Link mode and would refuse this card outright. Same
@@ -162,10 +162,10 @@ effects:
     );
 }
 
-// ── A `scope: linked` keyword grant applies to the host only (4-2-6) ──────
+// ── A `scope: linked` keyword grant applies to the host only (4-3-5) ──────
 //
 // A granted keyword with an auto-effect (here <Evade>'s optional replacement,
-// 16-21) is synthesized by `Game::build_effects_for_card`. It must reach the
+// 16-22) is synthesized by `Game::build_effects_for_card`. It must reach the
 // Digimon the card is linked to, once, and never the card's own permanent.
 
 const LINKED_EVADE: &str = r#"
@@ -186,6 +186,8 @@ fn linked_evade_runner() -> DebugRunner {
     DebugRunner::builder()
         .from_dsl_yaml(LINKED_EVADE)
         .expect("fixture compiles")
+        // The link card carries [Link] (§17-1-3-2-6 / -7).
+        .link_requirement("TEST-LINK-EVADE", 0)
         .add_card(digimon_card("HOST", CardColor::Red))
         .add_card(digimon_card("ALLY", CardColor::Red))
         .start()

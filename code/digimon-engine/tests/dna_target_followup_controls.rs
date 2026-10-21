@@ -69,7 +69,9 @@ fn pre_raid_dna_result_is_eligible_in_original_switch_window(){
         let declaration=encode_attack(attacker.index as u16,target.index as u16);
         assert!(build_action_mask(g,0)[declaration as usize]>0.0);g.decode_action(declaration,0);
         let pa=g.pending_attack.as_ref().expect("Raid attack remains");
-        assert_eq!(pa.state,AttackState::RaidOpen,"must be printed Raid switch, not later rescue window");
+        // §16-23-2: <Raid> resolves in the declaration's trigger pool (state
+        // still Declared), not the post-Block rescue window (PostBlock).
+        assert_eq!(pa.state,AttackState::Declared,"must be printed Raid switch, not later rescue window");
         let choice=g.pending_selection.as_ref().expect("new same-slot result must be offered for Raid");
         assert_eq!(choice.selecting_player,0);assert!(choice.is_optional);
         assert_eq!(choice.prompt,"Raid - switch attack target");

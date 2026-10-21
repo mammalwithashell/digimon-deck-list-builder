@@ -117,6 +117,9 @@ fn queued_host_only_source_added_context_rejects_reused_slot() {
 fn actual_native_link_attachment_preserves_host_fallback() {
     for seat in [0, 1] {
         let mut r = runner("on_any_link");
+        // A linked card needs a [Link] requirement the host meets, or the rule
+        // check trashes it (§17-1-3-2-7).
+        r.give_link_requirement("REV-LINK", 0);
         let observer = r.place_on_field(seat, "REV-OBSERVER", None);
         let host = r.place_on_field(seat, "REV-OLD", None);
         let distractor = r.place_on_field(1 - seat, "REV-DISTRACTOR", None);

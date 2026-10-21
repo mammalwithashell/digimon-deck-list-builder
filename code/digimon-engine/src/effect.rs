@@ -25,7 +25,7 @@ pub type ConditionFn = Arc<dyn Fn(&EffectReadContext) -> bool + Send + Sync + 's
 /// timings, with cause/source/subject replacement context attached to the
 /// read context. Returns `true` to keep the candidate in the dispatch list,
 /// `false` to skip — used by `<Scapegoat>` to suppress the outer "may" dialog
-/// when the deletion cause is `OwnEffect` (RULES_CONTEXT 16-31) and to
+/// when the deletion cause is `OwnEffect` (RULES_CONTEXT 16-32) and to
 /// suppress the dialog when there are no substitute candidates (mirrors DCGO
 /// `CanActivateScapegoat`'s `HasMatchConditionPermanent` gate).
 ///
@@ -336,10 +336,24 @@ pub struct Effect {
     pub clause_group: Option<u32>,
 
     // Behavior
+    /// The gate read when the effect ACTIVATES: a DSL clause's processing
+    /// conditions (`condition` / `active_when`, §15-8-3-9-1 / §15-8-3-9-3),
+    /// plus -- folded in by [`EffectBuilder::build`] -- its
+    /// [`Self::trigger_qualifier`], re-checked as "no longer met"
+    /// (§15-4-4-5). Every activation-time reader evaluates only this field.
     pub condition: Option<ConditionFn>,
-    /// Event/source gates tested at occurrence capture, separately from live
-    /// processing conditions. Currently consumed by native security checks.
-    pub trigger_eligibility: Option<ConditionFn>,
+    /// The trigger qualifier of a trigger-type effect (DSL `trigger_if:`):
+    /// "When one of your Digimon **with 4000 DP or less** is played". Decided
+    /// when the event triggers the effect -- `Game::enqueue_triggered` drops
+    /// a just-queued entry whose qualifier is false
+    /// (`Game::discard_entries_not_triggered`, §15-8-3-1 / §15-8-3-4), read
+    /// through the entry's own trigger context (live while the event's
+    /// referent is on the field, its snapshot once it has left,
+    /// `Game::gate_trigger_context`, §15-8-3-8). [`EffectBuilder::build`]
+    /// also ANDs it into [`Self::condition`], so the activation-time check
+    /// re-reads it without a second gate (§15-4-4-5).
+    /// G-ENGINE-OBSERVER-TRIGGER-QUALIFIER-NOT-CHECKED-AT-TRIGGER.
+    pub trigger_qualifier: Option<ConditionFn>,
     /// Context-aware candidate filter for `WhenWouldBe*` replacement timings.
     /// Evaluated in `replacement::collect_candidates` AFTER `condition`,
     /// with replacement cause/source/subject context attached to the read
@@ -500,6 +514,17 @@ pub struct Effect {
     /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
     pub outer_optional_guard: Option<ConditionFn>,
 
+    /// The payability of the effect's optional processing condition (its
+    /// leading "by X" cost steps; DSL-derived by
+    /// `dsl_cards::lower_triggered::leading_cost_guard`). §15-7-4 (Ver. 4.3):
+    /// a condition that can't be executed can't be chosen, so an OPTIONAL
+    /// effect whose guard fails installs no "you may" prompt and does not run
+    /// (as if declined); §15-8-4-4-1: a `[Main]` field ability whose guard
+    /// fails is not declarable (masked). Evaluated by
+    /// `Game::cost_guard_holds_at`. Plain data — clone-safe.
+    /// `G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED`.
+    pub optional_condition_guard: Option<Arc<crate::dsl_cards::lower_triggered::CostGuard>>,
+
     /// `BeforePayCost` cost reducers only: when `true`, this reducer's
     /// `pay_cost_fn` begins with a declinable (PASS-able) selection, so
     /// running it surfaces the player's own opt-in/opt-out rather than
@@ -597,9 +622,11 @@ impl Effect {
     }
 
     /// Builder constructor for an observer that fires **once per security
-    /// check** after the revealed card's own `SecuritySkill` effects resolve.
-    /// Used for field/trash/hand effects that react to security checks
-    /// globally. Mirrors Python's `EffectTiming.OnSecurityCheck`.
+    /// check** after the revealed card's own `SecuritySkill` effects resolve
+    /// and before the battle against a Security Digimon (§13-1-8-2 →
+    /// §13-1-8-3). Collected from both players' battle areas. Used for
+    /// field effects that react to security checks globally. Mirrors
+    /// Python's `EffectTiming.OnSecurityCheck`.
     pub fn on_security_check(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnSecurityCheck)
     }
@@ -662,9 +689,16 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::EndOfAttack)
     }
 
-    /// Fires when a battle resolves (DP comparison done) but before `EndOfAttack`.
+    /// The end of the battle timing (§14-2-5): after the battle's triggered
+    /// effects have resolved, before `EndOfAttack`.
     pub fn end_of_battle(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::EndOfBattle)
+    }
+
+    /// Triggered by the battle itself (§14-2-4): "wins a battle", "deletes
+    /// in battle", `<Piercing>`. Pends with the loser's `[On Deletion]`.
+    pub fn battle_result(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::BattleResult)
     }
 
     /// Fires when any Digimon enters any player's battle area (global observer).
@@ -760,6 +794,15 @@ impl Effect {
     /// Rocks core archetype observer.
     pub fn on_digivolution_card_trashed(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnDigivolutionCardTrashed)
+    }
+
+    /// Fires when the TOP stacked card of a Digimon is trashed: once per
+    /// <De-Digivolve> instance with every card it trashed (§16-12-1 /
+    /// §16-12-5), and by <Armor Purge>. Not a digivolution-card trash
+    /// (§4-8-1). DCGO `EffectTiming.WhenTopCardTrashed`.
+    /// G-DSL-TOP-CARD-TRASHED-TIMING.
+    pub fn on_top_card_trashed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnTopCardTrashed)
     }
 
     /// Fires once per host after an EFFECT places cards into that permanent's
@@ -909,7 +952,7 @@ impl EffectBuilder {
                 shared_opt_group: None,
                 clause_group: None,
                 condition: None,
-                trigger_eligibility: None,
+                trigger_qualifier: None,
                 replacement_condition: None,
                 process: None,
                 cost_reduction_fn: None,
@@ -943,6 +986,7 @@ impl EffectBuilder {
                 when_playing_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
+                optional_condition_guard: None,
                 pay_cost_self_gated: false,
                 pay_cost_interactive: false,
             },
@@ -1102,6 +1146,16 @@ impl EffectBuilder {
         self
     }
 
+    /// Attach the payability guard of the effect's optional processing
+    /// condition (§15-7-4, §15-8-4-4-1). See `Effect::optional_condition_guard`.
+    pub fn optional_condition_guard(
+        mut self,
+        guard: crate::dsl_cards::lower_triggered::CostGuard,
+    ) -> Self {
+        self.inner.optional_condition_guard = Some(Arc::new(guard));
+        self
+    }
+
     /// Mark a `BeforePayCost` cost reducer whose `pay_cost_fn` begins with a
     /// declinable selection so it auto-applies (the inner optional select is
     /// the acceptance prompt) instead of being parked behind the redundant
@@ -1133,11 +1187,14 @@ impl EffectBuilder {
         self
     }
 
-    pub fn trigger_eligibility(
+    /// Set the trigger qualifier (see [`Effect::trigger_qualifier`]): decided
+    /// when the event triggers the effect, and folded into `condition` by
+    /// [`Self::build`] so activation re-checks it (§15-4-4-5).
+    pub fn trigger_qualifier(
         mut self,
         f: impl Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
     ) -> Self {
-        self.inner.trigger_eligibility = Some(Arc::new(f));
+        self.inner.trigger_qualifier = Some(Arc::new(f));
         self
     }
 
@@ -1145,7 +1202,7 @@ impl EffectBuilder {
     /// Evaluated in `replacement::collect_candidates` after `condition`.
     /// See `EffectReplacementConditionFn` doc for the full contract; primary
     /// use is `<Scapegoat>` suppressing the outer "may" dialog on
-    /// `ReplacementCause::OwnEffect` per RULES_CONTEXT 16-31, and on the
+    /// `ReplacementCause::OwnEffect` per RULES_CONTEXT 16-32, and on the
     /// no-substitute case mirroring DCGO `HasMatchConditionPermanent`.
     pub fn replacement_condition(
         mut self,
@@ -1537,11 +1594,20 @@ impl EffectBuilder {
         self
     }
 
-    pub fn build(self) -> Effect {
+    pub fn build(mut self) -> Effect {
         debug_assert!(
             !(self.inner.linked && self.inner.inherited),
             ".linked() and .inherited() are mutually exclusive — a linked card's effects apply to its host, not to stack-above levels"
         );
+        // A pending effect whose trigger conditions are no longer met can't
+        // activate (§15-4-4-5): the activation-time gate re-reads the
+        // trigger qualifier before the processing conditions.
+        if let Some(qualifier) = self.inner.trigger_qualifier.clone() {
+            let processing = self.inner.condition.take();
+            self.inner.condition = Some(Arc::new(move |rctx: &EffectReadContext| {
+                qualifier(rctx) && processing.as_ref().is_none_or(|c| c(rctx))
+            }));
+        }
         self.inner
     }
 }
@@ -1552,14 +1618,14 @@ pub trait CardEffect: Send + Sync {
     fn effects(&self, card: CardHandle) -> Vec<Effect>;
 
     /// The per-slot `<Partition (A & B)>` source specs this card prints, in
-    /// printed order — general_rule.pdf §16-28-5: "the 'specified cards'
+    /// printed order — general_rule.pdf §16-3: "the 'specified cards'
     /// refers to the cards that meet the conditions shown in parentheses in
     /// the <Partition> icon text".
     ///
     /// The synthesized `Keyword::Partition` body
     /// ([`crate::cards::keyword_effects::keyword_to_auto_effect`]) consults
-    /// this at fire time so it can enforce §16-28-1 (the trigger needs 1 of
-    /// EACH specified card in the stack) and §16-28-6 (exactly 1 of each is
+    /// this at fire time so it can enforce §16-29-1 (the trigger needs 1 of
+    /// EACH specified card in the stack) and §16-29-4 (exactly 1 of each is
     /// played — "a player can't choose to only play one or some"). DCGO's
     /// analogue is `CardEffectFactory/KeyWordEffects/Partition.cs`'s
     /// `List<PartitionCondition>`, which filters the digivolution cards into

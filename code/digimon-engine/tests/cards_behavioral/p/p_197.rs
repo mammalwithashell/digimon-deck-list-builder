@@ -372,7 +372,7 @@ fn p_197_start_main_does_not_offer_when_memory_is_5_or_hand_has_no_angel_or_ts()
 fn p_197_inherited_when_attacking_gives_minus_2000_dp_once_per_turn() {
     let yaml = p_197_yaml();
     // Give the opponent 3000 DP so the inherited -2000 DP leaves it alive at
-    // 1000. A 2000 DP target would reach 0 DP and be deleted by rule 17-1-3-1,
+    // 1000. A 2000 DP target would reach 0 DP and be deleted by rule 17-1-3-1-1,
     // which would make the Once-Per-Turn check below ambiguous (no second target
     // because the Digimon is gone, rather than because OPT suppressed the trigger).
     let mut tough_opp = filler("OPP");

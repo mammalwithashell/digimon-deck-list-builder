@@ -1,0 +1,15 @@
+# WA_DRAW_INH -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   Inherited Effect: [When Attacking] <Draw 1> (Draw 1 card from your deck.)
+card: WA_DRAW_INH
+name: Drawsourcemon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - scope: inherited
+    when: when_attacking
+    summary: "Inherited: [When Attacking] <Draw 1> (Draw 1 card from your deck.)"
+    process:
+      - draw: { of: you, count: 1 }

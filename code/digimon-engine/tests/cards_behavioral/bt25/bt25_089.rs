@@ -62,6 +62,9 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT25-089 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("APPMON-IN-HAND", 0)
+        .link_requirement("APPMON-UNDER", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         .add_card(make_digimon("APPMON-IN-HAND", 4, 4000, 4, &["Appmon"]))
         .add_card(make_digimon("APPMON-UNDER", 3, 3000, 3, &["Appmon"]))
@@ -448,6 +451,7 @@ fn app_fuse_base() -> DebugRunnerBuilder {
         .expect("APP_FUSE_RESULT compiles")
         .add_card(named_fuse_material("TEST-KABEMON", "Kabemon"))
         .add_card(named_fuse_material("TEST-GOMIMON", "Gomimon"))
+        .link_requirement("TEST-GOMIMON", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
 }
 
 fn fire_eot(runner: &mut DebugRunner, player: PlayerId, field_index: usize) {
@@ -671,5 +675,100 @@ fn bt25_089_main_action_path_refuses_when_cost_unpayable() {
         r.game.player(0).hand.len(),
         1,
         "the Appmon card stays in hand"
+    );
+}
+
+/// §4-9-5 / §10-1-3-1: the [Main] link onto a Digimon at its link limit
+/// replaces an existing link card, and with 2 to choose from the linking
+/// player picks which. MY-HOST has a granted <Link +1> (limit 2) and holds 2
+/// [Appmon] link cards; linking APPMON-IN-HAND asks P0 which of the 2 is
+/// trashed (never the new card), before anything moves, and the pick trashes
+/// it in the link itself (no later §17-1-3-2-5 trim).
+#[test]
+fn bt25_089_main_link_at_link_limit_offers_the_replacement_choice() {
+    let mut r = base()
+        .hand(0, &["APPMON-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let my_host = r.place_on_field(0, "MY-HOST", Some(0));
+    r.give_link_plus(my_host, 1);
+    let existing = vec![
+        r.push_linked_owned(my_host, "APPMON-UNDER", 0),
+        r.push_linked_owned(my_host, "APPMON-UNDER", 0),
+    ];
+    let new_card = r.game.player(0).hand[0].handle();
+    advance_to_main(&mut r);
+
+    assert!(
+        r.game.activate_field_main(0, kazuki.index as usize),
+        "the [Main] fires"
+    );
+    let mut choice = None;
+    for _ in 0..8 {
+        let Some(sel) = r.game.pending_selection.as_ref() else {
+            break;
+        };
+        if sel.prompt.starts_with("Choose a link card to trash") {
+            choice = Some((
+                sel.selecting_player,
+                sel.effect_choices.clone().unwrap_or_default(),
+            ));
+            break;
+        }
+        let action = sel.valid_action_ids[0];
+        let player = sel.selecting_player;
+        r.game
+            .resolve_selection(player, action)
+            .unwrap_or_else(|e| panic!("pick rejected: {e:?}"));
+    }
+    let (chooser, options) = choice.expect("P0 chooses the replaced link card");
+    assert_eq!(chooser, 0, "the linking player chooses");
+    let offered: Vec<_> = options.iter().filter_map(|c| c.source_card).collect();
+    assert_eq!(offered, existing, "exactly the existing link cards are offered");
+    assert!(!offered.contains(&new_card), "the new card is not an option");
+    let host_links = |r: &DebugRunner| -> Vec<_> {
+        r.game.player(0).battle_area[my_host.index as usize]
+            .linked_cards
+            .iter()
+            .map(|c| c.handle())
+            .collect()
+    };
+    assert_eq!(host_links(&r), existing, "nothing moved before the choice");
+    assert!(
+        r.game.player(0).hand.iter().any(|c| c.handle() == new_card),
+        "the new card is still in hand during the choice"
+    );
+
+    // The parked choice is plain data (rule 28): a clone taken at the prompt
+    // resolves the same pick to the same board.
+    let mut twin = r.game.clone();
+
+    let pick = r.game.pending_selection.as_ref().unwrap().valid_action_ids[1];
+    r.game.resolve_selection(0, pick).expect("pick the second link card");
+    twin.resolve_selection(0, pick).expect("the clone takes the same pick");
+    let board = |g: &digimon_engine::game::Game| {
+        (
+            g.player(0).battle_area[my_host.index as usize]
+                .linked_cards
+                .iter()
+                .map(|c| c.handle())
+                .collect::<Vec<_>>(),
+            g.player(0).trash.iter().map(|c| c.handle()).collect::<Vec<_>>(),
+            g.player(0).hand.iter().map(|c| c.handle()).collect::<Vec<_>>(),
+            g.pending_selection.is_some(),
+        )
+    };
+    assert_eq!(board(&twin), board(&r.game), "the clone resolves identically");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "the trash happened in the link; no §17-1-3-2-5 trim follows: {:?}",
+        r.game.pending_selection.as_ref().map(|s| &s.prompt)
+    );
+    assert_eq!(host_links(&r), vec![existing[0], new_card]);
+    assert!(
+        r.game.player(0).trash.iter().any(|c| c.handle() == existing[1]),
+        "the picked link card is trashed"
     );
 }

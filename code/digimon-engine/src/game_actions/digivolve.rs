@@ -109,6 +109,11 @@ pub(crate) enum DigivolveReducerChoice {
         reducer: crate::player_cost_reducer::PlayerDigivolveCostReducer,
     },
     Field(CostReductionCandidate),
+    /// One printed `<Digisorption -N>` instance of the hand card being
+    /// digivolved into (§16-10-1). Its optional processing condition is
+    /// "by suspending 1 of your Digimon" (§16-10-3); every instance is its
+    /// own entry (§16-10-4).
+    Digisorption { source_card: CardHandle, amount: i32 },
 }
 
 impl DigivolveReducerChoice {
@@ -116,7 +121,39 @@ impl DigivolveReducerChoice {
         match self {
             Self::Player { reducer, .. } => reducer.source_card,
             Self::Field(candidate) => candidate.key.source_card,
+            Self::Digisorption { source_card, .. } => *source_card,
         }
+    }
+
+    /// The suspend-cost reduction, for the choices whose payment is
+    /// "suspend 1 of your Digimon".
+    fn suspend_reduction(&self) -> Option<i32> {
+        match self {
+            Self::Player { reducer, .. } if reducer.suspend_cost => Some(reducer.amount),
+            Self::Digisorption { amount, .. } => Some(*amount),
+            _ => None,
+        }
+    }
+
+    fn keyword(&self) -> Option<Keyword> {
+        match self {
+            Self::Digisorption { amount, .. } => {
+                Some(Keyword::Digisorption((*amount).clamp(0, u8::MAX as i32) as u8))
+            }
+            _ => None,
+        }
+    }
+
+    /// Two identical `<Digisorption>` instances: resolving either first is
+    /// the same game, so no order decision is offered between them.
+    fn same_digisorption(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (
+                Self::Digisorption { source_card: a, amount: x },
+                Self::Digisorption { source_card: b, amount: y },
+            ) if a == b && x == y
+        )
     }
 
     fn label(&self) -> String {
@@ -125,6 +162,7 @@ impl DigivolveReducerChoice {
                 format!("Suspend 1 Digimon (digivolution cost -{})", reducer.amount)
             }
             Self::Field(candidate) => format!("{} (-{})", candidate.label, candidate.amount),
+            Self::Digisorption { amount, .. } => format!("<Digisorption -{amount}>"),
         }
     }
 
@@ -132,6 +170,8 @@ impl DigivolveReducerChoice {
         match self {
             Self::Player { .. } => true,
             Self::Field(candidate) => candidate.optional && !candidate.pay_cost_self_gated,
+            // §16-10-3: the suspend is an optional processing condition.
+            Self::Digisorption { .. } => true,
         }
     }
 }
@@ -693,11 +733,10 @@ impl Game {
         action_id: u16,
     ) {
         use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
-        let Some(DigivolveReducerChoice::Player {
-            index: reducer_index,
-            reducer,
-        }) = state.current.clone()
-        else {
+        let Some(current) = state.current.clone() else {
+            return;
+        };
+        let Some(amount) = current.suspend_reduction() else {
             return;
         };
         let index = (action_id.saturating_sub(ATTACK_START) % TARGETS_PER_ATTACKER) as usize;
@@ -705,13 +744,21 @@ impl Game {
             .suspendable_own_digimon(state.acting_player)
             .contains(&index)
         {
+            // §16-10-3: once the Digimon is suspended, the reduction is
+            // mandatory (likewise for the player-scoped suspend reducers).
             self.suspend(PermanentHandle {
                 player: state.acting_player,
                 index: index as u8,
             });
-            state.reduction += reducer.amount;
+            state.reduction += amount;
         }
-        self.consume_player_digivolve_reducer(reducer_index, &reducer, reducer.single_fire);
+        if let DigivolveReducerChoice::Player {
+            index: reducer_index,
+            reducer,
+        } = &current
+        {
+            self.consume_player_digivolve_reducer(*reducer_index, reducer, reducer.single_fire);
+        }
         self.resume_player_digivolve_reducers(state);
     }
 
@@ -877,6 +924,9 @@ impl Game {
         field_index: usize,
         source: PlaySource,
     ) -> bool {
+        if self.game_over {
+            return false;
+        }
         // Fresh user-initiated attempt: drop any stale cost-choice. The
         // cost-choice `EffectChoice` callback re-enters `digivolve_from_hand_inner`
         // DIRECTLY (not through here), so the player's pick is preserved across
@@ -1319,6 +1369,13 @@ impl Game {
                             .push(DigivolveReducerChoice::Player { index, reducer });
                     }
                 }
+                // §16-10-1/-3: offered only while a Digimon can be suspended
+                // to pay its condition; a prohibited reduction offers nothing.
+                DigivolveReducerChoice::Digisorption { .. } => {
+                    if !prohibited && payable {
+                        state.remaining.push(choice);
+                    }
+                }
                 DigivolveReducerChoice::Field(candidate) => {
                     // Resolve by physical source, not an index shifted by an
                     // earlier payment deleting another battle-area permanent.
@@ -1344,7 +1401,11 @@ impl Game {
             self.pending_player_digivolve_reduction = state.reduction;
             return false;
         }
-        state.choosing_order = state.remaining.len() > 1;
+        state.choosing_order = state.remaining.len() > 1
+            && !state
+                .remaining
+                .iter()
+                .all(|choice| choice.same_digisorption(&state.remaining[0]));
         if !state.choosing_order {
             state.current = Some(state.remaining.remove(0));
             if let Some(DigivolveReducerChoice::Field(candidate)) = state.current.clone() {
@@ -1609,7 +1670,7 @@ impl Game {
                 source_kind: Some(self.effect_source_kind_for_handle(choice.source_card())),
                 timing: Some(EffectTiming::BeforePayCost),
                 is_optional: !ordering,
-                keyword: None,
+                keyword: choice.keyword(),
                 observation_metadata: Default::default(),
             })
             .collect();
@@ -1657,21 +1718,24 @@ impl Game {
     pub(crate) fn player_digivolve_reducer_accept(&mut self, state: DigivolveReducerState) {
         use crate::action::space::encode_attack;
         let current = state.current.as_ref().expect("selected reducer").clone();
-        let DigivolveReducerChoice::Player { index, reducer } = current else {
-            if let DigivolveReducerChoice::Field(candidate) = current {
-                if let Some(next) = self.run_digivolve_reducer_chain_payment(state, candidate) {
-                    self.resume_player_digivolve_reducers(next);
-                }
+        if let DigivolveReducerChoice::Field(candidate) = current {
+            if let Some(next) = self.run_digivolve_reducer_chain_payment(state, candidate) {
+                self.resume_player_digivolve_reducers(next);
             }
             return;
-        };
+        }
+        // Player-scoped suspend reducers and `<Digisorption>` (§16-10-1):
+        // choose 1 of your unsuspended Digimon to suspend; the Digimon that
+        // will become a digivolution card is a candidate (§16-10-5).
         let suspendable = self.suspendable_own_digimon(state.acting_player);
         if suspendable.is_empty() {
-            self.consume_player_digivolve_reducer(index, &reducer, reducer.single_fire);
+            if let DigivolveReducerChoice::Player { index, reducer } = &current {
+                self.consume_player_digivolve_reducer(*index, reducer, reducer.single_fire);
+            }
             self.resume_player_digivolve_reducers(state);
             return;
         }
-        let source_card = reducer.source_card;
+        let source_card = current.source_card();
         let source_kind = self.effect_source_kind_for_handle(source_card);
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
@@ -1942,6 +2006,11 @@ impl Game {
         // docs/superpowers/specs/2026-05-23-digivolve-reward-shaping-design.md.
         self.n_digivolutions[resume.player as usize] += 1;
 
+        // 6-1-4-1: the turn ends only once the digivolution's processing is
+        // over. A `<Blitz>` attack decision parked by a [When Digivolving]
+        // (§16-16-3, `ResumeFrame::AttackDeclarationDecision`) is a pending
+        // selection, so this is a no-op until it resolves; the decline, or
+        // the attack's cleanup, re-runs the check.
         self.check_turn_end();
         true
     }
@@ -2076,6 +2145,9 @@ impl Game {
     /// computes the matching `DnaCost` via `get_dna_stacking_order`,
     /// applies `BeforePayCost` reductions, and pays memory.
     pub fn initiate_dna_digivolve(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
+        if self.game_over {
+            return false;
+        }
         let Some(route_window) = self.current_dna_route_window() else {
             self.logger.log(&format!(
                 "[Rejected] initiate_dna_digivolve: not in DNA action phase (phase={:?})",
@@ -3036,7 +3108,7 @@ impl Game {
         // effect-initiated digivolve draws exactly like the main-phase action
         // — and it lands here, after the stack mutation and BEFORE the
         // WhenDigivolving fan-out, mirroring the player-action path above.
-        // (§8-1-2-10 covers the empty-deck case: digivolution still happens,
+        // (§8-1-2-8 covers the empty-deck case: digivolution still happens,
         // just "without drawing a card" — which `draw()` already models.)
         self.player_mut(player_id).draw();
 
@@ -3087,7 +3159,7 @@ effects:
             .unwrap()
             .from_dsl_yaml(include_str!("../../cards/st1/ST1-03.yaml"))
             .unwrap()
-            .from_dsl_yaml(include_str!("../../cards/LM/LM-027.yaml"))
+            .from_dsl_yaml(include_str!("../../cards/lm/LM-027.yaml"))
             .unwrap()
             .from_dsl_yaml(observer)
             .unwrap()

@@ -77,6 +77,8 @@ fn base() -> DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("P-241 YAML parses and compiles")
+        // Linked cards carry [Link] (Q4533; §17-1-3-2-6 / -7).
+        .link_requirement("LINKED-CARD", 0)
         .add_card(make_test_card("DECK-PAD", "Filler"))
         .add_card(make_appmon("APPMON-DIG"))
         .add_card(make_plain_digimon("PLAIN-DIG"))
@@ -381,11 +383,15 @@ fn p_241_vortex_and_dp_boost_expire_end_of_turn() {
     );
 
     // End P0's turn → expiry fires.
-    // Vortex grants an end-of-turn-keyword window so end_turn() parks at
-    // GamePhase::EndOfTurnAction; rotate_turn_player (and expire_end_of_turn)
-    // fires only after pass_end_of_turn_action() completes the rotation.
+    // <Vortex> is a trigger-type effect at the end of the turn (§16-33-2):
+    // with a legal target it offers its attack inside the end-of-turn pool;
+    // decline it so the turn rotates (and `expire_end_of_turn` fires).
     r.game.end_turn();
-    r.game.pass_end_of_turn_action();
+    if r.game.pending_selection.is_some() {
+        r.game
+            .resolve_selection(0, PASS)
+            .expect("decline the <Vortex> attack");
+    }
 
     assert!(
         !r.game.has_keyword(appmon_handle, Keyword::Vortex),
@@ -537,6 +543,7 @@ fn p_241_app_fuse_from_hand_after_vortex_grant() {
         .expect("APP_FUSE_RESULT compiles")
         .add_card(named_material("TEST-KABEMON", "Kabemon"))
         .add_card(named_material("TEST-GOMIMON", "Gomimon"))
+        .link_requirement("TEST-GOMIMON", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .deck(0, &["DECK-PAD"; 12])
         .hand(0, &["TEST-APPFUSE"])
         .memory(5)
@@ -625,6 +632,7 @@ fn p_241_no_appmon_buff_skipped_app_fuse_still_offered() {
         .expect("APP_FUSE_RESULT compiles")
         .add_card(plain_named("PLAIN-KABEMON", "Kabemon"))
         .add_card(plain_named("PLAIN-GOMIMON", "Gomimon"))
+        .link_requirement("PLAIN-GOMIMON", 0) // [Link] (Q4533; §17-1-3-2-6 / -7)
         .deck(0, &["DECK-PAD"; 12])
         .hand(0, &["TEST-APPFUSE"])
         .memory(5)
