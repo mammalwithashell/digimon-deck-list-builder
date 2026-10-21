@@ -14978,6 +14978,22 @@
         "H-ArmorPurge"
       ],
       "notes": "Blue/Yellow Lv.4 Armor Form. Digivolve: Blue / Yellow Lv.3 circles cost 3; [Armadillomon] (any level, DCGO EqualsCardName) or Lv.3 w/[TS] cost 2 (red non-TS Lv.3 and Lv.2 TS refused). <Armor Purge> (deletion -> top card trashed). [When Attacking][OPT] optional clause over a mandatory select_hand ([TS] Tamer only) -> guarded outer confirm (no prompt without a candidate; declining keeps the OPT, as DCGO's optional confirm) -> play_from_hand cost_delta reduce 2 (floors at 0). Lockout + next-turn reset tested; real attack_player path tested. DCGO BT24_024.cs."
+    },
+    "BT7-107": {
+      "card_name": "Calling From the Darkness",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta (purple splash)",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-107.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_107.rs",
+      "test_count": 14,
+      "patterns": [
+        "F1",
+        "A3"
+      ],
+      "notes": "Option, purple, cost 1. Promoted from cards/_examples/ (git mv; the pack forbids duplicate ids) and fixed: the second 'up to 2' trash pick is now offered only after a first pick (previously PASS at pick 1 still offered pick 2). [Main] mandatory select_own_permanent (battle-area Digimon only; opponent / breeding excluded) -> delete; then (independent of the deletion) up to 2 purple Digimon cards trash -> hand (purple Tamer/Option and red Digimon excluded; 0, 1 or 2). Q1673 (deleted card returnable) and Q1674 (returned Digimon's On Deletion does not activate; control: it activates when left in trash) tested. DCGO forces >=1 return; printed 'up to 2' + rule 15-10-2-2 allow 0 (rules govern). [Security] scope inherited on_security add_this_option_to_hand. Colour requirement enforced (tested)."
     }
   }
 }
