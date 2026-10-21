@@ -6026,6 +6026,13 @@ Filed from the second re-review of the Venusmon owner-security fix (p4-venusmon-
 - **Fix shape:** record the grantor's effect category on the grant when it is installed (the resolving effect's `source_kind`, `Option` for a DUAL's `[Main]`) and read it in the gate instead of the card kind.
 - **Blocks training:** no — only a kind-specific immunity (Option-only or Digimon-only) meeting a DUAL Option-face grant diverges; not audited across the pool.
 
+### A budget multi-select deleted its picks as separate events  [G-ENGINE-DELETE-BOUND-PERMANENTS-SEQUENTIAL] — RESOLVED (2026-10-21, ex13-lane-b)
+
+- **Rule / card:** §15-5-2 (Ver. 4.3); BT8-070 BlackWarGreymon "Delete the chosen cards." (and EX4-073, P-094, BT17-018, LM-021). DCGO deletes the chosen set with one `DestroyPermanentsClass(list)`.
+- **Ours (before):** the DSL `delete_bound_permanents` executor (`dsl_cards/step/permanent_mutations.rs`) called `EffectContext::delete_permanent` once per bound handle, so each chosen Digimon was its own deletion event and every "when ... deleted" observer pended once per Digimon (a `TriggerOrder` with two BT8-070 entries for one effect).
+- **Resolution:** the executor collects the live, affectable, de-duplicated handles and runs ONE `Game::delete_permanents_batch` (the `delete_permanents` shape). DSL entry: `qa/dsl-vocab-gaps.md` G-DSL-DELETE-BOUND-PERMANENTS-ONE-EVENT. Test: `dsl -- delete_bound_permanents_deletes_the_picks_as_one_event`.
+- **Blocks training:** was a phantom decision whenever a budget pick deleted 2+ Digimon with a deletion observer on the field.
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.
