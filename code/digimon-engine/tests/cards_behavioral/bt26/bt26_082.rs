@@ -196,6 +196,13 @@ fn bt26_082_q7122_engage_attack_after_security_play_wins_the_game() {
         "<Engage> offers its attack inside the end-of-turn pool: {:?}",
         r.pending_selection()
     );
+    // §15-4-3-5: the turn player's effects activate first, so the non-turn
+    // player's Ravemon is still pending (in security) at the declaration.
+    assert!(
+        !field_ids(&r, 1).contains(&CARD_ID.to_string()),
+        "Ravemon has not played itself before the turn player's <Engage> activates"
+    );
+    assert_eq!(r.security_count(1), 1);
     r.game.decode_action(attack, 0);
     for _ in 0..12 {
         let Some(sel) = r.pending_selection() else { break };

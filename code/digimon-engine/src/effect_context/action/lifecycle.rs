@@ -91,8 +91,9 @@ impl<'a> EffectContext<'a> {
     ///
     /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
     /// that token"). Analogous to `schedule_delete_at_end_of_turn` but the
-    /// deletion joins the `EndOfOpponentsTurn` pool built in
-    /// `rotate_turn_player` (§18-1-2) rather than the `EndOfYourTurn` one.
+    /// deletion joins the `EndOfOpponentsTurn` half of the end-of-turn pool
+    /// (`enqueue_end_of_opponents_turn_pool`, §18-1-2) rather than the
+    /// `EndOfYourTurn` one.
     pub fn schedule_delete_at_end_of_opponents_turn(&mut self, permanent: PermanentHandle) {
         self.schedule_provenance_deletion(permanent, true);
     }
