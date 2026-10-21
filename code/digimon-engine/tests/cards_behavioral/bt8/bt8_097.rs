@@ -1082,3 +1082,220 @@ fn prepare_security_option(
     });
     handle
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Task 7 re-audit (2026-10-21) — the formerly blocked controller/breeding clauses
+// (G-EFFECT-PLAY-CONTROLLER-PROVENANCE / G-EFFECT-PLAY-BREEDING-FLOODGATE,
+// repaired 2026-10-11) exercised through real Option use and real Digimon play
+// on the opponent's following turn, where the restriction still applies.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn give_turn_memory(r: &mut DebugRunner, player: u8, value: i16) {
+    r.game.memory = if r.game.memory_pair.0 == player {
+        value
+    } else {
+        -value
+    };
+}
+
+fn hand_pos(r: &DebugRunner, player: usize, id: &str) -> u16 {
+    r.game.players[player]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == id)
+        .unwrap_or_else(|| panic!("{id} in hand")) as u16
+}
+
+/// Plays Crimson Blaze from player 0's hand through the real mask, ends the
+/// turn and opens player 1's Main phase with memory to spend.
+fn cast_blaze_then_opponent_main(r: &mut DebugRunner, cast: bool) {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::enums::GamePhase;
+    if cast {
+        let a = hand_pos(r, 0, "BT8-097");
+        assert!(build_action_mask(&r.game, 0)[a as usize] > 0.0);
+        r.game.decode_action(a, 0);
+        assert!(r.pending_selection().is_none());
+        assert!(r
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect));
+    }
+    r.end_turn();
+    assert_eq!(r.turn_player(), 1);
+    r.game.current_phase = GamePhase::Main;
+    give_turn_memory(r, 1, 10);
+    assert_eq!(
+        r.game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        cast,
+        "the restriction lasts through the opponent's turn"
+    );
+}
+
+/// Q4664: after my Crimson Blaze, my opponent's Dragomon (EX5-060) cannot make
+/// me play my own trash Digimon — the restriction is on the opponent's
+/// effects, whoever the destination player is (DCGO BT8_097 CardEffectCondition:
+/// `cardEffect.EffectSourceCard.Owner == card.Owner.Enemy`).
+#[test]
+fn bt8_097_q4664_opponents_effect_cannot_play_my_digimon() {
+    use digimon_engine::action::build_action_mask;
+    for cast in [false, true] {
+        let mut r = audit_runner();
+        r.place_on_field(0, "A-RED", None);
+        r.inject_trash(0, "A-LOW");
+        r.add_to_hand(1, "EX5-060");
+        cast_blaze_then_opponent_main(&mut r, cast);
+        let before_field = r.battle_area_size(0);
+        let before_trash = r.trash_size(0);
+        let a = hand_pos(&r, 1, "EX5-060");
+        assert!(build_action_mask(&r.game, 1)[a as usize] > 0.0);
+        r.game.decode_action(a, 1);
+        // Any trash prompt shown to player 0 is answered through the mask.
+        while let Some(v) = r.pending_selection_view() {
+            let p = v.selecting_player;
+            let pick = v.valid_action_ids[0];
+            assert!(build_action_mask(&r.game, p)[pick as usize] > 0.0);
+            r.game.decode_action(pick, p);
+        }
+        let played = r.battle_area_size(0) - before_field;
+        if cast {
+            assert_eq!(
+                played, 0,
+                "Q4664: my Digimon can't be played by the opponent's effect"
+            );
+            assert_eq!(r.trash_size(0), before_trash);
+        } else {
+            assert_eq!(played, 1, "control: Dragomon plays my trash Digimon");
+        }
+    }
+}
+
+/// Q6238 through a real effect: after Crimson Blaze, the opponent's Grademon
+/// (BT20-053) [On Play] cannot play Dorumon into their breeding area; without
+/// Crimson Blaze the same play offers and performs it.
+#[test]
+fn bt8_097_q6238_grademon_cannot_play_into_breeding_after_blaze() {
+    use digimon_engine::action::{build_action_mask, space::PASS};
+    use digimon_engine::enums::CardColor;
+    for cast in [false, true] {
+        let mut doru = make_test_card("AUDIT-DORU", "Dorumon");
+        doru.dp = Some(3000);
+        doru.level = Some(3);
+        doru.colors = vec![CardColor::Purple];
+        let mut red = make_test_card("AUDIT-RED", "Red");
+        red.colors = vec![CardColor::Red];
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+            .unwrap()
+            .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-053.yaml"))
+            .unwrap()
+            .add_card(doru)
+            .add_card(red)
+            .hand(0, &["BT8-097"])
+            .hand(1, &["BT20-053", "AUDIT-DORU"])
+            .deck(0, &["AUDIT-RED"; 10])
+            .deck(1, &["AUDIT-RED"; 10])
+            .security(0, &["AUDIT-RED"; 3])
+            .security(1, &["AUDIT-RED"; 3])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.game.current_phase = digimon_engine::enums::GamePhase::Main;
+        r.place_on_field(0, "AUDIT-RED", None);
+        cast_blaze_then_opponent_main(&mut r, cast);
+        assert!(r.game.players[1].breeding_area.is_none());
+        let a = hand_pos(&r, 1, "BT20-053");
+        assert!(build_action_mask(&r.game, 1)[a as usize] > 0.0);
+        r.game.decode_action(a, 1);
+        if cast {
+            // No legal Dorumon: either no prompt, or a prompt whose only legal
+            // answer is to decline.
+            if let Some(v) = r.pending_selection_view() {
+                assert_eq!(v.selecting_player, 1);
+                assert!(
+                    v.valid_action_ids.iter().all(|&x| x == PASS),
+                    "Q6238: Dorumon must not be offered into breeding"
+                );
+                r.game.decode_action(PASS, 1);
+            }
+            assert!(
+                r.game.players[1].breeding_area.is_none(),
+                "Q6238: the opponent can't play a Digimon into breeding by effect"
+            );
+            assert!(r.game.players[1]
+                .hand
+                .iter()
+                .any(|c| c.card_id(&r.game.card_data) == "AUDIT-DORU"));
+        } else {
+            let v = r.pending_selection_view().expect("Dorumon offered");
+            let pick = *v.valid_action_ids.iter().find(|&&x| x != PASS).unwrap();
+            assert!(build_action_mask(&r.game, 1)[pick as usize] > 0.0);
+            r.game.decode_action(pick, 1);
+            assert_eq!(
+                r.game.players[1]
+                    .breeding_area
+                    .as_ref()
+                    .map(|p| p.top_card().card_id(&r.game.card_data).to_string()),
+                Some("AUDIT-DORU".to_string()),
+                "control: Grademon plays Dorumon into the empty breeding area"
+            );
+        }
+    }
+}
+
+/// Q1774: after Crimson Blaze, a security Digimon whose own "[Security] At the
+/// end of the battle, play this card" effect (Cyclonemon BT21-015) is the
+/// opponent's effect, so it is not played and goes to the trash instead.
+#[test]
+fn bt8_097_q1774_security_digimon_self_play_is_blocked() {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::enums::{CardColor, GamePhase};
+    for cast in [false, true] {
+        let mut atk = make_test_card("AUDIT-ATK", "Attacker");
+        atk.dp = Some(1000);
+        atk.level = Some(3);
+        atk.colors = vec![CardColor::Red];
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(include_str!("../../../cards/bt8/BT8-097.yaml"))
+            .unwrap()
+            .from_dsl_yaml(include_str!("../../../cards/bt21/BT21-015.yaml"))
+            .unwrap()
+            .add_card(atk)
+            .hand(0, &["BT8-097"])
+            .deck(0, &["AUDIT-ATK"; 10])
+            .deck(1, &["AUDIT-ATK"; 10])
+            .security(1, &["BT21-015"])
+            .memory(10)
+            .start();
+        r.skip_mulligan();
+        r.game.current_phase = GamePhase::Main;
+        let attacker = r.place_on_field(0, "AUDIT-ATK", Some(0));
+        if cast {
+            let a = hand_pos(&r, 0, "BT8-097");
+            assert!(build_action_mask(&r.game, 0)[a as usize] > 0.0);
+            r.game.decode_action(a, 0);
+            assert!(r.pending_selection().is_none());
+        }
+        assert_eq!(r.security_count(1), 1);
+        r.attack_player(attacker, 1, false);
+        let _ = r.auto_resolve();
+        assert_eq!(r.security_count(1), 0);
+        let cyclonemon_in_trash = r.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "BT21-015");
+        if cast {
+            assert_eq!(
+                r.battle_area_size(1),
+                0,
+                "Q1774: the security Digimon can't be played by its own effect"
+            );
+            assert!(cyclonemon_in_trash, "Q1774: it is placed in the trash");
+        } else {
+            assert_eq!(r.battle_area_size(1), 1, "control: Cyclonemon plays itself");
+            assert!(!cyclonemon_in_trash);
+        }
+    }
+}

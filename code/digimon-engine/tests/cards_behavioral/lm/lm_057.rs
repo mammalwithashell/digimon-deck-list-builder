@@ -875,3 +875,83 @@ fn lm_057_real_delay_cloned_route_choice_keeps_both_reduced_costs() {
         "printed costs 3/4 reduced by 2 must pay 1/2"
     );
 }
+
+// ─────── Task 7 re-audit (2026-10-21): printed BT20 route choice ───────
+//
+// G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE (RESOLVED 2026-10-10) named the real
+// pair this card meets in the Examon deck: Wingdramon (BT20-025, blue/red) on
+// Coredramon (BT20-023) has the named-Coredramon cost-3 route and the
+// level-4 blue / red cost-4 routes. Cost -2 must offer paying 1 or 2 (the two
+// duplicate 4-cost colour routes are one choice), never auto-pick the cheaper.
+#[test]
+fn lm_057_real_delay_wingdramon_on_coredramon_offers_reduced_1_and_2() {
+    let mut r = builder()
+        .dsl_card("BT20-023")
+        .expect("Coredramon YAML")
+        .dsl_card("BT20-025")
+        .expect("Wingdramon YAML")
+        .add_card(filler("AUDIT-FILL"))
+        .hand(0, &[CARD_ID, "BT20-025"])
+        .deck(0, &["AUDIT-FILL"; 12])
+        .deck(1, &["AUDIT-FILL"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    r.auto_resolve().unwrap();
+    assert!(delayed_self_in_battle_area(&r, 0));
+    r.place_on_field(0, "BT20-023", Some(0));
+    let index = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == CARD_ID)
+        .unwrap();
+    let action =
+        FIELD_EFFECT_START + index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN;
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.game.set_memory(5);
+    assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+    r.game.decode_action(action, 0);
+    // Host (Coredramon), then the Wingdramon hand card — through the mask.
+    for kind in [SelectionKind::OwnField, SelectionKind::Hand] {
+        assert_eq!(r.pending_kind(), Some(kind));
+        let v = r.pending_selection_view().unwrap();
+        let pick = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+        assert_eq!(build_action_mask(&r.game, 0)[pick as usize], 1.0);
+        r.execute_action(0, pick).unwrap();
+    }
+    let routes = r
+        .pending_selection_view()
+        .expect("named 3 and colour 4 routes stay a player choice");
+    assert!(!routes.is_optional);
+    assert_eq!(
+        routes.valid_action_ids.len(),
+        2,
+        "duplicate 4-cost colour routes collapse into one payable choice"
+    );
+    let saved = r.game.clone();
+    let mut memories = Vec::new();
+    for a in routes.valid_action_ids.clone() {
+        r.game = saved.clone();
+        assert_eq!(build_action_mask(&r.game, 0)[a as usize], 1.0);
+        r.execute_action(0, a).unwrap();
+        r.auto_resolve().unwrap();
+        let host = r
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .find(|p| p.top_card().card_id(&r.game.card_data) == "BT20-025")
+            .expect("Coredramon digivolved into Wingdramon");
+        assert_eq!(host.stack_size(), 2);
+        memories.push(r.memory());
+    }
+    memories.sort();
+    assert_eq!(memories, vec![3, 4], "pay 4-2=2 or 3-2=1 from 5 memory");
+}
