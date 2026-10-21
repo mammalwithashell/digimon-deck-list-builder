@@ -7044,14 +7044,14 @@
     },
     "BT25-097": {
       "card_name": "Guardian Palace",
-      "validated_date": "2026-10-20",
+      "validated_date": "2026-10-21",
       "report": "ex13-meta-c1-jupitermon",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "TS Jupitermon",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-097.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_097.rs",
-      "test_count": 16,
+      "test_count": 18,
       "patterns": [
         "D3",
         "D4",
@@ -7060,7 +7060,7 @@
         "B2",
         "F9"
       ],
-      "notes": "TDD vs DCGO BT25_097.cs; prior unreviewed draft 38d596b56 re-verified (dropped its player-scoped IgnoreColorRequirement flood_gate; the colour bypass is the card-scoped use_requirement face_up_security_count_lte 0; 4-22-3 both colours otherwise). {Security}[All Turns] face-up aura: yellow/purple [TS] Digimon gain <Alliance>; with an own [Junomon]-named Digimon they also gain <Scapegoat>, which is behavioural (recipient-side replacement synthesis) now that the DSL maps the keyword (G-DSL-SCAPEGOAT-GRANT-KEYWORD). [Main] bottom security -> hand, self face-up bottom security, optional yellow/purple [TS] Digimon play -3. [Security] optional free level<=4 yellow/purple [TS] Digimon from hand or trash. Supersedes the 2026-06-06 BLOCKED (G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD) verdict."
+      "notes": "TDD vs DCGO BT25_097.cs; prior unreviewed draft 38d596b56 re-verified (dropped its player-scoped IgnoreColorRequirement flood_gate; the colour bypass is the card-scoped use_requirement face_up_security_count_lte 0; 4-22-3 both colours otherwise). {Security}[All Turns] face-up aura: yellow/purple [TS] Digimon gain <Alliance>; with an own [Junomon]-named Digimon they also gain <Scapegoat>, which is behavioural (recipient-side replacement synthesis) now that the DSL maps the keyword (G-DSL-SCAPEGOAT-GRANT-KEYWORD). [Main] bottom security -> hand, self face-up bottom security, optional yellow/purple [TS] Digimon play -3. [Security] optional free level<=4 yellow/purple [TS] Digimon from hand or trash. Supersedes the 2026-06-06 BLOCKED (G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD) verdict. Fix round 2026-10-21: added Q6458 (0-security [Main] only places the card face up) and Q6463 (granted <Scapegoat> still prevents the deletion when the [Junomon] is deleted in the same batch) tests."
     },
     "BT25-102": {
       "status": "IMPLEMENTED",
@@ -14803,20 +14803,20 @@
     },
     "BT4-105": {
       "card_name": "Tactical Retreat!",
-      "validated_date": "2026-10-20",
+      "validated_date": "2026-10-21",
       "report": "ex13-meta-c1-jupitermon",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "TS Jupitermon",
       "yaml_path": "code/digimon-engine/cards/bt4/BT4-105.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_105.rs",
-      "test_count": 7,
+      "test_count": 9,
       "patterns": [
         "OPTION-MAIN-MANDATORY-OWN-PICK",
         "PERMANENT-TO-SECURITY",
         "SECURITY-RECOVERY"
       ],
-      "notes": "TDD vs DCGO BT4_105.cs + official text (the old printing's 'Trash all of the digivolution cards of that Digimon' is CR 4.3 4-7-8): [Main] mandatory pick of 1 own Digimon -> top card face down on top of own security, stacked cards trashed; not a deletion (Q&A: no [On Deletion]); offered only when you can add security (owner_can_add_security, DCGO CanAddSecurity); [Security] <Recovery +1 (Deck)>."
+      "notes": "TDD vs DCGO BT4_105.cs + official text (the old printing's 'Trash all of the digivolution cards of that Digimon' is CR 4.3 4-7-8): [Main] mandatory pick of 1 own Digimon -> top card face down on top of own security, stacked cards trashed; not a deletion (Q&A: no [On Deletion]); offered only when you can add security (owner_can_add_security, DCGO CanAddSecurity); [Security] <Recovery +1 (Deck)>. Fix round 2026-10-21: added Q1271 token test (a chosen token is removed from the game instead, security unchanged, no add-to-security trigger; CR 4.3 4-21-5 / 15-1-10) with a positive add-to-security probe control."
     }
   }
 }
