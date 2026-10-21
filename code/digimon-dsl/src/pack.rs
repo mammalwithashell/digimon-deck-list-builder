@@ -34,7 +34,9 @@ use std::collections::BTreeSet;
 // 0.23.0 adds `to_owner` to the cancel-via-bottom-security replacement step and
 // the engine-only `SecurityPlacementCancelFinalize` continuation, and the
 // `owner_can_add_security` permanent predicate.
-pub const PACK_FORMAT_VERSION: &str = "0.23.0";
+// 0.24.0 adds `play_from_hand_free.suspended` and
+// `grant_triggered_effect.trigger_if`. Rebuild packs; bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.24.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {
