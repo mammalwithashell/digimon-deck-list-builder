@@ -14889,6 +14889,22 @@
         "D2"
       ],
       "notes": "[Start of Your Main Phase] mandatory opponent-Digimon pick + grant_triggered_effect on_suspend / end_of_opponents_turn, body lose_memory 2 (the carrier's controller), trigger_if event_target_is_source (G-DSL-GRANTED-TRIGGER-QUALIFIER: on_suspend is an observer timing, any suspension made the carrier's controller lose 2). Inherited [Your Turn][OPT] digivolve cost -1 with an own green Tamer (BT14-046 shape). DCGO oracle unmeasured."
+    },
+    "BT2-047": {
+      "card_name": "Argomon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/bt2/BT2-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt2/bt2_047.rs",
+      "test_count": 11,
+      "patterns": [
+        "H1",
+        "F1"
+      ],
+      "notes": "<Digisorption -3> printed keyword (grant_keyword value 3, read off the hand card by the digivolve reducer chain). Inherited [When Attacking] optional select_hand level 3 green Digimon + play_from_hand_free suspended: true (G-DSL-PLAY-FROM-HAND-FREE-SUSPENDED: enters suspended, no suspend event); Q1018 On Play activates. DCGO oracle unmeasured."
     }
   }
 }
