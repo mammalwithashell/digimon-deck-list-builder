@@ -1,0 +1,81 @@
+# BT24-024 Submarimon — Digimon, Lv.4, Blue/Yellow, DP 5000, Play Cost 5.
+# Trait line (card image): Armor Form | Free | Aquatic/Iliad/TS
+#   → form: Armor Form, attribute: Free, traits: [Aquatic, Iliad, TS].
+#
+# Printed text (card image + official Bandai DB bundle data/card_bundles/BT24-024.md):
+#   Digivolve circle: Lv.3 / Cost 3 (official DB: Blue Lv.3 / 3, Yellow Lv.3 / 3)
+#   [Digivolve] [Armadillomon]/Lv.3 w/[TS] trait: Cost 2
+#   <Armor Purge>
+#   [When Attacking] [Once Per Turn] You may play 1 Tamer card with the [TS]
+#     trait from your hand with the play cost reduced by 2.
+#   (No inherited effect.)
+#
+# DCGO BT24_024.cs:
+#   - AddSelfDigivolutionRequirementStaticEffect(EqualsCardName("Armadillomon")
+#     || (IsLevel3 && HasTSTraits), cost 2) — the name alone qualifies (no level).
+#   - ArmorPurgeEffect.
+#   - OnAllyAttack ActivateClass, maxCountPerTurn 1, isOptional; CanActivateCondition
+#     requires a [TS] Tamer in hand; SelectHandEffect canNoSelect: false; the
+#     pick is played paying its cost under a temporary "Play Cost -2" for the
+#     owner's [TS] Tamers.
+#
+# Modeling: `optional: true` with a mandatory first select_hand → the lowering
+#   installs the outer "you may" confirm, guarded on the select having a
+#   candidate (DCGO CanActivateCondition). Declining the confirm drops the
+#   effect before its once-per-turn use is recorded (DCGO optional confirm).
+#   play_from_hand cost_delta reduce: 2 (floors at 0).
+# Exemplars: BT24-023 Calmaramon (TS digivolve conditions), BT24-018
+#   (ArmorPurge grant), BT20-093 (play_from_hand cost_delta reduce).
+
+card: BT24-024
+name: Submarimon
+kind: digimon
+level: 4
+color: [blue, yellow]
+cost: 5
+dp: 5000
+form: Armor Form
+traits: [Aquatic, Iliad, TS]
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  # [Digivolve] [Armadillomon]/Lv.3 w/[TS] trait: Cost 2.
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: "Armadillomon"
+        - all_of:
+            - level_eq: 3
+            - trait_has: TS
+    cost: 2
+
+effects:
+  # ─── <Armor Purge> ───────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge>"
+
+  # ─── [When Attacking][OPT] you may play 1 [TS] Tamer from hand at cost -2 ────
+  - when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[When Attacking][Once Per Turn] You may play 1 Tamer card with the [TS] trait from your hand with the play cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: ts_tamer
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: TS
+          prompt: "Play 1 Tamer card with the [TS] trait from your hand with the play cost reduced by 2"
+      - play_from_hand:
+          of: you
+          hand_index: ts_tamer
+          cost_delta: { reduce: 2 }

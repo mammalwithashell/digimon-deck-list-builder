@@ -14961,6 +14961,23 @@
         "D2"
       ],
       "notes": "Green/Red Lv.4. Digivolve circles Green Lv.3 / 3 and Red Lv.3 / 3 (blue refused). [On Play][When Digivolving] optional select_hand Tamer with play_cost_lte 3 -> play_from_hand_free (cost-4 Tamer and Digimon not offered; PASS declines). Inherited aura +2000 DP gated on your_turn + own Tamer on the battle area (opponent's Tamer and opponent's turn give nothing). DCGO BT11_052.cs."
+    },
+    "BT24-024": {
+      "card_name": "Submarimon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta — DATA SQUAD Ravemon (TS splash)",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_024.rs",
+      "test_count": 17,
+      "patterns": [
+        "B2",
+        "E2",
+        "H-ArmorPurge"
+      ],
+      "notes": "Blue/Yellow Lv.4 Armor Form. Digivolve: Blue / Yellow Lv.3 circles cost 3; [Armadillomon] (any level, DCGO EqualsCardName) or Lv.3 w/[TS] cost 2 (red non-TS Lv.3 and Lv.2 TS refused). <Armor Purge> (deletion -> top card trashed). [When Attacking][OPT] optional clause over a mandatory select_hand ([TS] Tamer only) -> guarded outer confirm (no prompt without a candidate; declining keeps the OPT, as DCGO's optional confirm) -> play_from_hand cost_delta reduce 2 (floors at 0). Lockout + next-turn reset tested; real attack_player path tested. DCGO BT24_024.cs."
     }
   }
 }

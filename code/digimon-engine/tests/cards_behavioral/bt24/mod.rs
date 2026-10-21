@@ -48,6 +48,7 @@ mod bt24_099;
 mod bt24_009;
 mod bt24_021;
 mod bt24_023;
+mod bt24_024;
 mod bt24_026;
 mod bt24_042;
 mod bt24_045;
