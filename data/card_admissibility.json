@@ -1,0 +1,5621 @@
+{
+  "cards": {
+    "AD1-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-004": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "AD1-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT1-085": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT1-087": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT1-090": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT10-003": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT10-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT10-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT10-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT10-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT10-087": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT10-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT10-111": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT11-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT11-022": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT11-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT11-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT11-061": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT11-089": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT11-095": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT11-105": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-022": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-028": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-031": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-034": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-038": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-043": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-050": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-092": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT12-112": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-060": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT13-075": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-083": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-087": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-088": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-095": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-096": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT13-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-103": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-106": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-110": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-111": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT13-112": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT14-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT14-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT14-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT14-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-003": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-092": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-096": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT15-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-004": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-028": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-077": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-082": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT16-085": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT16-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-077": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-078": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-081": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-095": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-097": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT17-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-064": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-065": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-087": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-092": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT18-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-026": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-038": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-061": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-065": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-075": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-079": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-089": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-090": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-099": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT19-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT2-041": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT2-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT2-076": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-002": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-007": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-023": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-025": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-027": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-040": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-042": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-044": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-045": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-053": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-076": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-081": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-083": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-091": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-093": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT20-100": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT20-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-004": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-023": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-026": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-043": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-044": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-046": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT21-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-052": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT21-054": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-058": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-062": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-071": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT21-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-074": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT21-081": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-082": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-083": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-086": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-087": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-091": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-092": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-095": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-097": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-098": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT21-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-026": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-041": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-052": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-088": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-089": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-094": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-098": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT22-099": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-054": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-058": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-064": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-077": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-079": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-096": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT23-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-003": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT24-004": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-023": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-026": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-031": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT24-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-034": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT24-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-041": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-043": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-045": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-046": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-058": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-062": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-063": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-067": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-068": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-075": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-081": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-082": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-083": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-085": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-087": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-088": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT24-089": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-090": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-091": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-094": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-095": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-097": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-098": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-099": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-100": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT24-101": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT24-102": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-003": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-004": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-005": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-022": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-023": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-026": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-028": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-031": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-032": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-034": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-035": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-038": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-039": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-041": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-043": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-044": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-045": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-046": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-048": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-049": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-050": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-052": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-053": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-054": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-058": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-061": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-062": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-063": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-064": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-065": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-067": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-068": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-071": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-075": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-077": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-078": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-080": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-081": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-082": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-083": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-085": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT25-086": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-087": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-088": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-089": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-090": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-091": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-092": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-094": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-095": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-096": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-098": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-099": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-100": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-103": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT25-104": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-005": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT26-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-022": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-026": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-028": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-031": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-034": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-038": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-039": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-041": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-044": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-045": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-049": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-050": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT26-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-063": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-065": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-067": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-074": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-075": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-076": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT26-078": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-079": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-080": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-081": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-082": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT26-083": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-085": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-086": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-087": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-088": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-089": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-090": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-091": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "BT26-092": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-094": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-096": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-098": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-100": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-103": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT26-104": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT3-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT3-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT3-077": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT3-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT3-096": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT3-103": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT3-105": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT3-109": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT4-011": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT4-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT4-086": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT4-097": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT4-098": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT4-104": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT4-111": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT5-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT5-021": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT5-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT5-092": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT5-093": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT5-106": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT5-112": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT6-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT6-082": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT6-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT6-102": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT6-105": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT7-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT7-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT7-058": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT7-059": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT7-063": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT7-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT7-071": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT7-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT7-107": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-071": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-084": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-090": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-094": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-095": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-097": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-107": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-108": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT8-109": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT9-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT9-041": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT9-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT9-092": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT9-103": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT9-108": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "BT9-109": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "BT9-112": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX1-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX1-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX1-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX1-068": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX1-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-003": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-025": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "EX10-028": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "EX10-031": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-034": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-039": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-044": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-063": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-068": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX10-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-022": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-023": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-038": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-044": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-046": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-053": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-054": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-061": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-065": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-071": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX11-074": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-004": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-022": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-026": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-031": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-034": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-039": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-043": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-044": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-045": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-046": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-048": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-061": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-062": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-063": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-065": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-071": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-074": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-075": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-076": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX12-077": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-001": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-002": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-003": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-004": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-007": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-009": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-017": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-018": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-022": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-023": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-026": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-028": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-031": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-034": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-038": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-039": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-041": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "EX13-042": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-043": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-044": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-045": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-046": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-048": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-049": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-050": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-052": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-053": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-054": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-058": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-061": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-062": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-063": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-064": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-065": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-067": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-068": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-069": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-071": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-074": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-075": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-076": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX13-077": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX2-007": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX2-046": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX2-055": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX3-012": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-014": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX3-018": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-020": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-024": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-037": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-041": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-044": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX3-063": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX3-065": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX3-074": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX4-003": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-006": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-038": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-039": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-061": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-065": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX4-074": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX5-015": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX5-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX6-004": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX6-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX6-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX6-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX6-072": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-011": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-016": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-023": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-025": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-040": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-043": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-044": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-048": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-049": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-063": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-071": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX7-074": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-002": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "EX8-005": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-022": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-023": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-028": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-045": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-046": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-048": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-050": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-067": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-070": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-073": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX8-074": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-008": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-012": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-013": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-019": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-024": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-058": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-066": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-067": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "EX9-074": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-020": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-021": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-027": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-028": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-029": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-030": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-031": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-032": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-033": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-034": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-036": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-047": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-049": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-051": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-054": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-055": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-056": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-057": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-058": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-059": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-060": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "LM-061": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-037": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-039": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-092": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "P-094": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-101": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-103": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-104": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-105": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-106": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-107": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-108": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-117": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-118": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-123": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-128": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-130": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-134": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-136": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-137": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-151": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-156": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-165": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-167": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-169": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-170": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-180": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-182": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-186": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-189": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-193": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-194": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-196": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-197": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-198": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-200": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-205": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-206": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-207": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-209": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-210": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-212": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-213": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-215": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-217": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-220": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-224": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-228": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-229": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-235": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-236": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-240": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "P-244": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "RB1-010": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "RB1-035": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-02": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST1-16": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST12-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST12-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST12-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST13-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST16-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST17-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST18-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST19-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-02": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST2-16": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST20-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST20-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST20-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST20-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST21-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST22-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST22-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST22-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-02": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-03": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "ST23-04": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "ST23-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-06": {
+      "admissible": false,
+      "reason": "diverged_no_quirk",
+      "reasons": [
+        "diverged_no_quirk"
+      ]
+    },
+    "ST23-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST23-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-02": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST24-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-02": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST3-16": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-02": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST4-16": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-02": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST5-16": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-01": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-02": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-03": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-07": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-08": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-10": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-11": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-12": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-13": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-14": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-15": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST6-16": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST9-04": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST9-05": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST9-06": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "ST9-09": {
+      "admissible": true,
+      "reason": null,
+      "reasons": []
+    },
+    "TEST-020": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "TEST-021": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    },
+    "TEST-022": {
+      "admissible": false,
+      "reason": "untested",
+      "reasons": [
+        "untested"
+      ]
+    }
+  },
+  "counts": {
+    "admissible": 1025,
+    "diverged_no_quirk": 31,
+    "failed_verdict": 0,
+    "registered": 1093,
+    "unregistered": 0,
+    "untested": 37
+  },
+  "generated_at": "2026-10-21T15:11:29+00:00",
+  "sources": {
+    "exam_verdicts_sha256": "0888d106cfc848db624be24d8affe948466d7fff15f1e50b29e891d557ee3692",
+    "tested_cards_sha256": "4d397070844146a41a3f679fc372c3d00666b5068066919a60e02b102aca428a",
+    "validated_cards_dsl_sha256": "80c79d5477221c4f8441f06772b9f702af75bf1786023448a93034f0e58eb5db",
+    "validated_cards_sha256": "04f91bf602871457f7284d95a89dffc9a1db2b86093652e19747a35425f607c6"
+  },
+  "version": 1
+}

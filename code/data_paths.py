@@ -19,6 +19,7 @@ databases, or ad-hoc re-homing without touching code:
 - ``DIGIMON_CARD_DATA_REVISION``
 - ``DIGIMON_TESTED_CARDS``
 - ``DIGIMON_ORACLE_READINESS`` (the training gate's readiness artifact)
+- ``DIGIMON_CARD_ADMISSIBILITY`` (the training gate's per-card admissibility artifact)
 - ``DIGIMON_DATA_DIR`` — overrides the whole directory; individual file
   env vars still win if set.
 
@@ -59,6 +60,7 @@ ARCHETYPE_ALIASES: Path = _resolve("DIGIMON_ARCHETYPE_ALIASES", "archetype_alias
 CARD_OVERRIDES: Path = _resolve("DIGIMON_CARD_OVERRIDES", "card_overrides.json")
 TESTED_CARDS: Path = _resolve("DIGIMON_TESTED_CARDS", "tested_cards.json")
 ORACLE_READINESS: Path = _resolve("DIGIMON_ORACLE_READINESS", "oracle_readiness.json")
+CARD_ADMISSIBILITY: Path = _resolve("DIGIMON_CARD_ADMISSIBILITY", "card_admissibility.json")
 
 # Canonical card-data pipeline inputs and generated pool artifacts.
 CARD_SOURCES_DIR: Path = Path(
