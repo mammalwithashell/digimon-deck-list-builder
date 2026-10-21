@@ -789,10 +789,12 @@ fn bt13_008_does_not_install_prompt_when_opponent_has_no_digimon() {
 // SECTION 7 — Clause 2 OPT lockout
 // ════════════════════════════════════════════════════════════════════════════
 
-/// OPT: two own red/yellow Tamer suspends in the same turn must produce only
-/// ONE optional delete prompt.
+/// Official Q&A Q1818 / CR 4.3 §15-14-1-4: declining a whole-effect "may"
+/// is choosing not to activate it (DCGO `isOptional` gate), so the
+/// [Once Per Turn] is not used up and the next event the same turn offers it
+/// again (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
 #[test]
-fn bt13_008_inherited_opt_lockout_blocks_second_activation_in_same_turn() {
+fn bt13_008_declined_activation_is_offered_again_same_turn_q1818() {
     let mut runner = base_runner().start();
     let _carrier = runner.place_stack(0, &[CARD_ID, "TOP-DGM"]);
     let red = runner.place_on_field(0, "MARCUS-R", Some(0));
@@ -817,8 +819,8 @@ fn bt13_008_inherited_opt_lockout_blocks_second_activation_in_same_turn() {
 
     runner.game.suspend(yel);
     assert!(
-        runner.game.pending_selection.is_none(),
-        "OPT must lock the second activation in the same turn"
+        runner.game.pending_selection.is_some(),
+        "Q1818: the declined effect is offered again on the second Tamer suspend"
     );
 }
 

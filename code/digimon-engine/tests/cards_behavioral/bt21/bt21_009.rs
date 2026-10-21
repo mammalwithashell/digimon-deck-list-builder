@@ -470,9 +470,12 @@ fn bt21_009_when_linked_no_haru_in_hand_no_prompt() {
 
 // ── Section 5: OPT enforcement ───────────────────────────────────────────────
 
-/// Second link same turn → OPT lockout prevents a second prompt.
+/// Official Q&A Q1818 / CR 4.3 §15-14-1-4: declining a whole-effect "may"
+/// is choosing not to activate it (DCGO `isOptional` gate), so the
+/// [Once Per Turn] is not used up and the next event the same turn offers it
+/// again (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
 #[test]
-fn bt21_009_when_linked_opt_blocks_second_link_same_turn() {
+fn bt21_009_declined_when_linked_is_offered_again_same_turn_q1818() {
     use digimon_engine::action::space::PASS;
     let mut r = base()
         .hand(0, &["HARU-IN-HAND"])
@@ -488,7 +491,7 @@ fn bt21_009_when_linked_opt_blocks_second_link_same_turn() {
         let _ = r.game.resolve_selection(0, PASS);
     }
 
-    // Second link same turn — OPT must block.
+    // Second link same turn — the declined effect is offered again.
     // Fire OnLink again (simulates a second card being linked onto host).
     use digimon_engine::enums::EffectTiming;
     let dummy_card = r.push_linked_owned(host, "APPMON-HOST", 0);
@@ -505,8 +508,8 @@ fn bt21_009_when_linked_opt_blocks_second_link_same_turn() {
     r.game.drain_effect_queue();
 
     assert!(
-        r.game.pending_selection.is_none(),
-        "OPT: second link in same turn must be locked out"
+        r.game.pending_selection.is_some(),
+        "Q1818: the declined effect is offered again on the second link"
     );
 }
 

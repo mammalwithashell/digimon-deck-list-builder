@@ -662,11 +662,17 @@ fn bt13_012_opt_lockout_blocks_second_activation_in_same_turn() {
         .as_ref()
         .unwrap()
         .selecting_player;
+    // Accept: delete one of the two 3000 DP Digimon (activating spends the
+    // use, §15-14-1-4; a decline would keep it, Q1818).
+    let pick = runner.game.pending_selection.as_ref().unwrap().valid_action_ids
+        .iter().copied().find(|&a| a != PASS).expect("a delete target");
     runner
-        .execute_action(player, PASS)
-        .expect("decline resolves");
+        .execute_action(player, pick)
+        .expect("accept resolves");
+    assert_eq!(runner.game.players[1].battle_area.len(), 1, "one Digimon deleted");
 
-    // Second suspend same turn → prompt must NOT install (OPT lockout).
+    // Second suspend same turn → prompt must NOT install (OPT lockout), even
+    // though OPP-DGM-B is still a legal target.
     runner.game.suspend(yel);
     assert!(
         runner.game.pending_selection.is_none(),

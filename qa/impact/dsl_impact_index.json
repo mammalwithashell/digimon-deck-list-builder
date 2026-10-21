@@ -5057,6 +5057,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "binding_present",
         "kind",
         "trait_has",
         "your_turn",
@@ -5067,6 +5068,7 @@
       ],
       "verbs": [
         "effect_initiated_digivolve",
+        "if",
         "select_hand",
         "select_own_permanent"
       ]
@@ -29408,6 +29410,7 @@
       "BT20-040",
       "BT20-042",
       "BT20-044",
+      "BT21-001",
       "BT21-009",
       "BT21-013",
       "BT21-027",
@@ -41403,6 +41406,7 @@
       "BT20-059",
       "BT20-060",
       "BT20-100",
+      "BT21-001",
       "BT21-009",
       "BT21-013",
       "BT21-021",

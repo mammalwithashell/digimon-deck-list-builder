@@ -804,12 +804,15 @@ fn p_207_when_attacking_declining_leaves_candidate_in_trash() {
 // SECTION 8 — OPT lockout (When Attacking clause)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Official Q&A Q1818 / CR 4.3 §15-14-1-4: declining a whole-effect "may"
+/// is choosing not to activate it (DCGO `isOptional` gate), so the
+/// [Once Per Turn] is not used up and the next event the same turn offers it
+/// again (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
 #[test]
-fn p_207_when_attacking_opt_blocks_second_attack_same_turn() {
+fn p_207_declined_when_attacking_is_offered_again_same_turn_q1818() {
     let mut runner = attack_and_get_trash_prompt(&["Beast"], 4);
-    // Decline the first offer to keep state simple (still counts as an
-    // activation per DCGO — the OPT counter increments on trigger firing,
-    // not on accepting the pick; the trigger fired and installed a prompt).
+    // Decline the first offer: the whole effect is a "may" (DCGO P_207.cs
+    // `isOptional: true`), so declining it does not use the [Once Per Turn].
     runner
         .execute_action(0, PASS)
         .expect("decline the first free play");
@@ -835,8 +838,8 @@ fn p_207_when_attacking_opt_blocks_second_attack_same_turn() {
     runner.attack_player(mine, 1, false);
 
     assert!(
-        runner.pending_selection().is_none(),
-        "OPT must lock out the second When Attacking activation in the same turn"
+        runner.pending_selection().is_some(),
+        "Q1818: the declined When Attacking effect is offered again on the second attack"
     );
 }
 

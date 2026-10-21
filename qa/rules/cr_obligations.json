@@ -2700,13 +2700,17 @@
       "blocks_training": false,
       "chapter": 15,
       "fingerprint": "0ec475393b7da51a023fdc14b305d8c33160c89fce5d469544b9040c676a117f",
-      "gap_id": null,
+      "gap_id": "G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "A use counts when the player chooses to activate (official Q&A Q1818: declining a whole-effect \"you may\" leaves the [Once Per Turn] unused); a declined optional processing condition of an activated triggered effect still spends it (owner ruling #20). The DSL lowering refunds the use when a clause's folded first \"may\" pick is passed (`lower_triggered::folded_may_refund_process`). Proof limit: trigger-type clauses whose whole effect is authored `optional: true` with a non-cost first pick and a pick-dependent tail; [Main]/[Counter] activations and per-card shapes outside that (listed in the gap entry) are not covered by these tests.",
+      "status": "proven",
+      "tests": [
+        "ch15_14_effect_icons::declined_you_may_effect_keeps_its_once_per_turn",
+        "ch15_14_effect_icons::activated_you_may_effect_spends_its_once_per_turn",
+        "ch15_14_effect_icons::declined_optional_cost_of_an_activated_effect_spends_its_once_per_turn"
+      ],
       "text": "When a player chooses to activate an [X Per Turn] effect, it will count toward 1 use of [X Per Turn], even if the effect's processing can't be executed."
     },
     "15-14-1-5": {
@@ -15347,9 +15351,9 @@
         "total": 10
       },
       "15": {
-        "gap": 134,
+        "gap": 133,
         "not_testable": 66,
-        "proven": 44,
+        "proven": 45,
         "total": 244
       },
       "16": {
@@ -15419,15 +15423,15 @@
         "total": 13
       }
     },
-    "gap": 589,
+    "gap": 588,
     "mechanics": {
       "gap_blocking": 0,
-      "gap_nonblocking": 318,
+      "gap_nonblocking": 317,
       "not_testable": 152,
-      "proven": 245
+      "proven": 246
     },
     "not-testable": 246,
-    "proven": 284
+    "proven": 285
   },
   "version": 1
 }

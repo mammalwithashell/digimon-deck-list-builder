@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use digimon_dsl::compiled::{
     CompiledActivationCostKind, CompiledBindingRef, CompiledCardKind, CompiledPlayerRef,
-    CompiledPredicate, CompiledScope, CompiledStep, CompiledTriggeredClause,
+    CompiledPredicate, CompiledScope, CompiledStep, CompiledTiming, CompiledTriggeredClause,
 };
 
 use crate::card_source::CardHandle;
@@ -78,12 +78,18 @@ pub fn lower_for_kind_with_clause_index(
         .filter(|t| compiled_timing_to_engine(**t).is_some())
         .count();
     let has_opt_cap = clause.once_per_turn || matches!(clause.max_per_turn, Some(n) if n > 0);
+    // Q1818 / CR 4.3 §15-14-1-4: a "you may" [X Per Turn] clause whose "may"
+    // is folded into its first pick refunds the use when that pick is passed
+    // (the effect was never activated). See `folded_may_refund_process`.
+    // G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT.
+    let process: Vec<CompiledStep> =
+        folded_may_refund_process(clause).unwrap_or_else(|| clause.process.clone());
     // A clause containing a `refund_opt` step needs its OPT key to be
     // STATICALLY known (the step un-records the activation at runtime via the
     // StepRuntime — G-OPT-REFUND-ON-DECLINE). Forcing such a clause into its
     // own shared-opt group makes the key `0x80 | clause_index` instead of the
     // effect-slot index, which the lowering cannot know here.
-    let has_refund_opt = steps_contain_refund_opt(&clause.process);
+    let has_refund_opt = steps_contain_refund_opt(&process);
     let needs_shared_opt = has_opt_cap && (real_timing_count > 1 || has_refund_opt);
     // Disjoint keyspace: real effect slots are vec indices (0..N). A shared
     // group key sets the high bit so it can never collide with a slot index.
@@ -135,9 +141,9 @@ pub fn lower_for_kind_with_clause_index(
         let (activation_cost_kind, body_steps): (
             Option<CompiledActivationCostKind>,
             Vec<CompiledStep>,
-        ) = match clause.process.split_first() {
+        ) = match process.split_first() {
             Some((CompiledStep::ActivationCost { kind }, rest)) => (Some(*kind), rest.to_vec()),
-            _ => (None, clause.process.clone()),
+            _ => (None, process.clone()),
         };
         // G-OUTER-OPTIONAL-NOT-INSTALLED: decide whether a "you may" clause
         // needs an explicit outer accept/decline prompt — computed before
@@ -262,7 +268,7 @@ pub fn lower_for_kind_with_clause_index(
                 builder = builder.optional_condition_guard(guard);
             }
         }
-        if steps_provide_resource_flow(&clause.process) {
+        if steps_provide_resource_flow(&process) {
             builder = builder.resource_flow();
         }
         // G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT: an Option [Main] body
@@ -272,7 +278,7 @@ pub fn lower_for_kind_with_clause_index(
         if matches!(
             engine_timing,
             EffectTiming::MainFromHand | EffectTiming::OptionMain
-        ) && steps_contain_place_self_as_delay_option(&clause.process)
+        ) && steps_contain_place_self_as_delay_option(&process)
         {
             builder = builder.explicit_self_placement();
         }
@@ -503,6 +509,140 @@ fn steps_contain_place_self_as_delay_option(steps: &[CompiledStep]) -> bool {
     serde_json::to_value(steps)
         .map(|v| walk(&v))
         .unwrap_or(false)
+}
+
+/// The binding of a `[X Per Turn]` clause's folded "you may" pick, when
+/// passing that pick means the effect was never activated (official Q&A
+/// Q1818, CR 4.3 §15-14-1-4), so the use must not be spent.
+///
+/// The shape (all must hold):
+/// - it is a trigger-type effect (not [Main] / [Counter], whose activation is
+///   the player's declaration);
+/// - the clause is `optional: true` (its whole effect is a "you may") with no
+///   `outer_prompt` (otherwise the outer confirm is the decision, and its
+///   decline already drops the effect before the use is recorded);
+/// - it has a per-turn cap and authors no `refund_opt` of its own;
+/// - its first step is a declinable selection (`optional: true`) that binds
+///   its pick (`bind_as`) and is NOT a cost (`cost: true`): declining an
+///   optional COST of an activated effect still spends the use (BT24-026 /
+///   P-250, owner ruling #20);
+/// - every later step depends on that binding, so a pass leaves nothing else
+///   of the effect to process: it names the binding, or it is an `if` on
+///   `binding_present` of it whose `else` branch depends on it too. A tail
+///   that runs without the pick ("You may X. Then, Y": Q1643) is a different
+///   ruling -- the effect was activated -- and is left as authored.
+pub fn folded_may_refund_binding(clause: &CompiledTriggeredClause) -> Option<String> {
+    let capped = clause.once_per_turn || matches!(clause.max_per_turn, Some(n) if n > 0);
+    if !capped || !clause.optional || clause.outer_prompt {
+        return None;
+    }
+    // An activation-type effect ([Main], [Counter]) is activated by the
+    // player's own declaration (§15-14-1-4 "when a player chooses to activate
+    // ... even if the effect's processing can't be executed"): a pick passed
+    // inside it is not a decision not to activate.
+    if clause.when.iter().any(|t| {
+        matches!(
+            t,
+            CompiledTiming::Main
+                | CompiledTiming::MainFromHand
+                | CompiledTiming::MainOnField
+                | CompiledTiming::MainFromTrash
+                | CompiledTiming::Counter
+        )
+    }) {
+        return None;
+    }
+    if steps_contain_refund_opt(&clause.process) {
+        return None;
+    }
+    let (first, tail) = clause.process.split_first()?;
+    let value = serde_json::to_value(first).ok()?;
+    let (_, fields) = value.as_object()?.iter().next()?;
+    let fields = fields.as_object()?;
+    if fields.get("optional").and_then(|v| v.as_bool()) != Some(true) {
+        return None;
+    }
+    if fields.get("cost").and_then(|v| v.as_bool()) == Some(true) {
+        return None;
+    }
+    let binding = fields.get("bind_as")?.as_str()?.to_string();
+    tail.iter()
+        .all(|step| step_depends_on_binding(step, &binding))
+        .then_some(binding)
+}
+
+/// The clause body rewritten for the Q1818 refund, or `None` when the clause
+/// does not have that shape (`folded_may_refund_binding`):
+///
+/// ```text
+/// <first pick, continuing on PASS>
+/// if binding_absent: <pick> then [refund_opt] else [<rest of the body>]
+/// ```
+///
+/// A permanent pick's PASS drops the rest of the clause by default, so the
+/// rewritten pick continues on decline (`continue_on_decline`) to reach the
+/// refund; the rest of the body runs only when the pick was made, exactly as
+/// before (it depends on the pick, so a pass never ran anything of it).
+pub fn folded_may_refund_process(clause: &CompiledTriggeredClause) -> Option<Vec<CompiledStep>> {
+    let binding = folded_may_refund_binding(clause)?;
+    let (first, rest) = clause.process.split_first()?;
+    let mut first = first.clone();
+    match &mut first {
+        CompiledStep::SelectOwnPermanent {
+            continue_on_decline,
+            ..
+        }
+        | CompiledStep::SelectOpponentPermanent {
+            continue_on_decline,
+            ..
+        }
+        | CompiledStep::SelectAnyPermanent {
+            continue_on_decline,
+            ..
+        } => *continue_on_decline = true,
+        _ => {}
+    }
+    Some(vec![
+        first,
+        CompiledStep::If {
+            condition: CompiledPredicate {
+                binding_absent: Some(binding),
+                ..CompiledPredicate::default()
+            },
+            then: vec![CompiledStep::RefundOpt],
+            else_branch: rest.to_vec(),
+        },
+    ])
+}
+
+/// Whether `step` does nothing when `binding` is unbound: an `if` on
+/// `binding_present: <binding>` whose `else` branch only holds such steps, or
+/// any other step that names the binding (a step acting on an unbound
+/// binding is a no-op).
+fn step_depends_on_binding(step: &CompiledStep, binding: &str) -> bool {
+    fn names(v: &serde_json::Value, binding: &str) -> bool {
+        match v {
+            serde_json::Value::String(s) => s == binding,
+            serde_json::Value::Array(items) => items.iter().any(|i| names(i, binding)),
+            serde_json::Value::Object(map) => map.values().any(|i| names(i, binding)),
+            _ => false,
+        }
+    }
+    match step {
+        CompiledStep::If {
+            condition,
+            else_branch,
+            ..
+        } => {
+            condition.binding_present.as_deref() == Some(binding)
+                && else_branch
+                    .iter()
+                    .all(|s| step_depends_on_binding(s, binding))
+        }
+        _ => serde_json::to_value(step)
+            .map(|v| names(&v, binding))
+            .unwrap_or(false),
+    }
 }
 
 /// Recursive scan for a `refund_opt` step anywhere in a clause body
