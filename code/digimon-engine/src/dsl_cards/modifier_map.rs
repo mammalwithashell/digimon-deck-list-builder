@@ -61,6 +61,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotReturnToHand" => ModifierType::CannotReturnToHand,
         "CannotTrash" => ModifierType::CannotTrash,
         "CannotBlock" => ModifierType::CannotBlock,
+        "CannotBeBlocked" => ModifierType::CannotBeBlocked,
         "CannotCounter" => ModifierType::CannotCounter,
         "DrawBlock" => ModifierType::DrawBlock,
         "MemoryBlock" => ModifierType::MemoryBlock,
@@ -180,6 +181,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotReturnToHand
         | ModifierType::CannotTrash
         | ModifierType::CannotBlock
+        | ModifierType::CannotBeBlocked
         | ModifierType::CannotCounter
         | ModifierType::DrawBlock
         | ModifierType::MemoryBlock
@@ -299,6 +301,7 @@ mod tests {
             ModifierType::CannotReturnToHand,
             ModifierType::CannotTrash,
             ModifierType::CannotBlock,
+            ModifierType::CannotBeBlocked,
             ModifierType::CannotCounter,
             ModifierType::DrawBlock,
             ModifierType::MemoryBlock,

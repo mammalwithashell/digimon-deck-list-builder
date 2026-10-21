@@ -6014,6 +6014,15 @@ Filed from the second re-review of the Venusmon owner-security fix (p4-venusmon-
 - **Witness:** `cards_behavioral::bt26::bt26_097::bt26_097_main_trashes_the_cards_under_the_placed_tamer` (RED before, GREEN after); `token_source_destination` still green.
 - **Blocks training:** no (resolved).
 
+### No attacker-side "can't be blocked" restriction  [G-ENGINE-CANNOT-BE-BLOCKED] — RESOLVED (2026-10-21, EX13 lane c)
+
+- **Card reached:** EX2-068 High-Speed Plug-In D ("[Main] For the turn, 1 of your Digimon gains <Jamming> and can't be blocked by your opponent's Digimon"). Same primitive is needed by the unauthored BT1-034 / BT2-029 ("can't be blocked by your opponent's Digimon with no digivolution cards"), BT3-074, BT6-028, BT7-087, BT9-023, BT11-106, BT14-020, BT16-054, EX1-019.
+- **Defect:** the engine only had the defender-side `ModifierType::CannotBlock` (the carrier can't declare a block). Nothing stopped a Blocker from blocking a given ATTACKER, so "this Digimon can't be blocked" was inexpressible (approximating it with `CannotBlock` on every opponent Digimon would miss Blockers played after the effect).
+- **Fix:** new `ModifierType::CannotBeBlocked` (appended to the enum to keep existing IDs; DSL modifier string `CannotBeBlocked`, serialization name `CannotBeBlocked`, frontend label). `Game::try_enter_block` returns early (no block window) when the attacker carries it — before the candidate scan, so a <Collision>-forced window does not open either. DCGO `GainCanNotBeBlocked` / `CanNotBeBlockedClass` with `defenderCondition: null`.
+- **Not covered:** the conditional "can't be blocked by your opponent's Digimon with no digivolution cards" (BT1-034 / BT2-029) needs a blocker-side predicate on the modifier (DCGO `defenderCondition`); `CannotBeBlocked` is unconditional. Add a payload when those cards are authored.
+- **Witness:** `combat -- block_interrupt::blocker_window_skipped_when_attacker_cannot_be_blocked`, `block_interrupt::cannot_be_blocked_is_attacker_side_only`; `cards_behavioral -- ex2_068_chosen_digimon_cannot_be_blocked`, `ex2_068_unchosen_digimon_can_still_be_blocked`.
+- **Blocks training:** no (resolved).
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.

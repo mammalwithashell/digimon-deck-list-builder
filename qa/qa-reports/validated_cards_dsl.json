@@ -14853,6 +14853,25 @@
         "inherited-when-attacking-opt"
       ],
       "notes": "TDD vs DCGO BT26_064.cs (BT26-065 Falcomon idiom). Alt digivolve Lv.2 [TS] cost 0 (behavioural +/-); [On Play] reveal 3, two mandatory ordered buckets ([Fallen Angel]/[Undead]/[Wizard]/[Demon Lord] exact traits, then [TS]), no duplicate card, rest to bottom; inherited [When Attacking][OPT] draw 1 then mandatory trash 1 (lockout + next-turn reset)."
+    },
+    "EX2-068": {
+      "card_name": "High-Speed Plug-In D",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c2 — Three Musketeers / Beelstarmon (3M)",
+      "yaml_path": "code/digimon-engine/cards/ex2/EX2-068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex2/ex2_068.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "select-own-permanent",
+        "grant-keyword-eot",
+        "attacker-cannot-be-blocked",
+        "security-draw-add-self"
+      ],
+      "notes": "TDD vs DCGO EX2_068.cs. Tamer-gated color bypass (+/-); [Main] mandatory pick of 1 own Digimon -> <Jamming> + new CannotBeBlocked modifier for the turn (G-ENGINE-CANNOT-BE-BLOCKED / G-DSL-CANNOT-BE-BLOCKED-MODIFIER, substrate widened this commit); block window suppressed only for the pick; Jamming survives a bigger Security Digimon; expiry at end of turn; [Security] draw 1 then add this card to hand."
     }
   }
 }

@@ -79,6 +79,7 @@ mod ex10;
 mod ex11;
 mod ex12;
 mod ex13;
+mod ex2;
 mod ex3;
 mod ex4;
 mod ex5;

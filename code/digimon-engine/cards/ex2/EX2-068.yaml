@@ -1,0 +1,70 @@
+# EX2-068 High-Speed Plug-In D — Option, Blue, Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/EX2-068.md):
+#   While you have a Tamer in play, you may use this card without meeting its
+#   color requirements.
+#   [Main] For the turn, 1 of your Digimon gains <Jamming> (This Digimon can't
+#   be deleted in battles against Security Digimon) and can't be blocked by
+#   your opponent's Digimon.
+#   Security Effect: [Security] <Draw 1>. (Draw 1 card from your deck.) Then,
+#   add this card to your hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX2/Blue/EX2_068.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Clause 0 — `EffectTiming.None` IgnoreColorConditionClass; CanUseCondition =
+#   `card.Owner.GetBattleAreaPermanents().Count(IsTamer) >= 1`; CardCondition
+#   = this card only. → card-level `use_requirement` over an own battle-area
+#   Tamer (BT21-091 idiom).
+# Clause 1 — `EffectTiming.OptionSkill` ([Main]). If you have a Digimon:
+#   SelectPermanentEffect(maxCount 1, canNoSelect: false) over your Digimon →
+#   GainJamming(UntilEachTurnEnd) + GainCanNotBeBlocked(defenderCondition:
+#   null, UntilEachTurnEnd). → mandatory `select_own_permanent` (the engine's
+#   existential guard skips it with no Digimon, matching HasMatchCondition) +
+#   `grant_keyword Jamming` + `add_modifier CannotBeBlocked`, both
+#   `expiry: end_of_turn`. `CannotBeBlocked` is the attacker-side block
+#   immunity added for this card (G-ENGINE-CANNOT-BE-BLOCKED).
+# Clause 2 — `EffectTiming.SecuritySkill`: DrawClass(1) then
+#   AddThisCardToHand → on_security: draw 1 + `add_this_option_to_hand`.
+
+card: EX2-068
+name: "High-Speed Plug-In D"
+kind: option
+color: [blue]
+cost: 2
+
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: tamer
+
+effects:
+  # ─── [Main] 1 of your Digimon: <Jamming> + can't be blocked, for the turn ──
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] For the turn, 1 of your Digimon gains <Jamming> and can't be blocked by your opponent's Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            kind: digimon
+          prompt: "1 of your Digimon gains <Jamming> and can't be blocked for the turn"
+      - grant_keyword:
+          target: tgt
+          keyword: Jamming
+          expiry: end_of_turn
+      - add_modifier:
+          target: tgt
+          modifier: CannotBeBlocked
+          value: 1
+          expiry: end_of_turn
+
+  # ─── [Security] <Draw 1>. Then, add this card to your hand ─────────────────
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] <Draw 1>. Then, add this card to your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - add_this_option_to_hand: {}

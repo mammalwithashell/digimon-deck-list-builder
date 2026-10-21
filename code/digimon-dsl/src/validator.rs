@@ -2996,6 +2996,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotReturnToHand",
     "CannotTrash",
     "CannotBlock",
+    "CannotBeBlocked",
     "CannotCounter",
     "DrawBlock",
     "MemoryBlock",

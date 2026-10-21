@@ -9123,3 +9123,10 @@ BT25-097 Guardian Palace: "{Security} [All Turns] All of your yellow or purple [
 
 - **Resolution:** `"Scapegoat"` added to `KNOWN_KEYWORD_KEYS` (digimon-dsl validator) and `lookup_keyword("Scapegoat") => Keyword::Scapegoat` (engine `dsl_cards/modifier_map.rs`). No pack-format change (string-keyed). Tests: `dsl -- keyword_map_covers_aura_grants_used_by_examples` (mapping), `cards_behavioral -- bt25_097` (aura grant only while a [Junomon] is present; the granted keyword offers the §16-32 substitution and the other Digimon is deleted instead; no offer without [Junomon]).
 - **Not covered:** EX11-022 / EX11-023 keep their hand-authored replacement bodies (behaviourally equivalent; could migrate to `grant_keyword: Scapegoat`).
+
+### No "can't be blocked" modifier string [G-DSL-CANNOT-BE-BLOCKED-MODIFIER] — RESOLVED (2026-10-21, EX13 lane c)
+
+EX2-068 High-Speed Plug-In D: "For the turn, 1 of your Digimon gains <Jamming> and can't be blocked by your opponent's Digimon." The DSL had `CannotBlock` (defender-side) but no attacker-side restriction.
+
+- **Resolution:** `"CannotBeBlocked"` added to `KNOWN_MODIFIER_KEYS` (digimon-dsl validator) and `lookup_modifier_type("CannotBeBlocked") => ModifierType::CannotBeBlocked` (engine `dsl_cards/modifier_map.rs`); engine primitive in `docs/RUST_ENGINE_GAPS.md` [G-ENGINE-CANNOT-BE-BLOCKED]. Authoring: `add_modifier { target: <binding>, modifier: CannotBeBlocked, value: 1, expiry: end_of_turn }`. No pack-format change (string-keyed). Tests: `cards_behavioral -- ex2_068`.
+- **Not covered:** the blocker-qualified form ("by your opponent's Digimon with no digivolution cards", BT1-034 / BT2-029) — needs a predicate payload.
