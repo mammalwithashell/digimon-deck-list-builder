@@ -14952,6 +14952,22 @@
         "H1"
       ],
       "notes": "<Digisorption -3> printed keyword only (grant_keyword value 3); §16-10-1..5 behaviour (optional, before payment, may suspend the digivolving Digimon, only own unsuspended Digimon, not on a play) tested through the real digivolve action. DCGO oracle unmeasured."
+    },
+    "BT13-049": {
+      "card_name": "Lalamon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_049.rs",
+      "test_count": 14,
+      "patterns": [
+        "A1",
+        "D2"
+      ],
+      "notes": "[On Play] reveal 3, two mandatory buckets (Digimon with Vegetation/Plant/Fairy trait_contains; name_is Yoshino Fujieda) + no_duplicate_cards, rest to bottom in a chosen order. ST24-14 now authors its <Rule> name alias (also_treated_as Yoshino Fujieda / Keenan Crier) so it fills the Yoshino bucket. Inherited [Your Turn][OPT] digivolve -1 with a green Tamer. DCGO oracle unmeasured."
     }
   }
 }
