@@ -46,6 +46,22 @@ effects:
       - gain_memory: 3
 "#;
 
+/// Test-only Tamer: "when a card is added to your security stack, gain 1
+/// memory" (Q1270/Q1271 probe).
+const SEC_ADD_YAML: &str = r#"
+card: T-SECADD
+name: Security Add Probe
+kind: tamer
+color: [yellow]
+cost: 2
+traits: []
+effects:
+  - when: on_added_to_security
+    summary: "When a card is added to your security stack, gain 1 memory"
+    process:
+      - gain_memory: 1
+"#;
+
 fn digimon(id: &str, level: u8) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
@@ -72,6 +88,8 @@ fn setup() -> DebugRunner {
         .expect("BT4-105 YAML")
         .from_dsl_yaml(ONDEL_YAML)
         .expect("probe")
+        .from_dsl_yaml(SEC_ADD_YAML)
+        .expect("security-add probe")
         .add_card(make_test_card("FILL", "Filler"))
         .add_card(make_test_card("DECKTOP", "Deck Top"))
         .add_card(digimon("ROOKIE", 3))
@@ -244,6 +262,58 @@ fn bt4_105_main_offers_nothing_when_you_cannot_add_security() {
     assert!(r.game.pending_selection.is_none(), "no placeable Digimon → no pick");
     assert_eq!(field_ids(&r, 0), vec!["ROOKIE".to_string()]);
     assert_eq!(security_ids(&r, 0).len(), 2);
+}
+
+#[test]
+fn bt4_105_security_add_probe_control_fires_for_a_real_digimon() {
+    // Positive control for the token test below: a real Digimon placed in
+    // security IS a card added to the security stack.
+    let mut r = setup();
+    r.place_on_field(0, "T-SECADD", Some(0));
+    let mine = r.place_on_field(0, "ROOKIE", Some(0));
+    let mem = r.memory();
+    use_retreat(&mut r);
+    r.execute_action(0, own_action(mine)).unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(security_ids(&r, 0).len(), 3);
+    assert_eq!(r.memory(), mem - 1 + 1, "use cost 1, +1 from the add-to-security probe");
+}
+
+#[test]
+fn bt4_105_a_chosen_token_is_removed_instead_of_placed_in_security() {
+    // Q1271 / CR 4.3 §4-21-5 + §15-1-10: a token that would be placed in the
+    // security stack is removed from the game instead; no card is added to
+    // the security stack, so "when a card is added to the security stack"
+    // effects do not trigger.
+    let mut r = setup();
+    r.place_on_field(0, "T-SECADD", Some(0));
+    let token = r.place_on_field(0, "ROOKIE", Some(0));
+    r.game.players[0].battle_area[token.index as usize]
+        .card_sources
+        .last_mut()
+        .unwrap()
+        .is_token = true;
+    let mem = r.memory();
+    let trash_before = r.game.players[0].trash.len();
+    let hand_before = r.game.players[0].hand.len();
+    use_retreat(&mut r);
+    let v = r.pending_selection_view().expect("Digimon pick");
+    assert!(v.valid_action_ids.contains(&own_action(token)), "a token Digimon may be chosen");
+    r.execute_action(0, own_action(token)).unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(field_ids(&r, 0), vec!["T-SECADD".to_string()], "the token left the field");
+    assert_eq!(security_ids(&r, 0).len(), 2, "security count unchanged");
+    assert!(
+        r.game.players[0].security.iter().all(|c| !c.is_token),
+        "the token is not in the security stack"
+    );
+    assert_eq!(
+        r.game.players[0].trash.len(),
+        trash_before + 1,
+        "only the used Option reaches the trash — the token is removed from the game"
+    );
+    assert_eq!(r.game.players[0].hand.len(), hand_before);
+    assert_eq!(r.memory(), mem - 1, "no add-to-security trigger");
 }
 
 // ─── Clause 2: [Security] <Recovery +1 (Deck)> ───────────────────────────────
