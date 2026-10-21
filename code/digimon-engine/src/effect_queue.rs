@@ -3885,9 +3885,6 @@ impl Game {
         if qe.bypass_once_per_turn || qe.granted_effect_id.is_some() {
             return false;
         }
-        let Some(perm_handle) = qe.source_permanent else {
-            return false;
-        };
         let Some(effects) = self.effects_for_queued(qe) else {
             return false;
         };
@@ -3898,6 +3895,13 @@ impl Game {
             return false;
         }
         let opt_key = self.queued_opt_key(effect, qe);
+        if let Some(owner) = self.security_opt_owner(qe, effect) {
+            return self.player(owner).security_activation_count(qe.source_card, opt_key)
+                >= effect.max_per_turn;
+        }
+        let Some(perm_handle) = qe.source_permanent else {
+            return false;
+        };
         matches!(
             self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key),
             Some(count) if count >= effect.max_per_turn
@@ -4597,6 +4601,13 @@ impl Game {
                 if activation_count >= effect.max_per_turn {
                     return;
                 }
+            } else if let Some(owner) = self.security_opt_owner(&qe, effect) {
+                let opt_key = self.queued_opt_key(effect, &qe);
+                if self.player(owner).security_activation_count(qe.source_card, opt_key)
+                    >= effect.max_per_turn
+                {
+                    return;
+                }
             }
         }
 
@@ -4737,6 +4748,9 @@ impl Game {
                             qe.source_card,
                             opt_key,
                         );
+                    } else if self.security_card_holder(&qe).is_some() {
+                        self.player_mut(qe.controller)
+                            .record_security_activation(qe.source_card, opt_key);
                     }
                 }
                 return;
@@ -4828,6 +4842,17 @@ impl Game {
                     return;
                 }
                 self.record_source_permanent_activation(perm_handle, qe.source_card, opt_key);
+            } else if let Some(owner) = self.security_opt_owner(qe, effect) {
+                // A {Security} effect's card is not on a permanent: its
+                // [X Per Turn] count is keyed by the security card
+                // (G-ENGINE-SECURITY-ZONE-OPT-UNTRACKED).
+                if self.player(owner).security_activation_count(qe.source_card, opt_key)
+                    >= effect.max_per_turn
+                {
+                    return;
+                }
+                self.player_mut(owner)
+                    .record_security_activation(qe.source_card, opt_key);
             }
         }
 
@@ -5172,6 +5197,46 @@ impl Game {
     /// `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
     fn opt_slot_key(effect: &crate::effect::Effect, effect_slot: u8) -> u8 {
         effect.shared_opt_group.unwrap_or(effect_slot)
+    }
+
+    /// The controller whose security stack holds `qe`'s source card, if it is
+    /// there.
+    fn security_card_holder(&self, qe: &QueuedEffect) -> Option<PlayerId> {
+        self.players
+            .get(qe.controller as usize)
+            .is_some_and(|p| p.security.iter().any(|c| c.handle() == qe.source_card))
+            .then_some(qe.controller)
+    }
+
+    /// The player whose security stack holds the card of a `{Security}`
+    /// (security-zone) entry, when that entry's [X Per Turn] is counted on the
+    /// security card rather than a permanent: no source permanent, a
+    /// security-zone effect, and the card still in its controller's security
+    /// stack. G-ENGINE-SECURITY-ZONE-OPT-UNTRACKED.
+    fn security_opt_owner(
+        &self,
+        qe: &QueuedEffect,
+        effect: &crate::effect::Effect,
+    ) -> Option<PlayerId> {
+        if qe.source_permanent.is_some() || !effect.security {
+            return None;
+        }
+        self.security_card_holder(qe)
+    }
+
+    /// Refund one use of a `{Security}` effect counted on its security card
+    /// (the `refund_opt` step for a clause with no source permanent).
+    pub(crate) fn unrecord_security_card_activation(
+        &mut self,
+        player: PlayerId,
+        card: CardHandle,
+        key: u8,
+    ) {
+        if let Some(p) = self.players.get_mut(player as usize) {
+            if p.security.iter().any(|c| c.handle() == card) {
+                p.unrecord_security_activation(card, key);
+            }
+        }
     }
 
     /// [`Game::opt_slot_key`] for a queued entry, with a `<Succession>`-adopted
@@ -5676,6 +5741,13 @@ impl Game {
                     Some(count) if count >= effect.max_per_turn => return false,
                     None => return false,
                     _ => {}
+                }
+            } else if let Some(owner) = self.security_opt_owner(&qe, effect) {
+                let opt_key = self.queued_opt_key(effect, &qe);
+                if self.player(owner).security_activation_count(qe.source_card, opt_key)
+                    >= effect.max_per_turn
+                {
+                    return false;
                 }
             }
         }

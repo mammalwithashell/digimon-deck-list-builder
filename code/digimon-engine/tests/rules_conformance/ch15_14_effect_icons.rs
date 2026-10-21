@@ -20,6 +20,7 @@ use digimon_engine::action::space::PASS;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::EffectTiming;
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 use digimon_engine::trigger_context::EventCause;
 
@@ -102,6 +103,10 @@ fn declined_you_may_effect_keeps_its_once_per_turn() {
 #[test]
 fn activated_you_may_effect_spends_its_once_per_turn() {
     cite!(
+        "15-14-1-2",
+        "98e456796774965369540240091e980a3f1dfb06729aa1c2c7a05f0e1c2ec170"
+    );
+    cite!(
         "15-14-1-4",
         "0ec475393b7da51a023fdc14b305d8c33160c89fce5d469544b9040c676a117f"
     );
@@ -183,4 +188,87 @@ fn then_may_effect_with_one_half_executed_spends_its_once_per_turn() {
         r.pending_selection().is_none(),
         "a half executed: the [Once Per Turn] is spent"
     );
+}
+
+/// P0: two `LV5_PLAIN` attackers (they survive their security battles, so the
+/// second handle stays valid) and a face-up `SECZONE_MAY_DEL` as its only
+/// security card; P1: two `VANILLA_LV3` and three security cards.
+fn security_zone_board() -> (DebugRunner, PermanentHandle, PermanentHandle) {
+    let mut r = fixtures::builder(&[fixtures::ch15_14_cards()])
+        .security(0, &["SECZONE_MAY_DEL"])
+        .security(1, &["VANILLA_LV3"; 3])
+        .deck(0, &["VANILLA_LV3"; 6])
+        .deck(1, &["VANILLA_LV3"; 6])
+        .memory(5)
+        .start();
+    let idx = r.game.players[0].security[0].card_index;
+    r.game.players[0].face_up_security.insert(idx);
+    let a1 = r.place_on_field(0, "LV5_PLAIN", Some(0));
+    let a2 = r.place_on_field(0, "LV5_PLAIN", Some(0));
+    r.place_on_field(1, "VANILLA_LV3", Some(0));
+    r.place_on_field(1, "VANILLA_LV3", Some(0));
+    (r, a1, a2)
+}
+
+/// §15-14-1-1 / §15-14-1-2 apply to a `{Security}` effect too: its card is not
+/// on a permanent, but its [Once Per Turn] is still counted, so after it
+/// activated once the next attack the same turn does not offer it.
+#[test]
+fn security_zone_once_per_turn_effect_is_used_once_per_turn() {
+    cite!(
+        "15-14-1-2",
+        "98e456796774965369540240091e980a3f1dfb06729aa1c2c7a05f0e1c2ec170"
+    );
+    let (mut r, a1, a2) = security_zone_board();
+    r.attack_player(a1, 1, false);
+    accept(&mut r);
+    settle(&mut r);
+    assert_eq!(r.game.players[1].battle_area.len(), 1, "the first activation deleted");
+
+    assert_eq!(r.game.players[0].battle_area.len(), 2, "both attackers remain");
+    r.attack_player(a2, 1, false);
+    assert!(
+        r.game.players[0].battle_area[a2.index as usize].is_suspended,
+        "the second attack was declared"
+    );
+    assert!(
+        r.pending_selection().is_none(),
+        "the {{Security}} [Once Per Turn] effect is not offered a second time: {:?}",
+        r.pending_selection()
+    );
+}
+
+/// Declining the `{Security}` "you may" keeps the use (§15-14-1-4; Q1818),
+/// so the next attack the same turn offers it again.
+#[test]
+fn declined_security_zone_you_may_effect_keeps_its_once_per_turn() {
+    cite!(
+        "15-14-1-4",
+        "0ec475393b7da51a023fdc14b305d8c33160c89fce5d469544b9040c676a117f"
+    );
+    let (mut r, a1, a2) = security_zone_board();
+    r.attack_player(a1, 1, false);
+    pass(&mut r);
+    settle(&mut r);
+    assert_eq!(r.game.players[1].battle_area.len(), 2);
+
+    r.attack_player(a2, 1, false);
+    assert!(
+        r.pending_selection().is_some(),
+        "the declined {{Security}} effect is offered again the same turn"
+    );
+}
+
+/// Decline whatever optional prompt is left (the attack's own windows).
+fn settle(r: &mut DebugRunner) {
+    for _ in 0..8 {
+        let Some(sel) = r.pending_selection() else { return };
+        let player = sel.selecting_player;
+        if sel.is_optional {
+            r.execute_action(player, PASS).expect("pass");
+        } else {
+            let act = sel.valid_action_ids[0];
+            r.execute_action(player, act).expect("first pick");
+        }
+    }
 }

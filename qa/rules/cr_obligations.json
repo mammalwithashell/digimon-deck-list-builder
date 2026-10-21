@@ -2674,13 +2674,16 @@
       "blocks_training": false,
       "chapter": 15,
       "fingerprint": "98e456796774965369540240091e980a3f1dfb06729aa1c2c7a05f0e1c2ec170",
-      "gap_id": null,
+      "gap_id": "G-ENGINE-SECURITY-ZONE-OPT-UNTRACKED",
       "mechanisms": [
         "effects-and-ordering"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "An [X Per Turn] effect used X times does not activate again that turn, for a permanent's effect and for a {Security} effect counted on its security card (Player::security_effect_activations). Proof limit: X = 1; triggered effects.",
+      "status": "proven",
+      "tests": [
+        "ch15_14_effect_icons::activated_you_may_effect_spends_its_once_per_turn",
+        "ch15_14_effect_icons::security_zone_once_per_turn_effect_is_used_once_per_turn"
+      ],
       "text": "If an [X Per Turn] effect is used X number of times during 1 turn, it won't trigger again during that turn."
     },
     "15-14-1-3": {
@@ -2711,7 +2714,8 @@
         "ch15_14_effect_icons::activated_you_may_effect_spends_its_once_per_turn",
         "ch15_14_effect_icons::declined_optional_cost_of_an_activated_effect_spends_its_once_per_turn",
         "ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn",
-        "ch15_14_effect_icons::then_may_effect_with_one_half_executed_spends_its_once_per_turn"
+        "ch15_14_effect_icons::then_may_effect_with_one_half_executed_spends_its_once_per_turn",
+        "ch15_14_effect_icons::declined_security_zone_you_may_effect_keeps_its_once_per_turn"
       ],
       "text": "When a player chooses to activate an [X Per Turn] effect, it will count toward 1 use of [X Per Turn], even if the effect's processing can't be executed."
     },
@@ -15353,9 +15357,9 @@
         "total": 10
       },
       "15": {
-        "gap": 133,
+        "gap": 132,
         "not_testable": 66,
-        "proven": 45,
+        "proven": 46,
         "total": 244
       },
       "16": {
@@ -15425,15 +15429,15 @@
         "total": 13
       }
     },
-    "gap": 588,
+    "gap": 587,
     "mechanics": {
       "gap_blocking": 0,
-      "gap_nonblocking": 317,
+      "gap_nonblocking": 316,
       "not_testable": 152,
-      "proven": 246
+      "proven": 247
     },
     "not-testable": 246,
-    "proven": 285
+    "proven": 286
   },
   "version": 1
 }
