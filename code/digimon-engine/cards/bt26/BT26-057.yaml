@@ -1,0 +1,152 @@
+# BT26-057 Bearcatmon // Penetrate Blow — DUAL (Digimon Lv.5 Black/Red DP 8000
+#   // Option Black use cost 4). Traits: Beastkin, Glowing Dawn, BEATBREAK.
+#   Form: Ultimate. Attribute: Vaccine.
+# Printed digivolve box: Black Lv.4 / cost 4; Red Lv.4 / cost 4;
+#   [Digivolve] Lv.4 w/[Glowing Dawn] trait: Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-057.md):
+#   Digimon face:
+#   [When Digivolving] By trashing the bottom face-down card from under any of
+#     your Tamers, until your opponent's turn ends, their Digimon effects don't
+#     affect this Digimon, and it gets +3000 DP.
+#   [All Turns] [Once Per Turn] When attack targets change or effects trash
+#     cards from under your Tamers, this Digimon may unsuspend.
+#   Option face (DUAL): <Use Req. ([Glowing Dawn] trait)> [Main]
+#     <De-Digivolve 1> 1 of your opponent's Digimon. Then, give 1 of their
+#     Digimon "[Start of Your Main Phase] This Digimon attacks." until their
+#     turn ends.
+#   DUAL Rule: <Arts Digivolve>.
+#   Official Q&A: the effect can be given, but if the Digimon isn't affected
+#     by effects at the time it would trigger, it won't trigger.
+#   Owner ruling 2026-10-20: "the bottom face-down card" is the LOWEST
+#     face-down card, even with face-up cards below it.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Black/BT26_057.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 4 + TopCard EqualsTraits "Glowing Dawn", cost 3.
+# [When Digivolving] (not optional, skippable; CanActivate = an own Tamer with
+#   a face-down source): canNoSelect:true Tamer pick (declining = not paying)
+#   → TrashDigivolutionCardsFromTopOrBottom(bottom, 1, face-down only) →
+#   UntilOpponentTurnEnd DigimonEffectImmunity (opponent's Digimon effects) +
+#   ChangeDigimonDP +3000 UntilOpponentTurnEnd.
+#   → BT26-031 idiom: optional clause + face_down_sources_under_tamers_gte 1;
+#   trash_bottom_face_down_source_under_tamer (tail only when paid) →
+#   grant_effect_immunity (source_kind digimon, controller opponent) +
+#   add_dp_modifier, both until end of the opponent's turn (ST23-09 idiom).
+# [All Turns][OPT] (OnAttackTargetChanged | OnDigivolutionCardDiscarded,
+#   maxCount 1, optional TRUE, shared hash): any attack target switch, or a
+#   card trashed from under an OWN Tamer (the trash event is an effect's);
+#   CanActivate = CanUnsuspend(this). Body: unsuspend this.
+#   → when [on_attack_target_change, on_digivolution_card_trashed] +
+#   timing_conditions event_host_is_own_tamer (BT26-044 / BT26-076 idiom) +
+#   condition source_is_unsuspended: false (an unsuspended Bearcatmon is not
+#   offered and keeps its [Once Per Turn]) → unsuspend source.
+# Option [Main] (OptionSkill): if an opponent Digimon exists, a mandatory
+#   Degenerate(1) pick, then a mandatory pick of 1 opponent Digimon → grant
+#   UntilOwnerTurnEnd "[Start of Your Main Phase] This Digimon attacks."
+#   (CanActivate re-checks !CanNotBeAffected — the official Q&A; the engine's
+#   granted-clause immunity gate) → SelectAttackEffect (no "don't attack").
+#   → select_opponent_permanent + de_digivolve 1 (stop at level 3);
+#   select_opponent_permanent + grant_triggered_effect start_of_your_main_phase
+#   expiry end_of_opponents_turn body force_attack (BT21-073 / BT25-054 idiom).
+# Use Req ([Glowing Dawn]) + <Arts Digivolve>: BT26-031 idiom.
+
+card: BT26-057
+name: "Bearcatmon"
+kind: dual
+
+level: 5
+color: [black, red]
+dp: 8000
+traits: [Beastkin, Glowing Dawn, BEATBREAK]
+form: Ultimate
+attribute: Vaccine
+
+dual:
+  digimon:
+    level: 5
+    dp: 8000
+    colors: [black, red]
+    traits: [Beastkin, Glowing Dawn, BEATBREAK]
+    effect_text: "[When Digivolving] By trashing the bottom face-down card from under any of your Tamers, until your opponent's turn ends, their Digimon effects don't affect this Digimon, and it gets +3000 DP. [All Turns] [Once Per Turn] When attack targets change or effects trash cards from under your Tamers, this Digimon may unsuspend."
+    inherited_text: ""
+  option:
+    use_cost: 4
+    colors: [black]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "Glowing Dawn"
+    effect_text: "<Use Req. ([Glowing Dawn] trait)> [Main] <De-Digivolve 1> 1 of your opponent's Digimon. Then, give 1 of their Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends. <Arts Digivolve>"
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: "Glowing Dawn"
+    cost: 3
+
+effects:
+  # ─── [When Digivolving] by trashing a Tamer's bottom face-down card, immune
+  #     to the opponent's Digimon effects + +3000 DP until their turn ends ─────
+  - when: when_digivolving
+    optional: true
+    condition: { face_down_sources_under_tamers_gte: 1 }
+    summary: "[When Digivolving] By trashing the bottom face-down card from under any of your Tamers, until your opponent's turn ends, their Digimon effects don't affect this Digimon, and it gets +3000 DP"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - grant_effect_immunity:
+          target: source
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── [All Turns][OPT] attack targets change OR effects trash cards from
+  #     under your Tamers → this Digimon may unsuspend ─────────────────────────
+  - when: [on_attack_target_change, on_digivolution_card_trashed]
+    optional: true
+    once_per_turn: true
+    active_when: { all_turns: true }
+    timing_conditions:
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_is_own_tamer: true
+    condition: { source_is_unsuspended: false }
+    summary: "[All Turns][Once Per Turn] When attack targets change or effects trash cards from under your Tamers, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }
+
+  # ─── Option face [Main] <De-Digivolve 1> 1 opp Digimon; then give 1 of their
+  #     Digimon "[Start of Your Main Phase] This Digimon attacks." ────────────
+  - when: main_from_hand
+    summary: "[Main] <De-Digivolve 1> 1 of your opponent's Digimon. Then, give 1 of their Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3
+      - select_opponent_permanent:
+          bind_as: taunt_target
+          filter: { kind: digimon }
+          prompt: "Give 1 of your opponent's Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends"
+      - grant_triggered_effect:
+          target: taunt_target
+          timing: start_of_your_main_phase
+          expiry: end_of_opponents_turn
+          body:
+            - force_attack:
+                attacker: carrier
+                targets: any
+                prompt: "This Digimon attacks"

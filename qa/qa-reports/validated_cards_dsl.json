@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-19",
+  "last_updated": "2026-10-20",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14778,6 +14778,24 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_138.rs",
       "test_count": 6,
       "notes": "Official observation/image reviewed; test-first authoring and independent static review. Focused behavioral tests pass in ulforce-batches-mixed.log. DCGO unmeasured."
+    },
+    "BT26-057": {
+      "card_name": "Bearcatmon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta b1-glowing-dawn-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-057.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_057.rs",
+      "test_count": 20,
+      "patterns": [
+        "D1",
+        "F6",
+        "E2",
+        "F1"
+      ],
+      "notes": "DUAL. Alt-digivolve Lv.4 [Glowing Dawn] cost 3. WD optional cost trash_bottom_face_down_source_under_tamer (lowest face-down card, owner ruling 2026-10-20) -> grant_effect_immunity opp Digimon + +3000 DP until end of opp turn. [All Turns][OPT] on_attack_target_change | on_digivolution_card_trashed (timing_conditions event_host_is_own_tamer) may unsuspend, gated source suspended. Option [Main] De-Digivolve 1 + grant_triggered_effect SOMP force_attack until end of opp turn; Q&A immunity gate honoured. Use Req [Glowing Dawn] + Arts Digivolve. Note: the granted-clause immunity gate attributes a DUAL Option-face grant as a Digimon effect (G-ENGINE-DUAL-OPTION-GRANT-SOURCE-KIND, non-blocking)."
     }
   }
 }
