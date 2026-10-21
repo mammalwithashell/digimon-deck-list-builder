@@ -13833,21 +13833,21 @@
     },
     "LM-057": {
       "card_name": "Wall Training",
-      "validated_date": "2026-10-10",
-      "report": "examon-2026-10-10",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-10-21",
+      "report": "mechanics-gate-task-7-2026-10-21",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-057.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_057.rs",
-      "test_count": 20,
+      "test_count": 24,
       "patterns": [
         "D3",
         "A2",
         "delay-main",
         "effect-digivolve-reduce"
       ],
-      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "notes": "Re-audit 2026-10-21 (mechanics gate Task 7): G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE was RESOLVED 2026-10-10 (qa/dsl-vocab-gaps.md: cloneable effect-cost continuation exposes every distinct payable route, reductions preserved, duplicates collapsed). YAML unchanged and faithful to the card image and DCGO LM_057.cs (DigivolveIntoHandOrTrashCard isHand, payCost, reduceCost 2; canNoSelect host/hand picks). The formerly blocked clause is exercised by real paid placement + later Main <Delay> activation through the mask: synthetic 3/4 routes pay 1/2 (cloned choice), and the archetype's real pair Wingdramon BT20-025 on Coredramon BT20-023 offers exactly two payments (named 3 -> 1, colour 4 -> 2). 24/24 lm_057 tests pass; DCGO oracle unmeasured.",
       "prior_authoring_status": "IMPLEMENTED"
     },
     "LM-058": {
