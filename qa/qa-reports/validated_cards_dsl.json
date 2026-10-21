@@ -1391,19 +1391,19 @@
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
-      "validated_date": "2026-10-10",
-      "report": "examon-2026-10-10",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-10-21",
+      "report": "mechanics-gate-task-7-2026-10-21",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/bt8/BT8-097.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_097.rs",
-      "test_count": 21,
+      "test_count": 34,
       "patterns": [
         "D2",
         "D6"
       ],
-      "notes": "Blocked by G-EFFECT-PLAY-CONTROLLER-PROVENANCE; G-EFFECT-PLAY-BREEDING-FLOODGATE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "notes": "Re-audit 2026-10-21 (mechanics gate Task 7): the cited blockers G-EFFECT-PLAY-CONTROLLER-PROVENANCE / G-EFFECT-PLAY-BREEDING-FLOODGATE were repaired 2026-10-11 (qa/dsl-vocab-gaps.md: effect-play provenance distinguishes the causing controller from the destination player across hand/trash/security/source/token/breeding play; breeding play honours the prohibition). YAML unchanged and faithful to the official text and DCGO BT8_097.cs (CanNotPutFieldClass keyed on EffectSourceCard.Owner == enemy; DestroyPermanentsClass batch). Rulings exercised through real Option use + real opponent plays on their following turn, each with a no-Blaze control arm: Q4663 (my EX5-060 Dragomon still plays the opponent's trash Digimon), Q4664 (opponent's Dragomon cannot make me play mine), Q6238 (opponent's BT20-053 Grademon cannot play Dorumon into breeding), Q1774 (opponent's BT21-015 security self-play is refused and the card goes to trash), plus the Q1773 zero floor and end-of-opponent-turn expiry. 34/34 bt8_097 tests pass; DCGO oracle unmeasured.",
       "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale.",
       "prior_authoring_status": "IMPLEMENTED"
     },
