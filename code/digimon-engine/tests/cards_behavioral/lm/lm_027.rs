@@ -1396,3 +1396,77 @@ fn lm_027_tail_ordinary_alternate_requirement_remains_available() {
         "TAIL-ALT"
     );
 }
+
+// ─────── Task 7 re-audit (2026-10-21): printed BT20 route choice ───────
+//
+// G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE (RESOLVED 2026-10-10) named LM-027's
+// Reduce3 → costs 0/1 case. Real pair from the Examon deck, through the real
+// Option play (paid, not `activate_hand_main`): red Coredramon (BT20-023) into
+// red Wingdramon (BT20-025) — named route 3 and colour routes 4, reduced by 3
+// → the player chooses paying 0 or 1 (duplicate colour routes collapse).
+#[test]
+fn lm_027_real_play_wingdramon_on_coredramon_offers_reduced_0_and_1() {
+    use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(LM_027_YAML)
+        .unwrap()
+        .dsl_card("BT20-023")
+        .expect("Coredramon YAML")
+        .dsl_card("BT20-025")
+        .expect("Wingdramon YAML")
+        .add_card(make_filler("TAIL-FILL"))
+        .memory(10)
+        .hand(0, &["LM-027", "BT20-025"])
+        .deck(0, &["TAIL-FILL"; 10])
+        .deck(1, &["TAIL-FILL"; 10])
+        .start();
+    r.game.enter_main_phase();
+    r.place_on_field(0, "BT20-023", None);
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    assert_eq!(r.memory(), 8, "Red Scramble's printed cost 2 is paid");
+    for kind in [SelectionKind::OwnField, SelectionKind::Hand] {
+        assert_eq!(r.pending_kind(), Some(kind));
+        let v = r.pending_selection_view().unwrap();
+        let pick = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+        assert_eq!(build_action_mask(&r.game, 0)[pick as usize], 1.0);
+        r.execute_action(0, pick).unwrap();
+    }
+    let routes = r
+        .pending_selection_view()
+        .expect("named 3 and colour 4 routes stay a player choice");
+    assert!(!routes.is_optional);
+    assert_eq!(
+        routes
+            .effect_choices
+            .as_ref()
+            .unwrap()
+            .iter()
+            .map(|e| e.label.as_str())
+            .collect::<Vec<_>>(),
+        vec!["Digivolve for cost 0", "Digivolve for cost 1"]
+    );
+    let saved = r.game.clone();
+    let mut memories = Vec::new();
+    for a in routes.valid_action_ids.clone() {
+        r.game = saved.clone();
+        assert_eq!(build_action_mask(&r.game, 0)[a as usize], 1.0);
+        r.execute_action(0, a).unwrap();
+        r.auto_resolve().unwrap();
+        assert!(r.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "BT20-025"
+                && p.stack_size() == 2));
+        assert!(
+            r.game.players[0]
+                .battle_area
+                .iter()
+                .any(|p| p.top_card().card_id(&r.game.card_data) == "LM-027"),
+            "then, Red Scramble is placed in the battle area"
+        );
+        memories.push(r.memory());
+    }
+    memories.sort();
+    assert_eq!(memories, vec![7, 8], "pay 4-3=1 or 3-3=0 after the Option's 2");
+}

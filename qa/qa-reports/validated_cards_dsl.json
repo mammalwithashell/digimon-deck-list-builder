@@ -649,20 +649,20 @@
     },
     "LM-027": {
       "card_name": "Red Scramble",
-      "validated_date": "2026-10-10",
-      "report": "examon-2026-10-10",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-10-21",
+      "report": "mechanics-gate-task-7-2026-10-21",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Examon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-027.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_027.rs",
-      "test_count": 22,
+      "test_count": 32,
       "patterns": [
         "A3",
         "E1",
         "G1-adjacent"
       ],
-      "notes": "Blocked by G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE. No readiness or training promotion; existing YAML retained with documented blocker.",
+      "notes": "Re-audit 2026-10-21 (mechanics gate Task 7): G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE was RESOLVED 2026-10-10; its pool review had blocked LM-027 for the Reduce3 -> costs 0/1 case. YAML unchanged and faithful to the card image and DCGO LM_027.cs (DigivolveIntoHandOrTrashCard reduceCost 3, canNoSelect host; Q4033 requirements kept, Q4037 mandatory return, security add-to-hand after decline). Formerly blocked clause exercised by the real paid Option play through the mask on the deck's real pair Coredramon BT20-023 -> Wingdramon BT20-025: exactly 'cost 0' / 'cost 1' choices (named 3, colour 4, minus 3), cloned per choice, Option then placed; the synthetic tail test covers the same via activate_hand_main. 32/32 lm_027 tests pass; DCGO oracle unmeasured.",
       "prior_authoring_status": "IMPLEMENTED"
     },
     "LM-055": {
