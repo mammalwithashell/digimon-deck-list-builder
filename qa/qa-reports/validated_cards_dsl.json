@@ -14883,7 +14883,7 @@
       "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
       "yaml_path": "code/digimon-engine/cards/bt14/BT14-044.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_044.rs",
-      "test_count": 17,
+      "test_count": 18,
       "patterns": [
         "B1",
         "D2"
@@ -14931,7 +14931,7 @@
       "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
       "yaml_path": "code/digimon-engine/cards/p/P-166.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_166.rs",
-      "test_count": 14,
+      "test_count": 16,
       "patterns": [
         "F1",
         "D2"

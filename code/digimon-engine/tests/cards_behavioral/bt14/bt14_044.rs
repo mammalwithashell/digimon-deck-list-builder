@@ -103,6 +103,7 @@ fn builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
         .add_card(tamer("G-TAMER", CardColor::Green))
         .add_card(tamer("R-TAMER", CardColor::Red))
         .add_card(digimon("TOP-G4", CardColor::Green, 4))
+        .add_card(evo_target("G-LV4", 4))
         .add_card(evo_target("G-LV5", 5))
         .add_card(evo_target("G-LV6", 6))
         .add_card(make_test_card("FILL", "Filler"))
@@ -403,6 +404,16 @@ fn bt14_044_inherited_does_not_reduce_another_permanents_digivolve() {
     r.place_stack(0, &[CARD_ID, "TOP-G4"]);
     let other = r.place_on_field(0, "TOP-G4", Some(0));
     assert_eq!(digivolve(&mut r, other, "G-LV5"), 3, "only THIS Digimon");
+}
+
+/// Inherited text is active only from the digivolution cards: with Palmon
+/// itself the top card, its own digivolution pays the full cost.
+#[test]
+fn bt14_044_inherited_inactive_while_palmon_is_the_top_card() {
+    let mut r = inh_runner();
+    r.place_on_field(0, "G-TAMER", Some(0));
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    assert_eq!(digivolve(&mut r, me, "G-LV4"), 3, "inherited, not top-card text");
 }
 
 #[test]

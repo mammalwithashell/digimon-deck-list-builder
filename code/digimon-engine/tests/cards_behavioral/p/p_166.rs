@@ -90,6 +90,21 @@ fn runner() -> DebugRunner {
             c.evo_costs[0].memory_cost = 9;
             c
         })
+        .add_card({
+            // [Avian], but digivolves only from a green Lv.5: Galemon (Lv.4)
+            // does not meet its digivolution requirements.
+            let mut c = lv5("AVIAN6", &["Avian"]);
+            c.level = Some(6);
+            c.evo_costs[0].level = 5;
+            c
+        })
+        .add_card({
+            let mut c = make_test_card("TAMER", "TAMER");
+            c.card_kind = CardKind::Tamer;
+            c.colors = vec![CardColor::Green];
+            c.play_cost = 2;
+            c
+        })
         .add_card(digimon("G-LV3", CardColor::Green, 3, &["Beast"]))
         .add_card(digimon("ALLY", CardColor::Blue, 3, &["Beast"]))
         .add_card(digimon("OPP", CardColor::Red, 4, &["Dragon"]))
@@ -276,6 +291,39 @@ fn p_166_offers_only_avian_or_bird_trait_digimon() {
     assert!(v.valid_action_ids.contains(&(PLAY_HAND_START + hand_idx(&r, "AVIAN5"))));
     assert!(v.valid_action_ids.contains(&(PLAY_HAND_START + hand_idx(&r, "BIRDDRAGON5"))));
     assert!(!v.valid_action_ids.contains(&(PLAY_HAND_START + hand_idx(&r, "BEAST5"))));
+}
+
+/// "suspend 1 Digimon": a Tamer is not offered (DCGO: IsDigimon); an
+/// unsuspended Digimon on either side is.
+#[test]
+fn p_166_suspend_pick_does_not_offer_a_tamer() {
+    let mut r = runner();
+    let t = r.place_on_field(0, "TAMER", Some(0));
+    let ally = r.place_on_field(0, "ALLY", Some(0));
+    let o = r.place_on_field(1, "OPP", Some(0));
+    play_galemon(&mut r);
+    let v = r.pending_selection_view().expect("'You may suspend 1 Digimon'");
+    assert!(v.valid_action_ids.contains(&any(ally)), "{:?}", v.valid_action_ids);
+    assert!(v.valid_action_ids.contains(&any(o)), "{:?}", v.valid_action_ids);
+    assert!(!v.valid_action_ids.contains(&any(t)), "Tamer offered: {:?}", v.valid_action_ids);
+}
+
+/// "may digivolve into" is a normal digivolution: an [Avian] card whose
+/// digivolution requirements Galemon does not meet is not offered.
+#[test]
+fn p_166_does_not_offer_an_avian_card_whose_requirements_are_unmet() {
+    let mut r = runner();
+    r.add_to_hand(0, "AVIAN5");
+    r.add_to_hand(0, "AVIAN6");
+    play_galemon(&mut r);
+    answer_suspend(&mut r, None);
+    let v = r.pending_selection_view().expect("hand pick");
+    assert!(v.valid_action_ids.contains(&(PLAY_HAND_START + hand_idx(&r, "AVIAN5"))));
+    assert!(
+        !v.valid_action_ids.contains(&(PLAY_HAND_START + hand_idx(&r, "AVIAN6"))),
+        "Lv.6 from Lv.5 offered onto Lv.4 Galemon: {:?}",
+        v.valid_action_ids
+    );
 }
 
 /// "may digivolve": declining leaves Galemon as is.
