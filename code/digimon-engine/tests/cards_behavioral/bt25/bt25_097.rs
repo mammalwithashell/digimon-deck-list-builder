@@ -80,6 +80,13 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(plain_digimon("RED", CardColor::Red))
         .add_card(named("JUNO", "Junomon", CardColor::Purple))
         .add_card(named("NOTJUNO", "Minervamon", CardColor::Purple))
+        .add_card({
+            // A [Junomon]-named Digimon that does NOT itself gain the aura
+            // (red, no [TS]) — isolates the Q6463 probe to one Scapegoat.
+            let mut c = plain_digimon("JUNO-R", CardColor::Red);
+            c.card_name = "Junomon".to_string();
+            c
+        })
         .add_card(plain_digimon("ATK", CardColor::Blue))
         .deck(0, &["FILL"; 6])
         .deck(1, &["FILL"; 6])
@@ -280,6 +287,28 @@ fn bt25_097_main_play_is_optional() {
     assert_eq!(ids(&r, 0, "security"), vec![CARD_ID.to_string()]);
 }
 
+#[test]
+fn bt25_097_main_with_zero_security_just_places_this_card_face_up() {
+    // Q6458: usable with 0 security cards — nothing is added to the hand; the
+    // card is only placed face up in the security stack.
+    let mut r = builder().start();
+    assert!(r.game.players[0].security.is_empty());
+    push_hand(&mut r, 0, "Y-TS");
+    let hand_before = r.game.players[0].hand.len(); // Y-TS only
+    let res = use_palace(&mut r);
+    assert_ne!(res, "Invalid", "usable with 0 security cards");
+    assert_eq!(ids(&r, 0, "security"), vec![CARD_ID.to_string()]);
+    let palace = r.game.players[0].security[0].card_index;
+    assert!(r.game.players[0].face_up_security.contains(&palace), "face up");
+    // The play is still offered; decline it.
+    let v = r.pending_selection_view().expect("reduced-play prompt");
+    assert!(v.is_optional);
+    r.execute_action(0, PASS).unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(r.game.players[0].hand.len(), hand_before, "no card added to the hand");
+    assert!(!ids(&r, 0, "trash").contains(&CARD_ID.to_string()));
+}
+
 // ─── Clause 2: {Security} [All Turns] auras ──────────────────────────────────
 
 #[test]
@@ -342,6 +371,40 @@ fn bt25_097_granted_scapegoat_substitutes_another_digimon_for_the_deletion() {
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"Y-TS".to_string()), "protected");
     assert!(ids(&r, 0, "trash").contains(&"RED".to_string()), "deleted instead");
+}
+
+#[test]
+fn bt25_097_scapegoat_still_resolves_when_the_junomon_is_deleted_in_the_same_batch() {
+    // Q6463: the [Junomon] and a yellow/purple [TS] Digimon would be deleted
+    // at the same time; the granted <Scapegoat> activates and the [Junomon] is
+    // deleted, so <Scapegoat> is lost — but processing that has started is
+    // performed to the end, so the Digimon is still prevented from deletion.
+    let mut r = builder().start();
+    let y = r.place_on_field(0, "Y-TS", Some(0));
+    let juno = r.place_on_field(0, "JUNO-R", Some(0));
+    let _fodder = r.place_on_field(0, "RED", Some(0));
+    seat_in_security(&mut r, true);
+    assert!(r.game.has_keyword(y, Keyword::Scapegoat));
+    let _ = r
+        .game
+        .delete_permanents_batch(vec![y, juno], ReplacementCause::OpponentEffect);
+    let v = r.pending_selection_view().expect("<Scapegoat> offer");
+    assert!(v.is_optional);
+    r.execute_action(0, REPLACEMENT_ACCEPT).unwrap();
+    let red_slot = field_ids(&r, 0).iter().position(|s| s == "RED").unwrap() as u16;
+    let action = digimon_engine::action::space::encode_attack(0, red_slot);
+    let v = r.pending_selection_view().expect("Scapegoat pick");
+    assert!(v.valid_action_ids.contains(&action), "{:?}", v.valid_action_ids);
+    r.execute_action(0, action).unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(field_ids(&r, 0), vec!["Y-TS".to_string()], "protected; the others are gone");
+    let trash = ids(&r, 0, "trash");
+    assert!(trash.contains(&"JUNO-R".to_string()), "the [Junomon] was deleted");
+    assert!(trash.contains(&"RED".to_string()), "deleted instead");
+    assert!(!trash.contains(&"Y-TS".to_string()));
+    let y_now = PermanentHandle { player: 0, index: 0 };
+    r.game.tick_declarative_effects();
+    assert!(!r.game.has_keyword(y_now, Keyword::Scapegoat), "no [Junomon] left → Scapegoat lost");
 }
 
 #[test]
