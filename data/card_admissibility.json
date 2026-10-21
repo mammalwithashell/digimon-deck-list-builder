@@ -17656,11 +17656,9 @@
       ]
     },
     "BT8-097": {
-      "admissible": false,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ]
+      "admissible": true,
+      "reason": null,
+      "reasons": []
     },
     "BT8-098": {
       "admissible": false,
@@ -24943,11 +24941,9 @@
       ]
     },
     "LM-027": {
-      "admissible": false,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ]
+      "admissible": true,
+      "reason": null,
+      "reasons": []
     },
     "LM-028": {
       "admissible": false,
@@ -25113,11 +25109,9 @@
       "reasons": []
     },
     "LM-055": {
-      "admissible": false,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ]
+      "admissible": true,
+      "reason": null,
+      "reasons": []
     },
     "LM-056": {
       "admissible": true,
@@ -25125,18 +25119,14 @@
       "reasons": []
     },
     "LM-057": {
-      "admissible": false,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ]
+      "admissible": true,
+      "reason": null,
+      "reasons": []
     },
     "LM-058": {
-      "admissible": false,
-      "reason": "failed_verdict",
-      "reasons": [
-        "failed_verdict"
-      ]
+      "admissible": true,
+      "reason": null,
+      "reasons": []
     },
     "LM-059": {
       "admissible": true,
@@ -29141,19 +29131,19 @@
     }
   },
   "counts": {
-    "admissible": 1095,
+    "admissible": 1100,
     "diverged_no_quirk": 3,
-    "failed_verdict": 29,
+    "failed_verdict": 24,
     "registered": 4475,
     "unregistered": 0,
     "untested": 3348
   },
-  "generated_at": "2026-10-21T22:15:04+00:00",
+  "generated_at": "2026-10-21T23:06:15+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "7dc53b4e470e01fca15d0c790388afdcf0d87b6097ede6c2b793471706b3b8f7",
     "card_registry_sha256": "17e73d7c894a1f8681b102828f2f1a56c08d9d7ed8d4f683b176e0869c2f2b00",
     "exam_verdicts_sha256": "d0ad7f061c6a0a5e440bab3772cb736b000835f14d13518d5dd8880f40656479",
-    "validated_cards_dsl_sha256": "c1767440f5a5116b4a1025c06b72179aed27dcb94c8e50b9a4484a0d4656e0fc",
+    "validated_cards_dsl_sha256": "0d8e89a53316c4821c4d9db1439648b78d8e3b0243159f08c29103d2ee82eba4",
     "validated_cards_sha256": "04f91bf602871457f7284d95a89dffc9a1db2b86093652e19747a35425f607c6"
   },
   "version": 1
