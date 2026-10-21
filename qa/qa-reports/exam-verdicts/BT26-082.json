@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-08T03:03:04.999855100+00:00",
+  "last_updated": "2026-10-21T15:09:52.979449+00:00",
   "clauses": {
     "BT26-082#effect#0": {
       "clause_id": "BT26-082#effect#0",
@@ -106,6 +106,8 @@
       "reason": "ours contradicts ruling qa:Q7120 (ours vs DCGO: agree); CLEAN (compared 31 of 31 ours / 31 dcgo steps)",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-082-qa-Q7120",
+      "triage": "stale",
+      "citation": "The expect_ruling block asserts on a PRE-decision row (a row is the state BEFORE its step), so it reads the state before the ruling's action; Q7120 is asserted at row 29 (the Ravemon play pick still open). At row 30 BT26-021, the face-up security card whose [Security] effect triggered on the check, is on the field, as Q7120 rules; the line is CLEAN 31/31 vs the recorded sidecar. Re-encode at row 30 and re-exam",
       "recorded_at": "2026-10-07T02:59:01.319447700+00:00"
     },
     "qa:Q7121": {
@@ -121,6 +123,8 @@
       "reason": "ours contradicts ruling qa:Q7121 (ours vs DCGO: agree); CLEAN (compared 21 of 23 ours / 22 dcgo steps (2 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-082-qa-Q7121",
+      "triage": "stale",
+      "citation": "Now matches DCGO's recorded answer and the ruling: re-diffed 2026-10-21 CLEAN (21 of 23 / 22) against the same sidecar, and expect_ruling Q7121 agrees. Re-exam to earn confirmed",
       "recorded_at": "2026-10-08T01:14:53.492471400+00:00"
     },
     "qa:Q7122": {
@@ -136,6 +140,8 @@
       "reason": "ours contradicts ruling qa:Q7122 (ours vs DCGO: agree); CLEAN (compared 48 of 53 ours / 53 dcgo steps (5 sim-only row(s) with no DCGO prompt + 5 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-082-qa-Q7122",
+      "triage": "ours_wrong",
+      "citation": "G-ENGINE-SECURITY-END-OF-OPPONENT-TURN-PLAY-SKIPPED-BY-ENGAGE-ATTACK (docs/RUST_ENGINE_GAPS.md): during P1's end-of-turn <Engage> attack, P0's face-up Ravemon's {Security} [End of Opponent's Turn] 'play this card' does not resolve before the security check; the check takes Ravemon to the trash and the game continues (projection 53: Breeding, P0 security 0). Official Q&A Q7122: Ravemon is played, the attack succeeds against 0 security and P0 loses; end-of-turn effects resolve after the declaration and before the counter timing (owner ruling W3 (a), §11-1-4, Q3869). DCGO's recording ends before the check, so DCGO's outcome is unknown",
       "recorded_at": "2026-10-08T03:03:04.999855100+00:00"
     }
   }

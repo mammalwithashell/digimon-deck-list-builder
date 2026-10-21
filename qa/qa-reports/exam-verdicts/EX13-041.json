@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-11T15:19:58.019791600+00:00",
+  "last_updated": "2026-10-21T15:10:53.139043+00:00",
   "clauses": {
     "EX13-041#effect#0": {
       "clause_id": "EX13-041#effect#0",
@@ -128,6 +128,8 @@
       "reason": "DIVERGED at step 16 (compared 16 of 17 ours / 16 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-EX13-041-interaction-Q7335-ex13-scope-next8-20261011T105413Z-af4cc792f4",
+      "triage": "dcgo_quirk",
+      "citation": "Official Q&A Q7335 ('X in its text' includes effect text): Slayerdramon EX3-024 names [Examon] only in its effect text, so its battle deletion triggers EX13-041's inherited 'trash their top security card'. Ours does (p1.security 4, expect_ruling 6/6), DCGO does not (5) although its HasText scans effect text (CardSource.cs:2149). Re-diffed 2026-10-21; the ruling outranks DCGO. qa/rules/dcgo_quirks.md Q-IN-TEXT-BATTLE-TRIGGER-MISSED",
       "recorded_at": "2026-10-11T10:55:29.535303300+00:00"
     },
     "qa:Q7336": {
@@ -143,6 +145,8 @@
       "reason": "DIVERGED at step 16 (compared 16 of 17 ours / 16 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-EX13-041-interaction-Q7336-ex13-scope-next8-20261011T105413Z-af4cc792f4",
+      "triage": "dcgo_quirk",
+      "citation": "Official Q&A Q7336 ('[AA] or [BB] in its text' = either one): the attacker has [Examon] but not [Dracomon] in its text, and EX13-041's inherited trashes the top security card. Ours does (expect_ruling 6/6), DCGO does not. Same line and same DCGO miss as qa:Q7335. Re-diffed 2026-10-21; the ruling outranks DCGO. qa/rules/dcgo_quirks.md Q-IN-TEXT-BATTLE-TRIGGER-MISSED",
       "recorded_at": "2026-10-11T10:55:54.348258900+00:00"
     },
     "qa:Q7337": {
@@ -186,6 +190,8 @@
       "reason": "DIVERGED at step 16 (compared 16 of 17 ours / 16 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-EX13-041-interaction-Q7339-other-ally-dies-ex13-followup8-20261011T100854Z-46dd552133",
+      "triage": "stale",
+      "citation": "Mis-encoded: the scenario is byte-identical to the qa:Q7335 line (only the id differs). It never deletes the specified Digimon together with the opponent's Digimon, so it does not exercise Q7339's simultaneous-deletion case. Re-author and re-exam",
       "recorded_at": "2026-10-11T10:19:06.981593800+00:00"
     }
   }

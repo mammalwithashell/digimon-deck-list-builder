@@ -30,3 +30,10 @@ Older families documented elsewhere and not repeated here: `docs/DCGO_EXAM.md` "
 - **Exam signature:** every row matches until the end state; DCGO's end state lacks everything the re-activated effect does.
 - **Rows (2026-10-21):** BT24-102#effect#1 (Jupitermon BT24-101's [On Play] re-activated: ours trashes a second security card, DCGO does not).
 - **Other cards:** any DCGO script that reads its choice through `SetUpAfterSelectIndexCoroutine` is affected the same way under the harness. Not audited.
+
+## Q-IN-TEXT-BATTLE-TRIGGER-MISSED: EX13-041's "[Dracomon] or [Examon] in their texts" battle trigger does not fire for an effect-text match
+
+- **DCGO:** Groundramon EX13-041's inherited "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, trash their top security card" (`EX13_041.cs:182-213`, `WinnerRealCondition` on `permanent.TopCard.HasText`) did not trash a security card when Slayerdramon EX3-024 won the battle. EX3-024 names [Examon] only in its effect text. DCGO asked no trigger-order prompt either (only BT20-044's own trigger pended). Its `HasText` does scan effect text (`CardSource.cs:2149`), so the miss is somewhere in the trigger path. Not traced further.
+- **Rules:** official Q&A Q7335 ("X in its text" includes effects) and Q7336 ("[AA] or [BB] in its text" = either). Ours fires and trashes the card, and agrees with both rulings (expect_ruling 6/6).
+- **Exam signature:** one LEAD row at the trailing step: `p1.security` ours 4 / DCGO 5 and `p1.trash` one card longer in ours.
+- **Rows (2026-10-21):** EX13-041 `qa:Q7335`, `qa:Q7336`. (`qa:Q7339` on the same line is `stale`: the line does not exercise that ruling.)
