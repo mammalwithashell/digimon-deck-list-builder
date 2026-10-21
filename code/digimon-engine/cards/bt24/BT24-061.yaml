@@ -1,0 +1,96 @@
+# BT24-061 Vademon — Digimon, Lv.5, Black, DP 7000, Play cost 6.
+# Form: Ultimate. Attribute: Virus. Traits: Alien / Iliad / TS.
+# Standard digivolve (official Bandai DB + card image): Lv.4 Black / cost 3.
+#
+# Printed card text (data/card_bundles/BT24-061.md — official Bandai DB,
+# matches the card image and data/cards.json):
+#
+#   [Digivolve] Lv.4 w/[TS] trait: Cost 3
+#   [On Play] [When Digivolving] Return 1 of your opponent's play cost 3 or
+#     lower Digimon or Tamers to the top of the deck.
+#
+# Inherited Effect:
+#   [When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's
+#     Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Black/BT24_061.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt digivolve — AddSelfDigivolutionRequirementStaticEffect gated on
+#   `TopCard.IsLevel4 && TopCard.HasTSTraits`, cost 3. The standard printed
+#   Lv.4 Black / cost 3 circle is also authored as an alt_path so the route
+#   exists for DSL-loaded fixtures (G-DSL-FIXTURE-EVO-COSTS) — the BT24-063
+#   Locomon "standard + special" idiom; both land at cost 3.
+#
+# Shared [On Play]/[When Digivolving] — SelectPermanentEffect on the
+#   opponent's battle area, `(IsDigimon || IsTamer) && HasPlayCost &&
+#   GetCostItself <= 3`, maxCount 1, canNoSelect: false (mandatory — no "you
+#   may"), Mode.PutLibraryTop. Only the chosen card goes to the top of its
+#   owner's deck; cards stacked under it are trashed (§4-7-8 — the printed
+#   text has no "and all of its digivolution cards", so include_sources is
+#   false).
+#
+# Inherited [When Attacking][Once Per Turn] — SelectPermanent(opponent
+#   Digimon), canNoSelect: false → IDegeneration(selected, 1). <De-Digivolve>
+#   is mandatory and can't trash Lv.3 or lower cards (§16-12-3, §16-12-4).
+
+card: BT24-061
+name: Vademon
+kind: digimon
+level: 5
+form: Ultimate
+color: [black]
+cost: 6
+dp: 7000
+traits: [Alien, Iliad, TS]
+attribute: Virus
+
+alt_paths:
+  # Standard printed Lv.4 Black / cost 3 — kept for DSL-loaded fixtures per
+  # G-DSL-FIXTURE-EVO-COSTS.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - color_is: black
+    cost: 3
+  # Special [Digivolve] Lv.4 w/[TS] trait: Cost 3 (DCGO PermanentCondition:
+  # IsLevel4 && HasTSTraits).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── [On Play] [When Digivolving] return 1 cost<=3 Digimon/Tamer to top ──
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Return 1 of your opponent's play cost 3 or lower Digimon or Tamers to the top of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: to_top
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - play_cost_lte: 3
+          prompt: "Return 1 of your opponent's play cost 3 or lower Digimon or Tamers to the top of the deck"
+      - return_to_deck: { target: to_top, position: top }
+
+  # ─── Inherited [When Attacking][OPT] <De-Digivolve 1> ──────────────────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "Inherited [When Attacking][Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve:
+          target: dedigivolve_target
+          amount: 1
+          stop_at_level: 3

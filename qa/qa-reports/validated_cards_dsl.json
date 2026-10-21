@@ -14968,6 +14968,21 @@
         "D2"
       ],
       "notes": "[On Play] reveal 3, two mandatory buckets (Digimon with Vegetation/Plant/Fairy trait_contains; name_is Yoshino Fujieda) + no_duplicate_cards, rest to bottom in a chosen order. ST24-14 now authors its <Rule> name alias (also_treated_as Yoshino Fujieda / Keenan Crier) so it fills the Yoshino bucket. Inherited [Your Turn][OPT] digivolve -1 with a green Tamer. DCGO oracle unmeasured."
+    },
+    "BT24-061": {
+      "card_name": "Vademon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a3-mervamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Mervamon — EX13 meta slice a3-mervamon",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_061.rs",
+      "test_count": 16,
+      "patterns": [
+        "G4"
+      ],
+      "notes": "Standard Lv.4 black + special Lv.4 [TS] digivolve (both cost 3). [On Play][When Digivolving] mandatory pick of 1 opponent Digimon or Tamer with play cost <=3 (DCGO HasPlayCost && GetCostItself<=3, canNoSelect false) returned to the top of its owner's deck, stacked cards trashed (§4-7-8). Inherited [When Attacking][OPT] mandatory <De-Digivolve 1> on an opponent Digimon (§16-12), driven through real attacks incl. OPT lockout + next-turn reset and top-card-inactive negative. DCGO BT24/Black/BT24_061.cs; no official Q&A. Mutation-checked (position/cost/OPT)."
     }
   }
 }
