@@ -303,8 +303,9 @@ def test_build_artifact_shape_and_counts():
         dsl=_ledger(BT1_004="AUDITED-DRIFT"),
         exams=[_exam(_clause(OTHER, verdict="diverged"))],
     )
-    sources = {"tested_cards_sha256": "t", "validated_cards_dsl_sha256": "d",
-               "validated_cards_sha256": "r", "exam_verdicts_sha256": "e"}
+    sources = {"card_registry_sha256": "g", "behavioral_test_modules_sha256": "t",
+               "validated_cards_dsl_sha256": "d", "validated_cards_sha256": "r",
+               "exam_verdicts_sha256": "e"}
     art = adm.build_artifact(sources=sources, generated_at="2026-10-21T00:00:00+00:00")
     assert art["version"] == 1
     assert art["generated_at"] == "2026-10-21T00:00:00+00:00"
@@ -330,12 +331,35 @@ def test_build_artifact_shape_and_counts():
         assert back.reason(cid) == adm.reason(cid)
 
 
-def _write_inputs(root: Path, *, dsl_status="IMPLEMENTED"):
-    (root / "exam").mkdir(exist_ok=True)
-    (root / "tested.json").write_text(
-        json.dumps({"version": 1, "generated_at": "x", "card_count": 2, "card_ids": [CARD, OTHER]}),
+def _write_behavioral(root: Path, card_ids, *, declare=True):
+    """A fake `cards_behavioral/` tree with one declared module per card."""
+    tests = root / "cards_behavioral"
+    tests.mkdir(exist_ok=True)
+    sets = {}
+    for cid in card_ids:
+        set_dir, file = ca.behavioral_test_key(cid).split("/")
+        sets.setdefault(set_dir, []).append(file[: -len(".rs")])
+    (tests / "main.rs").write_text(
+        "#[global_allocator]\nstatic GLOBAL: X = X;\n\nmod test_cards;\n"
+        + "".join(f"mod {s};\n" for s in sorted(sets)),
         encoding="utf-8",
     )
+    for set_dir, stems in sets.items():
+        (tests / set_dir).mkdir(exist_ok=True)
+        decls = "".join(f"mod {stem};\n" for stem in sorted(stems)) if declare else ""
+        (tests / set_dir / "mod.rs").write_text(decls, encoding="utf-8")
+        for stem in stems:
+            (tests / set_dir / f"{stem}.rs").write_text("// test\n", encoding="utf-8")
+    return tests
+
+
+def _write_inputs(root: Path, *, dsl_status="IMPLEMENTED"):
+    (root / "exam").mkdir(exist_ok=True)
+    (root / "registry.json").write_text(
+        json.dumps({"assignments": {CARD: 1, OTHER: 2, "BT1-003": 3}, "schema_version": 1}),
+        encoding="utf-8",
+    )
+    _write_behavioral(root, [CARD, OTHER])
     (root / "dsl.json").write_text(json.dumps(_ledger(BT1_001=dsl_status)), encoding="utf-8")
     (root / "rust.json").write_text(json.dumps(_ledger()), encoding="utf-8")
     (root / "exam" / f"{OTHER}.json").write_text(
@@ -345,7 +369,8 @@ def _write_inputs(root: Path, *, dsl_status="IMPLEMENTED"):
 
 def _argv(root: Path, *extra):
     return [
-        "--tested", str(root / "tested.json"),
+        "--registry", str(root / "registry.json"),
+        "--behavioral-tests", str(root / "cards_behavioral"),
         "--dsl-ledger", str(root / "dsl.json"),
         "--rust-ledger", str(root / "rust.json"),
         "--exam-verdicts", str(root / "exam"),
@@ -354,21 +379,107 @@ def _argv(root: Path, *extra):
     ]
 
 
-@pytest.fixture
-def fake_registry(monkeypatch):
-    monkeypatch.setattr(ca, "load_registry_ids", lambda: {CARD, OTHER, "BT1-003"})
+SOURCE_KEYS = {
+    "card_registry_sha256",
+    "behavioral_test_modules_sha256",
+    "validated_cards_dsl_sha256",
+    "validated_cards_sha256",
+    "exam_verdicts_sha256",
+}
 
 
-def test_cli_writes_then_check_passes_and_detects_drift(tmp_path, fake_registry, capsys):
+# ─── Tested = a behavioural test module exists (ruling R3-revised) ────
+
+
+@pytest.mark.parametrize(
+    "card_id, key",
+    [
+        ("BT20-007", "bt20/bt20_007.rs"),
+        ("ST1-07", "st1/st1_07.rs"),
+        ("P-092", "p/p_092.rs"),
+        ("LM-062", "lm/lm_062.rs"),
+        ("EX3-024", "ex3/ex3_024.rs"),
+    ],
+)
+def test_behavioral_test_key(card_id, key):
+    assert ca.behavioral_test_key(card_id) == key
+
+
+def test_tested_means_a_declared_test_module_exists(tmp_path):
+    tests = _write_behavioral(tmp_path, [CARD, "ST1-07"])
+    modules = ca.behavioral_test_modules(tests)
+    assert modules == {"bt1/bt1_001.rs", "st1/st1_07.rs"}
+    tested = ca.discover_tested_ids([CARD, OTHER, "ST1-07"], modules=modules, ledgers=[])
+    assert tested == {CARD, "ST1-07"}
+
+
+def test_undeclared_test_file_does_not_count(tmp_path):
+    """A file `<set>/mod.rs` does not declare is not compiled, so it is no test."""
+    tests = _write_behavioral(tmp_path, [CARD], declare=False)
+    assert ca.behavioral_test_modules(tests) == set()
+    # Neither does a set the binary root does not declare.
+    other = tmp_path / "other"
+    other.mkdir()
+    tests = _write_behavioral(other, [CARD])
+    (tests / "main.rs").write_text("mod test_cards;\n", encoding="utf-8")
+    assert ca.behavioral_test_modules(tests) == set()
+
+
+def test_ledger_test_path_counts_when_the_file_exists(tmp_path):
+    shared = tmp_path / "st2_cards.rs"
+    shared.write_text("// shared\n", encoding="utf-8")
+    ledger = {
+        "cards": {
+            "ST2-01": {"status": "IMPLEMENTED", "test_path": str(shared)},
+            "ST2-02": {"status": "IMPLEMENTED", "test_path": str(tmp_path / "gone.rs")},
+            "ST2-03": {"status": "IMPLEMENTED", "test_path": "rel/st2_03.rs"},
+        }
+    }
+    (tmp_path / "rel").mkdir()
+    (tmp_path / "rel" / "st2_03.rs").write_text("// rel\n", encoding="utf-8")
+    tested = ca.discover_tested_ids(
+        ["ST2-01", "ST2-02", "ST2-03"], modules=set(), ledgers=[ledger], repo_root=tmp_path
+    )
+    assert tested == {"ST2-01", "ST2-03"}
+
+
+def test_registry_is_the_committed_json(tmp_path):
+    path = tmp_path / "registry.json"
+    path.write_text(json.dumps({"assignments": {CARD: 1, "LM-062": 7}}), encoding="utf-8")
+    assert ca.load_registry_ids(path) == {CARD, "LM-062"}
+
+
+def test_generator_needs_no_engine_binding(tmp_path):
+    """R5-revised: the whole generator is a pure function of the repo."""
+    _write_inputs(tmp_path)
+    script = textwrap.dedent(
+        """
+        import sys
+        sys.modules["digimon_engine"] = None  # any import of it now fails
+        import digimon_gym.agents.card_admissibility as ca
+        rc = ca.main(sys.argv[1:])
+        assert "digimon_gym.agents.gauntlet" not in sys.modules
+        sys.exit(rc)
+        """
+    )
+    env = {**os.environ, "PYTHONPATH": str(REPO / "code")}
+    out = subprocess.run(
+        [sys.executable, "-c", script, *_argv(tmp_path)], env=env, capture_output=True, text=True
+    )
+    assert out.returncode == 0, out.stderr
+    assert "3 registered cards: 2 admissible" in out.stdout
+
+
+# ─── CLI ──────────────────────────────────────────────────────────────
+
+
+def test_cli_writes_then_check_passes_and_detects_drift(tmp_path, capsys):
     _write_inputs(tmp_path)
     assert ca.main(_argv(tmp_path)) == 0
     out = capsys.readouterr().out
     assert "3 registered cards: 2 admissible / 0 unregistered / 1 untested / 0 failed_verdict / 0 diverged_no_quirk" in out
     art = json.loads((tmp_path / "card_admissibility.json").read_text(encoding="utf-8"))
-    assert set(art["sources"]) == {
-        "tested_cards_sha256", "validated_cards_dsl_sha256",
-        "validated_cards_sha256", "exam_verdicts_sha256",
-    }
+    assert set(art["sources"]) == SOURCE_KEYS
     assert ca.main(_argv(tmp_path, "--check")) == 0
 
     # generated_at is outside the comparison.
@@ -382,12 +493,18 @@ def test_cli_writes_then_check_passes_and_detects_drift(tmp_path, fake_registry,
     assert ca.main(_argv(tmp_path)) == 0
     assert ca.main(_argv(tmp_path, "--check")) == 0
 
+    # A new test module (BT1-003 becomes tested) makes it stale too.
+    _write_behavioral(tmp_path, [CARD, OTHER, "BT1-003"])
+    assert ca.main(_argv(tmp_path, "--check")) == 1
+    assert ca.main(_argv(tmp_path)) == 0
+    assert ca.main(_argv(tmp_path, "--check")) == 0
+
     # An exam-store change (even one that keeps every decision) is caught by the sha.
     (tmp_path / "exam" / "BT1-003.json").write_text(json.dumps(_exam()), encoding="utf-8")
     assert ca.main(_argv(tmp_path, "--check")) == 1
 
 
-def test_cli_check_detects_tampered_card(tmp_path, fake_registry):
+def test_cli_check_detects_tampered_card(tmp_path):
     _write_inputs(tmp_path)
     assert ca.main(_argv(tmp_path)) == 0
     path = tmp_path / "card_admissibility.json"
@@ -397,12 +514,12 @@ def test_cli_check_detects_tampered_card(tmp_path, fake_registry):
     assert ca.main(_argv(tmp_path, "--check")) == 1
 
 
-def test_cli_check_fails_when_artifact_missing(tmp_path, fake_registry):
+def test_cli_check_fails_when_artifact_missing(tmp_path):
     _write_inputs(tmp_path)
     assert ca.main(_argv(tmp_path, "--check")) == 1
 
 
-def test_rewrite_without_changes_keeps_generated_at(tmp_path, fake_registry):
+def test_rewrite_without_changes_keeps_generated_at(tmp_path):
     _write_inputs(tmp_path)
     assert ca.main(_argv(tmp_path)) == 0
     path = tmp_path / "card_admissibility.json"
@@ -415,19 +532,26 @@ def test_rewrite_without_changes_keeps_generated_at(tmp_path, fake_registry):
 
 
 def test_real_repo_counts_add_up():
-    pytest.importorskip("digimon_engine")
     adm = CardAdmissibility.from_repo()
     art = adm.build_artifact(sources={}, generated_at="x")
     c = art["counts"]
-    assert c["registered"] == len(art["cards"]) > 0
+    registry = json.loads((REPO / "data/card_registry.json").read_text(encoding="utf-8"))["assignments"]
+    assert c["registered"] == len(art["cards"]) == len(registry) > 0
     assert c["registered"] == (
         c["admissible"] + c["unregistered"] + c["untested"]
         + c["failed_verdict"] + c["diverged_no_quirk"]
     )
     assert c["unregistered"] == 0  # the artifact covers registered ids only
-    tested = set(json.loads((REPO / "data/tested_cards.json").read_text(encoding="utf-8"))["card_ids"])
-    for cid in tested & set(art["cards"]):
-        assert art["cards"][cid]["reason"] != "untested", cid
+    modules = ca.behavioral_test_modules()
+    for cid in art["cards"]:
+        if ca.behavioral_test_key(cid) in modules:
+            assert art["cards"][cid]["reason"] != "untested", cid
+    # R3/R5-revised regressions: tested Examon cards and cards a lagging wheel missed.
+    for cid in ("BT20-025", "BT20-042", "EX3-024", "EX3-037", "BT20-007", "BT21-046", "BT20-093", "LM-062"):
+        assert "untested" not in art["cards"][cid]["reasons"], cid
+    for cid in ("LM-062", "BT23-022", "BT23-039", "P-250"):
+        assert cid in art["cards"], cid
+
 
 
 def test_from_artifact_reads_committed_file_and_rejects_other_versions(tmp_path):
@@ -459,13 +583,13 @@ def test_from_artifact_rejects_inconsistent_entries(entry):
         CardAdmissibility.from_artifact_dict(art)
 
 
-def test_input_override_refuses_the_committed_artifact_path(tmp_path, fake_registry, capsys):
+def test_input_override_refuses_the_committed_artifact_path(tmp_path, capsys):
     _write_inputs(tmp_path)
-    assert ca.main(["--tested", str(tmp_path / "tested.json")]) == 2
+    assert ca.main(["--registry", str(tmp_path / "registry.json")]) == 2
     assert "--out" in capsys.readouterr().err
 
 
-def test_check_reports_missing_exam_store(tmp_path, fake_registry, capsys):
+def test_check_reports_missing_exam_store(tmp_path, capsys):
     _write_inputs(tmp_path)
     assert ca.main(_argv(tmp_path)) == 0
     (tmp_path / "exam" / f"{OTHER}.json").unlink()
@@ -474,29 +598,15 @@ def test_check_reports_missing_exam_store(tmp_path, fake_registry, capsys):
     assert "exam-verdict store" in capsys.readouterr().err
 
 
-def test_check_reports_corrupt_artifact(tmp_path, fake_registry, capsys):
+def test_check_reports_missing_behavioral_root(tmp_path, capsys):
+    _write_inputs(tmp_path)
+    (tmp_path / "cards_behavioral" / "main.rs").unlink()
+    assert ca.main(_argv(tmp_path, "--check")) == 1
+    assert "behavioural test root" in capsys.readouterr().err
+
+
+def test_check_reports_corrupt_artifact(tmp_path, capsys):
     _write_inputs(tmp_path)
     (tmp_path / "card_admissibility.json").write_text("{not json", encoding="utf-8")
     assert ca.main(_argv(tmp_path, "--check")) == 1
     assert "not valid JSON" in capsys.readouterr().err
-
-
-def test_skip_if_no_engine_requires_check(capsys):
-    assert ca.main(["--skip-if-no-engine"]) == 2
-    assert "only makes sense with --check" in capsys.readouterr().err
-
-
-def test_check_skips_cleanly_when_engine_binding_is_absent(monkeypatch, capsys):
-    monkeypatch.setattr(ca.importlib.util, "find_spec", lambda name: None)
-    assert ca.main(["--check", "--skip-if-no-engine"]) == 0
-    assert "SKIPPED" in capsys.readouterr().out
-
-
-def test_skip_flag_does_not_hide_a_stale_artifact_when_the_binding_is_present(
-    tmp_path, fake_registry, monkeypatch
-):
-    _write_inputs(tmp_path)
-    assert ca.main(_argv(tmp_path)) == 0
-    _write_inputs(tmp_path, dsl_status="FAILED")  # artifact is now stale
-    monkeypatch.setattr(ca.importlib.util, "find_spec", lambda name: object())
-    assert ca.main(_argv(tmp_path, "--check", "--skip-if-no-engine")) == 1

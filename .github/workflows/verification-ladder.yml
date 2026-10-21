@@ -24,6 +24,7 @@ on:
       - 'data/mechanics_readiness.json'
       - 'data/card_admissibility.json'
       - 'data/tested_cards.json'
+      - 'data/card_registry.json'
       - 'qa/qa-reports/validated_cards*.json'
       - 'data/cards.json'
       - 'data/card_official.json'
@@ -52,6 +53,7 @@ on:
       - 'data/mechanics_readiness.json'
       - 'data/card_admissibility.json'
       - 'data/tested_cards.json'
+      - 'data/card_registry.json'
       - 'qa/qa-reports/validated_cards*.json'
       - 'data/cards.json'
       - 'data/card_official.json'
@@ -85,41 +87,6 @@ jobs:
         env:
           RUST_MIN_STACK: "268435456"
         run: python scripts/verify --tier 1
-
-  card-admissibility:
-    # scripts/verify tier 0 skips the admissibility drift check where no
-    # `digimon_engine` wheel is installed (bare runners). This job builds the wheel
-    # and runs the check unskipped, so the committed data/card_admissibility.json
-    # cannot go stale unnoticed.
-    name: Card admissibility artifact is fresh
-    if: github.event_name == 'pull_request' || github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-      # Exactly what `import digimon_gym.agents.gauntlet` pulls in beyond the stdlib
-      # (verified via sys.modules): numpy, gymnasium, and the digimon_engine wheel built
-      # below. requirements-training.txt is deliberately not used: it adds torch/SB3.
-      - name: Install maturin and the gauntlet's imports
-        run: python -m pip install maturin numpy gymnasium
-      - name: Cache cargo registry + target
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-card-admissibility-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
-      - name: Build and install the engine wheel
-        run: |
-          cd code/digimon-engine-py
-          maturin build --out "$RUNNER_TEMP/wheels"
-          python -m pip install "$RUNNER_TEMP"/wheels/*.whl
-      - name: Check data/card_admissibility.json
-        run: PYTHONPATH=code python -m digimon_gym.agents.card_admissibility --check
 
   tier-2:
     name: Tier 2 scoped behavior

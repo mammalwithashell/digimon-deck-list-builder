@@ -255,7 +255,7 @@ python code/tools/meta_loader.py --build
 - Runtime gauntlet loading applies a two-layer training gate (spec `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5b). It reads only two committed `data/` artifacts, because the training image ships no `qa/`; a missing artifact stops the load (`MechanicsReadinessMissingError` / `CardAdmissibilityMissingError`, each naming its regenerate command):
   1. **Mechanics (global).** `data/mechanics_readiness.json` must be `ready`: no open blocking gap among the mechanics-set rules obligations. This is checked once per load, before any deck is examined. Otherwise `MechanicsNotReadyError` names the blocking rule and gap ids. Regenerate with `PYTHONPATH=code python -m tools.rules.mechanics_readiness`.
   2. **Light per-card (per decklist).** Every card ID must be playable, meaning registered in the Rust engine and present in `data/cards.json` (rejection `unregistered`). It must also be admissible in `data/card_admissibility.json` (rejection `not_admissible`, logged with the card's reason):
-     - tested (`untested`);
+     - tested, i.e. a behavioural test module exists at generation time: `code/digimon-engine/tests/cards_behavioral/<set>/<card_id>.rs` declared from `main.rs` / `<set>/mod.rs`, or an existing ledger `test_path` (`untested`);
      - no failed ledger verdict, i.e. `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT`, `AUDITED-MISSING-TESTS`, `FAILED`, `FAIL` or `QA-FAIL` in either ledger (`failed_verdict`);
      - no `diverged` exam row without a cited `dcgo_quirk`/`stale` triage (`diverged_no_quirk`).
 
@@ -963,14 +963,13 @@ in §2 ("Runtime gauntlet loading ..."); this section is the operator view.
 | Layer | Artifact | Regenerate | Fails with |
 |---|---|---|---|
 | Mechanics (global) | `data/mechanics_readiness.json` | `PYTHONPATH=code python -m tools.rules.mechanics_readiness` | `MechanicsNotReadyError` / `MechanicsReadinessMissingError` |
-| Per-card (per decklist) | `data/card_admissibility.json` | `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility` (needs the installed `digimon_engine` wheel) | `NotAdmissibleDeckError` / `CardAdmissibilityMissingError` |
+| Per-card (per decklist) | `data/card_admissibility.json` | `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility` (stdlib only; reads `data/card_registry.json`, the `cards_behavioral/` test modules, both ledgers and the exam verdicts) | `NotAdmissibleDeckError` / `CardAdmissibilityMissingError` |
 
-Both take `--check` (run by `scripts/verify` tier 0; the admissibility check is
-skipped there when no wheel is installed, and the verification-ladder
-`card-admissibility` job runs it with one). Regenerate the mechanics artifact
-after any change to the rules ledger (`qa/rules/`), and the admissibility
-artifact after any change to the validated-cards ledgers, `tested_cards.json`,
-exam verdicts, `cards.json` or the engine registry (a new card).
+Both take `--check` (run by `scripts/verify` tier 0, which CI's tier-1 job
+includes). Regenerate the mechanics artifact after any change to the rules
+ledger (`qa/rules/`), and the admissibility artifact after any change to the
+validated-cards ledgers, exam verdicts, `data/card_registry.json` or the
+behavioural test modules (a new or removed `cards_behavioral/<set>/<id>.rs`).
 
 **Pre-flight for a training or cloud run.** Both artifacts must be present on the
 host: they are the only gate inputs, because the training image and cloud pods

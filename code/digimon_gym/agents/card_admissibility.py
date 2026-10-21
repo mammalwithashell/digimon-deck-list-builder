@@ -2,9 +2,16 @@
 
 A card may appear in a training decklist when it is:
 
-1. **registered** -- the Rust engine registers it and the card database the game
-   loads knows it (`gauntlet.load_playable_card_ids`);
-2. **tested** -- listed in `data/tested_cards.json`;
+1. **registered** -- an `assignments` key of the committed `data/card_registry.json`
+   (ruling R5-revised: the artifact is a pure function of the repo, never of the
+   installed `digimon_engine` wheel, which can lag the branch);
+2. **tested** -- a behavioural test module exists for it when the artifact is
+   generated (ruling R3-revised): `code/digimon-engine/tests/cards_behavioral/
+   <set>/<card_id>.rs` (set = id prefix, file stem = id, both lowercased with
+   `-` -> `_`), declared from the discovery roots `cards_behavioral/main.rs`
+   (`mod <set>;`) and `<set>/mod.rs` (`mod <stem>;`); or a `test_path` recorded
+   for the card in either validated-cards ledger names an existing file (cards
+   whose test lives elsewhere, e.g. a shared `st2_cards.rs`);
 3. free of a **failed ledger verdict** -- its status in
    `qa/qa-reports/validated_cards_dsl.json` or `validated_cards.json` is not in
    `FAILED_VERDICT_STATUSES` -- the ledger gate `NOT_READY_LEDGER_STATUSES`
@@ -27,37 +34,33 @@ citation. That is why `load()` accepts `official` (the printed text the
 readiness report fingerprints against) for interface parity but does not read
 it, and why `from_repo()` does not load it.
 
-Training images ship no `qa/` (ruling R5), so this module is also the generator
-and checker of the committed artifact `data/card_admissibility.json`, which
-covers every registered card id; `CardAdmissibility.from_artifact()` reads it
-back at run time:
+Training images ship no `qa/` and no `tests/` (ruling R5), so this module is also
+the generator and checker of the committed artifact `data/card_admissibility.json`,
+which covers every registered card id; `CardAdmissibility.from_artifact()` reads
+it back at run time and never scans tests:
 
     PYTHONPATH=code python -m digimon_gym.agents.card_admissibility [--check] [--out PATH]
 
 `--check` rebuilds from the current inputs and fails when the committed file
 differs in anything but `generated_at`. Run `--check` (and any write of the
 committed artifact) without input overrides: the input flags are refused unless
-`--out` points elsewhere. `--check --skip-if-no-engine` exits 0 with a notice when
-the `digimon_engine` wheel is absent (used by `scripts/verify` tier 0; CI's
-`card-admissibility` job builds the wheel and checks unskipped).
+`--out` points elsewhere.
 
-Importing the module, `load()` and every per-card decision need no engine
-binding; only `load_registry_ids()` / `from_repo()` (the registry) import the
-gauntlet and so `digimon_engine`.
+Stdlib only: nothing here (generator included) needs the engine binding.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import json
+import re
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
-from data_paths import CARD_ADMISSIBILITY, QA_REPORTS_DIR, TESTED_CARDS
+from data_paths import CARD_ADMISSIBILITY, CARD_REGISTRY, QA_REPORTS_DIR, REPO_ROOT
 
 ARTIFACT_VERSION = 1
 
@@ -85,7 +88,9 @@ TRUNCATED_PREFIX = "TRUNCATED, no divergence found"
 CLEARING_TRIAGES = frozenset({"dcgo_quirk", "stale"})
 
 EXAM_FAMILIES = ("clauses", "interactions")
+BEHAVIORAL_TESTS = REPO_ROOT / "code" / "digimon-engine" / "tests" / "cards_behavioral"
 _REGENERATE = "PYTHONPATH=code python -m digimon_gym.agents.card_admissibility"
+_MOD_DECL = re.compile(r"^\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_][A-Za-z0-9_]*)\s*;", re.M)
 
 
 def _has_text(value: Any) -> bool:
@@ -142,24 +147,77 @@ def _failed_ids(ledger: Mapping[str, Any]) -> set[str]:
     }
 
 
+# ─── Tested: behavioural test modules (generation time only) ──────────
+
+
+def behavioral_test_key(card_id: str) -> str:
+    """`BT20-007` -> `bt20/bt20_007.rs`, `ST1-07` -> `st1/st1_07.rs`, `P-092` -> `p/p_092.rs`."""
+    set_dir = card_id.split("-", 1)[0].lower()
+    return f"{set_dir}/{card_id.lower().replace('-', '_')}.rs"
+
+
+def _declared_mods(rs_file: Path) -> set[str]:
+    try:
+        return set(_MOD_DECL.findall(rs_file.read_text(encoding="utf-8")))
+    except FileNotFoundError:
+        return set()
+
+
+def behavioral_test_modules(directory: Path = BEHAVIORAL_TESTS) -> set[str]:
+    """Every `<set>/<stem>.rs` test module the `cards_behavioral` binary compiles:
+    the set is declared in `main.rs`, the module in `<set>/mod.rs`, and the file
+    exists."""
+    directory = Path(directory)
+    if not (directory / "main.rs").is_file():
+        raise FileNotFoundError(f"behavioural test root {directory / 'main.rs'} is missing")
+    found = set()
+    for set_dir in sorted(_declared_mods(directory / "main.rs")):
+        for stem in _declared_mods(directory / set_dir / "mod.rs"):
+            if (directory / set_dir / f"{stem}.rs").is_file():
+                found.add(f"{set_dir}/{stem}.rs")
+    return found
+
+
+def _ledger_test_path_ids(ledger: Mapping[str, Any], repo_root: Path) -> set[str]:
+    """Cards whose ledger row records a `test_path` naming an existing file."""
+    out = set()
+    for cid, entry in (ledger.get("cards") or {}).items():
+        path = str((entry or {}).get("test_path") or "").strip()
+        if path and (Path(repo_root) / path.replace("\\", "/")).is_file():
+            out.add(str(cid))
+    return out
+
+
+def discover_tested_ids(
+    card_ids: Iterable[str],
+    *,
+    modules: set[str],
+    ledgers: Iterable[Mapping[str, Any]],
+    repo_root: Path = REPO_ROOT,
+) -> set[str]:
+    """The ids among `card_ids` with a behavioural test (module or ledger `test_path`)."""
+    via_ledger: set[str] = set()
+    for ledger in ledgers:
+        via_ledger |= _ledger_test_path_ids(ledger, repo_root)
+    return {cid for cid in card_ids if behavioral_test_key(cid) in modules or cid in via_ledger}
+
+
 @dataclass(frozen=True)
 class DataPaths:
     """Inputs and output of the generator (`from_repo`, `main`)."""
 
-    tested: Path = TESTED_CARDS
+    registry: Path = CARD_REGISTRY
+    behavioral_tests: Path = BEHAVIORAL_TESTS
     dsl_ledger: Path = QA_REPORTS_DIR / "validated_cards_dsl.json"
     rust_ledger: Path = QA_REPORTS_DIR / "validated_cards.json"
     exam_verdicts: Path = QA_REPORTS_DIR / "exam-verdicts"
     out: Path = CARD_ADMISSIBILITY
+    repo_root: Path = REPO_ROOT  # ledger `test_path`s are relative to it
 
 
-def load_registry_ids() -> set[str]:
-    """The registered (playable) card ids -- the loader the gauntlet uses for
-    its `unregistered` rejections. Imported lazily: it needs the engine binding,
-    and the gauntlet imports this module."""
-    from digimon_gym.agents.gauntlet import load_playable_card_ids
-
-    return set(load_playable_card_ids())
+def load_registry_ids(path: Path = CARD_REGISTRY) -> set[str]:
+    """The registered card ids: `assignments` keys of `data/card_registry.json`."""
+    return {str(cid) for cid in _read_json(path)["assignments"]}
 
 
 def _read_json(path: Path) -> Any:
@@ -192,8 +250,10 @@ def store_sha256(directory: Path) -> str:
 
 
 def source_hashes(paths: DataPaths) -> dict[str, str]:
+    modules = "\n".join(sorted(behavioral_test_modules(paths.behavioral_tests)))
     return {
-        "tested_cards_sha256": file_sha256(paths.tested),
+        "card_registry_sha256": file_sha256(paths.registry),
+        "behavioral_test_modules_sha256": hashlib.sha256(modules.encode("utf-8")).hexdigest(),
         "validated_cards_dsl_sha256": file_sha256(paths.dsl_ledger),
         "validated_cards_sha256": file_sha256(paths.rust_ledger),
         "exam_verdicts_sha256": store_sha256(paths.exam_verdicts),
@@ -221,9 +281,8 @@ class CardAdmissibility:
         official: Optional[Mapping[str, Any]] = None,
         exam_verdicts: Iterable[Mapping[str, Any]] = (),
     ) -> "CardAdmissibility":
-        """Decide from in-memory inputs; needs no engine binding. `official` is
-        accepted for interface parity and never read: staleness cannot change a
-        decision (module doc)."""
+        """Decide from in-memory inputs. `official` is accepted for interface
+        parity and never read: staleness cannot change a decision (module doc)."""
         del official
         diverged: set[str] = set()
         for exam in exam_verdicts:
@@ -241,12 +300,21 @@ class CardAdmissibility:
 
     @classmethod
     def from_repo(cls, paths: DataPaths = DataPaths()) -> "CardAdmissibility":
-        """Decide from the repo's sources (needs `qa/` and the engine binding)."""
+        """Decide from the repo's sources (registry json, behavioural tests, `qa/`)."""
+        registry = load_registry_ids(paths.registry)
+        dsl = _read_json(paths.dsl_ledger)
+        rust = _read_json(paths.rust_ledger)
+        tested = discover_tested_ids(
+            registry,
+            modules=behavioral_test_modules(paths.behavioral_tests),
+            ledgers=(dsl, rust),
+            repo_root=paths.repo_root,
+        )
         return cls.load(
-            registry_ids=load_registry_ids(),
-            tested_ids=_read_json(paths.tested)["card_ids"],
-            verdicts_dsl=_read_json(paths.dsl_ledger),
-            verdicts_rust=_read_json(paths.rust_ledger),
+            registry_ids=registry,
+            tested_ids=tested,
+            verdicts_dsl=dsl,
+            verdicts_rust=rust,
             exam_verdicts=_read_exam_verdicts(paths.exam_verdicts),
         )
 
@@ -353,7 +421,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     defaults = DataPaths()
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--out", type=Path, default=defaults.out)
-    ap.add_argument("--tested", type=Path, default=defaults.tested)
+    ap.add_argument("--registry", type=Path, default=defaults.registry)
+    ap.add_argument("--behavioral-tests", type=Path, default=defaults.behavioral_tests)
     ap.add_argument("--dsl-ledger", type=Path, default=defaults.dsl_ledger)
     ap.add_argument("--rust-ledger", type=Path, default=defaults.rust_ledger)
     ap.add_argument("--exam-verdicts", type=Path, default=defaults.exam_verdicts)
@@ -362,30 +431,12 @@ def main(argv: Optional[list[str]] = None) -> int:
         action="store_true",
         help="exit 1 if the committed artifact differs (ignoring generated_at) from a fresh build",
     )
-    ap.add_argument(
-        "--skip-if-no-engine",
-        action="store_true",
-        help="with --check: exit 0 with a notice when the `digimon_engine` binding is not "
-        "installed (the registry needs it). For environments with no wheel, e.g. "
-        "`scripts/verify` tier 0 on a bare CI runner; a job that builds the wheel runs the "
-        "check without this flag.",
-    )
     args = ap.parse_args(argv)
-    if args.skip_if_no_engine:
-        if not args.check:
-            print("error: --skip-if-no-engine only makes sense with --check", file=sys.stderr)
-            return 2
-        if importlib.util.find_spec("digimon_engine") is None:
-            print(
-                "card admissibility check: SKIPPED -- the `digimon_engine` binding is not "
-                "installed (the registry needs it). The verification-ladder `card-admissibility` "
-                "job builds the wheel and runs this check unskipped."
-            )
-            return 0
     overridden = [
         flag
         for flag, value, default in (
-            ("--tested", args.tested, defaults.tested),
+            ("--registry", args.registry, defaults.registry),
+            ("--behavioral-tests", args.behavioral_tests, defaults.behavioral_tests),
             ("--dsl-ledger", args.dsl_ledger, defaults.dsl_ledger),
             ("--rust-ledger", args.rust_ledger, defaults.rust_ledger),
             ("--exam-verdicts", args.exam_verdicts, defaults.exam_verdicts),
@@ -400,7 +451,8 @@ def main(argv: Optional[list[str]] = None) -> int:
         )
         return 2
     paths = DataPaths(
-        tested=args.tested,
+        registry=args.registry,
+        behavioral_tests=args.behavioral_tests,
         dsl_ledger=args.dsl_ledger,
         rust_ledger=args.rust_ledger,
         exam_verdicts=args.exam_verdicts,
