@@ -73,22 +73,26 @@ impl<'a> EffectContext<'a> {
         Some(permanent.card_sources.remove(pos))
     }
 
+    /// Place a sourceless Digimon at the bottom of `player`'s security stack
+    /// (see `Game::place_sourceless_permanent_on_security_bottom`). `true`
+    /// only when the placement completed synchronously; a parked placement
+    /// (the Digimon's own would-leave replacement prompt) returns `false`
+    /// with `pending_selection` set and completes on resume.
+    pub fn place_sourceless_permanent_bottom_security(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+    ) -> bool {
+        self.game
+            .place_sourceless_permanent_on_security_bottom(player, target, self.player)
+    }
+
     pub fn place_sourceless_permanent_bottom_security_and_cancel_current_replacement(
         &mut self,
         player: PlayerId,
         target: PermanentHandle,
     ) -> bool {
-        if self
-            .game
-            .modifiers
-            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
-        {
-            return false;
-        }
-        if self
-            .game
-            .place_sourceless_permanent_on_security_bottom(player, target, self.player)
-        {
+        if self.place_sourceless_permanent_bottom_security(player, target) {
             if self.game.has_active_parked_replacement() {
                 self.cancel_current_replacement();
             }

@@ -84,16 +84,57 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement { of, target } => {
-            let player = crate::dsl_cards::step::resolve_player(ctx, *of);
+        CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
+            of,
+            target,
+            to_owner,
+        } => {
             if let Some(ResolvedBinding::Permanent(handle)) =
                 resolve_binding_ref(target, ctx, bindings)
             {
-                if ctx.place_sourceless_permanent_bottom_security_and_cancel_current_replacement(
-                    player, handle,
-                ) {
-                    set_outcome(ctx, ReplacementOutcome::Cancelled);
-                }
+                let Some((owner, card)) = ctx
+                    .game
+                    .player(handle.player)
+                    .battle_area
+                    .get(handle.index as usize)
+                    .map(|p| (p.top_card().owner, p.top_card().handle()))
+                else {
+                    return true;
+                };
+                // `to_owner`: the placed card's OWNER's security (§3-1-3-8 —
+                // BT24-040 names no stack; owner ruling 2026-10-20).
+                let player = if *to_owner {
+                    owner
+                } else {
+                    crate::dsl_cards::step::resolve_player(ctx, *of)
+                };
+                // "By placing X ..., they don't leave": the leave is
+                // cancelled only if X's placement was processed (§15-1-9:
+                // a token / Digi-Egg meets it without entering security;
+                // §15-7-1, and §15-7-2 when it wasn't). X's own would-leave
+                // shield (e.g. its controller's <Guard>) may park the
+                // placement — the finalize step waits behind it.
+                ctx.game.security_placement_receipts.push((card.0, false));
+                ctx.place_sourceless_permanent_bottom_security(player, handle);
+                let finalize = [CompiledStep::SecurityPlacementCancelFinalize { card: card.0 }];
+                super::run_steps_with_runtime(
+                    &finalize,
+                    ctx,
+                    &mut Bindings::new(),
+                    &super::StepRuntime::default(),
+                );
+            }
+            true
+        }
+        CompiledStep::SecurityPlacementCancelFinalize { card } => {
+            let processed = ctx
+                .game
+                .security_placement_receipts
+                .iter()
+                .rposition(|(c, _)| c == card)
+                .map(|i| ctx.game.security_placement_receipts.remove(i).1);
+            if processed == Some(true) {
+                set_outcome(ctx, ReplacementOutcome::Cancelled);
             }
             true
         }

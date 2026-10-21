@@ -698,6 +698,9 @@ fn run_steps_with_runtime_inner(
         if ctx.game.dsl_clause_aborted {
             for remaining in &steps[i..] {
                 if let CompiledStep::ReturnReceiptFinalize {receipt} = remaining { ctx.game.return_receipts.retain(|(id,_)|id!=receipt); }
+                if let CompiledStep::SecurityPlacementCancelFinalize { card } = remaining {
+                    ctx.game.security_placement_receipts.retain(|(c, _)| c != card);
+                }
                 if let CompiledStep::FieldSourceFinalize { receipt, .. } = remaining {
                     ctx.game
                         .field_source_receipts

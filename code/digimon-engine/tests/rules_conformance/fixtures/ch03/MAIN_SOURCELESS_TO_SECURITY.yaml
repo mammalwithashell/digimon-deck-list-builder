@@ -1,0 +1,29 @@
+# MAIN_SOURCELESS_TO_SECURITY -- Option, red, use cost 0.
+#   [Main] Place 1 Digimon with no digivolution cards as the bottom security
+#   card.
+# The text names no player's security stack, so the card is placed in the
+# security stack of the player who owns it (§3-1-3-8): `to_owner: true`. Either
+# player's Digimon may be chosen ("1 Digimon" is unqualified). The production
+# shape is BT24-040 Venusmon's leave-replacement cost (owner ruling 2026-10-20)
+# and BT25-044 Junomon.
+card: MAIN_SOURCELESS_TO_SECURITY
+name: Undersecurity Sweep
+kind: option
+color: [red]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Place 1 Digimon with no digivolution cards as the bottom security card."
+    process:
+      - select_any_permanent:
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "Place 1 Digimon with no digivolution cards as the bottom security card"
+      - place_on_security:
+          source: { permanent: pick }
+          to_owner: true
+          position: bottom
+          face_up: false

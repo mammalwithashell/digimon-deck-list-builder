@@ -476,6 +476,7 @@ fn predicate_reads_replacement_subject(pred: &CompiledPredicate) -> bool {
         || pred.is_unsuspended.is_some()
         || pred.can_change_orientation.is_some()
         || pred.can_unsuspend.is_some()
+        || pred.owner_can_add_security.is_some()
         || pred.can_attack.is_some()
         || pred.has_keyword.is_some()
         || !pred.zone.is_empty()

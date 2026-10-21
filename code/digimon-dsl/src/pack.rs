@@ -31,7 +31,10 @@ use std::collections::BTreeSet;
 // 0.19.0 distinguishes explicit plural paid prevention from singular choice.
 // 0.20.0 adds explicit grouped returns and captured remaining ForEach iterations.
 // 0.22.0 adds triggered-clause trigger qualifiers (`trigger_if:`). Rebuild packs.
-pub const PACK_FORMAT_VERSION: &str = "0.22.0";
+// 0.23.0 adds `to_owner` to the cancel-via-bottom-security replacement step and
+// the engine-only `SecurityPlacementCancelFinalize` continuation, and the
+// `owner_can_add_security` permanent predicate.
+pub const PACK_FORMAT_VERSION: &str = "0.23.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

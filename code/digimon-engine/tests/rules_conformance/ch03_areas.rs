@@ -18,10 +18,10 @@
 
 use crate::fixtures;
 use crate::support::*;
-use digimon_engine::action::space::SOURCE_SELECT_START;
+use digimon_engine::action::space::{encode_attack, SOURCE_SELECT_START};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::PlaySource;
+use digimon_engine::enums::{PlaySource, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 
 /// P0's `AREA_TAMER` with `stashed` face-down under it, `option` in P0's
@@ -96,6 +96,94 @@ fn face_down_card_trashed_from_under_a_tamer_is_face_up_in_the_trash() {
     );
     let trashed = find(&r.game.players[0].trash, &r, "AREA_LV3");
     assert!(!trashed.face_down, "the trashed card is face-up in the trash");
+}
+
+// ─── §3-1-3-8 ───────────────────────────────────────────────────────────────
+
+/// P0 holds `MAIN_SOURCELESS_TO_SECURITY`; each player has one security card
+/// and one sourceless `AREA_LV4` on the field. Uses the Option and picks
+/// `chosen`'s `AREA_LV4`; returns both security stacks, bottom first.
+fn place_sourceless_digimon_of(chosen: PlayerId) -> (Vec<String>, Vec<String>) {
+    let mut r = fixtures::builder(&[fixtures::ch03_cards()])
+        .hand(0, &["MAIN_SOURCELESS_TO_SECURITY"])
+        .deck(0, &[FILL; 4])
+        .deck(1, &[FILL; 4])
+        .security(0, &["AREA_LV3"])
+        .security(1, &["AREA_LV3"])
+        .memory(5)
+        .start();
+    let own = r.place_on_field(0, "AREA_LV4", Some(0));
+    let opp = r.place_on_field(1, "AREA_LV4", Some(0));
+    let pick = if chosen == 0 { own } else { opp };
+    use_option(&mut r, 0, "MAIN_SOURCELESS_TO_SECURITY");
+    let sel = r.pending_selection().expect("the Digimon pick");
+    // An any-player field pick encodes (controller, slot) in the attack-id
+    // block (the same idiom as bt24_040's `encode_any_permanent`).
+    let action = encode_attack(pick.player as u16, pick.index as u16);
+    for h in [own, opp] {
+        assert!(
+            sel.valid_action_ids
+                .contains(&encode_attack(h.player as u16, h.index as u16)),
+            "either player's sourceless Digimon may be chosen: {sel:?}"
+        );
+    }
+    let player = sel.selecting_player;
+    r.execute_action(player, action).expect("pick the Digimon");
+    resolve_prompts(&mut r);
+    assert!(
+        r.game.players[chosen as usize].battle_area.is_empty(),
+        "the chosen Digimon left the field"
+    );
+    (
+        card_ids(&r, &r.game.players[0].security),
+        card_ids(&r, &r.game.players[1].security),
+    )
+}
+
+/// §3-1-3-8 "When card text specifies that a card is to be placed in an area
+/// without specifying which player's area, the card is placed in the area of
+/// the player who owns the card."
+///
+/// "[Main] Place 1 Digimon with no digivolution cards as the bottom security
+/// card." names no player's security stack, so the chosen Digimon goes to the
+/// bottom of its OWNER's stack: your own Digimon to yours, the opponent's to
+/// the opponent's, never the user's by default. Text that does name the stack
+/// ("... at the top of your security stack", `MAIN_SRC_TO_SECURITY`) is
+/// authored `of: you`; text that names none is authored `to_owner: true`.
+/// Production shapes: BT24-040 Venusmon's leave-replacement cost (owner ruling
+/// 2026-10-20: the chosen Digimon, either player's per the unqualified printed
+/// text, goes to its owner's security) and BT25-044 Junomon.
+///
+/// This test exercises only the `disposition: none` path. The
+/// `disposition: cancel` (replacement-cost) route is pinned by
+/// `cards_behavioral::bt24_040_protection_paid_with_opponent_digimon_places_it_in_opponent_security`
+/// and `…_opponent_cost_body_is_checked_from_opponent_security_into_owner_trash`,
+/// not by this test.
+#[test]
+fn card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack() {
+    cite!(
+        "3-1-3-8",
+        "6e64bb68d43209eb187b242f20fcd67fca67dc817b5dffa7448efa34ebb97b92"
+    );
+    let (own_security, opp_security) = place_sourceless_digimon_of(0);
+    assert_eq!(
+        own_security,
+        owned(&["AREA_LV4", "AREA_LV3"]),
+        "your own Digimon goes to the bottom of YOUR security stack"
+    );
+    assert_eq!(opp_security, owned(&["AREA_LV3"]));
+
+    let (own_security, opp_security) = place_sourceless_digimon_of(1);
+    assert_eq!(
+        opp_security,
+        owned(&["AREA_LV4", "AREA_LV3"]),
+        "the opponent's Digimon goes to the bottom of THEIR security stack"
+    );
+    assert_eq!(
+        own_security,
+        owned(&["AREA_LV3"]),
+        "the user's security stack is not the default destination"
+    );
 }
 
 // ─── §3-7-2 ─────────────────────────────────────────────────────────────────

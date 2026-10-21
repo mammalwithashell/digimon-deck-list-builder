@@ -792,6 +792,11 @@ pub struct Game {
     pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
     pub(crate) pending_field_top_source_moves: Vec<PendingFieldTopSourceMove>,
     pub(crate) pending_security_moves: Vec<PendingSecurityMove>,
+    /// Open "by placing X in security" condition receipts: (top-card handle,
+    /// processed). Marked processed when the move of that card completes —
+    /// into security, or under Digi-Egg / token rules (§15-1-9) — and taken
+    /// by `SecurityPlacementCancelFinalize` (BT24-040).
+    pub(crate) security_placement_receipts: Vec<(u16, bool)>,
     /// The host chosen for a from-hand Plug-In Option's §6-5-1-4 link
     /// declaration, pinned between the host pick (§10-1-3-1) and the plug-in
     /// (§10-1-3-3) so `dispose_option`'s `Link` arm attaches to it instead of

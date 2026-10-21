@@ -10518,9 +10518,11 @@
       "mechanisms": [
         "zones-and-visibility"
       ],
-      "note": null,
-      "status": "gap",
-      "tests": [],
+      "note": "Authoring rule, not an engine inference: text that names no player's area is authored `to_owner: true` (the placed card's owner's stack), text that names one is authored `of: you|opponent`. `place_on_security` accepts `to_owner` with `disposition: none` (BT25-044 Junomon) and `disposition: cancel` (BT24-040 Venusmon's leave-replacement cost; owner ruling 2026-10-20: the chosen 'other Digimon', either player's per the unqualified printed text, goes to its owner's security). The listed test exercises only the `disposition: none` path; the `disposition: cancel` (replacement-cost) route is pinned by cards_behavioral `bt24_040_protection_paid_with_opponent_digimon_places_it_in_opponent_security` / `bt24_040_opponent_cost_body_is_checked_from_opponent_security_into_owner_trash`, not by this test. Proof limit: the security stack is the only area pinned; other unnamed-area verbs (hand/deck/trash returns) route to the owner by their own engine helpers and are not asserted here.",
+      "status": "proven",
+      "tests": [
+        "ch03_areas::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack"
+      ],
       "text": "When card text specifies that a card is to be placed in an area without specifying which player's area, the card is placed in the area of the player who owns the card."
     },
     "3-1-3-9": {
@@ -15375,9 +15377,9 @@
         "total": 115
       },
       "3": {
-        "gap": 45,
+        "gap": 44,
         "not_testable": 14,
-        "proven": 7,
+        "proven": 8,
         "total": 66
       },
       "4": {
@@ -15417,7 +15419,7 @@
         "total": 13
       }
     },
-    "gap": 590,
+    "gap": 589,
     "mechanics": {
       "gap_blocking": 0,
       "gap_nonblocking": 318,
@@ -15425,7 +15427,7 @@
       "proven": 245
     },
     "not-testable": 246,
-    "proven": 283
+    "proven": 284
   },
   "version": 1
 }

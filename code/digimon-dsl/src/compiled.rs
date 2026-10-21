@@ -483,6 +483,9 @@ pub struct CompiledPredicate {
     /// Direction-specific legality; see PredicateSpec::can_unsuspend.
     #[serde(default)]
     pub can_unsuspend: Option<bool>,
+    /// See `PredicateSpec::owner_can_add_security` (BT24-040).
+    #[serde(default)]
+    pub owner_can_add_security: Option<bool>,
     /// See `PredicateSpec::can_attack` (G-DSL-CAN-ATTACK-PREDICATE).
     #[serde(default)]
     pub can_attack: Option<CompiledCanAttack>,
@@ -2233,6 +2236,10 @@ pub enum CompiledStep {
     PlacePermanentBottomSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
         target: CompiledBindingRef,
+        /// Place into the placed card's OWNER's security (ignores `of`;
+        /// §3-1-3-8). BT24-040 Venusmon.
+        #[serde(default)]
+        to_owner: bool,
     },
     PlacePermanentOnSecurity {
         of: CompiledPlayerRef,
@@ -3079,6 +3086,17 @@ pub enum CompiledStep {
     },
     DeleteReceiptFinalize {
         receipt: u64,
+    },
+    /// Engine-only: after a "by placing X as the bottom security card, it
+    /// doesn't leave" payment (`PlacePermanentBottomSecurityAndCancelReplacement`),
+    /// cancel the current replacement only if card `card` actually reached
+    /// `player`'s security stack (§15-7-1 / §15-7-2), or was processed under
+    /// Digi-Egg / token rules (§15-1-9) — read from the open
+    /// `Game::security_placement_receipts` entry for `card`. Runs behind any
+    /// prompt the placement parked on (the placed Digimon's own would-leave
+    /// shield).
+    SecurityPlacementCancelFinalize {
+        card: u16,
     },
     /// Engine-only paid prevention, matched to the carrier's actual physical deletion.
     PaidDeletionPreventionFinalize {
