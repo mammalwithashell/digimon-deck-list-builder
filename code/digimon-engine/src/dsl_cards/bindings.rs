@@ -305,6 +305,21 @@ impl Bindings {
         }
     }
 
+    /// Every named plain `Permanent` binding (reserved pin slots excluded).
+    pub(crate) fn permanent_slots(&self) -> Vec<(String, PermanentHandle)> {
+        let mut out: Vec<_> = self
+            .slots
+            .iter()
+            .filter(|(k, _)| !k.starts_with('\u{0}'))
+            .filter_map(|(k, v)| match v {
+                BindingValue::Permanent(h) => Some((k.clone(), *h)),
+                _ => None,
+            })
+            .collect();
+        out.sort_by(|a, b| a.0.cmp(&b.0));
+        out
+    }
+
     pub fn insert_permanent(&mut self, name: &str, h: PermanentHandle) {
         self.insert(name, BindingValue::Permanent(h));
     }

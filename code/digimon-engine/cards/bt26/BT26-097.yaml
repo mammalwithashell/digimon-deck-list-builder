@@ -36,7 +36,11 @@
 #   §15-7-4: with no legal Tamer or no [Aegiomon], the cost cannot be chosen
 #   (the gate below — no prompt is shown).
 #   → optional select_own_permanent ×2 + place_as_bottom_source (permanent
-#   source); optional select_union_zone { hand, trash } + effect_initiated_
+#   source: CR 4.3 §4-7-7, the Tamer leaves the battle area, so its
+#   would-leave replacements — BT24-101 / BT26-033 "[TS] ... Tamers ... don't
+#   leave" — get a window; `bind_placed_as` binds only on a real placement and
+#   gates the rest, §15-7-2 + Q7170 — DCGO runs the rest unconditionally, the
+#   official ruling governs); optional select_union_zone { hand, trash } + effect_initiated_
 #   digivolve { cost: free, ignore_requirements } (EX11-046 / BT26-098 idiom);
 #   optional select_trash + optional select_own_permanent + place_as_top_source
 #   (BT13-088 idiom).
@@ -106,58 +110,70 @@ effects:
                   - if:
                       condition: { binding_present: aegiomon }
                       then:
-                        - place_as_bottom_source: { source: tamer, target: aegiomon }
-                        # "it may digivolve into [Jupitermon] in the hand or trash"
-                        - select_union_zone:
-                            of: you
-                            zones: [hand, trash]
-                            bind_as: jupitermon_card
-                            optional: true
-                            filter: { name_is: "Jupitermon" }
-                            prompt: "That [Aegiomon] may digivolve into [Jupitermon] in your hand or trash, ignoring digivolution requirements and without paying the cost"
+                        # CR 4.3 §4-7-7: the Tamer leaves the battle area, so its
+                        # would-leave replacements get a window first (e.g.
+                        # BT24-101 / BT26-033 Jupitermon "[TS] ... Tamers ...
+                        # don't leave"). §15-7-2 + Q7170: only a REAL placement
+                        # lets the digivolve and the "After" part run —
+                        # `bind_placed_as` binds only on success.
+                        - place_as_bottom_source:
+                            source: tamer
+                            target: aegiomon
+                            bind_placed_as: placed_tamer
                         - if:
-                            condition: { binding_present: jupitermon_card }
+                            condition: { binding_present: placed_tamer }
                             then:
-                              - effect_initiated_digivolve:
-                                  target: aegiomon
-                                  source: jupitermon_card
-                                  cost: free
-                                  ignore_requirements: true
-                        # "After, you may place 1 card with [Aegiochusmon] in its
-                        # name in your trash as any of your [Jupitermon]'s top
-                        # digivolution card." (any [Jupitermon], not only the
-                        # one that just digivolved — DCGO picks freely.)
-                        - if:
-                            condition:
-                              all_of:
-                                - count_gte:
-                                    filter: { of: you, zone: [trash], name_contains: "Aegiochusmon" }
-                                    n: 1
-                                - any_permanent:
-                                    of: you
-                                    zone: [battle_area]
-                                    name_is: "Jupitermon"
-                            then:
-                              - select_trash:
+                              # "it may digivolve into [Jupitermon] in the hand or trash"
+                              - select_union_zone:
                                   of: you
-                                  bind_as: aegiochusmon_card
+                                  zones: [hand, trash]
+                                  bind_as: jupitermon_card
                                   optional: true
-                                  filter: { name_contains: "Aegiochusmon" }
-                                  prompt: "You may place 1 card with [Aegiochusmon] in its name from your trash as any of your [Jupitermon]'s top digivolution card"
+                                  filter: { name_is: "Jupitermon" }
+                                  prompt: "That [Aegiomon] may digivolve into [Jupitermon] in your hand or trash, ignoring digivolution requirements and without paying the cost"
                               - if:
-                                  condition: { binding_present: aegiochusmon_card }
+                                  condition: { binding_present: jupitermon_card }
                                   then:
-                                    - select_own_permanent:
-                                        bind_as: jupitermon_host
+                                    - effect_initiated_digivolve:
+                                        target: aegiomon
+                                        source: jupitermon_card
+                                        cost: free
+                                        ignore_requirements: true
+                              # "After, you may place 1 card with [Aegiochusmon] in its
+                              # name in your trash as any of your [Jupitermon]'s top
+                              # digivolution card." (any [Jupitermon], not only the
+                              # one that just digivolved — DCGO picks freely.)
+                              - if:
+                                  condition:
+                                    all_of:
+                                      - count_gte:
+                                          filter: { of: you, zone: [trash], name_contains: "Aegiochusmon" }
+                                          n: 1
+                                      - any_permanent:
+                                          of: you
+                                          zone: [battle_area]
+                                          name_is: "Jupitermon"
+                                  then:
+                                    - select_trash:
+                                        of: you
+                                        bind_as: aegiochusmon_card
                                         optional: true
-                                        filter: { name_is: "Jupitermon" }
-                                        prompt: "Select 1 of your [Jupitermon] to receive the card as its top digivolution card"
+                                        filter: { name_contains: "Aegiochusmon" }
+                                        prompt: "You may place 1 card with [Aegiochusmon] in its name from your trash as any of your [Jupitermon]'s top digivolution card"
                                     - if:
-                                        condition: { binding_present: jupitermon_host }
+                                        condition: { binding_present: aegiochusmon_card }
                                         then:
-                                          - place_as_top_source:
-                                              source: aegiochusmon_card
-                                              target: jupitermon_host
+                                          - select_own_permanent:
+                                              bind_as: jupitermon_host
+                                              optional: true
+                                              filter: { name_is: "Jupitermon" }
+                                              prompt: "Select 1 of your [Jupitermon] to receive the card as its top digivolution card"
+                                          - if:
+                                              condition: { binding_present: jupitermon_host }
+                                              then:
+                                                - place_as_top_source:
+                                                    source: aegiochusmon_card
+                                                    target: jupitermon_host
 
   # ─── [Security] may play 1 play cost <= 5 [TS] card from hand free; then
   #     add this card to the hand ──────────────────────────────────────────────

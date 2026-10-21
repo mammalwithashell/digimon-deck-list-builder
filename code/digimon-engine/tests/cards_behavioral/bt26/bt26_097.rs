@@ -23,7 +23,7 @@
 
 use super::support::*;
 use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
-use digimon_engine::action::space::encode_attack;
+use digimon_engine::action::space::{encode_attack, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -43,10 +43,18 @@ fn ts_option(id: &str, cost: u16) -> CardData {
 }
 
 fn setup_with_security(n: usize) -> DebugRunner {
+    setup_full(n, &[])
+}
+
+/// `setup_with_security` plus extra real DSL cards (e.g. BT24-101 Jupitermon,
+/// whose leave-battle-area replacement protects own [TS] Tamers).
+fn setup_full(n: usize, extra_dsl: &[&str]) -> DebugRunner {
     let sec = vec!["FILLER"; n];
-    let mut r = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("BT26-097")
+    let mut b = DebugRunner::builder().dsl_card(CARD_ID).expect("BT26-097");
+    for id in extra_dsl {
+        b = b.dsl_card(id).expect("extra DSL card");
+    }
+    let mut r = b
         .add_card(filler("FILLER"))
         .add_card(tamer("DAN", "Dan Yuki", CardColor::Yellow, &["TS"]))
         .add_card(tamer("KANAN", "Kanan Yuki", CardColor::Green, &["TS"]))
@@ -426,6 +434,120 @@ fn bt26_097_main_trashes_the_cards_under_the_placed_tamer() {
         "the card that was under the Tamer is trashed (§4-7-8)"
     );
     assert!(!field_ids(&r, 0).contains(&"DAN".to_string()));
+}
+
+// ─── Clause 2: the placement is a leave-the-battle-area event ─────────────────
+//
+// CR 4.3 §4-7-7: a permanent placed as a digivolution card leaves the battle
+// area. DCGO routes a field top card through IPlacePermanentToDigivolutionCards
+// (CardController.cs), which runs the WhenPermanentWouldRemoveField check and
+// stacks WhenRemoveField effects before moving it, and sets `Placed` only on a
+// real placement. The archetype's own BT24-101 Jupitermon prints "[All Turns]
+// [OPT] When any of your [TS] Digimon or Tamers would leave the battle area,
+// by trashing your top security card, they don't leave" — every [Dan Yuki] /
+// [Kanan Yuki] Tamer is [TS], so the player must be offered that protection.
+// §15-7-2 + Q7170: if the "by" placement isn't executed, neither the digivolve
+// nor the "After" part is processed.
+
+fn setup_with_bt24_101() -> (DebugRunner, PermanentHandle, PermanentHandle) {
+    let mut r = setup_full(1, &["BT24-101"]);
+    r.place_on_field(0, "BT24-101", Some(0)); // a [Jupitermon] on the field
+    let aegio = r.place_on_field(0, "AEGIO", Some(0));
+    let dan = r.place_on_field(0, "DAN", Some(0));
+    push_hand(&mut r, 0, "JUPI");
+    push_trash(&mut r, 0, "AEGIOCHUS");
+    (r, aegio, dan)
+}
+
+fn assert_replacement_prompt(r: &DebugRunner) {
+    let v = r
+        .pending_selection_view()
+        .expect("the would-leave replacement window must open for the Tamer");
+    assert!(
+        v.valid_action_ids.contains(&REPLACEMENT_ACCEPT) && r.pending_is_optional(),
+        "expected BT24-101's optional protection prompt, got {:?}",
+        v.valid_action_ids
+    );
+}
+
+#[test]
+fn bt26_097_main_placement_offers_bt24_101_protection_and_accepting_stops_the_effect() {
+    let (mut r, aegio, dan) = setup_with_bt24_101();
+    use_card(&mut r);
+    let security_before = r.security_count(0);
+    pick_own(&mut r, dan);
+    pick_own(&mut r, aegio);
+
+    assert_replacement_prompt(&r);
+    r.execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept BT24-101's protection");
+
+    // The Tamer doesn't leave, so it is not placed: §15-7-2 / Q7170 — no
+    // digivolve prompt and no "After" prompt (a [Jupitermon] is on the field
+    // and an [Aegiochusmon] is in the trash, so an ungated After would ask).
+    assert!(
+        r.pending_selection_view().is_none(),
+        "no digivolve / After prompt once the placement was prevented"
+    );
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).contains(&"DAN".to_string()), "the Tamer stays");
+    assert_eq!(stack_ids(&r, aegio), vec!["AEGIO"], "nothing went under the [Aegiomon]");
+    assert!(hand_ids(&r, 0).contains(&"JUPI".to_string()), "no digivolve");
+    assert!(trash_ids(&r, 0).contains(&"AEGIOCHUS".to_string()), "no After");
+    assert_eq!(
+        r.security_count(0),
+        security_before - 1,
+        "BT24-101's cost (trash the top security card) was paid"
+    );
+}
+
+#[test]
+fn bt26_097_main_placement_declining_bt24_101_protection_proceeds() {
+    let (mut r, aegio, dan) = setup_with_bt24_101();
+    use_card(&mut r);
+    let security_before = r.security_count(0);
+    pick_own(&mut r, dan);
+    pick_own(&mut r, aegio);
+
+    assert_replacement_prompt(&r);
+    pass(&mut r, 0); // decline the protection: the Tamer leaves
+
+    pick_hand(&mut r, 0, "JUPI"); // may digivolve: Jupitermon from hand
+    pick_trash(&mut r, 0, "AEGIOCHUS"); // After
+    pick_own(&mut r, aegio);
+    let _ = r.auto_resolve();
+
+    assert_eq!(stack_ids(&r, aegio), vec!["DAN", "AEGIO", "AEGIOCHUS", "JUPI"]);
+    assert!(!field_ids(&r, 0).contains(&"DAN".to_string()));
+    assert_eq!(r.security_count(0), security_before, "declined: no security paid");
+}
+
+#[test]
+fn bt26_097_main_works_when_the_tamer_sits_left_of_the_aegiomon() {
+    // The Tamer usually entered play first, so it occupies a LOWER battle-area
+    // slot than the [Aegiomon]; removing it shifts the [Aegiomon] down one
+    // slot. The digivolve and the "After" must still find that [Aegiomon]
+    // (by identity), not whatever now sits in its old slot.
+    let mut r = setup();
+    let dan = r.place_on_field(0, "DAN", Some(0));
+    let aegio = r.place_on_field(0, "AEGIO", Some(0));
+    r.place_on_field(0, "NOTAEGIO", Some(0)); // would slide into aegio's old slot
+    push_hand(&mut r, 0, "JUPI");
+    push_trash(&mut r, 0, "AEGIOCHUS");
+    use_card(&mut r);
+    pick_own(&mut r, dan);
+    pick_own(&mut r, aegio);
+    pick_hand(&mut r, 0, "JUPI");
+    let aegio_now = PermanentHandle { player: 0, index: aegio.index - 1 };
+    pick_trash(&mut r, 0, "AEGIOCHUS");
+    pick_own(&mut r, aegio_now);
+    let _ = r.auto_resolve();
+    assert_eq!(
+        stack_ids(&r, aegio_now),
+        vec!["DAN", "AEGIO", "AEGIOCHUS", "JUPI"],
+        "the [Aegiomon] that received the Tamer is the one that digivolves"
+    );
+    assert_eq!(stack_ids(&r, aegio), vec!["NOTAEGIO"], "the neighbour is untouched");
 }
 
 // ─── Clause 3: [Security] ────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 //! Publish actual field-top movement after the complete immediate window.
 use crate::dsl_cards::{
     binding_ref::{resolve_binding_ref, ResolvedBinding},
-    bindings::Bindings,
+    bindings::{BindingValue, Bindings},
 };
 use crate::effect_context::EffectContext;
 use crate::enums::CardSourceRef;
@@ -21,7 +21,7 @@ pub(super) fn expand(
         return None;
     };
     let Some(CardSourceRef::Material(donor, index)) =
-        super::play_digivolve::resolve_card_source_ref(source, ctx, bindings)
+        super::play_digivolve::resolve_bottom_source_ref(source, ctx, bindings)
     else {
         return None;
     };
@@ -51,6 +51,20 @@ pub(super) fn expand(
     let source_anchor = ctx
         .source_permanent
         .and_then(|h| ctx.game.source_move_anchor(h));
+    // The donor leaving compacts its controller's battle area: pin every
+    // plain permanent binding on that side by identity so later steps still
+    // address the same permanents (BT26-097: a [Dan Yuki] Tamer in a lower
+    // slot than the [Aegiomon] it goes under).
+    let rebind = bindings
+        .permanent_slots()
+        .into_iter()
+        .filter(|(n, h)| {
+            n != name
+                && h.player == donor.0
+                && h.index != crate::action::space::BREEDING_TARGET as u8
+        })
+        .filter_map(|(n, h)| ctx.game.source_move_anchor(h).map(|a| (n, a)))
+        .collect();
     // Receipt names depend only on outstanding work, never completed history.
     let mut receipt = 0;
     while ctx
@@ -75,6 +89,7 @@ pub(super) fn expand(
             bind_as: name.clone(),
             source_anchor,
             source_breeding,
+            rebind,
         },
     ])
 }
@@ -114,7 +129,17 @@ pub(super) fn try_run(
             bind_as,
             source_anchor,
             source_breeding,
+            rebind,
         } => {
+            for (name, anchor) in rebind {
+                if !matches!(bindings.get(name), Some(BindingValue::Permanent(_))) {
+                    continue;
+                }
+                match ctx.game.resolve_source_move_anchor(*anchor, false) {
+                    Some(h) => bindings.insert_permanent(name, h),
+                    None => bindings.remove(name),
+                }
+            }
             if let Some(index) = ctx
                 .game
                 .field_source_receipts

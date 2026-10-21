@@ -221,6 +221,23 @@ pub(super) fn resolve_card_source_ref(
     }
 }
 
+/// `resolve_card_source_ref` for a `place_as_bottom_source` source: a
+/// permanent binding addresses that permanent's TOP card
+/// (`Game::field_top_material_ref`), so placing it routes into the field-top
+/// source move — the permanent leaves the battle area (CR 4.3 §4-7-7) with
+/// its would-leave replacement window and [On Leave] observers.
+/// G-ENGINE-PLACE-PERMANENT-AS-SOURCE-NO-LEAVE-WINDOW.
+pub(super) fn resolve_bottom_source_ref(
+    source: &digimon_dsl::compiled::CompiledBindingRef,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> Option<CardSourceRef> {
+    if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(source, ctx, bindings) {
+        return ctx.game.field_top_material_ref(h);
+    }
+    resolve_card_source_ref(source, ctx, bindings)
+}
+
 /// Read the stable `CardHandle` a `CardSourceRef` currently addresses,
 /// WITHOUT moving the card. Used by `PlaceAsBottomSource.bind_placed_as` to
 /// capture the placed card's identity before the zone move invalidates the
@@ -1350,18 +1367,20 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // Resolve inputs before clearing the output: authors may reuse
             // the same slot for the chosen card and successful placement.
             let target_value = resolve_binding_ref(target, ctx, bindings);
-            let source_value = resolve_binding_ref(source, ctx, bindings);
-            let source_ref = resolve_card_source_ref(source, ctx, bindings);
+            // A permanent source addresses its top card: the whole permanent
+            // leaves the battle area (CR 4.3 §4-7-7) through the field-top
+            // source move (would-leave window, [On Leave], under-cards
+            // trashed). A `bind_placed_as` placement of that shape is
+            // intercepted earlier by `field_source_results::expand`, which
+            // binds only on a real placement (§15-7-2).
+            // G-ENGINE-PLACE-PERMANENT-AS-SOURCE-NO-LEAVE-WINDOW.
+            let source_ref = resolve_bottom_source_ref(source, ctx, bindings);
             if let Some(name) = bind_placed_as {
                 bindings.remove(name);
             }
             let Some(ResolvedBinding::Permanent(target_handle)) = target_value else {
                 return true;
             };
-            if let Some(ResolvedBinding::Permanent(source_handle)) = source_value {
-                let _ = ctx.place_permanent_as_bottom_sources(source_handle, target_handle);
-                return true;
-            }
             let Some(source_ref) = source_ref else {
                 return true;
             };

@@ -3152,6 +3152,12 @@ pub enum CompiledStep {
         bind_as: String,
         source_anchor: Option<(u8, u64)>,
         source_breeding: bool,
+        /// Plain permanent bindings on the donor's side, captured by stable
+        /// identity before the donor leaves the battle area: removing it
+        /// compacts the slots above it, so each is re-resolved afterwards
+        /// (dropped if that permanent itself left).
+        #[serde(default)]
+        rebind: Vec<(String, (u8, u64))>,
     },
 }
 
