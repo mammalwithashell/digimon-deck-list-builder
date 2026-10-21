@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-21T15:09:52.979449+00:00",
+  "last_updated": "2026-10-21T16:08:54.681572+00:00",
   "clauses": {
     "BT25-083#effect#0": {
       "clause_id": "BT25-083#effect#0",
@@ -168,8 +168,8 @@
       "reason": "ours contradicts ruling qa:Q6396 (ours vs DCGO: diverge); DIVERGED at step 29 (compared 27 of 32 ours / 29 dcgo steps (5 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-083-qa-Q6396",
-      "triage": "ours_wrong",
-      "citation": "G-ENGINE-USED-OPTION-FIRES-ITS-TRASHED-FROM-SOURCES-TRIGGER (docs/RUST_ENGINE_GAPS.md): with P-180 trashed from digivolution cards as LadyDevimon's cost and then used from the trash, ours still activates P-180's 'when effects trash this card from digivolution cards, delete 1 of your opponent's 7000 DP or lower Digimon' after the use (OppField prompt after row 29 of a re-authored copy). Official Q&A Q6396: it can't activate -- the used Option is in no area until its [Main] resolves, so it has left the trash. DCGO does not fire it",
+      "triage": "stale",
+      "citation": "fixed a6a265cdf; oracle re-exam needed",
       "recorded_at": "2026-10-06T21:47:05.811409100+00:00"
     }
   }
