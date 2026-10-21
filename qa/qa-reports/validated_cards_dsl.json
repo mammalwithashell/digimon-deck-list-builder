@@ -14841,6 +14841,22 @@
         "G4"
       ],
       "notes": "[Main][OPT] activated through the action mask: optional own-green-Digimon suspend (self allowed, Q1977) -> effect_suspended re-check -> optional free play from hand of a Vegetation/Plant/Fairy Digimon with DP<=3000; §15-6-3/§15-7-4 gate (illegal with no unsuspended green Digimon); OPT lockout + reset. Inherited [Your Turn][OPT] effect-suspend gain 1 memory (attack suspend excluded, Q1978); buried-copy integration. DCGO lets [Main] be declared with only suspended green Digimon (no-op); ours follows §15-6-3. DCGO oracle unmeasured."
+    },
+    "BT14-085": {
+      "card_name": "Mimi Tachikawa",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt14/BT14-085.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_085.rs",
+      "test_count": 13,
+      "patterns": [
+        "A2",
+        "B1"
+      ],
+      "notes": "[On Play] reveal 3, add 1 Digimon with Vegetation/Plant/Fairy (trait_contains) via single-bucket select_reveal_buckets (min 1), rest to deck bottom. [Your Turn] when an effect suspends a Digimon (any player's, Q2458), optional suspend-self cost -> gain 1 memory; no OPT; attack suspend, opponent's turn, already-suspended Mimi (§15-7-4) negatives. [Security] play self free. DCGO oracle unmeasured."
     }
   }
 }
