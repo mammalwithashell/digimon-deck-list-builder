@@ -1,0 +1,72 @@
+# BT11-052 Tyrannomon — Digimon, Lv.4, Green/Red, DP 5000, Play Cost 5.
+# Trait line (card image): Champion | Data | Dinosaur
+#   → form: Champion, attribute: Data, traits: [Dinosaur].
+#
+# Printed text (card image + official Bandai DB bundle data/card_bundles/BT11-052.md):
+#   Digivolve circles: Green Lv.3 / Cost 3 · Red Lv.3 / Cost 3
+#   [On Play] [When Digivolving] You may play 1 Tamer card with a play cost of
+#     3 or less from your hand without paying the cost.
+#   Inherited: [Your Turn] While you have a Tamer in play, this Digimon gets
+#     +2000 DP.
+#
+# DCGO BT11_052.cs:
+#   - Two OnEnterFieldAnyone ActivateClasses (On Play, When Digivolving),
+#     isOptional; SelectHandEffect over IsTamer && GetCostItself <= 3 (printed
+#     play cost), canNoSelect: true; PlayPermanentCards(payCost: false).
+#   - ChangeSelfDPStaticEffect(+2000, isInheritedEffect: true) with condition
+#     IsOwnerTurn && the owner has a Tamer permanent.
+#
+# Exemplars: BT12-011 (on_play + when_digivolving optional free play from hand),
+#   BT23-008 (inherited [Your Turn] self DP aura), BT21-009 (all_of active_when).
+
+card: BT11-052
+name: Tyrannomon
+kind: digimon
+level: 4
+color: [green, red]
+cost: 5
+dp: 5000
+form: Champion
+traits: [Dinosaur]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] you may play a cost<=3 Tamer free ──────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may play 1 Tamer card with a play cost of 3 or less from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - play_cost_lte: 3
+          prompt: "You may play 1 Tamer card with a play cost of 3 or less from your hand without paying the cost"
+      - if:
+          condition: { binding_present: tamer_pick }
+          then:
+            - play_from_hand_free: { of: you, hand_index: tamer_pick }
+
+  # ─── Inherited [Your Turn] +2000 DP while you have a Tamer ──────────────────
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] While you have a Tamer in play, this Digimon gets +2000 DP"

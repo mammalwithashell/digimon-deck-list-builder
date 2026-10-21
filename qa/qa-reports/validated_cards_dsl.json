@@ -14945,6 +14945,22 @@
         "G-app-fusion"
       ],
       "notes": "Blue/Red Lv.5 Appmon. Digivolve: Lv.4 blue / red circles cost 4, Sup. (rainbow) cost 4, App Fusion [Dosukomon]&[Coachmon] cost 0 (engine offers the cost choice when the paid circle also matches). <Raid>. [WD][WA][OPT] optional + outer_prompt (DCGO optional confirm: declining it keeps [WA] available) link_cards from hand/self_sources, level<=4 Digimon, to self, free; zone choice when both zones qualify; Q5243 enforced by link_card_qualifies_for (no <Link> -> not offered). [All Turns][OPT] when_card_linked_to_this optional self-unsuspend (any link source; not when another Digimon is linked). Link box: [Appmon] cost 3, +4000 DP, Security A. +1 (attack checks 2). Integrated WA line with Perorimon BT23-039 (Raid ordering, unsuspend + Perorimon suspend). Second link replaces the first (§4-9-5 max 1 link card). DCGO BT23_022.cs."
+    },
+    "BT11-052": {
+      "card_name": "Tyrannomon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b3-rebootmon-chronomon-datasquad",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta — Chronomon",
+      "yaml_path": "code/digimon-engine/cards/bt11/BT11-052.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt11/bt11_052.rs",
+      "test_count": 13,
+      "patterns": [
+        "B2",
+        "D2"
+      ],
+      "notes": "Green/Red Lv.4. Digivolve circles Green Lv.3 / 3 and Red Lv.3 / 3 (blue refused). [On Play][When Digivolving] optional select_hand Tamer with play_cost_lte 3 -> play_from_hand_free (cost-4 Tamer and Digimon not offered; PASS declines). Inherited aura +2000 DP gated on your_turn + own Tamer on the battle area (opponent's Tamer and opponent's turn give nothing). DCGO BT11_052.cs."
     }
   }
 }
