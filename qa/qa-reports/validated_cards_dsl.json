@@ -15322,7 +15322,7 @@
       "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
       "yaml_path": "code/digimon-engine/cards/p/P-250.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_250.rs",
-      "test_count": 20,
+      "test_count": 21,
       "patterns": [
         "alt-digivolve-by-name",
         "trash-zone-end-of-your-turn",
@@ -15330,7 +15330,7 @@
         "shared-opt-cost-clause",
         "inherited-on-deletion"
       ],
-      "notes": "Card data ingested 2026-10-21 (digimoncard.io API + official bundle; override restores the Black Lv.3 circle and the Champion form). TDD vs DCGO P_250.cs. {Trash}[End of Your Turn] needed G-ENGINE-TRASH-ZONE-END-OF-YOUR-TURN (engine scans the ending player's trash; substrate widened this commit). Demon pick filtered by has_digivolve_candidate, normal cost. OP/WD/WA shared OPT cost clause (BT24-026 idiom; DCGO has no hand>=1 gate, so declining/empty hand spends the OPT). Inherited [On Deletion] mandatory delete play cost <= 6. No local card image."
+      "notes": "Card data ingested 2026-10-21 (digimoncard.io API + official bundle; override restores the Black Lv.3 circle and the Champion form). TDD vs DCGO P_250.cs. {Trash}[End of Your Turn] needed G-ENGINE-TRASH-ZONE-END-OF-YOUR-TURN (engine scans the ending player's trash; substrate widened this commit). Demon pick filtered by has_digivolve_candidate, normal cost. OP/WD/WA shared OPT cost clause (BT24-026 idiom; DCGO has no hand>=1 gate, so declining/empty hand spends the OPT). Inherited [On Deletion] mandatory delete play cost <= 6. No local card image. Gate added 2026-10-21 (controller): condition hand >= 1 so the unpayable cost is not offered and the once-per-turn is kept (CR 4.3 §15-7-4; dcgo_quirk)."
     },
     "BT6-108": {
       "card_name": "Underworld's Call",

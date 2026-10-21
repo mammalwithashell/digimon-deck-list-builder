@@ -414,6 +414,26 @@ fn p_250_once_per_turn_shared_and_resets_next_turn() {
     );
 }
 
+#[test]
+fn p_250_empty_hand_never_activates_so_the_once_per_turn_is_kept() {
+    // CR 4.3 §15-7-4 / §15-8-4-4-1: an unpayable optional condition can't be
+    // chosen, so the clause doesn't activate and the once-per-turn is not spent
+    // (dcgo_quirk: DCGO offers the cost pick and spends the use).
+    let mut r = setup();
+    let shaman = r.place_on_field(0, "SHAMAN3", Some(0));
+    let me = play_card(&mut r);
+    assert_eq!(r.hand_size(0), 0, "empty hand after the play");
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the unpayable 'by trashing 1 card in your hand' is not offered"
+    );
+    assert!(!r.game.has_keyword(shaman, Keyword::Blocker));
+    push_hand(&mut r, 0, "FILLER");
+    r.attack_player(me, 1, false);
+    let v = r.pending_selection_view().expect("[When Attacking] still has its once-per-turn");
+    assert!(v.is_optional, "the cost pick is offered now that it is payable");
+}
+
 // ─── Section 5 — Inherited [On Deletion] ─────────────────────────────────────
 
 #[test]

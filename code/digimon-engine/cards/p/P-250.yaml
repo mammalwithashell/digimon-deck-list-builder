@@ -42,9 +42,14 @@
 #   → ONE clause `when: [on_play, when_digivolving, when_attacking]` +
 #   once_per_turn (one shared counter); select_hand optional cost:true +
 #   trash; select_own_permanent; two grants expiring at the end of the
-#   opponent's turn. DCGO never calls RemoveUse, so declining the cost (or an
-#   empty hand) still spends the once-per-turn — unlike BT24-026, DCGO P-250
-#   has no `hand >= 1` activate condition, so none is authored here.
+#   opponent's turn. DCGO never calls RemoveUse, so DECLINING the cost still
+#   spends the once-per-turn (the activation happened; owner ruling #20's
+#   "use spent on activation" reading). An EMPTY hand is different: CR 4.3
+#   §15-7-4 / §15-8-4-4-1 — an unpayable optional condition can't be chosen
+#   and the effect isn't activated, so the once-per-turn is kept. DCGO P-250
+#   has no `hand >= 1` activate condition (DCGO offers the cost pick and
+#   spends the use — dcgo_quirk; the PDF governs), so the gate is authored
+#   here as `condition: count_gte hand 1`, the BT24-026 idiom.
 # Inherited [On Deletion] (not optional): if an opponent Digimon with
 #   TopCard.HasPlayCost && GetCostItself <= 6 exists, a mandatory pick → delete.
 
@@ -110,6 +115,12 @@ effects:
   #     <Retaliation> until your opponent's turn ends ─────────────────────────
   - when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
+    # §15-7-4: an unpayable "by trashing 1 card in your hand" is not offered and
+    # the once-per-turn is not spent (dcgo_quirk: DCGO offers it anyway).
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
     summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] By trashing 1 card in your hand, 1 of your [Demon], [Shaman] or [Undead] trait Digimon gains <Blocker> and <Retaliation> until your opponent's turn ends"
     process:
       - select_hand:
