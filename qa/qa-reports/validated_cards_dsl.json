@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-20",
+  "last_updated": "2026-10-21",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -14873,6 +14873,22 @@
         "E2"
       ],
       "notes": "Clause 1: field-hosted cost_reduction, when_any_ally_played green Tamer + cost_target_from_hand, optional, OPT, interactive pay_cost (select own unsuspended green Digimon -> suspend), amount 3; §15-7-4 gate. Clause 2: inherited cost_reduction on this permanent's digivolve (source_is_cost_target_permanent) with an own green Tamer, mandatory, OPT. Substrate fix G-COST-REDUCTION-ALLY-PLAYED-OWNER: when_any_ally_played now requires the played card to belong to the reducer's controller (opponent's green Tamer play was offered Togemon's prompt). DCGO oracle unmeasured."
+    },
+    "BT14-044": {
+      "card_name": "Palmon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta-a2-ceresmon-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
+      "yaml_path": "code/digimon-engine/cards/bt14/BT14-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_044.rs",
+      "test_count": 17,
+      "patterns": [
+        "B1",
+        "D2"
+      ],
+      "notes": "[Start of Your Main Phase] mandatory opponent-Digimon pick + grant_triggered_effect on_suspend / end_of_opponents_turn, body lose_memory 2 (the carrier's controller), trigger_if event_target_is_source (G-DSL-GRANTED-TRIGGER-QUALIFIER: on_suspend is an observer timing, any suspension made the carrier's controller lose 2). Inherited [Your Turn][OPT] digivolve cost -1 with an own green Tamer (BT14-046 shape). DCGO oracle unmeasured."
     }
   }
 }
