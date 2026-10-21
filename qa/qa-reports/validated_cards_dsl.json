@@ -14796,6 +14796,23 @@
         "F1"
       ],
       "notes": "DUAL. Alt-digivolve Lv.4 [Glowing Dawn] cost 3. WD optional cost trash_bottom_face_down_source_under_tamer (lowest face-down card, owner ruling 2026-10-20) -> grant_effect_immunity opp Digimon + +3000 DP until end of opp turn. [All Turns][OPT] on_attack_target_change | on_digivolution_card_trashed (timing_conditions event_host_is_own_tamer) may unsuspend, gated source suspended. Option [Main] De-Digivolve 1 + grant_triggered_effect SOMP force_attack until end of opp turn; Q&A immunity gate honoured. Use Req [Glowing Dawn] + Arts Digivolve. Note: the granted-clause immunity gate attributes a DUAL Option-face grant as a Digimon effect (G-ENGINE-DUAL-OPTION-GRANT-SOURCE-KIND, non-blocking)."
+    },
+    "BT26-061": {
+      "card_name": "Chiropmon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta b1-glowing-dawn-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_061.rs",
+      "test_count": 9,
+      "patterns": [
+        "A1",
+        "G4",
+        "E2"
+      ],
+      "notes": "Alt-digivolve Lv.2 [Glowing Dawn] cost 0. On Play reveal 3 -> select_reveal_buckets ([Glowing Dawn]; purple [BEATBREAK]; no_duplicate_cards), rest to deck bottom (BT25-032 idiom). Inherited [When Attacking][OPT] Draw 1 then mandatory hand trash."
     }
   }
 }
