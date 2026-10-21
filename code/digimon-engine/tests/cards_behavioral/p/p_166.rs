@@ -40,6 +40,7 @@
 mod dsl_card_data;
 
 use digimon_dsl::compiled::{CompiledClause, CompiledCost, CompiledScope, CompiledTiming};
+use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{
     encode_attack, encode_digivolve, ATTACK_START, PASS, PLAY_HAND_START,
 };
@@ -47,6 +48,7 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, CostDelta, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::SelectionKind;
 
 const CARD_ID: &str = "P-166";
 
@@ -356,16 +358,25 @@ fn p_166_inherited_inactive_while_galemon_is_the_top_card() {
 /// (2), and with BT3-103's 5 the total is 7. A cost-9 target makes the split
 /// visible: 9 - 7 = 2 paid (the engine pays 3: it counts the suspended
 /// Digimon when the effect starts the digivolution, before the would-digivolve
-/// reducer window — DCGO does the same).
+/// reducer window — DCGO does the same). Every step up to the final cost
+/// assertion passes: the reducer is armed, offered and accepted, ALLY is
+/// suspended, and the digivolution resolves; only the amount paid differs.
 #[test]
 #[ignore = "G-ENGINE-EFFECT-DIGIVOLVE-COST-LATE-COUNT (Q4276): the reduction is counted before the would-digivolve reducer window"]
 fn p_166_q4276_hidden_potential_suspension_counts() {
     let mut r = runner();
     let o = r.place_on_field(1, "OPP", Some(0));
     let ally = r.place_on_field(0, "ALLY", Some(0));
-    let h = r.add_to_hand(0, "BT3-103");
-    let _ = r.game.play_option_from_hand(0, h);
-    let _ = r.auto_resolve();
+    // An Option needs a Digimon/Tamer of its colour in play to be used.
+    r.place_on_field(0, "G-LV3", Some(0));
+    // Use BT3-103 from the hand as a main-phase action (the
+    // `tests/effect_player_digivolve_reducer.rs` staging) and prove its
+    // player-scoped reducer is armed before Galemon is played.
+    let h = r.add_to_hand(0, "BT3-103") as u16;
+    assert_eq!(build_action_mask(&r.game, 0)[(PLAY_HAND_START + h) as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START + h, 0);
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.game.player_digivolve_cost_reducers.len(), 1, "BT3-103 armed");
     r.game.set_memory(10);
     r.add_to_hand(0, "AVIAN5-9");
     play_galemon(&mut r);
@@ -373,10 +384,22 @@ fn p_166_q4276_hidden_potential_suspension_counts() {
     let before = r.memory();
     let a = PLAY_HAND_START + hand_idx(&r, "AVIAN5-9");
     r.execute_action(0, a).unwrap();
-    // BT3-103's reducer: accept, suspend ALLY.
-    r.accept_optional_trigger().unwrap();
+    // BT3-103's reducer: an optional EffectChoice offered before the cost is
+    // paid; accept, then suspend ALLY (OwnField).
+    let v = r
+        .pending_selection_view()
+        .expect("BT3-103's armed reducer is offered on Galemon's effect digivolution");
+    assert_eq!(v.kind, SelectionKind::EffectChoice);
+    assert!(v.is_optional);
+    assert_eq!(r.memory(), before, "nothing paid before the reducer choice");
+    let yes = *v.valid_action_ids.iter().find(|&&x| x != PASS).unwrap();
+    r.execute_action(0, yes).unwrap();
+    let v = r.pending_selection_view().expect("choose 1 own Digimon to suspend");
+    assert_eq!(v.kind, SelectionKind::OwnField);
     r.execute_action(0, own_field(ally)).unwrap();
     let _ = r.auto_resolve();
+    assert!(suspended(&r, ally));
     assert!(find(&r, "AVIAN5-9").is_some());
+    assert!(r.game.player_digivolve_cost_reducers.is_empty());
     assert_eq!(before - r.memory(), 2, "9 - 5 - 2 (Q4276)");
 }

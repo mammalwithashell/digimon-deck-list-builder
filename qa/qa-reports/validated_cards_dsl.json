@@ -14927,7 +14927,7 @@
       "validated_date": "2026-10-21",
       "report": "ex13-meta-a2-ceresmon-2",
       "status": "PARTIAL",
-      "gap_kind": null,
+      "gap_kind": "engine",
       "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a2-ceresmon-2",
       "yaml_path": "code/digimon-engine/cards/p/P-166.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_166.rs",
@@ -14936,7 +14936,7 @@
         "F1",
         "D2"
       ],
-      "notes": "[On Play][When Digivolving] optional any-Digimon suspend (continue_on_decline), then if your turn optional digivolve into an Avian/Bird-trait hand Digimon via effect_initiated_digivolve with reduce = suspended_count {of: any, exclude_source}. Inherited [Your Turn] +2000 DP. PARTIAL: Q4276 - a Digimon suspended by a would-digivolve reducer (BT3-103) during this digivolution must count toward the reduction; the formula is evaluated when the effect starts the digivolution (as DCGO). G-ENGINE-EFFECT-DIGIVOLVE-COST-LATE-COUNT; witness p_166_q4276_hidden_potential_suspension_counts (ignored). DCGO oracle unmeasured."
+      "notes": "[On Play][When Digivolving] optional any-Digimon suspend (continue_on_decline), then if your turn optional digivolve into an Avian/Bird-trait hand Digimon via effect_initiated_digivolve with reduce = suspended_count {of: any, exclude_source}. Inherited [Your Turn] +2000 DP. PARTIAL: Q4276 - a Digimon suspended by a would-digivolve reducer (BT3-103) during this digivolution must count toward the reduction; the formula is evaluated when the effect starts the digivolution (as DCGO). G-ENGINE-EFFECT-DIGIVOLVE-COST-LATE-COUNT; witness p_166_q4276_hidden_potential_suspension_counts (ignored; run with --ignored it fails only at the final cost: 3 paid instead of 2). DCGO oracle unmeasured."
     },
     "BT3-054": {
       "card_name": "Blossomon",
