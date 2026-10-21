@@ -5995,6 +5995,15 @@ no dedicated clause test in `dna_result_new_card.rs`.
 - **Fix shape:** seed the checker's `event_permanent_identity` + `event_snapshot` into these contexts (or set `event_permanent: Some(attacker)` after confirming every `event_target_*` reader still resolves the same referent), with a witness in `ch11_14_attack_procedure`: a "your Digimon with N DP or more checks" observer, `[Security]` deletes the checker, the observer reads the snapshot.
 - **Blocks training:** no. Filed from the main-merge review (M1, `main-merge-review-findings.md`).
 
+### Optional-replacement residuals from the Venusmon BT24-040 fix  [G-ENGINE-OPTIONAL-REPLACEMENT-RESIDUALS-2026-10-20] — OPEN (2026-10-20, non-blocking)
+
+Filed from the second re-review of the Venusmon owner-security fix (p4-venusmon-owner, 35b22a630), after the generic `ResumeFrame::OptionalReplacement` ordering change (steps queued behind an accepted optional replacement's prompt run after that replacement's window commits — §15-8-5-2; confirmed correct for <Armor Purge>, <Evade>, <Barrier>, <Fragment>, <Scapegoat>, <Decoy>, <Guard>, the Overclock/Armor-Purge park and the paid-prevention receipt finalizers).
+
+- **R1 (edge case, no card known to reach it):** `selections.rs` ~L1356-1362 with `replacement.rs` ~L1604-1606 — steps attached to `parked_replacement[base]` are DROPPED if that window's subject cannot be resolved when it drains (the function returns before `run_outer_conts`). On the pre-fix head those steps ran from the resume frame. Hardening: run `parked.outer_conts` on that early return too, with a test that makes the subject vanish between the park and the drain.
+- **R2 (§15-7-4, same family as the Venusmon N-2 fix):** the acting player's own `CannotAddSecurityByEffect` gate (`game_actions/mod.rs` ~L3636 / ~L4009) still OFFERS a security-placement cost/replacement and then fails the payment; the new `owner_can_add_security` candidate filter does not cover the acting-player-blocked case. Per §15-7-4 an unpayable optional condition is not offered. Fix shape: gate the offer on the destination owner being able to add security (for `to_owner` bodies the destination is the body's owner — covered; for `of: you` bodies it is the acting player — not covered).
+- **R3 (test-only):** `place_sourceless_permanent_bottom_security_and_cancel_current_replacement` (DebugRunner-only caller) ignores a parked placement; the primitive's doc comment still names EX8-028.
+- **Blocks training:** no — R1 has no production reach, R2 wastes an action without changing an outcome the rules give (the placement could not legally happen), R3 is test-only.
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.
