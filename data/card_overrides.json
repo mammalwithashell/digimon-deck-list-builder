@@ -18415,6 +18415,23 @@
     ],
     "effect_description_eng": "[Main] You may play 1 [Vemmon] or [Zenith] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When effects place [Vemmon] as any of your Digimon's digivolution cards, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with [Vemmon] in its text may digivolve into a Digimon card with [Vemmon] in its text in the hand or trash with the cost reduced by 3."
   },
+  "P-250": {
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "form_eng": [
+      "Champion"
+    ]
+  },
   "_note_cards_json_drift_2026_10": "2026-10-03 reconciliation against the official Bandai DB; every value checked against the card image and the DCGO card asset (code/tools/archive/reconcile_cards_json_drift_2026_10.py lists them). The API still serves these wrong unless noted: pre-release stubs BT24-028/061/068/078 (cost 0, no DP, no text, no special digivolution condition), BT24-044 and ST23-06 (cost 0, no DP); ST24-04 (the API now has its cost/DP, but its text is still the stale pre-release text); play cost or DP; the third colour of three-colour cards (the API has two colour fields; BT16-102's earlier override said white for black); '|applinkdp =' residue as inherited text; stale or misfiled text (EX11-033 and ST24-04 print [When Moving]; BT25-088's effect held its security text; Digi-Eggs BT13-006/BT22-001 keep inherited text in the inherited field); missing traits (P-169's LIBERATOR is a type, as printed); special digivolution conditions missing from xros_req. Where the official mirror itself is wrong, cards.json keeps the printed value: see PRINTED_OVER_MIRROR in code/tests/test_cards_json_integrity.py.",
   "AD1-020": {
     "card_colors": [
@@ -18562,5 +18579,6 @@
   "ST22-11": {
     "link_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
   },
-  "_note_link_box_2026_10": "2026-10-05: a link card's link effect lives in `link_effect_description_eng`, not in the inherited text where the API's `source_effect` puts it (ingest_cards.normalize_link_box moves it; code/tools/archive/move_link_box_2026_10.py). The link-effect overrides restore the printed text (official Bandai DB; EX10-016 from the card image) where the API drops its timing, keywords or the whole effect."
+  "_note_link_box_2026_10": "2026-10-05: a link card's link effect lives in `link_effect_description_eng`, not in the inherited text where the API's `source_effect` puts it (ingest_cards.normalize_link_box moves it; code/tools/archive/move_link_box_2026_10.py). The link-effect overrides restore the printed text (official Bandai DB; EX10-016 from the card image) where the API drops its timing, keywords or the whole effect.",
+  "_note_P-250": "P-250 Ogremon (X Antibody), ingested 2026-10-21 from digimoncard.io for the EX13 meta run. The API drops the second (Black) digivolve circle and the Champion form; the official Bandai DB (data/card_bundles/P-250.md) prints Purple Lv.3/3 AND Black Lv.3/3, form Champion."
 }

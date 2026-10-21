@@ -6023,6 +6023,15 @@ Filed from the second re-review of the Venusmon owner-security fix (p4-venusmon-
 - **Witness:** `combat -- block_interrupt::blocker_window_skipped_when_attacker_cannot_be_blocked`, `block_interrupt::cannot_be_blocked_is_attacker_side_only`; `cards_behavioral -- ex2_068_chosen_digimon_cannot_be_blocked`, `ex2_068_unchosen_digimon_can_still_be_blocked`.
 - **Blocks training:** no (resolved).
 
+### `{Trash}` [End of Your Turn] effects never triggered from the trash  [G-ENGINE-TRASH-ZONE-END-OF-YOUR-TURN] — RESOLVED (2026-10-21, EX13 lane c)
+
+- **Card reached:** P-250 Ogremon (X Antibody) ("{Trash} [End of Your Turn] If your hand has 5 or fewer cards, 1 of your [Demon] trait Digimon may digivolve into this card"). The same timing is printed on the unauthored BT24-080 Megidramon, EX4-011 ChaosGallantmon and EX10-071 Paradise Lost.
+- **Defect:** trash-scoped clauses (`scope: trash`, `Effect::trash_zone`) were only scanned for `OnAllyPlayed` (BT20-084) and the self "trashed from the hand" path (BT26-069). `Game::fire_end_of_your_turn` fanned `EndOfYourTurn` out to the battle area and the security stack only, so a `scope: trash` + `when: end_of_your_turn` clause compiled but never fired.
+- **Fix:** `fire_end_of_your_turn` also calls `enqueue_from_player_trash(EndOfYourTurn, player, None)` (now `pub(crate)`) for the ENDING player, so the `{Trash}` clauses join the same simultaneous end-of-turn pool (§15-4-3-5-1 ordering unchanged). `enqueue_from_player_trash` already filters to `trash_zone` clauses, so a dead card's ordinary field effects stay dormant. DCGO `IsExistOnTrashTrigger` + `IsOwnerTurn`; Q&A: a {Trash} effect triggers only while its card is in the trash.
+- **Not covered:** `[End of Opponent's Turn]` / `[End of All Turns]` from the trash (no card needs it yet), and a card that enters the trash DURING the end-of-turn pool is not re-scanned (§15-8-3-6 — the scan is a one-time snapshot, like the security-stack scan).
+- **Witness:** `trash_zone_end_of_your_turn` (4 tests: fires from the ending player's trash; dormant on the field, in the hand, and at the opponent's turn end); `cards_behavioral -- p_250_trash_end_of_turn_*` (7 tests).
+- **Blocks training:** no (resolved).
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.

@@ -1321,6 +1321,14 @@ impl Game {
                 crate::selection::TriggerSource::SecurityStackCard { player, card },
             );
         }
+        // G-ENGINE-TRASH-ZONE-END-OF-YOUR-TURN (P-250 Ogremon (X Antibody)):
+        // `{Trash}[End of Your Turn]` effects on cards in the ENDING player's
+        // trash join the same simultaneous end-of-turn pool. Only clauses
+        // printed with the `{Trash}` zone scope (`scope: trash`) are scanned,
+        // so a dead card's ordinary field effects stay dormant (DCGO
+        // `IsExistOnTrashTrigger`; Q&A: a {Trash} effect triggers only while
+        // its card is in the trash).
+        self.enqueue_from_player_trash(EffectTiming::EndOfYourTurn, player, None);
         // §18-1-2: pending processing due at the end of this turn
         // (`ScheduledEffect`s for `EndOfYourTurn` / `EndOfYourNextTurn`)
         // joins the printed `[End of Your Turn]` effects in ONE simultaneous

@@ -14890,6 +14890,25 @@
         "opt-lockout"
       ],
       "notes": "TDD vs DCGO BT6_006.cs. Inherited [Your Turn][OPT] on_discard_hand gated on event_discard_player: you + event_caused_by_own_effect: true (ST16-14 idiom); mandatory <Draw 1>. Negatives: opponent's turn, opponent's effect trashing your hand (mutation-checked), your effect trashing the opponent's hand, Tsunomon as top card. OPT lockout + reset next turn."
+    },
+    "P-250": {
+      "card_name": "Ogremon (X Antibody)",
+      "validated_date": "2026-10-21",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "EX13 meta c3 — Titans (black/purple Titan line)",
+      "yaml_path": "code/digimon-engine/cards/p/P-250.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_250.rs",
+      "test_count": 20,
+      "patterns": [
+        "alt-digivolve-by-name",
+        "trash-zone-end-of-your-turn",
+        "effect-digivolve-from-trash",
+        "shared-opt-cost-clause",
+        "inherited-on-deletion"
+      ],
+      "notes": "Card data ingested 2026-10-21 (digimoncard.io API + official bundle; override restores the Black Lv.3 circle and the Champion form). TDD vs DCGO P_250.cs. {Trash}[End of Your Turn] needed G-ENGINE-TRASH-ZONE-END-OF-YOUR-TURN (engine scans the ending player's trash; substrate widened this commit). Demon pick filtered by has_digivolve_candidate, normal cost. OP/WD/WA shared OPT cost clause (BT24-026 idiom; DCGO has no hand>=1 gate, so declining/empty hand spends the OPT). Inherited [On Deletion] mandatory delete play cost <= 6. No local card image."
     }
   }
 }
