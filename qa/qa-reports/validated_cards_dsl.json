@@ -14847,6 +14847,22 @@
         "E2"
       ],
       "notes": "SOMP optional BEATBREAK hand stash face down (bottom, Q&A) -> Draw 1 + 1 memory (Kyo BT26-089 idiom). [All Turns] on_any_deletion trigger_if event_target_kind digimon (either player's), optional, suspend_self cost (source_is_unsuspended) -> Draw 1 -> mandatory hand trash -> mandatory pick of a BEATBREAK non-Digi-Egg trash card placed bottom face down. One trigger per simultaneous deletion (§15-5-2, engine fix G-ENGINE-DELETION-OBSERVER-TRIGGERS-PER-DELETED-DIGIMON). [Security] play self."
+    },
+    "BT26-053": {
+      "card_name": "Wolvermon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b2-glowing-dawn-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-053.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_053.rs",
+      "test_count": 17,
+      "patterns": [
+        "H5",
+        "E2"
+      ],
+      "notes": "Alt-digivolve Lv.3 [Glowing Dawn] cost 2 (printed Black Lv.3 circle comes from cards.json evo_costs). <Blocker> own + inherited (grant_keyword). [All Turns][OPT] on_attack_target_change (any attack, either turn; tested with its own block, an own attack being blocked, and the opponent's attack redirected by another blocker): optional clause gated face_down_sources_under_tamers_gte 1 (declining keeps the OPT = DCGO RemoveUse) -> trash_bottom_face_down_source_under_tamer (lowest face-down card, owner ruling #19; fires on_digivolution_card_trashed observers) -> optional use_option_from_hand free over kind option + [Glowing Dawn] + use cost <= 4 (a [Glowing Dawn] DUAL is offered by its Option use cost, rules 4-6-1/4-6-6-2; use cost 5, no trait, and Digimon cards are not offered). Paying without an eligible Option still trashes (DCGO)."
     }
   }
 }

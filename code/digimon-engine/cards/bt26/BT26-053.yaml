@@ -1,0 +1,85 @@
+# BT26-053 Wolvermon — Digimon, Lv.4, Black, DP 5000, Cost 5.
+# Traits: Cyborg, Glowing Dawn, BEATBREAK. Form: Champion. Attribute: Vaccine.
+# Printed digivolve box: Black Lv.3 / cost 2; [Digivolve] Lv.3 w/[Glowing
+#   Dawn] trait: Cost 2.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-053.md):
+#   <Blocker> [All Turns] [Once Per Turn] When attack targets change, by
+#     trashing the bottom face-down card from under any of your Tamers, you may
+#     use 1 Option card with the [Glowing Dawn] trait and a use cost of 4 or
+#     less from your hand without paying the cost.
+#   Inherited: <Blocker>
+#   Owner ruling 2026-10-20: "the bottom face-down card" is the LOWEST
+#     face-down card, even with face-up cards below it.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Black/BT26_053.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: level 3 + TopCard EqualsTraits "Glowing Dawn", cost 2.
+# <Blocker>: BlockerSelfStaticEffect (own) → grant_keyword Blocker.
+# [All Turns][OPT] (OnAttackTargetChanged, any switch — `permanent => true`,
+#   maxCount 1, not optional): CanActivate = an own Tamer with a face-down
+#   card that can be stack-trashed. The Tamer pick is canNoSelect:true —
+#   declining is not paying, and RemoveUse refunds the [Once Per Turn].
+#   → optional clause (the "by trashing" cost is the player's choice; a
+#   declined optional trigger does not spend the OPT) +
+#   face_down_sources_under_tamers_gte 1 + trash_bottom_face_down_source_
+#   under_tamer (BT26-057 / BT26-005 idiom). After paying: a canNoSelect:true
+#   hand pick over IsOption && EqualsTraits("Glowing Dawn") && GetCostItself
+#   <= 4 && !CanNotPlayThisOption → PlayOptionCards(payCost: false).
+#   → optional use_option_from_hand (free; a DUAL is offered by its Option
+#   information — §4-6-1 / §4-6-6-2 — so `kind: option` + `play_cost_lte`
+#   read the Option face's use cost).
+# Inherited <Blocker>: BlockerSelfStaticEffect(isInherited) → scope inherited.
+
+card: BT26-053
+name: "Wolvermon"
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: [Cyborg, Glowing Dawn, BEATBREAK]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: "Glowing Dawn"
+    cost: 2
+
+effects:
+  # ─── <Blocker> ──────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [All Turns][OPT] When attack targets change, by trashing the bottom
+  #     face-down card from under any of your Tamers, you may use 1 [Glowing
+  #     Dawn] Option with use cost 4 or less from hand without paying ───────────
+  - when: on_attack_target_change
+    optional: true
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition: { face_down_sources_under_tamers_gte: 1 }
+    summary: "[All Turns][Once Per Turn] When attack targets change, by trashing the bottom face-down card from under any of your Tamers, you may use 1 Option card with the [Glowing Dawn] trait and a use cost of 4 or less from your hand without paying the cost"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "Glowing Dawn"
+              - play_cost_lte: 4
+          prompt: "You may use 1 Option card with the [Glowing Dawn] trait and a use cost of 4 or less from your hand without paying the cost"
+
+  # ─── Inherited <Blocker> ────────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited <Blocker>"
