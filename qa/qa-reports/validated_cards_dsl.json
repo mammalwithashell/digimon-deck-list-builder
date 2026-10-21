@@ -14829,6 +14829,24 @@
         "H7"
       ],
       "notes": "Alt-digivolve Lv.2 [Glowing Dawn] cost 0. On Play reveal 3 -> select_reveal_buckets ([Glowing Dawn]; black [BEATBREAK]; no_duplicate_cards — DCGO mutualConditions), rest to deck bottom (BT25-032 idiom). Inherited <Reboot>."
+    },
+    "BT26-095": {
+      "card_name": "Makoto Kuonji",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta b1-glowing-dawn-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt26/BT26-095.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_095.rs",
+      "test_count": 15,
+      "patterns": [
+        "B1",
+        "B3",
+        "A6",
+        "E2"
+      ],
+      "notes": "SOMP optional BEATBREAK hand stash face down (bottom, Q&A) -> Draw 1 + 1 memory (Kyo BT26-089 idiom). [All Turns] on_any_deletion trigger_if event_target_kind digimon (either player's), optional, suspend_self cost (source_is_unsuspended) -> Draw 1 -> mandatory hand trash -> mandatory pick of a BEATBREAK non-Digi-Egg trash card placed bottom face down. One trigger per simultaneous deletion (§15-5-2, engine fix G-ENGINE-DELETION-OBSERVER-TRIGGERS-PER-DELETED-DIGIMON). [Security] play self."
     }
   }
 }
