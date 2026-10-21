@@ -1,0 +1,76 @@
+# BT26-052 Pristimon — Digimon, Lv.3, Black, DP 2000, Cost 3.
+# Traits: Puppet, Glowing Dawn, BEATBREAK. Form: Rookie. Attribute: Vaccine.
+# Printed digivolve box: Black Lv.2 / cost 0; [Digivolve] Lv.2 w/[Glowing
+#   Dawn] trait: Cost 0.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-052.md):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 [Glowing Dawn] trait
+#     card and 1 black [BEATBREAK] trait card among them to the hand. Return
+#     the rest to the bottom of the deck.
+#   Inherited: <Reboot> (This Digimon also unsuspends in your opponent's
+#     unsuspend phase.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Black/BT26_052.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve (timing None): level 2 + TopCard EqualsTraits("Glowing Dawn"),
+#   cost 0. → alt_paths digivolve from level 2 + Glowing Dawn trait, cost 0.
+# On Play (OnEnterFieldAnyone, not optional): SimplifiedRevealDeckTopCardsAnd
+#   Select(revealCount 3; bucket EqualsTraits("Glowing Dawn") max 1 AddHand;
+#   bucket HasCardColor(Black) && EqualsTraits("BEATBREAK") max 1 AddHand;
+#   remainder DeckBottom; mutualConditions: true). → BT25-032 Liollmon idiom:
+#   reveal_top_deck 3 + two-bucket select_reveal_buckets (no_duplicate_cards)
+#   + add both + place_remainder_on_deck bottom.
+# Inherited (None): RebootSelfStaticEffect(isInheritedEffect: true) → scope
+#   inherited + grant_keyword Reboot.
+
+card: BT26-052
+name: "Pristimon"
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+traits: [Puppet, Glowing Dawn, BEATBREAK]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: "Glowing Dawn"
+    cost: 0
+
+effects:
+  # ─── [On Play] Reveal 3; add 1 Glowing Dawn + 1 black BEATBREAK; rest bottom ─
+  - when: on_play
+    summary: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Glowing Dawn] trait card and 1 black [BEATBREAK] trait card among them to the hand. Return the rest to the bottom of the deck"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: gd_pick
+              min: 1
+              max: 1
+              filter: { trait_has: "Glowing Dawn" }
+            - bind_as: bb_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - trait_has: "BEATBREAK"
+                  - color_is: black
+          no_duplicate_cards: true
+          prompt: "Add 1 [Glowing Dawn] and 1 black [BEATBREAK] trait card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: gd_pick }
+      - add_to_hand_from_reveal: { of: you, card: bb_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited <Reboot> ────────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "Inherited <Reboot>"
