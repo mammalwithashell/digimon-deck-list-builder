@@ -14809,6 +14809,22 @@
         "E2"
       ],
       "notes": "Inherited [Your Turn][OPT] on_suspend <Draw 1> with trigger_if event_is_effect_initiated + own Digimon (EX6-004 shape). Tests: effect suspend of another own Digimon / of the carrier draws; attack declaration (Q3438), non-effect suspend, opponent's Digimon, opponent's turn, Kokomon not a source: no draw; OPT lockout + reset. DCGO oracle unmeasured."
+    },
+    "BT10-048": {
+      "card_name": "Sunflowmon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt10/BT10-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_048.rs",
+      "test_count": 17,
+      "patterns": [
+        "E2",
+        "G4"
+      ],
+      "notes": "[When Digivolving] optional processing condition (§15-7): optional own-green-Digimon suspend pick -> effect_suspended_any_own_digimon -> optional free play from hand of a Digimon with Vegetation/Plant/Fairy (trait_contains) and DP<=3000; §15-7-4 condition gate; §15-7-5 suspend allowed with nothing playable. Inherited [Your Turn][OPT] effect-suspend <Draw 1>. Tests drive the real digivolve action. Data fix: cards.json + card_overrides.json drop the phantom green Lv.3/cost 0 circle (image + DCGO asset print only cost 2; official mirror also wrong). Q1974 (Digisorption timing) not exercised: no Digisorption card in the pack. DCGO oracle unmeasured."
     }
   }
 }
