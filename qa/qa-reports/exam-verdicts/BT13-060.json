@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T21:14:36.076313500+00:00",
+  "last_updated": "2026-10-21T15:09:52.979449+00:00",
   "clauses": {
     "BT13-060#effect#1": {
       "clause_id": "BT13-060#effect#1",
@@ -23,6 +23,8 @@
       "reason": "DIVERGED at step 16 (compared 18 of 18 ours / 18 dcgo steps)",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT13-060-effect2",
+      "triage": "stale",
+      "citation": "Sim side now matches DCGO's recorded answer: re-diffed 2026-10-21 on the Plan 4 engine against the same recorded sidecar (20261006T190759Z) -- CLEAN 18/18. Re-exam to earn confirmed",
       "recorded_at": "2026-10-06T19:08:43.848455700+00:00"
     }
   },
@@ -68,6 +70,8 @@
       "reason": "ours contradicts ruling qa:Q2304 (ours vs DCGO: diverge); DIVERGED at step 16 (compared 21 of 21 ours / 21 dcgo steps)",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT13-060-qa-Q2304",
+      "triage": "stale",
+      "citation": "The expect_ruling block asserts on a PRE-decision row (a row is the state BEFORE its step), so it reads the state before the ruling's action; Q2304 is asserted at row 20, before the second attack is declared. On today's engine (re-diffed 2026-10-21: CLEAN 21/21 vs the recorded sidecar) the state after that attack has p1.security 2 -- one Digimon + one Tamer counted as one pair, as Q2304 rules. Re-encode at a post-attack row (the line has none: add a trailing step) and re-exam",
       "recorded_at": "2026-10-06T21:14:36.076313500+00:00"
     }
   }

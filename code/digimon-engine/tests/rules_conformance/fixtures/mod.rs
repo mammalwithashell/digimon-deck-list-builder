@@ -210,6 +210,14 @@ const CH15_15: &[&str] = &[
     include_str!("ch15_15/TOKEN_OD_MINUS_3K.yaml"),
 ];
 
+/// §15-14 effect icon cards (`ch15_14_effect_icons.rs`).
+const CH15_14: &[&str] = &[
+    include_str!("ch15_14/SEC_COST_DEL.yaml"),
+    include_str!("ch15_14/SEC_MAY_DEL.yaml"),
+    include_str!("ch15_14/SEC_THEN_MAY.yaml"),
+    include_str!("ch15_14/SECZONE_MAY_DEL.yaml"),
+];
+
 /// §16-42..§16-47 Ver. 4.x keyword cards, with the §4-6 DUAL, §4-19
 /// <Overflow> and §4-20 Arts Digivolve cards (`ch16_new_keywords.rs`).
 const CH16_NEW: &[&str] = &[
@@ -433,6 +441,11 @@ pub fn ch15_15_cards() -> &'static [&'static str] {
     CH15_15
 }
 
+/// Every `ch15_14/` card's YAML source.
+pub fn ch15_14_cards() -> &'static [&'static str] {
+    CH15_14
+}
+
 /// Every `ch16_new/` card's YAML source.
 pub fn ch16_new_cards() -> &'static [&'static str] {
     CH16_NEW
@@ -502,6 +515,7 @@ fn every_fixture_file_is_listed() {
         ("ch15_04", CH15_04.len()),
         ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),
+        ("ch15_14", CH15_14.len()),
         ("ch15_15", CH15_15.len()),
         ("ch16_new", CH16_NEW.len()),
         ("ch16_repl", CH16_REPL.len()),

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-10T17:16:28.542254+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "BT25-035#effect#0": {
       "clause_id": "BT25-035#effect#0",
@@ -21,6 +21,8 @@
       "reason": "DIVERGED at step 10 (compared 12 of 24 ours / 14 dcgo steps (7 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable); trace truncated); DCGO job failed: prompt mismatch: step 14 expected prompt 'SelectHandEffect' but DCGO asked 'SelectPermanentEffect'",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-035-effect1",
+      "triage": "stale",
+      "citation": "Scenario steps re-lowered 2026-10-19 (c435d251e: the source-trash trigger pool is now a shared MultipleSkills row) after this 2026-10-10 recording; that DCGO run aborted at step 14 (DCGO asked the Tamer cost pick, SelectPermanentEffect, before the hand pick -- §15-7-1 order) so the clause was never compared; the only compared diff is the Gekkomon add/place prefix row (Q-REVEAL-ADD-THEN-PLACE). Re-author step 14 and re-exam",
       "recorded_at": "2026-10-10T17:16:28.542254+00:00"
     },
     "BT25-035#inherited#0": {

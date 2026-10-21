@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T20:58:11.671298600+00:00",
+  "last_updated": "2026-10-21T15:09:52.979449+00:00",
   "clauses": {
     "BT24-088#effect#0": {
       "clause_id": "BT24-088#effect#0",
@@ -58,6 +58,8 @@
       "reason": "DIVERGED at step 3 (compared 4 of 4 ours / 4 dcgo steps)",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT24-088-effect1-optional-decline",
+      "triage": "stale",
+      "citation": "Sim side now matches DCGO's recorded answer: re-diffed 2026-10-21 CLEAN 4/4 against the same sidecar. Re-exam to earn confirmed",
       "recorded_at": "2026-10-06T15:34:04.361183100+00:00"
     },
     "qa:Q5676": {
@@ -87,6 +89,8 @@
       "reason": "ours contradicts ruling qa:Q5677 (ours vs DCGO: diverge); DIVERGED at step 8 (compared 11 of 12 ours / 12 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT24-088-qa-Q5677",
+      "triage": "stale",
+      "citation": "The expect_ruling block asserts on a PRE-decision row (a row is the state BEFORE its step), so it reads the state before the ruling's action; Q5677 is asserted at rows 2 and 6 (before the hand-trash pick and before the trash play). At rows 3 and 7 ours has ToyAgumon EX7-008 in the trash, then on the field -- the card qualifies by its effect text, as Q5677 rules. The only DCGO divergence (row 8, p0.hand) is the ToyAgumon reveal's bucket add timing (qa/rules/dcgo_quirks.md Q-REVEAL-BUCKET-ADD-TIMING). Re-encode at rows 3 and 7 and re-exam",
       "recorded_at": "2026-10-06T20:58:11.671298600+00:00"
     },
     "qa:Q5678": {

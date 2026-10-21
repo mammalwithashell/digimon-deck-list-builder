@@ -25,6 +25,10 @@ const CHAPTER_SOURCES: &[(&str, &str)] = &[
         include_str!("ch15_08_effect_categories.rs"),
     ),
     (
+        "ch15_14_effect_icons.rs",
+        include_str!("ch15_14_effect_icons.rs"),
+    ),
+    (
         "ch15_15_unaffected.rs",
         include_str!("ch15_15_unaffected.rs"),
     ),

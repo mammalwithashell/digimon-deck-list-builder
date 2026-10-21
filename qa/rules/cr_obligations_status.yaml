@@ -212,6 +212,18 @@
   tests: ["ch15_07_optional_conditions::mandatory_invoker_does_not_force_invoked_optional_condition", "ch15_07_optional_conditions::declining_invoked_optional_condition_keeps_invoker_remaining_steps", "ch15_07_optional_conditions::invoked_optional_condition_decision_survives_clone"]
   note: "Ver. 4.3 rewrite. The DSL expresses borrowing (refire_card_effect, BT15-102 idiom). A mandatory '[When Attacking] Place 1 [Lender] card from your trash under this Digimon; activate 1 of its [On Play] effects as an effect of this Digimon' offers the borrowed 'By trashing your top security card, gain 1 memory' its own optional decision: declining keeps the security card and gains nothing, accepting trashes it and gains 1 memory; a borrowed hand-pick condition keeps its PASS. A refired effect goes through the same optional-decision gate as a lone queued trigger (Game::install_single_trigger_optional_gate, with the §15-7-4 payability guard: an unpayable borrowed condition is not offered, pinned in tests/dsl unpayable_optional_condition). A decline drops only the activated effect: the activating effect's later 'Then, gain 2 memory' still runs (accept: +1 then +2). The parked decision is a resumable-VM frame: two clones of the parked board resolve accept and decline independently and match the original's verification_digest. BT23-060 (the rule's example card) has no behavioural coverage yet."
 
+# ── ch15-14 Effect Icons (§15-14-1 [X Per Turn]) — tests/rules_conformance/ch15_14_effect_icons.rs ──
+"15-14-1-2":
+  status: proven
+  tests: ["ch15_14_effect_icons::activated_you_may_effect_spends_its_once_per_turn", "ch15_14_effect_icons::security_zone_once_per_turn_effect_is_used_once_per_turn"]
+  gap_id: "G-ENGINE-SECURITY-ZONE-OPT-UNTRACKED"
+  note: "An [X Per Turn] effect used X times does not activate again that turn, for a permanent's effect and for a {Security} effect counted on its security card (Player::security_effect_activations). Proof limit: X = 1; triggered effects."
+"15-14-1-4":
+  status: proven
+  tests: ["ch15_14_effect_icons::declined_you_may_effect_keeps_its_once_per_turn", "ch15_14_effect_icons::activated_you_may_effect_spends_its_once_per_turn", "ch15_14_effect_icons::declined_optional_cost_of_an_activated_effect_spends_its_once_per_turn", "ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn", "ch15_14_effect_icons::then_may_effect_with_one_half_executed_spends_its_once_per_turn", "ch15_14_effect_icons::declined_security_zone_you_may_effect_keeps_its_once_per_turn"]
+  gap_id: "G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT"
+  note: "A use counts when the player chooses to activate (official Q&A Q1818: declining a whole-effect \"you may\" leaves the [Once Per Turn] unused); a declined optional processing condition of an activated triggered effect still spends it (owner ruling #20). The DSL lowering refunds the use when a clause's folded first \"may\" pick is passed (`lower_triggered::folded_may_refund_process`). Both-halves-declined \"you may A. Then, you may B.\" refunds the use (W13, owner-decided 2026-10-21; DCGO RemoveUse). Proof limit: trigger-type clauses whose whole effect is authored `optional: true` with a non-cost first pick and a pick-dependent tail; [Main]/[Counter] activations and per-card shapes outside that (listed in the gap entry) are not covered by these tests."
+
 # ── ch15-15 "Isn't affected by effects" (§15-15-5) — tests/rules_conformance/ch15_15_unaffected.rs ──
 "15-15-5":
   status: not-testable

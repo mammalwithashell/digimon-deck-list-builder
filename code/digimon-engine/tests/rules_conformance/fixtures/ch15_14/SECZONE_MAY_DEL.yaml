@@ -1,0 +1,26 @@
+# SECZONE_MAY_DEL -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   {Security} [Your Turn] [Once Per Turn] When one of your Digimon attacks,
+#   you may delete 1 of your opponent's Digimon.
+# A security-zone (face-up {Security}) [Once Per Turn] effect.
+card: SECZONE_MAY_DEL
+name: Seczonemon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - scope: security
+    when: on_ally_attack
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    trigger_if: { event_target_owner: you }
+    summary: "{Security} [Your Turn] [Once Per Turn] When one of your Digimon attacks, you may delete 1 of your opponent's Digimon."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }

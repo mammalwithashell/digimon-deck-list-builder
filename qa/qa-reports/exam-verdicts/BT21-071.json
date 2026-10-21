@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T19:31:19.849043900+00:00",
+  "last_updated": "2026-10-21T15:09:52.979449+00:00",
   "clauses": {
     "BT21-071#effect#0": {
       "clause_id": "BT21-071#effect#0",
@@ -90,6 +90,8 @@
       "reason": "ours contradicts ruling qa:Q4577 (ours vs DCGO: agree); CLEAN (compared 12 of 13 ours / 13 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT21-071-qa-Q4577",
+      "triage": "stale",
+      "citation": "The expect_ruling block asserts on a PRE-decision row (a row is the state BEFORE its step), so it reads the state before the ruling's action; Q4577 is asserted at row 9, before Scopemon digivolves. At row 11 both engines have Scopemon over ToyAgumon EX7-008 for cost 2 (3 -> 1), accepted only through the 'in text' requirement; re-diffed CLEAN 12/13 vs the recorded sidecar. Re-encode at row 11 and re-exam",
       "recorded_at": "2026-10-06T19:31:19.849043900+00:00"
     },
     "qa:Q4578": {
@@ -105,6 +107,8 @@
       "reason": "ours contradicts ruling qa:Q4578 (ours vs DCGO: diverge); DIVERGED at step 14 (compared 9 of 15 ours / 13 dcgo steps (6 sim-only row(s) with no DCGO prompt + 4 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT21-071-qa-Q4578",
+      "triage": "stale",
+      "citation": "Now matches DCGO's recorded answer and the ruling: re-diffed 2026-10-21 CLEAN (9 of 15 / 13) against the same sidecar, and expect_ruling Q4578 agrees (1 check). Re-exam to earn confirmed",
       "recorded_at": "2026-10-06T19:10:18.949811900+00:00"
     }
   }

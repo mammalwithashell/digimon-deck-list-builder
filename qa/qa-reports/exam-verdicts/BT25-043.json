@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-10T19:56:09.497104600+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "BT25-043#effect#0": {
       "clause_id": "BT25-043#effect#0",
@@ -39,6 +39,8 @@
       "reason": "DIVERGED at step 15 (compared 13 of 16 ours / 15 dcgo steps (3 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-043-effect3",
+      "triage": "ours_wrong",
+      "citation": "G-CARD-GLOWING-DAWN-LEAVE-PREVENTION-SECURITY-GATE (docs/RUST_ENGINE_GAPS.md): the replacement's active_when `any_permanent { of: you, zone: [security] }` never holds (security cards are not Permanents), so it is never offered and Habakirimon is deleted; DCGO offers it and keeps it (card text; CR 4.3 §15-8-5). Re-confirmed sim-side 2026-10-21",
       "recorded_at": "2026-10-10T19:56:09.497104600+00:00"
     },
     "BT25-043#effect#4": {

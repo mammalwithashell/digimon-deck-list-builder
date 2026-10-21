@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T19:13:40.395720300+00:00",
+  "last_updated": "2026-10-21T15:09:52.979449+00:00",
   "clauses": {
     "BT21-074#effect#0": {
       "clause_id": "BT21-074#effect#0",
@@ -132,6 +132,8 @@
       "reason": "ours contradicts ruling qa:Q4585 (ours vs DCGO: diverge); DIVERGED at step 28 (compared 24 of 29 ours / 27 dcgo steps (5 sim-only row(s) with no DCGO prompt + 3 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT21-074-qa-Q4585",
+      "triage": "stale",
+      "citation": "The expect_ruling block asserts on a PRE-decision row (a row is the state BEFORE its step), so it reads the state before the ruling's action; Q4585 is asserted at row 23, before BT21-074 digivolves into Gundramon EX7-048. At row 24 BT21-054 Shotmon is already in the trash (link requirements no longer met, rule check) and the line is CLEAN 24/29 vs the recorded sidecar. Re-encode at row 24 and re-exam",
       "recorded_at": "2026-10-06T19:13:40.395720300+00:00"
     }
   }

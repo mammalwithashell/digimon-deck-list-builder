@@ -30,6 +30,7 @@ mod ch11_14_attack_procedure;
 mod ch15_04_effect_states;
 mod ch15_07_optional_conditions;
 mod ch15_08_effect_categories;
+mod ch15_14_effect_icons;
 mod ch15_15_unaffected;
 mod ch16_attack_keywords;
 mod ch16_new_keywords;

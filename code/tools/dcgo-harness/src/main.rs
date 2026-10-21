@@ -231,7 +231,7 @@ enum Command {
     VerdictTriage {
         #[arg(long)]
         clause: String,
-        /// ours_wrong | dcgo_quirk | undetermined
+        /// ours_wrong | dcgo_quirk | undetermined | stale
         #[arg(long)]
         triage: String,
         #[arg(long)]
@@ -680,8 +680,9 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 "ours_wrong" => Triage::OursWrong,
                 "dcgo_quirk" => Triage::DcgoQuirk,
                 "undetermined" => Triage::Undetermined,
+                "stale" => Triage::Stale,
                 other => return Err(format!(
-                    "--triage must be ours_wrong | dcgo_quirk | undetermined, got `{other}`"
+                    "--triage must be ours_wrong | dcgo_quirk | undetermined | stale, got `{other}`"
                 )),
             };
             let mut store = VerdictStore::load_dir(verdicts)?;
@@ -712,8 +713,9 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 Some("ours_wrong") => Some((Triage::OursWrong, citation.clone())),
                 Some("dcgo_quirk") => Some((Triage::DcgoQuirk, citation.clone())),
                 Some("undetermined") => Some((Triage::Undetermined, citation.clone())),
+                Some("stale") => Some((Triage::Stale, citation.clone())),
                 Some(other) => return Err(format!(
-                    "--triage must be ours_wrong | dcgo_quirk | undetermined, got `{other}`"
+                    "--triage must be ours_wrong | dcgo_quirk | undetermined | stale, got `{other}`"
                 )),
             };
             let now = chrono::Utc::now().to_rfc3339();

@@ -5057,6 +5057,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "binding_present",
         "kind",
         "trait_has",
         "your_turn",
@@ -5067,6 +5068,7 @@
       ],
       "verbs": [
         "effect_initiated_digivolve",
+        "if",
         "select_hand",
         "select_own_permanent"
       ]
@@ -7582,6 +7584,7 @@
       "path": "bt24/BT24-003.yaml",
       "predicates": [
         "all_of",
+        "binding_present",
         "kind",
         "trait_has",
         "your_turn"
@@ -7591,6 +7594,8 @@
       ],
       "verbs": [
         "effect_initiated_digivolve",
+        "if",
+        "refund_opt",
         "select_hand"
       ]
     },
@@ -27399,7 +27404,7 @@
       ]
     }
   },
-  "cards_root": "code/digimon-engine/cards",
+  "cards_root": "D:/wt/p2-triage/code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost_reduce": [
       "BT26-084",
@@ -29405,6 +29410,7 @@
       "BT20-040",
       "BT20-042",
       "BT20-044",
+      "BT21-001",
       "BT21-009",
       "BT21-013",
       "BT21-027",
@@ -29415,6 +29421,7 @@
       "BT21-093",
       "BT22-022",
       "BT23-039",
+      "BT24-003",
       "BT24-007",
       "BT24-009",
       "BT24-013",
@@ -41399,6 +41406,7 @@
       "BT20-059",
       "BT20-060",
       "BT20-100",
+      "BT21-001",
       "BT21-009",
       "BT21-013",
       "BT21-021",
@@ -41428,6 +41436,7 @@
       "BT23-057",
       "BT23-096",
       "BT23-102",
+      "BT24-003",
       "BT24-007",
       "BT24-009",
       "BT24-013",
@@ -42849,6 +42858,7 @@
       "AD1-024",
       "BT19-001",
       "BT20-027",
+      "BT24-003",
       "BT24-007",
       "BT24-009",
       "BT24-013",
