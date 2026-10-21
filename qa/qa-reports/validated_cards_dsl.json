@@ -14895,6 +14895,22 @@
         "A6"
       ],
       "notes": "Digi-Egg. Inherited [When Attacking][OPT], optional (the 'by placing' cost; declining keeps the OPT = DCGO RemoveUse, rule 15-14-1-4), gated on an own [Glowing Dawn] Tamer AND a hand card (15-7-4) -> select_hand (any card: Digimon / Tamer / Option all offered) -> select_own_permanent ([Glowing Dawn] Tamer; plain and opponent Tamers not offered) -> place_selected_card_under_tamer face_down (BOTTOM of the stack, Q6954) -> <Draw 1>. Face-up Pagumon has no effect (inherited only)."
+    },
+    "BT8-070": {
+      "card_name": "BlackWarGreymon",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b2-glowing-dawn-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_070.rs",
+      "test_count": 18,
+      "patterns": [
+        "F7",
+        "E2"
+      ],
+      "notes": "Printed circles Black/Red Lv.5 cost 4 come from cards.json evo_costs (tested via an integrated digivolve). [When Digivolving] select_opponent_play_cost_budget (budget 6, min_picks 1 per rule 1-3-6, PASS only after a pick) whose filter admits a non-token Digimon while self_source_count(red) >= 1 and a Tamer while self_source_count(black) >= 1 -- one shared budget (Q1751/Q1752), a single red+black source enables both (Q1753), tokens excluded (DCGO HasPlayCost), cost > 6 never offered, no red/black source or no candidate -> no prompt -> delete_bound_permanents, now ONE deletion event (substrate fix G-DSL-DELETE-BOUND-PERMANENTS-ONE-EVENT). [All Turns][OPT] on_any_deletion trigger_if opponent Digimon, optional, gated source suspended (DCGO CanUnsuspend; an unsuspended BWG keeps its OPT) -> unsuspend; fires on the opponent's turn; own Digimon / opponent Tamer deletions don't trigger; its own WD deleting two Digimon triggers it once."
     }
   }
 }

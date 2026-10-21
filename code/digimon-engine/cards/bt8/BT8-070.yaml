@@ -1,0 +1,95 @@
+# BT8-070 BlackWarGreymon — Digimon, Lv.6, Black/Red, DP 12000, Cost 12.
+# Traits: Dragonkin. Form: Mega. Attribute: Virus.
+# Printed digivolve box: Black Lv.5 / cost 4; Red Lv.5 / cost 4 (both from
+#   cards.json evo_costs — no alt_paths needed).
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT8-070.md):
+#   [When Digivolving] If this Digimon has a red digivolution card, choose any
+#     number of your opponent's Digimon. If this Digimon has a black
+#     digivolution card, choose any number of your opponent's Tamers. The
+#     chosen cards' play costs must add up to 6 or less. Delete the chosen
+#     cards.
+#   [All Turns][Once Per Turn] When an opponent's Digimon is deleted, you may
+#     unsuspend this Digimon.
+#   Official Q&A: Q1751 red AND black sources → both Digimon and Tamers;
+#     Q1752 ONE combined budget of 6 (not 6 each); Q1753 a single red-and-black
+#     multicolour source enables both.
+#   Rule 1-3-6: "choose any number" requires at least 1 when one can be chosen.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT8/Black/BT8_070.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# [When Digivolving] (OnEnterFieldAnyone, mandatory): candidates = opponent
+#   battle-area permanents with HasPlayCost && GetCostItself <= 6 that are a
+#   Digimon (this Digimon has a red digivolution card) or a Tamer (it has a
+#   black one); SelectPermanentEffect canNoSelect:false, canEndNotMax:true,
+#   CanTargetCondition_ByPreSelecetedList keeps the running sum <= 6,
+#   CanEndSelectCondition needs >= 1 pick → Mode.Destroy (one batch).
+#   → select_opponent_play_cost_budget (budget 6, min_picks 1) whose filter
+#   admits a Digimon only while self_source_count(red) >= 1 and a Tamer only
+#   while self_source_count(black) >= 1 (one shared budget, Q1752) →
+#   delete_bound_permanents. `none_of: [kind: token]` = DCGO HasPlayCost (a
+#   token has no printed play cost). With no candidate the step installs
+#   nothing (no red/black source, or every target over 6).
+# [All Turns][OPT] (OnDestroyedAnyone, maxCount 1, optional): an opponent
+#   battle-area Digimon deleted; CanActivate = CanUnsuspend(this).
+#   → on_any_deletion + trigger_if event_target_owner opponent / kind digimon
+#   + condition source_is_unsuspended: false (RB1-010 Siriusmon idiom, with
+#   all_turns instead of your_turn) → unsuspend source.
+
+card: BT8-070
+name: "BlackWarGreymon"
+kind: digimon
+level: 6
+color: [black, red]
+cost: 12
+dp: 12000
+traits: [Dragonkin]
+form: Mega
+attribute: Virus
+
+effects:
+  # ─── [When Digivolving] delete opp Digimon (red source) and/or Tamers
+  #     (black source) whose play costs add up to 6 or less ─────────────────────
+  - when: when_digivolving
+    summary: "[When Digivolving] If this Digimon has a red digivolution card, choose any number of your opponent's Digimon. If this Digimon has a black digivolution card, choose any number of your opponent's Tamers. The chosen cards' play costs must add up to 6 or less. Delete the chosen cards"
+    process:
+      - select_opponent_play_cost_budget:
+          play_cost_budget: 6
+          min_picks: 1
+          filter:
+            any_of:
+              - all_of:
+                  - kind: digimon
+                  - none_of:
+                      - kind: token
+                  - self_source_count:
+                      filter: { color_is: red }
+                      op: gte
+                      value: 1
+              - all_of:
+                  - kind: tamer
+                  - self_source_count:
+                      filter: { color_is: black }
+                      op: gte
+                      value: 1
+          bind_as: chosen
+          prompt: "Choose your opponent's Digimon (if this Digimon has a red digivolution card) and/or Tamers (if it has a black one) whose play costs add up to 6 or less, and delete them"
+          then:
+            - delete_bound_permanents: { binding: chosen }
+
+  # ─── [All Turns][OPT] When an opponent's Digimon is deleted, you may
+  #     unsuspend this Digimon ────────────────────────────────────────────────
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    condition:
+      source_is_unsuspended: false
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[All Turns][Once Per Turn] When an opponent's Digimon is deleted, you may unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }
