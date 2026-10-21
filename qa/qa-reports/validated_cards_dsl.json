@@ -14863,6 +14863,21 @@
         "E2"
       ],
       "notes": "Alt-digivolve Lv.3 [Glowing Dawn] cost 2 (printed Black Lv.3 circle comes from cards.json evo_costs). <Blocker> own + inherited (grant_keyword). [All Turns][OPT] on_attack_target_change (any attack, either turn; tested with its own block, an own attack being blocked, and the opponent's attack redirected by another blocker): optional clause gated face_down_sources_under_tamers_gte 1 (declining keeps the OPT = DCGO RemoveUse) -> trash_bottom_face_down_source_under_tamer (lowest face-down card, owner ruling #19; fires on_digivolution_card_trashed observers) -> optional use_option_from_hand free over kind option + [Glowing Dawn] + use cost <= 4 (a [Glowing Dawn] DUAL is offered by its Option use cost, rules 4-6-1/4-6-6-2; use cost 5, no trait, and Digimon cards are not offered). Paying without an eligible Option still trashes (DCGO)."
+    },
+    "BT6-103": {
+      "card_name": "Blasted Disaster",
+      "validated_date": "2026-10-21",
+      "report": "ex13-meta b2-glowing-dawn-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_103.rs",
+      "test_count": 8,
+      "patterns": [
+        "F7"
+      ],
+      "notes": "Option, green, cost 6. [Main] for_each opponent battle-area Digimon -> suspend (Tamers and own Digimon untouched; a CannotSuspend Digimon is skipped), then gain_memory_fn = count of the opponent's suspended Digimon read after the suspends (already-suspended ones count; a Digimon that could not be suspended does not; none -> 0). Green colour requirement enforced by the engine (tested). [Security] (scope inherited + on_security, BT6-105 idiom) mandatory select_opponent_permanent Digimon + suspend, chosen by the security card's owner."
     }
   }
 }
