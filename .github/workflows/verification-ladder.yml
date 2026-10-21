@@ -18,6 +18,9 @@ on:
       - 'qa/exam-clause-text.json'
       - 'data/deck_library.json'
       - 'data/oracle_readiness.json'
+      - 'code/digimon_gym/agents/card_admissibility.py'
+      - 'code/digimon_gym/agents/gauntlet.py'
+      - 'code/data_paths.py'
       - 'data/mechanics_readiness.json'
       - 'data/card_admissibility.json'
       - 'data/tested_cards.json'
@@ -43,6 +46,9 @@ on:
       - 'qa/exam-clause-text.json'
       - 'data/deck_library.json'
       - 'data/oracle_readiness.json'
+      - 'code/digimon_gym/agents/card_admissibility.py'
+      - 'code/digimon_gym/agents/gauntlet.py'
+      - 'code/data_paths.py'
       - 'data/mechanics_readiness.json'
       - 'data/card_admissibility.json'
       - 'data/tested_cards.json'
@@ -94,8 +100,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Install maturin and gauntlet imports
-        run: python -m pip install maturin numpy pyyaml
+      # Exactly what `import digimon_gym.agents.gauntlet` pulls in beyond the stdlib
+      # (verified via sys.modules): numpy, gymnasium, and the digimon_engine wheel built
+      # below. requirements-training.txt is deliberately not used: it adds torch/SB3.
+      - name: Install maturin and the gauntlet's imports
+        run: python -m pip install maturin numpy gymnasium
       - name: Cache cargo registry + target
         uses: actions/cache@v5
         with:

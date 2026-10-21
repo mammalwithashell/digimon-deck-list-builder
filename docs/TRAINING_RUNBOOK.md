@@ -974,8 +974,9 @@ exam verdicts, `cards.json` or the engine registry (a new card).
 
 **Pre-flight for a training or cloud run.** Both artifacts must be present on the
 host: they are the only gate inputs, because the training image and cloud pods
-ship no `qa/`. `Dockerfile.training` copies them; for a bare pod, `scp` them with
-the rest of `data/` (docs/CLOUD_TRAINING.md). Override locations with
+ship no `qa/`. The image does not bake them in: `data/` is a runtime mount
+(`-v data:/app/data`, `DIGIMON_DATA_DIR`), so that mount must carry them; for a
+bare pod, `scp` them with the rest of `data/` (docs/CLOUD_TRAINING.md). Override locations with
 `DIGIMON_MECHANICS_READINESS` / `DIGIMON_CARD_ADMISSIBILITY` (or `DIGIMON_DATA_DIR`).
 
 If training stops with `EmptyTrainingPoolError`, the message lists the cards

@@ -490,3 +490,13 @@ def test_check_skips_cleanly_when_engine_binding_is_absent(monkeypatch, capsys):
     monkeypatch.setattr(ca.importlib.util, "find_spec", lambda name: None)
     assert ca.main(["--check", "--skip-if-no-engine"]) == 0
     assert "SKIPPED" in capsys.readouterr().out
+
+
+def test_skip_flag_does_not_hide_a_stale_artifact_when_the_binding_is_present(
+    tmp_path, fake_registry, monkeypatch
+):
+    _write_inputs(tmp_path)
+    assert ca.main(_argv(tmp_path)) == 0
+    _write_inputs(tmp_path, dsl_status="FAILED")  # artifact is now stale
+    monkeypatch.setattr(ca.importlib.util, "find_spec", lambda name: object())
+    assert ca.main(_argv(tmp_path, "--check", "--skip-if-no-engine")) == 1
