@@ -6251,7 +6251,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
                 &read_ctx,
                 PredicateSubject::Permanent(handle),
                 Some(&filter_bindings),
-            ) && face_down_cards_under(game, handle) > 0
+            ) && face_down_cards_under(game, handle, player) > 0
         },
         move |cb_ctx, handle: PermanentHandle| {
             let trashed = cb_ctx.trash_bottom_face_down_source(handle);
@@ -6908,7 +6908,7 @@ pub(crate) fn face_down_sources_under_tamers(
         .filter(|handle| {
             eval_predicate_with_bindings(&filter, read, PredicateSubject::Permanent(*handle), None)
         })
-        .map(|handle| face_down_cards_under(read.game, handle))
+        .map(|handle| face_down_cards_under(read.game, handle, read.player))
         .sum()
 }
 
@@ -6978,7 +6978,7 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
                 &read_ctx,
                 PredicateSubject::Permanent(handle),
                 Some(&filter_bindings),
-            ) && face_down_cards_under(game, handle)
+            ) && face_down_cards_under(game, handle, player_for_filter)
                 > picked_for_filter.iter().filter(|h| **h == handle).count()
         },
         move |cb_ctx, handle: PermanentHandle| {
@@ -7078,15 +7078,40 @@ pub(crate) fn advance_trash_n_bottom_face_down_pick(
 }
 
 /// Face-down cards under `handle`'s top card
-/// (`Permanent::face_down_source_indices`): how many bottom face-down cards
-/// the face-down-under-Tamer costs can take from it, lowest first. The
-/// per-Tamer unit of `face_down_sources_under_tamers` and of both steps' Tamer
-/// picks.
-pub(crate) fn face_down_cards_under(game: &crate::game::Game, handle: PermanentHandle) -> usize {
+/// (`Permanent::face_down_source_indices`) that an effect controlled by
+/// `controller` can trash as "the bottom face-down card": how many bottom
+/// face-down cards the face-down-under-Tamer costs can take from it, lowest
+/// first. The per-Tamer unit of `face_down_sources_under_tamers` and of both
+/// steps' Tamer picks.
+///
+/// The costs always take the LOWEST face-down card left
+/// (`EffectContext::trash_bottom_face_down_source`), which refuses a card
+/// protected from this effect's trash (`Game::source_card_trash_blocked`:
+/// `ImmuneFromStackTrashing`, per-card `CannotTrash`). So the payable run
+/// stops at the first protected face-down card from the bottom: a Tamer whose
+/// lowest face-down card can't be trashed offers nothing. §15-7-4 (Ver. 4.3):
+/// a cost whose contents can't be executed isn't offered; DCGO
+/// `IsTamerWithFaceDownCard` (BT26_057.cs, BT26_005.cs) likewise excludes
+/// `ImmuneFromStackTrashing(activateClass)`.
+pub(crate) fn face_down_cards_under(
+    game: &crate::game::Game,
+    handle: PermanentHandle,
+    controller: PlayerId,
+) -> usize {
     game.player(handle.player)
         .battle_area
         .get(handle.index as usize)
-        .map(|perm| perm.face_down_source_indices().count())
+        .map(|perm| {
+            perm.face_down_source_indices()
+                .take_while(|&i| {
+                    !game.source_card_trash_blocked(
+                        handle,
+                        perm.card_sources[i].handle(),
+                        controller,
+                    )
+                })
+                .count()
+        })
         .unwrap_or(0)
 }
 

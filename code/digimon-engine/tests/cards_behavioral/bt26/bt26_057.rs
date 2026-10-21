@@ -669,3 +669,61 @@ fn bt26_057_wd_cost_trash_lets_a_suspended_bearcatmon_unsuspend() {
     assert!(!suspended(&r, host), "unsuspended");
     assert_eq!(r.effective_dp(host), Some(11000));
 }
+
+// ─── A Tamer whose stacked cards can't be trashed is not a payable choice ───
+// DCGO `IsTamerWithFaceDownCard` excludes `ImmuneFromStackTrashing(activateClass)`;
+// §15-7-4 (4.3): a cost whose contents can't be executed isn't offered.
+
+fn protect_stack(r: &mut DebugRunner, t: PermanentHandle) {
+    // Protected from being trashed by ANY player's effects.
+    r.game.modifiers.add(
+        t,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::ImmuneFromStackTrashing,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            t.player,
+        ),
+    );
+}
+
+#[test]
+fn bt26_057_wd_is_not_offered_when_the_only_stash_cannot_be_trashed() {
+    let mut r = setup();
+    let t = tamer_with_face_down(&mut r, 0, "GDT", 1);
+    protect_stack(&mut r, t);
+    let b = r.place_on_field(0, CARD_ID, Some(0));
+    fire(&mut r, EffectTiming::WhenDigivolving, b);
+    let _ = r.auto_resolve();
+    assert!(r.game.pending_selection.is_none(), "the cost is unpayable");
+    assert_eq!(sources(&r, t), 1);
+    assert_eq!(r.effective_dp(b), Some(8000));
+}
+
+#[test]
+fn bt26_057_wd_offers_only_tamers_whose_stash_can_be_trashed() {
+    let mut r = setup();
+    let protected = tamer_with_face_down(&mut r, 0, "GDT", 1);
+    protect_stack(&mut r, protected);
+    let open = tamer_with_face_down(&mut r, 0, "PT", 1);
+    let b = r.place_on_field(0, CARD_ID, Some(0));
+    fire(&mut r, EffectTiming::WhenDigivolving, b);
+    r.accept_optional_trigger().expect("payable through the other Tamer");
+    let v = r.pending_selection_view().expect("Tamer pick");
+    assert!(
+        !v.valid_action_ids
+            .contains(&encode_attack(0, protected.index as u16)),
+        "the protected Tamer is not offered: {:?}",
+        v.valid_action_ids
+    );
+    assert!(v
+        .valid_action_ids
+        .contains(&encode_attack(0, open.index as u16)));
+    r.execute_action(0, encode_attack(0, open.index as u16))
+        .unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(sources(&r, protected), 1);
+    assert_eq!(sources(&r, open), 0);
+    assert_eq!(r.effective_dp(b), Some(11000));
+}
+
