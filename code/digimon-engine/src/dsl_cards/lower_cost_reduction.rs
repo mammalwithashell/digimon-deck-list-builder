@@ -171,6 +171,9 @@ pub fn lower_with_formula(
             let Some(target) = rctx.cost_target_card else {
                 return false;
             };
+            if !played_card_is_controllers(rctx, target) {
+                return false;
+            }
             if !eval_predicate(wap, rctx, PredicateSubject::Card(target)) {
                 return false;
             }
@@ -215,6 +218,9 @@ pub fn lower_with_formula(
             let Some(target) = rctx.cost_target_card else {
                 return 0;
             };
+            if !played_card_is_controllers(rctx, target) {
+                return 0;
+            }
             if !eval_predicate(wap, rctx, PredicateSubject::Card(target)) {
                 return 0;
             }
@@ -312,6 +318,19 @@ pub fn lower_with_formula(
         effect.activation_cost_kind = Some(crate::effect::ActivationCostKind::SuspendSelf);
     }
     effect
+}
+
+/// `when_any_ally_played` is "when YOU would play ..." — the card whose cost
+/// is being computed must belong to this reducer's controller. The
+/// BeforePayCost scan walks BOTH players' fields, so without this an
+/// opponent's matching play (e.g. P1 playing a green Tamer from hand during
+/// P0's turn) was offered P0's reducer, with P1 as the selecting player
+/// (BT14-046 Togemon). An unresolvable owner keeps the prior behaviour.
+/// G-COST-REDUCTION-ALLY-PLAYED-OWNER.
+fn played_card_is_controllers(rctx: &EffectReadContext<'_>, target: CardHandle) -> bool {
+    rctx.game
+        .owner_of_card(target)
+        .is_none_or(|owner| owner == rctx.player)
 }
 
 /// True when `pay_cost` is exactly a single self-targeted `suspend` step —

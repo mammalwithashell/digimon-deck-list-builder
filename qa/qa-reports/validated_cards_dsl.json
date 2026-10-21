@@ -14857,6 +14857,22 @@
         "B1"
       ],
       "notes": "[On Play] reveal 3, add 1 Digimon with Vegetation/Plant/Fairy (trait_contains) via single-bucket select_reveal_buckets (min 1), rest to deck bottom. [Your Turn] when an effect suspends a Digimon (any player's, Q2458), optional suspend-self cost -> gain 1 memory; no OPT; attack suspend, opponent's turn, already-suspended Mimi (§15-7-4) negatives. [Security] play self free. DCGO oracle unmeasured."
+    },
+    "BT14-046": {
+      "card_name": "Togemon",
+      "validated_date": "2026-10-20",
+      "report": "ex13-meta-a1-ceresmon-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Ceresmon (green Tamer/Plant support) — EX13 meta slice a1-ceresmon-1",
+      "yaml_path": "code/digimon-engine/cards/bt14/BT14-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_046.rs",
+      "test_count": 18,
+      "patterns": [
+        "D2",
+        "E2"
+      ],
+      "notes": "Clause 1: field-hosted cost_reduction, when_any_ally_played green Tamer + cost_target_from_hand, optional, OPT, interactive pay_cost (select own unsuspended green Digimon -> suspend), amount 3; §15-7-4 gate. Clause 2: inherited cost_reduction on this permanent's digivolve (source_is_cost_target_permanent) with an own green Tamer, mandatory, OPT. Substrate fix G-COST-REDUCTION-ALLY-PLAYED-OWNER: when_any_ally_played now requires the played card to belong to the reducer's controller (opponent's green Tamer play was offered Togemon's prompt). DCGO oracle unmeasured."
     }
   }
 }

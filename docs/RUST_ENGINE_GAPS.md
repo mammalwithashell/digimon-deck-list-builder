@@ -6004,6 +6004,21 @@ Filed from the second re-review of the Venusmon owner-security fix (p4-venusmon-
 - **R3 (test-only):** `place_sourceless_permanent_bottom_security_and_cancel_current_replacement` (DebugRunner-only caller) ignores a parked placement; the primitive's doc comment still names EX8-028.
 - **Blocks training:** no — R1 has no production reach, R2 wastes an action without changing an outcome the rules give (the placement could not legally happen), R3 is test-only.
 
+### A "when you would play" cost reducer was offered for the OPPONENT's matching play  [G-COST-REDUCTION-ALLY-PLAYED-OWNER] — RESOLVED (2026-10-20, EX13 lane a1-ceresmon-1, BT14-046 commit)
+
+- **Card:** BT14-046 Togemon "[Your Turn][Once Per Turn] When you would play a green Tamer card from your hand, by suspending 1 of your green Digimon, reduce the play cost by 3." DCGO `BT14_046.cs` gates on `cardSource.Owner.HandCards.Contains(cardSource)` from `card.Owner`'s side (and its static `ChangeCostClass` checks `cardSource.Owner == card.Owner`).
+- **Ours (before):** the BeforePayCost scan (`game_actions/mod.rs::before_pay_cost_source_infos`) walks BOTH players' fields, and `lower_cost_reduction.rs` evaluated `when_any_ally_played` against the cost-target card's shape only. P1 playing a green Tamer from hand during P0's turn got P0's Togemon prompt with P1 as the selecting player (`EffectChoice`, "Cost reduction (-3)").
+- **Fix:** `when_any_ally_played` now also requires the cost-target card's owner to be the reducer's controller (`played_card_is_controllers`, both the offer condition and the amount); an unresolvable owner keeps the old behaviour. Tests: `cost_hooks -- ally_played_owner_scope` (both directions), `cards_behavioral -- bt14_046_opponents_green_tamer_play_is_not_reduced` (red before). Regression: the 15 production `when_any_ally_played` cards' behavioral tests pass.
+- **Blocks training:** no (the opponent playing from hand during your turn needs an effect).
+
+### A Digimon in the breeding area keeps materializing its persistent effects  [G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE] — OPEN (2026-10-20, non-blocking)
+
+- **Rule:** §3-4-7-4: effects on cards in breeding areas can't trigger or activate, except effects that explicitly specify or reference breeding areas.
+- **Ours:** `game/triggers.rs::materialize_declaratives_full` pushes the breeding-area top card as a declarative source unconditionally (needed by the `[Breeding]` cards), so a persistent effect with no breeding reference still applies from there. Witness: BT9-047 Pomumon in the breeding area installed `CannotPlayDigimonByEffect` on both players (`cards_behavioral -- bt9_047_in_breeding_area_does_not_lock_effect_plays`, red before its YAML gate). The BeforePayCost scan already honours §3-4-7-4 (`push_breeding_cost_sources`).
+- **Per-card guard today:** `active_when: { not: { in_breeding: true } }` (EX2-007, BT9-047). Unguarded flood gates with the same reach: BT9-033 Pillomon, BT14-009 Gotsumon (same printed text); other Lv.3+ persistent effects likely too.
+- **Fix shape:** in the declarative pass, skip a breeding-area source's effects unless the effect references the breeding area (a lowering-time flag set when the clause's predicates mention `in_breeding` / the `[Breeding]` timing), then drop the per-card guards; witness with Pillomon BT9-033 in the breeding area.
+- **Blocks training:** no for correctness of the cards that carry the guard; Pillomon/Gotsumon raised in the breeding area wrongly lock effect plays until fixed.
+
 ### Retracted during the 2026-10-15/16 campaign
 
 The two entries below were logged and then withdrawn on review; they are kept for the record and are not open work.
