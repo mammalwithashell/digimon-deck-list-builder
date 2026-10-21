@@ -1,0 +1,107 @@
+# P-166 Galemon — Digimon, Lv.4, Green, DP 4000, Cost 4.
+# Traits: Bird Dragon, LIBERATOR. Form: Champion. Attribute: Data.
+# Digivolve: green Lv.3 / cost 2 (official DB + image).
+#
+# Printed text (official Bandai DB, data/card_bundles/P-166.md; image agrees):
+#   [On Play] [When Digivolving] You may suspend 1 Digimon. Then, if it's your
+#   turn, this Digimon may digivolve into a Digimon card with [Avian] or [Bird]
+#   in any of its traits in the hand. For every other suspended Digimon,
+#   reduce this effect's digivolution cost by 1.
+#   Inherited: [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Green/P_166.cs
+#   - On Play / When Digivolving (two ActivateClasses, not optional):
+#     SelectPermanent over ANY battle-area Digimon (canNoSelect, Mode.Tap);
+#     then if IsOwnerTurn: suspendedCount = suspended Digimon on both fields
+#     other than this permanent → DigivolveIntoHandOrTrashCard(this,
+#     ContainsTraits Avian/Bird Digimon, payCost, reduceCost suspendedCount,
+#     isHand).
+#   - Inherited: ChangeSelfDPStaticEffect +2000, IsOwnerTurn.
+#
+# Modeling:
+#   - One mandatory `[on_play, when_digivolving]` clause: optional
+#     `select_any_permanent` (an unsuspended Digimon) + `suspend` under a
+#     `binding_present` guard; then, `if your_turn`, optional `select_hand`
+#     (Digimon, trait contains Avian or Bird, `can_digivolve_onto: source`) +
+#     `effect_initiated_digivolve` (BT12-030 shape) with `cost.reduce` =
+#     `suspended_count { of: any, exclude_source: true }` (EX8-074 shape).
+#   - Inherited `[Your Turn]` aura +2000 DP.
+#
+# KNOWN GAP (PARTIAL): Q4276 — when a "would digivolve" reducer (BT3-103
+#   Hidden Potential Discovered!) suspends one more Digimon during this
+#   digivolution, the official ruling counts it toward this reduction. The
+#   formula is evaluated when the effect starts the digivolution (as DCGO
+#   does), before that reducer window. G-ENGINE-EFFECT-DIGIVOLVE-COST-LATE-COUNT.
+
+card: P-166
+name: Galemon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+traits: [Bird Dragon, LIBERATOR]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play] [When Digivolving] You may suspend 1 Digimon. Then, if it's your turn, this Digimon may digivolve into a Digimon card with [Avian] or [Bird] in any of its traits in the hand. For every other suspended Digimon, reduce this effect's digivolution cost by 1"
+    process:
+      - select_any_permanent:
+          bind_as: to_suspend
+          optional: true
+          # "Then, ..." runs whether or not a Digimon was suspended (DCGO:
+          # canNoSelect, the coroutine continues).
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "You may suspend 1 Digimon"
+      - if:
+          condition: { binding_present: to_suspend }
+          then:
+            - suspend: { target: to_suspend }
+      - if:
+          condition: { your_turn: true }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo_card
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_contains: Avian
+                        - trait_contains: Bird
+                    - can_digivolve_onto: source
+                prompt: "This Digimon may digivolve into a Digimon card with [Avian] or [Bird] in any of its traits (cost -1 for every other suspended Digimon)"
+            - if:
+                condition: { binding_present: evo_card }
+                then:
+                  - effect_initiated_digivolve:
+                      target: source
+                      from_hand: evo_card
+                      cost:
+                        reduce:
+                          base: 0
+                          per:
+                            suspended_count:
+                              of: any
+                              exclude_source: true
+                          delta: 1
+                      ignore_requirements: false
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"
