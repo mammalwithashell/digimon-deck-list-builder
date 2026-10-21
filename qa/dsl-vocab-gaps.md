@@ -9179,3 +9179,10 @@ P-250 Ogremon (X Antibody) {Trash}[End of Your Turn]: "If your hand has 5 or few
 - **Impact:** the pick is optional ("may"), so choosing the unpayable target equals declining — game state never diverges. Only an extra, rules-illegal-looking option (CR 4.3 §1-3-11-1) is exposed to the action space.
 - **Proposed vocab:** an `affordable: true` flag on the `has_digivolve_candidate` / `can_digivolve_onto` specs that keeps only routes whose (effect-adjusted) digivolve cost keeps the controller's memory at or above the floor — the digivolve sibling of `affordable_with_cost_reduce` (BT26-084). Must use the same route cost the effect digivolve will charge (printed circle vs alt path).
 - **Cards:** P-250 (and any "may digivolve into this card" / "digivolve into ... paying the cost" pick filtered by these probes).
+
+### `place_as_bottom_source` with a permanent source: no leave window, no success binding [G-DSL-PLACE-PERMANENT-AS-SOURCE-RESULT] — RESOLVED (2026-10-21, EX13 final fix round)
+
+BT26-097 The Thunder Emperor Awakens: "[Main] By placing 1 of your Tamers with [Dan Yuki] or [Kanan Yuki] in their names as any of your [Aegiomon]'s bottom digivolution card, it may digivolve into [Jupitermon] ... After, ...". The permanent-source branch of the step called a verb that opened no would-leave window and discarded its result, and `bind_placed_as` was ignored for a permanent source, so the "by" placement could not gate the rest (§15-7-2, Q7170).
+
+- **Resolution:** no new vocabulary. A permanent source now resolves to its top card (`resolve_bottom_source_ref` → `Game::field_top_material_ref`) and goes through the field-top source move (engine entry G-ENGINE-PLACE-PERMANENT-AS-SOURCE-NO-LEAVE-WINDOW); `bind_placed_as` binds the placed card only on a real placement, through the existing `FieldSourceCaptured` / `FieldSourceFinalize` receipt expansion, which now also re-resolves the donor side's permanent bindings by identity after the move (`FieldSourceFinalize.rebind`, `#[serde(default)]`; runtime-only step, never in a pack).
+- **Cards:** BT26-097 (the only YAML with a permanent-bound `place_as_bottom_source` source, scan of 2026-10-21).

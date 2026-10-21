@@ -15206,21 +15206,22 @@
     "BT26-097": {
       "card_name": "The Thunder Emperor Awakens",
       "validated_date": "2026-10-21",
-      "report": "ex13-meta-c1-jupitermon",
+      "report": "ex13-meta-c1-jupitermon; final-review fix round",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "TS Jupitermon",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-097.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_097.rs",
-      "test_count": 22,
+      "test_count": 25,
       "patterns": [
         "USE-COST-INCREASE",
         "OPTIONAL-PROCESSING-CONDITION",
         "HAND-OR-TRASH-DIGIVOLVE",
         "PLACE-AS-TOP-SOURCE",
-        "SECURITY-PLAY-THEN-ADD-SELF"
+        "SECURITY-PLAY-THEN-ADD-SELF",
+        "PLACE-PERMANENT-AS-SOURCE-LEAVE-WINDOW"
       ],
-      "notes": "TDD vs DCGO BT26_097.cs + CR 4.3 15-7-1/15-7-2/15-7-4: use cost +1 per own security (use_cost_increase); [Main] optional Tamer ([Dan Yuki]/[Kanan Yuki] in name) + [Aegiomon] picks gate everything (no placement -> no digivolve, no After); free requirement-ignoring digivolve into [Jupitermon] from hand or trash (union pick, optional); After: optional [Aegiochusmon]-named trash card as top source of any own [Jupitermon]; [Security] optional free play of a play-cost<=5 [TS] Digimon/Tamer from hand, then add self to hand. Fix round 2026-10-21: place_as_bottom_source with a permanent source used to move the Tamer's whole stack; this IS reachable (e.g. <Material Save> BT10-009 / AD1-006 / BT10-088 put cards under 'one of your Tamers', which can be a Dan/Kanan Tamer). Fixed in the engine verb (G-ENGINE-PLACE-PERMANENT-AS-SOURCE-KEEPS-STACK, RESOLVED): only the Tamer card moves, the cards under it are trashed (CR 4.3 4-7-7/4-7-8, DCGO DiscardEvoRoots + TopCard). Added tests: cards under the Tamer trashed, [TS] Tamer security play, no After without a [Jupitermon] on the field."
+      "notes": "TDD vs DCGO BT26_097.cs + CR 4.3 15-7-1/15-7-2/15-7-4: use cost +1 per own security (use_cost_increase); [Main] optional Tamer ([Dan Yuki]/[Kanan Yuki] in name) + [Aegiomon] picks gate everything (no placement -> no digivolve, no After); free requirement-ignoring digivolve into [Jupitermon] from hand or trash (union pick, optional); After: optional [Aegiochusmon]-named trash card as top source of any own [Jupitermon]; [Security] optional free play of a play-cost<=5 [TS] Digimon/Tamer from hand, then add self to hand. Fix round 2026-10-21: place_as_bottom_source with a permanent source used to move the Tamer's whole stack; this IS reachable (e.g. <Material Save> BT10-009 / AD1-006 / BT10-088 put cards under 'one of your Tamers', which can be a Dan/Kanan Tamer). Fixed in the engine verb (G-ENGINE-PLACE-PERMANENT-AS-SOURCE-KEEPS-STACK, RESOLVED): only the Tamer card moves, the cards under it are trashed (CR 4.3 4-7-7/4-7-8, DCGO DiscardEvoRoots + TopCard). Added tests: cards under the Tamer trashed, [TS] Tamer security play, no After without a [Jupitermon] on the field. Final fix round 2026-10-21 (final-review IMPORTANT 1 / c1 R1): placing the Tamer is a leave-the-battle-area event (CR 4.3 4-7-7; DCGO IPlacePermanentToDigivolutionCards) -- the permanent-source placement now routes through the field-top source move, so would-leave replacements (BT24-101 / BT26-033 Jupitermon protecting [TS] Tamers) are offered and [On Leave] observers fire; the YAML binds the placement (bind_placed_as) and gates the digivolve + After on it (15-7-2, Q7170). Bound permanents are re-resolved by identity after the move (a Tamer in a lower slot used to make the wrong permanent digivolve). G-ENGINE-PLACE-PERMANENT-AS-SOURCE-NO-LEAVE-WINDOW RESOLVED. Added tests: BT24-101 accept (Tamer stays, no digivolve/After) / decline (proceeds); Tamer left of the Aegiomon."
     },
     "BT4-105": {
       "card_name": "Tactical Retreat!",
