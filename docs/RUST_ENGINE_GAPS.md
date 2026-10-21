@@ -6171,7 +6171,7 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
     - ST24-11#0 (DATA SQUAD) is "You may suspend .... Then, by trashing ...": the effect was activated (Q1643).
   - **Remaining, blocks training: yes:**
     - **BT25-089#2** (Rebootmon), "[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse ...", is a whole-effect "may" (DCGO `RemoveUse` when nothing executed). Its only step is `app_fuse { optional: true }`, which reports no result to the clause, so neither the rewrite nor `refund_opt` can see the pass. It needs an app-fuse result signal (substrate).
-    - **BT25-028#2** (both Jupitermon lists, TS Toolbox, Chronomon), "you may trash any 4 digivolution cards .... Then, 2 of your Digimon may DNA digivolve ...". DCGO calls `RemoveUse` when neither part executed. The rules reading (§15-14-1-4 plus Q1643's "Then": the triggered effect activates, then its optional parts are passed) says the use is spent. This needs an owner ruling before either is implemented.
+    - **BT25-028#2** (both Jupitermon lists, TS Toolbox, Chronomon): **RESOLVED in fix round 2 (see below).**
 - **Remaining clauses not yet read per card (from the 2026-10-21 scan):**
   - `optional: true` clauses whose tail runs without the pick (left as authored): AD1-012#2, AD1-012#3, BT16-025#2, BT21-102#2, BT23-037#1, BT25-027#0, EX10-036#2, EX11-044#3, EX3-057#1, EX8-074#4.
   - Clauses led by a non-binding or multi-pick step: BT21-018#4, BT23-013#3 (`may_attack_now`); BT23-032#2, BT23-032#3 (`select_material`); EX10-033#1, EX8-055#2 (`select_count_capped_multi`); EX7-049#2.
@@ -6179,7 +6179,13 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
   - Excluded by design: [Main] / [Counter] clauses EX12-013#0, EX12-017#3, EX12-043#0.
   - Each needs a read of its printed text against Q1818 / Q1643. Where the whole effect is a "may", either author it `optional: true` with a pick-dependent tail (the rewrite then covers it) or add `refund_opt`.
 - **Fix shape (remainder):** an app-fuse result for BT25-089; an owner ruling for BT25-028; per-card reads for the rest. A `dsl-lint` warning for an OPT clause led by an optional non-cost pick that the rewrite does not cover would keep new cards honest.
-- **Blocks training:** yes, for BT25-089#2 and BT25-028#2 (top-10 decks) and for any unread clause above that turns out to be a whole-effect "may".
+- **Fix round 2 (2026-10-21): "you may A. Then, you may B." (BT25-028#2) RESOLVED. OWNER-DECIDED (2026-10-21):** "DCGO has the Dianamon/GraceNovamon effect correct". If both halves are declined, the use is refunded; it is spent as soon as either half executes. The PDF is silent on this, and DCGO does the same (`BT25_028.cs` `if (!executed) RemoveUse()`). Recorded as W13 in `qa/rules/mechanics-gaps-2026-10.md`.
+  - **Mechanism:** `lower_triggered::then_may_refund_bindings` / `then_may_refund_process` cover the shape of two or more optional halves, each led by a declinable non-cost pick (an `optional: true` pick or a zero-minimum multi-pick) whose other steps depend on that pick. It appends `if every half's pick is empty then refund_opt`, and each half's permanent pick continues on PASS. A half with mandatory content that runs without its pick (Q1643, BT7-079) breaks the shape and keeps spending the use.
+  - **Production clauses:** BT25-028#2 and EX8-074#4 ("you may activate 1 of this Digimon's [When Digivolving] effects", DCGO `isOptional: true`), pinned by `dsl -- folded_may_opt_refund::production_then_may_inventory_matches_the_reviewed_list`.
+  - **BT25-028 card change:** its DNA half now has one decision, the first-Digimon pick. `may_dna_digivolve_now` is no longer `optional`; DCGO asks one skippable 2-Digimon selection. Residual: if that pick is made but no DNA is possible, the step does nothing and the use is spent.
+  - **Tests:** `rules_conformance -- ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn` (red before) and `::then_may_effect_with_one_half_executed_spends_its_once_per_turn`; `cards_behavioral -- bt25_028_all_turns_both_halves_declined_keeps_once_per_turn` (red before) and `bt25_028_all_turns_one_half_executed_spends_once_per_turn`.
+- **BT25-089 is held back from training:** `qa/qa-reports/validated_cards_dsl.json` row is set to `PARTIAL`, `gap_kind: engine`, naming this residual, so card admissibility rejects it as `failed_verdict` until the app-fuse result signal exists.
+- **Blocks training:** yes (BT25-089 only). The unread per-card list above may add cards once read.
 
 ### Declining Callismon's "You may suspend" skips the "Then, ... can't unsuspend" lock  [G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK] — OPEN (2026-10-21, Plan 2 Task 5b exam triage)
 

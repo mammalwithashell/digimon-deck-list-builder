@@ -6407,8 +6407,8 @@
       "card_name": "Kazuki & Itsuki",
       "validated_date": "2026-07-10",
       "report": "buglist-faithfulness-campaign-2026-07",
-      "status": "AUDITED-OK",
-      "gap_kind": null,
+      "status": "PARTIAL",
+      "gap_kind": "engine",
       "archetype": "BT25 link-ts slice",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-089.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_089.rs",
@@ -6417,7 +6417,7 @@
         "B1",
         "B3"
       ],
-      "notes": "Prior PARTIAL closed: own_digimon_sources link zone consumed; cost reduce:2; traits added"
+      "notes": "Blocked 2026-10-21 (Plan 2 Task 6 fix round 2): clause #2 '[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse' spends its [Once Per Turn] when the app fuse is passed, against Q1818 / CR 4.3 §15-14-1-4 and DCGO BT25_089.cs (RemoveUse when nothing executed). `app_fuse` reports no result to the clause, so neither the folded-may refund nor `refund_opt` can see the pass: needs the app-fuse result signal (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT residual). Previous note: Prior PARTIAL closed: own_digimon_sources link zone consumed; cost reduce:2; traits added"
     },
     "BT25-052": {
       "card_name": "Logimon",
