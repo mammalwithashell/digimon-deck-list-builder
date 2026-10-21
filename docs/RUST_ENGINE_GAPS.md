@@ -5709,9 +5709,9 @@ no dedicated clause test in `dna_result_new_card.rs`.
 
 - **Rule:** §17-1-3-2-6 "Link cards that don't meet the link requirements" and §17-1-3-2-7 "Linked cards in a card category other than those specified in the notes for <Link>" are rule-check trash targets. Q4533: an effect can't link a card without `<Link>`.
 - **Ours:** `Game::link_requirement_met_by` reads a card's link requirement from its lowered `link_cost` effect (DSL `kind: link_condition` / `kind: link_requirement`). A card that prints a Link box (`CardData::link_text`, from `link_effect_description_eng`) but has no lowered requirement is treated as meeting it: unknown isn't unmet. So the rule check keeps it, and effect links may offer it. A card with no `link_text` and no requirement has no `[Link]`, and is trashed (§17-1-3-2-7).
-- **Cards (39; printed Link box, no lowered requirement, 2026-10-17):**
+- **Cards (37; printed Link box, no lowered requirement, 2026-10-17; BT23-022 / BT23-039 lowered 2026-10-21):**
   - With YAML but the requirement omitted (`G-LINK-REQUIREMENTS`): BT22-009.
-  - With no YAML: BT21-041, BT21-053, BT22-016, BT22-030, BT22-033, BT22-035, BT22-050, BT22-055, BT22-058, BT22-075, BT23-007, BT23-009, BT23-016, BT23-021, BT23-022, BT23-028, BT23-033, BT23-039, BT23-052, BT24-032, BT24-038, BT24-053, BT24-056, BT24-057, BT24-071, BT24-077, BT24-092, EX10-014, EX10-016, EX10-017, EX10-019, EX10-024, EX10-029, EX10-030, EX10-038, EX10-043, P-190, ST22-09.
+  - With no YAML: BT21-041, BT21-053, BT22-016, BT22-030, BT22-033, BT22-035, BT22-050, BT22-055, BT22-058, BT22-075, BT23-007, BT23-009, BT23-016, BT23-021, BT23-028, BT23-033, BT23-052, BT24-032, BT24-038, BT24-053, BT24-056, BT24-057, BT24-071, BT24-077, BT24-092, EX10-014, EX10-016, EX10-017, EX10-019, EX10-024, EX10-029, EX10-030, EX10-038, EX10-043, P-190, ST22-09.
 - **Fix shape:** lower each card's printed `<Link>` requirement (`data/card_bundles/<ID>.md` "Link Condition") as a `kind: link_condition` clause. The fallback in `link_requirement_met_by` can then go.
 - **Blocks training:** no. None of these cards is training-gated; the effect is that an unmet requirement is accepted.
 
