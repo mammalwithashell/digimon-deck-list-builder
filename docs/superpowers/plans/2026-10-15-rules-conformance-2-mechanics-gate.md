@@ -114,6 +114,26 @@
 
 ---
 
+### Task 6: Fix the three `ours_wrong` findings that block top-10 decks (added 2026-10-21 after Task 5b)
+
+**Files:**
+- Modify (per finding, TDD): the card YAML under `code/digimon-engine/cards/<set>/` and/or the engine under `code/digimon-engine/src/`; the card's behavioural test under `code/digimon-engine/tests/cards_behavioral/<set>/`; the verdict row's `triage` (→ `stale` with "fixed <sha>; re-exam needed" once the sim side matches the ruling); the gap entry in `docs/RUST_ENGINE_GAPS.md` (→ RESOLVED).
+- Report: `.superpowers/sdd/2026-10-15-rules-conformance-2-mechanics-gate/task-6-report.md`.
+
+**Scope (from `task-5-triage.md` "## Interactions"):**
+1. **BT24-003 (Q1818)** — a declined `[Once Per Turn]` "you may" effect must be offered again later the same turn: declining an OPTIONAL EFFECT does not activate it, so the once-per-turn is not consumed (§15-7 / Q1818). This is distinct from declining the optional COST of an activated effect (BT24-026 / P-250 idiom, owner ruling #20's "use spent on activation"), which does spend it. Confirm the cause (the YAML's missing `refund_opt` is a guess), fix at the right layer (if the engine's optional-effect decline consumes OPT generically, fix the engine and audit which shipping cards relied on it), pin with a test. Blocks both Jupitermon lists.
+2. **BT25-083 (Q6396)** — a P-180 that was *used* (its Option played) must not fire its "when trashed from digivolution cards" trigger: the card was not trashed from under a Digimon. Fix the event attribution; test. Blocks Beelstarmon (3M).
+3. **BT26-082 (Q7122)** — Ravemon's `{Security}` end-of-turn play must happen during an end-of-turn `<Engage>` attack so the player with no security loses; today the play never happens. Read §16 `<Engage>` and the attack/end-of-turn ordering (Plan 4's `G-ENGINE-ENGAGE-*` entries) first; fix; test. Blocks DATA SQUAD.
+
+The other two `ours_wrong` cards (BT25-043, ST23-04 ×4 — Task 5; BT25-058 "Then" lock Q1643 — Task 5b) are NOT in the top-10 decks: leave their gaps OPEN and blocked by the gate; they are follow-ups.
+
+- [ ] **Step 1:** for each finding, write the failing DebugRunner test that encodes the ruling; run RED.
+- [ ] **Step 2:** fix; run GREEN; run the card's whole test module plus the suites a shared-engine change touches (`rules_conformance`, `combat`, `timing_dispatch`, `cost_hooks` for 1; `cards_behavioral` filtered to the affected sets for all).
+- [ ] **Step 3:** re-run the committed exam scenario sim-only; set the row's `triage: stale` with the fix sha when the sim now matches the ruling; update the gap entry.
+- [ ] **Step 4:** commit per finding — `"engine/cards: <ID> — <ruling> (Q…)"`.
+
+---
+
 ## Self-review notes
 
 - Spec §5b covered end to end (artifact → admissibility → gauntlet → docs). The gate flips to admitting decks only when Plan 1's chapters have no `blocks_training` gaps open; until then Task 3's `MechanicsNotReadyError` is the honest state and the message names what to fix.
