@@ -136,7 +136,13 @@ effects:
               - name_contains: "GraceNovamon"
           cost: 0
           ignore_requirements: false
-          optional: true
+          # The half's one "may" is the first-Digimon pick above (DCGO asks a
+          # single skippable 2-Digimon selection); once a Digimon is chosen the
+          # partner and target picks are not a second decline. This makes "the
+          # Then half executed" = "its pick was made", which the [Once Per
+          # Turn] refund reads (owner-decided 2026-10-21, W13; DCGO
+          # BT25_028.cs `if (!executed) RemoveUse()`).
+          optional: false
           prompt: "DNA digivolve 2 of your Digimon into [GraceNovamon] in the hand?"
 
   - scope: inherited

@@ -484,6 +484,13 @@ Each item gives the question, the candidate readings, what DCGO does, and what t
 **W12. Link-time replacement chooser (§4-9-5).** §4-9-5 says the same number of existing link cards are trashed but not who chooses which. Q6370 gives the choice to "the player" for the rule-check trim. Reading: the linking player (who controls the host, §10-1-3-1) chooses. DCGO: the owner chooses when the maximum is above 1. Confirmation only.
 - **Confirmed by owner 2026-10-17** (linking player chooses; implemented by Task 3).
 
+**W13. §15-14-1-4 [X Per Turn]: a "you may A. Then, you may B." effect with BOTH halves declined.** Is the use spent? §15-14-1-4 counts a use "when a player chooses to activate ... even if the effect's processing can't be executed"; it does not say whether declining every optional part is choosing not to activate. Q1818 (a whole-effect "you may" declined → not used up) and Q1643 (the "Then" part still processes after the first "may" is declined → the effect was activated) pull in opposite directions. (`G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT`; Plan 2 Task 6 fix round 2.)
+- (a) Not spent: nothing executed, so the effect was never activated. This is DCGO (`BT25_028.cs` `if (!executed) activateClass.RemoveUse()`).
+- (b) Spent: the triggered effect activated, and its optional parts were then passed.
+- **Owner decided (a) on 2026-10-21: "DCGO has the Dianamon/GraceNovamon effect correct".** (A controller ruling on the same reading came first: PDF-silent, so DCGO is the behavioural authority.) The DSL lowering (`lower_triggered::then_may_refund_process`) refunds the use when every optional half's pick is empty, and spends it as soon as either half executes. A half with mandatory content that runs without its pick (Q1643's BT7-079 shape) still spends the use. Production clauses: BT25-028#2 and EX8-074#4.
+- Tests: `rules_conformance -- ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn` and `::then_may_effect_with_one_half_executed_spends_its_once_per_turn`; `cards_behavioral -- bt25_028_all_turns_both_halves_declined_keeps_once_per_turn` and `bt25_028_all_turns_one_half_executed_spends_once_per_turn`; `dsl -- folded_may_opt_refund::then_may_*`.
+- **Cost if ever reversed to (b):** drop the `then_may_refund_process` branch in `lower_triggered.rs` (one `.or_else`) and flip the two "both declined" tests.
+
 ## Retracted or resolved during the campaign
 
 - `G-ENGINE-IMMEDIATE-ONCE-PER-CAUSE-SCOPED-TO-EVENT`: retracted (`b20297ec9`). The engine's per-event `replacement_fired` scope is right; `ch15_08_effect_categories::immediate_effect_once_per_interrupting_cause` now proves §15-8-5-4 (W7).

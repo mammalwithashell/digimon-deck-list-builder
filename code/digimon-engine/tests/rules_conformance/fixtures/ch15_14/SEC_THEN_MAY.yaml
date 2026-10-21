@@ -1,0 +1,32 @@
+# SEC_THEN_MAY -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [All Turns] [Once Per Turn] When your security stack is removed from, you
+#   may delete 1 of your opponent's Digimon. Then, you may return 1 of your
+#   opponent's Digimon to the hand.
+# Two optional halves (owner-decided 2026-10-21, W13: both declined = nothing
+# executed = the use is not spent; DCGO `RemoveUse` when nothing executed).
+card: SEC_THEN_MAY
+name: Thenmaymon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns] [Once Per Turn] When your security stack is removed from, you may delete 1 of your opponent's Digimon. Then, you may return 1 of your opponent's Digimon to the hand."
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }
+      - select_opponent_permanent:
+          bind_as: bounce
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may return 1 of your opponent's Digimon to the hand"
+      - return_to_hand: { target: bounce }

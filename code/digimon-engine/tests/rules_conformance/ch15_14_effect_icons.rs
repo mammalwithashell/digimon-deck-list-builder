@@ -139,3 +139,48 @@ fn declined_optional_cost_of_an_activated_effect_spends_its_once_per_turn() {
         "the effect was activated, so its [Once Per Turn] is spent"
     );
 }
+
+/// Owner-decided 2026-10-21 (mechanics-gaps W13; the PDF is silent; DCGO
+/// `BT25_028.cs` `if (!executed) activateClass.RemoveUse()`): a
+/// "you may A. Then, you may B." [Once Per Turn] effect whose halves are both
+/// declined executed nothing, so its use is not spent and the next event the
+/// same turn offers it again.
+#[test]
+fn then_may_effect_with_both_halves_declined_keeps_its_once_per_turn() {
+    cite!(
+        "15-14-1-4",
+        "0ec475393b7da51a023fdc14b305d8c33160c89fce5d469544b9040c676a117f"
+    );
+    let mut r = board("SEC_THEN_MAY", &[]);
+    remove_p0_security(&mut r);
+    pass(&mut r); // decline "delete"
+    pass(&mut r); // decline "return"
+    assert_eq!(r.game.players[1].battle_area.len(), 2, "nothing executed");
+
+    remove_p0_security(&mut r);
+    assert!(
+        r.pending_selection().is_some(),
+        "both halves declined: the [Once Per Turn] is not spent"
+    );
+}
+
+/// The same effect is spent as soon as either half executes (here the first;
+/// the "Then" half is declined).
+#[test]
+fn then_may_effect_with_one_half_executed_spends_its_once_per_turn() {
+    cite!(
+        "15-14-1-4",
+        "0ec475393b7da51a023fdc14b305d8c33160c89fce5d469544b9040c676a117f"
+    );
+    let mut r = board("SEC_THEN_MAY", &[]);
+    remove_p0_security(&mut r);
+    accept(&mut r); // delete one
+    pass(&mut r); // decline "return"
+    assert_eq!(r.game.players[1].battle_area.len(), 1, "the first half executed");
+
+    remove_p0_security(&mut r);
+    assert!(
+        r.pending_selection().is_none(),
+        "a half executed: the [Once Per Turn] is spent"
+    );
+}

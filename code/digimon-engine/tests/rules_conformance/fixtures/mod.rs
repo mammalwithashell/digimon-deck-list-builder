@@ -214,6 +214,7 @@ const CH15_15: &[&str] = &[
 const CH15_14: &[&str] = &[
     include_str!("ch15_14/SEC_COST_DEL.yaml"),
     include_str!("ch15_14/SEC_MAY_DEL.yaml"),
+    include_str!("ch15_14/SEC_THEN_MAY.yaml"),
 ];
 
 /// §16-42..§16-47 Ver. 4.x keyword cards, with the §4-6 DUAL, §4-19

@@ -82,8 +82,9 @@ pub fn lower_for_kind_with_clause_index(
     // is folded into its first pick refunds the use when that pick is passed
     // (the effect was never activated). See `folded_may_refund_process`.
     // G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT.
-    let process: Vec<CompiledStep> =
-        folded_may_refund_process(clause).unwrap_or_else(|| clause.process.clone());
+    let process: Vec<CompiledStep> = folded_may_refund_process(clause)
+        .or_else(|| then_may_refund_process(clause))
+        .unwrap_or_else(|| clause.process.clone());
     // A clause containing a `refund_opt` step needs its OPT key to be
     // STATICALLY known (the step un-records the activation at runtime via the
     // StepRuntime — G-OPT-REFUND-ON-DECLINE). Forcing such a clause into its
@@ -613,6 +614,130 @@ pub fn folded_may_refund_process(clause: &CompiledTriggeredClause) -> Option<Vec
             else_branch: rest.to_vec(),
         },
     ])
+}
+
+/// Shared preconditions of the folded-"may" refunds: a trigger-type,
+/// `optional: true` clause with a per-turn cap, no explicit `outer_prompt`
+/// and no authored `refund_opt`.
+fn folded_may_preconditions(clause: &CompiledTriggeredClause) -> bool {
+    let capped = clause.once_per_turn || matches!(clause.max_per_turn, Some(n) if n > 0);
+    capped
+        && clause.optional
+        && !clause.outer_prompt
+        && !steps_contain_refund_opt(&clause.process)
+        && !clause.when.iter().any(|t| {
+            matches!(
+                t,
+                CompiledTiming::Main
+                    | CompiledTiming::MainFromHand
+                    | CompiledTiming::MainOnField
+                    | CompiledTiming::MainFromTrash
+                    | CompiledTiming::Counter
+            )
+        })
+}
+
+/// The binding of a declinable, non-cost selection that may pick nothing:
+/// an `optional: true` pick, or a multi-pick whose minimum is zero.
+fn declinable_pick_binding(step: &CompiledStep) -> Option<String> {
+    let value = serde_json::to_value(step).ok()?;
+    let (variant, fields) = value.as_object()?.iter().next()?;
+    if !variant.starts_with("Select") {
+        return None;
+    }
+    let fields = fields.as_object()?;
+    if fields.get("cost").and_then(|v| v.as_bool()) == Some(true) {
+        return None;
+    }
+    let is_true = |k: &str| fields.get(k).and_then(|v| v.as_bool()) == Some(true);
+    // `min` is a plain count or a `CompiledCountBound` (`{"Literal": 0}`).
+    let is_zero = |k: &str| {
+        fields.get(k).is_some_and(|v| {
+            v.as_u64() == Some(0) || v.get("Literal").and_then(|l| l.as_u64()) == Some(0)
+        })
+    };
+    if !(is_true("optional") || is_true("optional_zero") || is_zero("min") || is_zero("min_picks")) {
+        return None;
+    }
+    fields.get("bind_as")?.as_str().map(str::to_string)
+}
+
+/// The bindings of a "[X Per Turn] you may A. Then, you may B." clause: two or
+/// more optional halves, each led by a declinable pick ([`declinable_pick_binding`])
+/// that names none of the earlier halves' picks, with every other step
+/// depending on its own half's pick ([`step_depends_on_binding`]). A half with
+/// mandatory content that runs without its pick (Q1643, BT7-079) breaks the
+/// shape, so its clause keeps spending the use.
+pub fn then_may_refund_bindings(clause: &CompiledTriggeredClause) -> Option<Vec<String>> {
+    if !folded_may_preconditions(clause) {
+        return None;
+    }
+    let mut halves: Vec<String> = Vec::new();
+    for step in &clause.process {
+        let starts_half = declinable_pick_binding(step).filter(|_| {
+            !halves.iter().any(|b| step_depends_on_binding(step, b))
+        });
+        if let Some(binding) = starts_half {
+            halves.push(binding);
+            continue;
+        }
+        let current = halves.last()?;
+        if !step_depends_on_binding(step, current) {
+            return None;
+        }
+    }
+    (halves.len() >= 2).then_some(halves)
+}
+
+/// Owner-decided 2026-10-21 (mechanics-gaps W13: "DCGO has the
+/// Dianamon/GraceNovamon effect correct"; the PDF is silent; DCGO
+/// `BT25_028.cs` `if (!executed) activateClass.RemoveUse()`): a "you may A. Then, you may
+/// B." [X Per Turn] effect whose halves were BOTH declined executed nothing,
+/// so its use is refunded; it is spent as soon as either half executes. The
+/// body gets `if <every half's pick is empty> then refund_opt` appended, and
+/// each half's permanent pick continues on PASS so the refund is reached.
+pub fn then_may_refund_process(clause: &CompiledTriggeredClause) -> Option<Vec<CompiledStep>> {
+    let halves = then_may_refund_bindings(clause)?;
+    let mut steps: Vec<CompiledStep> = clause
+        .process
+        .iter()
+        .cloned()
+        .map(|mut step| {
+            if declinable_pick_binding(&step).is_some_and(|b| halves.contains(&b)) {
+                match &mut step {
+                    CompiledStep::SelectOwnPermanent {
+                        continue_on_decline,
+                        ..
+                    }
+                    | CompiledStep::SelectOpponentPermanent {
+                        continue_on_decline,
+                        ..
+                    }
+                    | CompiledStep::SelectAnyPermanent {
+                        continue_on_decline,
+                        ..
+                    } => *continue_on_decline = true,
+                    _ => {}
+                }
+            }
+            step
+        })
+        .collect();
+    steps.push(CompiledStep::If {
+        condition: CompiledPredicate {
+            all_of: halves
+                .into_iter()
+                .map(|b| CompiledPredicate {
+                    binding_count_eq: Some((b, 0)),
+                    ..CompiledPredicate::default()
+                })
+                .collect(),
+            ..CompiledPredicate::default()
+        },
+        then: vec![CompiledStep::RefundOpt],
+        else_branch: Vec::new(),
+    });
+    Some(steps)
 }
 
 /// Whether `step` does nothing when `binding` is unbound: an `if` on
