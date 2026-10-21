@@ -39,6 +39,14 @@ fn setup() -> DebugRunner {
         .add_card(digimon("GD", "GD", CardColor::Yellow, 3, 3, &["Glowing Dawn"]))
         .add_card(digimon("KBB", "Black BB", CardColor::Black, 4, 5, &["BEATBREAK"]))
         .add_card(digimon("PBB", "Purple BB", CardColor::Purple, 4, 5, &["BEATBREAK"]))
+        .add_card(digimon(
+            "BOTH",
+            "Black GD BB",
+            CardColor::Black,
+            4,
+            5,
+            &["Glowing Dawn", "BEATBREAK"],
+        ))
         .add_card(digimon("CARRIER", "Carrier", CardColor::Black, 4, 5, &[]))
         .add_card(digimon("DECKTOP", "DeckTop", CardColor::Red, 3, 3, &[]))
         .add_card(gd_egg)
@@ -123,6 +131,20 @@ fn bt26_052_beatbreak_bucket_rejects_non_black() {
     let _ = r.auto_resolve();
     assert_eq!(hand_ids(&r, 0), vec!["GD".to_string()]);
     assert_eq!(r.deck_size(0), 6);
+}
+
+#[test]
+fn bt26_052_one_card_cannot_fill_both_buckets() {
+    // A black [Glowing Dawn] [BEATBREAK] card meets both buckets but is added
+    // once ("1 ... card and 1 ... card": two different cards).
+    let mut r = setup();
+    stack_deck_top(&mut r, 0, &["FILLER", "FILLER", "BOTH"]);
+    play_from_hand(&mut r);
+    pick_revealed(&mut r, "BOTH");
+    let _ = r.auto_resolve();
+    assert!(r.game.pending_selection.is_none(), "no second pick of the same card");
+    assert_eq!(hand_ids(&r, 0), vec!["BOTH".to_string()], "added once");
+    assert_eq!(r.deck_size(0), 6, "the other two return to the bottom");
 }
 
 #[test]
