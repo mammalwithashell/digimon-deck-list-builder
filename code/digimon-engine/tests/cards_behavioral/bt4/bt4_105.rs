@@ -229,6 +229,23 @@ fn bt4_105_placed_digimon_is_not_deleted() {
     assert_eq!(r.memory(), mem - 1, "no [On Deletion] memory gain");
 }
 
+#[test]
+fn bt4_105_main_offers_nothing_when_you_cannot_add_security() {
+    // DCGO CanSelectPermanentCondition requires Owner.CanAddSecurity.
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut r = setup();
+    r.place_on_field(0, "ROOKIE", Some(0));
+    r.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(ModifierType::CannotAddSecurityByEffect, 1, Expiry::EndOfTurn, None, 1),
+    );
+    use_retreat(&mut r);
+    assert!(r.game.pending_selection.is_none(), "no placeable Digimon → no pick");
+    assert_eq!(field_ids(&r, 0), vec!["ROOKIE".to_string()]);
+    assert_eq!(security_ids(&r, 0).len(), 2);
+}
+
 // ─── Clause 2: [Security] <Recovery +1 (Deck)> ───────────────────────────────
 
 #[test]

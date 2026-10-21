@@ -14807,13 +14807,13 @@
       "archetype": "TS Jupitermon",
       "yaml_path": "code/digimon-engine/cards/bt4/BT4-105.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_105.rs",
-      "test_count": 6,
+      "test_count": 7,
       "patterns": [
         "OPTION-MAIN-MANDATORY-OWN-PICK",
         "PERMANENT-TO-SECURITY",
         "SECURITY-RECOVERY"
       ],
-      "notes": "TDD vs DCGO BT4_105.cs + official text (the old printing's 'Trash all of the digivolution cards of that Digimon' is CR 4.3 4-7-8): [Main] mandatory pick of 1 own Digimon -> top card face down on top of own security, stacked cards trashed; not a deletion (Q&A: no [On Deletion]); [Security] <Recovery +1 (Deck)>. DCGO also skips the pick when the owner cannot add security (CanAddSecurity); here place_on_security enforces CannotAddSecurity at placement but the pick is still shown - unreachable for this card's own text."
+      "notes": "TDD vs DCGO BT4_105.cs + official text (the old printing's 'Trash all of the digivolution cards of that Digimon' is CR 4.3 4-7-8): [Main] mandatory pick of 1 own Digimon -> top card face down on top of own security, stacked cards trashed; not a deletion (Q&A: no [On Deletion]); offered only when you can add security (owner_can_add_security, DCGO CanAddSecurity); [Security] <Recovery +1 (Deck)>."
     }
   }
 }

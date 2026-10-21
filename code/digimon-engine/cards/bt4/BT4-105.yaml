@@ -21,6 +21,8 @@
 #   IPutSecurityPermanent(toTop: true) — top card face down on top of security,
 #   the stacked cards trashed. → mandatory select_own_permanent { kind: digimon }
 #   + place_on_security { source: permanent, top, face down } (LM-020 idiom).
+#   `owner_can_add_security: true` mirrors DCGO's CanAddSecurity gate: with
+#   CannotAddSecurityByEffect on you, no Digimon is offered (BT24-040 predicate).
 # [Security] (SecuritySkill): IRecovery(1) — deck top onto the security top.
 #   → inherited on_security `recover: { count: 1 }`.
 
@@ -40,10 +42,11 @@ effects:
               of: you
               zone: [battle_area]
               kind: digimon
+              owner_can_add_security: true
           then:
             - select_own_permanent:
                 bind_as: retreating
-                filter: { kind: digimon }
+                filter: { kind: digimon, owner_can_add_security: true }
                 prompt: "Place 1 of your Digimon on top of your security stack face down"
             - place_on_security:
                 source: { permanent: retreating }
