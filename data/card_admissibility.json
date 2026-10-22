@@ -2479,14 +2479,17 @@
     },
     "BT10-085": {
       "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:event_card_kind",
+        "predicate:event_card_name_contains"
+      ]
     },
     "BT10-086": {
       "admissible": false,
@@ -5430,14 +5433,19 @@
     },
     "BT13-013": {
       "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:can_digivolve_from_source",
+        "predicate:event_card_kind",
+        "predicate:event_card_name_contains",
+        "timing:on_ally_played"
+      ]
     },
     "BT13-014": {
       "admissible": false,
@@ -14676,14 +14684,18 @@
     },
     "BT20-014": {
       "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:can_change_orientation",
+        "predicate:can_digivolve_from_source",
+        "predicate:is_unsuspended"
+      ]
     },
     "BT20-015": {
       "admissible": false,
@@ -17994,14 +18006,17 @@
     },
     "BT23-006": {
       "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:event_card_kind",
+        "timing:on_ally_played"
+      ]
     },
     "BT23-007": {
       "admissible": false,
@@ -18077,6 +18092,7 @@
         "untested_lowering"
       ],
       "untested_constructs": [
+        "predicate:event_card_kind",
         "predicate:event_target_is_source",
         "timing:on_ally_played"
       ]
@@ -18768,14 +18784,16 @@
     },
     "BT23-076": {
       "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "verb:add_top_security_to_hand"
+      ]
     },
     "BT23-077": {
       "admissible": true,
@@ -28827,14 +28845,12 @@
       "untested_constructs": []
     },
     "BT8-001": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT8-002": {
@@ -46199,14 +46215,12 @@
       ]
     },
     "ST12-13": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "ST12-14": {
@@ -49380,21 +49394,21 @@
     }
   },
   "counts": {
-    "admissible": 597,
+    "admissible": 599,
     "diverged_no_quirk": 2,
     "failed_verdict": 11,
     "registered": 4475,
     "unregistered": 0,
     "untested_card": 2,
-    "untested_lowering": 3863
+    "untested_lowering": 3861
   },
-  "generated_at": "2026-10-22T04:21:15+00:00",
+  "generated_at": "2026-10-22T05:11:36+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "7dc53b4e470e01fca15d0c790388afdcf0d87b6097ede6c2b793471706b3b8f7",
+    "behavioral_test_modules_sha256": "91c5e72d6b3944cf75a1207265ab7bdf58da4047bc71616d5328cc6b63b795ad",
     "card_registry_sha256": "17e73d7c894a1f8681b102828f2f1a56c08d9d7ed8d4f683b176e0869c2f2b00",
     "exam_verdicts_sha256": "d0ad7f061c6a0a5e440bab3772cb736b000835f14d13518d5dd8880f40656479",
-    "lowering_coverage_sha256": "03c3016f0834c5b7c0e2205263fe78bc319ae7ba83912e3dc728ba1b3528407e",
-    "validated_cards_dsl_sha256": "0d8e89a53316c4821c4d9db1439648b78d8e3b0243159f08c29103d2ee82eba4",
+    "lowering_coverage_sha256": "113cb3e51e428ec6069d54c8b686d6ec3d10b05efb8b26bd91144eedf4d18062",
+    "validated_cards_dsl_sha256": "ccbca0febc8c869a013bcdcafd011accc56d3d7822218b38781cf56b507b4bff",
     "validated_cards_sha256": "04f91bf602871457f7284d95a89dffc9a1db2b86093652e19747a35425f607c6"
   },
   "version": 2

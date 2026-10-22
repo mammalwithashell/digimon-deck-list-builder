@@ -1,0 +1,61 @@
+# Image + official bundle verified; behavior cross-checked with DCGO BT23_076.cs.
+card: BT23-076
+name: Sistermon Blanc
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 3000
+traits: [Puppet, CS]
+attribute: Vaccine
+form: Rookie
+effects:
+  - when: on_play
+    summary: "[On Play] Add your top security card to the hand. Then, Recovery +1 (Deck)."
+    process:
+      - add_top_security_to_hand: { of: you }
+      - recover: { of: you, count: 1 }
+  - when: on_suspend
+    active_when: { your_turn: true }
+    condition: { event_permanent_is_source: true }
+    summary: "[Your Turn] When this Digimon suspends, 1 of your other Digimon may digivolve into a [Huckmon] name or [Royal Knight]/[CS] Digimon in hand or trash, cost reduced by 1."
+    process:
+      - select_own_permanent:
+          bind_as: base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand, trash]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - name_contains: Huckmon
+                          - trait_has: Royal Knight
+                          - trait_has: CS
+          prompt: "You may select 1 of your other Digimon to digivolve"
+      - if:
+          condition: { binding_present: base }
+          then:
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                bind_as: evolution
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: Huckmon
+                        - trait_has: Royal Knight
+                        - trait_has: CS
+                    - can_digivolve_onto: base
+                prompt: "Digivolve into a [Huckmon] name or [Royal Knight]/[CS] Digimon from your hand or trash, cost reduced by 1"
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: evolution
+                cost: { reduce: 1 }

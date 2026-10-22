@@ -1,0 +1,56 @@
+card: BT13-013
+name: BaoHuckmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Dinosaur]
+form: Champion
+attribute: Data
+
+# Printed ordinary digivolution circle, also available to metadata-only runners.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - color_is: red
+    cost: 2
+
+effects:
+  - when: on_ally_played
+    optional: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_card_kind: digimon
+        - event_card_name_contains: Sistermon
+    summary: "[Your Turn] When you play a Sistermon Digimon, may digivolve into SaviorHuckmon in hand with cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evolution
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: SaviorHuckmon
+              - can_digivolve_from_source: true
+          prompt: "Digivolve this Digimon into SaviorHuckmon with cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evolution
+          cost: { reduce: 2 }
+
+  - when: on_ally_played
+    scope: inherited
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_card_kind: digimon
+        - event_card_name_contains: Sistermon
+    summary: "[Your Turn][Once Per Turn] When you play a Sistermon Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
