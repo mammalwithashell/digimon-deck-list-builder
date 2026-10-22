@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5d (construct tests), §5b (the gate it feeds). Semantics sheets (research inputs, committed): `docs/superpowers/research/2026-10-22-construct-tests/semantics/*.md` — each task's brief points the implementer at its family's sheet for lowering sites, YAML shapes and rule citations.
 
-**Branch:** `claude/p3-construct-tests`, cut from `claude/p2-mechanics-gate` @ f24f26dfa (stacked on PR #743 → #742). Worktree `D:/wt/p3-constructs`; `CARGO_TARGET_DIR=E:/cargo-target-wt/p3-constructs`.
+**Branch:** `claude/p3-construct-tests`, cut from `claude/p2-mechanics-gate` @ f24f26dfa (PR #743's content; #743 merged into `claude/ex13-meta-cards` after #742 reached `main`, so a follow-up PR carries the gate to `main` — rebase onto `main` once it lands; see the hand-off §7). Worktree `D:/wt/p3-constructs`; `CARGO_TARGET_DIR=E:/cargo-target-wt/p3-constructs`.
 
 ## Global Constraints
 

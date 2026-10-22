@@ -19,7 +19,7 @@ separate substrate gap). The gate itself does not change.
 
 | Thing | Path |
 |---|---|
-| Branch / base | `claude/p3-construct-tests`, cut from `claude/p2-mechanics-gate` @ f24f26dfa (stacked on PR #743 → PR #742 → main) |
+| Branch / base | `claude/p3-construct-tests`, cut from `claude/p2-mechanics-gate` @ f24f26dfa — the gate's content, which is on `claude/ex13-meta-cards` (PR #743 merged there) and reaches `main` via the follow-up PR described in §7 |
 | Worktree used so far | `D:/wt/p3-constructs` (cargo target `E:/cargo-target-wt/p3-constructs`) — reuse it or make your own from the branch |
 | **The plan (read first)** | `docs/superpowers/plans/2026-10-22-construct-tests-1-top10.md` — 9 tasks; Tasks 2–7 are the six construct families |
 | Spec | `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` **§5d** (what a construct test is) and §5b (the gate it feeds) |
@@ -130,8 +130,13 @@ Cargo stalls → kill stale `dsl-*.exe` / `cards_behavioral-*.exe` holding the t
   construct coverage.
 - The hybrid rule (card with ≥4 clauses or a protection construct also needs its own `cards_behavioral` test) is
   already satisfied for every top-10 card; nothing to do there.
-- PR #742 (37 EX13 meta cards) and PR #743 (the two-layer mechanics gate) are drafts awaiting the owner's
-  review/undraft; this branch stacks on #743. If they merge first, rebase onto the new base.
+- **Base-branch state (2026-10-22 09:10Z):** PR #742 (37 EX13 meta cards) is on `main`. PR #743 (the two-layer
+  mechanics gate) merged 46 s later into its *stacked* base `claude/ex13-meta-cards`, so **`main` does not have the
+  gate yet**; PR #744 (`claude/ex13-meta-cards` → `main`) carries it (diff = #743's merge commit
+  88e3cb841). This branch's base f24f26dfa is contained in that follow-up, so once it merges, rebase this branch onto
+  `main` (expect a clean rebase: only docs on this branch so far) and target the campaign PR at `main`. Until then
+  the campaign PR targets `claude/ex13-meta-cards`. Check with `git ls-tree origin/main data/card_admissibility.json`
+  — when it prints, main has the gate.
 - Other open follow-ups (not this campaign): app-fuse result signal (BT25-089); would-link window for effect links
   (BT25-004 / BT25-045 vs BT25-089); `card_number_is` self-proxy sweep (~25 cards, Task 5 gap); BT16-055
   De-Digivolve scope; oracle re-exams for rows triaged `stale`; `meta_coverage.py` / `candidates.py` still on the old
