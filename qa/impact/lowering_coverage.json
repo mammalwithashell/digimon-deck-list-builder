@@ -1,8 +1,8 @@
 {
- "attribution": "token presence in a #[test] fn body or a same-file helper/const it references; signals: variant | spec | yaml_key | literal | keyword | fixture; cards_behavioral never scanned",
+ "attribution": "token presence in a #[test] fn body or a same-file helper/const it references; signals: variant | spec | yaml_key | literal | keyword | fixture; cards_behavioral never scanned; behavioural per test: an ENGINE_RUN_MARKERS hit in the test body or a same-file test-support helper",
  "cards": {
   "AD1-001": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:add_to_hand_from_trash",
@@ -27,7 +27,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -211,7 +213,7 @@
    ]
   },
   "AD1-010": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 6,
    "constructs": [
     "verb:draw",
@@ -233,7 +235,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [
     "keyword:Jamming"
    ],
@@ -380,7 +384,7 @@
    "untested_constructs": []
   },
   "AD1-016": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
@@ -408,7 +412,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -490,7 +496,7 @@
    ]
   },
   "AD1-019": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -516,7 +522,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -660,7 +668,7 @@
    "untested_constructs": []
   },
   "BT1-085": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:play_from_security",
@@ -679,12 +687,15 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT1-087": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_security",
@@ -704,7 +715,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:shuffle_security",
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -849,7 +863,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:trait_contains"
@@ -888,7 +904,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:trait_contains"
@@ -924,7 +942,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_gain_memory",
@@ -1052,13 +1072,15 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_card_name_contains",
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT11-023": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_reveal",
@@ -1080,7 +1102,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -1145,7 +1169,10 @@
    "effect_clause_count": 3,
    "has_card_test": false,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:shuffle_security",
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_name_contains"
@@ -1270,7 +1297,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:has_alt_path"
@@ -1343,7 +1372,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [
     "keyword:Evade"
    ],
@@ -1853,7 +1884,7 @@
    "untested_constructs": []
   },
   "BT12-092": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_modifier",
@@ -1879,7 +1910,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -1933,7 +1966,8 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:in_breeding"
+    "predicate:in_breeding",
+    "timing:start_of_your_main_phase"
    ],
    "protection_constructs": [
     "clause:flood_gate"
@@ -2002,7 +2036,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:shuffle_security"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:play_security_card",
@@ -2333,7 +2369,9 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_card_name_contains",
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -2393,7 +2431,7 @@
    "untested_constructs": []
   },
   "BT13-095": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:add_dp_modifier",
@@ -2423,7 +2461,10 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -2464,7 +2505,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_change_orientation",
@@ -2724,7 +2767,7 @@
    "untested_constructs": []
   },
   "BT14-033": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -2746,7 +2789,10 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:shuffle_security",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -2773,7 +2819,8 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "timing:start_of_your_main_phase"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -2801,7 +2848,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:cost_target_from_hand",
@@ -2916,7 +2965,7 @@
    "untested_constructs": []
   },
   "BT15-020": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -2938,7 +2987,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -2963,7 +3014,7 @@
    "untested_constructs": []
   },
   "BT15-084": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:activation_cost",
@@ -2988,7 +3039,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -3019,7 +3072,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:shuffle_security"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:play_security_card"
@@ -3163,7 +3218,8 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -3200,7 +3256,7 @@
    "untested_constructs": []
   },
   "BT16-025": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 6,
    "constructs": [
     "verb:add_player_modifier",
@@ -3225,7 +3281,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [
     "clause:partition"
    ],
@@ -3262,7 +3320,7 @@
    "untested_constructs": []
   },
   "BT16-028": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
@@ -3296,7 +3354,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -3356,7 +3416,7 @@
    ]
   },
   "BT16-040": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -3381,7 +3441,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -3512,7 +3574,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:name_in"
@@ -3610,7 +3674,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:may_dna_digivolve_now"
@@ -3755,7 +3821,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:may_dna_digivolve_now"
@@ -3857,7 +3925,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:trash_all_sources"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:stack_size_lte"
@@ -3956,7 +4026,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is",
@@ -4247,7 +4319,7 @@
    "untested_constructs": []
   },
   "BT18-065": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -4275,7 +4347,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -4341,7 +4415,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is",
@@ -4349,7 +4426,7 @@
    ]
   },
   "BT18-092": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -4373,12 +4450,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT18-093": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -4400,7 +4479,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -5037,7 +5119,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:has_alt_path"
@@ -5191,7 +5275,7 @@
    ]
   },
   "BT2-041": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:add_dp_modifier",
@@ -5211,7 +5295,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -5286,7 +5372,7 @@
    "untested_constructs": []
   },
   "BT20-007": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -5307,7 +5393,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -5379,7 +5467,8 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -5477,7 +5566,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [
     "keyword:Jamming"
    ],
@@ -5656,7 +5747,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_digivolve_from_source",
@@ -5993,7 +6086,7 @@
    "untested_constructs": []
   },
   "BT20-084": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:add_modifier",
@@ -6016,7 +6109,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -6051,7 +6146,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_subject_is_mine",
@@ -6756,7 +6853,7 @@
    "untested_constructs": []
   },
   "BT21-042": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -6776,7 +6873,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -6867,7 +6966,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:may_dna_digivolve_now"
@@ -7033,7 +7134,7 @@
    ]
   },
   "BT21-058": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:delete_permanent",
@@ -7062,7 +7163,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -7127,7 +7230,7 @@
    "untested_constructs": []
   },
   "BT21-062": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:delete_permanent",
@@ -7148,7 +7251,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "trigger:when_would_leave_battle_area"
@@ -7338,7 +7443,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -7372,14 +7480,16 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "timing:on_opponent_security_removed"
    ]
   },
   "BT21-083": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -7405,7 +7515,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -7429,7 +7541,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:app_fuse",
@@ -7437,7 +7551,7 @@
    ]
   },
   "BT21-086": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:add_dp_modifier",
@@ -7465,12 +7579,15 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT21-087": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_reveal",
@@ -7495,7 +7612,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -7741,7 +7860,10 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -8340,7 +8462,7 @@
    "untested_constructs": []
   },
   "BT22-084": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:play_from_hand_free",
@@ -8363,7 +8485,10 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -8396,7 +8521,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [
     "keyword:Jamming"
    ],
@@ -8405,7 +8532,7 @@
    ]
   },
   "BT22-088": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -8433,7 +8560,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -8465,7 +8594,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is",
@@ -8504,7 +8635,7 @@
    ]
   },
   "BT22-098": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -8528,7 +8659,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -8642,7 +8775,8 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -9017,7 +9151,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_cause",
@@ -9089,7 +9225,7 @@
    "untested_constructs": []
   },
   "BT23-072": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -9124,7 +9260,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -9176,7 +9315,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:app_fuse",
@@ -9327,7 +9468,7 @@
    "untested_constructs": []
   },
   "BT24-004": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 1,
    "constructs": [
     "verb:draw",
@@ -9340,7 +9481,9 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -9926,7 +10069,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_cause",
@@ -10142,7 +10287,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:trash_all_sources"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_cause",
@@ -10317,7 +10464,7 @@
    "untested_constructs": []
   },
   "BT24-047": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:if",
@@ -10342,7 +10489,9 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -10715,7 +10864,7 @@
    "untested_constructs": []
   },
   "BT24-082": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_dp_modifier",
@@ -10745,12 +10894,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT24-083": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -10775,12 +10926,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT24-084": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -10803,7 +10956,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -10833,7 +10989,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_attack"
@@ -10866,7 +11025,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:app_fuse",
@@ -10874,7 +11035,7 @@
    ]
   },
   "BT24-088": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -10904,12 +11065,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT24-089": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -10933,7 +11096,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -11292,7 +11457,10 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -11314,7 +11482,7 @@
    "untested_constructs": []
   },
   "BT25-002": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 1,
    "constructs": [
     "verb:draw",
@@ -11328,7 +11496,9 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -11487,7 +11657,7 @@
    "untested_constructs": []
   },
   "BT25-009": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -11506,7 +11676,10 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -11800,7 +11973,7 @@
    ]
   },
   "BT25-019": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:delete_permanent",
@@ -11827,7 +12000,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
@@ -12108,7 +12283,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:may_dna_digivolve_now"
@@ -12178,7 +12355,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:add_top_security_to_hand"
@@ -13198,14 +13377,16 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "timing:when_linked"
    ]
   },
   "BT25-062": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -13223,7 +13404,10 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -13315,7 +13499,7 @@
    "untested_constructs": []
   },
   "BT25-067": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -13334,7 +13518,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -13829,7 +14015,7 @@
    ]
   },
   "BT25-086": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -13853,7 +14039,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -13881,7 +14070,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_add_to_hand_player",
@@ -13908,7 +14099,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "timing:on_lose_security"
@@ -13937,14 +14130,16 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:app_fuse"
    ]
   },
   "BT25-090": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:activation_cost",
@@ -13966,7 +14161,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -14000,7 +14197,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:effect_added_any_card_to_hand",
@@ -14042,7 +14241,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:source_count"
@@ -14631,7 +14832,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:return_union_bound_to_deck"
@@ -15240,7 +15443,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:play_or_use_from_hand",
@@ -15320,7 +15525,11 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_digivolve_from_source"
@@ -15360,7 +15569,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:source_deleted_battle_opponent"
@@ -15472,7 +15683,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:source_deleted_battle_opponent"
@@ -15532,7 +15745,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:add_top_security_to_hand",
@@ -15654,7 +15869,7 @@
    "untested_constructs": []
   },
   "BT26-047": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:add_modifier",
@@ -15683,7 +15898,10 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
@@ -16196,7 +16414,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_digivolve_from_source"
@@ -16529,7 +16749,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:effect_deleted_any_own_digimon",
@@ -16621,7 +16843,9 @@
    "effect_clause_count": 5,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:play_cost_gte"
@@ -16870,7 +17094,7 @@
    ]
   },
   "BT26-087": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_trash",
@@ -16897,12 +17121,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-088": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:gain_memory",
@@ -16922,7 +17148,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -16956,14 +17184,16 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "timing:on_lose_security"
    ]
   },
   "BT26-090": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -16983,7 +17213,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -17023,14 +17256,16 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:trait_contains"
    ]
   },
   "BT26-092": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -17058,12 +17293,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-093": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -17095,12 +17332,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-094": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -17131,12 +17370,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-095": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -17167,12 +17408,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-096": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:play_from_security",
@@ -17193,7 +17436,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -17409,7 +17654,7 @@
    ]
   },
   "BT26-104": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:activation_cost",
@@ -17437,7 +17682,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -17517,7 +17764,7 @@
    "untested_constructs": []
   },
   "BT3-093": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_reveal",
@@ -17537,7 +17784,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -17741,7 +17990,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -18473,7 +18724,7 @@
    ]
   },
   "BT8-090": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -18490,7 +18741,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -18573,7 +18826,7 @@
    "untested_constructs": []
   },
   "BT8-107": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:bind_permanent_property",
@@ -18590,7 +18843,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -18771,7 +19026,7 @@
    "untested_constructs": []
   },
   "BT9-108": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:delete_permanent",
@@ -18791,7 +19046,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -19314,7 +19571,7 @@
    ]
   },
   "EX10-039": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -19341,12 +19598,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX10-040": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:gain_memory",
@@ -19364,7 +19623,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -19475,7 +19736,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -19506,14 +19770,16 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:color_matches_returned_card"
    ]
   },
   "EX10-069": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -19541,7 +19807,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -19578,7 +19846,7 @@
    ]
   },
   "EX11-002": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 1,
    "constructs": [
     "predicate:all_of",
@@ -19593,7 +19861,9 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -19720,7 +19990,7 @@
    "untested_constructs": []
   },
   "EX11-016": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 6,
    "constructs": [
     "verb:if",
@@ -19753,12 +20023,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-017": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 7,
    "constructs": [
     "verb:add_modifier",
@@ -19796,7 +20068,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [
     "keyword:Barrier"
    ],
@@ -20166,7 +20440,7 @@
    "untested_constructs": []
   },
   "EX11-054": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -20192,12 +20466,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-055": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -20225,12 +20501,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-057": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:activation_cost",
@@ -20256,12 +20534,14 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-060": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -20292,12 +20572,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-061": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -20325,7 +20607,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -20364,14 +20648,17 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
    ]
   },
   "EX11-066": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -20404,12 +20691,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-069": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:activation_cost",
@@ -20440,7 +20729,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -20533,7 +20824,8 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -20583,7 +20875,7 @@
    "untested_constructs": []
   },
   "EX12-006": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -20604,7 +20896,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -21018,7 +21312,7 @@
    ]
   },
   "EX12-021": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -21044,7 +21338,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -21277,7 +21573,7 @@
    "untested_constructs": []
   },
   "EX12-034": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 6,
    "constructs": [
     "verb:if",
@@ -21307,7 +21603,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_subject_is_mine",
@@ -21395,7 +21693,9 @@
    "effect_clause_count": 5,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "keyword:Barrier",
@@ -21766,7 +22066,7 @@
    "untested_constructs": []
   },
   "EX12-057": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:add_dp_modifier",
@@ -21786,7 +22086,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -21908,7 +22210,7 @@
    "untested_constructs": []
   },
   "EX12-066": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -21942,7 +22244,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -22232,7 +22536,9 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_color_any_of"
@@ -22256,7 +22562,9 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_color_any_of"
@@ -22437,7 +22745,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_color_any_of"
@@ -22569,7 +22879,7 @@
    ]
   },
   "EX13-014": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:delete_permanent",
@@ -22606,7 +22916,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -22761,7 +23073,8 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -22869,7 +23182,7 @@
    "untested_constructs": []
   },
   "EX13-022": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:add_modifier",
@@ -22904,7 +23217,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -22992,7 +23307,9 @@
    "effect_clause_count": 5,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_subject_is_mine",
@@ -23031,7 +23348,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_cause",
@@ -23543,7 +23862,8 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -23671,7 +23991,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_cause",
@@ -23684,7 +24006,7 @@
    ]
   },
   "EX13-044": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 9,
    "constructs": [
     "verb:add_modifier",
@@ -23720,7 +24042,9 @@
    "effect_clause_count": 5,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -24165,7 +24489,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:play_or_use_from_hand"
@@ -24245,7 +24571,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_attack",
@@ -24409,7 +24737,8 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -24518,14 +24847,16 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_name_contains"
    ]
   },
   "EX13-068": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -24549,12 +24880,15 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX13-069": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -24586,12 +24920,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX13-070": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -24622,7 +24958,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -24660,14 +24998,16 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:face_down_sources_under_tamers_gte"
    ]
   },
   "EX13-072": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -24696,12 +25036,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX13-073": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 5,
    "constructs": [
     "verb:activation_cost",
@@ -24733,12 +25075,15 @@
    "effect_clause_count": 5,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX13-074": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -24771,12 +25116,15 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX13-075": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:play_from_security",
@@ -24791,7 +25139,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -24954,7 +25304,9 @@
    "effect_clause_count": 3,
    "has_card_test": false,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:pay_source_prefix"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:select_zone_cards"
@@ -25148,7 +25500,8 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source"
+    "predicate:event_target_is_source",
+    "predicate:is_unsuspended"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -25438,7 +25791,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_color_any_of"
@@ -25617,7 +25972,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_name_contains"
@@ -26113,7 +26470,7 @@
    "untested_constructs": []
   },
   "EX7-016": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_reveal",
@@ -26138,12 +26495,14 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX7-020": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:grant_keyword",
@@ -26167,14 +26526,16 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [
     "keyword:Jamming"
    ],
    "untested_constructs": []
   },
   "EX7-021": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:if",
@@ -26201,7 +26562,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -26233,7 +26596,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:stack_size_lte"
@@ -26321,7 +26686,7 @@
    "untested_constructs": []
   },
   "EX7-030": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:add_dp_modifier",
@@ -26347,7 +26712,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -26512,7 +26879,7 @@
    "untested_constructs": []
   },
   "EX7-051": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -26535,7 +26902,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -26568,7 +26937,7 @@
    "untested_constructs": []
   },
   "EX7-063": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:gain_memory",
@@ -26583,7 +26952,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -26751,7 +27122,7 @@
    ]
   },
   "EX8-002": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 1,
    "constructs": [
     "verb:gain_memory",
@@ -26763,7 +27134,9 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -26814,7 +27187,7 @@
    ]
   },
   "EX8-022": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 6,
    "constructs": [
     "verb:add_modifier",
@@ -26839,12 +27212,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX8-023": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 6,
    "constructs": [
     "verb:add_modifier",
@@ -26874,7 +27249,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -27142,7 +27519,7 @@
    ]
   },
   "EX8-066": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -27170,7 +27547,11 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte",
+    "timing:on_ally_played",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -27204,7 +27585,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -27236,7 +27620,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [
     "modifier:CannotBeReturnedToDeck",
     "modifier:CannotBeReturnedToHand"
@@ -27283,7 +27669,7 @@
    ]
   },
   "EX8-074": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
@@ -27307,7 +27693,9 @@
    "effect_clause_count": 5,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -27328,7 +27716,7 @@
    "untested_constructs": []
   },
   "EX9-012": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 8,
    "constructs": [
     "verb:delete_permanent",
@@ -27355,7 +27743,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -27400,7 +27790,7 @@
    ]
   },
   "EX9-019": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 9,
    "constructs": [
     "verb:add_modifier",
@@ -27428,7 +27818,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -27771,7 +28163,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "verb:shuffle_security"
+   ],
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
@@ -28570,7 +28964,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_ally_played"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_digivolve_from_source",
@@ -28881,7 +29277,7 @@
    ]
   },
   "P-128": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -28906,7 +29302,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -28936,7 +29334,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -29147,7 +29547,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:trait_contains"
@@ -29186,7 +29588,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:trash_selected_sources_as_cost"
@@ -29221,7 +29625,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -29451,7 +29858,10 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_digivolve_from_source"
@@ -29479,7 +29889,10 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_digivolve_from_source"
@@ -29507,14 +29920,17 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_digivolve_from_source"
    ]
   },
   "P-200": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:play_from_security",
@@ -29534,7 +29950,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte",
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -29678,7 +30097,7 @@
    "untested_constructs": []
   },
   "P-210": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_trash",
@@ -29698,7 +30117,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -29730,7 +30151,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:trashed_hand_card_matching"
@@ -29873,7 +30296,7 @@
    "untested_constructs": []
   },
   "P-224": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -29900,12 +30323,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "P-228": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_reveal",
@@ -29930,12 +30355,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "P-229": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_reveal",
@@ -29960,7 +30387,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:event_card_name_contains"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -30084,7 +30513,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:app_fuse",
@@ -30345,7 +30776,7 @@
    "untested_constructs": []
   },
   "ST1-09": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:gain_memory",
@@ -30357,7 +30788,9 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:on_block"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -30583,7 +31016,7 @@
    "untested_constructs": []
   },
   "ST16-14": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -30601,7 +31034,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -30657,7 +31092,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -30944,7 +31382,10 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "predicate:memory_lte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -31365,7 +31806,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -31792,7 +32235,7 @@
    "untested_constructs": []
   },
   "ST23-13": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -31821,12 +32264,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "ST23-14": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -31856,7 +32301,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [
     "keyword:Jamming"
    ],
@@ -31889,7 +32336,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:move_self_option_under_permanent"
@@ -32277,7 +32726,7 @@
    ]
   },
   "ST24-13": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -32307,14 +32756,16 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [
     "keyword:Jamming"
    ],
    "untested_constructs": []
   },
   "ST24-14": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -32340,7 +32791,9 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -32371,7 +32824,9 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "timing:start_of_your_main_phase"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:move_self_option_under_permanent"
@@ -32877,7 +33332,10 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended",
+    "predicate:stack_size_gte"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:trash_selected_sources_as_cost"
@@ -32906,7 +33364,7 @@
    "untested_constructs": []
   },
   "ST4-15": {
-   "behaviourally_covered": true,
+   "behaviourally_covered": false,
    "clause_count": 2,
    "constructs": [
     "verb:add_this_option_to_hand",
@@ -32921,7 +33379,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -33473,7 +33933,9 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [],
+   "parsed_only_constructs": [
+    "predicate:is_unsuspended"
+   ],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is"
@@ -39104,14 +39566,14 @@
   "predicate:event_card_in_text_contains": {
    "kind": "predicate",
    "name": "event_card_in_text_contains",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::in_text_contains.rs::parse_and_compile_event_card_in_text_contains_leaf": [
      "yaml_key"
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::in_text_contains.rs::parse_and_compile_event_card_in_text_contains_leaf"
    ]
@@ -39161,14 +39623,14 @@
   "predicate:event_card_name_contains": {
    "kind": "predicate",
    "name": "event_card_name_contains",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::delay.rs::delay_event_trigger_lowers_to_on_event_delay": [
      "variant"
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::delay.rs::delay_event_trigger_lowers_to_on_event_delay"
    ]
@@ -40774,14 +41236,14 @@
   "predicate:is_unsuspended": {
    "kind": "predicate",
    "name": "is_unsuspended",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::predicate_leaves_ii.rs::level_lte_binding_compiles_from_yaml": [
      "yaml_key"
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::predicate_leaves_ii.rs::level_lte_binding_compiles_from_yaml"
    ]
@@ -42413,7 +42875,7 @@
   "predicate:level": {
    "kind": "predicate",
    "name": "level",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::dna_material_identity.rs::dna_material_identity_requires_a_level_or_name": [
      "yaml_key"
@@ -42423,7 +42885,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::dna_material_identity.rs::dna_material_identity_requires_a_level_or_name",
     "dsl::pretty.rs::format_preserves_top_level_key_order"
@@ -43564,14 +44026,14 @@
   "predicate:memory_lte": {
    "kind": "predicate",
    "name": "memory_lte",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::group7_predicate_batch.rs::scalar_threshold_predicates_accept_formula_threshold_yaml": [
      "yaml_key"
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::group7_predicate_batch.rs::scalar_threshold_predicates_accept_formula_threshold_yaml"
    ]
@@ -46109,14 +46571,14 @@
   "predicate:stack_size_gte": {
    "kind": "predicate",
    "name": "stack_size_gte",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::group7_predicate_batch.rs::scalar_threshold_predicates_accept_formula_threshold_yaml": [
      "yaml_key"
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::group7_predicate_batch.rs::scalar_threshold_predicates_accept_formula_threshold_yaml"
    ]
@@ -47226,7 +47688,7 @@
   "timing:before_pay_cost": {
    "kind": "timing",
    "name": "before_pay_cost",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::parse_declarative.rs::cost_reduction_reduction_timing_is_populated_independently_of_clause_scope": [
      "literal"
@@ -47242,7 +47704,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::parse_declarative.rs::cost_reduction_reduction_timing_is_populated_independently_of_clause_scope",
     "dsl::phase1c_lowering.rs::cost_reduction_when_playing_this_emits_before_pay_cost_effect",
@@ -48818,7 +49280,7 @@
   "timing:on_ally_played": {
    "kind": "timing",
    "name": "on_ally_played",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings": [
      "variant"
@@ -48828,7 +49290,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings",
     "dsl::predicate_leaves_ii.rs::event_target_trait_contains_compiles_from_yaml"
@@ -49196,7 +49658,7 @@
   "timing:on_block": {
    "kind": "timing",
    "name": "on_block",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::parse_clauses.rs::parse_on_block_timing_clause": [
      "yaml_key"
@@ -49206,7 +49668,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::parse_clauses.rs::parse_on_block_timing_clause",
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings"
@@ -50913,7 +51375,7 @@
   "timing:start_of_your_main_phase": {
    "kind": "timing",
    "name": "start_of_your_main_phase",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::activation_cost.rs::compile_activation_cost_lowers_to_return_self_kind": [
      "yaml_key"
@@ -50923,7 +51385,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::activation_cost.rs::compile_activation_cost_lowers_to_return_self_kind",
     "dsl::activation_cost.rs::parse_activation_cost_return_self_step"
@@ -51715,7 +52177,7 @@
     "code/digimon-engine/src/dsl_cards/step/digixros_transaction.rs"
    ],
    "name": "add_digixros_wildcard_to_pending_transaction",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::digixros_transaction_steps.rs::digixros_wildcard_steps_lower_to_compiled_steps": [
      "variant",
@@ -51723,7 +52185,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::digixros_transaction_steps.rs::digixros_wildcard_steps_lower_to_compiled_steps"
    ]
@@ -52119,7 +52581,7 @@
     "code/digimon-engine/src/dsl_cards/step/zone_moves.rs"
    ],
    "name": "add_to_hand_from_deck",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "lib::src/dsl_cards/lower_triggered.rs::resource_flow_catalog_detects_nested_draw_steps": [
      "variant"
@@ -52129,7 +52591,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "lib::src/dsl_cards/lower_triggered.rs::resource_flow_catalog_detects_nested_draw_steps",
     "lib::src/dsl_cards/lower_triggered.rs::resource_flow_catalog_ignores_non_hand_resource_steps"
@@ -55762,7 +56224,7 @@
     "code/digimon-engine/src/dsl_cards/step/replacement_outcome.rs"
    ],
    "name": "handle_replacement",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::phase3_reducer_replacement.rs::replacement_outcome_verbs_parse_and_compile": [
      "variant",
@@ -55770,7 +56232,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::phase3_reducer_replacement.rs::replacement_outcome_verbs_parse_and_compile"
    ]
@@ -56366,7 +56828,7 @@
     "code/digimon-engine/src/dsl_cards/step/combat.rs"
    ],
    "name": "open_counter_window",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::effect_granted_attack.rs::open_counter_window_yaml_lowers_to_compiled_step": [
      "variant",
@@ -56374,7 +56836,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::effect_granted_attack.rs::open_counter_window_yaml_lowers_to_compiled_step"
    ]
@@ -56458,14 +56920,14 @@
     "code/digimon-engine/src/dsl_cards/step/selections.rs"
    ],
    "name": "pay_source_prefix",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection": [
      "variant"
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection"
    ]
@@ -60915,7 +61377,7 @@
     "code/digimon-engine/src/dsl_cards/step/draw.rs"
    ],
    "name": "shuffle_security",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::group4_zone_movement.rs::security_stack_steps_parse_and_compile": [
      "variant",
@@ -60923,7 +61385,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::group4_zone_movement.rs::security_stack_steps_parse_and_compile"
    ]
@@ -61081,7 +61543,7 @@
     "code/digimon-engine/src/dsl_cards/step/permanent_mutations.rs"
    ],
    "name": "trash_all_sources",
-   "parsed_only": false,
+   "parsed_only": true,
    "signals": {
     "dsl::source_stack_aggregates.rs::source_stack_steps_compile": [
      "variant",
@@ -61089,7 +61551,7 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": true,
+   "tested_behaviourally": false,
    "tests": [
     "dsl::source_stack_aggregates.rs::source_stack_steps_compile"
    ]
@@ -62141,8 +62603,9 @@
  ],
  "schema_version": 1,
  "summary": {
+  "behavioural_tests": 1638,
   "cards": {
-   "behaviourally_covered": 665,
+   "behaviourally_covered": 552,
    "lowering_covered": 677,
    "not_covered": 467,
    "total": 1144
@@ -62158,27 +62621,27 @@
     "used_untested": 0
    },
    "predicate": {
-    "parsed_only": 4,
+    "parsed_only": 10,
     "tested": 140,
-    "tested_behaviourally": 136,
+    "tested_behaviourally": 130,
     "total": 216,
     "untested": 76,
     "used_by_cards": 189,
     "used_untested": 67
    },
    "timing": {
-    "parsed_only": 0,
+    "parsed_only": 4,
     "tested": 47,
-    "tested_behaviourally": 47,
+    "tested_behaviourally": 43,
     "total": 65,
     "untested": 18,
     "used_by_cards": 56,
     "used_untested": 16
    },
    "verb": {
-    "parsed_only": 0,
+    "parsed_only": 7,
     "tested": 149,
-    "tested_behaviourally": 149,
+    "tested_behaviourally": 142,
     "total": 183,
     "untested": 34,
     "used_by_cards": 171,
@@ -62187,10 +62650,52 @@
   },
   "ex13_lists": 568,
   "parse_only_files": [
+   "src/dsl_cards/binding_ref.rs",
    "src/dsl_cards/bindings.rs",
    "src/dsl_cards/expiry_map.rs",
+   "src/dsl_cards/formula_eval.rs",
+   "src/dsl_cards/formula_registry.rs",
+   "src/dsl_cards/lower_alt_path_registration.rs",
+   "src/dsl_cards/lower_aura.rs",
+   "src/dsl_cards/lower_cost_reduction.rs",
+   "src/dsl_cards/lower_delay.rs",
+   "src/dsl_cards/lower_flood_gate.rs",
+   "src/dsl_cards/lower_grant_keyword.rs",
+   "src/dsl_cards/lower_partition.rs",
+   "src/dsl_cards/lower_replacement.rs",
+   "src/dsl_cards/lower_triggered.rs",
+   "src/dsl_cards/mod.rs",
    "src/dsl_cards/modifier_map.rs",
+   "src/dsl_cards/predicate.rs",
+   "src/dsl_cards/raw_rust.rs",
    "src/dsl_cards/source_stats.rs",
+   "src/dsl_cards/step/as_selecting_player.rs",
+   "src/dsl_cards/step/combat.rs",
+   "src/dsl_cards/step/control_flow.rs",
+   "src/dsl_cards/step/deletion_results.rs",
+   "src/dsl_cards/step/digixros_transaction.rs",
+   "src/dsl_cards/step/dna_digivolve.rs",
+   "src/dsl_cards/step/draw.rs",
+   "src/dsl_cards/step/effects.rs",
+   "src/dsl_cards/step/field_source_results.rs",
+   "src/dsl_cards/step/grant_triggered.rs",
+   "src/dsl_cards/step/iteration.rs",
+   "src/dsl_cards/step/link_cards.rs",
+   "src/dsl_cards/step/memory.rs",
+   "src/dsl_cards/step/modifiers.rs",
+   "src/dsl_cards/step/named_materials.rs",
+   "src/dsl_cards/step/permanent_mutations.rs",
+   "src/dsl_cards/step/permanent_scan.rs",
+   "src/dsl_cards/step/play_digivolve.rs",
+   "src/dsl_cards/step/replacement_outcome.rs",
+   "src/dsl_cards/step/return_results.rs",
+   "src/dsl_cards/step/schedule_delayed.rs",
+   "src/dsl_cards/step/selections.rs",
+   "src/dsl_cards/step/simultaneous_play.rs",
+   "src/dsl_cards/step/source_play_batch.rs",
+   "src/dsl_cards/step/source_prefix_payment.rs",
+   "src/dsl_cards/step/zone_cards.rs",
+   "src/dsl_cards/step/zone_moves.rs",
    "src/dsl_cards/timing_map.rs",
    "src/dsl_cards/trigger_map.rs",
    "tests/cost_hooks/main.rs",
@@ -62198,9 +62703,11 @@
    "tests/dsl/cross_check.rs",
    "tests/dsl/effect_refiring.rs",
    "tests/dsl/embedded_registry.rs",
+   "tests/dsl/folded_may_opt_refund.rs",
    "tests/dsl/grant_triggered_trigger_if.rs",
    "tests/dsl/i18n_scaffolding.rs",
    "tests/dsl/loader.rs",
+   "tests/dsl/main.rs",
    "tests/dsl/official_rule_grants.rs",
    "tests/dsl/pack_file_loader.rs",
    "tests/dsl/parse_alt_paths.rs",
@@ -62211,36 +62718,50 @@
    "tests/dsl/parse_minimal.rs",
    "tests/dsl/parse_predicates.rs",
    "tests/dsl/parse_steps.rs",
+   "tests/dsl/partition.rs",
    "tests/dsl/phase0_exit.rs",
    "tests/dsl/phase1b_exit.rs",
    "tests/dsl/phase1c_exit.rs",
+   "tests/dsl/phase1c_lowering.rs",
+   "tests/dsl/phase1c_parity.rs",
+   "tests/dsl/phase1c_scaffold.rs",
+   "tests/dsl/phase2d_helpers.rs",
    "tests/dsl/phase3a_cost_delta.rs",
    "tests/dsl/phase4_raw_rust_budget.rs",
+   "tests/dsl/phase4_raw_rust_clause.rs",
+   "tests/dsl/phase4_raw_rust_registry.rs",
    "tests/dsl/phase4_retirement_guard.rs",
    "tests/dsl/play_from_hand_free_suspended.rs",
    "tests/dsl/pretty.rs",
    "tests/dsl/raw_rust_registry.rs",
    "tests/dsl/real_cards_json.rs",
+   "tests/dsl/replacement.rs",
    "tests/dsl/roundtrip.rs",
    "tests/dsl/schema_export.rs",
    "tests/dsl/security_icon_lint.rs",
+   "tests/dsl/standalone_declaratives_exit.rs",
    "tests/dsl/trait_parity.rs",
    "tests/dsl/validator.rs",
    "tests/effect_context/main.rs",
+   "tests/keyword_phase_d/helpers.rs",
    "tests/keyword_phase_d/main.rs",
    "tests/keyword_phase_d/material_save.rs",
    "tests/keyword_phase_e/de_digivolve_n.rs",
    "tests/keyword_phase_e/draw_x_n.rs",
    "tests/keyword_phase_e/helpers.rs",
    "tests/keyword_phase_e/main.rs",
+   "tests/keyword_phase_f/helpers.rs",
    "tests/keyword_phase_f/main.rs",
    "tests/replacements/enum_and_context.rs",
    "tests/replacements/main.rs",
    "tests/rules_conformance/cite.rs",
+   "tests/rules_conformance/fixtures/mod.rs",
    "tests/rules_conformance/main.rs",
-   "tests/rules_conformance/meta.rs"
+   "tests/rules_conformance/meta.rs",
+   "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 348,
+  "scanned_tests": 2023,
   "top_untested": [
    {
     "cards_blocked": 61,

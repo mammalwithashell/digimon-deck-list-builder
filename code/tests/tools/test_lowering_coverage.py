@@ -35,15 +35,28 @@ fn variant_test() {
     let _r = DebugRunner::new();
 }
 
+fn run_card(src: &str) {
+    let _r = DebugRunner::from_yaml(src);
+}
+
 #[test]
 fn yaml_test() {
-    let _c = compile(SNIPPET); // CompiledStep::Delete in a comment
+    run_card(SNIPPET); // CompiledStep::Delete in a comment
 }
 
 #[test]
 fn literal_test() {
     assert_eq!(timing, "on_play");
     let _k = Keyword::Blocker;
+    let _g = runner.game.turn;
+}
+
+// A catalog-only test in a file that ALSO has engine tests: it must credit
+// `shuffle` as parsed_only (final-review I1: behavioural is per test).
+#[test]
+fn catalog_only_test() {
+    let steps = vec![CompiledStep::Shuffle];
+    assert!(steps_provide_resource_flow(&steps));
 }
 
 #[test]
@@ -59,6 +72,36 @@ fn parse(yaml: &str) -> PredicateSpec { serde_yml::from_str(yaml).unwrap() }
 fn parses_trait_has() {
     let p = parse("trait_has: Royal Knight");
     assert!(p.trait_has.is_some());
+}
+'''
+
+# A lowering source file: production code names the engine (`EffectContext`) and
+# the variant; a `#[cfg(test)]` catalog test that merely calls it must NOT be
+# behavioural, while a test that calls a cfg(test) helper which runs the engine is.
+LOWER_RS = r'''
+pub fn lower_trash(ctx: &mut EffectContext) -> CompiledStep {
+    CompiledStep::Trash
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn drive() {
+        let mut r = DebugRunner::new();
+        r.run_steps(&[]);
+    }
+
+    #[test]
+    fn catalog_reaches_production_fn() {
+        let _ = lower_trash;
+    }
+
+    #[test]
+    fn helper_runs_engine() {
+        drive();
+        let _ = CompiledStep::Mill;
+    }
 }
 '''
 
@@ -106,9 +149,9 @@ effects:
 
 def _vocab() -> lc.Vocab:
     return lc.Vocab(
-        step_keys={"draw", "delete"},
+        step_keys={"draw", "delete", "shuffle", "trash", "mill"},
         predicate_keys={"kind", "level_eq", "trait_has"},
-        step_variants={"Draw": "draw", "Delete": "delete"},
+        step_variants={"Draw": "draw", "Delete": "delete", "Shuffle": "shuffle", "Trash": "trash", "Mill": "mill"},
         step_spec={"Draw": "draw", "Delete": "delete"},
         timing_variants={"OnPlay": "on_play", "WhenAttacking": "when_attacking"},
         timings={"on_play", "when_attacking"},
@@ -124,6 +167,8 @@ def synthetic(tmp_path: Path) -> dict:
     (engine / "tests" / "dsl" / "mech.rs").write_text(MECH_RS, encoding="utf-8")
     (engine / "tests" / "dsl" / "parse_predicates.rs").write_text(PARSE_RS, encoding="utf-8")
     (engine / "tests" / "dsl" / "fixtures" / "FIX_CARD.yaml").write_text(FIXTURE_YAML, encoding="utf-8")
+    (engine / "src" / "dsl_cards").mkdir(parents=True)
+    (engine / "src" / "dsl_cards" / "lower.rs").write_text(LOWER_RS, encoding="utf-8")
     (engine / "tests" / "cards_behavioral" / "c").mkdir(parents=True)
     (engine / "tests" / "cards_behavioral" / "c" / "c_2.rs").write_text(BEHAVIORAL_RS, encoding="utf-8")
     cards_dir = tmp_path / "cards"
@@ -189,7 +234,8 @@ def test_comments_and_cards_behavioral_are_ignored(synthetic):
     assert all("cards_behavioral" not in t for v in c.values() for t in v["tests"])
     engine = synthetic["kwargs"]["engine"]
     path = engine / "tests" / "cards_behavioral" / "c" / "c_2.rs"
-    assert lc.scan_file(path, engine, _vocab()) == (False, {})
+    scan = lc.scan_file(path, engine, _vocab())
+    assert (scan.hits, scan.tests, scan.behavioural_tests) == ({}, 0, 0)
 
 
 def test_parse_only_classification(synthetic):
@@ -199,6 +245,39 @@ def test_parse_only_classification(synthetic):
     assert th["tested"] and not th["tested_behaviourally"] and th["parsed_only"]
     assert c["verb:draw"]["tested_behaviourally"]
     assert "tests/dsl/parse_predicates.rs" in synthetic["payload"]["summary"]["parse_only_files"]
+
+
+def test_behavioural_is_decided_per_test(synthetic):
+    """final-review I1: a catalog-only test in a file that also drives the engine
+    credits its construct as parsed_only, not behaviourally."""
+    c = synthetic["payload"]["constructs"]
+    sh = c["verb:shuffle"]
+    assert sh["tests"] == ["dsl::mech.rs::catalog_only_test"]
+    assert sh["tested"] and not sh["tested_behaviourally"] and sh["parsed_only"]
+    # ...while the same file's engine tests (body marker / same-file helper) stay behavioural.
+    assert c["timing:when_attacking"]["tests"] == ["dsl::mech.rs::yaml_test"]
+    assert c["timing:when_attacking"]["tested_behaviourally"]
+    assert c["keyword:Blocker"]["tested_behaviourally"]
+
+
+def test_production_code_reached_by_a_src_test_is_not_behavioural(synthetic):
+    c = synthetic["payload"]["constructs"]
+    tr = c["verb:trash"]
+    assert tr["tests"] == ["lib::src/dsl_cards/lower.rs::catalog_reaches_production_fn"]
+    assert tr["parsed_only"], "EffectContext in a production fn the test calls must not count"
+    mill = c["verb:mill"]
+    assert mill["tests"] == ["lib::src/dsl_cards/lower.rs::helper_runs_engine"]
+    assert mill["tested_behaviourally"], "a #[cfg(test)] helper that runs the engine counts"
+    s = synthetic["payload"]["summary"]
+    assert (s["scanned_tests"], s["behavioural_tests"]) == (8, 4)
+
+
+def test_runs_engine_markers():
+    assert lc.runs_engine("let r = DebugRunnerBuilder::new();")
+    assert lc.runs_engine("let x = runner . game.turn;")
+    assert lc.runs_engine("fixtures::builder(&[]).build()")
+    assert not lc.runs_engine("let g = GameState; let d = DebugRunnerish;")
+    assert not lc.runs_engine("assert!(steps_provide_resource_flow(&steps));")
 
 
 def test_card_rollup_and_list_blocking(synthetic):

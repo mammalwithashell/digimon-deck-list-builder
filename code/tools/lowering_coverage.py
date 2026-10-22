@@ -46,8 +46,19 @@ followed.
 
 A construct is `tested` when at least one attributed test exists (all scanned
 roots are outside `cards_behavioral`). It is `tested_behaviourally` when one of
-those tests lives in a BEHAVIOURAL file (not `parse_*.rs`, and the file drives
-the engine -- see `BEHAVIOUR_MARKERS`); otherwise it is `parsed_only`.
+those tests is itself BEHAVIOURAL; otherwise it is `parsed_only`.
+
+Behavioural is decided PER TEST, not per file (final-review I1, 2026-10-21): a
+`#[test]` is behavioural when its file is not a `parse_*.rs` AND an
+`ENGINE_RUN_MARKERS` pattern occurs in its own body or in a same-file
+TEST-SUPPORT helper it reaches by name (any item of a `tests/**` file; inside
+`src/**`, only items in a `#[cfg(test)] mod { .. }`). Production code a test
+merely calls (a lowering file's catalog fn that happens to name `EffectContext`)
+never makes it behavioural, so a test that only inspects compiled IR, a catalog
+or a lowering table credits its constructs as `parsed_only`. Like the construct
+signals, this is token presence: a test that runs the engine and asserts nothing
+about the construct still counts, and a cross-file builder is only seen through
+the builder names listed in `ENGINE_RUN_MARKERS`.
 
 Usage
 -----
@@ -109,19 +120,25 @@ SCAN_GLOBS = (
 )
 EXCLUDED_PART = "cards_behavioral"
 
-# A file "drives the engine" when it names one of these. A file without any is
-# parse/serde/validator-only, as is every `parse_*.rs`.
-BEHAVIOUR_MARKERS = (
-    "DebugRunner",
-    "run_step",
-    "run_steps",
-    "Game::",
-    "Game {",
-    "DslCardEffect",
-    "EffectContext",
-    "HeadlessRunner",
-    "dsl_cards::",
-    "effects_for_card",
+# A TEST "runs the engine" when its body, or a same-file test-support helper it
+# reaches, matches one of these (the single place the rule is defined; see the
+# module docstring). The last group are the cross-file DebugRunner builders the
+# mechanics roots use (`rules_conformance/fixtures::builder` / `::load`), which
+# compile + run card YAML but live in another file, so their call sites are named
+# explicitly. A test with none of these only inspects IR / catalogs / tables.
+ENGINE_RUN_MARKERS = tuple(
+    re.compile(p)
+    for p in (
+        r"\bDebugRunner(?:Builder)?\b",
+        r"\brun_steps?\b",
+        r"\bEffectContext\b",
+        r"\bGame\b",
+        r"\brunner\s*\.\s*game\b",
+        r"\bstep_for_player\b",
+        r"\bauto_resolve\b",
+        r"\bHeadlessRunner\b",
+        r"\bfixtures\s*::\s*(?:builder|load)\b",
+    )
 )
 
 # Compiled-only step variants that lower FROM a canonical key under another name.
@@ -656,27 +673,45 @@ def test_prefix(path: Path, engine: Path) -> str:
     return f"{rel.parts[1]}::" + Path(*rel.parts[2:]).as_posix()
 
 
-def is_behavioural_file(path: Path, text: str) -> bool:
-    if path.name.startswith("parse_"):
-        return False
-    return any(marker in text for marker in BEHAVIOUR_MARKERS)
+def runs_engine(text: str) -> bool:
+    """True when `text` (masked Rust) matches an `ENGINE_RUN_MARKERS` pattern."""
+    return any(rx.search(text) for rx in ENGINE_RUN_MARKERS)
 
 
-def scan_file(path: Path, engine: Path, vocab: Vocab) -> tuple[bool, dict[tuple[str, str], list[TestHit]]]:
+_CFG_TEST_MOD_RE = re.compile(r"#\[\s*cfg\s*\(\s*test\s*\)\s*\]\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+[A-Za-z_][A-Za-z0-9_]*\s*\{")
+
+
+def test_support_spans(path: Path, engine: Path, masked: str) -> list[tuple[int, int]]:
+    """Spans whose items are test-support code: the whole file under `tests/`,
+    only the `#[cfg(test)] mod { .. }` bodies under `src/`."""
+    if path.relative_to(engine).parts[0] != "src":
+        return [(0, len(masked))]
+    return [(m.start(), _match_brace(masked, m.end() - 1)) for m in _CFG_TEST_MOD_RE.finditer(masked)]
+
+
+@dataclass
+class FileScan:
+    hits: dict[tuple[str, str], list[TestHit]]
+    tokens: set[str]
+    tests: int
+    behavioural_tests: int
+
+
+def scan_file(path: Path, engine: Path, vocab: Vocab) -> FileScan:
     if EXCLUDED_PART in path.as_posix():
-        return False, {}
+        return FileScan({}, set(), 0, 0)
     text = path.read_text(encoding="utf-8", errors="replace")
     lexed = lex_rust(text)
-    scan_file.last_tokens = set(_IDENT_RE.findall(lexed.masked)) | {  # type: ignore[attr-defined]
-        w for (_a, _b, st) in lexed.strings for w in _IDENT_RE.findall(st)
-    }
-    behavioural = is_behavioural_file(path, lexed.masked)
+    tokens = set(_IDENT_RE.findall(lexed.masked)) | {w for (_a, _b, st) in lexed.strings for w in _IDENT_RE.findall(st)}
+    parse_file = path.name.startswith("parse_")
+    support = test_support_spans(path, engine, lexed.masked)
     items = extract_items(lexed.masked)
     closures = test_closures(lexed.masked, items)
     names_cp = "CompiledPredicate" in lexed.masked
     prefix = test_prefix(path, engine)
     out: dict[tuple[str, str], list[TestHit]] = defaultdict(list)
     used_ids: Counter[str] = Counter()
+    n_behavioural = 0
     for idx, reach in sorted(closures.items(), key=lambda kv: items[kv[0]].start):
         test = items[idx]
         used_ids[test.name] += 1
@@ -684,10 +719,17 @@ def scan_file(path: Path, engine: Path, vocab: Vocab) -> tuple[bool, dict[tuple[
         test_id = f"{prefix}::{test.name}{suffix}"
         spans = sorted((it.start, it.end) for it in reach)
         masked = "\n".join(lexed.masked[a:b] for a, b in spans)
+        own = "\n".join(
+            lexed.masked[it.start : it.end]
+            for it in reach
+            if it is test or any(sa <= it.start and it.end <= sb for sa, sb in support)
+        )
+        behavioural = not parse_file and runs_engine(own)
+        n_behavioural += behavioural
         strings = [s for (a, b, s) in lexed.strings if any(sa <= a and b <= sb for sa, sb in spans)]
         for key, sigs in signals_in(masked, strings, vocab, names_compiled_predicate=names_cp).items():
             out[key].append(TestHit(test_id, behavioural, set(sigs)))
-    return behavioural, out
+    return FileScan(out, tokens, len(closures), n_behavioural)
 
 
 # --------------------------------------------------------------------------
@@ -859,13 +901,17 @@ def build(
     parse_only_files: list[str] = []
     n_tests_files = 0
     file_tokens: dict[str, set[str]] = {}
+    n_tests = n_behavioural_tests = 0
     for path in files:
-        behavioural, file_hits = scan_file(path, engine, vocab)
-        file_tokens[path.relative_to(engine).as_posix()] = getattr(scan_file, "last_tokens", set())
-        if not behavioural:
-            parse_only_files.append(path.relative_to(engine).as_posix())
+        scan = scan_file(path, engine, vocab)
+        rel = path.relative_to(engine).as_posix()
+        file_tokens[rel] = scan.tokens
+        if not scan.behavioural_tests:
+            parse_only_files.append(rel)
         n_tests_files += 1
-        for key, hs in file_hits.items():
+        n_tests += scan.tests
+        n_behavioural_tests += scan.behavioural_tests
+        for key, hs in scan.hits.items():
             hits[key].extend(hs)
 
     verb_files: dict[str, list[str]] = defaultdict(list)
@@ -969,13 +1015,16 @@ def build(
             for c in top
         ],
         "scanned_files": n_tests_files,
+        "scanned_tests": n_tests,
+        "behavioural_tests": n_behavioural_tests,
         "parse_only_files": sorted(parse_only_files),
     }
     return {
         "schema_version": SCHEMA_VERSION,
         "attribution": (
             "token presence in a #[test] fn body or a same-file helper/const it references; "
-            "signals: variant | spec | yaml_key | literal | keyword | fixture; cards_behavioral never scanned"
+            "signals: variant | spec | yaml_key | literal | keyword | fixture; cards_behavioral never scanned; "
+            "behavioural per test: an ENGINE_RUN_MARKERS hit in the test body or a same-file test-support helper"
         ),
         "scan_globs": list(SCAN_GLOBS),
         "clause_count_keys": ["/".join(p) for p in CLAUSE_LIST_PATHS],
