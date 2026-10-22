@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5d (construct tests), §5b (the gate it feeds). Semantics sheets (research inputs, committed): `docs/superpowers/research/2026-10-22-construct-tests/semantics/*.md` — each task's brief points the implementer at its family's sheet for lowering sites, YAML shapes and rule citations.
 
-**Branch:** `claude/p3-construct-tests`, cut from `claude/p2-mechanics-gate` @ f24f26dfa (PR #743's content; #743 merged into `claude/ex13-meta-cards` after #742 reached `main`, so a follow-up PR carries the gate to `main` — rebase onto `main` once it lands; see the hand-off §7). Worktree `D:/wt/p3-constructs`; `CARGO_TARGET_DIR=E:/cargo-target-wt/p3-constructs`.
+**Branch:** `claude/p3-construct-tests`, rebased onto `main` @ 3b6a2d8f4 (which carries PR #742 and the mechanics gate, PR #743 via #744); the campaign PR targets `main`. Worktree `D:/wt/p3-constructs`; `CARGO_TARGET_DIR=E:/cargo-target-wt/p3-constructs`.
 
 ## Global Constraints
 
@@ -337,7 +337,7 @@ git commit -m "qa: regenerate lowering coverage + card admissibility after the t
 - [ ] **Step 2: Suites a construct fix could touch** — if any task changed `src/` (an engine or lowering fix), run `rules_conformance`, `timing_dispatch`, `cost_hooks`, `replacements`, `selection`, `clone_fuzz`, and `RUST_MIN_STACK=268435456 cargo test … --test cards_behavioral -- --test-threads=8`; record counts in the ledger. If no `src/` change landed, record "no src change; suites not rerun".
 - [ ] **Step 3: Replay goldens** — only if `src/` changed: `digimon-engine-cli replay_corpus verify` 10/10 (regenerate + NOTES.md diagnosis per the Plan 2 forensics procedure if not).
 - [ ] **Step 4: Docs** — `docs/TRAINING_RUNBOOK.md` gate section: one paragraph "where the pool stands" with the 9/10 figure and the regenerate commands; `qa/rules/mechanics-gaps-2026-10.md` or `docs/RUST_ENGINE_GAPS.md` entries for every gap a task filed.
-- [ ] **Step 5: Ledger + PR body** — `.superpowers/sdd/2026-10-22-construct-tests/progress.md` complete lines per task; `pr-body.md` with per-family construct counts, deck flips, gaps filed, verification counts. Controller opens the PR (draft, base `claude/p2-mechanics-gate`).
+- [ ] **Step 5: Ledger + PR body** — `.superpowers/sdd/2026-10-22-construct-tests/progress.md` complete lines per task; `pr-body.md` with per-family construct counts, deck flips, gaps filed, verification counts. Controller opens the PR (draft, base `main`).
 
 ## Execution order and parallelism
 
