@@ -8,7 +8,18 @@ rules whose open gap blocks training, and ``ready``.
     ready = counts.gap_blocking == 0 and counts.proven > 0
 
 ``proven > 0`` keeps an empty or all-not-testable mechanics set from reading as
-ready. The artifact records the sha256 of the ledger file it was built from;
+ready.
+
+What ``ready`` does and does not mean (final review I3): ``ready`` = no
+mechanics obligation is FLAGGED outcome-changing. ``blocks_training`` is a
+hand-set field in ``qa/rules/cr_obligations_status.yaml`` (default false; the
+Plan 4 triage is its basis); nothing automatic sets it, and the gap-tracker
+entries' "Blocks training" lines are not read. Every other open gap in the set
+is counted as ``unflagged_open_gaps`` (stored and printed) and listed in
+``qa/rules/cr_obligations.json``; they were not each judged outcome-neutral.
+The spec's second layer-1 condition -- the ``rules_conformance`` suite green at
+the committed manual version -- is enforced by the PR CI gate
+``.github/workflows/engine-rules-conformance.yml``, not by this artifact. The artifact records the sha256 of the ledger file it was built from;
 ``--check`` rebuilds from the current ledger and fails if the committed file
 differs (including a stale recorded sha).
 
@@ -42,6 +53,13 @@ MECHANICS_SET = (
     "play-and-costs",
     "card-use-and-costs",
     "link",
+)
+
+
+READY_MEANS = (
+    "ready = no mechanics obligation is flagged outcome-changing (blocks_training, hand-set in "
+    "qa/rules/cr_obligations_status.yaml); unflagged open gaps are not judged outcome-neutral; "
+    "rules_conformance suite greenness is enforced by CI (engine-rules-conformance.yml), not here"
 )
 
 
@@ -82,6 +100,8 @@ def build(ledger: dict, obligations_sha256: str) -> dict:
         "mechanics_set": list(MECHANICS_SET),
         "counts": counts,
         "blocking": blocking,
+        "unflagged_open_gaps": counts["gap_nonblocking"],
+        "ready_means": READY_MEANS,
         "ready": counts["gap_blocking"] == 0 and counts["proven"] > 0,
     }
 
@@ -96,7 +116,10 @@ def summary_line(payload: dict) -> str:
         f"{c['total']} obligations in the mechanics set: "
         f"{c['proven']} proven / {c['not_testable']} not-testable / "
         f"{c['gap_blocking']} gap(blocking) / {c['gap_nonblocking']} gap(non-blocking) "
-        f"=> ready: {str(payload['ready']).lower()}"
+        f"=> ready: {str(payload['ready']).lower()}\n"
+        f"  ready = no mechanics obligation is flagged outcome-changing (`blocks_training`); "
+        f"{payload['unflagged_open_gaps']} open mechanics gaps are unflagged and listed in "
+        f"`qa/rules/cr_obligations.json`"
     )
 
 

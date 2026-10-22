@@ -22,9 +22,11 @@
     "link"
   ],
   "ready": true,
+  "ready_means": "ready = no mechanics obligation is flagged outcome-changing (blocks_training, hand-set in qa/rules/cr_obligations_status.yaml); unflagged open gaps are not judged outcome-neutral; rules_conformance suite greenness is enforced by CI (engine-rules-conformance.yml), not here",
   "source": {
     "obligations_sha256": "bfa7741526877df683001289fcded5d5c460435aa6b42930fc75b9937f816117",
     "rules_version": "4.3"
   },
+  "unflagged_open_gaps": 316,
   "version": 1
 }

@@ -41,6 +41,10 @@ def test_ready_when_no_blocking_gaps():
         "total": 3,
     }
     assert out["blocking"] == []
+    assert out["unflagged_open_gaps"] == 1
+    assert out["ready_means"] == mr.READY_MEANS
+    assert "flagged outcome-changing" in mr.summary_line(out)
+    assert "1 open mechanics gaps are unflagged" in mr.summary_line(out)
     assert out["version"] == 1
     assert out["source"] == {"obligations_sha256": "abc", "rules_version": "4.3"}
     assert out["mechanics_set"] == list(mr.MECHANICS_SET)
@@ -139,6 +143,7 @@ def test_real_ledger_counts_are_consistent():
     assert c["total"] == c["proven"] + c["not_testable"] + c["gap_blocking"] + c["gap_nonblocking"]
     assert c["total"] > 0
     assert len(out["blocking"]) == c["gap_blocking"]
+    assert out["unflagged_open_gaps"] == c["gap_nonblocking"]
     assert out["ready"] == (c["gap_blocking"] == 0 and c["proven"] > 0)
     mset = set(mr.MECHANICS_SET)
     expected = sum(1 for o in ledger["obligations"].values() if mset & set(o["mechanisms"]))
