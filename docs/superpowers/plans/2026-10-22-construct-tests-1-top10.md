@@ -12,6 +12,42 @@
 
 **Branch:** `claude/p3-construct-tests`, rebased onto `main` @ 3b6a2d8f4 (which carries PR #742 and the mechanics gate, PR #743 via #744); the campaign PR targets `main`. Worktree `D:/wt/p3-constructs`; `CARGO_TARGET_DIR=E:/cargo-target-wt/p3-constructs`.
 
+## Execution record (2026-10-22)
+
+The steps below preserve the original task prescription. This table records
+completion with reviewed deviations; it does not claim every proposed test or
+fix landed literally.
+
+| Task | Completed result | Commit |
+|---|---|---|
+| 1 | Six-family scaffold and taxonomy | `bca75ef81` |
+| 2 | Security: 7 constructs, 40 family tests; receipt, destination gate and play-removal observers | `5d8d91778` |
+| 3 | Play/digivolve/link: 13 constructs, 44 family tests; all 9 existing App Fuse tests ported | `89a0742d8` |
+| 4 | Cost/event: 13 constructs, 27 family tests; atomic source costs and replacement-aware deletion receipts | `e75bd45c2` |
+| 5 | Identity/state: 10 constructs, 58 family tests including Q3185 followup | `576a4527f`, `bc7fdce71` |
+| 6 | Zone moves: 5 constructs, 25 family tests; all 7 old grouped-return tests preserved | `b2129cd6f` |
+| 7 | Protection: 3 constructs, 32 family tests; DP formulas, individual source return and unpayable prevention | `5744f1cea` |
+| 8 | Original 51 plus 4 parsed-only tail keys now behavioral; 10/10 scanner coverage, 9/10 actual admission | `532a97bc4`, `45b79f418` |
+
+Task 9 is complete: full core/card runs, baseline reproduction, 10 replay
+goldens, tier 0, six integrated tail tests and 37 corrected card-module tests (`81d40b77d`)
+are recorded in the completion report. The broad suites retain their documented
+baseline failures; the card aggregate also retains its three corrected fixture
+failures. Draft PR packaging targets `main`.
+
+The owner-authorized English exclusion fix (`2f03d4da4`) implements all 12
+English exact-name/query exclusions and shared DNA/DigiXros matching.
+P-217's link clause correctly excludes Creation on the printed image, so the
+proposed YAML addition was withdrawn (`7cbd3b976`). Face-down `source_count`
+behavior was retained after the specified DCGO check. The self-proxy audit
+found 18 actual users, not the estimated 25. App Fuse's result/refund gap stays
+open despite behavioral coverage of existing operations. Protection table
+rows requiring own DP-payment or keyword-removal DSL primitives remain
+unexpressed/unmeasured. Nonbatch plural stack protection and queued sequential
+deletion observer compaction have explicit gap entries and retained failing
+probe evidence; their paths are not claimed fixed. See the committed gap
+trackers and [completion report](../research/2026-10-22-construct-tests/completion-report.md) for validation boundaries.
+
 ## Global Constraints
 
 - **Vehicle:** every construct test uses a same-file `const … : &str = r#"…"#` inline fixture YAML; no `format!` placeholder may touch the construct's YAML key or a `when:` value (the coverage scanner attributes by `yaml_key` in a plain string literal, following same-file consts by name; cross-file helpers and `include_str!` are NOT followed). Production cards may be added as a second witness via `.dsl_card("<ID>")`, never as the only vehicle.
@@ -320,7 +356,7 @@ Expected: 13/13 green (`lowering_coverage_check`, `card_admissibility_check`, `m
 - [ ] **Step 5: Admissibility by deck**
 
 Run: `PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONPATH=code python -m digimon_gym.agents.card_admissibility` then a short script that, for each deck in `qa/impact/decks/digilab-11087-top10.json`, prints inadmissible cards with `reason`.
-Expected: 9 decks with zero inadmissible cards; Rebootmon's only inadmissible cards are BT25-089 (`failed_verdict`, PARTIAL) and app-fuse users (`untested_lowering`).
+Measured: 9 decks with zero inadmissible cards; Rebootmon's only inadmissible card is BT25-089 (`failed_verdict`, PARTIAL). All App Fuse users are lowering-covered; no pool card retains `untested_lowering`.
 
 - [ ] **Step 6: Commit**
 
@@ -335,7 +371,7 @@ git commit -m "qa: regenerate lowering coverage + card admissibility after the t
 
 - [ ] **Step 1: Full DSL binary** — `CARGO_TARGET_DIR=E:/cargo-target-wt/p3-constructs cargo test -p digimon-engine --test dsl` — Expected: all green except the two pre-existing reds (`official_rule_grants`, `trait_parity`; confirm they fail identically on `f24f26dfa` before attributing).
 - [ ] **Step 2: Suites a construct fix could touch** — if any task changed `src/` (an engine or lowering fix), run `rules_conformance`, `timing_dispatch`, `cost_hooks`, `replacements`, `selection`, `clone_fuzz`, and `RUST_MIN_STACK=268435456 cargo test … --test cards_behavioral -- --test-threads=8`; record counts in the ledger. If no `src/` change landed, record "no src change; suites not rerun".
-- [ ] **Step 3: Replay goldens** — only if `src/` changed: `digimon-engine-cli replay_corpus verify` 10/10 (regenerate + NOTES.md diagnosis per the Plan 2 forensics procedure if not).
+- [ ] **Step 3: Replay goldens** — only if `src/` changed: `cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- verify --goldens qa/replay-goldens --cards data/cards.json` 10/10 (regenerate + NOTES.md diagnosis per the Plan 2 forensics procedure if not).
 - [ ] **Step 4: Docs** — `docs/TRAINING_RUNBOOK.md` gate section: one paragraph "where the pool stands" with the 9/10 figure and the regenerate commands; `qa/rules/mechanics-gaps-2026-10.md` or `docs/RUST_ENGINE_GAPS.md` entries for every gap a task filed.
 - [ ] **Step 5: Ledger + PR body** — `.superpowers/sdd/2026-10-22-construct-tests/progress.md` complete lines per task; `pr-body.md` with per-family construct counts, deck flips, gaps filed, verification counts. Controller opens the PR (draft, base `main`).
 

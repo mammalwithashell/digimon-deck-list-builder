@@ -982,6 +982,24 @@ mechanics suites (`tests/dsl`, `tests/rules_conformance`, ... -- never
 tools.lowering_coverage --report OUT.md --decks deckpool.json` ranks the untested
 constructs by decks blocked.
 
+### DigiLab-11087 top-10 construct campaign (2026-10-22)
+
+For the frozen `qa/impact/decks/digilab-11087-top10.json` pool (10 lists,
+540 card entries, 167 unique IDs), the per-card artifact now admits **9/10
+lists and 166/167 unique IDs**. Rebootmon alone remains blocked by BT25-089's
+`failed_verdict`; it has no remaining `untested_lowering` keys. All 51 keys
+in the original frozen untested union, plus four previously parsed-only keys
+(`memory_lte`, `name_not_shared_by_field_tamer`, `event_target_is_source`,
+`on_ally_played`), now have behavioral construct tests. The scanner's deck
+report says **10/10 lowering-covered**; that report includes parsed-only
+credits and is not the admission gate. Regenerate both artifacts with
+`PYTHONPATH=code python -m tools.lowering_coverage` and
+`PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`, then compare
+each deck's IDs against `cards[id].admissible`. The gate and global mechanics
+triage were unchanged. This result does not certify DCGO parity or training
+fidelity: App Fuse result/refund handling, effect-link timing, and the other
+campaign findings remain in `docs/RUST_ENGINE_GAPS.md` and `qa/dsl-vocab-gaps.md`.
+
 ### What `ready` means, and what it does not
 
 `ready` = **no mechanics obligation is flagged outcome-changing**.
