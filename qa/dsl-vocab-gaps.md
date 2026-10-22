@@ -9268,9 +9268,10 @@ this card correction separate; the construct tests prove payment eligibility.
   link window it is false. `reduce_link_cost` silently does nothing outside
   that window; consider authoring validation. Effect/Plug-In window coverage
   is G-ENGINE-WOULD-LINK-WINDOW-EFFECT-LINKS-2026-10-22 in RUST_ENGINE_GAPS.
-- `app_fuse` still lacks a receipt for completed/declined/no-eligible outcomes;
-  see the existing BT25-089#2 OPT signal gap and the separately recorded
-  G-ENGINE-APP-FUSE-PROCEDURE-2026-10-22. Literal lowering coverage does not
+- The 2026-10-22 followup adds optional `app_fuse.bind_as`: a Card receipt
+  only after success, absent on decline/no eligible pair/rejected stale choice.
+  BT25-089 authors an explicit absent-receipt OPT refund. The separate
+  G-ENGINE-APP-FUSE-PROCEDURE-2026-10-22 remains open. Literal lowering coverage does not
   establish training readiness or resolve these substrate gaps.
 
 

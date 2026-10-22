@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-21",
+  "last_updated": "2026-10-22",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6405,19 +6405,19 @@
     },
     "BT25-089": {
       "card_name": "Kazuki & Itsuki",
-      "validated_date": "2026-07-10",
-      "report": "buglist-faithfulness-campaign-2026-07",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-10-22",
+      "report": "docs/superpowers/research/2026-10-22-construct-tests/app-fuse-opt-followup.md",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
       "archetype": "BT25 link-ts slice",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-089.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_089.rs",
-      "test_count": 7,
+      "test_count": 16,
       "patterns": [
         "B1",
         "B3"
       ],
-      "notes": "Blocked 2026-10-21 (Plan 2 Task 6 fix round 2): clause #2 '[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse' spends its [Once Per Turn] when the app fuse is passed, against Q1818 / CR 4.3 §15-14-1-4 and DCGO BT25_089.cs (RemoveUse when nothing executed). `app_fuse` reports no result to the clause, so neither the folded-may refund nor `refund_opt` can see the pass: needs the app-fuse result signal (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT residual). Previous note: Prior PARTIAL closed: own_digimon_sources link zone consumed; cost reduce:2; traits added"
+      "notes": "App Fuse result/OPT residual closed: explicit success receipt and whole-effect refund preserve OPT for no eligible pair, either decline, and rejected stale choices; committed fusion consumes OPT. All 16 BT25-089 tests pass in the integrated card target; focused mechanics cover nested receipt reuse, scope rebinding, stable host identity and both prompt clones. Separate App Fuse procedure draw/cost/link-retention and effect-link timing gaps remain tracked; this verdict is not DCGO or full-fidelity certification. Prior PARTIAL closures: own_digimon_sources link zone consumed; cost reduce:2; traits added."
     },
     "BT25-052": {
       "card_name": "Logimon",

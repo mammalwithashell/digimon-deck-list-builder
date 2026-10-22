@@ -985,20 +985,22 @@ constructs by decks blocked.
 ### DigiLab-11087 top-10 construct campaign (2026-10-22)
 
 For the frozen `qa/impact/decks/digilab-11087-top10.json` pool (10 lists,
-540 card entries, 167 unique IDs), the per-card artifact now admits **9/10
-lists and 166/167 unique IDs**. Rebootmon alone remains blocked by BT25-089's
-`failed_verdict`; it has no remaining `untested_lowering` keys. All 51 keys
-in the original frozen untested union, plus four previously parsed-only keys
+540 card entries, 167 unique IDs), the per-card artifact now admits **10/10
+lists and 167/167 unique IDs**. The original campaign reached 9/10; the
+[App Fuse OPT followup](superpowers/research/2026-10-22-construct-tests/app-fuse-opt-followup.md)
+closed BT25-089's verdict hold and admitted Rebootmon. All 51 keys in the
+original frozen untested union, plus four previously parsed-only keys
 (`memory_lte`, `name_not_shared_by_field_tamer`, `event_target_is_source`,
-`on_ally_played`), now have behavioral construct tests. The scanner's deck
-report says **10/10 lowering-covered**; that report includes parsed-only
-credits and is not the admission gate. Regenerate both artifacts with
+`on_ally_played`), have behavioral construct tests. The scanner's deck report
+also says **10/10 lowering-covered**; it includes parsed-only credits and
+is not the admission gate. Regenerate both artifacts with
 `PYTHONPATH=code python -m tools.lowering_coverage` and
 `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`, then compare
-each deck's IDs against `cards[id].admissible`. The gate and global mechanics
-triage were unchanged. This result does not certify DCGO parity or training
-fidelity: App Fuse result/refund handling, effect-link timing, and the other
-campaign findings remain in `docs/RUST_ENGINE_GAPS.md` and `qa/dsl-vocab-gaps.md`.
+each deck's IDs against `cards[id].admissible`. Gate semantics and global
+mechanics triage are unchanged. This result does not certify DCGO parity or
+training fidelity: separate App Fuse procedure details, effect-link timing,
+and other campaign findings remain in `docs/RUST_ENGINE_GAPS.md` and
+`qa/dsl-vocab-gaps.md`.
 
 ### What `ready` means, and what it does not
 

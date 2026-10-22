@@ -1,5 +1,7 @@
 # Construct Tests 1 — Top-10 Meta Decks Implementation Plan
 
+> Historical plan scope below. The [App Fuse OPT followup](../research/2026-10-22-construct-tests/app-fuse-opt-followup.md) subsequently closed the Rebootmon hold; current admission is 10/10 lists and 167/167 unique IDs.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give every DSL construct the DigiLab-11087 top-10 decks reference a behavioural mechanics test, so the lowering-coverage light gate admits 9 of those 10 decks (all but Rebootmon, blocked by the app-fuse substrate gap) without changing the gate.

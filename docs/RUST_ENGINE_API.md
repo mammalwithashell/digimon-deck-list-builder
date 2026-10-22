@@ -5348,3 +5348,23 @@ the `Player` (preserving the composition view) but the reveal source on
 Setup-time behaviors are covered in `code/digimon-engine/tests/opaque_deck.rs`
 (10 integration tests). Mid-game draw integration tests will follow once
 the corresponding draw paths are wired.
+
+
+## App Fuse success receipt (2026-10-22)
+
+The DSL step accepts `app_fuse: { from: hand, optional: true, bind_as: fused }`.
+`bind_as` is optional and names a Card binding containing the chosen result
+only after App Fuse commits. The binding is cleared when the step starts;
+no eligible pair, declining either prompt, or rejecting an invalidated choice
+leaves it absent. Receipt-bearing steps continue their enclosing process on
+both PASS paths, so authors can branch on `binding_present` / `binding_absent`.
+Existing steps without `bind_as` retain their previous decline behavior.
+
+For a whole-effect optional trigger such as BT25-089's End of Your Turn
+clause, author `if: { condition: { binding_absent: fused }, then: [refund_opt] }`
+after the step. Do not add this refund to an effect that already activated and
+performed earlier processing merely because a later optional App Fuse was
+declined (CR 4.3 15-14-1-4; official Q1818 addresses declining the whole effect).
+The public `EffectContext::initiate_effect_app_fuse` signature is unchanged;
+the DSL uses a receipt-aware internal path. Both selections remain visible,
+and their result survives the typed resume/clone path.

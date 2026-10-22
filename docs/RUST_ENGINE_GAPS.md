@@ -6239,8 +6239,8 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
   - **Production clauses:** BT25-028#2 and EX8-074#4 ("you may activate 1 of this Digimon's [When Digivolving] effects", DCGO `isOptional: true`), pinned by `dsl -- folded_may_opt_refund::production_then_may_inventory_matches_the_reviewed_list`.
   - **BT25-028 card change:** its DNA half now has one decision, the first-Digimon pick (`may_dna_digivolve_now` is no longer `optional`). **Divergence from DCGO (re-review N2):** DCGO (`BT25_028.cs:142-181`, `DNADigivolveEffects.cs:456-610`) asks a skippable GraceNovamon hand pick, shown only when a DNA-able GraceNovamon is in hand and there are 2 or more Digimon, then a skippable roots pick. Its `executed` is set only when the DNA succeeds, so every failed DNA path refunds the use. Ours offers the `dna_anchor` pick over any own Digimon, even when no DNA is possible. Picking it then does nothing but spends the use, which DCGO never charges. That choice is dominated, and still costs the [Once Per Turn]. Fix shape: gate the refund on the DNA result (a DNA result in the clause's result log), or constrain `dna_anchor` to Digimon that have a partner and a reachable GraceNovamon (widen the DSL). OPEN, minor, non-blocking.
   - **Tests:** `rules_conformance -- ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn` (red before) and `::then_may_effect_with_one_half_executed_spends_its_once_per_turn`; `cards_behavioral -- bt25_028_all_turns_both_halves_declined_keeps_once_per_turn` (red before) and `bt25_028_all_turns_one_half_executed_spends_once_per_turn`.
-- **BT25-089 is held back from training:** `qa/qa-reports/validated_cards_dsl.json` row is set to `PARTIAL`, `gap_kind: engine`, naming this residual, so card admissibility rejects it as `failed_verdict` until the app-fuse result signal exists.
-- **Blocks training:** yes (BT25-089 only). The unread per-card list above may add cards once read.
+- **Historical 2026-10-21 hold (closed by the 2026-10-22 followup below):** `qa/qa-reports/validated_cards_dsl.json` row is set to `PARTIAL`, `gap_kind: engine`, naming this residual, so card admissibility rejects it as `failed_verdict` until the app-fuse result signal exists.
+- **Followup:** the BT25-089 result/refund residual is closed below. The unread per-card list above still needs separate review; this does not close the whole audit.
 
 ### Declining Callismon's "You may suspend" skips the "Then, ... can't unsuspend" lock  [G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK] — OPEN (2026-10-21, Plan 2 Task 5b exam triage)
 
@@ -6379,13 +6379,17 @@ resumed attacks from counting twice. Rejected declarations do not count.
   scope for multiple links remains a rules question; do not certify the
   current all-links consumption. This campaign ports current primitive
   coverage without treating its behavior as complete App Fusion fidelity.
-- **Existing BT25-089#2 OPT result-signal gap remains open.** Three losses:
-  `CompiledStep::AppFuse` returns true without writing a binding; both host
-  and result selections have `on_decline: None` and no binding writer; the
-  result callback and resume step discard `commit_effect_app_fuse`'s bool.
-  A result receipt must reach the clause for success, both PASS paths and
-  no-eligible-pair exits before a whole-effect may can refund its OPT use.
-  Rebootmon remains inadmissible; no verdict promotion is implied.
+- **BT25-089#2 OPT result signal — implemented 2026-10-22 followup.**
+  `app_fuse.bind_as` is an optional success-only Card receipt. It clears at
+  entry and survives both callback and typed resume paths. Receipt-bearing
+  PASS paths continue to the authored tail; no eligible pair or a rejected
+  stale selection leaves it absent. BT25-089 explicitly refunds its whole-
+  effect optional EOT use when the receipt is absent (Q1818; CR 15-14-1-4;
+  DCGO `RemoveUse` when no eligible fusion was executed). A successful fuse
+  keeps the use. No automatic refund is applied to other effects with earlier
+  completed processing. Host incarnation and current route/result are
+  revalidated before commit. This closes the specific result/refund residual;
+  the separate procedure and effect-link-window gaps above remain open.
 - **Unmeasured:** armed player digivolve-cost reducers' applicability to DNA
   and App Fusion (CR 4.3 8-2-2-5, 8-4-2-3); DNA requirement-ordered stacking.
   The construct suite does not assert or repair these contracts.

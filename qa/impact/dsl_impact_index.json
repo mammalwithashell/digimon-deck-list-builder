@@ -11495,6 +11495,7 @@
       "path": "bt25/BT25-089.yaml",
       "predicates": [
         "all_of",
+        "binding_absent",
         "count_gte",
         "kind",
         "owner",
@@ -11511,8 +11512,10 @@
         "activation_cost",
         "app_fuse",
         "gain_memory",
+        "if",
         "link_cards",
-        "play_from_security"
+        "play_from_security",
+        "refund_opt"
       ]
     },
     "BT25-090": {
@@ -29515,6 +29518,7 @@
       "BT25-044",
       "BT25-060",
       "BT25-085",
+      "BT25-089",
       "BT26-007",
       "BT26-021",
       "BT26-055",
@@ -41789,6 +41793,7 @@
       "BT25-080",
       "BT25-084",
       "BT25-085",
+      "BT25-089",
       "BT25-091",
       "BT25-093",
       "BT25-096",
@@ -43167,6 +43172,7 @@
       "BT25-077",
       "BT25-080",
       "BT25-085",
+      "BT25-089",
       "BT25-103",
       "BT26-007",
       "BT26-012",

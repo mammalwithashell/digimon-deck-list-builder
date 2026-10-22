@@ -1,6 +1,6 @@
 # Hand-off: construct-test campaign 1 (top-10 meta decks) — for Codex
 
-> Completion update (2026-10-22): implementation is complete, including both owner-authorized rules fixes. The historical instructions below are superseded where noted by the [completion report](../research/2026-10-22-construct-tests/completion-report.md): 55 behavioral construct keys, 10/10 lowering-covered lists, 9/10 per-card admissible lists, with BT25-089 still blocked. PR target is `main`.
+> Completion update (2026-10-22): implementation is complete, including both owner-authorized rules fixes. The historical instructions below are superseded where noted by the [completion report](../research/2026-10-22-construct-tests/completion-report.md): 55 behavioral construct keys, 10/10 lowering-covered lists, initially 9/10 per-card admissible lists. The [App Fuse OPT followup](../research/2026-10-22-construct-tests/app-fuse-opt-followup.md) closes BT25-089 and raises admission to 10/10 lists (167/167 IDs). PR target is `main`.
 
 Written 2026-10-22 by the Claude controller session that planned this work. The owner is out of
 Claude usage; Codex takes over execution from here. Everything below is on the branch

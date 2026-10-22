@@ -1,5 +1,9 @@
 # Top-10 construct campaign completion
 
+> Historical campaign result below: 9/10 admitted. The subsequent
+> [App Fuse OPT followup](app-fuse-opt-followup.md) closes BT25-089's hold;
+> the refreshed artifact admits 10/10 lists and 167/167 unique pool IDs.
+
 The frozen DigiLab-11087 pool contains 10 lists, 540 card entries and 167
 unique IDs. All 51 original untested construct keys now have behavioral
 coverage. Final admission measurement exposed four additional parsed-only

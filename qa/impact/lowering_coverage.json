@@ -13708,9 +13708,12 @@
     "verb:activation_cost",
     "verb:app_fuse",
     "verb:gain_memory",
+    "verb:if",
     "verb:link_cards",
     "verb:play_from_security",
+    "verb:refund_opt",
     "predicate:all_of",
+    "predicate:binding_absent",
     "predicate:count_gte",
     "predicate:kind",
     "predicate:owner",
@@ -36922,6 +36925,9 @@
    "name": "binding_absent",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
     "dsl::group7_predicate_batch.rs::binding_present_and_absent_predicates_read_current_bindings": [
      "variant"
     ]
@@ -36929,6 +36935,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
     "dsl::group7_predicate_batch.rs::binding_present_and_absent_predicates_read_current_bindings"
    ]
   },
@@ -37043,6 +37050,30 @@
    "name": "binding_present",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
+     "yaml_key"
+    ],
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound": [
      "yaml_key"
     ],
@@ -37083,6 +37114,14 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound",
     "dsl::constructs/zone_moves.rs::field_option_before_host_preserves_identity_after_compaction",
     "dsl::constructs/zone_moves.rs::field_option_moves_facedown_and_faceup",
@@ -38408,12 +38447,20 @@
    "signals": {
     "dsl::battle_deleter.rs::observer_or_inherited_host_that_dies_cannot_activate": [
      "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
+     "yaml_key"
     ]
    },
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
-    "dsl::battle_deleter.rs::observer_or_inherited_host_that_dies_cannot_activate"
+    "dsl::battle_deleter.rs::observer_or_inherited_host_that_dies_cannot_activate",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding"
    ]
   },
   "predicate:dp_eq": {
@@ -40071,6 +40118,9 @@
     "dsl::constructs/cost_target_event.rs::event_target_names_and_deleted_snapshot": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -40089,6 +40139,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -40099,6 +40167,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -40372,16 +40443,24 @@
     "dsl::activation_cost.rs::pre_cost_prompt_absent_when_event_condition_is_false",
     "dsl::activation_cost.rs::pre_cost_prompt_appears_when_event_condition_is_true",
     "dsl::constructs/cost_target_event.rs::event_target_names_and_deleted_snapshot",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -41403,6 +41482,12 @@
      "yaml_key"
     ],
     "dsl::constructs/identity_state.rs::tail_name_not_shared_by_field_tamer_scope_alias_and_no_tamers": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable": [
@@ -42749,6 +42834,8 @@
     "dsl::constructs/identity_state.rs::source_count_no_matching_permanent_installs_no_prompt",
     "dsl::constructs/identity_state.rs::source_count_reads_a_dual_source_as_an_option",
     "dsl::constructs/identity_state.rs::tail_name_not_shared_by_field_tamer_scope_alias_and_no_tamers",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable",
     "dsl::constructs/protection.rs::formula_own_negative_and_opponent_positive_apply",
     "dsl::constructs/protection.rs::grants_expire_after_opponents_turn",
@@ -43183,8 +43270,14 @@
   "predicate:level": {
    "kind": "predicate",
    "name": "level",
-   "parsed_only": true,
+   "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
+     "yaml_key"
+    ],
     "dsl::dna_material_identity.rs::dna_material_identity_requires_a_level_or_name": [
      "yaml_key"
     ],
@@ -43193,8 +43286,10 @@
     ]
    },
    "tested": true,
-   "tested_behaviourally": false,
+   "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::dna_material_identity.rs::dna_material_identity_requires_a_level_or_name",
     "dsl::pretty.rs::format_preserves_top_level_key_order"
    ]
@@ -43222,6 +43317,9 @@
     "dsl::constructs/cost_target_event.rs::tail_on_ally_played_own_opponent_and_adjacent_digivolve": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -43240,6 +43338,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -43250,6 +43366,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -43943,16 +44062,24 @@
     "dsl::constructs/cost_target_event.rs::source_cost_target_carrier_and_inheritance",
     "dsl::constructs/cost_target_event.rs::tail_event_target_is_source_live_self_other_and_adjacent_timing",
     "dsl::constructs/cost_target_event.rs::tail_on_ally_played_own_opponent_and_adjacent_digivolve",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -44779,6 +44906,9 @@
     "dsl::constructs/identity_state.rs::name_in_rejects_substrings_and_case_variants": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -44797,6 +44927,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -44807,6 +44955,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -45015,16 +45166,24 @@
     "dsl::constructs/identity_state.rs::name_in_matches_exact_names_and_also_treated_as_aliases",
     "dsl::constructs/identity_state.rs::name_in_on_a_permanent_reads_the_overlay_name",
     "dsl::constructs/identity_state.rs::name_in_rejects_substrings_and_case_variants",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -47926,6 +48085,9 @@
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -47944,6 +48106,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -47954,6 +48134,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -48503,16 +48686,24 @@
     "dsl::constructs/cost_target_event.rs::source_cost_zero_sources_aborts_outer_tail",
     "dsl::constructs/cost_target_event.rs::source_payment_two_cards_one_observer_event",
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -51416,6 +51607,9 @@
    "name": "on_any_link",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -51434,6 +51628,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -51444,6 +51656,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -51552,16 +51767,24 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -52786,6 +53009,9 @@
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -52804,6 +53030,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -52814,6 +53058,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -53570,16 +53817,24 @@
     "dsl::constructs/identity_state.rs::trait_contains_matches_substrings_case_insensitively",
     "dsl::constructs/identity_state.rs::trait_contains_reads_granted_traits_on_permanents",
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -54731,6 +54986,9 @@
    "name": "when_card_linked_to_this",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -54749,6 +55007,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -54759,6 +55035,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -54867,16 +55146,24 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -55481,6 +55768,9 @@
    "name": "when_linked",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -55499,6 +55789,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -55509,6 +55817,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -55617,16 +55928,24 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -56543,6 +56862,9 @@
    "name": "app_fuse",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -56561,6 +56883,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -56571,6 +56911,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -56679,16 +57022,24 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -56859,6 +57210,12 @@
    "name": "bind_permanent_property",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
+     "yaml_key"
+    ],
     "dsl::parse_steps.rs::parse_bind_permanent_level_property_step": [
      "spec",
      "yaml_key"
@@ -56870,6 +57227,8 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::parse_steps.rs::parse_bind_permanent_level_property_step",
     "dsl::phase2d_for_each.rs::bind_permanent_level_filters_for_each_same_level_permanents"
    ]
@@ -58088,6 +58447,9 @@
     "dsl::constructs/identity_state.rs::tail_memory_lte_boundary_and_opposite_controller": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -58106,6 +58468,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -58116,6 +58496,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -58423,16 +58806,24 @@
     "dsl::constructs/cost_target_event.rs::tail_event_target_is_source_live_self_other_and_adjacent_timing",
     "dsl::constructs/cost_target_event.rs::tail_on_ally_played_own_opponent_and_adjacent_digivolve",
     "dsl::constructs/identity_state.rs::tail_memory_lte_boundary_and_opposite_controller",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -59143,6 +59534,9 @@
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing": [
      "yaml_key"
     ],
@@ -59161,6 +59555,24 @@
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials": [
      "yaml_key"
     ],
@@ -59171,6 +59583,9 @@
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
      "yaml_key"
     ],
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire": [
@@ -60608,16 +61023,24 @@
     "dsl::constructs/identity_state.rs::trait_contains_matches_substrings_case_insensitively",
     "dsl::constructs/identity_state.rs::trait_contains_reads_granted_traits_on_permanents",
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_card_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_decline_at_permanent_pick_does_nothing",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_hand_happy_path_stacks_result_and_consumes_link",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_ineligible_permanent_not_offered",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_no_eligible_permanent_is_silent_noop",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_prompts_clone_faithfully",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_requires_two_distinct_named_materials",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_result_filter_excludes_nonmatching_trash_card",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_trash_happy_path",
     "dsl::constructs/play_digivolve_link.rs::app_fuse_two_candidates_and_pass_at_either_pick_preserves_state",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_decline_consumes_single_fire",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_end_turn_expiry",
     "dsl::constructs/play_digivolve_link.rs::arm_digivolve_cost_reducer_no_suspend_silent_and_multi_fire",
@@ -61555,6 +61978,30 @@
     "dsl::constructs/identity_state.rs::source_count_in_an_if_without_a_permanent_subject_is_false": [
      "yaml_key"
     ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick": [
+     "yaml_key"
+    ],
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding": [
+     "yaml_key"
+    ],
     "dsl::constructs/security_stack.rs::add_top_security_to_hand_records_the_added_card": [
      "yaml_key"
     ],
@@ -61841,6 +62288,14 @@
     "dsl::constructs/identity_state.rs::on_field_pending_continuation_does_not_reuse_a_departed_source_slot",
     "dsl::constructs/identity_state.rs::on_field_true_in_the_battle_area_and_the_if_reads_the_source",
     "dsl::constructs/identity_state.rs::source_count_in_an_if_without_a_permanent_subject_is_false",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_callback_publishes_receipt_without_typed_tail",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_empty_result_zone_and_legacy_decline",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_follows_original_host_after_field_compaction",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_outcomes_and_clones",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rebinding_clears_previous_success",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_rejects_replayed_host_before_first_pick",
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_unbound_success_preserves_later_lexical_binding",
     "dsl::constructs/security_stack.rs::add_top_security_to_hand_records_the_added_card",
     "dsl::constructs/security_stack.rs::on_lose_security_and_on_opponent_security_removed_are_disjoint",
     "dsl::constructs/security_stack.rs::on_lose_security_does_not_fire_for_the_other_players_stack",
@@ -62317,6 +62772,9 @@
    "name": "optional",
    "parsed_only": false,
    "signals": {
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding": [
+     "yaml_key"
+    ],
     "dsl::constructs/play_digivolve_link.rs::may_dna_ignore_requirements_authored_cost_mandatory_picks": [
      "yaml_key"
     ],
@@ -62342,6 +62800,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::constructs/play_digivolve_link.rs::app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding",
     "dsl::constructs/play_digivolve_link.rs::may_dna_ignore_requirements_authored_cost_mandatory_picks",
     "dsl::constructs/play_digivolve_link.rs::may_dna_outer_optional_mandatory_step_guard",
     "dsl::effect_refiring.rs::refire_effect_rejects_optional_combined_timing",
@@ -69032,7 +69491,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 1883,
+  "behavioural_tests": 1891,
   "cards": {
    "behaviourally_covered": 990,
    "lowering_covered": 1010,
@@ -69050,9 +69509,9 @@
     "used_untested": 0
    },
    "predicate": {
-    "parsed_only": 4,
+    "parsed_only": 3,
     "tested": 165,
-    "tested_behaviourally": 161,
+    "tested_behaviourally": 162,
     "total": 216,
     "untested": 51,
     "used_by_cards": 190,
@@ -69191,7 +69650,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 356,
-  "scanned_tests": 2269,
+  "scanned_tests": 2277,
   "top_untested": [
    {
     "cards_blocked": 5,
