@@ -7,6 +7,7 @@ mod also_treated_as;
 mod assembly_play;
 mod attack_history_predicate;
 mod collapse_then_tail;
+mod constructs;
 mod cross_check;
 mod battle_deleter;
 mod delay;
