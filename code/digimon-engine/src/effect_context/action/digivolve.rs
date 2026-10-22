@@ -907,12 +907,10 @@ impl<'a> EffectContext<'a> {
         let controller = self.player;
         let partner_target_filter = std::sync::Arc::clone(&target_filter);
         let partner_filter = std::sync::Arc::new(move |game: &Game, partner| {
-            partner_filter(game, partner)
-                && (0..game.player(controller).hand.len()).any(|i| {
-                    partner_target_filter(game, i)
-                        && (ignore_requirements
-                            || dna_pair_can_reach_hand_card(game, controller, anchor, partner, i))
-                })
+            crate::effect_context::dna_partner_has_target(
+                game, controller, anchor, partner, ignore_requirements,
+                partner_filter.as_ref(), partner_target_filter.as_ref(),
+            )
         });
 
         // Quick install-time eligibility checks. If either side has zero

@@ -6325,3 +6325,44 @@ resumed attacks from counting twice. Rejected declarations do not count.
   `0..min(len, 10)` from the bottom. Above ten cards, the top cards cannot be
   selected. Requires a separately planned player-visible choice contract;
   the construct campaign does not expand action/tensor contracts.
+
+
+## Play/digivolve/link construct audit (2026-10-22)
+
+- **Resolved: hatch observer ordering.** `Game::hatch` now uses
+  `maybe_drain_effect_queue`: OnHatch observers wait until the enclosing effect
+  body completes (CR 4.3 15-8-3-2). The construct fixture hatches, gains memory,
+  then the observer sets memory to 5; the prior nested drain ended at 6.
+- **Resolved: leading optional DNA offers.** `MayDnaDigivolveNow` supplies its
+  own decline path. The clause offer guard and runtime partner picker share
+  `dna_partner_has_target`, requiring a compatible filtered hand target. An
+  optional clause no longer offers an extra accept prompt or an impossible
+  action. Named anchors remain resolved by the running body, not guessed by
+  the read-only leading-step guard.
+- **G-ENGINE-WOULD-LINK-WINDOW-EFFECT-LINKS-2026-10-22 — open.** Player-action
+  standing/hand Digimon links park `pending_digimon_link`, offer WhenWouldLink
+  before payment, and resume after accept/decline. Effect links and Plug-In
+  links do not open this window or populate that pending state. Therefore
+  BT25-004/BT25-045 cannot reduce the cost of BT25-089's Main effect link.
+  Add a shared resumable link declaration before cost payment, preserving the
+  source zone and host identity, rather than bypassing the window in effect
+  helpers. Construct coverage of player-action links does not close this gap.
+- **G-ENGINE-APP-FUSE-PROCEDURE-2026-10-22 — open.**
+  `Game::commit_effect_app_fuse` does not draw the procedure card required by
+  CR 4.3 8-4-3-3, assumes cost zero instead of the selected path's cost
+  (8-4-3-2), and consumes all linked cards. DCGO's `SetAppFusion` carries the
+  host and chosen link index into `PlayPermanent`; its `isEvolution` commit
+  draws one (`Script/CardController.cs:1762`). The material/link retention
+  scope for multiple links remains a rules question; do not certify the
+  current all-links consumption. This campaign ports current primitive
+  coverage without treating its behavior as complete App Fusion fidelity.
+- **Existing BT25-089#2 OPT result-signal gap remains open.** Three losses:
+  `CompiledStep::AppFuse` returns true without writing a binding; both host
+  and result selections have `on_decline: None` and no binding writer; the
+  result callback and resume step discard `commit_effect_app_fuse`'s bool.
+  A result receipt must reach the clause for success, both PASS paths and
+  no-eligible-pair exits before a whole-effect may can refund its OPT use.
+  Rebootmon remains inadmissible; no verdict promotion is implied.
+- **Unmeasured:** armed player digivolve-cost reducers' applicability to DNA
+  and App Fusion (CR 4.3 8-2-2-5, 8-4-2-3); DNA requirement-ordered stacking.
+  The construct suite does not assert or repair these contracts.

@@ -816,6 +816,7 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         | CompiledStep::SelectDnaPair { optional, .. }
         | CompiledStep::LinkToOwnDigimon { optional, .. }
         | CompiledStep::MayAttackNow { optional, .. }
+        | CompiledStep::MayDnaDigivolveNow { optional, .. }
         | CompiledStep::RedirectAttackTarget { optional, .. }
         | CompiledStep::RefireEffect { optional, .. }
         // `use_option_from_hand` / `use_option_from_trash` with `optional: true`
@@ -912,6 +913,34 @@ pub(crate) fn first_step_candidate_guard(
     step: &CompiledStep,
 ) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
     match step {
+        CompiledStep::MayDnaDigivolveNow {
+            anchor, partner_filter, target_filter, ignore_requirements, ..
+        } => {
+            // A leading step has no earlier selection bindings. Do not guess
+            // an unresolved named anchor; source/carrier are readable here.
+            if !matches!(anchor, CompiledBindingRef::Source | CompiledBindingRef::Carrier) {
+                return None;
+            }
+            let partner_filter = partner_filter.clone();
+            let target_filter = target_filter.clone();
+            let ignore_requirements = *ignore_requirements;
+            Some(Box::new(move |rctx| {
+                let Some(anchor) = rctx.source_permanent else { return false; };
+                (0..rctx.game.player(rctx.player).battle_area.len()).any(|i| {
+                    let partner = crate::permanent::PermanentHandle {
+                        player: rctx.player, index: i as u8,
+                    };
+                    crate::effect_context::dna_partner_has_target(
+                        rctx.game, rctx.player, anchor, partner, ignore_requirements,
+                        &|_, h| eval_predicate(&partner_filter, rctx, PredicateSubject::Permanent(h)),
+                        &|game, i| eval_predicate(
+                            &target_filter, rctx,
+                            PredicateSubject::Card(game.player(rctx.player).hand[i].handle()),
+                        ),
+                    )
+                })
+            }))
+        }
         CompiledStep::SelectHand { of, filter, .. } => {
             let of = *of;
             let filter = Arc::new(filter.clone());

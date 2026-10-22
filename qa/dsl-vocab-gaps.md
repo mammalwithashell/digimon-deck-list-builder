@@ -9252,3 +9252,23 @@ this card correction separate; the construct tests prove payment eligibility.
   BT15-092's Kari Kamiya tail). Review `continue_on_decline` for these cards.
   This is not resolved by the play-from-security observer repair and no
   production card YAML was changed in this family.
+
+
+## Play/digivolve/link authoring audit (2026-10-22)
+
+- `link_card_count` is evaluated only for permanent subjects. A card-subject
+  selection filter silently ignores it; reject that usage in validation or
+  define its false result explicitly. No production misuse was found.
+- `play_or_use_from_hand` ignores `of` and uses the bound HandIndex owner;
+  unlike its source sibling, it also returns no played-permanent binding.
+  Its nearby comment promises a handle that is not recorded. Production uses
+  `of: you`; report these limitations without changing this campaign's verb.
+- `would_link_card_trait_any_of` uses exact case-sensitive traits; the tests
+  deliberately distinguish Social from social. Outside the player Digimon
+  link window it is false. `reduce_link_cost` silently does nothing outside
+  that window; consider authoring validation. Effect/Plug-In window coverage
+  is G-ENGINE-WOULD-LINK-WINDOW-EFFECT-LINKS-2026-10-22 in RUST_ENGINE_GAPS.
+- `app_fuse` still lacks a receipt for completed/declined/no-eligible outcomes;
+  see the existing BT25-089#2 OPT signal gap and the separately recorded
+  G-ENGINE-APP-FUSE-PROCEDURE-2026-10-22. Literal lowering coverage does not
+  establish training readiness or resolve these substrate gaps.

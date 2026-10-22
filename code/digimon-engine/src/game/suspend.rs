@@ -278,7 +278,7 @@ impl Game {
                     ),
                 );
             }
-            self.drain_effect_queue();
+            self.maybe_drain_effect_queue();
             self.reevaluate_until_condition_modifiers_if_dirty();
         }
         ok

@@ -1707,6 +1707,30 @@ impl<'a> EffectContext<'a> {
     // ─── Combat mutations (Phase 9 Task 2) ────────────────────────────
 }
 
+/// Shared partner eligibility for the DNA step and its clause-level offer guard.
+/// A partner must reach at least one filtered hand target, rather than merely
+/// satisfying an independent material filter.
+pub(crate) fn dna_partner_has_target(
+    game: &Game,
+    controller: PlayerId,
+    anchor: PermanentHandle,
+    partner: PermanentHandle,
+    ignore_requirements: bool,
+    partner_filter: &dyn Fn(&Game, PermanentHandle) -> bool,
+    target_filter: &dyn Fn(&Game, usize) -> bool,
+) -> bool {
+    anchor != partner
+        && anchor.player == controller
+        && partner.player == controller
+        && game.player(controller).battle_area.get(anchor.index as usize).is_some()
+        && partner_filter(game, partner)
+        && (0..game.player(controller).hand.len()).any(|i| {
+            target_filter(game, i)
+                && (ignore_requirements
+                    || dna_pair_can_reach_hand_card(game, controller, anchor, partner, i))
+        })
+}
+
 /// Can the `{anchor, partner}` battle-area pair legally DNA-digivolve into the
 /// hand card at `hand_idx` (one of its printed DNA requirements satisfied by the
 /// two materials)? Used by `may_dna_digivolve_now`'s faithful (requirement-checked)
