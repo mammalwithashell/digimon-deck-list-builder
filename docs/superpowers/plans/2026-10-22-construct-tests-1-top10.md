@@ -8,7 +8,7 @@
 
 **Tech Stack:** Rust integration tests (`cargo test -p digimon-engine --test dsl`), `DebugRunner` / `DebugRunnerBuilder::from_dsl_yaml`, the `digimon-dsl` compiler, Python 3.13 tooling (`tools.lowering_coverage`, `digimon_gym.agents.card_admissibility`, `scripts/verify --tier 0`).
 
-**Spec:** `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5d (construct tests), §5b (the gate it feeds). Semantics sheets (research inputs, git-ignored): `.superpowers/sdd/2026-10-22-construct-tests/semantics/*.md` — each task's brief points the implementer at its family's sheet for lowering sites, YAML shapes and rule citations.
+**Spec:** `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5d (construct tests), §5b (the gate it feeds). Semantics sheets (research inputs, committed): `docs/superpowers/research/2026-10-22-construct-tests/semantics/*.md` — each task's brief points the implementer at its family's sheet for lowering sites, YAML shapes and rule citations.
 
 **Branch:** `claude/p3-construct-tests`, cut from `claude/p2-mechanics-gate` @ f24f26dfa (stacked on PR #743 → #742). Worktree `D:/wt/p3-constructs`; `CARGO_TARGET_DIR=E:/cargo-target-wt/p3-constructs`.
 
@@ -74,7 +74,7 @@ git commit -m "test(dsl): scaffold the construct-test bucket; commit the DigiLab
 
 ### Task 2: Family `security_stack` — 7 constructs (decks: Jupitermon ×2, TS Toolbox, Chronomon, Rebootmon, Beelstarmon, Medusamon, Ravemon)
 
-**Sheet:** `.superpowers/sdd/2026-10-22-construct-tests/semantics/security-stack-and-zone-verbs.md`, sections 1–7 — read its "Shared conventions" first (security `Vec` index 0 = bottom, `last()` = top; `select_security` ids `SEL_MY_SECURITY_START (40) + i` / `SEL_OPP_SECURITY_START (50) + i` counted from the bottom; memory is read from player 0's side). CR 4.3: the security stack is §3-7 (not §3-5), area rules §3-1-3.
+**Sheet:** `docs/superpowers/research/2026-10-22-construct-tests/semantics/security-stack-and-zone-verbs.md`, sections 1–7 — read its "Shared conventions" first (security `Vec` index 0 = bottom, `last()` = top; `select_security` ids `SEL_MY_SECURITY_START (40) + i` / `SEL_OPP_SECURITY_START (50) + i` counted from the bottom; memory is read from player 0's side). CR 4.3: the security stack is §3-7 (not §3-5), area rules §3-1-3.
 
 **Files:**
 - Modify: `code/digimon-engine/tests/dsl/constructs/security_stack.rs`
@@ -108,7 +108,7 @@ git commit -m "test(dsl): construct tests for the security-stack family (7 const
 
 ### Task 3: Family `play_digivolve_link` — 13 constructs (decks: Jupitermon ×2, TS Toolbox, Chronomon, Examon, Toho Braves, Ravemon, Beelstarmon, Rebootmon)
 
-**Sheet:** `.superpowers/sdd/2026-10-22-construct-tests/semantics/play-digivolve-and-link.md` — read it first; it has the lowering sites, exact YAML shapes, the shared harness facts (how to link by player action, by hand, by effect API; `link_requirement`, `give_link_plus`, `push_linked_owned`) and every fixture below in full.
+**Sheet:** `docs/superpowers/research/2026-10-22-construct-tests/semantics/play-digivolve-and-link.md` — read it first; it has the lowering sites, exact YAML shapes, the shared harness facts (how to link by player action, by hand, by effect API; `link_requirement`, `give_link_plus`, `push_linked_owned`) and every fixture below in full.
 
 **Files:**
 - Modify: `code/digimon-engine/tests/dsl/constructs/play_digivolve_link.rs` (all tests of this family; private helpers and fixture consts in-file)
@@ -150,7 +150,7 @@ git commit -m "test(dsl): construct tests for the play/digivolve/link family (13
 
 ### Task 4: Family `cost_target_event` — 13 constructs (decks: Beelstarmon, Chronomon, Toho Braves, Medusamon, TS Toolbox, Ravemon, Examon)
 
-**Sheet:** `.superpowers/sdd/2026-10-22-construct-tests/semantics/cost-target-and-event-predicates.md` — read it first. Two corrections it makes to common assumptions: "cost target" is the card whose play/digivolve/use cost is being calculated (§15-8-5-1 "would digivolve into" reducers), not a "By doing X" cost; the attack flow is CR 4.3 §11 (§13 is Security Checks).
+**Sheet:** `docs/superpowers/research/2026-10-22-construct-tests/semantics/cost-target-and-event-predicates.md` — read it first. Two corrections it makes to common assumptions: "cost target" is the card whose play/digivolve/use cost is being calculated (§15-8-5-1 "would digivolve into" reducers), not a "By doing X" cost; the attack flow is CR 4.3 §11 (§13 is Security Checks).
 
 **Files:**
 - Modify: `code/digimon-engine/tests/dsl/constructs/cost_target_event.rs`
@@ -190,7 +190,7 @@ git commit -m "test(dsl): construct tests for the cost-target/event family (13 c
 
 ### Task 5: Family `identity_state` — 10 constructs (decks: all ten; `card_number_is` alone blocks seven)
 
-**Sheet:** `.superpowers/sdd/2026-10-22-construct-tests/semantics/identity-state-predicates-and-protection.md`, "Read this first" + sections 1–10. Note its point 2: the predicate SUBJECT (None / Card / Permanent / Source) decides which leaves are evaluated, and several permanent-only leaves are today silently skipped (vacuously true) on `None` and `Card` subjects.
+**Sheet:** `docs/superpowers/research/2026-10-22-construct-tests/semantics/identity-state-predicates-and-protection.md`, "Read this first" + sections 1–10. Note its point 2: the predicate SUBJECT (None / Card / Permanent / Source) decides which leaves are evaluated, and several permanent-only leaves are today silently skipped (vacuously true) on `None` and `Card` subjects.
 
 **Files:**
 - Modify: `code/digimon-engine/tests/dsl/constructs/identity_state.rs`
@@ -227,7 +227,7 @@ git commit -m "test(dsl): construct tests for the identity/state predicate famil
 
 ### Task 6: Family `zone_moves` — 5 constructs (decks: TS Toolbox, Chronomon, Examon, Ravemon, Beelstarmon)
 
-**Sheet:** `.superpowers/sdd/2026-10-22-construct-tests/semantics/security-stack-and-zone-verbs.md`, sections 8–12.
+**Sheet:** `docs/superpowers/research/2026-10-22-construct-tests/semantics/security-stack-and-zone-verbs.md`, sections 8–12.
 
 **Files:**
 - Modify: `code/digimon-engine/tests/dsl/constructs/zone_moves.rs`
@@ -304,7 +304,7 @@ PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONPATH=code python -m digimon_gym.agents
 
 - [ ] **Step 2: Every top-10 construct is behavioural, not parsed-only**
 
-Run: `PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONPATH=code python - <<'PY'` … load `qa/impact/lowering_coverage.json`, iterate the 50 construct keys (the 51 minus `verb:app_fuse`) from `.superpowers/sdd/2026-10-22-construct-tests/top10_untested_union.json`, assert `constructs[k]["tested_behaviourally"] is True`, print any that are not.
+Run: `PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PYTHONPATH=code python - <<'PY'` … load `qa/impact/lowering_coverage.json`, iterate the 50 construct keys (the 51 minus `verb:app_fuse`) from `docs/superpowers/research/2026-10-22-construct-tests/top10_untested_union.json`, assert `constructs[k]["tested_behaviourally"] is True`, print any that are not.
 Expected: none printed.
 
 - [ ] **Step 3: Deck report**
