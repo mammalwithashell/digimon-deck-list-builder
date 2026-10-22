@@ -4885,6 +4885,7 @@
       "path": "bt20/BT20-083.yaml",
       "predicates": [
         "all_of",
+        "in_breeding",
         "name_is",
         "opponents_turn",
         "security_count_lte",
@@ -7413,6 +7414,7 @@
         "event_target_kind",
         "event_target_owner",
         "event_target_trait_has",
+        "in_breeding",
         "kind",
         "materials_count_gte",
         "name_contains",
@@ -31709,6 +31711,8 @@
     ],
     "in_breeding": [
       "BT13-007",
+      "BT20-083",
+      "BT23-072",
       "BT9-047",
       "EX2-007"
     ],

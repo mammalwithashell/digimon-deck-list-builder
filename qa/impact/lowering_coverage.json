@@ -496,7 +496,7 @@
    ]
   },
   "AD1-019": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -522,9 +522,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -1297,9 +1295,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:has_alt_path"
@@ -1884,7 +1880,7 @@
    "untested_constructs": []
   },
   "BT12-092": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_modifier",
@@ -1910,9 +1906,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -1946,7 +1940,7 @@
    ]
   },
   "BT13-007": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:for_each",
@@ -1965,10 +1959,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "predicate:in_breeding",
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:flood_gate"
    ],
@@ -2733,7 +2724,7 @@
    ]
   },
   "BT14-001": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
     "verb:draw",
@@ -2742,12 +2733,10 @@
    ],
    "effect_clause_count": 1,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT14-009": {
    "behaviourally_covered": true,
@@ -2790,8 +2779,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "verb:shuffle_security",
-    "timing:start_of_your_main_phase"
+    "verb:shuffle_security"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -2819,8 +2807,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:event_target_is_source",
-    "timing:start_of_your_main_phase"
+    "predicate:event_target_is_source"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -2965,7 +2952,7 @@
    "untested_constructs": []
   },
   "BT15-020": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -2987,9 +2974,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -3416,7 +3401,7 @@
    ]
   },
   "BT16-040": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -3441,9 +3426,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -3574,9 +3557,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:name_in"
@@ -3650,8 +3631,7 @@
     "verb:grant_effect_immunity"
    ],
    "untested_constructs": [
-    "predicate:self_digivolution_sources_trait_has",
-    "timing:on_opponent_security_removed"
+    "predicate:self_digivolution_sources_trait_has"
    ]
   },
   "BT17-007": {
@@ -3674,9 +3654,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:may_dna_digivolve_now"
@@ -3821,9 +3799,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:may_dna_digivolve_now"
@@ -4421,12 +4397,11 @@
    ],
    "protection_constructs": [],
    "untested_constructs": [
-    "predicate:card_number_is",
-    "timing:on_opponent_security_removed"
+    "predicate:card_number_is"
    ]
   },
   "BT18-092": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -4450,9 +4425,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -4480,8 +4453,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -5372,7 +5344,7 @@
    "untested_constructs": []
   },
   "BT20-007": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -5393,9 +5365,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -5476,7 +5446,7 @@
    ]
   },
   "BT20-020": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:add_player_modifier",
@@ -5502,12 +5472,10 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT20-021": {
    "behaviourally_covered": true,
@@ -5652,8 +5620,7 @@
     "verb:suspend_and_cancel_all_matching_leaves",
     "predicate:can_change_orientation",
     "predicate:can_unsuspend",
-    "predicate:source_count",
-    "timing:on_opponent_security_removed"
+    "predicate:source_count"
    ]
   },
   "BT20-036": {
@@ -5923,7 +5890,7 @@
    "untested_constructs": []
   },
   "BT20-056": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
@@ -5948,7 +5915,7 @@
    ],
    "effect_clause_count": 4,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
@@ -5958,9 +5925,7 @@
     "trigger:when_would_leave_battle_area",
     "verb:trash_top_security_and_cancel_replacement"
    ],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT20-059": {
    "behaviourally_covered": true,
@@ -5997,7 +5962,7 @@
    "untested_constructs": []
   },
   "BT20-060": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
@@ -6019,12 +5984,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT20-076": {
    "behaviourally_covered": true,
@@ -6068,6 +6031,7 @@
     "verb:select_own_breeding_permanent",
     "verb:suspend",
     "predicate:all_of",
+    "predicate:in_breeding",
     "predicate:name_is",
     "predicate:opponents_turn",
     "predicate:security_count_lte",
@@ -6271,7 +6235,7 @@
    "untested_constructs": []
   },
   "BT21-001": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -6289,12 +6253,10 @@
    ],
    "effect_clause_count": 1,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT21-004": {
    "behaviourally_covered": false,
@@ -6370,7 +6332,7 @@
    "untested_constructs": []
   },
   "BT21-008": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_reveal",
@@ -6387,12 +6349,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT21-009": {
    "behaviourally_covered": false,
@@ -6513,7 +6473,7 @@
    "untested_constructs": []
   },
   "BT21-017": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:gain_memory",
@@ -6532,12 +6492,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT21-018": {
    "behaviourally_covered": false,
@@ -6654,7 +6612,7 @@
    "untested_constructs": []
   },
   "BT21-025": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:play_from_hand_free",
@@ -6676,14 +6634,12 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "keyword:Progress"
    ],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT21-026": {
    "behaviourally_covered": true,
@@ -6741,7 +6697,7 @@
    ]
   },
   "BT21-029": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
     "verb:delete_permanent",
@@ -6765,14 +6721,12 @@
    ],
    "effect_clause_count": 5,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "keyword:Progress"
    ],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT21-030": {
    "behaviourally_covered": true,
@@ -6966,9 +6920,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:may_dna_digivolve_now"
@@ -7230,7 +7182,7 @@
    "untested_constructs": []
   },
   "BT21-062": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:delete_permanent",
@@ -7251,9 +7203,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
     "trigger:when_would_leave_battle_area"
@@ -7444,8 +7394,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:is_unsuspended",
-    "timing:start_of_your_main_phase"
+    "predicate:is_unsuspended"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -7453,7 +7402,7 @@
    ]
   },
   "BT21-082": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -7479,17 +7428,13 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT21-083": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -7515,9 +7460,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -7580,8 +7523,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:is_unsuspended",
-    "timing:start_of_your_main_phase"
+    "predicate:is_unsuspended"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -7716,8 +7658,7 @@
    "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
-    "predicate:on_field",
-    "timing:on_opponent_security_removed"
+    "predicate:on_field"
    ]
   },
   "BT21-095": {
@@ -8486,8 +8427,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -8532,7 +8472,7 @@
    ]
   },
   "BT22-088": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -8560,9 +8500,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -8594,9 +8532,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:card_number_is",
@@ -9022,7 +8958,7 @@
    ]
   },
   "BT23-047": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 10,
    "constructs": [
     "verb:add_player_modifier",
@@ -9048,14 +8984,12 @@
    ],
    "effect_clause_count": 5,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:partition"
    ],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT23-054": {
    "behaviourally_covered": true,
@@ -9242,6 +9176,7 @@
     "predicate:event_target_kind",
     "predicate:event_target_owner",
     "predicate:event_target_trait_has",
+    "predicate:in_breeding",
     "predicate:kind",
     "predicate:materials_count_gte",
     "predicate:name_contains",
@@ -9261,8 +9196,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "timing:on_ally_played",
-    "timing:start_of_your_main_phase"
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -9315,9 +9249,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:app_fuse",
@@ -9425,7 +9357,7 @@
    ]
   },
   "BT24-001": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
     "verb:delete_permanent",
@@ -9438,12 +9370,10 @@
    ],
    "effect_clause_count": 1,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT24-003": {
    "behaviourally_covered": true,
@@ -9518,7 +9448,7 @@
    ]
   },
   "BT24-008": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
     "verb:draw",
@@ -9536,12 +9466,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT24-009": {
    "behaviourally_covered": false,
@@ -9622,7 +9550,7 @@
    "untested_constructs": []
   },
   "BT24-012": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:cancel_replacement",
@@ -9642,7 +9570,7 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
@@ -9651,9 +9579,7 @@
     "trigger:when_would_leave_battle_area",
     "verb:cancel_replacement"
    ],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT24-013": {
    "behaviourally_covered": false,
@@ -9731,7 +9657,7 @@
    "untested_constructs": []
   },
   "BT24-016": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:as_selecting_player",
@@ -9764,12 +9690,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT24-017": {
    "behaviourally_covered": false,
@@ -9850,8 +9774,7 @@
     "verb:cancel_replacement"
    ],
    "untested_constructs": [
-    "verb:trash_selected_security",
-    "timing:on_opponent_security_removed"
+    "verb:trash_selected_security"
    ]
   },
   "BT24-020": {
@@ -10864,7 +10787,7 @@
    "untested_constructs": []
   },
   "BT24-082": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_dp_modifier",
@@ -10894,9 +10817,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -10957,8 +10878,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -10990,8 +10910,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -11025,9 +10944,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:app_fuse",
@@ -11458,8 +11375,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:is_unsuspended",
-    "timing:start_of_your_main_phase"
+    "predicate:is_unsuspended"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -11677,8 +11593,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -12355,9 +12270,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:add_top_security_to_hand"
@@ -13377,9 +13290,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "timing:when_linked"
@@ -13405,8 +13316,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -14040,8 +13950,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -14130,9 +14039,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:app_fuse"
@@ -14241,9 +14148,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:source_count"
@@ -14832,9 +14737,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:return_union_bound_to_deck"
@@ -15527,8 +15430,7 @@
    "lowering_covered": false,
    "parsed_only_constructs": [
     "predicate:is_unsuspended",
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -15899,8 +15801,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:is_unsuspended",
-    "timing:start_of_your_main_phase"
+    "predicate:is_unsuspended"
    ],
    "protection_constructs": [
     "verb:grant_effect_immunity"
@@ -16414,9 +16315,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:can_digivolve_from_source"
@@ -17094,7 +16993,7 @@
    ]
   },
   "BT26-087": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_trash",
@@ -17121,14 +17020,12 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-088": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:gain_memory",
@@ -17148,9 +17045,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -17184,9 +17079,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "timing:on_lose_security"
@@ -17214,8 +17107,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -17256,16 +17148,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:trait_contains"
    ]
   },
   "BT26-092": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -17293,14 +17183,12 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-093": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -17332,14 +17220,12 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-094": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -17370,14 +17256,12 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "BT26-095": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -17408,9 +17292,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -17622,7 +17504,7 @@
    ]
   },
   "BT26-103": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 10,
    "constructs": [
     "verb:add_dp_modifier",
@@ -17646,15 +17528,13 @@
    ],
    "effect_clause_count": 6,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "BT26-104": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:activation_cost",
@@ -17682,9 +17562,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -18936,7 +18814,7 @@
    "untested_constructs": []
   },
   "BT9-047": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
     "predicate:all_of",
@@ -18949,9 +18827,7 @@
    "effect_clause_count": 1,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "predicate:in_breeding"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:flood_gate"
    ],
@@ -19571,7 +19447,7 @@
    ]
   },
   "EX10-039": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -19598,14 +19474,12 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX10-040": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:gain_memory",
@@ -19623,9 +19497,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -19737,8 +19609,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:is_unsuspended",
-    "timing:start_of_your_main_phase"
+    "predicate:is_unsuspended"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -19770,9 +19641,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:color_matches_returned_card"
@@ -19868,7 +19737,7 @@
    "untested_constructs": []
   },
   "EX11-008": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_dp_modifier",
@@ -19892,12 +19761,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "EX11-012": {
    "behaviourally_covered": true,
@@ -20473,7 +20340,7 @@
    "untested_constructs": []
   },
   "EX11-055": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -20501,14 +20368,12 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-057": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:activation_cost",
@@ -20534,9 +20399,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -20579,7 +20442,7 @@
    "untested_constructs": []
   },
   "EX11-061": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -20607,9 +20470,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -20649,8 +20510,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:is_unsuspended",
-    "timing:start_of_your_main_phase"
+    "predicate:is_unsuspended"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -20658,7 +20518,7 @@
    ]
   },
   "EX11-066": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -20691,14 +20551,12 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX11-069": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:activation_cost",
@@ -20729,9 +20587,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -20875,7 +20731,7 @@
    "untested_constructs": []
   },
   "EX12-006": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -20896,9 +20752,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -21253,7 +21107,7 @@
    ]
   },
   "EX12-019": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 10,
    "constructs": [
     "verb:add_dp_modifier",
@@ -21274,14 +21128,12 @@
    ],
    "effect_clause_count": 7,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "verb:grant_effect_immunity"
    ],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "EX12-020": {
    "behaviourally_covered": false,
@@ -21312,7 +21164,7 @@
    ]
   },
   "EX12-021": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -21338,9 +21190,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -21920,7 +21770,7 @@
    "untested_constructs": []
   },
   "EX12-046": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 7,
    "constructs": [
     "verb:add_dp_modifier",
@@ -21944,12 +21794,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "EX12-047": {
    "behaviourally_covered": false,
@@ -23348,9 +23196,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
     "predicate:replacement_cause",
@@ -23770,7 +23616,7 @@
    "untested_constructs": []
   },
   "EX13-037": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 9,
    "constructs": [
     "verb:add_dp_modifier",
@@ -23796,12 +23642,10 @@
    ],
    "effect_clause_count": 5,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "EX13-038": {
    "behaviourally_covered": false,
@@ -24847,9 +24691,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_name_contains"
@@ -24881,14 +24723,13 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "EX13-069": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -24920,9 +24761,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -24998,16 +24837,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:face_down_sources_under_tamers_gte"
    ]
   },
   "EX13-072": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -25036,9 +24873,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -25076,8 +24911,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "timing:on_ally_played",
-    "timing:start_of_your_main_phase"
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -25252,9 +25086,7 @@
    "effect_clause_count": 4,
    "has_card_test": false,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "predicate:in_breeding"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:select_zone_cards",
@@ -25791,9 +25623,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:event_target_color_any_of"
@@ -26686,7 +26516,7 @@
    "untested_constructs": []
   },
   "EX7-030": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:add_dp_modifier",
@@ -26712,9 +26542,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -26879,7 +26707,7 @@
    "untested_constructs": []
   },
   "EX7-051": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:draw",
@@ -26902,9 +26730,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -26937,7 +26763,7 @@
    "untested_constructs": []
   },
   "EX7-063": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
     "verb:gain_memory",
@@ -26952,9 +26778,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -27549,8 +27373,7 @@
    "lowering_covered": true,
    "parsed_only_constructs": [
     "predicate:stack_size_gte",
-    "timing:on_ally_played",
-    "timing:start_of_your_main_phase"
+    "timing:on_ally_played"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -29277,7 +29100,7 @@
    ]
   },
   "P-128": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:effect_initiated_digivolve",
@@ -29302,9 +29125,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -29588,9 +29409,7 @@
    "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:trash_selected_sources_as_cost"
@@ -29626,8 +29445,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:is_unsuspended",
-    "timing:start_of_your_main_phase"
+    "predicate:is_unsuspended"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -29758,7 +29576,7 @@
    "untested_constructs": []
   },
   "P-189": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
     "verb:gain_memory",
@@ -29775,14 +29593,12 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "keyword:Progress"
    ],
-   "untested_constructs": [
-    "timing:on_opponent_security_removed"
-   ]
+   "untested_constructs": []
   },
   "P-193": {
    "behaviourally_covered": true,
@@ -29859,8 +29675,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -29890,8 +29705,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -29921,8 +29735,7 @@
    "has_card_test": true,
    "lowering_covered": false,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": [
@@ -29951,8 +29764,7 @@
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
-    "predicate:memory_lte",
-    "timing:start_of_your_main_phase"
+    "predicate:memory_lte"
    ],
    "protection_constructs": [],
    "untested_constructs": []
@@ -30097,7 +29909,7 @@
    "untested_constructs": []
   },
   "P-210": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_to_hand_from_trash",
@@ -30117,9 +29929,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -30151,9 +29961,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "predicate:trashed_hand_card_matching"
@@ -30296,7 +30104,7 @@
    "untested_constructs": []
   },
   "P-224": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:draw",
@@ -30323,9 +30131,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -32235,7 +32041,7 @@
    "untested_constructs": []
   },
   "ST23-13": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -32264,14 +32070,12 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
   "ST23-14": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -32301,9 +32105,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [
     "keyword:Jamming"
    ],
@@ -32336,9 +32138,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:move_self_option_under_permanent"
@@ -32726,7 +32526,7 @@
    ]
   },
   "ST24-13": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -32756,16 +32556,14 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [
     "keyword:Jamming"
    ],
    "untested_constructs": []
   },
   "ST24-14": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
@@ -32791,9 +32589,7 @@
    "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": []
   },
@@ -32824,9 +32620,7 @@
    "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": false,
-   "parsed_only_constructs": [
-    "timing:start_of_your_main_phase"
-   ],
+   "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
     "verb:move_self_option_under_permanent"
@@ -37546,6 +37340,12 @@
     "dsl::validator.rs::validate_dynamic_dp_aura_rejects_dp_dependent_active_when": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition": [
+     "fixture"
+    ],
     "rules_conformance::ch18_pending_overwrite.rs::dp_progress_chain_is_not_an_infinite_loop": [
      "fixture"
     ],
@@ -37563,6 +37363,8 @@
     "dsl::phase1c_predicate.rs::any_permanent_matches_if_any_battle_area_perm_matches",
     "dsl::phase1c_predicate.rs::binding_comparisons_flow_through_permanent_existentials",
     "dsl::validator.rs::validate_dynamic_dp_aura_rejects_dp_dependent_active_when",
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition",
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition",
     "rules_conformance::ch18_pending_overwrite.rs::dp_progress_chain_is_not_an_infinite_loop",
     "rules_conformance::ch18_pending_overwrite.rs::instead_overwrites_the_normal_processing"
    ]
@@ -38034,10 +37836,25 @@
     "keyword_phase_d::partition.rs::partition_source_prompt_clones_faithfully": [
      "fixture"
     ],
+    "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area": [
+     "fixture"
+    ],
     "rules_conformance::ch03_areas.rs::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack": [
      "fixture"
     ],
     "rules_conformance::ch03_areas.rs::face_down_card_digivolved_into_is_a_face_up_top_card": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas": [
      "fixture"
     ],
     "rules_conformance::ch11_14_attack_procedure.rs::attack_target_cannot_block": [
@@ -38541,8 +38358,13 @@
     "keyword_phase_d::partition.rs::partition_does_not_fire_when_fewer_than_two_sources",
     "keyword_phase_d::partition.rs::partition_plays_two_picked_sources_on_opponent_effect_deletion",
     "keyword_phase_d::partition.rs::partition_source_prompt_clones_faithfully",
+    "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition",
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger",
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference",
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area",
     "rules_conformance::ch03_areas.rs::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack",
     "rules_conformance::ch03_areas.rs::face_down_card_digivolved_into_is_a_face_up_top_card",
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas",
     "rules_conformance::ch11_14_attack_procedure.rs::attack_target_cannot_block",
     "rules_conformance::ch11_14_attack_procedure.rs::attack_timings_continue_when_attacker_leaves_mid_resolution",
     "rules_conformance::ch11_14_attack_procedure.rs::battle_compares_dp_then_deletes_loser_then_end_of_battle",
@@ -41057,16 +40879,28 @@
   "predicate:in_breeding": {
    "kind": "predicate",
    "name": "in_breeding",
-   "parsed_only": true,
+   "parsed_only": false,
    "signals": {
     "dsl::parse_declarative.rs::parse_flood_gate": [
      "yaml_key"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas": [
+     "fixture"
     ]
    },
    "tested": true,
-   "tested_behaviourally": false,
+   "tested_behaviourally": true,
    "tests": [
-    "dsl::parse_declarative.rs::parse_flood_gate"
+    "dsl::parse_declarative.rs::parse_flood_gate",
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference",
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area",
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas"
    ]
   },
   "predicate:in_event_discarded_cards": {
@@ -41920,7 +41754,16 @@
     "replacements::granted_keywords.rs::mass_granted_fortitude_fires_on_its_own_grantor": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference": [
+     "fixture"
+    ],
     "rules_conformance::ch03_areas.rs::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition": [
      "fixture"
     ],
     "rules_conformance::ch11_14_attack_procedure.rs::removed_target_stays_the_target_and_attack_fails": [
@@ -42689,7 +42532,10 @@
     "replacements::granted_keywords.rs::mass_granted_evade_prompts_on_a_non_source_recipient",
     "replacements::granted_keywords.rs::mass_granted_fortitude_fires_on_a_non_source_recipient",
     "replacements::granted_keywords.rs::mass_granted_fortitude_fires_on_its_own_grantor",
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference",
     "rules_conformance::ch03_areas.rs::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack",
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition",
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition",
     "rules_conformance::ch11_14_attack_procedure.rs::removed_target_stays_the_target_and_attack_fails",
     "rules_conformance::ch11_14_attack_procedure.rs::security_check_trigger_whose_condition_lapsed_before_activation_cannot_activate",
     "rules_conformance::ch11_14_attack_procedure.rs::unsuccessful_attack_reaches_end_of_attack_timing",
@@ -42953,10 +42799,25 @@
     "keyword_phase_f::guard.rs::guard_plural_return_supports_printed_and_aura_granted_carriers": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area": [
+     "fixture"
+    ],
     "rules_conformance::ch03_areas.rs::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack": [
      "fixture"
     ],
     "rules_conformance::ch03_areas.rs::face_down_card_digivolved_into_is_a_face_up_top_card": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas": [
      "fixture"
     ],
     "rules_conformance::ch11_14_attack_procedure.rs::attack_target_cannot_block": [
@@ -43525,8 +43386,13 @@
     "keyword_phase_d::partition.rs::partition_plays_two_picked_sources_on_opponent_effect_deletion",
     "keyword_phase_d::partition.rs::partition_source_prompt_clones_faithfully",
     "keyword_phase_f::guard.rs::guard_plural_return_supports_printed_and_aura_granted_carriers",
+    "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition",
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger",
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference",
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area",
     "rules_conformance::ch03_areas.rs::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack",
     "rules_conformance::ch03_areas.rs::face_down_card_digivolved_into_is_a_face_up_top_card",
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas",
     "rules_conformance::ch11_14_attack_procedure.rs::attack_target_cannot_block",
     "rules_conformance::ch11_14_attack_procedure.rs::attack_timings_continue_when_attacker_leaves_mid_resolution",
     "rules_conformance::ch11_14_attack_procedure.rs::battle_compares_dp_then_deletes_loser_then_end_of_battle",
@@ -45348,6 +45214,15 @@
     "replacements::granted_keywords.rs::mass_granted_fortitude_fires_on_its_own_grantor": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition": [
+     "fixture"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::piercing_triggers_with_the_battle_deletion_pool": [
      "fixture"
     ],
@@ -45533,6 +45408,9 @@
     "replacements::granted_keywords.rs::mass_granted_evade_prompts_on_a_non_source_recipient",
     "replacements::granted_keywords.rs::mass_granted_fortitude_fires_on_a_non_source_recipient",
     "replacements::granted_keywords.rs::mass_granted_fortitude_fires_on_its_own_grantor",
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference",
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition",
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition",
     "rules_conformance::ch15_04_effect_states.rs::piercing_triggers_with_the_battle_deletion_pool",
     "rules_conformance::ch15_08_effect_categories.rs::battle_winner_qualifier_does_not_read_the_digimon_that_slid_into_the_slot",
     "rules_conformance::ch15_08_effect_categories.rs::battle_winner_qualifier_reads_last_known_information_after_the_winner_leaves",
@@ -46198,6 +46076,7 @@
     "tests/keyword_phase_f/iceclad.rs",
     "tests/replacements/attack_cancel.rs",
     "tests/replacements/route_replacements.rs",
+    "tests/rules_conformance/ch03_areas.rs",
     "tests/rules_conformance/ch11_14_attack_procedure.rs",
     "tests/rules_conformance/ch15_04_effect_states.rs",
     "tests/rules_conformance/ch15_07_optional_conditions.rs",
@@ -47405,6 +47284,15 @@
     "dsl::validator.rs::validate_unknown_modifier_name_fails": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas": [
+     "fixture"
+    ],
     "rules_conformance::ch11_14_attack_procedure.rs::one_security_check_per_attack_sa_plus_counts_inside_it": [
      "fixture"
     ],
@@ -47484,6 +47372,9 @@
     "dsl::phase3d_event_context.rs::ally_attack_event_target_in_text_contains_matches_attacking_digimon_text",
     "dsl::validator.rs::validate_unknown_aura_grant_keyword_fails",
     "dsl::validator.rs::validate_unknown_modifier_name_fails",
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger",
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area",
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas",
     "rules_conformance::ch11_14_attack_procedure.rs::one_security_check_per_attack_sa_plus_counts_inside_it",
     "rules_conformance::ch11_14_attack_procedure.rs::security_check_trigger_whose_condition_lapsed_before_activation_cannot_activate",
     "rules_conformance::ch15_04_effect_states.rs::pending_effect_whose_trigger_condition_lapsed_cannot_activate",
@@ -47597,6 +47488,9 @@
     "keyword_phase_f::guard.rs::guard_plural_return_supports_printed_and_aura_granted_carriers": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference": [
+     "fixture"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::piercing_triggers_with_the_battle_deletion_pool": [
      "fixture"
     ],
@@ -47670,6 +47564,7 @@
     "dsl::validator.rs::validate_unknown_modifier_name_fails",
     "dsl::zone_movement_verbs.rs::for_each_merges_body_result_log_into_parent_bindings",
     "keyword_phase_f::guard.rs::guard_plural_return_supports_printed_and_aura_granted_carriers",
+    "rules_conformance::ch03_areas.rs::breeding_area_persistent_effect_applies_only_with_a_breeding_reference",
     "rules_conformance::ch15_04_effect_states.rs::piercing_triggers_with_the_battle_deletion_pool",
     "rules_conformance::ch15_08_effect_categories.rs::battle_winner_qualifier_does_not_read_the_digimon_that_slid_into_the_slot",
     "rules_conformance::ch15_08_effect_categories.rs::battle_winner_trait_is_the_top_cards_trait",
@@ -49102,6 +48997,9 @@
     "dsl::unpayable_optional_condition.rs::unpayable_main_does_not_consume_its_once_per_turn": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition": [
+     "fixture"
+    ],
     "rules_conformance::ch15_07_optional_conditions.rs::unpayable_optional_condition_cannot_be_chosen": [
      "fixture"
     ],
@@ -49142,6 +49040,7 @@
     "dsl::phase2g_select_sources.rs::source_trash_observer_triggers_once_per_event_and_again_per_new_event",
     "dsl::stack_pair_and_protection.rs::same_by_level_compiles_from_yaml_and_rejects_uniqueness",
     "dsl::unpayable_optional_condition.rs::unpayable_main_does_not_consume_its_once_per_turn",
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition",
     "rules_conformance::ch15_07_optional_conditions.rs::unpayable_optional_condition_cannot_be_chosen",
     "rules_conformance::ch16_attack_keywords.rs::blitz_attack_proceeds_after_memory_returns_to_zero_or_more",
     "rules_conformance::ch16_attack_keywords.rs::blitz_cannot_attack_when_memory_already_zero_or_more",
@@ -49985,6 +49884,9 @@
     "dsl::phase3d_event_context.rs::on_digivolve_event_target_binding_resolves_digivolved_permanent": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition": [
+     "fixture"
+    ],
     "rules_conformance::ch15_04_effect_states.rs::effect_digivolve_triggers_wait_for_the_digivolving_effect_and_pool": [
      "fixture"
     ],
@@ -50008,6 +49910,7 @@
     "dsl::phase3d_event_context.rs::event_target_owner_predicate_compiles",
     "dsl::phase3d_event_context.rs::on_digivolve_event_card_trait_predicate_matches_new_top_card",
     "dsl::phase3d_event_context.rs::on_digivolve_event_target_binding_resolves_digivolved_permanent",
+    "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition",
     "rules_conformance::ch15_04_effect_states.rs::effect_digivolve_triggers_wait_for_the_digivolving_effect_and_pool",
     "rules_conformance::ch15_04_effect_states.rs::replacement_digivolve_triggers_pend_in_one_pool",
     "rules_conformance::ch16_attack_keywords.rs::blitz_cannot_attack_when_memory_already_zero_or_more",
@@ -50261,17 +50164,25 @@
   "timing:on_opponent_security_removed": {
    "kind": "timing",
    "name": "on_opponent_security_removed",
-   "near_miss_files": [
-    "src/dsl_cards/lower_triggered.rs",
-    "src/dsl_cards/timing_map.rs",
-    "tests/effect_context/security_stack_operations.rs",
-    "tests/timing_dispatch.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas": [
+     "fixture"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger",
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area",
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas"
+   ]
   },
   "timing:on_option_placed": {
    "kind": "timing",
@@ -51375,20 +51286,24 @@
   "timing:start_of_your_main_phase": {
    "kind": "timing",
    "name": "start_of_your_main_phase",
-   "parsed_only": true,
+   "parsed_only": false,
    "signals": {
     "dsl::activation_cost.rs::compile_activation_cost_lowers_to_return_self_kind": [
      "yaml_key"
     ],
     "dsl::activation_cost.rs::parse_activation_cost_return_self_step": [
      "yaml_key"
+    ],
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition": [
+     "fixture"
     ]
    },
    "tested": true,
-   "tested_behaviourally": false,
+   "tested_behaviourally": true,
    "tests": [
     "dsl::activation_cost.rs::compile_activation_cost_lowers_to_return_self_kind",
-    "dsl::activation_cost.rs::parse_activation_cost_return_self_step"
+    "dsl::activation_cost.rs::parse_activation_cost_return_self_step",
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition"
    ]
   },
   "timing:start_of_your_turn": {
@@ -55179,6 +55094,24 @@
     "replacements::attack_cancel.rs::dsl_end_attack_step_cancels_pending_attack": [
      "yaml_key"
     ],
+    "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition": [
+     "fixture"
+    ],
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas": [
+     "fixture"
+    ],
     "rules_conformance::ch11_14_attack_procedure.rs::attack_does_not_end_until_all_processing_resolved": [
      "fixture"
     ],
@@ -55816,6 +55749,12 @@
     "lib::src/dsl_cards/lower_triggered.rs::resource_flow_catalog_ignores_non_hand_resource_steps",
     "lib::src/dsl_cards/step/mod.rs::resume_without_pending_selection_preserves_enclosing_tail",
     "replacements::attack_cancel.rs::dsl_end_attack_step_cancels_pending_attack",
+    "rules_conformance::ch03_areas.rs::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition",
+    "rules_conformance::ch03_areas.rs::breeding_area_effects_without_a_breeding_reference_do_not_trigger",
+    "rules_conformance::ch03_areas.rs::breeding_scoped_effect_triggers_only_in_the_breeding_area",
+    "rules_conformance::ch03_areas.rs::opponents_breeding_area_digimon_does_not_meet_an_activation_condition",
+    "rules_conformance::ch03_areas.rs::own_breeding_area_digimon_does_not_meet_a_main_activation_condition",
+    "rules_conformance::ch03_areas.rs::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas",
     "rules_conformance::ch11_14_attack_procedure.rs::attack_does_not_end_until_all_processing_resolved",
     "rules_conformance::ch11_14_attack_procedure.rs::attack_timings_continue_when_attacker_leaves_mid_resolution",
     "rules_conformance::ch11_14_attack_procedure.rs::battle_compares_dp_then_deletes_loser_then_end_of_battle",
@@ -62603,11 +62542,11 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 1638,
+  "behavioural_tests": 1645,
   "cards": {
-   "behaviourally_covered": 552,
-   "lowering_covered": 677,
-   "not_covered": 467,
+   "behaviourally_covered": 613,
+   "lowering_covered": 698,
+   "not_covered": 446,
    "total": 1144
   },
   "constructs": {
@@ -62621,22 +62560,22 @@
     "used_untested": 0
    },
    "predicate": {
-    "parsed_only": 10,
+    "parsed_only": 9,
     "tested": 140,
-    "tested_behaviourally": 130,
+    "tested_behaviourally": 131,
     "total": 216,
     "untested": 76,
     "used_by_cards": 189,
     "used_untested": 67
    },
    "timing": {
-    "parsed_only": 4,
-    "tested": 47,
-    "tested_behaviourally": 43,
+    "parsed_only": 3,
+    "tested": 48,
+    "tested_behaviourally": 45,
     "total": 65,
-    "untested": 18,
+    "untested": 17,
     "used_by_cards": 56,
-    "used_untested": 16
+    "used_untested": 15
    },
    "verb": {
     "parsed_only": 7,
@@ -62761,7 +62700,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 348,
-  "scanned_tests": 2023,
+  "scanned_tests": 2030,
   "top_untested": [
    {
     "cards_blocked": 61,
@@ -62777,11 +62716,6 @@
     "cards_blocked": 17,
     "construct": "verb:add_top_security_to_hand",
     "ex13_lists_blocked": 219
-   },
-   {
-    "cards_blocked": 26,
-    "construct": "timing:on_opponent_security_removed",
-    "ex13_lists_blocked": 189
    },
    {
     "cards_blocked": 17,
