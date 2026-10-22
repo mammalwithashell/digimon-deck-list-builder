@@ -1,8 +1,8 @@
 """The training gate for the Architect pipeline (final review I5, 2026-10-21).
 
-The Architect agents (`architect_training`, `architect_cotraining`,
-`architect_optimizer`, `architect_pool`) read `data/deck_library.json` and build
-decks outside `MetaGauntlet.load`. They apply the same two layers (spec
+The Architect TRAINING entrypoints (`architect_training`, `architect_cotraining`)
+read `data/deck_library.json` and build decks outside `MetaGauntlet.load`. They
+apply the same two layers (spec
 2026-10-15 §5b, CLAUDE.md rule 34), from the same committed artifacts, with the
 same errors:
 
@@ -14,7 +14,13 @@ same errors:
    decklists but none is admissible), and the mutation candidate pool keeps only
    admissible cards. `CardAdmissibilityMissingError` when the artifact is missing.
 
-There is no override. The artifacts are read once per process: the cache is keyed
+`MetaOptimizer`, `CandidatePool` and `_pick_best_decklist` are shared with
+hosted product surfaces (`code/server/routers/deck_optimizer.py` `/evaluate` and
+`/optimize`, `code/tools/store_night.py`), so there the gate is opt-in
+(`training_gate=True`), passed only by the training entrypoints; the default is
+the pre-gate, unfiltered behaviour (re-review N1, controller ruling 2026-10-21:
+the two-layer gate is a TRAINING gate). Within training there is no override.
+The artifacts are read once per process: the cache is keyed
 on the gauntlet loader in effect, so the test suite's permissive conftest
 fixtures (which monkeypatch those loaders) still apply.
 """

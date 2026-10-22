@@ -144,8 +144,9 @@ def canonicalize_archetype(name: str) -> str:
 #   plus the hybrid own-test rule, no failed verdict, no untriaged divergence;
 #   rejection reason `not_admissible`, logged with the artifact's per-card reason
 #   (`unregistered` / `untested_lowering` / `untested_card` / `failed_verdict` /
-#   `diverged_no_quirk`). The Architect pipeline (`architect_*`) reads the same
-#   artifacts through `architect_admission`.
+#   `diverged_no_quirk`). The Architect TRAINING entrypoints read the same
+#   artifacts through `architect_admission` (`training_gate=True`); the hosted
+#   deck tools sharing those modules stay ungated.
 # Run time reads ONLY those two committed `data/` artifacts (training images
 # ship no `qa/`, ruling R5); a missing one stops training. Always on, for every
 # library path and every pool snapshot; no CLI or env override admits a

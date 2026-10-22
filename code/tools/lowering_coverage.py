@@ -1304,12 +1304,13 @@ def render_report(payload: dict, *, decks: list[dict] | None, deck_library: dict
     L.append(
         "- Token presence is a proxy for `tested`: a test that names `CompiledStep::Draw` in a fixture it never "
         "asserts on still counts; a construct exercised only through a cross-file helper (`support.rs`, "
-        "`include_str!` of a card YAML) does NOT count. Attribution is per file + same-file helper closure by name, "
-        "so a helper whose name collides with a method call can over-attribute."
+        "`include_str!` of a card YAML) does NOT count. Attribution is per test + same-file helper closure by name "
+        "(transitive, order-independent), so a helper whose name collides with a method call can over-attribute."
     )
     L.append(
         "- `tested` (the brief's criterion) includes parse-only evidence. `tested_behaviourally` requires a hit in a "
-        "file that drives the engine; the rest are `parsed_only` (parsed, not behaviourally tested)."
+        "test that itself runs the engine (an `ENGINE_RUN_MARKERS` match in its body or a same-file test-support "
+        "helper, decided per test); the rest are `parsed_only` (parsed, not behaviourally tested)."
     )
     po = sorted(k for k, v in cons.items() if v["parsed_only"])
     L.append(f"- Parsed-only constructs ({len(po)}): " + (", ".join(f"`{k}`" for k in po) or "none"))

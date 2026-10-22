@@ -358,6 +358,7 @@ class CoTrainer:
             pilot_policy_path=pilot_path,
             output_dir=str(architect_dir),
             extra_cards=self.extra_cards,
+            training_gate=True,  # rule 34: co-training trains
         )
 
         metadata = optimizer.train(

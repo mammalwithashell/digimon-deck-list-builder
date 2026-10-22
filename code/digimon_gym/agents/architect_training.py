@@ -207,6 +207,7 @@ def train(args: argparse.Namespace) -> None:
         custom_pool=custom_pool,
         card_constraints=card_constraints,
         use_restricted_list=args.use_restricted_list,
+        training_gate=True,  # rule 34: this CLI trains
     )
 
     # --- Train ---

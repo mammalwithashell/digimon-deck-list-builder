@@ -35,13 +35,19 @@ fn variant_test() {
     let _r = DebugRunner::new();
 }
 
-fn run_card(src: &str) {
-    let _r = DebugRunner::from_yaml(src);
-}
-
 #[test]
 fn yaml_test() {
     run_card(SNIPPET); // CompiledStep::Delete in a comment
+}
+
+// Defined AFTER its test and reaching the engine only through a second hop:
+// helper resolution is by name, transitive and order-independent.
+fn run_card(src: &str) {
+    drive_runner(src);
+}
+
+fn drive_runner(src: &str) {
+    let _r = DebugRunner::from_yaml(src);
 }
 
 #[test]

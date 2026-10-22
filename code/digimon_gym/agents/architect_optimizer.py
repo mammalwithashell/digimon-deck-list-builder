@@ -23,7 +23,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
-from digimon_gym.agents.architect_admission import is_admissible_deck, require_training_gate
 from digimon_gym.agents.architect_agent import ArchitectDQN
 from digimon_gym.agents.architect_pool import CandidatePool, CardConstraint
 from digimon_gym.agents.architect_simulator import DeckSimulator
@@ -44,15 +43,22 @@ _SOURCE_PREFERENCE: Dict[str, int] = {
 def _pick_best_decklist(
     decklists: List[dict],
     implemented: set,
+    *,
+    training_gate: bool = False,
 ) -> Optional[List[str]]:
     """Pick the best decklist that has 100% card coverage.
 
     Selects the decklist with the highest source preference whose cards
-    are all present in the frozen manifest AND admissible under the training
-    gate (`architect_admission`, rule 34).  Returns ``None`` if no decklist
+    are all present in the frozen manifest -- and, with ``training_gate=True``
+    (training entrypoints only), admissible under the training gate
+    (`architect_admission`, rule 34).  Returns ``None`` if no decklist
     qualifies.
     """
-    require_training_gate()
+    is_admissible_deck = None
+    if training_gate:
+        from digimon_gym.agents.architect_admission import is_admissible_deck, require_training_gate
+
+        require_training_gate()
     candidates: List[Tuple[int, List[str]]] = []
 
     for entry in decklists:
@@ -68,8 +74,10 @@ def _pick_best_decklist(
         if not deck_ids:
             continue
 
-        # Check full coverage and admissibility
-        if all(cid in implemented for cid in deck_ids) and is_admissible_deck(deck_ids):
+        # Check full coverage (and, under the training gate, admissibility)
+        if all(cid in implemented for cid in deck_ids) and (
+            is_admissible_deck is None or is_admissible_deck(deck_ids)
+        ):
             candidates.append((pref, deck_ids))
 
     if not candidates:
@@ -94,6 +102,7 @@ class MetaOptimizer:
         custom_pool: Optional[List[str]] = None,
         card_constraints: Optional[Dict[str, CardConstraint]] = None,
         use_restricted_list: bool = False,
+        training_gate: bool = False,
     ):
         """
         Args:
@@ -108,7 +117,20 @@ class MetaOptimizer:
             custom_pool: Custom candidate pool (replaces archetype-derived).
             card_constraints: Per-card constraints (locks, min/max counts).
             use_restricted_list: If True, enforce the official ban/restricted list.
+            training_gate: If True, apply the two-layer training gate (rule 34):
+                the base deck must be admissible, opponents are admissible
+                library lists and the candidate pool holds admissible cards.
+                Passed by `architect_training` / `architect_cotraining` only;
+                the hosted deck tools (`/evaluate`, `/optimize`) and
+                `store_night` keep the default (ungated).
         """
+        if training_gate:
+            from digimon_gym.agents.architect_admission import card_admissibility, require_training_gate
+            from digimon_gym.agents.gauntlet import validate_admissible_deck
+
+            require_training_gate()
+            validate_admissible_deck(list(base_deck), card_admissibility(), label=f"architect base deck {archetype_name!r}")
+        self.training_gate = training_gate
         self.archetype_name = archetype_name
         self.base_deck = list(base_deck)
         self.meta_config = meta_config
@@ -179,7 +201,9 @@ class MetaOptimizer:
                 )
                 continue
 
-            best_deck = _pick_best_decklist(lib_arch["decklists"], implemented)
+            best_deck = _pick_best_decklist(
+                lib_arch["decklists"], implemented, training_gate=self.training_gate
+            )
             if best_deck is None:
                 logger.debug(
                     "No fully-simulatable decklist for %r; skipping.", arch_name
@@ -243,6 +267,7 @@ class MetaOptimizer:
             custom_pool=self.custom_pool,
             card_constraints=self.card_constraints,
             use_restricted_list=self.use_restricted_list,
+            training_gate=self.training_gate,
         )
 
         self._opponents = self.build_opponents()
