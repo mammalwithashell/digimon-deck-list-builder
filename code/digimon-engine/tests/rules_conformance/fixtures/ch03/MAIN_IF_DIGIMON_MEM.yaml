@@ -1,0 +1,16 @@
+# MAIN_IF_DIGIMON_MEM -- Tamer, red, play cost 2.
+#   [Main] [Once Per Turn] If you have a Digimon, gain 1 memory.
+# An activated effect whose activation condition counts Digimon: a Digimon in
+# the breeding area doesn't meet it (§3-4-7-7).
+card: MAIN_IF_DIGIMON_MEM
+name: Roll-Call Tamer
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    condition: { any_permanent: { of: you, kind: digimon } }
+    summary: "[Main] [Once Per Turn] If you have a Digimon, gain 1 memory."
+    process:
+      - gain_memory: 1

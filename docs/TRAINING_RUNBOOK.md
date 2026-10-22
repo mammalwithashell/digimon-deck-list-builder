@@ -252,14 +252,19 @@ python code/tools/meta_loader.py --build
 - Scrapes tournament data from DigiLab, DigimonMeta, Egman Events.
 - Outputs: `data/deck_library.json`.
 - Format: archetypes → decklists + `digilab_stats`.
-- Runtime gauntlet loading admits each decklist on its own. A list is training-ready when:
-  1. every card ID is playable: registered in the Rust engine and present in the card database the game runner loads (`data/cards.json`), and
-  2. no card's verdict in `qa/qa-reports/validated_cards_dsl.json` is `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS`. A playable card with no ledger entry counts as ready.
-  3. every card is oracle-ready in `data/oracle_readiness.json` — see [Oracle readiness gate](#oracle-readiness-gate-2026-10-04). Unlike check 2, this applies to every library path and to pool snapshots, and it has no off switch.
-- The ledger's `archetype` field is a batch label (`store-champs-june-2026`, `three-musketeers`), not a deck-library archetype key, so it plays no part in admission. An archetype is eligible when at least one of its lists is admitted.
-- `--archetypes` / `allowed_archetypes` narrows the pool further; each scoped name that ends up with no admitted list is logged at INFO with how many lists each check rejected.
-- The ledger is read only when loading the default `data/deck_library.json`, and a missing ledger skips check 2. The training image does not ship `qa/`, so cloud runs skip check 2 (checks 1 and 3 still apply).
-- `code/tools/meta_coverage.py` reports the field share this gate admits as **Trainable today**.
+- Runtime gauntlet loading applies a two-layer training gate (spec `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5b). It reads only two committed `data/` artifacts, because the training image ships no `qa/`; a missing artifact stops the load (`MechanicsReadinessMissingError` / `CardAdmissibilityMissingError`, each naming its regenerate command):
+  1. **Mechanics (global).** `data/mechanics_readiness.json` must be `ready`: no mechanics-set rules obligation is flagged outcome-changing (`blocks_training`). This is checked once per load, before any deck is examined. Otherwise `MechanicsNotReadyError` names the blocking rule and gap ids. Regenerate with `PYTHONPATH=code python -m tools.rules.mechanics_readiness`. See [What `ready` means](#what-ready-means-and-what-it-does-not) for what the flag does and does not cover.
+  2. **Light per-card (per decklist).** Every card ID must be playable, meaning registered in the Rust engine and present in `data/cards.json` (rejection `unregistered`). It must also be admissible in `data/card_admissibility.json` (rejection `not_admissible`, logged with the card's reason):
+     - lowering-covered: every construct its YAML references (verbs, predicates, timings, keywords, as `tools.lowering_coverage` attributes them from the impact index) is tested behaviourally by the mechanics tests; a `parsed_only` construct does not count (`untested_lowering`, with the constructs listed in the row's `untested_constructs`). A non-DSL card (raw_rust / hand-written, or unimplemented) has no constructs and is `untested_lowering` unless it has its own test module. The attribution is a proxy -- see [Attribution caveat](#attribution-caveat);
+     - hybrid rule: a card with >= 4 clauses or any protection construct (the `protection_constructs` family in `qa/impact/lowering_coverage.json`) also needs its own behavioural test module, `code/digimon-engine/tests/cards_behavioral/<set>/<card_id>.rs` declared from `main.rs` / `<set>/mod.rs` with a plain `mod x;`, or an existing ledger `test_path` (`untested_card`; rows carry `needs_card_test` / `has_card_test`). A `#[cfg(..)]`/`#[path]` module declaration or a dedicated top-level `tests/<id>_*.rs` file is not seen (fail-closed: the card reads `untested_card`, it is never wrongly admitted);
+     - no failed ledger verdict, i.e. `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT`, `AUDITED-MISSING-TESTS`, `FAILED`, `FAIL` or `QA-FAIL` in either ledger (`failed_verdict`);
+     - no `diverged` exam row without a cited `dcgo_quirk`/`stale` triage (`diverged_no_quirk`).
+
+     An unmeasured clause blocks nothing. Regenerate with `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`.
+- Both layers apply to every training library path (including the Architect *training* entrypoints -- `architect_training` / `architect_cotraining` base decks, and, through `MetaOptimizer(training_gate=True)`, their opponents and mutation pool; `code/digimon_gym/agents/architect_admission.py` loads the artifacts once per process. The gate is a TRAINING gate: the shared `MetaOptimizer` / `CandidatePool` / `_pick_best_decklist` default to ungated, so the hosted deck tools (`/deck-optimizer/evaluate`, `/deck-optimizer/optimize`), `store_night` and everything under `code/server/` never read it), to pool snapshots (`GeneralistDeckPool.from_snapshot`, `--curriculum-pool`, the eval CLIs) and to a job's `agent_deck: {source: deck_id}` library deck. There is no off switch. `--legacy-clause-gate` (pilot_training) only *adds* the old per-card requirement, `ready` in `data/oracle_readiness.json` (see [Legacy: oracle readiness is a report](#legacy-oracle-readiness-is-a-report-formerly-the-gate-2026-10-04)), for transition comparison runs. It never admits a deck the two layers reject.
+- When no decklist survives, `EmptyTrainingPoolError` lists the cards blocking the most decklists, each with its reason, and gives both regenerate commands. An archetype is eligible when at least one of its lists is admitted.
+- `--archetypes` / `allowed_archetypes` narrows the pool further. Each scoped name that ends up with no admitted list is logged at INFO with how many lists each check rejected (`unregistered`, `not_admissible`, and `not_oracle_ready` under the legacy flag).
+- `code/tools/meta_coverage.py`'s **Trainable today** figure is only an approximation: it still uses the pre-2026-10-21 ledger rule (registry plus the old four-status ledger list), not the two layers above. The admission truth is `data/card_admissibility.json` (`PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`). Aligning `meta_coverage.py` and `card_loop/candidates.py` with it is a follow-up.
 
 ### Configuration Parameters
 
@@ -948,36 +953,98 @@ Key RL/ML packages:
 - `numpy` >= 1.24
 - `tensorboard` (for monitoring)
 
-## Oracle readiness gate (2026-10-04)
+## Training gate: mechanics + card admissibility (2026-10-21)
 
-Training admits a decklist only when every card in it is oracle-ready:
-every printed clause is confirmed against DCGO, or unreachable/unavailable
-with a reason, or a diverged clause triaged as a cited DCGO quirk. The gate
-is always on — there is no flag to disable it. Source of truth:
-`data/oracle_readiness.json`, regenerated with
+Training admits a decklist only through two layers (spec
+`docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md`
+§5b; plan `docs/superpowers/plans/2026-10-15-rules-conformance-2-mechanics-gate.md`).
+The gate is always on; there is no flag to disable it. The admission rules are
+in §2 ("Runtime gauntlet loading ..."); this section is the operator view.
+
+| Layer | Artifact | Regenerate | Fails with |
+|---|---|---|---|
+| Mechanics (global) | `data/mechanics_readiness.json` | `PYTHONPATH=code python -m tools.rules.mechanics_readiness` | `MechanicsNotReadyError` / `MechanicsReadinessMissingError` |
+| Per-card (per decklist) | `data/card_admissibility.json` | `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility` (no engine wheel; reads `data/card_registry.json`, runs `tools.lowering_coverage.build()` in-process, scans the `cards_behavioral/` test modules, both ledgers and the exam verdicts) | `NotAdmissibleDeckError` / `CardAdmissibilityMissingError` |
+
+Both take `--check` (run by `scripts/verify` tier 0, which CI's tier-1 job
+includes, beside `lowering_coverage_check`). Regenerate the mechanics artifact
+after any change to the rules ledger (`qa/rules/`), and the admissibility
+artifact (plus `PYTHONPATH=code python -m tools.lowering_coverage`) after any
+change to the validated-cards ledgers, exam verdicts, `data/card_registry.json`,
+card YAML, the mechanics tests, or the behavioural test modules (a new or
+removed `cards_behavioral/<set>/<id>.rs`).
+
+**The work queue.** `qa/impact/lowering_coverage.json` is the human-readable
+report behind `untested_lowering`: per construct, whether a mechanics test
+exercises it; per card, its `untested_constructs`. A construct test in the
+mechanics suites (`tests/dsl`, `tests/rules_conformance`, ... -- never
+`cards_behavioral`) unblocks every card that uses it. `PYTHONPATH=code python -m
+tools.lowering_coverage --report OUT.md --decks deckpool.json` ranks the untested
+constructs by decks blocked.
+
+### What `ready` means, and what it does not
+
+`ready` = **no mechanics obligation is flagged outcome-changing**.
+`blocks_training` is a hand-set field in `qa/rules/cr_obligations_status.yaml`
+(default false); its basis is the Plan 4 triage. Nothing sets it automatically,
+and the gap trackers' "Blocks training" lines are not read. Every other open
+mechanics gap is counted in the artifact as `unflagged_open_gaps` (316 on
+2026-10-21; printed by the regenerate command) and listed in
+`qa/rules/cr_obligations.json`. Those gaps were not each judged
+outcome-neutral. Flagging policy (`qa/rules/mechanics-gaps-2026-10.md`): a new
+mechanics gap that can change a game outcome (ordering, legality, deletion,
+memory, security) is filed with `blocks_training: true` until fixed.
+
+The spec's second layer-1 condition -- the `rules_conformance` suite green at the
+committed manual version -- is **not** in the artifact. It is enforced by the PR
+CI gate `.github/workflows/engine-rules-conformance.yml`.
+
+### Attribution caveat
+
+Lowering coverage is token presence, not proof of assertion. The exact rule is
+the `code/tools/lowering_coverage.py` module docstring. A construct is credited
+to a `#[test]` when it appears in the test body or in a same-file helper the
+body calls. The credit is behavioural only when that body or helper runs the
+engine (`ENGINE_RUN_MARKERS`, decided per test); a test that only inspects
+compiled IR, a catalog or a lowering table credits `parsed_only`. Cross-file
+helpers and `include_str!` fixtures are not seen, so a construct can read
+untested when it is tested (fail-closed). A test can also name a construct and
+assert nothing about it, so a construct can read tested when nothing checks it
+(over-credit). On 2026-10-21, 68 of the 354 behaviourally-credited constructs
+were credited only through a YAML string literal, and 150 of the 537 admissible
+cards depend on one.
+
+**Pre-flight for a training or cloud run.** Both artifacts must be present on the
+host: they are the only gate inputs, because the training image and cloud pods
+ship no `qa/`. The image does not bake them in: `data/` is a runtime mount
+(`-v data:/app/data`, `DIGIMON_DATA_DIR`), so that mount must carry them; for a
+bare pod, `scp` them with the rest of `data/` (docs/CLOUD_TRAINING.md). Override locations with
+`DIGIMON_MECHANICS_READINESS` / `DIGIMON_CARD_ADMISSIBILITY` (or `DIGIMON_DATA_DIR`).
+
+If training stops with `EmptyTrainingPoolError`, the message lists the cards
+blocking the most decklists, each with its reason (`unregistered`,
+`untested_lowering`, `untested_card`, `failed_verdict`, `diverged_no_quirk`), and
+both regenerate commands. Fix the cause (test the construct, add the card's own
+test, resolve the ledger verdict, triage the divergence with a cited
+`dcgo_quirk`) and regenerate; do not edit the artifacts by hand.
+
+Pool snapshots (`--curriculum-pool`, eval CLIs) are refused if they contain an
+inadmissible card (`NotAdmissibleDeckError`; `NotOracleReadyDeckError` and
+`validate_oracle_ready_deck` are deprecated aliases).
+
+### Legacy: oracle readiness is a report (formerly the gate, 2026-10-04)
+
+From 2026-10-04 to 2026-10-21 admission required every card to be oracle-ready
+(every printed clause and gating interaction adjudicated against DCGO). That is
+no longer a gate: `data/oracle_readiness.json` is a progress **report** of the
+opt-in DCGO exam deepening, regenerated with
 
     PYTHONPATH=code python -m tools.clause_coverage.readiness
 
-and checked in CI (`scripts/verify` tier 0). Regenerate it after any verdict
-change under `qa/qa-reports/exam-verdicts/`, any deck-library rebuild, and any
-card-text change (`cards.json`, `card_overrides.json`, `card_official.json`);
-a clause whose text changed loses its verdict and drops the card back to
-`not_ready`. The artifact also records how many library decklists have every
-card ready (`decklists.oracle_ready`), an upper bound on the admitted pool
-(the registry and ledger checks above still apply).
-
-If training stops with `EmptyTrainingPoolError`, the message names the cards
-blocking the most decklists (card, name, decklists blocked); the exam queue is
-
-    PYTHONPATH=code python -m tools.clause_coverage.readiness --plan --limit 25
-
-which ranks not-ready cards by greedy decklist completion over the lists that
-pass the other checks, with each pick's archetypes and outstanding clause ids.
-A missing artifact stops training with `OracleReadinessMissingError` — cloud
-runs read it from the mounted data volume (`DIGIMON_DATA_DIR`, override with
-`DIGIMON_ORACLE_READINESS`), so sync `data/oracle_readiness.json` with the rest
-of `data/`.
-
-Pool snapshots (`--curriculum-pool`, eval CLIs) are refused if they contain a
-non-ready card (`NotOracleReadyDeckError`). Spec:
-`docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md`.
+and still checked by `scripts/verify` tier 0 (`oracle_readiness_check`). Its
+`--plan --limit 25` still ranks which exams to run next. `pilot_training
+--legacy-clause-gate` re-adds the old requirement on top of the two layers (it
+never admits a deck they reject) for transition comparison runs; only that path
+reads the report and can raise `OracleReadinessMissingError`. Spec:
+`docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md` (§4.7 is
+superseded as a gate).

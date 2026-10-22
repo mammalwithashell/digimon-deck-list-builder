@@ -18,6 +18,9 @@ databases, or ad-hoc re-homing without touching code:
 - ``DIGIMON_CARD_REGISTRY``
 - ``DIGIMON_CARD_DATA_REVISION``
 - ``DIGIMON_TESTED_CARDS``
+- ``DIGIMON_ORACLE_READINESS`` (the per-clause oracle readiness report; a gate only under ``--legacy-clause-gate``)
+- ``DIGIMON_MECHANICS_READINESS`` (the training gate's mechanics layer)
+- ``DIGIMON_CARD_ADMISSIBILITY`` (the training gate's light per-card layer)
 - ``DIGIMON_DATA_DIR`` — overrides the whole directory; individual file
   env vars still win if set.
 
@@ -57,6 +60,9 @@ DECK_LIBRARY: Path = _resolve("DIGIMON_DECK_LIBRARY", "deck_library.json")
 ARCHETYPE_ALIASES: Path = _resolve("DIGIMON_ARCHETYPE_ALIASES", "archetype_aliases.json")
 CARD_OVERRIDES: Path = _resolve("DIGIMON_CARD_OVERRIDES", "card_overrides.json")
 TESTED_CARDS: Path = _resolve("DIGIMON_TESTED_CARDS", "tested_cards.json")
+ORACLE_READINESS: Path = _resolve("DIGIMON_ORACLE_READINESS", "oracle_readiness.json")
+MECHANICS_READINESS: Path = _resolve("DIGIMON_MECHANICS_READINESS", "mechanics_readiness.json")
+CARD_ADMISSIBILITY: Path = _resolve("DIGIMON_CARD_ADMISSIBILITY", "card_admissibility.json")
 
 # Canonical card-data pipeline inputs and generated pool artifacts.
 CARD_SOURCES_DIR: Path = Path(

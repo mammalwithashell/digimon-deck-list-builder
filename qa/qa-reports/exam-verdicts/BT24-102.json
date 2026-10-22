@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-10T17:05:05.026671200+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "BT24-102#effect#0": {
       "clause_id": "BT24-102#effect#0",
@@ -21,6 +21,8 @@
       "reason": "DIVERGED at step 10 (compared 10 of 11 ours / 11 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT24-102-effect1",
+      "triage": "dcgo_quirk",
+      "citation": "BT24-102 printed [End of Your Turn] + official Q&A Q6945/Q5721 (the chosen [On Play]/[When Digivolving] effect activates); DCGO's AI/harness select path passes Indicies=null (SelectCardEffect.cs:684, :982), so Homeros' AfterSelectIndexCoroutine (BT24_102.cs:226-230) never sees an index and re-activates nothing. Re-diffed 2026-10-21: ONLY divergence is the end-state row (ours p0.security 3 + BT25-033 trashed = the refired Jupitermon [On Play]). qa/rules/dcgo_quirks.md Q-SELECT-INDEX-NULL-ON-AI-PATH",
       "recorded_at": "2026-10-10T17:05:05.026671200+00:00"
     },
     "BT24-102#security#0": {

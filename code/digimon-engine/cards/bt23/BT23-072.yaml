@@ -64,10 +64,13 @@ effects:
           keyword: Blocker
           expiry: end_of_opponents_turn
 
+  # [Breeding]: specifies the breeding area, so it triggers only while the
+  # carrier is there (CR 4.3 §3-4-7-4; `in_breeding: true` is also what lets
+  # the breeding-area dispatch consider it at all).
   - scope: inherited
     when: start_of_your_main_phase
     optional: true
-    active_when: { materials_count_gte: 6 }
+    active_when: { in_breeding: true, materials_count_gte: 6 }
     summary: "[Breeding][Start of Main] Play a King Drasil source free if this Digimon has 6+ sources"
     process:
       - select_materials:

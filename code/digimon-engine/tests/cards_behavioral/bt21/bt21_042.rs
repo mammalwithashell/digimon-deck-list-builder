@@ -718,11 +718,14 @@ fn bt21_042_observer_marcus_play_emits_play_event() {
 
 // ─── SECTION 5 — Behavioral: [Once Per Turn] lockout ─────────────────────────
 
-/// OPT lockout: the observer fires at most once per turn. A SECOND own Marcus
-/// Damon play in the same turn must NOT install a second prompt. After
-/// end_turn the gate clears and a fresh play fires again.
+/// Official Q&A Q1818 / CR 4.3 §15-14-1-4: declining a whole-effect "may"
+/// is choosing not to activate it (DCGO `isOptional` gate), so the
+/// [Once Per Turn] is not used up and the next event the same turn offers it
+/// again (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
+/// After a declined first activation a SECOND own Marcus Damon play in the
+/// same turn is offered again; after end_turn the observer fires again.
 #[test]
-fn bt21_042_observer_once_per_turn_lockout_and_clear() {
+fn bt21_042_observer_declined_is_offered_again_and_fires_next_turn() {
     let mut runner = geogrey_runner_with_decks();
     runner.game.card_data.push(make_rizegrey_lv4("RIZE-A"));
     runner.game.card_data.push(make_rizegrey_lv4("RIZE-B"));
@@ -759,14 +762,21 @@ fn bt21_042_observer_once_per_turn_lockout_and_clear() {
     }
     runner.auto_resolve().ok();
 
-    // Second Marcus Damon play SAME turn → [Once Per Turn] suppresses.
+    // Second Marcus Damon play SAME turn → offered again (the declined
+    // activation did not use the [Once Per Turn]); decline it too.
     let hand_idx = find_hand_index(&runner, 0, "MARCUS-B").expect("MARCUS-B in hand");
     runner.play(0, hand_idx).expect("second Marcus Damon plays");
     runner.game.drain_effect_queue();
-    assert!(
-        runner.pending_selection().is_none(),
-        "[Once Per Turn] must suppress a second observer activation in the same turn"
-    );
+    {
+        let s = runner
+            .pending_selection()
+            .expect("Q1818: the declined observer is offered again the same turn");
+        let player = s.selecting_player;
+        runner
+            .execute_action(player, digimon_engine::action::space::PASS)
+            .expect("decline second activation");
+    }
+    runner.auto_resolve().ok();
 
     // After a full turn cycle the OPT gate clears. Set positive memory before
     // each turn-end and re-enter Main so the memory-swing-back guard in

@@ -109,6 +109,12 @@ pub enum Triage {
     DcgoQuirk,
     /// Not yet decided. Blocks readiness.
     Undetermined,
+    /// The recorded comparison no longer applies: the scenario was
+    /// re-lowered or mis-authored, the prompt shape legitimately changed, or
+    /// our engine now matches DCGO's recorded answer. Read as unmeasured
+    /// (never as adjudicated) until the clause is re-examined; the citation
+    /// carries the one-line reason.
+    Stale,
 }
 
 /// One clause's exam record.
@@ -545,7 +551,7 @@ impl VerdictStore {
         citation: Option<String>,
     ) -> Result<(), String> {
         let citation = citation.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
-        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk) && citation.is_none() {
+        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk | Triage::Stale) && citation.is_none() {
             return Err(format!(
                 "triage {triage:?} for `{clause_id}` needs --citation (rules section, \
                  DCGO file:line, or gap-tracker id)"
@@ -656,7 +662,7 @@ impl VerdictStore {
         citation: Option<String>,
     ) -> Result<(), String> {
         let citation = citation.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
-        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk) && citation.is_none() {
+        if matches!(triage, Triage::OursWrong | Triage::DcgoQuirk | Triage::Stale) && citation.is_none() {
             return Err(format!("triage {triage:?} for `{interaction_id}` needs a citation"));
         }
         let row = self
@@ -668,6 +674,7 @@ impl VerdictStore {
                 Triage::OursWrong => "ours_wrong",
                 Triage::DcgoQuirk => "dcgo_quirk",
                 Triage::Undetermined => "undetermined",
+                Triage::Stale => "stale",
             }
             .into(),
         ));
@@ -1241,7 +1248,7 @@ fn needs_reason(verdict: Verdict) -> bool {
 fn check_triage(triage: &Option<(Triage, Option<String>)>) -> Result<(), String> {
     if let Some((t, c)) = triage {
         let cited = c.as_deref().map(str::trim).filter(|c| !c.is_empty()).is_some();
-        if matches!(t, Triage::OursWrong | Triage::DcgoQuirk) && !cited {
+        if matches!(t, Triage::OursWrong | Triage::DcgoQuirk | Triage::Stale) && !cited {
             return Err(format!("triage {t:?} needs a citation (rules section, DCGO file:line, or qa:<Q>)"));
         }
     }
@@ -1884,6 +1891,23 @@ mod tests {
         assert!(store.set_triage("BT6-060#effect#0", Triage::DcgoQuirk, None).is_err());
         assert!(store.set_triage("BT6-060#effect#0", Triage::OursWrong, Some("  ".into())).is_err());
         assert!(store.set_triage("BT6-060#effect#0", Triage::Undetermined, None).is_ok());
+    }
+
+    #[test]
+    fn stale_triage_round_trips_and_needs_a_reason() {
+        let mut store = VerdictStore::default();
+        store.record(diverged_row("BT6-060"));
+        assert!(store.set_triage("BT6-060#effect#0", Triage::Stale, None).is_err());
+        store
+            .set_triage("BT6-060#effect#0", Triage::Stale, Some("scenario re-lowered".into()))
+            .unwrap();
+        let json = store.to_json().unwrap();
+        assert!(json.contains("\"triage\": \"stale\""), "got: {json}");
+        let row: ClauseVerdict = serde_json::from_value(
+            serde_json::from_str::<serde_json::Value>(&json).unwrap()["clauses"]["BT6-060#effect#0"].clone(),
+        )
+        .unwrap();
+        assert_eq!(row.triage, Some(Triage::Stale));
     }
 
     #[test]

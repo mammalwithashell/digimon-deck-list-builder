@@ -72,6 +72,9 @@ impl CardEffect for Bt20_083BreedingFanoutWitness {
         vec![Effect::inherited(card)
             .name("BT20-083 breeding security removed witness")
             .timing(EffectTiming::OnOwnSecurityRemoved)
+            // A `[Breeding]` effect (CR 4.3 §3-4-7-4): only those are
+            // considered by the breeding-area dispatch.
+            .breeding_zone()
             .process(move |ctx| {
                 seen.lock().unwrap().push((
                     ctx.event_affected_player(),
@@ -475,5 +478,40 @@ fn bt20_083_inherited_breeding_security_removed_suspends_carrier_and_plays_omeka
                 && perm.top_card().card_name(&runner.game.card_data) == "Omekamon"
         }),
         "selected Omekamon source is played for free"
+    );
+}
+
+/// The inherited effect is printed "[Breeding] [Opponent's Turn] ...": it
+/// specifies the breeding area, so it is an effect of a breeding-area
+/// Digimon only. Under a battle-area Digimon it does not trigger (CR 4.3
+/// §3-4-7-4; G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE).
+#[test]
+fn bt20_083_inherited_breeding_effect_does_not_trigger_from_the_battle_area() {
+    let mut attacker = make_test_card("BT20-083-ATTACKER", "BT20-083 attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.level = Some(5);
+    attacker.dp = Some(9000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-083")
+        .expect("BT20-083 YAML loads")
+        .add_card(attacker)
+        .add_card(make_test_card("BT20-083-CARRIER", "Battle carrier"))
+        .add_card(make_test_card("BT20-083-SEC", "Security card"))
+        .add_card(make_test_card("BT20-083-FILL", "Filler"))
+        .security(1, &["BT20-083-SEC", "BT20-083-SEC"])
+        .deck(0, &["BT20-083-FILL"; 10])
+        .deck(1, &["BT20-083-FILL"; 10])
+        .memory(5)
+        .start();
+
+    let attacker = runner.place_on_field(0, "BT20-083-ATTACKER", Some(0));
+    runner.place_stack(1, &["BT20-083", "BT20-083-CARRIER"]);
+
+    let _ = runner.attack_player(attacker, 1, true);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the [Breeding] inherited effect is not offered from the battle area: {:?}",
+        runner.pending_selection()
     );
 }

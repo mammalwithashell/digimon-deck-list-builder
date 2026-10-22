@@ -64,7 +64,11 @@ impl Game {
                 continue;
             }
             total += 1;
-            let used = permanent.activation_count(source.handle(), slot as u8);
+            // The per-turn counter key: a shared-OPT group (multi-timing or
+            // refund-bearing clauses) counts on `0x80 | clause`, not the slot
+            // (`Game::opt_slot_key`).
+            let key = effect.shared_opt_group.unwrap_or(slot as u8);
+            let used = permanent.activation_count(source.handle(), key);
             if used < effect.max_per_turn {
                 available += 1;
             }

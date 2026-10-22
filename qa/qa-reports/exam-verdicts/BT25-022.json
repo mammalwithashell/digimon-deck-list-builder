@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-10T17:01:13.405327+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "BT25-022#effect#0": {
       "clause_id": "BT25-022#effect#0",
@@ -21,6 +21,8 @@
       "reason": "DIVERGED at step 3 (compared 5 of 6 ours / 5 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-022-effect1",
+      "triage": "dcgo_quirk",
+      "citation": "CR 4.3 §3-1-3-3 + §15-1-2 (one printed 'Add 1 [X] and 1 [Y] card ... to the hand' moves both cards at once); DCGO adds each bucket's pick when its own prompt closes (RevealLibrary.cs:291 per-condition loop, Mode.AddHand). Outcome-neutral: re-diffed 2026-10-21 against the recorded sidecar, the ONLY divergence is p0.hand on the 2nd bucket-pick row, no downstream rows. qa/rules/dcgo_quirks.md Q-REVEAL-BUCKET-ADD-TIMING",
       "recorded_at": "2026-10-10T17:00:47.019439400+00:00"
     },
     "BT25-022#inherited#0": {
@@ -33,6 +35,8 @@
       "reason": "DIVERGED at step 3 (compared 11 of 12 ours / 11 dcgo steps (1 sim-only row(s) with no DCGO prompt))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-022-inherited0",
+      "triage": "dcgo_quirk",
+      "citation": "CR 4.3 §3-1-3-3 + §15-1-2 (one printed 'Add 1 [X] and 1 [Y] card ... to the hand' moves both cards at once); DCGO adds each bucket's pick when its own prompt closes (RevealLibrary.cs:291 per-condition loop, Mode.AddHand). Outcome-neutral: re-diffed 2026-10-21 against the recorded sidecar, the ONLY divergence is p0.hand on the 2nd bucket-pick row, no downstream rows. qa/rules/dcgo_quirks.md Q-REVEAL-BUCKET-ADD-TIMING",
       "recorded_at": "2026-10-10T17:01:13.405327+00:00"
     }
   }

@@ -201,6 +201,32 @@ def tier0_suites() -> list[Suite]:
         ),
         Suite(
             tier=0,
+            name="mechanics_readiness_check",
+            kind="python",
+            command=[PYTHON, "-m", "tools.rules.mechanics_readiness", "--check"],
+            env={"PYTHONPATH": "code"},
+        ),
+        # The lowering-coverage report (qa/impact/lowering_coverage.json): which DSL
+        # constructs the mechanics tests exercise -- the admissibility work queue.
+        Suite(
+            tier=0,
+            name="lowering_coverage_check",
+            kind="python",
+            command=[PYTHON, "-m", "tools.lowering_coverage", "--check"],
+            env={"PYTHONPATH": "code"},
+        ),
+        # No engine wheel needed: the registry is data/card_registry.json, lowering
+        # coverage is tools.lowering_coverage.build() in-process (PyYAML), and the own-
+        # card-test scan reads cards_behavioral/.
+        Suite(
+            tier=0,
+            name="card_admissibility_check",
+            kind="python",
+            command=[PYTHON, "-m", "digimon_gym.agents.card_admissibility", "--check"],
+            env={"PYTHONPATH": "code"},
+        ),
+        Suite(
+            tier=0,
             name="verification_tool_tests",
             kind="python",
             command=[

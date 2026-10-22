@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-10T19:44:53.514012500+00:00",
+  "last_updated": "2026-10-21T15:09:52.979449+00:00",
   "clauses": {
     "BT25-058#effect#0": {
       "clause_id": "BT25-058#effect#0",
@@ -85,6 +85,8 @@
       "reason": "DIVERGED at step 24 (compared 33 of 33 ours / 33 dcgo steps)",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-058-effect3-leave-play",
+      "triage": "ours_wrong",
+      "citation": "G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK (docs/RUST_ENGINE_GAPS.md): after the replayed Callismon's 'You may suspend' is declined, ours skips the 'Then, ... can't unsuspend' lock, so Dracomon unsuspends on T8 (DCGO keeps it suspended). Everything after a 'Then,' still activates when the 'may' part is not done (official Q&A Q1643; DCGO BT25_058.cs runs the second pick regardless). Re-diffed 2026-10-21: LEAD at row 24, the lock row",
       "recorded_at": "2026-10-10T17:07:57.149127300+00:00"
     },
     "probe:BT25-058#effect#4:optional_decline": {
@@ -100,6 +102,8 @@
       "reason": "DIVERGED at step 12 (compared 14 of 14 ours / 14 dcgo steps)",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-058-effect4-optional-decline",
+      "triage": "ours_wrong",
+      "citation": "G-CARD-BT25-058-DECLINED-SUSPEND-SKIPS-THEN-LOCK (docs/RUST_ENGINE_GAPS.md): declining 'You may suspend' ends the effect in ours (no lock prompt; the turn passes, row 12) while DCGO still asks the mandatory lock. Q1643: everything after 'Then,' still activates. Re-diffed 2026-10-21: same LEAD",
       "recorded_at": "2026-10-10T17:01:52.547581200+00:00"
     },
     "probe:BT25-058#effect#4:scope:neg": {
@@ -157,6 +161,8 @@
       "reason": "ours contradicts ruling qa:Q6345 (ours vs DCGO: agree); CLEAN (compared 15 of 15 ours / 15 dcgo steps)",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-BT25-058-qa-Q6345",
+      "triage": "stale",
+      "citation": "The expect_ruling block asserts on a PRE-decision row (a row is the state BEFORE its step), so it reads the state before the ruling's action; the recorded Q6345 expectation sat at row 14, before the lock pick, and was removed when the scenario was re-authored (63f7f98a5, 2026-10-10, after this recording). Today ours offers the lock over both opposing Digimon after suspending Biyomon, so a different card can be locked (Q6345), and the line is CLEAN 15/15 vs the recorded sidecar. Encode at row 15 and re-exam",
       "recorded_at": "2026-10-10T19:44:53.514012500+00:00"
     }
   }

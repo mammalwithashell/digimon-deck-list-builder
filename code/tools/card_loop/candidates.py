@@ -94,8 +94,8 @@ TIER_B_MAX_IMPL = 30
 TIER_B_SMALL_IMPL = 10
 TIER_B_MIN_TOP2_SHARE = 0.6
 
-#: The training gate's deny-list (`gauntlet._NOT_READY_DSL_STATUSES`); a test
-#: pins the two together without importing gauntlet (it needs the engine).
+#: The ledger deny-list (`card_admissibility.NOT_READY_LEDGER_STATUSES`, part of
+#: the training gate's `failed_verdict` rule); a test pins the two together.
 NOT_READY_STATUSES = frozenset({"PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"})
 #: Failing verdicts of the legacy hand-written tracker, consulted only for a
 #: card the DSL ledger does not list.

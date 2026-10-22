@@ -29,17 +29,26 @@ const COMMON: &[&str] = &[
 ];
 
 /// Chapter 3 areas: a Tamer, the cards stashed face-down under it, and the
-/// Options that move one to another area (`ch03_areas.rs`).
+/// Options that move one to another area, plus the §3-4-7 breeding-area
+/// cards (`ch03_areas.rs`).
 const CH03: &[&str] = &[
     include_str!("ch03/AREA_EGG.yaml"),
     include_str!("ch03/AREA_LV3.yaml"),
     include_str!("ch03/AREA_LV4.yaml"),
     include_str!("ch03/AREA_TAMER.yaml"),
+    include_str!("ch03/BRD_AURA_LV3.yaml"),
+    include_str!("ch03/BRD_AURA_SCOPED_LV3.yaml"),
+    include_str!("ch03/BRD_OBS_EGG.yaml"),
+    include_str!("ch03/BRD_OBS_LV3.yaml"),
+    include_str!("ch03/BRD_SCOPED_EGG.yaml"),
+    include_str!("ch03/MAIN_IF_DIGIMON_MEM.yaml"),
     include_str!("ch03/MAIN_SRC_TO_HAND.yaml"),
     include_str!("ch03/MAIN_SRC_TO_DECK.yaml"),
     include_str!("ch03/MAIN_SRC_TO_SECURITY.yaml"),
     include_str!("ch03/MAIN_SOURCELESS_TO_SECURITY.yaml"),
     include_str!("ch03/MAIN_TRASH_UNDER.yaml"),
+    include_str!("ch03/OPT_SEC_MEM.yaml"),
+    include_str!("ch03/START_IF_OPP_DIGIMON_MEM.yaml"),
 ];
 
 /// §11-14 "Attacking", "Blocking", "Security Checks", "Battles" chapter
@@ -208,6 +217,14 @@ const CH15_15: &[&str] = &[
     include_str!("ch15_15/TAMER_MINUS_3K.yaml"),
     include_str!("ch15_15/TAMER_PROGRESS_SEC4.yaml"),
     include_str!("ch15_15/TOKEN_OD_MINUS_3K.yaml"),
+];
+
+/// §15-14 effect icon cards (`ch15_14_effect_icons.rs`).
+const CH15_14: &[&str] = &[
+    include_str!("ch15_14/SEC_COST_DEL.yaml"),
+    include_str!("ch15_14/SEC_MAY_DEL.yaml"),
+    include_str!("ch15_14/SEC_THEN_MAY.yaml"),
+    include_str!("ch15_14/SECZONE_MAY_DEL.yaml"),
 ];
 
 /// §16-42..§16-47 Ver. 4.x keyword cards, with the §4-6 DUAL, §4-19
@@ -433,6 +450,11 @@ pub fn ch15_15_cards() -> &'static [&'static str] {
     CH15_15
 }
 
+/// Every `ch15_14/` card's YAML source.
+pub fn ch15_14_cards() -> &'static [&'static str] {
+    CH15_14
+}
+
 /// Every `ch16_new/` card's YAML source.
 pub fn ch16_new_cards() -> &'static [&'static str] {
     CH16_NEW
@@ -502,6 +524,7 @@ fn every_fixture_file_is_listed() {
         ("ch15_04", CH15_04.len()),
         ("ch15_07", CH15_07.len()),
         ("ch15_08", CH15_08.len()),
+        ("ch15_14", CH15_14.len()),
         ("ch15_15", CH15_15.len()),
         ("ch16_new", CH16_NEW.len()),
         ("ch16_repl", CH16_REPL.len()),

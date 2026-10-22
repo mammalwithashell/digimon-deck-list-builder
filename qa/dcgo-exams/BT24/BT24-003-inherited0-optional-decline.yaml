@@ -11,19 +11,21 @@
 # evolve into the remaining Aegiomon for 2 - 1 = 1 memory. Decline its WD.
 # No attack occurs, so neither Barrier nor Elecmon's inherited effect fires.
 #
-# Probe observations (sim-only, NOT oracle confirmation):
-# Before step 7: Hand optional=true, two BT24-034 candidates, memory 4,
-# security 4, BT25-030 over BT24-003. Step 7 explicitly declines this prompt.
-# Before step 11: our engine has NO pending prompt and has advanced to turn 4,
-# memory -1, security 3, with Elecmon unchanged and BT24-034 still in hand.
-# Steps 11/12/13 intentionally remain ordinary shared selections: the adapter
-# tolerates them as no-live-prompt rows, but DCGO must answer the renewed
-# Tsunomon OptionalSkill, hand pick, then Aegiomon's WD OptionalSkill.
-# The second acceptance uses EXPLICIT gate + pick rows because no live sim
-# prompt exists from which the adapter could infer its optional-gate fold.
+# Adjudicated (official Q&A Q1818, CR 4.3 §15-14-1-4) and fixed in a396076fd
+# (G-CARD-BT24-003-DECLINED-OPT-NOT-REFUNDED): declining the "may" does not
+# use up the [Once Per Turn], so the second removal (step 11) re-offers
+# Tsunomon in our engine as in DCGO. Before the fix our engine had no prompt
+# there and passed to turn 4.
+# Step 7 (0-indexed) folds DCGO's OptionalSkill gate into our live Hand pick
+# (two BT24-034 candidates) and declines it. Step 11 is the renewed
+# acceptance as ONE folded row (expect OptionalSkill over our live Hand pick):
+# the emitter splits it into DCGO's OptionalSkill(yes) + the hand-pick wire
+# row, the same decision sequence the two explicit rows of the first
+# authoring sent. Lost in the fold: the pick row is emitted with no
+# `expect_prompt`, so DCGO no longer asserts `SelectHandEffect` on it.
+# The next row declines Aegiomon's WD OptionalSkill.
 # Expected oracle witness after those answers: evolved carrier, extra draw,
-# memory -2 instead of -1. This is a suspected decline/OPT divergence, not
-# an adjudicated engine defect. Leave assertions for oracle backfill.
+# memory -2. Leave assertions for oracle backfill.
 card: BT24-003
 clause: BT24-003#inherited#0
 covers: [BT24-003#inherited#0, BT25-030#effect#0, BT25-030#effect#1, BT24-034#effect#0, BT24-034#effect#2]
@@ -76,11 +78,8 @@ steps:
     do: { select: { decline: true } }
     expect: { prompt: SelectHandEffect }
   - actor: 0
-    do: { select: { yes: true } }
-    expect: { prompt: OptionalSkill }
-  - actor: 0
     do: { select: { cards: [BT24-034] } }
-    expect: { prompt: SelectHandEffect }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: OptionalSkill }

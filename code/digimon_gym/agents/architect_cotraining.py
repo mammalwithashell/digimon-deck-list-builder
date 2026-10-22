@@ -56,8 +56,11 @@ _SOURCE_PREFERENCE = {
 def _resolve_base_deck(archetype_name: str) -> List[str]:
     """Find the best decklist for the given archetype from deck_library.
 
-    Prefers decklists from higher-quality sources (digilab > digimonmeta > egman).
+    Prefers decklists from higher-quality sources (digilab > digimonmeta > egman),
+    among the decklists admissible under the training gate (`architect_admission`).
     """
+    from digimon_gym.agents.architect_admission import first_admissible_decklist
+
     if not _DECK_LIBRARY_PATH.exists():
         raise FileNotFoundError(
             f"deck_library.json not found at {_DECK_LIBRARY_PATH}"
@@ -76,15 +79,9 @@ def _resolve_base_deck(archetype_name: str) -> List[str]:
         reverse=True,
     )
 
-    for entry in decklists:
-        raw = entry.get("decklist")
-        if not raw:
-            continue
-        deck = json.loads(raw) if isinstance(raw, str) else raw
-        if deck:
-            return deck
-
-    raise ValueError(f"No valid decklists for archetype: {archetype_name}")
+    # Training gate (rule 34): the best ADMISSIBLE decklist; a list holding a
+    # non-admissible card is skipped (final review I5).
+    return first_admissible_decklist(decklists, label=f"archetype {archetype_name!r}")
 
 
 def _build_default_meta_config() -> dict:
@@ -148,6 +145,13 @@ class CoTrainer:
             output_dir: Root directory for co-training artifacts.
             extra_cards: Additional card IDs for the architect candidate pool.
         """
+        # Training gate (rule 34; final review I5): the pilot is retrained on
+        # this deck, so it must be admissible like any training deck.
+        from digimon_gym.agents.architect_admission import card_admissibility, require_training_gate
+        from digimon_gym.agents.gauntlet import validate_admissible_deck
+
+        require_training_gate()
+        validate_admissible_deck(list(base_deck), card_admissibility(), label=f"co-training base deck {archetype_name!r}")
         self.archetype_name = archetype_name
         self.base_deck = list(base_deck)
         self.meta_config = meta_config
@@ -354,6 +358,7 @@ class CoTrainer:
             pilot_policy_path=pilot_path,
             output_dir=str(architect_dir),
             extra_cards=self.extra_cards,
+            training_gate=True,  # rule 34: co-training trains
         )
 
         metadata = optimizer.train(
@@ -528,6 +533,13 @@ class ArchitectGauntlet:
             base_deck = cfg.get("base_deck")
             if base_deck is None:
                 base_deck = _resolve_base_deck(name)
+            else:
+                # An explicit base deck passes the same training gate (rule 34).
+                from digimon_gym.agents.architect_admission import card_admissibility, require_training_gate
+                from digimon_gym.agents.gauntlet import validate_admissible_deck
+
+                require_training_gate()
+                validate_admissible_deck(list(base_deck), card_admissibility(), label=f"base deck {name!r}")
             self._archetypes[name] = {
                 "base_deck": list(base_deck),
                 "current_deck": list(base_deck),

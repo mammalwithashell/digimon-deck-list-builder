@@ -106,7 +106,7 @@ fn place_gigimon_as_source(
 
 /// Gigimon (BT21-001) has exactly one triggered clause,
 /// which is Inherited, fires on OnOpponentSecurityRemoved,
-/// is OPT, and is not optional at the clause level.
+/// is OPT, and is optional at the clause level (the whole effect is a "may").
 #[test]
 fn bt21_001_has_exactly_one_inherited_triggered_clause() {
     let runner = DebugRunner::builder()
@@ -172,10 +172,11 @@ fn bt21_001_inherited_clause_scope_timing_opt_flags() {
         clause.once_per_turn,
         "BT21-001's inherited clause must be once_per_turn (OPT)"
     );
-    // The clause itself is NOT optional at the clause level —
-    // the optional behaviour is inside the process (the permanent-select step is optional).
-    // DCGO: CanActivateCondition always fires when conditions met; the *selection* itself
-    // has canNoSelect = true (player may decline the permanent pick).
+    // The whole effect is one "may": DCGO BT21_001.cs `SetUpActivateClass(..,
+    // 1, true, ..)` (`isOptional`). The clause is `optional: true` with the
+    // "may" folded into the permanent pick, so passing it keeps the
+    // [Once Per Turn] (Q1818; G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
+    assert!(clause.optional, "\"may digivolve\" covers the whole effect");
 }
 
 // ─── Section 2: Condition gating ────────────────────────────────────────────
@@ -375,9 +376,11 @@ fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1()
 
 // ─── Section 5: OPT lockout ─────────────────────────────────────────────────
 
-/// Second security removal in same turn must not install a selection.
+/// Official Q&A Q1818 / CR 4.3 §15-14-1-4: passing the "may" is choosing not
+/// to activate the effect, so a second security removal the same turn
+/// offers it again.
 #[test]
-fn bt21_001_opt_blocks_second_trigger_same_turn() {
+fn bt21_001_declined_trigger_is_offered_again_same_turn_q1818() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-001")
         .expect("BT21-001 in embedded DSL pack")
@@ -405,15 +408,18 @@ fn bt21_001_opt_blocks_second_trigger_same_turn() {
         return;
     }
 
-    // Second security removal in same turn — OPT must be locked out.
+    // Second security removal in the same turn: the declined effect never
+    // used its [Once Per Turn], so it is offered again. (Unsuspend the
+    // carrier so the second attack is legal.)
     let carrier2 = runner.perm_handle(0, 0);
+    runner.game.players[0].battle_area[carrier2.index as usize].is_suspended = false;
+    let sec_before = runner.security_count(1);
     runner.attack_player(carrier2, 1, false);
-    let _ = runner.auto_resolve();
+    assert_eq!(runner.security_count(1), sec_before - 1, "the second attack removed security");
 
-    // No selection should be installed for the second trigger.
     assert!(
-        runner.pending_selection().is_none(),
-        "OPT must prevent second inherited trigger in the same turn"
+        runner.pending_selection().is_some(),
+        "Q1818: a declined [Once Per Turn] 'may' effect is offered again the same turn"
     );
 }
 
@@ -463,5 +469,47 @@ fn bt21_001_opt_resets_after_end_turn() {
     assert!(
         runner.pending_selection().is_some(),
         "OPT must reset after end_turn; inherited should fire again on P0's next turn"
+    );
+}
+
+// ─── Section 6: breeding area (CR 4.3 §3-4-7-4) ─────────────────────────────
+
+/// Gigimon under a Digimon in P0's BREEDING area: the inherited effect has no
+/// breeding-area reference, so a security removal on P0's turn offers nothing
+/// (CR 4.3 §3-4-7-4 / §3-4-7-6; DCGO `BT21_001.cs` `CanUseCondition` /
+/// `CanActivateCondition` require `IsExistOnBattleAreaDigimon(card)`).
+/// G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE: the breeding fan-out
+/// used to enqueue it (replay goldens 001 / 002 / 008).
+#[test]
+fn bt21_001_under_a_breeding_area_digimon_does_not_trigger() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-001")
+        .expect("BT21-001 in embedded DSL pack")
+        .add_card(make_filler("CARRIER"))
+        .add_card(make_filler("ATTACKER"))
+        .add_card(make_non_digimon_security_filler("SEC-P1"))
+        .add_card(make_reptile("REPTILE-HAND"))
+        .security(1, &["SEC-P1", "SEC-P1"])
+        .hand(0, &["REPTILE-HAND"])
+        .deck(0, &["CARRIER"; 4])
+        .deck(1, &["CARRIER"; 4])
+        .memory(10)
+        .start();
+
+    // Gigimon under CARRIER in P0's breeding area.
+    let breeding = runner.place_stack(0, &["BT21-001", "CARRIER"]);
+    let perm = runner.game.players[0]
+        .battle_area
+        .remove(breeding.index as usize);
+    runner.game.players[0].breeding_area = Some(perm);
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+
+    runner.attack_player(attacker, 1, false);
+
+    assert_eq!(runner.security_count(1), 1, "one security card removed");
+    assert!(
+        runner.pending_selection().is_none(),
+        "BT21-001 in the breeding area must not trigger: {:?}",
+        runner.pending_selection()
     );
 }

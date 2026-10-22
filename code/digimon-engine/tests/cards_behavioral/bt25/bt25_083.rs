@@ -884,6 +884,132 @@ fn bt25_083_q6395_trashes_dual_bt25_085_from_digivolution_cards_then_uses_it() {
     );
 }
 
+/// Drive LadyDevimon's [When Attacking] cost: trash P-180 Bind Red Trigger
+/// from its digivolution cards, then either use P-180 from the trash
+/// (`use_it`) or decline the use. Afterwards answer every remaining prompt
+/// (decline optional ones, take the only pick of mandatory ones) and report
+/// whether P-180's "When effects trash this card from digivolution cards,
+/// delete 1 of your opponent's 7000 DP or lower Digimon" asked its target.
+fn q6396_line(use_it: bool) -> (DebugRunner, bool) {
+    let mut runner = base()
+        .dsl_card("P-180")
+        .expect("P-180 YAML parses and compiles")
+        .security(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .memory(10)
+        .start();
+    let ladydevimon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.push_source(ladydevimon, "P-180");
+    // A [Three Musketeers] Digimon: P-180's [Main] places the used card as
+    // its bottom digivolution card (and lets P-180 ignore its colour).
+    runner.place_on_field(0, "TM-TRAIT-CARD", Some(0));
+    // A 5000 DP opponent Digimon: a legal target of P-180's trigger.
+    runner.place_on_field(1, "PLAIN-FIELD", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
+    runner.game.drain_effect_queue();
+    if matches!(runner.pending_kind(), Some(SelectionKind::Replacement)) {
+        runner
+            .accept_optional_trigger()
+            .expect("accept the [When Attacking] effect");
+    }
+    let sel = runner.pending_selection().expect("the cost's material pick");
+    assert_eq!(sel.valid_action_ids.len(), 1, "P-180 is the only Option source: {sel:?}");
+    let cost_act = sel.valid_action_ids[0];
+    runner.execute_action(0, cost_act).expect("trash P-180 from the digivolution cards");
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Trash), "the use pick");
+    if use_it {
+        let use_act = runner
+            .pending_selection()
+            .unwrap()
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .expect("P-180 can be used from the trash");
+        runner.execute_action(0, use_act).expect("use P-180 from the trash");
+    } else {
+        runner.execute_action(0, PASS).expect("decline the use");
+    }
+
+    let mut trigger_asked = false;
+    for _ in 0..12 {
+        let Some(sel) = runner.pending_selection() else {
+            break;
+        };
+        if sel.kind == SelectionKind::OppField && sel.prompt.contains("7000 DP") {
+            trigger_asked = true;
+            break;
+        }
+        if sel.is_optional {
+            runner.decline_optional_trigger().expect("decline an optional prompt");
+        } else {
+            let act = sel.valid_action_ids[0];
+            runner.execute_action(0, act).expect("take the first pick");
+        }
+    }
+    (runner, trigger_asked)
+}
+
+/// Official Q&A Q6396 (2026-06-19): after this card's [When Digivolving]
+/// [When Attacking] effect trashes an Option card from digivolution cards and
+/// then uses it, the used Option's "when this card is trashed from
+/// digivolution cards" effect can't activate: "A used Option card is treated
+/// as not being in any area until its [Main] effect has been resolved ...
+/// it will be considered to be placed in a different area, therefore the
+/// effect can't activate." CR 4.3 §3-1-3-1-1 (a moved card is a new card) and
+/// §15-4-4-3 (a card with a pending effect that becomes a new card before the
+/// effect activates can no longer activate it). P-180's trigger pends while
+/// LadyDevimon's effect resolves (§15-8-3-2); by then P-180 was used and
+/// placed under the [Three Musketeers] Digimon, so it never asks its target.
+#[test]
+fn bt25_083_q6396_used_option_does_not_fire_its_trashed_from_sources_trigger() {
+    let (runner, trigger_asked) = q6396_line(true);
+    let tm_host = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "TM-TRAIT-CARD")
+        .expect("the [Three Musketeers] Digimon is on the field");
+    assert!(
+        tm_host
+            .card_sources
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "P-180"),
+        "P-180's [Main] placed it under the [Three Musketeers] Digimon"
+    );
+    assert!(
+        !trigger_asked,
+        "Q6396: the used P-180 is a new card, so its trashed-from-digivolution-cards effect can't activate"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area.len(),
+        1,
+        "the opponent's 5000 DP Digimon is not deleted"
+    );
+}
+
+/// Control for Q6396: when the trashed P-180 is NOT used it is still in the
+/// trash once LadyDevimon's effect has resolved, so its trigger activates and
+/// asks for an opponent's 7000 DP or lower Digimon.
+#[test]
+fn bt25_083_q6396_control_unused_trashed_option_fires_its_trigger() {
+    let (runner, trigger_asked) = q6396_line(false);
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "P-180"),
+        "the unused P-180 stays in the trash"
+    );
+    assert!(
+        trigger_asked,
+        "P-180 trashed from digivolution cards by an effect and still in the trash fires its trigger"
+    );
+}
+
 // ─── Section 4 — Behavior: inherited [On Deletion] play lv<=4 TM-text Digimon free ─
 //
 // Per rule 25 / effect_queue.rs's `inherited_sources` dispatch, a card's

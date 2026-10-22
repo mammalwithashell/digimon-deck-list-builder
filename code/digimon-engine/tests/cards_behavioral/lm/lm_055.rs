@@ -772,3 +772,80 @@ fn lm_055_delay_cloned_hand_choice_can_decline_after_selecting_base() {
         "AUDIT-EVO"
     );
 }
+
+// ─────── Task 7 re-audit (2026-10-21): printed BT20 route choice ───────
+//
+// The LM-055 extension of G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE observed the
+// real Delay auto-paying 1 for routes costing 3 or 4. Real pair from the
+// Examon deck: Wingdramon (BT20-025, blue/red — red qualifies) on Coredramon
+// (BT20-023): named route 3 and level-4 colour routes 4, reduced by 2 → the
+// player chooses between paying 1 and 2 (duplicate colour routes collapse).
+#[test]
+fn lm_055_real_delay_wingdramon_on_coredramon_offers_reduced_1_and_2() {
+    use digimon_engine::action::build_action_mask;
+    use digimon_engine::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
+        PLAY_HAND_START,
+    };
+    use digimon_engine::selection::SelectionKind;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .unwrap()
+        .dsl_card("BT20-023")
+        .expect("Coredramon YAML")
+        .dsl_card("BT20-025")
+        .expect("Wingdramon YAML")
+        .add_card(filler("AUDIT-FILL"))
+        .hand(0, &["LM-055", "BT20-025"])
+        .deck(0, &["AUDIT-FILL"; 12])
+        .deck(1, &["AUDIT-FILL"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    r.auto_resolve().unwrap();
+    r.place_on_field(0, "BT20-023", Some(0));
+    let index = r.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == "LM-055")
+        .expect("LM-055 placed by its own [Main]");
+    let bit =
+        FIELD_EFFECT_START + index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN;
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.game.set_memory(5);
+    assert_eq!(build_action_mask(&r.game, 0)[bit as usize], 1.0);
+    r.game.decode_action(bit, 0);
+    for kind in [SelectionKind::OwnField, SelectionKind::Hand] {
+        assert_eq!(r.pending_kind(), Some(kind));
+        let v = r.pending_selection_view().unwrap();
+        let pick = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+        assert_eq!(build_action_mask(&r.game, 0)[pick as usize], 1.0);
+        r.execute_action(0, pick).unwrap();
+    }
+    let routes = r
+        .pending_selection_view()
+        .expect("named 3 and colour 4 routes stay a player choice, not an auto-paid 1");
+    assert!(!routes.is_optional);
+    assert_eq!(routes.valid_action_ids.len(), 2);
+    let saved = r.game.clone();
+    let mut memories = Vec::new();
+    for a in routes.valid_action_ids.clone() {
+        r.game = saved.clone();
+        assert_eq!(build_action_mask(&r.game, 0)[a as usize], 1.0);
+        r.execute_action(0, a).unwrap();
+        r.auto_resolve().unwrap();
+        assert!(r.game.players[0].battle_area.iter().any(|p| p
+            .top_card()
+            .card_id(&r.game.card_data)
+            == "BT20-025"
+            && p.stack_size() == 2));
+        memories.push(r.memory());
+    }
+    memories.sort();
+    assert_eq!(memories, vec![3, 4], "pay 4-2=2 or 3-2=1 from 5 memory");
+}

@@ -175,6 +175,14 @@ are `ours_wrong` (§15-8-3-2).
 
 ### 4.7 Readiness artifact and the training gate (default ON)
 
+> **Status (2026-10-21): superseded as a gate.** Training admission is now the two-layer
+> mechanics gate (`data/mechanics_readiness.json` + the light per-card
+> `data/card_admissibility.json`), specified in §5b of
+> `2026-10-15-engine-rules-conformance-validation-design.md`. This section remains the
+> definition of the oracle-readiness **report** (`data/oracle_readiness.json`), which the
+> gauntlet reads only under `pilot_training --legacy-clause-gate`. The "default ON" /
+> "no override" statements below describe the retired gate.
+
 **Generator:** `PYTHONPATH=code python -m tools.clause_coverage.readiness` writes
 `data/oracle_readiness.json`, with `--check` for CI drift (mirrors
 `code/tools/build_tested_cards.py`). Per card:
