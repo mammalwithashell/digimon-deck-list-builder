@@ -1,3 +1,4 @@
+mod ex4_002;
 mod ex4_003;
 mod ex4_005;
 mod ex4_006;

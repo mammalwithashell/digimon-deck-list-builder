@@ -83194,7 +83194,11 @@
     },
     "P-250": {
       "blocking": [
-        "P-250#security#0",
+        "P-250#effect#0",
+        "P-250#effect#1",
+        "P-250#effect#2",
+        "P-250#effect#3",
+        "P-250#inherited#0",
         "P-250#denominator#missing"
       ],
       "by_interaction_verdict": {
@@ -83208,11 +83212,11 @@
         "confirmed": 0,
         "diverged": 0,
         "unavailable": 0,
-        "unmeasured": 1,
+        "unmeasured": 5,
         "unreachable": 0
       },
       "status": "not_ready",
-      "total_clauses": 1,
+      "total_clauses": 5,
       "total_interactions": 0
     },
     "RB1-001": {

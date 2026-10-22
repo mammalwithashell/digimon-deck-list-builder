@@ -1,0 +1,200 @@
+# BT26-097 The Thunder Emperor Awakens — Option, Yellow, use cost 2. Traits: TS.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-097.md):
+#   Add 1 to this card's use cost for each of your security cards.
+#   [Main] By placing 1 of your Tamers with [Dan Yuki] or [Kanan Yuki] in their
+#     names as any of your [Aegiomon]'s bottom digivolution card, it may
+#     digivolve into [Jupitermon] in the hand or trash, ignoring digivolution
+#     requirements and without paying the cost. After, you may place 1 card
+#     with [Aegiochusmon] in its name in your trash as any of your
+#     [Jupitermon]'s top digivolution card.
+#   Security Effect:
+#   [Security] You may play 1 play cost 5 or lower [TS] trait card from your
+#     hand without paying the cost. Then, add this card to the hand.
+#   Official Q&A: the use-cost increase is always active; the card is
+#     referenced as an Option with the increased cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Yellow/BT26_097.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Use cost (EffectTiming.None, ChangeCostClass): +Owner.SecurityCards.Count on
+#   this card's own cost. → `kind: use_cost_increase` (BT26-033 Option-face
+#   idiom; read live by Game::option_use_cost at affordability and payment).
+# [Main] (OptionSkill): only when an own Tamer whose top card's name contains
+#   [Dan Yuki] / [Kanan Yuki] AND an own [Aegiomon] (exact name) both exist:
+#   canNoSelect Tamer pick → canNoSelect [Aegiomon] pick → the Tamer goes
+#   under the [Aegiomon] as its bottom digivolution card
+#   (AddDigivolutionCardsBottom). Then, if a [Jupitermon] (exact name) is in
+#   hand and/or trash: a hand / trash / "Don't digivolve" choice →
+#   DigivolveIntoHandOrTrashCard(payCost: false, IgnoreRequirement.All).
+#   Then (independently of the digivolve) if an own [Jupitermon] permanent and
+#   an [Aegiochusmon]-named card in trash both exist: canNoSelect trash pick →
+#   canNoSelect [Jupitermon] pick → AddDigivolutionCardsTop.
+#   → Rules §15-7-1/§15-7-2: "By placing ..." is an optional processing
+#   condition; when it is not executed, neither the digivolve nor the "After"
+#   part runs — hence everything nests under the Tamer + [Aegiomon] picks.
+#   §15-7-4: with no legal Tamer or no [Aegiomon], the cost cannot be chosen
+#   (the gate below — no prompt is shown).
+#   → optional select_own_permanent ×2 + place_as_bottom_source (permanent
+#   source: CR 4.3 §4-7-7, the Tamer leaves the battle area, so its
+#   would-leave replacements — BT24-101 / BT26-033 "[TS] ... Tamers ... don't
+#   leave" — get a window; `bind_placed_as` binds only on a real placement and
+#   gates the rest, §15-7-2 + Q7170 — DCGO runs the rest unconditionally, the
+#   official ruling governs); optional select_union_zone { hand, trash } + effect_initiated_
+#   digivolve { cost: free, ignore_requirements } (EX11-046 / BT26-098 idiom);
+#   optional select_trash + optional select_own_permanent + place_as_top_source
+#   (BT13-088 idiom).
+# [Security] (SecuritySkill): HasPlayCost (not an Option) && cost <= 5 &&
+#   HasTSTraits && playable → PlayByEffect(hand, payCost: false) — the pick is
+#   canNoSelect; then AddThisCardToHand unconditionally.
+#   → optional select_union_zone { hand } over Digimon/Tamer [TS] with play
+#   cost <= 5 (BT26-101 filter) + play_union_bound_free +
+#   add_this_option_to_hand (BT26-098 idiom).
+
+card: BT26-097
+name: "The Thunder Emperor Awakens"
+kind: option
+color: [yellow]
+cost: 2
+traits: [TS]
+
+effects:
+  # ─── Use cost +1 per own security card ──────────────────────────────────────
+  - kind: use_cost_increase
+    amount:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: you
+          zone: security
+      delta: 1
+    summary: "Add 1 to this card's use cost for each of your security cards"
+
+  # ─── [Main] ────────────────────────────────────────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] By placing 1 of your [Dan Yuki]/[Kanan Yuki] Tamers as any of your [Aegiomon]'s bottom digivolution card, it may digivolve into [Jupitermon] in the hand or trash, ignoring requirements and without paying the cost. After, you may place 1 [Aegiochusmon] card from your trash as any of your [Jupitermon]'s top digivolution card"
+    process:
+      # §15-7-4: the optional cost can only be chosen when it can be executed.
+      - if:
+          condition:
+            all_of:
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: tamer
+                  any_of:
+                    - name_contains: "Dan Yuki"
+                    - name_contains: "Kanan Yuki"
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  name_is: "Aegiomon"
+          then:
+            - select_own_permanent:
+                bind_as: tamer
+                optional: true
+                filter:
+                  kind: tamer
+                  any_of:
+                    - name_contains: "Dan Yuki"
+                    - name_contains: "Kanan Yuki"
+                prompt: "You may place 1 of your [Dan Yuki]/[Kanan Yuki] Tamers as an [Aegiomon]'s bottom digivolution card"
+            - if:
+                condition: { binding_present: tamer }
+                then:
+                  - select_own_permanent:
+                      bind_as: aegiomon
+                      optional: true
+                      filter: { name_is: "Aegiomon" }
+                      prompt: "Select 1 of your [Aegiomon] to receive the Tamer as its bottom digivolution card"
+                  - if:
+                      condition: { binding_present: aegiomon }
+                      then:
+                        # CR 4.3 §4-7-7: the Tamer leaves the battle area, so its
+                        # would-leave replacements get a window first (e.g.
+                        # BT24-101 / BT26-033 Jupitermon "[TS] ... Tamers ...
+                        # don't leave"). §15-7-2 + Q7170: only a REAL placement
+                        # lets the digivolve and the "After" part run —
+                        # `bind_placed_as` binds only on success.
+                        - place_as_bottom_source:
+                            source: tamer
+                            target: aegiomon
+                            bind_placed_as: placed_tamer
+                        - if:
+                            condition: { binding_present: placed_tamer }
+                            then:
+                              # "it may digivolve into [Jupitermon] in the hand or trash"
+                              - select_union_zone:
+                                  of: you
+                                  zones: [hand, trash]
+                                  bind_as: jupitermon_card
+                                  optional: true
+                                  filter: { name_is: "Jupitermon" }
+                                  prompt: "That [Aegiomon] may digivolve into [Jupitermon] in your hand or trash, ignoring digivolution requirements and without paying the cost"
+                              - if:
+                                  condition: { binding_present: jupitermon_card }
+                                  then:
+                                    - effect_initiated_digivolve:
+                                        target: aegiomon
+                                        source: jupitermon_card
+                                        cost: free
+                                        ignore_requirements: true
+                              # "After, you may place 1 card with [Aegiochusmon] in its
+                              # name in your trash as any of your [Jupitermon]'s top
+                              # digivolution card." (any [Jupitermon], not only the
+                              # one that just digivolved — DCGO picks freely.)
+                              - if:
+                                  condition:
+                                    all_of:
+                                      - count_gte:
+                                          filter: { of: you, zone: [trash], name_contains: "Aegiochusmon" }
+                                          n: 1
+                                      - any_permanent:
+                                          of: you
+                                          zone: [battle_area]
+                                          name_is: "Jupitermon"
+                                  then:
+                                    - select_trash:
+                                        of: you
+                                        bind_as: aegiochusmon_card
+                                        optional: true
+                                        filter: { name_contains: "Aegiochusmon" }
+                                        prompt: "You may place 1 card with [Aegiochusmon] in its name from your trash as any of your [Jupitermon]'s top digivolution card"
+                                    - if:
+                                        condition: { binding_present: aegiochusmon_card }
+                                        then:
+                                          - select_own_permanent:
+                                              bind_as: jupitermon_host
+                                              optional: true
+                                              filter: { name_is: "Jupitermon" }
+                                              prompt: "Select 1 of your [Jupitermon] to receive the card as its top digivolution card"
+                                          - if:
+                                              condition: { binding_present: jupitermon_host }
+                                              then:
+                                                - place_as_top_source:
+                                                    source: aegiochusmon_card
+                                                    target: jupitermon_host
+
+  # ─── [Security] may play 1 play cost <= 5 [TS] card from hand free; then
+  #     add this card to the hand ──────────────────────────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 play cost 5 or lower [TS] trait card from your hand without paying the cost. Then, add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand]
+          bind_as: freebie
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - trait_has: TS
+              - play_cost_lte: 5
+          prompt: "You may play 1 play cost 5 or lower [TS] trait card from your hand without paying the cost"
+      # No-op when the pick is declined (PASS leaves `freebie` unbound).
+      - play_union_bound_free: { binding: freebie }
+      # "Then, add this card to the hand." — mandatory, runs either way.
+      - add_this_option_to_hand: {}

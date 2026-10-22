@@ -1,0 +1,104 @@
+# BT26-095 Makoto Kuonji — Tamer, Purple, Cost 3. Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT26-095.md):
+#   [Start of Your Main Phase] By placing 1 [BEATBREAK] trait card from your
+#     hand face down under this Tamer, <Draw 1> and gain 1 memory.
+#   [All Turns] When any Digimon are deleted, by suspending this Tamer,
+#     <Draw 1> and trash 1 card in your hand. After, place 1 [BEATBREAK] trait
+#     non-Digi-Egg card from your trash face down under this Tamer.
+#   [Security] Play this card without paying the cost.
+#   Official Q&A: the card is placed on the bottom of the cards under the Tamer.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT26/Purple/BT26_095.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# SOMP (OnStartMainPhase, not optional, skippable): IsOwnerTurn; CanActivate
+#   requires an EqualsTraits("BEATBREAK") hand card. canNoSelect:true hand pick
+#   → AddDigivolutionCardsBottom(face down) → Draw 1 → AddMemory 1 (only if a
+#   card was picked). → BT26-089 Kyo idiom: count_gte condition + optional
+#   select_hand + place_selected_card_under_tamer face_down + draw + memory.
+# Deletion observer (OnDestroyedAnyone, optional TRUE): CanTriggerOnPermanent
+#   Deleted over `permanent.IsDigimon` (either player's; a token is a Digimon);
+#   CanActivate = CanActivateSuspendCostEffect. Body: suspend self → on success
+#   Draw 1 → if hand >= 1 a MANDATORY (canNoSelect:false) Discard pick → if the
+#   trash holds an EqualsTraits("BEATBREAK") && !IsDigiEgg card, a MANDATORY
+#   (canNoSelect:false) pick → AddDigivolutionCardsBottom(face down).
+#   → on_any_deletion + all_turns + optional + trigger_if event_target_kind
+#   digimon + source_is_unsuspended; activation_cost suspend_self; draw; select
+#   _hand + trash_from_hand_by_index; select_trash + place_as_bottom_source
+#   face down (a no-candidate select_trash binds nothing, so the place no-ops).
+#   §15-5-2: several Digimon deleted at once are one trigger.
+# Security: PlaySelfTamerSecurityEffect → on_security play_from_security.
+
+card: BT26-095
+name: "Makoto Kuonji"
+kind: tamer
+color: [purple]
+cost: 3
+traits: [Glowing Dawn, BEATBREAK]
+
+effects:
+  # ─── [Start of Your Main Phase] place 1 [BEATBREAK] hand card face down
+  #     under this Tamer → <Draw 1> + 1 memory ─────────────────────────────────
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: "BEATBREAK"
+        n: 1
+    summary: "[Start of Your Main Phase] By placing 1 [BEATBREAK] card from your hand face down under this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: { trait_has: "BEATBREAK" }
+          prompt: "Place 1 [BEATBREAK] card from your hand face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── [All Turns] When any Digimon are deleted, by suspending this Tamer,
+  #     <Draw 1> + trash 1 hand card; after, place 1 [BEATBREAK] non-Digi-Egg
+  #     card from the trash face down under this Tamer ─────────────────────────
+  - when: on_any_deletion
+    optional: true
+    active_when: { all_turns: true }
+    trigger_if:
+      event_target_kind: digimon
+    condition: { source_is_unsuspended: true }
+    summary: "[All Turns] When any Digimon are deleted, by suspending this Tamer, <Draw 1> and trash 1 card in your hand. After, place 1 [BEATBREAK] non-Digi-Egg card from your trash face down under this Tamer"
+    process:
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - select_trash:
+          of: you
+          bind_as: stash
+          filter:
+            all_of:
+              - trait_has: "BEATBREAK"
+              - not: { kind: digi_egg }
+          prompt: "Place 1 [BEATBREAK] non-Digi-Egg card from your trash face down under this Tamer"
+      - place_as_bottom_source:
+          source: stash
+          target: source
+          face_down: true
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

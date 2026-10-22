@@ -61,6 +61,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotReturnToHand" => ModifierType::CannotReturnToHand,
         "CannotTrash" => ModifierType::CannotTrash,
         "CannotBlock" => ModifierType::CannotBlock,
+        "CannotBeBlocked" => ModifierType::CannotBeBlocked,
         "CannotCounter" => ModifierType::CannotCounter,
         "DrawBlock" => ModifierType::DrawBlock,
         "MemoryBlock" => ModifierType::MemoryBlock,
@@ -180,6 +181,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotReturnToHand
         | ModifierType::CannotTrash
         | ModifierType::CannotBlock
+        | ModifierType::CannotBeBlocked
         | ModifierType::CannotCounter
         | ModifierType::DrawBlock
         | ModifierType::MemoryBlock
@@ -299,6 +301,7 @@ mod tests {
             ModifierType::CannotReturnToHand,
             ModifierType::CannotTrash,
             ModifierType::CannotBlock,
+            ModifierType::CannotBeBlocked,
             ModifierType::CannotCounter,
             ModifierType::DrawBlock,
             ModifierType::MemoryBlock,
@@ -445,6 +448,14 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         // DSL grant path just needed the string mapping so `grant_keyword:
         // Retaliation` (BT25-078, BT25-081) actually installs it.
         "Retaliation" => Keyword::Retaliation,
+        // Scapegoat — replacement-type keyword (§16-32). A target-set aura
+        // grant lands in `ModifierRegistry::granted_keywords`, which the
+        // WhenWouldBeDeleted candidate scan (`replacement::collect_candidates`,
+        // the `granted_keywords(h)` loop) synthesizes into the keyword's
+        // replacement body on the RECIPIENT — so the grant is behavioral, not
+        // a bare `has_keyword` tag. The DSL only lacked this string mapping
+        // (BT25-097 Guardian Palace; G-DSL-SCAPEGOAT-GRANT-KEYWORD).
+        "Scapegoat" => Keyword::Scapegoat,
         _ => return None,
     })
 }

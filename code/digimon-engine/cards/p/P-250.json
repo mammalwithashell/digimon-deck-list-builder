@@ -1,0 +1,44 @@
+{
+  "index": 4479,
+  "norm_id": 0.22395,
+  "card_id": "P-250",
+  "card_index": 250,
+  "card_name_eng": "Ogremon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_250",
+  "play_cost": 6,
+  "dp": 7000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Demon",
+    "X Antibody"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Trash] [End of Your Turn] If you have 5 or fewer cards in hand, 1 of your [Demon] trait Digimon may digivolve into this card.\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card in your hand, 1 of your [Demon], [Shaman] or [Undead] trait Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.) until your opponent’s turn ends.",
+  "inherited_effect_description_eng": "[On Deletion] Delete 1 of your opponent's Digimon with a play cost of 6 or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    },
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Ogremon]/[Fugamon]/[Hyogamon]: Cost 1"
+}

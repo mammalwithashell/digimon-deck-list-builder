@@ -249,6 +249,7 @@ export const MODIFIER_DISPLAY: Record<string, ModifierDisplay> = {
   CannotAttack: { label: "Can't attack", group: 'Restriction' },
   CannotAttackPlayer: { label: "Can't attack players", group: 'Restriction' },
   CannotBlock: { label: "Can't block", group: 'Restriction' },
+  CannotBeBlocked: { label: "Can't be blocked", group: 'Restriction' },
   CannotCounter: { label: "Can't counter", group: 'Restriction' },
   CannotSuspend: { label: "Can't suspend", group: 'Restriction' },
   CannotUnsuspend: { label: "Can't unsuspend", group: 'Restriction' },

@@ -115,6 +115,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             can_hatch,
             digimon_attacked_this_turn,
             during_attack,
+            can_gain_memory,
             in_breeding,
             on_field,
             dna_origin,
@@ -604,6 +605,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             "UNCLASSIFIED_STRING",
         );
         during_attack.walk(c, &format!("{}.during_attack", path), "UNCLASSIFIED_STRING");
+        can_gain_memory.walk(c, &format!("{}.can_gain_memory", path), "UNCLASSIFIED_STRING");
         in_breeding.walk(c, &format!("{}.in_breeding", path), "UNCLASSIFIED_STRING");
         on_field.walk(c, &format!("{}.on_field", path), "UNCLASSIFIED_STRING");
         dna_origin.walk(c, &format!("{}.dna_origin", path), "UNCLASSIFIED_STRING");
@@ -1734,6 +1736,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             can_hatch,
             digimon_attacked_this_turn,
             during_attack,
+            can_gain_memory,
             in_breeding,
             on_field,
             dna_origin,
@@ -2230,6 +2233,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             "UNCLASSIFIED_STRING",
         );
         during_attack.walk(c, &format!("{}.during_attack", path), "UNCLASSIFIED_STRING");
+        can_gain_memory.walk(c, &format!("{}.can_gain_memory", path), "UNCLASSIFIED_STRING");
         in_breeding.walk(c, &format!("{}.in_breeding", path), "UNCLASSIFIED_STRING");
         on_field.walk(c, &format!("{}.on_field", path), "UNCLASSIFIED_STRING");
         dna_origin.walk(c, &format!("{}.dna_origin", path), "UNCLASSIFIED_STRING");

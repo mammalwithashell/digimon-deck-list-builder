@@ -1,0 +1,49 @@
+# BT6-006 Tsunomon — Digi-Egg, Lv.2, Purple. Trait: Lesser.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT6-006.md; card
+# image agrees):
+#   Inherited: [Your Turn] [Once Per Turn] When you trash a card in your hand
+#     using one of your effects, trigger <Draw 1>. (Draw 1 card from your
+#     deck.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT6/Purple/BT6_006.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+# OnDiscardHand, inherited, maxCountPerTurn 1, optional false. CanUseCondition:
+#   IsExistOnBattleArea(card) && IsOwnerTurn(card) && CanTriggerOnTrashHand(
+#   hashtable, SkillCondition: cardEffect.EffectSourceCard.Owner == card.Owner,
+#   cardCondition: cardSource.Owner == card.Owner).
+#   → `on_discard_hand` + `active_when: your_turn` + `trigger_if`:
+#     `event_discard_player: you` ("a card in YOUR hand") AND
+#     `event_caused_by_own_effect: true` ("using one of YOUR effects") — the
+#     same two gates as ST16-14 Matt Ishida. The engine fires the observer once
+#     per discard batch (G-ENGINE-ON-DISCARD-HAND), and [Once Per Turn] caps it
+#     at one draw per turn either way.
+# ActivateCoroutine: DrawClass(owner, 1) — mandatory <Draw 1>.
+#
+# Implementation status:
+# | Inherited [Your Turn][OPT] own effect trashes own hand → <Draw 1> | IMPLEMENTED |
+
+card: BT6-006
+name: Tsunomon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser]
+
+effects:
+  # ─── Inherited [Your Turn][OPT] when one of your effects trashes a card in
+  #     your hand → <Draw 1> ─────────────────────────────────────────────────
+  - scope: inherited
+    when: on_discard_hand
+    once_per_turn: true
+    active_when:
+      your_turn: true
+    trigger_if:
+      all_of:
+        - event_discard_player: you
+        - event_caused_by_own_effect: true
+    summary: "[Inherited][Your Turn][Once Per Turn] When you trash a card in your hand using one of your effects, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

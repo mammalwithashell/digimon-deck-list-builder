@@ -374,105 +374,55 @@ impl Game {
         self.place_as_top_source_observed(source, target, target.player, face_down)
     }
 
+    /// Place the permanent `source` under `target` as its bottom
+    /// digivolution card. The source permanent leaves the battle area
+    /// (CR 4.3 §4-7-7): only its top card moves; the cards under it and any
+    /// linked cards are trashed at the same time (§4-7-8), as one event
+    /// (§15-5-2).
+    ///
+    /// Routed through the field-top source move
+    /// (`begin_field_top_source_move`, `field_top_source_move.rs`), so the
+    /// donor's `WhenWouldLeaveBattleArea` replacement window opens before it
+    /// is removed (e.g. BT24-101 Jupitermon's "[TS] Digimon or Tamers ...
+    /// don't leave"; an optional replacement parks a prompt and the move
+    /// resumes when it resolves), and the [On Leave] observers see the
+    /// departure with a pre-removal snapshot (`fire_on_leave_field`). DCGO
+    /// `Permanent.AddDigivolutionCardsBottom` → `IPlacePermanentToDigivolutionCards`
+    /// (`willBeRemoveField`, `WhenRemoveField`, `OnLeaveFieldAnyone`,
+    /// `DiscardEvoRoots`). Returns `true` only when the placement completed
+    /// synchronously. G-ENGINE-PLACE-PERMANENT-AS-SOURCE-NO-LEAVE-WINDOW.
     pub fn place_permanent_as_bottom_sources(
         &mut self,
         source: PermanentHandle,
         target: PermanentHandle,
     ) -> bool {
-        self.place_permanent_as_bottom_sources_inner(source, target, None)
-    }
-
-    /// `place_permanent_as_bottom_sources` for an EFFECT-driven placement:
-    /// after the source permanent's whole stack rides under `target`, the
-    /// host's `OnAddDigivolutionCards` batch is noted with `cause` as the
-    /// placing effect (DCGO `IPlacePermanentToDigivolutionCards(..., cardEffect)`
-    /// → `AddDigivolutionCardsBottom(..., _cardEffect)`).
-    /// G-ENGINE-ON-ADD-DIGIVOLUTION-CARDS.
-    pub fn place_permanent_as_bottom_sources_by_effect(
-        &mut self,
-        source: PermanentHandle,
-        target: PermanentHandle,
-        cause: crate::trigger_context::EffectAttribution,
-    ) -> bool {
-        self.place_permanent_as_bottom_sources_inner(source, target, Some(cause))
-    }
-
-    fn place_permanent_as_bottom_sources_inner(
-        &mut self,
-        source: PermanentHandle,
-        target: PermanentHandle,
-        cause: Option<crate::trigger_context::EffectAttribution>,
-    ) -> bool {
-        if self.is_token_source_destination(target) { return false; }
-        if source.index == crate::action::space::BREEDING_TARGET as u8 {
-            return false;
-        }
-        if source == target {
-            return false;
-        }
-        if self
-            .player(source.player)
-            .battle_area
-            .get(source.index as usize)
-            .is_none()
-        {
-            return false;
-        }
-
-        let mut adjusted_target = target;
-        if target.index == crate::action::space::BREEDING_TARGET as u8 {
-            if self.player(target.player).breeding_area.is_none() {
-                return false;
-            }
-        } else {
-            if self
-                .player(target.player)
-                .battle_area
-                .get(target.index as usize)
-                .is_none()
-            {
-                return false;
-            }
-            if source.player == target.player && source.index < target.index {
-                adjusted_target.index = adjusted_target.index.saturating_sub(1);
-            }
-        }
-
-        let removed = self
-            .player_mut(source.player)
-            .battle_area
-            .remove(source.index as usize);
-        let cards = removed.card_sources;
-        let card_handles: Vec<crate::card_source::CardHandle> =
-            cards.iter().map(|c| c.handle()).collect();
-
-        if adjusted_target.index == crate::action::space::BREEDING_TARGET as u8 {
-            let Some(breeding) = self
-                .player_mut(adjusted_target.player)
-                .breeding_area
-                .as_mut()
-            else {
-                return false;
-            };
-            breeding.card_sources.splice(0..0, cards);
-            if let Some(cause) = cause {
-                self.note_effect_added_sources(adjusted_target, card_handles, cause);
-            }
-            return true;
-        }
-
-        let Some(target_perm) = self
-            .player_mut(adjusted_target.player)
-            .battle_area
-            .get_mut(adjusted_target.index as usize)
-        else {
+        let Some(source_ref) = self.field_top_material_ref(source) else {
             return false;
         };
-        target_perm.card_sources.splice(0..0, cards);
-        if let Some(cause) = cause {
-            self.note_effect_added_sources(adjusted_target, card_handles, cause);
+        self.place_as_bottom_source(source_ref, target, false)
+    }
+
+    /// The `CardSourceRef` addressing the TOP card of the battle-area
+    /// permanent `source` — the form every "place this permanent as a
+    /// digivolution card" placement takes, so it routes into the field-top
+    /// source move (`place_as_source_observed`). `None` for the breeding
+    /// area or an empty / missing slot.
+    pub(crate) fn field_top_material_ref(
+        &self,
+        source: PermanentHandle,
+    ) -> Option<crate::enums::CardSourceRef> {
+        if source.index == crate::action::space::BREEDING_TARGET as u8 {
+            return None;
         }
-        true
+        let top = self
+            .players
+            .get(source.player as usize)?
+            .battle_area
+            .get(source.index as usize)?
+            .card_sources
+            .len()
+            .checked_sub(1)?;
+        Some(crate::enums::CardSourceRef::Material(source, top))
     }
 
     /// Return one digivolution source from `perm`'s stack to its owner's deck
@@ -560,5 +510,74 @@ impl Game {
             );
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod place_permanent_as_source_leave_window_tests {
+    //! G-ENGINE-PLACE-PERMANENT-AS-SOURCE-NO-LEAVE-WINDOW: placing a whole
+    //! permanent as a digivolution card is a leave-the-battle-area event
+    //! (CR 4.3 §4-7-7), so the donor's would-leave replacements get a window.
+    use crate::action::space::{PASS, REPLACEMENT_ACCEPT};
+    use crate::card_source::CardHandle;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::effect::{CardEffect, Effect};
+    use crate::permanent::PermanentHandle;
+
+    struct Protect;
+    impl CardEffect for Protect {
+        fn effects(&self, c: CardHandle) -> Vec<Effect> {
+            vec![Effect::when_would_leave_battle_area(c)
+                .optional()
+                .replacement_process(|ctx| ctx.cancel())
+                .build()]
+        }
+    }
+
+    fn parked() -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .add_card(make_test_card("HOST", "Host"))
+            .add_card(make_test_card("DONOR", "Donor"))
+            .deck(0, &["HOST"; 8])
+            .deck(1, &["HOST"; 8])
+            .start();
+        r.register_effect("DONOR", std::sync::Arc::new(Protect));
+        r.skip_mulligan();
+        r.place_on_field(0, "HOST", Some(0));
+        r.place_on_field(0, "DONOR", Some(0));
+        let placed = r.game.place_permanent_as_bottom_sources(
+            PermanentHandle { player: 0, index: 1 },
+            PermanentHandle { player: 0, index: 0 },
+        );
+        assert!(!placed, "the placement parks on the replacement prompt");
+        assert!(r.pending_kind().is_some(), "the would-leave window opened");
+        assert_eq!(r.game.pending_field_top_source_moves.len(), 1);
+        r
+    }
+
+    fn host_ids(r: &DebugRunner) -> Vec<String> {
+        r.game.players[0].battle_area[0]
+            .card_sources
+            .iter()
+            .map(|c| c.card_id(&r.game.card_data).to_string())
+            .collect()
+    }
+
+    #[test]
+    fn accepting_the_replacement_keeps_the_permanent_on_the_field() {
+        let mut r = parked();
+        r.execute_action(0, REPLACEMENT_ACCEPT).unwrap();
+        assert_eq!(r.game.players[0].battle_area.len(), 2, "the donor stays");
+        assert_eq!(host_ids(&r), vec!["HOST"]);
+        assert!(r.game.pending_field_top_source_moves.is_empty());
+    }
+
+    #[test]
+    fn declining_the_replacement_completes_the_placement() {
+        let mut r = parked();
+        r.execute_action(0, PASS).unwrap();
+        assert_eq!(r.game.players[0].battle_area.len(), 1, "the donor left");
+        assert_eq!(host_ids(&r), vec!["DONOR", "HOST"]);
+        assert!(r.game.pending_field_top_source_moves.is_empty());
     }
 }

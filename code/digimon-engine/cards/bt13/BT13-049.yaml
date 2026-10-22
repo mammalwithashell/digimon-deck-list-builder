@@ -1,0 +1,86 @@
+# BT13-049 Lalamon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Vegetation. Form: Rookie. Attribute: Data.
+# Digivolve: green Lv.2 / cost 0 (official DB + image).
+#
+# Printed text (official Bandai DB, data/card_bundles/BT13-049.md; image agrees):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+#   [Vegetation], [Plant], or [Fairy] in one of its traits and 1 [Yoshino
+#   Fujieda] among them to the hand. Place the rest at the bottom of the deck
+#   in any order.
+#   Inherited: [Your Turn][Once Per Turn] When this Digimon would digivolve, if
+#   you have a green Tamer, reduce the digivolution cost by 1.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Green/BT13_049.cs
+#   - On Play (not optional): SimplifiedRevealDeckTopCardsAndSelect(3,
+#     [IsDigimon && (HasPlantTraits || HasFairyTraits) → AddHand max 1,
+#     CardNames contains "Yoshino Fujieda" → AddHand max 1], DeckBottom).
+#   - Inherited: ChangeCostClass -1 (OPT), IsOwnerTurn, own green Tamer, THIS
+#     permanent's digivolution.
+#
+# Modeling:
+#   - On Play — `reveal_top_deck` 3 + `select_reveal_buckets` (BT16-029 shape):
+#     two mandatory buckets (min 1 / max 1, finalize empty when nothing
+#     matches) with `no_duplicate_cards`; "in one of its traits" =
+#     `trait_contains`; "1 [Yoshino Fujieda]" = `name_is` (honors a card's
+#     printed name alias, e.g. ST24-14). The rest go to the bottom via
+#     `place_remainder_on_deck`, which surfaces the ordering prompt.
+#   - Inherited — as BT14-046 / BT14-044.
+
+card: BT13-049
+name: Lalamon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Vegetation]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Vegetation], [Plant], or [Fairy] in one of its traits and 1 [Yoshino Fujieda] among them to the hand. Place the rest at the bottom of the deck in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: plant_pick
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_contains: "Vegetation"
+                      - trait_contains: "Plant"
+                      - trait_contains: "Fairy"
+              min: 1
+              max: 1
+            - bind_as: yoshino_pick
+              filter: { name_is: "Yoshino Fujieda" }
+              min: 1
+              max: 1
+      - add_to_hand_from_reveal: { of: you, card: plant_pick }
+      - add_to_hand_from_reveal: { of: you, card: yoshino_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: cost_reduction
+    scope: inherited
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            color_is: green
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][Once Per Turn] When this Digimon would digivolve, if you have a green Tamer, reduce the digivolution cost by 1"

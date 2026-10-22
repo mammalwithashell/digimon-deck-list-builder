@@ -1,0 +1,82 @@
+# BT6-108 Underworld's Call — Option, Purple, Cost 4.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT6-108.md; card
+# image agrees):
+#   When you trash this card in your hand using one of your effects, trigger
+#     <Draw 1>. (Draw 1 card from your deck.)
+#   [Main] You may play 1 purple level 4 or lower Digimon card from your trash
+#     without paying its memory cost.
+#   [Security] Activate this card's [Main] effect.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT6/Purple/BT6_108.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# OnDiscardHand (not optional, no per-turn cap): CanUse =
+#   CanTriggerOnTrashSelfHand(hashtable, IsOwnerEffect(cardEffect, card), card)
+#   — THIS card was trashed from its owner's hand by an effect of its owner;
+#   CanActivate = IsExistOnTrash && deck >= 1 → DrawClass(owner, 1).
+#   → `scope: trash` + `when: on_discard_hand` (the engine reaches a
+#   trash-scoped on_discard_hand clause ONLY on the card that was itself just
+#   trashed from the hand — BT26-069 idiom; a draw, a rule discard or using the
+#   Option never fires it) + `trigger_if: event_caused_by_own_effect: true`
+#   ("using one of YOUR effects"). An empty deck simply draws nothing.
+# OptionSkill [Main]: SelectCardEffect over the trash, canNoSelect true,
+#   IsDigimon && HasCardColor(Purple) && HasLevel && Level <= 4 &&
+#   CanPlayAsNewPermanent(payCost false) → PlayPermanentCards(Root.Trash,
+#   payCost false). → optional select_trash + play_from_trash_free.
+# SecuritySkill: AddActivateMainOptionSecurityEffect — the [Main] body runs on
+#   a security check (then the card is trashed as usual). → `scope: inherited`
+#   + `when: on_security` with the same body.
+
+card: BT6-108
+name: Underworld's Call
+kind: option
+color: [purple]
+cost: 4
+
+effects:
+  # ─── When trashed from the hand by one of your effects → <Draw 1> ────────
+  - scope: trash
+    when: on_discard_hand
+    trigger_if:
+      event_caused_by_own_effect: true
+    summary: "When you trash this card in your hand using one of your effects, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  # ─── [Main] may play 1 purple Lv.4 or lower Digimon from the trash free ──
+  - when: main_from_hand
+    summary: "[Main] You may play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - level_lte: 4
+          prompt: "You may play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived
+
+  # ─── [Security] Activate this card's [Main] effect ────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effect: you may play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - level_lte: 4
+          prompt: "You may play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived

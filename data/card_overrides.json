@@ -4191,11 +4191,6 @@
         "card_color": 3,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 3,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -18574,5 +18569,24 @@
   "ST22-11": {
     "link_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
   },
-  "_note_link_box_2026_10": "2026-10-05: a link card's link effect lives in `link_effect_description_eng`, not in the inherited text where the API's `source_effect` puts it (ingest_cards.normalize_link_box moves it; code/tools/archive/move_link_box_2026_10.py). The link-effect overrides restore the printed text (official Bandai DB; EX10-016 from the card image) where the API drops its timing, keywords or the whole effect."
+  "_note_link_box_2026_10": "2026-10-05: a link card's link effect lives in `link_effect_description_eng`, not in the inherited text where the API's `source_effect` puts it (ingest_cards.normalize_link_box moves it; code/tools/archive/move_link_box_2026_10.py). The link-effect overrides restore the printed text (official Bandai DB; EX10-016 from the card image) where the API drops its timing, keywords or the whole effect.",
+  "_note_BT10-048": "BT10-048 Sunflowmon prints ONE digivolve circle, green Lv.3 / cost 2 (card image; DCGO BT10_048.asset). The digimoncard.io ingest and the official mirror (card_official.json digivolve_costs) both add a green Lv.3 / cost 0 circle the card does not print, which would let it digivolve for free. 2026-10-20, EX13 lane a1-ceresmon-1.",
+  "P-250": {
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "form_eng": [
+      "Champion"
+    ]
+  },
+  "_note_P-250": "P-250 Ogremon (X Antibody), ingested 2026-10-21 from digimoncard.io for the EX13 meta run. The API drops the second (Black) digivolve circle and the Champion form; the official Bandai DB (data/card_bundles/P-250.md) prints Purple Lv.3/3 AND Black Lv.3/3, form Champion."
 }

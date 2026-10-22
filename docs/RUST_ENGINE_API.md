@@ -3069,7 +3069,7 @@ Declared
   → RaidOpen                       (printed <Raid> optional target switch)
   → AllianceOpen
   → CounterOpen                    (3 candidate shapes — see §Counter broadening)
-  → BlockOpen                      (CannotBlock gates defenders; Collision flips optional → mandatory)
+  → BlockOpen                      (CannotBlock gates defenders; attacker CannotBeBlocked skips the window; Collision flips optional → mandatory)
   → PostBlock                      (target-loss compatibility rider)
   → Battle
   → PostBattle                     (Piercing post-battle security check if Digimon defender wiped)

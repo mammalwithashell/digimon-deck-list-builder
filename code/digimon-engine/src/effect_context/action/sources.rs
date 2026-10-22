@@ -301,14 +301,21 @@ impl<'a> EffectContext<'a> {
         self.place_union_card_under_tamer(card, origin, tamer, face_down)
     }
 
+    /// Place the battle-area permanent `source` under `target` as its
+    /// bottom digivolution card (CR 4.3 §4-7-7: it leaves the battle area).
+    /// Routed through the field-top source move, so the would-leave
+    /// replacement window opens and [On Leave] observers fire;
+    /// G-ENGINE-PLACE-PERMANENT-AS-SOURCE-NO-LEAVE-WINDOW. Returns `true`
+    /// only when the placement completed synchronously.
     pub fn place_permanent_as_bottom_sources(
         &mut self,
         source: PermanentHandle,
         target: PermanentHandle,
     ) -> bool {
-        let cause = self.placing_effect_attribution();
-        self.game
-            .place_permanent_as_bottom_sources_by_effect(source, target, cause)
+        let Some(source_ref) = self.game.field_top_material_ref(source) else {
+            return false;
+        };
+        self.place_as_bottom_source(source_ref, target, false)
     }
 
     pub fn move_all_matching_sources_under_tamer<F>(

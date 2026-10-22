@@ -1213,7 +1213,12 @@ fn has_opponent_play_cost_budget_candidate(
         .player(opponent)
         .battle_area
         .iter()
-        .any(|perm| i32::from(perm.top_card().play_cost(ctx.card_data())) <= play_cost_budget)
+        .any(|perm| {
+            // No play cost (a DUAL top) → never a candidate.
+            // G-ENGINE-PLAY-COST-BUDGET-DUAL-TOP.
+            perm.top_card().has_play_cost(ctx.card_data())
+                && i32::from(perm.top_card().play_cost(ctx.card_data())) <= play_cost_budget
+        })
 }
 
 fn replacement_subject_is_source(ctx: &EffectReadContext<'_>, subject: ReplacementSubject) -> bool {

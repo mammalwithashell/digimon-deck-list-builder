@@ -1,0 +1,151 @@
+# BT24-074 SkullSeadramon — Digimon, Lv.5, Purple/Blue, DP 7000, Cost 7.
+# Traits: Undead, Titan, TS (+ [Aquatic] by Rule). Form: Ultimate.
+# Attribute: Virus.
+# Printed digivolve box: Purple Lv.4 / cost 4; Blue Lv.4 / cost 4;
+#   [Digivolve] Lv.4 w/[Aqua] or [Sea Animal] in any trait or w/[TS] trait:
+#   Cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT24-074.md; card
+# image agrees):
+#   [On Play] [When Digivolving] Trash any 3 digivolution cards from 1 of your
+#     opponent's Digimon. Then, if played by effects, delete 1 of your
+#     opponent's Digimon with no digivolution cards.
+#   [On Deletion] You may play 1 level 4 or lower Digimon card with [Seadramon]
+#     in its name or the [TS] trait from your trash without paying the cost.
+#   (Rule) Trait: Has [Aquatic] Type.
+#   Inherited: [When Attacking] [Once Per Turn] By placing 1 of your other
+#     Digimon as this Digimon's bottom digivolution card, it unsuspends.
+#   Official Q&A: the [On Deletion] target is a level 4 or lower Digimon card
+#     with [Seadramon] in its name, or a level 4 or lower [TS] Digimon card.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_074.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+# Alt-digivolve: TopCard.IsLevel4 && (HasTSTraits || HasAquaTraits), cost 3.
+#   HasAquaTraits = ContainsTraits("Aqua") || ContainsTraits("Sea Animal") —
+#   the printed "in any trait" substring reading → `trait_contains`. The two
+#   colour circles are authored as alt-paths too (DSL fixtures read evo costs
+#   from alt-paths; cards.json + card_overrides.json carry both circles).
+# Shared OP / WD (two ActivateClasses, not optional, no per-turn cap;
+#   CanActivate = on the battle area): if an opponent Digimon has a source
+#   that can be trashed, SelectTrashDigivolutionCards(maxCount 3,
+#   canNoTrash false, isFromOnly1Permanent true) — pick 1 such Digimon, then
+#   trash any 3 of its sources (all of them when it has fewer). Then, only when
+#   IsByEffect && CanTriggerOnPlay (the OnPlay firing of an effect play), a
+#   mandatory pick of 1 opponent Digimon with no digivolution cards → delete.
+#   → BT20-027 Slayerdramon shape (select_opponent_permanent with a
+#   source_count filter → select_opponent_sources min/max 3
+#   clamp_to_available → trash_selected_sources), with the delete gated on
+#   `played_by_effect: true` — which the engine sets only on the OnPlay firing
+#   of an effect-driven play (`TriggerContext::effect_initiated`), so the
+#   [When Digivolving] firing never deletes.
+# [On Deletion] (optional; CanActivate = a candidate in the trash):
+#   canNoSelect pick over IsDigimon && (EqualsTraits TS || ContainsCardName
+#   Seadramon) && HasLevel && Level <= 4 → PlayPermanentCards(free).
+# Inherited [When Attacking][OPT] (optional true): pick 1 OTHER own Digimon →
+#   IPlacePermanentToDigivolutionCards(as this Digimon's bottom source; only
+#   its top card moves, the cards under it are trashed — CR 4.3 §4-7-8,
+#   G-ENGINE-PLACE-PERMANENT-AS-SOURCE-KEEPS-STACK) → IUnsuspendPermanents
+#   (this Digimon). → BT24-059 Sharkmon inherited clause.
+
+card: BT24-074
+name: SkullSeadramon
+kind: digimon
+level: 5
+color: [purple, blue]
+cost: 7
+dp: 7000
+traits: [Undead, Titan, TS, Aquatic]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_contains: Aqua
+            - trait_contains: Sea Animal
+            - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] trash any 3 sources from 1 opponent
+  #     Digimon; then, if played by effects, delete 1 sourceless one ──────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash any 3 digivolution cards from 1 of your opponent's Digimon. Then, if played by effects, delete 1 of your opponent's Digimon with no digivolution cards"
+    process:
+      - select_opponent_permanent:
+          bind_as: host
+          filter: { kind: digimon, source_count: { filter: {}, at_least: 1 } }
+          prompt: "Choose 1 of your opponent's Digimon to trash 3 of its digivolution cards"
+      - select_opponent_sources:
+          target: host
+          min: 3
+          max: 3
+          clamp_to_available: true
+          bind_as: stripped
+          prompt: "Trash any 3 digivolution cards from that Digimon"
+          then:
+            - trash_selected_sources: { source_refs: stripped }
+      - if:
+          condition: { played_by_effect: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  kind: digimon
+                  not: { source_count: { filter: {}, at_least: 1 } }
+                prompt: "Delete 1 of your opponent's Digimon with no digivolution cards"
+            - delete_permanent: { target: victim }
+
+  # ─── [On Deletion] may play 1 Lv.4 or lower [Seadramon]-named or [TS]
+  #     Digimon card from the trash free ──────────────────────────────────────
+  - when: on_deletion
+    summary: "[On Deletion] You may play 1 level 4 or lower Digimon card with [Seadramon] in its name or the [TS] trait from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - name_contains: "Seadramon"
+                  - trait_has: TS
+          prompt: "You may play 1 level 4 or lower Digimon card with [Seadramon] in its name or the [TS] trait from your trash without paying the cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived
+
+  # ─── Inherited [When Attacking][OPT] by placing 1 of your other Digimon as
+  #     this Digimon's bottom digivolution card, it unsuspends ───────────────
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, it unsuspends"
+    process:
+      - select_own_permanent:
+          bind_as: place_source
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Place 1 of your other Digimon as this Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: place_source }
+          then:
+            - place_as_bottom_source:
+                source: { permanent: place_source }
+                target: source
+            - unsuspend: { target: source }

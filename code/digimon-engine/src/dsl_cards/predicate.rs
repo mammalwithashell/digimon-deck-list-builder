@@ -399,6 +399,16 @@ fn eval_predicate_ref(
             return false;
         }
     }
+    // G-DSL-CAN-GAIN-MEMORY: DCGO `Owner.CanAddMemory(activateClass)` for
+    // the effect's controller, with this effect's Tamer-ness.
+    if let Some(want) = pred.can_gain_memory {
+        let can = rctx
+            .game
+            .player_can_gain_memory_by_effect(rctx.player, rctx.source_is_tamer());
+        if can != want {
+            return false;
+        }
+    }
     // G-DSL-DURING-ATTACK: "if during an attack" (DCGO
     // `attackProcess.IsAttacking`) â€” an attack is in flight.
     if let Some(want) = pred.during_attack {

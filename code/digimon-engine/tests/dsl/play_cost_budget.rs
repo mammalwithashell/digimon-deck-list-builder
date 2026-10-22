@@ -190,3 +190,79 @@ fn play_cost_budget_filter_excludes_non_matching_kind() {
 
     runner.game.resolve_selection(0, PASS).expect("decline");
 }
+
+/// G-DSL-DELETE-BOUND-PERMANENTS-ONE-EVENT: the permanents bound by a budget
+/// pick are deleted at the same time — ONE deletion event — so a "when an
+/// opponent's Digimon is deleted" observer triggers once for the whole set
+/// (§15-5-2), not once per deleted Digimon.
+const DELETE_OBSERVER_YAML: &str = r#"
+card: T-DELOBS
+name: Deletion Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+traits: []
+effects:
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[All Turns] When an opponent's Digimon is deleted, gain 1 memory"
+    process:
+      - gain_memory: 1
+"#;
+
+#[test]
+fn delete_bound_permanents_deletes_the_picks_as_one_event() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(DELETE_OBSERVER_YAML)
+        .expect("observer compiles")
+        .add_card(make_test_card("SRC", "Source"))
+        .add_card(digimon_with_cost("C2", "Cost2", 2))
+        .add_card(digimon_with_cost("C3", "Cost3", 3))
+        .memory(0)
+        .start();
+    let source = runner.place_on_field(0, "SRC", Some(0));
+    let source_card = runner.top_card(source);
+    runner.place_on_field(0, "T-DELOBS", Some(0));
+    let c2 = runner.place_on_field(1, "C2", Some(0));
+    let c3 = runner.place_on_field(1, "C3", Some(0));
+
+    let steps = vec![budget_step(vec![CompiledStep::DeleteBoundPermanents {
+        binding: "targets".to_string(),
+    }])];
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+    runner
+        .game
+        .resolve_selection(0, encode_attack(0, c2.index as u16))
+        .expect("pick C2");
+    runner
+        .game
+        .resolve_selection(0, encode_attack(0, c3.index as u16))
+        .expect("pick C3 (2 + 3 <= 6)");
+    while runner.game.pending_selection.is_some() {
+        let v = runner.pending_selection_view().unwrap();
+        let a = if v.valid_action_ids.contains(&PASS) {
+            PASS
+        } else {
+            v.valid_action_ids[0]
+        };
+        runner.game.resolve_selection(v.selecting_player, a).unwrap();
+    }
+    runner.game.drain_effect_queue();
+    assert!(runner.game.player(1).battle_area.is_empty(), "both deleted");
+    assert_eq!(
+        runner.memory(),
+        1,
+        "one simultaneous deletion → the observer triggers once (§15-5-2)"
+    );
+}

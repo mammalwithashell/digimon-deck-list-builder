@@ -1134,7 +1134,7 @@ impl Game {
     /// Collect top-level observer effects from a player's trash. These
     /// sources are not attached to a live permanent; the trigger payload
     /// carries the played/deleted/moved subject instead.
-    fn enqueue_from_player_trash(
+    pub(crate) fn enqueue_from_player_trash(
         &mut self,
         timing: EffectTiming,
         controller: PlayerId,
@@ -4000,6 +4000,31 @@ impl Game {
                 Some(crate::trigger_context::EventSubject::Permanent(_))
             );
         }
+        if let (Some(id), QueuedGate::TriggerQualifier, None) =
+            (qe.granted_effect_id, gate, qe.pending_processing.as_ref())
+        {
+            // G-DSL-GRANTED-TRIGGER-QUALIFIER: a granted body's trigger
+            // qualifier, read with the carrier as the effect's source and the
+            // event's trigger context installed.
+            let Some(qualifier) = self.granted_effect_bodies.qualifier(id).cloned() else {
+                return true;
+            };
+            let source_kind = self.queued_effect_activation_kind(qe);
+            let trigger_context = qe.trigger_context.clone();
+            let gate_context = trigger_context
+                .as_ref()
+                .and_then(|context| self.gate_trigger_context(context));
+            let trigger_guard =
+                TriggerContextGuard::install(self, gate_context.or(trigger_context));
+            let ctx = EffectContext::new_with_source_kind(
+                &mut *trigger_guard.game,
+                qe.source_card,
+                qe.source_permanent,
+                source_kind,
+                qe.controller,
+            );
+            return qualifier(&ctx.as_read());
+        }
         if qe.granted_effect_id.is_some() || qe.pending_processing.is_some() {
             // Granted effects and scheduled bodies have no clause condition —
             // keep them.
@@ -4100,6 +4125,14 @@ impl Game {
     }
 
     pub(crate) fn collapse_simultaneous_play_event_batch(&mut self, first_index: usize) {
+        self.collapse_event_batch(first_index, true, false);
+    }
+
+    /// Collapse the `OnAnyDeletion` / `OnLeaveField` observer entries one
+    /// deletion batch enqueued (from `first_index`) to one per observer and
+    /// timing, keeping every deleted Digimon as a member (§15-5-2; see
+    /// `Game::enqueue_batch_on_any_deletion`).
+    pub(crate) fn collapse_simultaneous_deletion_event_batch(&mut self, first_index: usize) {
         self.collapse_event_batch(first_index, true, false);
     }
 
@@ -4364,10 +4397,13 @@ impl Game {
         let Some(qe) = self.effect_queue.get(i) else {
             return false;
         };
-        if qe.granted_effect_id.is_some()
-            || qe.keyword_effect.is_some()
-            || qe.pending_processing.is_some()
-        {
+        // A granted body is gated by its own qualifier, when it has one
+        // (G-DSL-GRANTED-TRIGGER-QUALIFIER).
+        if let Some(id) = qe.granted_effect_id {
+            return qe.pending_processing.is_none()
+                && self.granted_effect_bodies.qualifier(id).is_some();
+        }
+        if qe.keyword_effect.is_some() || qe.pending_processing.is_some() {
             return false;
         }
         self.effects_for_queued(qe).is_some_and(|effects| {

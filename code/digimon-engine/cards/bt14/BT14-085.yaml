@@ -1,0 +1,83 @@
+# BT14-085 Mimi Tachikawa — Tamer, Green, Cost 3.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT14-085.md; image agrees):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+#   [Vegetation], [Plant] or [Fairy] in one of its traits among them to the
+#   hand. Return the rest to the bottom of the deck.
+#   [Your Turn] When an effect suspends a Digimon, by suspending this Tamer,
+#   gain 1 memory.
+#   Security: [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT14/Green/BT14_085.cs
+#   - On Play: SimplifiedRevealDeckTopCardsAndSelect(revealCount 3, one AddHand
+#     bucket, maxCount 1, Digimon with HasPlantTraits (Vegetation / Plant
+#     substring) or HasFairyTraits), remainingCardsPlace DeckBottom.
+#   - OnTappedAnyone: IsOwnerTurn, ANY battle-area Digimon (either player's),
+#     IsByEffect; isOptional true; CanActivate = CanActivateSuspendCostEffect
+#     (this Tamer). Body: suspend this Tamer → AddMemory(1). No per-turn cap.
+#   - SecuritySkill: PlaySelfTamerSecurityEffect.
+#
+# Official Q&A Q2458: it activates even when an opponent's effect suspends an
+# opponent's Digimon — "a Digimon" is any player's Digimon, "an effect" any
+# effect (on your turn).
+#
+# Modeling:
+#   - On Play: the BT22-094 / BT24-031 single-bucket reveal idiom
+#     (`select_reveal_buckets` min 1 / max 1 — mandatory when a card
+#     qualifies, nothing when none does), then the rest to the deck bottom.
+#     "in one of its traits" = `trait_contains` (DCGO ContainsTraits).
+#   - [Your Turn]: trigger qualifier (`trigger_if`) = an effect-initiated
+#     suspend of a Digimon (no owner gate, Q2458). "by suspending this Tamer"
+#     is an optional processing condition (§15-7-1): `optional: true` +
+#     `activation_cost: { suspend_self: true }`, gated on
+#     `source_is_unsuspended` (§15-7-4, DCGO CanActivateSuspendCostEffect).
+#     Suspending this TAMER is not a Digimon suspend, so it can't re-trigger.
+#     (The G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN gap that blocks BT13-102 is
+#     an opponent's-turn path; this clause is [Your Turn] only.)
+#   - Security: standard `play_from_security`.
+
+card: BT14-085
+name: Mimi Tachikawa
+kind: tamer
+color: [green]
+cost: 3
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Vegetation], [Plant] or [Fairy] in one of its traits among them to the hand. Return the rest to the bottom of the deck"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: plant_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_contains: Vegetation
+                      - trait_contains: Plant
+                      - trait_contains: Fairy
+          prompt: "Add 1 Digimon card with [Vegetation], [Plant] or [Fairy] in one of its traits to the hand"
+      - add_to_hand_from_reveal: { of: you, card: plant_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - when: on_suspend
+    optional: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When an effect suspends a Digimon, by suspending this Tamer, gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
