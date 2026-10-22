@@ -154,6 +154,17 @@ impl Game {
             hash_cards(&player.deck, &mut h);
             hash_cards(&player.digitama_deck, &mut h);
             hash_cards(&player.security, &mut h);
+            // `{Security}` [X Per Turn] counts, sorted like a permanent's
+            // `effect_activations` in `hash_permanent`: a loop through a
+            // capped `{Security}` effect progresses its count (§15-14-1-2).
+            let mut security_counts: Vec<(u16, u8, u8)> = player
+                .security_effect_activations
+                .iter()
+                .filter(|(_, &count)| count > 0)
+                .map(|(&(card, key), &count)| (card.0, key, count))
+                .collect();
+            security_counts.sort_unstable();
+            security_counts.hash(&mut h);
             hash_cards(&player.trash, &mut h);
             player.battle_area.len().hash(&mut h);
             for (index, permanent) in player.battle_area.iter().enumerate() {

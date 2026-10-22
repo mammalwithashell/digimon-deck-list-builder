@@ -6158,7 +6158,7 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
 - **Tests:**
   - `cards_behavioral -- ex12_074_security_digivolve_is_offered_once_per_turn` (red before), `ex12_074_declined_security_digivolve_is_offered_again_same_turn_q1818`, `ex12_074_security_digivolve_rearms_next_turn`.
   - `rules_conformance -- ch15_14_effect_icons::security_zone_once_per_turn_effect_is_used_once_per_turn` (red before), `::declined_security_zone_you_may_effect_keeps_its_once_per_turn`.
-- **Not folded (residual):** the counter is not part of the §18-3 loop signature (`game/triggers.rs`) or the verification digest (`game/verification.rs`). No production loop runs through a capped `{Security}` effect.
+- **Folded (residual RESOLVED 2026-10-21, Plan 2 final review I2):** the non-zero counts are now part of the §18-3 loop signature (`Game::loop_signature`, `game/infinite_loop.rs`, sorted like `hash_permanent`'s `effect_activations`), the declarative fingerprint (`game/triggers.rs`, the same order-independent summary as `hash_permanent_decl`) and the V3 verification digest (`game/verification.rs`, sorted, one `security_effect_activation` token per non-zero count, next to `face_up_security`; LegacyV2 archival digests and states with no counted `{Security}` use are unchanged). Pinned by `game::verification::security_activation_digest_tests` (clone-stable, refund-neutral, loop signature).
 - **Blocks training:** no longer.
 
 ### [Once Per Turn] clauses whose "may" is folded into a declinable first pick may spend the use on a pass  [G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT] — OPEN, substrate part RESOLVED (2026-10-21, 9888747b0; Plan 2 Task 6 fix round 1)
