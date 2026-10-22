@@ -1,0 +1,20 @@
+card: BT8-001
+name: Gurimon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+# Card image and official bundle: inherited mandatory draw, conditioned on
+# this Digimon's current DP (including modifiers), once per turn.
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      dp: { op: gte, value: 6000 }
+    summary: "[When Attacking][Once Per Turn] If this Digimon has 6000 DP or more, Draw 1."
+    process:
+      - draw: { of: you, count: 1 }

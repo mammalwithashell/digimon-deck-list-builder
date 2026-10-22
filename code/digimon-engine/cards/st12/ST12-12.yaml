@@ -6,6 +6,7 @@ color: [white]
 cost: 3
 dp: 3000
 traits: [Puppet]
+form: Rookie
 attribute: Vaccine
 
 effects:
@@ -21,6 +22,8 @@ effects:
       - select_hand:
           of: you
           bind_as: discard
+          optional: true
+          cost: true
           filter: {}
           prompt: "Trash 1 card in your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }

@@ -1,0 +1,76 @@
+card: BT20-014
+name: SaviorHuckmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Dragonkin]
+form: Ultimate
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - color_is: red
+    cost: 3
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "Delete 1 opponent Digimon with 5000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 5000
+          prompt: "Delete 1 opponent Digimon with 5000 DP or less"
+      - delete_permanent: { target: victim }
+  - when: end_of_your_turn
+    optional: true
+    summary: "By suspending another Digimon, may digivolve this Digimon into Jesmon in hand for free"
+    process:
+      - select_own_permanent:
+          bind_as: payment
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+              - is_unsuspended: true
+              - can_change_orientation: true
+          prompt: "Suspend 1 of your other Digimon"
+      - suspend: { target: payment }
+      - if:
+          condition:
+            all_of:
+              - binding_exists: payment
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  all_of:
+                    - not: { not_in_binding: payment }
+                    - is_suspended: true
+          then:
+            - select_hand:
+                of: you
+                bind_as: evolution
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: Jesmon
+                    - can_digivolve_from_source: true
+                prompt: "Digivolve this Digimon into Jesmon without paying the cost"
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evolution
+                cost: free
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Alliance
+    active_when:
+      all_of:
+        - your_turn: true
+        - trait_has: Royal Knight
