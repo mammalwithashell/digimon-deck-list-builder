@@ -25,8 +25,12 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
     // Q1818; 9888747b0): P0's breeding-area BT21-001 pick declined at step 61 is refunded and
     // re-offered on the next two attacks' security removals, so two declines (62) are inserted
     // (now steps 63 and 65; 67 actions). Steps 1-59 are unchanged; digests 60-62 change.
-    assert_eq!(rec.actions.len(), 67);
-    assert_eq!(rec.digests.len(), 67);
+    // Migrated 2026-10-21 for breeding-area effects that don't reference the breeding area
+    // (CR 4.3 §3-4-7-4; G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE): the breeding-area
+    // BT21-001 is never offered, so its three declines (steps 61, 63, 65) are removed
+    // (64 actions). Digests 1-59 are unchanged.
+    assert_eq!(rec.actions.len(), 64);
+    assert_eq!(rec.digests.len(), 64);
     let deck = |d: &ReplayDeckRef| match d {
         ReplayDeckRef::Inline { cards } => cards.clone(),
         _ => panic!("regression fixture requires inline decks"),

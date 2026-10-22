@@ -88,3 +88,39 @@ Golden 009: the same 9888747b0 change marks BT21-001's queued trigger optional
 (digest from action 47, the trigger-order prompt) and refunds the declined use
 at action 53; no later security removal happens that turn, so every recorded
 action stays legal. Here BT21-001 is under a battle-area Digimon (legitimate).
+
+## Goldens 002, 008 regenerated, 001 migrated -- 2026-10-21 (breeding-area BT21-001 no longer triggers)
+
+Step numbers are 0-based action indices, as in the entry above.
+
+- **Commands:** 002 and 008: `replay_corpus regenerate --goldens qa/replay-goldens --cards <LF copy of data/cards.json> --id greedy_002_`
+  (and `--id greedy_008_`) on `p2-triage` at 27009fb8a. Same inline decks,
+  seeds and 64-action budgets; engine schema 2 kept.
+  001: hand-migrated (its path is curated and pinned by
+  `tests/replay_empty_replacement_window.rs`, see the entry above): the three
+  declines (62) of the breeding-area BT21-001 pick at actions 60, 62 and 64
+  are removed, then `replay_corpus bless` re-records the digests; schema 1
+  kept, 67 -> 64 actions; the test's length pin moved to 64.
+- **Why:** 27009fb8a (Plan 2 Task 9, G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE):
+  effects on a card in the breeding area trigger only when they explicitly
+  specify or reference the breeding area (CR 4.3 §3-4-7-4 / §3-4-7-6; DCGO
+  `BT21_001.cs` requires `IsExistOnBattleAreaDigimon`). Seat 0's BT21-001
+  Gigimon under BT23-005 in the breeding area ("[Your Turn] [Once Per Turn]
+  When your opponent's security stack is removed from, 1 of your Digimon may
+  digivolve ...") has no breeding reference, so a security removal no longer
+  offers it. The same commit resets the breeding permanent's [Once Per Turn]
+  count at each turn change (§15-14-1-5-1), which no longer matters here.
+- **Where it bites:** the first diverging digest is the attack whose security
+  removal used to offer the breeding-area pick; the next recorded action was
+  the greedy decline (62) of that pick, which no longer has a prompt to answer.
+  - 001: digest after action 59 (attack 114); declines at 60, 62, 64 dropped.
+  - 002: digest after action 26 (attack 144); the recorded decline at action
+    27 (and the turn-9 re-offer's decline at action 43) dropped.
+  - 008: digest after action 27; the declines at actions 28 and 31 dropped.
+- **Result:** each new game is exactly the old recorded game with every
+  breeding-area BT21-001 decline removed (002 and 008: the first 62 actions
+  match the old path minus those declines; the 64-action budget then adds two
+  greedy actions; 001 keeps its curated path). Digests before the first
+  removed decline are unchanged. Verified 10/10 with `replay_corpus verify`
+  (with `data/cards.json` and with the LF copy);
+  `replay_empty_replacement_window` passes.
