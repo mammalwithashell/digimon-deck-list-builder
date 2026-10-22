@@ -9230,3 +9230,25 @@ ST24-10 adds a DATA SQUAD-in-hand gate beside the two face-down Tamer-source
 payment gate. CR 4.3 §15-7-5 allows paying an executable optional condition even
 if its benefit cannot execute. The hand gate hides that legal choice. Keep
 this card correction separate; the construct tests prove payment eligibility.
+
+## Security-stack construct audit (2026-10-22)
+
+- **G-DSL-PLACEMENT-SUCCESS-RECEIPT-2026-10-22 — open.**
+  `security_place_top_card` and `move_self_option_under_permanent` discard the
+  placement success bool. BT26-033 runs `cancel_replacement` after a blocked or
+  redirected placement; ST23-15 / ST24-15 gate draw/memory on `binding_present`,
+  not successful placement. CR 4.3 §15-7-2 requires the processing condition to
+  complete. Add a reusable placed-card receipt/predicate and gate follow-up
+  processing on actual success, with payable-cost checks at §15-7-4 selection.
+  Production YAML authoring is deferred from this construct family.
+- **G-DSL-RETURN-DECK-RANDOM-POSITION-2026-10-22 — open.**
+  `return_top_security_to_deck` and `return_union_bound_to_deck` interpret only
+  Bottom specially, silently treating Random as Top. Implement the requested
+  random placement or reject that position in validation rather than silently
+  changing its meaning (CR 4.3 §§3-2-3, 3-7-3).
+- **Authoring question — optional search decline tails.** BT13-012 and BT15-092
+  select security with an optional pick and `ResumeDecline::None`; declining
+  drops the remainder, including "Then, shuffle your security stack" (and
+  BT15-092's Kari Kamiya tail). Review `continue_on_decline` for these cards.
+  This is not resolved by the play-from-security observer repair and no
+  production card YAML was changed in this family.

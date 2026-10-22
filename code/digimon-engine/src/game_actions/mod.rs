@@ -954,6 +954,7 @@ impl Game {
                     resume.suppress_on_play,
                     resume.origin.enters_suspended(),
                     resume.origin.source_play_receipt(),
+                    matches!(resume.origin, PendingWouldPlayOrigin::SecurityTop { .. }),
                 );
                 self.effect_source_player = previous_controller;
                 if played.is_none() {
@@ -4170,6 +4171,9 @@ impl Game {
         if self
             .modifiers
             .player_has(observer, ModifierType::CannotAddSecurityByEffect)
+            || self
+                .modifiers
+                .player_has(player, ModifierType::CannotAddSecurityByEffect)
             || self
                 .player(observer)
                 .battle_area

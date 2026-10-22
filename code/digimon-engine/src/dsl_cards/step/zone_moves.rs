@@ -206,7 +206,11 @@ pub fn try_run(
         }
         CompiledStep::AddTopSecurityToHand { of } => {
             let p = resolve_player(ctx, *of);
-            ctx.add_top_security_to_hand(p);
+            if let Some(card) = ctx.game.player(p).security.last().map(|c| c.handle()) {
+                if ctx.add_top_security_to_hand(p) {
+                    bindings.record_added_to_hand(card);
+                }
+            }
             true
         }
         CompiledStep::AddBottomSecurityToHand { of } => {

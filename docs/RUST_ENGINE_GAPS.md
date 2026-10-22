@@ -6303,3 +6303,25 @@ The execution regression also exposed attack counters being skipped with
 suspension. Committed attacks now increment both permanent and player counters
 regardless of suspension; the existing declaration-committed guard prevents
 resumed attacks from counting twice. Rejected declarations do not count.
+
+## Security-stack construct audit (2026-10-22)
+
+- **G-ENGINE-ON-LOSE-SECURITY-DEFENDER-ONLY-2026-10-22 — open.**
+  `effect_queue.rs` dispatches `OnLoseSecurity` only to the removed card's
+  security-scoped clauses and the stack owner's battle area. BT23-102 Mastemon
+  says "When security stacks are removed from" (either stack); DCGO
+  `BT23_102.cs:337` uses `CanTriggerWhenLoseSecurity(hashtable, null)`.
+  Add an explicit either-stack observer variant; do not globally widen the
+  existing timing: BT24-101, BT25-044, BT25-088 and BT26-089 correctly observe
+  only their own stack. The construct tests pin that current narrower contract.
+- **G-ENGINE-SECURITY-PLAY-CANCEL-ORDER-2026-10-22 — open.** A security card
+  chosen below the top and parked on a would-play replacement is restored to
+  TOP if later cancelled (`PendingWouldPlayOrigin::SecurityTop`,
+  `game_actions/misc.rs::restore_pending_would_play_origin`). Immediate refusal
+  restores its original index. Preserve the original index in the pending
+  origin and restore there; security order is fixed (CR 4.3 §3-7-3).
+- **G-ENGINE-SECURITY-SELECTION-TEN-SLOTS-2026-10-22 — open.**
+  `effect_context/selections.rs::select_security` addresses only indices
+  `0..min(len, 10)` from the bottom. Above ten cards, the top cards cannot be
+  selected. Requires a separately planned player-visible choice contract;
+  the construct campaign does not expand action/tensor contracts.
