@@ -243,7 +243,9 @@ python -m tools.clause_coverage.readiness --clause-only --out /tmp/view.json  # 
 python -m tools.card_loop interactions --check                                # the gating denominator has not drifted
 ```
 
-Training admits only decklists whose every card is `ready` (rule 34): every
+Since 2026-10-21 this readiness is a **report, not the training gate** (rule 34 is now
+the two-layer mechanics gate; `pilot_training --legacy-clause-gate` re-adds this
+requirement for comparison runs). A card is `ready` when every
 printed clause AND every gating interaction of the card adjudicated
 (confirmed; unreachable / unavailable with a reason; or a cited `dcgo_quirk`).
 An escalation is not a verdict and blocks. The gating interactions are the

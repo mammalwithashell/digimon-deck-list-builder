@@ -95,7 +95,8 @@ STAGES = ("missing", "known_gap", "untested", "tested", "verified")
 KNOWN_GAP_STATUSES = frozenset({"PARTIAL", "BLOCKED"})
 
 #: Ledger verdicts that keep a list out of the training deck pool -- mirrors
-#: ``digimon_gym.agents.gauntlet._NOT_READY_DSL_STATUSES``.
+#: ``digimon_gym.agents.card_admissibility.NOT_READY_LEDGER_STATUSES`` (re-exported
+#: as ``gauntlet._NOT_READY_DSL_STATUSES``), part of its ``failed_verdict`` rule.
 NOT_READY_STATUSES = frozenset({"PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"})
 
 #: ``card_kind`` codes in ``cards.json``.
@@ -382,9 +383,9 @@ def card_stage(implemented: bool, has_test: bool, known_gap: bool, exam: dict | 
 def not_ready_card_ids(tracker: dict[str, dict]) -> set[str]:
     """Card ids whose ledger verdict keeps a list out of the training deck pool.
 
-    Mirrors ``digimon_gym.agents.gauntlet._load_not_ready_card_ids`` (which
-    cannot be imported here -- it pulls in numpy, gymnasium and the PyO3
-    engine). The pool admits a list when every card is implemented (a spec and
+    Mirrors the ledger part of ``card_admissibility``'s ``failed_verdict`` rule,
+    which the training gate reads from ``data/card_admissibility.json`` (the
+    run-time ledger gate ``gauntlet._load_not_ready_card_ids`` is retired). The pool admits a list when every card is implemented (a spec and
     a ``cards.json`` entry, as in this report) and none is returned here; the
     ledger's free-form ``archetype`` label plays no part, and a card with no
     ledger entry counts as ready.

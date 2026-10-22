@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-06T22:01:12.736921900+00:00",
+  "last_updated": "2026-10-21T16:08:54.681572+00:00",
   "clauses": {
     "BT25-083#effect#0": {
       "clause_id": "BT25-083#effect#0",
@@ -137,6 +137,8 @@
       "reason": "ours contradicts ruling qa:Q6393 (ours vs DCGO: diverge); DIVERGED at step 24 (compared 25 of 26 ours / 26 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-083-qa-Q6393",
+      "triage": "stale",
+      "citation": "Prompt shape legitimately changed: the scenario was re-authored 2026-10-10 (36086ff67), after this 2026-10-06 recording, and today it does not lower because our engine now asks Impmon BT6-068's optional [On Play] cost, as DCGO does (the row is still dcgo_only). With that row shared the line is CLEAN 26/26 vs the recorded sidecar and expect_ruling Q6393 agrees. Re-author and re-exam",
       "recorded_at": "2026-10-06T22:01:12.736921900+00:00"
     },
     "qa:Q6395": {
@@ -166,6 +168,8 @@
       "reason": "ours contradicts ruling qa:Q6396 (ours vs DCGO: diverge); DIVERGED at step 29 (compared 27 of 32 ours / 29 dcgo steps (5 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT25-083-qa-Q6396",
+      "triage": "stale",
+      "citation": "fixed a6a265cdf; oracle re-exam needed",
       "recorded_at": "2026-10-06T21:47:05.811409100+00:00"
     }
   }

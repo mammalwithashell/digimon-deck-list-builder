@@ -1,0 +1,20 @@
+# BRD_AURA_SCOPED_LV3 -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [Breeding] [All Turns] All of your opponent's Digimon get -1000 DP.
+# The same persistent effect, specifying the breeding area: it applies only
+# while this Digimon is there (§3-4-7-4's exception).
+card: BRD_AURA_SCOPED_LV3
+name: Nestgloommon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: aura
+    active_when: { in_breeding: true }
+    target:
+      of: opponent
+      zone: [battle_area]
+      kind: digimon
+    dp_modifier: -1000
+    summary: "[Breeding] [All Turns] All of your opponent's Digimon get -1000 DP."

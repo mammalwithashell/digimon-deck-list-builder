@@ -1,0 +1,19 @@
+# BRD_OBS_EGG -- Digi-Egg, Lv.2, red. Inherited effect:
+#   [Your Turn] When your opponent's security stack is removed from, gain 1
+#   memory.
+# An inherited trigger that does NOT reference the breeding area (the Gigimon
+# BT21-001 shape): it triggers under a battle-area Digimon, never under a
+# Digimon in the breeding area (§3-4-7-4).
+card: BRD_OBS_EGG
+name: Watchtama
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+effects:
+  - scope: inherited
+    when: on_opponent_security_removed
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When your opponent's security stack is removed from, gain 1 memory."
+    process:
+      - gain_memory: 1

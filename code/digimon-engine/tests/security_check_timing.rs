@@ -1649,6 +1649,9 @@ impl CardEffect for BreedingRemovalObserver {
         vec![Effect::inherited(card)
             .timing(EffectTiming::OnOwnSecurityRemoved)
             .name("explicit breeding security-removal observer")
+            // References the breeding area (CR 4.3 §3-4-7-4): only such
+            // effects are considered by the breeding-area dispatch.
+            .breeding_zone()
             .trigger_qualifier(breeding_eligible)
             .condition(breeding_eligible)
             .optional()

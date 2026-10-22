@@ -698,3 +698,74 @@ fn lm_058_delay_hand_rejects_matching_color_with_incompatible_evolution_requirem
     assert!(hand_ids(&r, 0).iter().any(|id| id == "ILLEGAL"));
     assert_eq!(r.memory(), 4);
 }
+
+// ─────── Task 7 re-audit (2026-10-21): printed BT20 route choice ───────
+//
+// G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE (RESOLVED 2026-10-10) reclassified this
+// card on the Examon pair Groundramon (BT20-042, green/red — green
+// qualifies) on Coredramon (BT20-040): named-Coredramon route 3 and level-4
+// colour routes 4, reduced by 2 → the player chooses paying 1 or 2.
+#[test]
+fn lm_058_real_delay_groundramon_on_coredramon_offers_reduced_1_and_2() {
+    let mut r = builder()
+        .dsl_card("BT20-040")
+        .expect("Coredramon YAML")
+        .dsl_card("BT20-042")
+        .expect("Groundramon YAML")
+        .add_card(filler("AUDIT-FILL"))
+        .hand(0, &[CARD_ID, "BT20-042"])
+        .deck(0, &["AUDIT-FILL"; 12])
+        .deck(1, &["AUDIT-FILL"; 12])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    assert_eq!(build_action_mask(&r.game, 0)[PLAY_HAND_START as usize], 1.0);
+    r.game.decode_action(PLAY_HAND_START, 0);
+    r.auto_resolve().unwrap();
+    assert!(delayed_self_in_battle_area(&r, 0));
+    r.place_on_field(0, "BT20-040", Some(0));
+    let index = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == CARD_ID)
+        .unwrap();
+    let action =
+        FIELD_EFFECT_START + index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN;
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.game.set_memory(5);
+    assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+    r.game.decode_action(action, 0);
+    for kind in [SelectionKind::OwnField, SelectionKind::Hand] {
+        assert_eq!(r.pending_kind(), Some(kind));
+        let v = r.pending_selection_view().unwrap();
+        let pick = *v.valid_action_ids.iter().find(|&&a| a != PASS).unwrap();
+        assert_eq!(build_action_mask(&r.game, 0)[pick as usize], 1.0);
+        r.execute_action(0, pick).unwrap();
+    }
+    let routes = r
+        .pending_selection_view()
+        .expect("named 3 and colour 4 routes stay a player choice");
+    assert!(!routes.is_optional);
+    assert_eq!(routes.valid_action_ids.len(), 2);
+    let saved = r.game.clone();
+    let mut memories = Vec::new();
+    for a in routes.valid_action_ids.clone() {
+        r.game = saved.clone();
+        assert_eq!(build_action_mask(&r.game, 0)[a as usize], 1.0);
+        r.execute_action(0, a).unwrap();
+        r.auto_resolve().unwrap();
+        assert!(r.game.player(0).battle_area.iter().any(|p| p
+            .top_card()
+            .card_id(&r.game.card_data)
+            == "BT20-042"
+            && p.stack_size() == 2));
+        memories.push(r.memory());
+    }
+    memories.sort();
+    assert_eq!(memories, vec![3, 4], "pay 4-2=2 or 3-2=1 from 5 memory");
+}

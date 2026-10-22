@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-06T21:49:27.898000400+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "BT26-050#effect#0": {
       "clause_id": "BT26-050#effect#0",
@@ -56,6 +56,8 @@
       "reason": "DIVERGED at step 11 (compared 13 of 13 ours / 13 dcgo steps)",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-050-effect6",
+      "triage": "stale",
+      "citation": "Sim side now matches DCGO's recorded answer: re-diffed 2026-10-21 on the Plan 4 engine against the same recorded sidecar (20261006T160051Z) -- CLEAN 13/13. Re-exam to earn confirmed",
       "recorded_at": "2026-10-06T16:01:30.475712+00:00"
     }
   }

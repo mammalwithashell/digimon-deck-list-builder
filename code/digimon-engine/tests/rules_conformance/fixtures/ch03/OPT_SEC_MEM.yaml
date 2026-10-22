@@ -1,0 +1,17 @@
+# OPT_SEC_MEM -- Tamer, red, play cost 2.
+#   [Your Turn] [Once Per Turn] When your opponent's security stack is removed
+#   from, gain 1 memory.
+# A battle-area [Once Per Turn] trigger, re-armed when the turn changes
+# (§15-14-1-5-1).
+card: OPT_SEC_MEM
+name: Tally Tamer
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory."
+    process:
+      - gain_memory: 1

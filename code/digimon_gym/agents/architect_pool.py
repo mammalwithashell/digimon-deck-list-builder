@@ -3,7 +3,10 @@
 Scopes the card pool for a given archetype to a tractable action space,
 encoding deck modifications as discrete swap actions (remove one card,
 add another).  The pool is derived from archetype decklists in the deck
-library, filtered to implementable (frozen-script) cards only.
+library, filtered to implementable cards only. With ``training_gate=True``
+(passed by the training entrypoints only -- never by `code/server/` or the
+deckbuilding tools) it also keeps only cards admissible under the training
+gate (`architect_admission`, rule 34).
 
 The action space is structured as:
   - Action 0: no-op (agent elects to stop swapping)
@@ -58,6 +61,7 @@ class CandidatePool:
         custom_pool: Optional[List[str]] = None,
         card_constraints: Optional[Dict[str, CardConstraint]] = None,
         use_restricted_list: bool = False,
+        training_gate: bool = False,
     ) -> None:
         """Initialise the candidate pool.
 
@@ -68,6 +72,9 @@ class CandidatePool:
             custom_pool: If provided, replaces the archetype-derived pool entirely.
             card_constraints: Per-card constraints (locks, min/max counts).
             use_restricted_list: If True, enforce the official ban/restricted list.
+            training_gate: If True (training entrypoints only), keep only cards
+                admissible under the two-layer training gate (rule 34). The
+                default is unfiltered: hosted deck tools never pass it.
         """
         self._archetype_name = archetype_name
         self._db = CardDatabase()
@@ -99,10 +106,19 @@ class CandidatePool:
             raw_ids -= banned
 
         # --- Filter to implementable, non-egg cards ---
+        # Under `training_gate` also to admissible cards (rule 34; final review
+        # I5 / re-review N1): a training mutation never adds a card the gate
+        # rejects. Opt-in, so the hosted deck tools keep their full pool.
         implemented = load_implemented_card_ids()
+        admissible: Optional[set] = None
+        if training_gate:
+            from digimon_gym.agents.architect_admission import admissible_card_ids, require_training_gate
+
+            require_training_gate()
+            admissible = admissible_card_ids(raw_ids)
         filtered: List[str] = []
         for cid in raw_ids:
-            if cid not in implemented:
+            if cid not in implemented or (admissible is not None and cid not in admissible):
                 continue
             entity = self._db.get_card(cid)
             if entity is not None and entity.card_kind == CardKind.DigiEgg:

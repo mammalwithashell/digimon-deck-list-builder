@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "last_updated": "2026-10-08T02:59:01.457578+00:00",
+  "last_updated": "2026-10-21T15:09:52.979449+00:00",
   "clauses": {
     "BT26-091#effect#0": {
       "clause_id": "BT26-091#effect#0",
@@ -92,6 +92,8 @@
       "reason": "ours contradicts ruling qa:Q7148 (ours vs DCGO: diverge); DIVERGED at step 14 (compared 12 of 15 ours / 13 dcgo steps (3 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "8b6c39ea1a0e285944b47ba2bb734e359b005870",
       "job_id": "exam-BT26-091-qa-Q7148",
+      "triage": "stale",
+      "citation": "The expect_ruling block asserts on a PRE-decision row (a row is the state BEFORE its step), so it reads the state before the ruling's action; Q7148 is asserted at row 13, before the digivolution resolves. At row 14 memory is -1 (cost not reduced under Syakomon BT5-021, as Q7148 rules) and the line is CLEAN 12/15 vs the recorded sidecar. Re-encode at row 14 and re-exam",
       "recorded_at": "2026-10-08T02:59:01.457578+00:00"
     }
   }

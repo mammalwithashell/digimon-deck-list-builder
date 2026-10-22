@@ -23,6 +23,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from digimon_gym.agents.architect_admission import first_admissible_decklist
 from digimon_gym.agents.architect_optimizer import MetaOptimizer
 from digimon_gym.agents.architect_pool import CardConstraint
 
@@ -42,10 +43,13 @@ def resolve_base_deck(archetype_name: str) -> List[str]:
     """Find the best decklist for the given archetype from deck_library.
 
     Prefers decklists from higher-quality sources (digilab > digimonmeta > egman).
-    Returns the card ID list for the first matching decklist.
+    Returns the card ID list for the first decklist whose cards are all
+    admissible under the training gate (`architect_admission`).
 
     Raises:
         ValueError: If the archetype has no decklists in the library.
+        NotAdmissibleDeckError: If it has decklists but none is admissible.
+        MechanicsNotReadyError: If the mechanics gate is closed.
         FileNotFoundError: If deck_library.json is missing.
     """
     if not _DECK_LIBRARY_PATH.exists():
@@ -66,15 +70,9 @@ def resolve_base_deck(archetype_name: str) -> List[str]:
         reverse=True,
     )
 
-    for entry in decklists:
-        raw = entry.get("decklist")
-        if not raw:
-            continue
-        deck = json.loads(raw) if isinstance(raw, str) else raw
-        if deck:
-            return deck
-
-    raise ValueError(f"No valid decklists for archetype: {archetype_name}")
+    # Training gate (rule 34): the best ADMISSIBLE decklist; a list holding a
+    # non-admissible card is skipped (final review I5).
+    return first_admissible_decklist(decklists, label=f"archetype {archetype_name!r}")
 
 
 def build_default_meta_config() -> dict:
@@ -209,6 +207,7 @@ def train(args: argparse.Namespace) -> None:
         custom_pool=custom_pool,
         card_constraints=card_constraints,
         use_restricted_list=args.use_restricted_list,
+        training_gate=True,  # rule 34: this CLI trains
     )
 
     # --- Train ---

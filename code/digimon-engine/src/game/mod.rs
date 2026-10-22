@@ -141,8 +141,9 @@ pub(crate) struct DelayedOptionLifecycleResume {
 /// parked it. The boundary does not pass until that pool has resolved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum TurnBoundaryResume {
-    /// The `EndOfOpponentsTurn` pool of `rotate_turn_player`: finish the
-    /// rotation (memory floor, turn advance, seesaw flip, `begin_turn`).
+    /// Whatever `rotate_turn_player`'s expiries queued (the `[End of
+    /// Opponent's Turn]` effects resolve earlier, in the end-of-turn pool):
+    /// finish the rotation (memory floor, turn advance, seesaw flip, `begin_turn`).
     FinishTurnRotation { ending_player: PlayerId },
     /// The `UntilNextUnsuspend` pool at the start of a turn: continue into
     /// the per-turn reset and the unsuspend phase.
@@ -1288,7 +1289,8 @@ pub struct Game {
     pub scheduled_provenance_deletions: Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
     /// PUPPETS-G016 — provenance-keyed deletions scheduled for the end of the
     /// **opponent's** turn. Mirror of `scheduled_provenance_deletions` but
-    /// enqueued into `rotate_turn_player`'s `EndOfOpponentsTurn` pool
+    /// enqueued into the non-turn player's `EndOfOpponentsTurn` half of the
+    /// end-of-turn pool (`enqueue_end_of_opponents_turn_pool`)
     /// (`Game::enqueue_provenance_deletions_at_opponents_turn_end`, §18-1-2)
     /// rather than the `EndOfYourTurn` one.
     /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
@@ -4240,7 +4242,9 @@ impl Game {
                     continue;
                 }
                 total += 1;
-                let count = permanent.activation_count(source.handle(), slot as u8);
+                // Shared-OPT groups count on their group key (`Game::opt_slot_key`).
+                let key = effect.shared_opt_group.unwrap_or(slot as u8);
+                let count = permanent.activation_count(source.handle(), key);
                 if count >= effect.max_per_turn {
                     used += 1;
                 }

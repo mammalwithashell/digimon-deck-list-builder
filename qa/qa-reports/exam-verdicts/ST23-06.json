@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-10T17:11:31.956098400+00:00",
+  "last_updated": "2026-10-21T14:46:28.317339+00:00",
   "clauses": {
     "ST23-06#effect#0": {
       "clause_id": "ST23-06#effect#0",
@@ -21,6 +21,8 @@
       "reason": "DIVERGED at step 9 (compared 11 of 16 ours / 13 dcgo steps (5 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-ST23-06-effect1",
+      "triage": "dcgo_quirk",
+      "citation": "Rules-neutral (CR 4.3 §15-8-3-2, §17-1-2-2: no triggered effect and no rule check runs inside the resolving effect, the candidate sets match, the end state matches): ST23-06's 'add 1 ... to the hand and place 1 such card face down under ... Tamers' -- DCGO moves the hand pick before the place prompt (RevealLibrary.cs:291 loop), ours picks both then moves. Re-diffed 2026-10-21: ONLY divergence is p0.hand on the place-pick row, no downstream rows. qa/rules/dcgo_quirks.md Q-REVEAL-ADD-THEN-PLACE (owner question open there)",
       "recorded_at": "2026-10-10T17:10:38.954449400+00:00"
     },
     "ST23-06#effect#2": {
@@ -33,6 +35,8 @@
       "reason": "DIVERGED at step 11 (compared 10 of 15 ours / 12 dcgo steps (5 sim-only row(s) with no DCGO prompt + 2 DCGO intermediate row(s) not comparable))",
       "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
       "job_id": "exam-ST23-06-effect2",
+      "triage": "dcgo_quirk",
+      "citation": "Rules-neutral (CR 4.3 §15-8-3-2, §17-1-2-2: no triggered effect and no rule check runs inside the resolving effect, the candidate sets match, the end state matches): ST23-06's 'add 1 ... to the hand and place 1 such card face down under ... Tamers' -- DCGO moves the hand pick before the place prompt (RevealLibrary.cs:291 loop), ours picks both then moves. Re-diffed 2026-10-21: ONLY divergence is p0.hand on the place-pick row, no downstream rows. qa/rules/dcgo_quirks.md Q-REVEAL-ADD-THEN-PLACE (owner question open there)",
       "recorded_at": "2026-10-10T17:11:31.956098400+00:00"
     },
     "ST23-06#inherited#0": {

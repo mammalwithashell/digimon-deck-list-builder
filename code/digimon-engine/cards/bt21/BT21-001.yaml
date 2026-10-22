@@ -53,6 +53,12 @@ effects:
   - scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
+    # The whole effect is one "may" (DCGO BT21_001.cs `isOptional: true`): a
+    # pass is not activating it, so the [Once Per Turn] is kept (official Q&A
+    # Q1818, CR 4.3 §15-14-1-4). `optional: true` + a tail gated on the pick
+    # lets the lowering refund the use on a pass
+    # (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT).
+    optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn][OPT] When opponent's security removed, 1 of your Digimon may digivolve into Reptile/Dragonkin in hand, cost -1"
     process:
@@ -64,18 +70,21 @@ effects:
               - kind: digimon
               - zone: [battle_area]
           prompt: "Choose 1 of your Digimon to digivolve"
-      - select_hand:
-          of: you
-          bind_as: evo
-          filter:
-            all_of:
-              - kind: digimon
-              - any_of:
-                  - trait_has: Reptile
-                  - trait_has: Dragonkin
-          prompt: "Choose a Reptile or Dragonkin card to digivolve into"
-      - effect_initiated_digivolve:
-          target: target
-          from_hand: evo
-          cost: { reduce: 1 }
-          ignore_requirements: false
+      - if:
+          condition: { binding_present: target }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Reptile
+                        - trait_has: Dragonkin
+                prompt: "Choose a Reptile or Dragonkin card to digivolve into"
+            - effect_initiated_digivolve:
+                target: target
+                from_hand: evo
+                cost: { reduce: 1 }
+                ignore_requirements: false

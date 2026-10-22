@@ -8978,6 +8978,8 @@ Repair checkpoint (2026-10-11): `event_card_name_is` compares the immutable even
 
 ### G-EFFECT-PLAY-CONTROLLER-PROVENANCE / G-EFFECT-PLAY-BREEDING-FLOODGATE (Examon campaign, 2026-10-10)
 
+Card promotion (2026-10-21, mechanics-gate Task 7): BT8-097 re-audited and flipped to IMPLEMENTED. The archived audit's Q4663/Q6238 regressions are live in `tests/cards_behavioral/bt8/bt8_097.rs`, joined by real-play Q4664 (opponent's EX5-060 cannot play my trash Digimon), Q6238 through BT20-053 Grademon's own effect, and Q1774 (BT21-015 security self-play refused, card to trash), each with a no-Crimson-Blaze control arm; 34/34 pass. YAML unchanged. DCGO oracle interactions remain unmeasured.
+
 Repair checkpoint (2026-10-11): effect-play provenance now distinguishes the causing controller from the destination player across supported hand/trash/security/source/token/breeding play paths. Breeding play respects the same prohibition. Four focused controller regressions and 41 flood-gate tests passed in `examon-2026-10-10-evidence/verification/tail-shared-primitives-green.log`; independent spec/quality approval complete. BT8-097 full archived audit and oracle interactions remain pending. Original diagnosis follows.
 
 **Engine gaps; BT8-097 remains BLOCKED.** Official Q4663/Q4664 restrict the effect controller, not the owner/destination of the played card. Actual Crimson Blaze followed by the controller's EX5-060 effect must allow playing the opponent's trash Digimon, but current can_effect_play_card checks destination player_id and forbids it (0 played, expected 1; 27/28 audit result). Q6238 also requires the play prohibition to cover breeding: play_to_breeding_from_hand currently succeeds under the installed floodgate (isolated regression 0/1). Need consistent effect-actor provenance and breeding-zone enforcement across play APIs and their masks. Full failing audit preserved in qa/archetype-qa/dsl/examon-2026-10-10-evidence/blocked/BT8-097-audit-full.rs; no readiness promotion.
@@ -8993,6 +8995,8 @@ Repair checkpoint (2026-10-11): opt-in `grant_triggered_effect.dynamic: true` in
 
 
 ### G-ENGINE-EFFECT-DIGIVOLVE-COST-CHOICE — LM-055 extension (2026-10-10)
+
+Card promotions (2026-10-21, mechanics-gate Task 7): the support-card re-audits are done. LM-057, LM-055 and LM-058 each gained a real-play test (paid placement, later Main <Delay> activation through the mask) on the deck's actual pair — Wingdramon BT20-025 (blue/red) on Coredramon BT20-023, or for LM-058 Groundramon BT20-042 on Coredramon BT20-040 — asserting the player is offered exactly the two reduced payments 1 and 2 (named 3 / colour 4 minus 2), cloned per choice; LM-027 gained the same check through its real paid Option play (Coredramon BT20-023 into Wingdramon BT20-025, Reduce3: exactly "cost 0" / "cost 1"). All four rows flipped BLOCKED -> IMPLEMENTED in validated_cards_dsl.json (lm_057 24/24, lm_055 17/17, lm_058 19/19, lm_027 32/32); YAML unchanged; DCGO oracle measurement remains separate.
 
 Repair follow-up: the shared cost-choice primitive above is now resolved by the core repair, including reduced-cost choices. The following support-card findings describe the original audit; LM-055/057/058 remain pending their own re-audit, outside this core repair, and are not automatically promoted by the shared fix.
 

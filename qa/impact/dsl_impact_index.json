@@ -4975,6 +4975,7 @@
       "path": "bt20/BT20-083.yaml",
       "predicates": [
         "all_of",
+        "in_breeding",
         "name_is",
         "opponents_turn",
         "security_count_lte",
@@ -5147,6 +5148,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "binding_present",
         "kind",
         "trait_has",
         "your_turn",
@@ -5157,6 +5159,7 @@
       ],
       "verbs": [
         "effect_initiated_digivolve",
+        "if",
         "select_hand",
         "select_own_permanent"
       ]
@@ -7530,6 +7533,7 @@
         "event_target_kind",
         "event_target_owner",
         "event_target_trait_has",
+        "in_breeding",
         "kind",
         "materials_count_gte",
         "name_contains",
@@ -7731,6 +7735,7 @@
       "path": "bt24/BT24-003.yaml",
       "predicates": [
         "all_of",
+        "binding_present",
         "kind",
         "trait_has",
         "your_turn"
@@ -7740,6 +7745,8 @@
       ],
       "verbs": [
         "effect_initiated_digivolve",
+        "if",
+        "refund_opt",
         "select_hand"
       ]
     },
@@ -29603,6 +29610,7 @@
       "BT20-040",
       "BT20-042",
       "BT20-044",
+      "BT21-001",
       "BT21-009",
       "BT21-013",
       "BT21-027",
@@ -29614,6 +29622,7 @@
       "BT22-022",
       "BT23-039",
       "BT23-076",
+      "BT24-003",
       "BT24-007",
       "BT24-009",
       "BT24-013",
@@ -31926,6 +31935,8 @@
     ],
     "in_breeding": [
       "BT13-007",
+      "BT20-083",
+      "BT23-072",
       "BT9-047",
       "EX2-007"
     ],
@@ -41688,6 +41699,7 @@
       "BT20-059",
       "BT20-060",
       "BT20-100",
+      "BT21-001",
       "BT21-009",
       "BT21-013",
       "BT21-021",
@@ -41718,6 +41730,7 @@
       "BT23-076",
       "BT23-096",
       "BT23-102",
+      "BT24-003",
       "BT24-007",
       "BT24-009",
       "BT24-013",
@@ -43141,6 +43154,7 @@
       "AD1-024",
       "BT19-001",
       "BT20-027",
+      "BT24-003",
       "BT24-007",
       "BT24-009",
       "BT24-013",

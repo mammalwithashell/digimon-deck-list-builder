@@ -1,4 +1,12 @@
-"""Oracle readiness: which cards RL training may draw.
+"""Oracle readiness: which cards have every clause and interaction adjudicated.
+
+REPORT, NOT A TRAINING GATE (since 2026-10-21). Training admission is the two-layer
+mechanics gate -- `data/mechanics_readiness.json` plus the light per-card
+`data/card_admissibility.json` (spec `2026-10-15-engine-rules-conformance-validation-design.md`
+§5b). This module still computes and `--check`s `data/oracle_readiness.json` as the
+progress report of the opt-in DCGO exam deepening (and `--plan` still ranks which
+exams to run next); `gauntlet.py` reads it only under `pilot_training --legacy-clause-gate`.
+The rest of this docstring defines the report.
 
 A card is READY when every printed clause AND every gating interaction of the
 card is adjudicated against the DCGO oracle: confirmed; unreachable/unavailable
@@ -62,8 +70,9 @@ GATING_CLAUSES = "clauses"
 GATING_INTERACTIONS = "interactions"
 READY = "ready"
 NOT_READY = "not_ready"
-# Mirror of gauntlet._NOT_READY_DSL_STATUSES (gauntlet needs the engine binding,
-# which this stdlib tool must not import).
+# Mirror of card_admissibility.NOT_READY_LEDGER_STATUSES (re-exported as
+# gauntlet._NOT_READY_DSL_STATUSES; gauntlet needs the engine binding, which this
+# stdlib tool must not import).
 LEDGER_NOT_READY = frozenset({"PARTIAL", "BLOCKED", "AUDITED-DRIFT", "AUDITED-MISSING-TESTS"})
 # Mirror of the engine's `deck_tools::is_card_id`, which `parse_tts` -- the
 # gauntlet's decklist parser -- applies: anything else in a decklist is an

@@ -290,6 +290,19 @@ pub struct Effect {
     /// the battle-area top-card scan skips them. Set via
     /// `EffectBuilder::trash_zone()` / DSL `scope: trash`.
     pub trash_zone: bool,
+    /// The clause explicitly specifies or references the breeding area
+    /// (CR 4.3 §3-4-7-4): a printed `[Breeding]` scope, authored as a positive
+    /// `in_breeding: true` (or `zone: [breeding]`) in the clause's own gate
+    /// (`active_when` / `condition` / `trigger_if` / `while_condition`; see
+    /// `dsl_cards::clause_references_breeding_area`). Effects on a card in the
+    /// breeding area can't trigger or activate otherwise, so the breeding-area
+    /// dispatch (`Game::enqueue_from_breeding_permanent`) and the declarative
+    /// pass (`Game::materialize_declaratives_full`) consider ONLY effects with
+    /// this flag. It does not restrict the effect elsewhere; the clause's own
+    /// `in_breeding` gate does that. Set via `EffectBuilder::breeding_zone()`.
+    /// G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE /
+    /// G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE.
+    pub breeding_zone: bool,
     pub counter: bool,
     pub declarative: bool,
     /// True only for process-backed declaratives that materialize static
@@ -939,6 +952,7 @@ impl EffectBuilder {
                 inherited: false,
                 security: false,
                 trash_zone: false,
+                breeding_zone: false,
                 counter: false,
                 declarative: false,
                 materializes_declarative_state: false,
@@ -1035,6 +1049,13 @@ impl EffectBuilder {
     /// `Effect::trash_zone`.
     pub fn trash_zone(mut self) -> Self {
         self.inner.trash_zone = true;
+        self
+    }
+    /// Mark this effect as one that explicitly specifies or references the
+    /// breeding area (CR 4.3 §3-4-7-4), so it may trigger / activate / apply
+    /// from a card in the breeding area. See `Effect::breeding_zone`.
+    pub fn breeding_zone(mut self) -> Self {
+        self.inner.breeding_zone = true;
         self
     }
     fn declarative_flag(mut self) -> Self {

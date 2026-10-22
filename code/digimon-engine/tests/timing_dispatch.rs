@@ -314,12 +314,19 @@ impl CardEffect for MainPhaseMemoryGain {
 
 struct MainPhaseObserverRecorder {
     seen: Arc<Mutex<Vec<(String, Option<PermanentHandle>)>>>,
+    /// Mark the effect as one that references the breeding area (a printed
+    /// `[Breeding]` effect, CR 4.3 §3-4-7-4): only those trigger there.
+    breeding: bool,
 }
 
 impl CardEffect for MainPhaseObserverRecorder {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         let seen = self.seen.clone();
-        vec![Effect::start_of_your_main_phase(card)
+        let mut builder = Effect::start_of_your_main_phase(card);
+        if self.breeding {
+            builder = builder.breeding_zone();
+        }
+        vec![builder
             .name("record main phase observer")
             .process(move |ctx| {
                 let observer_id = ctx
@@ -390,11 +397,17 @@ fn start_of_your_main_phase_fans_out_to_battle_and_breeding_once_each() {
         .start();
     r.register_effect(
         "BATTLE-MAIN",
-        Arc::new(MainPhaseObserverRecorder { seen: seen.clone() }),
+        Arc::new(MainPhaseObserverRecorder {
+            seen: seen.clone(),
+            breeding: false,
+        }),
     );
     r.register_effect(
         "BREED-MAIN",
-        Arc::new(MainPhaseObserverRecorder { seen: seen.clone() }),
+        Arc::new(MainPhaseObserverRecorder {
+            seen: seen.clone(),
+            breeding: true,
+        }),
     );
 
     let battle = r.place_on_field(0, "BATTLE-MAIN", Some(0));
@@ -2688,6 +2701,9 @@ impl CardEffect for BreedingInheritedOppSecRemovedPayloadObs {
         vec![Effect::inherited(card)
             .name("breeding inherited opponent security removal payload")
             .timing(EffectTiming::OnOpponentSecurityRemoved)
+            // A `[Breeding]` effect: only those trigger from the breeding
+            // area (CR 4.3 §3-4-7-4).
+            .breeding_zone()
             .process(move |ctx| {
                 seen.lock().unwrap().push((
                     ctx.event_affected_player(),

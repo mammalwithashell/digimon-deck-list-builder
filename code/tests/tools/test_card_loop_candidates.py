@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import time
 from datetime import date
 from pathlib import Path
@@ -305,12 +304,11 @@ def test_adjudicated_follows_the_readiness_definition(row, expected):
 
 
 def test_the_blocking_statuses_mirror_the_training_gate():
-    """The training gate's deny-list lives in `gauntlet.py`, which imports the
-    engine binding and gymnasium; read it as text rather than import it."""
-    src = (ROOT / "code" / "digimon_gym" / "agents" / "gauntlet.py").read_text(encoding="utf-8")
-    block = re.search(r"_NOT_READY_DSL_STATUSES = frozenset\(\{(.*?)\}\)", src, re.S)
-    assert block, "gauntlet.py no longer defines _NOT_READY_DSL_STATUSES"
-    assert set(re.findall(r'"([A-Z-]+)"', block.group(1))) == set(cand.NOT_READY_STATUSES)
+    """The ledger deny-list is owned by `card_admissibility` (stdlib-only, so it
+    imports without the engine binding); `gauntlet` re-exports it."""
+    from digimon_gym.agents.card_admissibility import NOT_READY_LEDGER_STATUSES
+
+    assert set(NOT_READY_LEDGER_STATUSES) == set(cand.NOT_READY_STATUSES)
 
 
 def test_the_command_is_registered():

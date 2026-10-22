@@ -1,9 +1,10 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use rand::seq::SliceRandom;
 use rand::Rng;
 
 use crate::card_data::CardData;
+use crate::card_source::CardHandle;
 use crate::card_source::CardSource;
 use crate::enums::PlayerId;
 use crate::opaque_deck::OpaqueDeckState;
@@ -61,6 +62,16 @@ pub struct Player {
     /// See `crate::opaque_deck` for the contract. Set only by
     /// `Game::new_with_opaque_opponent`.
     pub opaque_deck_state: Option<OpaqueDeckState>,
+
+    /// [X Per Turn] use counts of `{Security}` (security-zone) effects on
+    /// this player's security cards, keyed by `(card, OPT key)` the way a
+    /// permanent keys `effect_activations` (§15-14-1-1/-2). A security card is
+    /// not on a permanent, so its count lives here. Cleared when the turn
+    /// changes (§15-14-1-5-1, `reset_effect_activations`) and, for a card,
+    /// when it enters the security stack again as a new card
+    /// (§15-14-1-5-2, `insert_in_security`).
+    /// G-ENGINE-SECURITY-ZONE-OPT-UNTRACKED.
+    pub security_effect_activations: HashMap<(CardHandle, u8), u8>,
 }
 
 impl Player {
@@ -82,6 +93,7 @@ impl Player {
             commander_tax: 0,
             is_eliminated: false,
             opaque_deck_state: None,
+            security_effect_activations: HashMap::new(),
         }
     }
 
@@ -242,6 +254,10 @@ impl Player {
         // A new card arrives face down: drop any stale face-up record for its
         // instance. A face-up placement (§3-7-4) marks it after this insert.
         self.face_up_security.remove(&card.card_index);
+        // A card entering the security stack is a new card (§3-1-3-1-1): its
+        // {Security} [X Per Turn] uses start over (§15-14-1-5-2).
+        let handle = card.handle();
+        self.security_effect_activations.retain(|(c, _), _| *c != handle);
         self.security.insert(index, card);
     }
 
@@ -433,6 +449,13 @@ impl Player {
         for perm in &mut self.battle_area {
             perm.new_turn();
         }
+        // §15-14-1-5-1: the breeding-area Digimon's [X Per Turn] uses reset
+        // with the turn too (a `[Breeding]` effect's counter lives on it).
+        // G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE.
+        if let Some(perm) = self.breeding_area.as_mut() {
+            perm.new_turn();
+        }
+        self.security_effect_activations.clear();
     }
 
     /// Reset only the [Once Per Turn] activation counters. "Per turn" means
@@ -442,6 +465,31 @@ impl Player {
     pub fn reset_effect_activations(&mut self) {
         for perm in &mut self.battle_area {
             perm.effect_activations.clear();
+        }
+        if let Some(perm) = self.breeding_area.as_mut() {
+            perm.effect_activations.clear();
+        }
+        self.security_effect_activations.clear();
+    }
+
+    /// A `{Security}` effect's [X Per Turn] use count this turn.
+    pub fn security_activation_count(&self, card: CardHandle, key: u8) -> u8 {
+        self.security_effect_activations
+            .get(&(card, key))
+            .copied()
+            .unwrap_or(0)
+    }
+
+    /// Count one use of a `{Security}` effect.
+    pub fn record_security_activation(&mut self, card: CardHandle, key: u8) {
+        let entry = self.security_effect_activations.entry((card, key)).or_insert(0);
+        *entry = entry.saturating_add(1);
+    }
+
+    /// Refund one use of a `{Security}` effect (`refund_opt`). Saturates at 0.
+    pub fn unrecord_security_activation(&mut self, card: CardHandle, key: u8) {
+        if let Some(entry) = self.security_effect_activations.get_mut(&(card, key)) {
+            *entry = entry.saturating_sub(1);
         }
     }
 

@@ -1,0 +1,32 @@
+{
+  "blocking": [],
+  "counts": {
+    "gap_blocking": 0,
+    "gap_nonblocking": 315,
+    "not_testable": 152,
+    "proven": 248,
+    "total": 715
+  },
+  "mechanics_set": [
+    "effects-and-ordering",
+    "keywords",
+    "attack-and-timing",
+    "security",
+    "battle",
+    "blocking",
+    "rule-checks",
+    "turn-flow",
+    "digivolution-and-costs",
+    "play-and-costs",
+    "card-use-and-costs",
+    "link"
+  ],
+  "ready": true,
+  "ready_means": "ready = no mechanics obligation is flagged outcome-changing (blocks_training, hand-set in qa/rules/cr_obligations_status.yaml); unflagged open gaps are not judged outcome-neutral; rules_conformance suite greenness is enforced by CI (engine-rules-conformance.yml), not here",
+  "source": {
+    "obligations_sha256": "1a4b3d68f847a5760b8bf002acc2ca572ecfc24ea88afa6634d663fd47df538d",
+    "rules_version": "4.3"
+  },
+  "unflagged_open_gaps": 315,
+  "version": 1
+}

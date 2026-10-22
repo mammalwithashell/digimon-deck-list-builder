@@ -166,7 +166,19 @@ fn bt24_003_process_uses_effect_initiated_digivolve_with_cost_reduction() {
         .expect("own-security-removed clause");
 
     use digimon_dsl::compiled::CompiledCostDelta;
-    let has_reduced_digivolve = clause.process.iter().any(|s| {
+    // The digivolve sits in the `if binding_present` branch; the `else`
+    // branch refunds the [Once Per Turn] (Q1818).
+    fn any_step(steps: &[CompiledStep], f: &dyn Fn(&CompiledStep) -> bool) -> bool {
+        steps.iter().any(|s| {
+            f(s) || match s {
+                CompiledStep::If {
+                    then, else_branch, ..
+                } => any_step(then, f) || any_step(else_branch, f),
+                _ => false,
+            }
+        })
+    }
+    let has_reduced_digivolve = any_step(&clause.process, &|s| {
         matches!(
             s,
             CompiledStep::EffectInitiatedDigivolve {
@@ -175,6 +187,10 @@ fn bt24_003_process_uses_effect_initiated_digivolve_with_cost_reduction() {
             }
         )
     });
+    assert!(
+        any_step(&clause.process, &|s| matches!(s, CompiledStep::RefundOpt)),
+        "declining the pick refunds the [Once Per Turn] (Q1818)"
+    );
     assert!(
         has_reduced_digivolve,
         "must digivolve via effect_initiated_digivolve with cost reduced by 1; got {:?}",
@@ -486,83 +502,157 @@ fn bt24_003_no_shaman_hand_card_leaves_no_legal_pick() {
 // Section 4 — OPT enforcement
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// [Once Per Turn]: after resolving once, a second own-security removal on
-/// the same turn does not re-offer the prompt; after end_turn (and back to
-/// the controller's turn) the lockout clears.
+fn push_hand(runner: &mut DebugRunner, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("{card_id} registered"));
+    let next_idx = runner.game.next_card_index();
+    let card = digimon_engine::card_source::CardSource::new(data_idx, 0, next_idx);
+    runner.game.players[0].hand.push(card);
+}
+
+fn remove_own_security(runner: &mut DebugRunner) {
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOwnSecurityRemoved,
+        TriggerSource::SecurityRemoved {
+            affected_player: 0,
+            observer_player: 0,
+            source_player: 1,
+            card: CardHandle(0),
+            cause: EventCause::SecurityRemoval,
+        },
+    );
+    runner.game.drain_effect_queue();
+}
+
+fn pick_first_candidate(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional digivolve prompt installs");
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("a legal Shaman hand-card pick exists");
+    runner
+        .execute_action(view.selecting_player, pick)
+        .expect("select the Shaman hand card");
+    runner.game.drain_effect_queue();
+}
+
+fn top_id(runner: &DebugRunner, host_index: u8) -> String {
+    runner.game.players[0].battle_area[host_index as usize]
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string()
+}
+
+/// Official Q&A Q1818 (same "you may" + [Once Per Turn] shape, BT9-018):
+/// "If you choose not to, the effect's [Once Per Turn] requirement won't be
+/// used up". CR 4.3 §15-14-1-4 counts a use when the player CHOOSES to
+/// activate. Declining "this Digimon may digivolve" is choosing not to
+/// activate, so a second own-security removal the same turn offers the
+/// digivolve again, and accepting it digivolves. DCGO agrees
+/// (`BT24_003.cs` `canNoSelect: true`: declining the OptionalSkill gate
+/// never uses the ActivateClass; exam
+/// `probe:BT24-003#inherited#0:optional_decline`).
 #[test]
-fn bt24_003_opt_blocks_second_activation_same_turn() {
+fn bt24_003_declined_trigger_is_offered_again_same_turn_q1818() {
     let mut runner = base();
     let host = runner.place_stack(0, &["BT24-003", "ST3-02"]);
-    {
-        let data_idx = runner
-            .game
-            .card_data
-            .iter()
-            .position(|c| c.card_id == "BT24-034")
-            .unwrap();
-        let next_idx = runner.game.next_card_index();
-        let card = digimon_engine::card_source::CardSource::new(data_idx, 0, next_idx);
-        runner.game.players[0].hand.push(card);
-    }
+    push_hand(&mut runner, "BT24-034");
 
-    // First activation: decline (OPT should still be consumed — DCGO marks
-    // the ActivateClass as "used" once the prompt is offered/resolved).
-    runner.game.enqueue_triggered(
-        EffectTiming::OnOwnSecurityRemoved,
-        TriggerSource::SecurityRemoved {
-            affected_player: 0,
-            observer_player: 0,
-            source_player: 1,
-            card: CardHandle(0),
-            cause: EventCause::SecurityRemoval,
-        },
-    );
+    // First removal: decline.
+    remove_own_security(&mut runner);
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional digivolve prompt installs");
+    assert!(view.is_optional, "'may digivolve' is declinable");
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("decline the first activation");
     runner.game.drain_effect_queue();
-    if let Some(view) = runner.pending_selection_view() {
-        runner
-            .execute_action(view.selecting_player, PASS)
-            .expect("decline first activation");
-        runner.game.drain_effect_queue();
-    }
+    assert_eq!(top_id(&runner, host.index), "ST3-02", "declining digivolves nothing");
 
-    // Second own-security removal, same turn: must not re-offer.
-    runner.game.enqueue_triggered(
-        EffectTiming::OnOwnSecurityRemoved,
-        TriggerSource::SecurityRemoved {
-            affected_player: 0,
-            observer_player: 0,
-            source_player: 1,
-            card: CardHandle(0),
-            cause: EventCause::SecurityRemoval,
-        },
+    // Second removal, same turn: the [Once Per Turn] was not used up.
+    remove_own_security(&mut runner);
+    assert!(
+        runner.pending_selection().is_some(),
+        "Q1818: a declined [Once Per Turn] 'may' effect is offered again the same turn"
     );
+    pick_first_candidate(&mut runner);
+    assert_eq!(
+        top_id(&runner, host.index),
+        "BT24-034",
+        "accepting the second offer digivolves into the [Shaman] hand card"
+    );
+}
+
+/// §15-14-1-4: once the player chooses to activate (digivolves), the use is
+/// counted, so a second own-security removal the same turn does not offer the
+/// effect again even with a legal [Shaman] target in hand (BT24-014
+/// Aegiochusmon, Lv.5, digivolves from a yellow Lv.4); the lockout clears
+/// when the turn changes (§15-14-1-5-1).
+#[test]
+fn bt24_003_accepted_trigger_locks_out_second_activation_same_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT24-003 YAML parses and compiles")
+        .dsl_card("ST3-02")
+        .expect("ST3-02 YAML parses")
+        .dsl_card("BT24-034")
+        .expect("BT24-034 YAML parses")
+        .dsl_card("BT24-014")
+        .expect("BT24-014 YAML parses")
+        .add_card(make_test_card("FILLER-DECK", "Filler"))
+        .deck(0, &["FILLER-DECK"; 10])
+        .deck(1, &["FILLER-DECK"; 10])
+        .memory(10)
+        .start();
+    let host = runner.place_stack(0, &["BT24-003", "ST3-02"]);
+    push_hand(&mut runner, "BT24-034");
+
+    // First removal: accept -> digivolve into Aegiomon (BT24-034).
+    remove_own_security(&mut runner);
+    let view = runner
+        .pending_selection_view()
+        .expect("the optional digivolve prompt installs");
+    let aegiomon_pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect::<Vec<_>>();
+    assert_eq!(aegiomon_pick.len(), 1, "Aegiomon is the only [Shaman] hand card");
+    runner
+        .execute_action(view.selecting_player, aegiomon_pick[0])
+        .expect("digivolve into Aegiomon");
     runner.game.drain_effect_queue();
+    assert_eq!(top_id(&runner, host.index), "BT24-034");
+
+    // Second removal, same turn: Aegiochusmon (BT24-014) is a legal target
+    // onto the Lv.4 Aegiomon, but the use is spent.
+    push_hand(&mut runner, "BT24-014");
+    remove_own_security(&mut runner);
     assert!(
         runner.pending_selection().is_none(),
-        "OPT must lock out a second activation in the same turn"
+        "an activated [Once Per Turn] effect is not offered again the same turn"
     );
+    assert_eq!(top_id(&runner, host.index), "BT24-034");
 
-    // Cycle back to player 0's turn; the lockout must clear.
+    // Cycle back to player 0's turn; the lockout clears.
     runner.end_turn(); // -> P1
     runner.end_turn(); // -> P0 again
     assert_eq!(runner.game.turn_player(), 0);
-
-    runner.game.enqueue_triggered(
-        EffectTiming::OnOwnSecurityRemoved,
-        TriggerSource::SecurityRemoved {
-            affected_player: 0,
-            observer_player: 0,
-            source_player: 1,
-            card: CardHandle(0),
-            cause: EventCause::SecurityRemoval,
-        },
-    );
-    runner.game.drain_effect_queue();
+    remove_own_security(&mut runner);
     assert!(
         runner.pending_selection().is_some(),
-        "after end_turn cycles back to the controller's turn, OPT lockout clears"
+        "after the turn changes the [Once Per Turn] use resets (§15-14-1-5-1)"
     );
-    let _ = host;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

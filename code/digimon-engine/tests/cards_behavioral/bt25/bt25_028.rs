@@ -384,3 +384,87 @@ fn bt25_028_all_turns_offers_opponent_source_pick_on_opponent_digivolve() {
         view.kind
     );
 }
+
+// ─── [All Turns][OPT] refund when nothing executed (owner-decided, W13) ─────
+
+/// Fire the [All Turns] trigger with a fresh p0 Digimon entering, accept the
+/// clause's gate if it parks, and return whether anything was offered.
+fn bt25_028_fire_all_turns(runner: &mut DebugRunner, id: &str) -> bool {
+    let newcomer = runner.place_on_field(0, id, Some(0));
+    runner.fire_play_event_triggers(0, newcomer.index as usize, false, false);
+    if runner.pending_selection().is_none() {
+        return false;
+    }
+    if runner.pending_kind() == Some(SelectionKind::Replacement) {
+        let accept = runner
+            .pending_selection_view()
+            .expect("gate view")
+            .valid_action_ids[0];
+        runner.execute_action(0, accept).expect("accept the gate");
+    }
+    true
+}
+
+/// PASS every remaining optional prompt of the clause.
+fn bt25_028_pass_rest(runner: &mut DebugRunner) {
+    for _ in 0..6 {
+        let Some(sel) = runner.pending_selection() else { return };
+        assert!(sel.is_optional, "only optional prompts remain: {sel:?}");
+        runner
+            .execute_action(sel.selecting_player, digimon_engine::action::space::PASS)
+            .expect("pass");
+    }
+}
+
+/// Owner-decided 2026-10-21, W13 (DCGO `BT25_028.cs` `if (!executed)
+/// activateClass.RemoveUse()`; the PDF is silent): "you may trash any 4
+/// digivolution cards .... Then, 2 of your Digimon may DNA digivolve ..." with
+/// BOTH halves declined executed nothing, so the [Once Per Turn] is not spent
+/// and the next Digimon played the same turn offers it again.
+#[test]
+fn bt25_028_all_turns_both_halves_declined_keeps_once_per_turn() {
+    let mut runner = base().memory(12).start();
+    runner.place_stack(1, &["PAD", "PAD", "OPP-SRC"]);
+    runner.place_on_field(0, CARD_ID, Some(0));
+    assert!(bt25_028_fire_all_turns(&mut runner, "OPP-NOSRC"), "first offer");
+    assert!(
+        matches!(runner.pending_kind(), Some(SelectionKind::SourceMulti { .. })),
+        "{:?}",
+        runner.pending_kind()
+    );
+    bt25_028_pass_rest(&mut runner); // trash nothing, DNA nothing
+    let opp = &runner.game.players[1].battle_area[0];
+    assert_eq!(opp.card_sources.len(), 3, "nothing trashed");
+
+    assert!(
+        bt25_028_fire_all_turns(&mut runner, "OPP-NOSRC"),
+        "both halves declined: the [Once Per Turn] is not spent"
+    );
+}
+
+/// The use is spent as soon as either half executes: trash 1 digivolution
+/// card, decline the DNA half, and the next play offers nothing.
+#[test]
+fn bt25_028_all_turns_one_half_executed_spends_once_per_turn() {
+    let mut runner = base().memory(12).start();
+    runner.place_stack(1, &["PAD", "PAD", "OPP-SRC"]);
+    runner.place_on_field(0, CARD_ID, Some(0));
+    assert!(bt25_028_fire_all_turns(&mut runner, "OPP-NOSRC"), "first offer");
+    let pick = runner
+        .pending_selection()
+        .expect("source pick")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("a source to trash");
+    runner.execute_action(0, pick).expect("pick one source");
+    bt25_028_pass_rest(&mut runner); // stop at 1; decline the DNA half
+    let opp = &runner.game.players[1].battle_area[0];
+    assert_eq!(opp.card_sources.len(), 2, "one source trashed");
+
+    assert!(
+        !bt25_028_fire_all_turns(&mut runner, "OPP-NOSRC"),
+        "a half executed: the [Once Per Turn] is spent"
+    );
+}

@@ -1,0 +1,31 @@
+# SEC_COST_DEL -- Digimon, Lv.4, red, 5000 DP, play cost 5.
+#   [All Turns] [Once Per Turn] When your security stack is removed from, by
+#   trashing 1 card in your hand, delete 1 of your opponent's Digimon.
+# An optional processing condition (a cost) of a triggered effect.
+card: SEC_COST_DEL
+name: Costdelmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+effects:
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns] [Once Per Turn] When your security stack is removed from, by trashing 1 card in your hand, delete 1 of your opponent's Digimon."
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card in your hand to delete 1 of your opponent's Digimon"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: victim }

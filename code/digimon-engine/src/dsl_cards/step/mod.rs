@@ -993,6 +993,11 @@ pub fn run_step_with_runtime(
             );
             ctx.game
                 .unrecord_source_permanent_activation(perm, source_card, opt_key);
+        } else if let (Some(opt_key), None) = (runtime.opt_key(), ctx.source_permanent) {
+            // A {Security} effect counts its [X Per Turn] on its security card
+            // (G-ENGINE-SECURITY-ZONE-OPT-UNTRACKED).
+            let (player, card) = (ctx.player, ctx.source_card);
+            ctx.game.unrecord_security_card_activation(player, card, opt_key);
         }
         return;
     }
