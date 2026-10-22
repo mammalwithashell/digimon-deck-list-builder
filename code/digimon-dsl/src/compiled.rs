@@ -2175,6 +2175,7 @@ pub enum CompiledStep {
         from_zone: CompiledAppFuseZone,
         result_filter: Option<CompiledPredicate>,
         optional: bool,
+        bind_as: Option<String>,
     },
     EffectInitiatedDnaDigivolve {
         target_a: CompiledBindingRef,

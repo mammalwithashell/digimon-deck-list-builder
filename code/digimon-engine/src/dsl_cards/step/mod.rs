@@ -248,10 +248,29 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     source_permanent: Option<PermanentHandle>,
     player: PlayerId,
     outer_tail: Vec<CompiledStep>,
-    mut bindings: Bindings,
+    bindings: Bindings,
     runtime: StepRuntime,
     tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
 ) {
+    let _ = drain_or_rewrap_pending_tail_with_bindings(
+        game, source_card, source_permanent, player, outer_tail, bindings,
+        runtime, tail_trigger_context,
+    );
+}
+
+/// Resolve a lexical tail and return its current scope. This keeps synchronous
+/// receipt clears local while allowing enclosing typed continuations to see them.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn drain_or_rewrap_pending_tail_with_bindings(
+    game: &mut Game,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    player: PlayerId,
+    outer_tail: Vec<CompiledStep>,
+    mut bindings: Bindings,
+    runtime: StepRuntime,
+    tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
+) -> Option<Bindings> {
     if game.pending_selection.is_some() {
         wrap_pending_selection_with_tail(
             game,
@@ -263,11 +282,11 @@ pub(crate) fn drain_or_rewrap_pending_tail(
             runtime,
             tail_trigger_context,
         );
-        return;
+        return None;
     }
 
     if outer_tail.is_empty() {
-        return;
+        return Some(bindings);
     }
 
     // Re-assert the trigger context the tail was AUTHORED under (captured at
@@ -301,6 +320,7 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
     (game.effect_source_player, game.effect_source_card, game.effect_source_permanent) = previous_source;
     game.current_trigger_context = previous;
+    Some(bindings)
 }
 
 #[allow(clippy::too_many_arguments)]

@@ -3538,6 +3538,7 @@ fn compile_step(
                 )
             }),
             optional: a.optional,
+            bind_as: a.bind_as.clone(),
         },
         S::EffectInitiatedDnaDigivolve(a) => CompiledStep::EffectInitiatedDnaDigivolve {
             target_a: compile_binding_ref(&a.target_a),

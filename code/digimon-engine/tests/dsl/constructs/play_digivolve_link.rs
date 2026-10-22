@@ -484,6 +484,391 @@ effects:
             .to_string()
     }
 
+    // Receipt is opt-in: only a committed fuse binds the result card. Declining
+    // this step must not undo work performed earlier in a larger OPT effect.
+    const SRC_RECEIPT: &str = r#"
+card: DSL-APPFUSE-RECEIPT
+name: App Fuse Receipt
+kind: tamer
+color: [green]
+cost: 0
+effects:
+  - when: on_play
+    once_per_turn: true
+    process:
+      - gain_memory: 1
+      - app_fuse: { from: hand, optional: true, bind_as: fused }
+      - if:
+          condition: { binding_present: fused }
+          then:
+            - gain_memory: 2
+          else:
+            - gain_memory: 3
+"#;
+
+    #[test]
+    fn app_fuse_receipt_outcomes_and_clones() {
+        for mode in [
+            "success",
+            "host_pass",
+            "result_pass",
+            "no_pair",
+            "lost_material",
+            "lost_result",
+            "replaced_host",
+            "cannot_digivolve",
+        ] {
+            {
+                let mut r = builder()
+                    .from_dsl_yaml(SRC_RECEIPT)
+                    .unwrap()
+                    .hand(0, &["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"])
+                    .start();
+                let host = if mode == "no_pair" {
+                    r.place_on_field(0, "TEST-KABEMON", Some(0))
+                } else {
+                    fused_host(&mut r)
+                };
+                let before = r.game.memory;
+                r.play(0, 0);
+                if mode == "no_pair" {
+                    assert_eq!(r.game.memory, before + 4);
+                    continue;
+                }
+                let mut at_host = r.game.clone();
+                let first = if mode == "host_pass" {
+                    PASS
+                } else {
+                    encode_attack(0, host.index as u16)
+                };
+                for game in [&mut r.game, &mut at_host] {
+                    assert_eq!(
+                        digimon_engine::action::build_action_mask(game, 0)[first as usize],
+                        1.0
+                    );
+                    game.resolve_selection(0, first).unwrap();
+                }
+                if mode != "host_pass" {
+                    for game in [&mut r.game, &mut at_host] {
+                        match mode {
+                            "lost_material" => {
+                                game.players[0].battle_area[host.index as usize]
+                                    .linked_cards
+                                    .clear();
+                            }
+                            "lost_result" => {
+                                game.players[0].hand.clear();
+                            }
+                            "cannot_digivolve" => {
+                                game.modifiers.add(
+                                    host,
+                                    digimon_engine::modifiers::ModifierEntry::simple(
+                                        digimon_engine::enums::ModifierType::CannotDigivolve,
+                                        0,
+                                        digimon_engine::enums::Expiry::Permanent,
+                                        0,
+                                    ),
+                                );
+                            }
+                            "replaced_host" => {
+                                let old = game.players[0].battle_area.remove(host.index as usize);
+                                let mut replacement = digimon_engine::permanent::Permanent::new(
+                                    old.top_card().clone(),
+                                    game.turn_count,
+                                );
+                                replacement.linked_cards = old.linked_cards;
+                                game.players[0]
+                                    .battle_area
+                                    .insert(host.index as usize, replacement);
+                            }
+                            _ => {}
+                        }
+                    }
+                    let mut at_result = r.game.clone();
+                    let pick = if mode == "result_pass" {
+                        PASS
+                    } else {
+                        HAND_EFFECT_START
+                    };
+                    for game in [&mut r.game, &mut at_host, &mut at_result] {
+                        assert_eq!(
+                            digimon_engine::action::build_action_mask(game, 0)[pick as usize],
+                            1.0
+                        );
+                        game.resolve_selection(0, pick).unwrap();
+                    }
+                    assert_eq!(at_result.memory, r.game.memory, "{mode}");
+                }
+                let success = mode == "success";
+                assert_eq!(
+                    r.game.memory,
+                    before + if success { 3 } else { 4 },
+                    "{mode}"
+                );
+                assert_eq!(at_host.memory, r.game.memory, "{mode}");
+                assert!(r.game.pending_selection.is_none(), "{mode}");
+                assert_eq!(
+                    top_id(&r, host),
+                    if success {
+                        "TEST-APPFUSE"
+                    } else {
+                        "TEST-KABEMON"
+                    },
+                    "{mode}"
+                );
+                let source = r.game.players[0]
+                    .battle_area
+                    .iter()
+                    .find(|p| p.top_card().card_id(&r.game.card_data) == "DSL-APPFUSE-RECEIPT")
+                    .unwrap();
+                assert_eq!(
+                    source.activation_count(source.top_card().handle(), 0),
+                    1,
+                    "earlier completed work keeps OPT: {mode}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn app_fuse_receipt_empty_result_zone_and_legacy_decline() {
+        let mut r = builder()
+            .from_dsl_yaml(SRC_RECEIPT)
+            .unwrap()
+            .hand(0, &["DSL-APPFUSE-RECEIPT"])
+            .start();
+        fused_host(&mut r);
+        let before = r.game.memory;
+        r.play(0, 0);
+        assert!(r.game.pending_selection.is_none());
+        assert_eq!(
+            r.game.memory,
+            before + 4,
+            "empty result zone publishes no success"
+        );
+
+        let unbound = SRC_RECEIPT.replace(", bind_as: fused", "");
+        // Remove receipt conditions to keep the intentionally unbound fixture valid.
+        let unbound =
+            unbound.split("      - if:").next().unwrap().to_owned() + "      - gain_memory: 3\n";
+        for result_prompt in [false, true] {
+            let mut r = builder()
+                .from_dsl_yaml(&unbound)
+                .unwrap()
+                .hand(0, &["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"])
+                .start();
+            let host = fused_host(&mut r);
+            let before = r.game.memory;
+            r.play(0, 0);
+            if result_prompt {
+                r.execute_action(0, encode_attack(0, host.index as u16))
+                    .unwrap();
+            }
+            r.execute_action(0, PASS).unwrap();
+            assert_eq!(
+                r.game.memory,
+                before + 1,
+                "unbound legacy PASS still stops its tail"
+            );
+        }
+    }
+
+    #[test]
+    fn app_fuse_receipt_rebinding_clears_previous_success() {
+        let yaml = SRC_RECEIPT.split("      - app_fuse:").next().unwrap().to_owned()
+            + r#"
+      - if:
+          condition: {}
+          then:
+            - app_fuse: { from: hand, optional: true, bind_as: fused }
+            - if:
+                condition: { binding_present: fused }
+                then:
+                  - app_fuse: { from: hand, optional: true, bind_as: fused }
+      - if:
+          condition: { binding_absent: fused }
+          then:
+            - gain_memory: 3
+"#;
+        for outcome in ["no_pair", "host_pass", "result_pass"] {
+            let mut r = builder()
+                .from_dsl_yaml(&yaml)
+                .unwrap()
+                .hand(0, &["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE", "TEST-APPFUSE"])
+                .start();
+            let host = fused_host(&mut r);
+            let second_host = if outcome != "no_pair" {
+                Some(fused_host(&mut r))
+            } else {
+                None
+            };
+            let before = r.game.memory;
+            r.play(0, 0);
+            r.execute_action(0, encode_attack(0, host.index as u16))
+                .unwrap();
+            r.execute_action(0, HAND_EFFECT_START).unwrap();
+            assert_eq!(top_id(&r, host), "TEST-APPFUSE");
+            if let Some(second) = second_host {
+                if outcome == "result_pass" {
+                    r.execute_action(0, encode_attack(0, second.index as u16))
+                        .unwrap();
+                }
+                r.execute_action(0, PASS).unwrap();
+            }
+            assert_eq!(
+                r.game.memory,
+                before + 4,
+                "second {outcome} must clear first receipt"
+            );
+            assert!(r.game.pending_selection.is_none());
+        }
+    }
+
+    #[test]
+    fn app_fuse_receipt_rejects_replayed_host_before_first_pick() {
+        let mut r = builder()
+            .from_dsl_yaml(SRC_RECEIPT)
+            .unwrap()
+            .hand(0, &["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"])
+            .start();
+        let host = fused_host(&mut r);
+        let before = r.game.memory;
+        r.play(0, 0);
+        let old = r.game.players[0].battle_area.remove(host.index as usize);
+        let mut replayed =
+            digimon_engine::permanent::Permanent::new(old.top_card().clone(), r.game.turn_count);
+        replayed.linked_cards = old.linked_cards;
+        r.game.players[0]
+            .battle_area
+            .insert(host.index as usize, replayed);
+        let mut twin = r.game.clone();
+        let action = encode_attack(0, host.index as u16);
+        assert_eq!(
+            digimon_engine::action::build_action_mask(&r.game, 0)[action as usize],
+            1.0
+        );
+        r.execute_action(0, action).unwrap();
+        twin.resolve_selection(0, action).unwrap();
+        assert!(r.game.pending_selection.is_none());
+        assert_eq!(r.game.memory, before + 4);
+        assert_eq!(twin.memory, r.game.memory);
+        assert_eq!(top_id(&r, host), "TEST-KABEMON");
+        assert_eq!(r.game.players[0].hand.len(), 1);
+    }
+
+    #[test]
+    fn app_fuse_receipt_follows_original_host_after_field_compaction() {
+        let mut r = builder()
+            .from_dsl_yaml(SRC_RECEIPT)
+            .unwrap()
+            .hand(0, &["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"])
+            .start();
+        r.place_on_field(0, "TEST-KABEMON", Some(0));
+        let host = fused_host(&mut r);
+        let before = r.game.memory;
+        r.play(0, 0);
+        r.execute_action(0, encode_attack(0, host.index as u16))
+            .unwrap();
+        r.game.players[0].battle_area.remove(0);
+        r.execute_action(0, HAND_EFFECT_START).unwrap();
+        assert_eq!(
+            top_id(
+                &r,
+                PermanentHandle {
+                    player: 0,
+                    index: host.index - 1
+                }
+            ),
+            "TEST-APPFUSE"
+        );
+        assert_eq!(r.game.memory, before + 3);
+    }
+
+    #[test]
+    fn app_fuse_callback_publishes_receipt_without_typed_tail() {
+        use digimon_engine::dsl_cards::bindings::BindingValue;
+        for stop in [0, 1, 2] {
+            let mut r = builder().from_dsl_yaml(SRC_RECEIPT).unwrap()
+                .hand(0, &["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"]).start();
+            let host = fused_host(&mut r);
+            r.play(0, 0);
+            let result = r.game.players[0].hand[0].handle();
+            // Exercise the compatibility callbacks directly. Removing the typed
+            // frame deliberately removes its DSL tail; inspect its publication
+            // channel, rather than expecting that discarded tail to execute.
+            r.game.pending_selection_resume = None;
+            let first = if stop == 0 { PASS } else { encode_attack(0, host.index as u16) };
+            assert_eq!(digimon_engine::action::build_action_mask(&r.game, 0)[first as usize], 1.0);
+            r.execute_action(0, first).unwrap();
+            if stop != 0 {
+                r.game.pending_selection_resume = None;
+                let second = if stop == 1 { PASS } else { HAND_EFFECT_START };
+                assert_eq!(digimon_engine::action::build_action_mask(&r.game, 0)[second as usize], 1.0);
+                r.execute_action(0, second).unwrap();
+            }
+            let receipt = r.game.dsl_resolved_tail_bindings.as_ref().and_then(|b| b.get("fused"));
+            assert_eq!(receipt, if stop == 2 { Some(BindingValue::Card(result)) } else { None });
+            assert!(r.game.pending_selection.is_none());
+        }
+    }
+
+    #[test]
+    fn app_fuse_receipt_clear_does_not_erase_a_later_synchronous_binding() {
+        let yaml = SRC_RECEIPT.split("    process:").next().unwrap()
+            .replace("kind: tamer", "kind: digimon\nlevel: 3\ndp: 3000") + r#"
+    process:
+      - app_fuse: { from: trash, optional: true, bind_as: saved }
+      - bind_permanent_property: { from: source, property: level, bind_as: saved }
+      - app_fuse: { from: hand, optional: true, bind_as: other }
+      - if:
+          condition: { binding_present: saved }
+          then:
+            - gain_memory: 3
+"#;
+        for cross_clause in [false, true] {
+            let second = if cross_clause {
+                yaml.replace("      - app_fuse: { from: trash, optional: true, bind_as: saved }", "")
+            } else { yaml.clone() };
+            let clear = SRC_TRASH.replace("DSL-APPFUSE-TRASH", "CLEAR-RECEIPT")
+                .replace("optional: true", "optional: true, bind_as: saved");
+            let hand = if cross_clause {
+                vec!["CLEAR-RECEIPT", "DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"]
+            } else { vec!["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"] };
+            let mut r = builder().from_dsl_yaml(&second).unwrap()
+                .from_dsl_yaml(&clear).unwrap().hand(0, &hand).start();
+            fused_host(&mut r);
+            if cross_clause { r.play(0, 0); assert!(r.game.pending_selection.is_none()); }
+            let before = r.game.memory;
+            r.play(0, 0);
+            r.execute_action(0, PASS).unwrap();
+            assert_eq!(r.game.memory, before + 3, "new local binding must supersede the earlier receipt clear (cross_clause={cross_clause})");
+        }
+    }
+
+    #[test]
+    fn app_fuse_unbound_success_preserves_later_lexical_binding() {
+        let yaml = SRC_RECEIPT.split("    process:").next().unwrap()
+            .replace("kind: tamer", "kind: digimon\nlevel: 3\ndp: 3000") + r#"
+    process:
+      - app_fuse: { from: trash, optional: true, bind_as: saved }
+      - bind_permanent_property: { from: source, property: level, bind_as: saved }
+      - app_fuse: { from: hand, optional: true }
+      - if:
+          condition: { binding_present: saved }
+          then:
+            - gain_memory: 3
+"#;
+        let mut r = builder().from_dsl_yaml(&yaml).unwrap()
+            .hand(0, &["DSL-APPFUSE-RECEIPT", "TEST-APPFUSE"]).start();
+        let host = fused_host(&mut r);
+        let before = r.game.memory;
+        r.play(0, 0);
+        r.execute_action(0, encode_attack(0, host.index as u16)).unwrap();
+        r.execute_action(0, HAND_EFFECT_START).unwrap();
+        assert_eq!(top_id(&r, host), "TEST-APPFUSE");
+        assert_eq!(r.game.memory, before + 3, "unbound success must not consume an earlier receipt's stale publication");
+    }
+
     // ── 1. Hand happy path ────────────────────────────────────────────────────────
 
     #[test]

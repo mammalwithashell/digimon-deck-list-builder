@@ -2986,7 +2986,8 @@ pub enum AppFuseZone {
 /// App-Fusion materials linked. Two engine-driven selections (own permanent,
 /// then result card); no explicit target binding (both are fresh picks). The
 /// result card's App-Fusion materials live on its own `app_fusion` alt-path, so
-/// this step only carries the source zone + an optional result-card filter. See
+/// this step carries the source zone, optional result-card filter and optional
+/// success receipt. See
 /// `docs/superpowers/specs/2026-06-13-effect-initiated-app-fuse-design.md`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -3002,6 +3003,11 @@ pub struct AppFuseArgs {
     /// true; defaults false to match every other step's convention.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Bind the result Card only after a successful commit. Absent on PASS or
+    /// unavailable/rejected selection. Opts into continuing the tail on PASS;
+    /// authors decide whether the enclosing effect should refund its OPT.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

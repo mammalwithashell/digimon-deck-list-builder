@@ -1,6 +1,6 @@
 //! Named-binding environment for DSL process steps.
 
-use std::collections::HashMap;
+use std::collections::{BTreeSet, HashMap};
 
 use crate::card_source::CardHandle;
 use crate::enums::PlayerId;
@@ -68,6 +68,9 @@ fn trash_pin_key(name: &str) -> String {
 #[derive(Debug, Default, Clone)]
 pub struct Bindings {
     slots: HashMap<String, BindingValue>,
+    // Explicit receipt clears must survive overlays of pre-selection snapshots.
+    // Ordinary `remove` remains local; only `clear_for_merge` creates a tombstone.
+    cleared_slots: BTreeSet<String>,
     result_log: EffectResultLog,
     played_identity_pins: HashMap<String, (PlayerId, u64)>,
 }
@@ -112,6 +115,7 @@ impl Bindings {
     }
 
     pub fn insert(&mut self, name: &str, value: BindingValue) {
+        self.cleared_slots.remove(name);
         self.played_identity_pins.remove(name);
         // Re-binding a name drops any stable-identity pin from a previous
         // trash pick under the same name.
@@ -126,6 +130,13 @@ impl Bindings {
         self.slots.remove(&hand_pin_key(name));
         self.played_identity_pins.remove(name);
     }
+    /// Publish an explicit absence through nested continuation snapshots.
+    /// Unlike a missing key, this clears an older value during an overlay.
+    pub(crate) fn clear_for_merge(&mut self, name: &str) {
+        self.remove(name);
+        self.cleared_slots.insert(name.to_owned());
+    }
+
     pub fn get(&self, name: &str) -> Option<BindingValue> {
         self.get_ref(name).cloned()
     }
@@ -137,7 +148,11 @@ impl Bindings {
     /// `binding_exists` / `binding_absent` after a nested select would
     /// otherwise read a stale absence (G-OPT-REFUND-ON-DECLINE fallout).
     pub fn merge_slots_from(&mut self, other: &Bindings) {
+        for name in &other.cleared_slots {
+            self.clear_for_merge(name);
+        }
         for (k, v) in &other.slots {
+            self.cleared_slots.remove(k);
             self.slots.insert(k.clone(), v.clone());
             self.played_identity_pins.remove(k);
             if let Some(pin) = other.played_identity_pins.get(k) {

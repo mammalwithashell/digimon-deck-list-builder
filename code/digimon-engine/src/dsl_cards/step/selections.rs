@@ -1466,19 +1466,27 @@ pub(crate) fn run_resume(
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::AppFuseHostSelection(mut state) => {
-            if is_pass {
+            if is_pass && state.receipt.is_none() {
                 return;
             }
             let outer_conts = std::mem::take(&mut state.outer_conts);
-            crate::effect_context::run_app_fuse_host_selection_step(game, state, action_id);
+            if is_pass {
+                crate::effect_context::publish_app_fuse_receipt(game, state.receipt.as_ref(), None);
+            } else {
+                crate::effect_context::run_app_fuse_host_selection_step(game, state, action_id);
+            }
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::AppFuseResultSelection(mut state) => {
-            if is_pass {
+            if is_pass && state.receipt.is_none() {
                 return;
             }
             let outer_conts = std::mem::take(&mut state.outer_conts);
-            crate::effect_context::run_app_fuse_result_selection_step(game, state, action_id);
+            if is_pass {
+                crate::effect_context::publish_app_fuse_receipt(game, state.receipt.as_ref(), None);
+            } else {
+                crate::effect_context::run_app_fuse_result_selection_step(game, state, action_id);
+            }
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::ArtsDigivolveSelection(mut state) => {
@@ -3535,7 +3543,7 @@ pub(crate) fn run_outer_conts(
         if let Some(latest) = fresh.as_ref() {
             merged.merge_slots_from(latest);
         }
-        drain_or_rewrap_pending_tail(
+        if let Some(updated) = super::drain_or_rewrap_pending_tail_with_bindings(
             game,
             cont.source_card,
             cont.source_permanent,
@@ -3544,7 +3552,13 @@ pub(crate) fn run_outer_conts(
             merged,
             cont.runtime,
             cont.trigger_context,
-        );
+        ) {
+            if let Some(latest) = fresh.as_mut() {
+                latest.merge_slots_from(&updated);
+            } else {
+                fresh = Some(updated);
+            }
+        }
     }
 }
 

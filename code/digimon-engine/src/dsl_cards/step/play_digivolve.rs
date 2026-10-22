@@ -1173,8 +1173,20 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             from_zone,
             result_filter,
             optional,
+            bind_as,
         } => {
-            ctx.initiate_effect_app_fuse(*from_zone, result_filter.as_ref(), *optional);
+            let receipt = bind_as.as_ref().map(|name| {
+                // Clear locally. Synchronous no-pair results must not publish
+                // a tombstone into another clause's future selection.
+                bindings.clear_for_merge(name);
+                crate::effect_context::AppFuseReceipt {
+                    name: name.clone(),
+                    bindings: bindings.clone(),
+                }
+            });
+            ctx.initiate_effect_app_fuse_with_receipt(
+                *from_zone, result_filter.as_ref(), *optional, receipt,
+            );
             true
         }
         CompiledStep::EffectInitiatedDnaDigivolve {

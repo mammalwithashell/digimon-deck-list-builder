@@ -2070,6 +2070,9 @@ fn validate_step_binding_scope(
             // G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (BT25-039).
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::AppFuse(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::LinkCards(args) => {
             // The linked card(s) `bind_as` (a CardList, created only when ≥1
             // card is linked) gates downstream `if { binding_present }` tails
