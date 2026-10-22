@@ -706,7 +706,7 @@ fn run_steps_with_runtime_inner(
                         .field_source_receipts
                         .retain(|(id, _)| id != receipt);
                 }
-                if let CompiledStep::DeleteReceiptFinalize { receipt } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = remaining {
+                if let CompiledStep::DeleteReceiptFinalize { receipt, .. } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = remaining {
                     ctx.game.deletion_receipts.retain(|(id, _)| id != receipt);
                 }
                 if let CompiledStep::SourcePlayFinalize { receipt, .. } = remaining {
@@ -719,7 +719,7 @@ fn run_steps_with_runtime_inner(
             return RunOutcome::Synchronous;
         }
         let step = &steps[i];
-        if let CompiledStep::DeleteReceiptFinalize { receipt } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = step {
+        if let CompiledStep::DeleteReceiptFinalize { receipt, .. } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = step {
             ctx.game
                 .resume_deletion_batch_rest_for_receipt(Some(*receipt));
             if ctx.game.pending_selection.is_some() {

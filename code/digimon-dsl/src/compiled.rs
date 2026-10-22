@@ -3097,6 +3097,8 @@ pub enum CompiledStep {
     },
     DeleteReceiptFinalize {
         receipt: u64,
+        /// Credit only the original payer after its deletion physically completes.
+        cost_credit: Option<(u8, u64, i32)>,
     },
     /// Engine-only: after a "by placing X as the bottom security card, it
     /// doesn't leave" payment (`PlacePermanentBottomSecurityAndCancelReplacement`),

@@ -1325,7 +1325,7 @@ pub(crate) fn run_resume(
             // Ordinary deletion-result continuations require the same boundary.
             let receipt = outer_conts.first().and_then(|c| c.tail.first()).and_then(|step| {
                 match step {
-                    CompiledStep::DeleteReceiptFinalize { receipt }
+                    CompiledStep::DeleteReceiptFinalize { receipt, .. }
                     | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. }
                     | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } => Some(*receipt),
                     _ => None,
@@ -4756,13 +4756,12 @@ pub fn try_install(
             if min > max || *max == 0 {
                 return InstallResult::Continue;
             }
-            // When no digivolution sources exist at all (unfiltered), and the
-            // clause requires at least one pick (min > 0), the cost cannot be
-            // paid: abort the outer continuation silently. For min == 0, no
-            // sources means the player implicitly picks 0 — the `then` body
-            // with an empty binding is a no-op anyway, so advancing to the
-            // outer tail (`Continue`) is correct for that case.
-            if !has_own_source_candidates(ctx) {
+            // A min-zero trash-cost picker must run its empty payment tail:
+            // min_count may still require cards, aborting the outer continuation.
+            // Preserve the existing no-source behavior of non-cost selections.
+            if !has_own_source_candidates(ctx)
+                && (*min > 0 || !source_selection_pays_trash_cost(then, bind_as.as_deref()))
+            {
                 return if *min > 0 {
                     InstallResult::TailAlreadyRan
                 } else {
@@ -8925,6 +8924,16 @@ fn park_source_multi_resume_frame(
     let Some(pending) = ctx.game.pending_selection.as_ref() else {
         return;
     };
+    // CR 15-7-4: an impossible trash cost must not expose a mandatory pick.
+    if source_selection_pays_trash_cost(&state.inner_tail, state.bind_as.as_deref())
+        && state.candidates.len() < usize::from(state.min)
+    {
+        ctx.game.current_phase = pending.previous_phase;
+        ctx.game.pending_selection = None;
+        ctx.game.pending_selection_resume = None;
+        ctx.cost_unpayable = true;
+        return;
+    }
     state.selecting_player = pending.selecting_player;
     state.previous_phase = pending.previous_phase;
     ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {

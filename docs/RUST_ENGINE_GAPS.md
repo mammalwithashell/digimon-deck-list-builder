@@ -1,5 +1,28 @@
 # Rust Engine Gaps
 
+## Source-cost atomic payment and deletion-result receipts — construct regressions (2026-10-22)
+
+`trash_selected_sources_as_cost` now preflights every selected physical source
+before moving any of them. A protected or departed selected source aborts both
+inner and outer tails without partial payment (CR 4.3 §§15-7-1–4). Mandatory
+source pickers offer no decision when fewer eligible sources than their minimum
+remain. A zero-source optional picker still evaluates its trash-cost tail, so an
+unpaid `min_count` cannot execute the outer reward. Ordinary non-cost source
+selection behavior is unchanged.
+
+`delete_bound_permanents` and `delete_for_cost_reduction` now use the existing
+resumable deletion receipt path. Result predicates log only completed deletions;
+Evade prevention is not a deletion result. Variable cost reduction captures the
+payer's printed play cost before removal and credits it only after that physical
+payer's matching receipt completes, including across replacement prompts.
+Tokens count as Digimon; a Decoy substitute remains outside the original effect's
+receipt. No action or observation contract changed.
+
+Behavioral coverage: `tests/dsl/constructs/cost_target_event.rs`, including a
+mixed two-target batch whose high-DP target Evades, actual play-cost payment,
+atomic source payment, below-minimum and zero-source cases. These are focused
+engine/DSL tests, not live DCGO or complete production-card certification.
+
 ## Effect-play target eligibility separates controller and destination [G-DSL-EFFECT-PLAY-CROSS-OWNER-TARGETS] — focused repair verified; live pending
 
 BT8-097 Q4663/Q4664 distinguish the player causing an effect play from the
