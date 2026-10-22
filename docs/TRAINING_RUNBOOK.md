@@ -253,15 +253,15 @@ python code/tools/meta_loader.py --build
 - Outputs: `data/deck_library.json`.
 - Format: archetypes → decklists + `digilab_stats`.
 - Runtime gauntlet loading applies a two-layer training gate (spec `docs/superpowers/specs/2026-10-15-engine-rules-conformance-validation-design.md` §5b). It reads only two committed `data/` artifacts, because the training image ships no `qa/`; a missing artifact stops the load (`MechanicsReadinessMissingError` / `CardAdmissibilityMissingError`, each naming its regenerate command):
-  1. **Mechanics (global).** `data/mechanics_readiness.json` must be `ready`: no open blocking gap among the mechanics-set rules obligations. This is checked once per load, before any deck is examined. Otherwise `MechanicsNotReadyError` names the blocking rule and gap ids. Regenerate with `PYTHONPATH=code python -m tools.rules.mechanics_readiness`.
+  1. **Mechanics (global).** `data/mechanics_readiness.json` must be `ready`: no mechanics-set rules obligation is flagged outcome-changing (`blocks_training`). This is checked once per load, before any deck is examined. Otherwise `MechanicsNotReadyError` names the blocking rule and gap ids. Regenerate with `PYTHONPATH=code python -m tools.rules.mechanics_readiness`. See [What `ready` means](#what-ready-means-and-what-it-does-not) for what the flag does and does not cover.
   2. **Light per-card (per decklist).** Every card ID must be playable, meaning registered in the Rust engine and present in `data/cards.json` (rejection `unregistered`). It must also be admissible in `data/card_admissibility.json` (rejection `not_admissible`, logged with the card's reason):
-     - lowering-covered: every construct its YAML references (verbs, predicates, timings, keywords, as `tools.lowering_coverage` attributes them from the impact index) is tested behaviourally by the mechanics tests; a `parsed_only` construct does not count (`untested_lowering`, with the constructs listed in the row's `untested_constructs`). A non-DSL card (raw_rust / hand-written, or unimplemented) has no constructs and is `untested_lowering` unless it has its own test module;
-     - hybrid rule: a card with >= 4 clauses or any protection construct (the `protection_constructs` family in `qa/impact/lowering_coverage.json`) also needs its own behavioural test module, `code/digimon-engine/tests/cards_behavioral/<set>/<card_id>.rs` declared from `main.rs` / `<set>/mod.rs`, or an existing ledger `test_path` (`untested_card`; rows carry `needs_card_test` / `has_card_test`);
+     - lowering-covered: every construct its YAML references (verbs, predicates, timings, keywords, as `tools.lowering_coverage` attributes them from the impact index) is tested behaviourally by the mechanics tests; a `parsed_only` construct does not count (`untested_lowering`, with the constructs listed in the row's `untested_constructs`). A non-DSL card (raw_rust / hand-written, or unimplemented) has no constructs and is `untested_lowering` unless it has its own test module. The attribution is a proxy -- see [Attribution caveat](#attribution-caveat);
+     - hybrid rule: a card with >= 4 clauses or any protection construct (the `protection_constructs` family in `qa/impact/lowering_coverage.json`) also needs its own behavioural test module, `code/digimon-engine/tests/cards_behavioral/<set>/<card_id>.rs` declared from `main.rs` / `<set>/mod.rs` with a plain `mod x;`, or an existing ledger `test_path` (`untested_card`; rows carry `needs_card_test` / `has_card_test`). A `#[cfg(..)]`/`#[path]` module declaration or a dedicated top-level `tests/<id>_*.rs` file is not seen (fail-closed: the card reads `untested_card`, it is never wrongly admitted);
      - no failed ledger verdict, i.e. `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT`, `AUDITED-MISSING-TESTS`, `FAILED`, `FAIL` or `QA-FAIL` in either ledger (`failed_verdict`);
      - no `diverged` exam row without a cited `dcgo_quirk`/`stale` triage (`diverged_no_quirk`).
 
      An unmeasured clause blocks nothing. Regenerate with `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`.
-- Both layers apply to every library path, to pool snapshots (`GeneralistDeckPool.from_snapshot`, `--curriculum-pool`, the eval CLIs) and to a job's `agent_deck: {source: deck_id}` library deck. There is no off switch. `--legacy-clause-gate` (pilot_training) only *adds* the old per-card requirement, `ready` in `data/oracle_readiness.json` (see [Legacy: oracle readiness is a report](#legacy-oracle-readiness-is-a-report-formerly-the-gate-2026-10-04)), for transition comparison runs. It never admits a deck the two layers reject.
+- Both layers apply to every library path (including the Architect pipeline: `architect_training` / `architect_cotraining` base decks, `architect_optimizer` opponents and the `architect_pool` mutation pool, through `code/digimon_gym/agents/architect_admission.py`, which loads the artifacts once per process), to pool snapshots (`GeneralistDeckPool.from_snapshot`, `--curriculum-pool`, the eval CLIs) and to a job's `agent_deck: {source: deck_id}` library deck. There is no off switch. `--legacy-clause-gate` (pilot_training) only *adds* the old per-card requirement, `ready` in `data/oracle_readiness.json` (see [Legacy: oracle readiness is a report](#legacy-oracle-readiness-is-a-report-formerly-the-gate-2026-10-04)), for transition comparison runs. It never admits a deck the two layers reject.
 - When no decklist survives, `EmptyTrainingPoolError` lists the cards blocking the most decklists, each with its reason, and gives both regenerate commands. An archetype is eligible when at least one of its lists is admitted.
 - `--archetypes` / `allowed_archetypes` narrows the pool further. Each scoped name that ends up with no admitted list is logged at INFO with how many lists each check rejected (`unregistered`, `not_admissible`, and `not_oracle_ready` under the legacy flag).
 - `code/tools/meta_coverage.py`'s **Trainable today** figure is only an approximation: it still uses the pre-2026-10-21 ledger rule (registry plus the old four-status ledger list), not the two layers above. The admission truth is `data/card_admissibility.json` (`PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`). Aligning `meta_coverage.py` and `card_loop/candidates.py` with it is a follow-up.
@@ -981,6 +981,38 @@ mechanics suites (`tests/dsl`, `tests/rules_conformance`, ... -- never
 `cards_behavioral`) unblocks every card that uses it. `PYTHONPATH=code python -m
 tools.lowering_coverage --report OUT.md --decks deckpool.json` ranks the untested
 constructs by decks blocked.
+
+### What `ready` means, and what it does not
+
+`ready` = **no mechanics obligation is flagged outcome-changing**.
+`blocks_training` is a hand-set field in `qa/rules/cr_obligations_status.yaml`
+(default false); its basis is the Plan 4 triage. Nothing sets it automatically,
+and the gap trackers' "Blocks training" lines are not read. Every other open
+mechanics gap is counted in the artifact as `unflagged_open_gaps` (316 on
+2026-10-21; printed by the regenerate command) and listed in
+`qa/rules/cr_obligations.json`. Those gaps were not each judged
+outcome-neutral. Flagging policy (`qa/rules/mechanics-gaps-2026-10.md`): a new
+mechanics gap that can change a game outcome (ordering, legality, deletion,
+memory, security) is filed with `blocks_training: true` until fixed.
+
+The spec's second layer-1 condition -- the `rules_conformance` suite green at the
+committed manual version -- is **not** in the artifact. It is enforced by the PR
+CI gate `.github/workflows/engine-rules-conformance.yml`.
+
+### Attribution caveat
+
+Lowering coverage is token presence, not proof of assertion. The exact rule is
+the `code/tools/lowering_coverage.py` module docstring. A construct is credited
+to a `#[test]` when it appears in the test body or in a same-file helper the
+body calls. The credit is behavioural only when that body or helper runs the
+engine (`ENGINE_RUN_MARKERS`, decided per test); a test that only inspects
+compiled IR, a catalog or a lowering table credits `parsed_only`. Cross-file
+helpers and `include_str!` fixtures are not seen, so a construct can read
+untested when it is tested (fail-closed). A test can also name a construct and
+assert nothing about it, so a construct can read tested when nothing checks it
+(over-credit). On 2026-10-21, 68 of the 354 behaviourally-credited constructs
+were credited only through a YAML string literal, and 150 of the 537 admissible
+cards depend on one.
 
 **Pre-flight for a training or cloud run.** Both artifacts must be present on the
 host: they are the only gate inputs, because the training image and cloud pods

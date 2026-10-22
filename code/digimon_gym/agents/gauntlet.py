@@ -5,13 +5,19 @@ training-ready decklists, computes a Threat Index for each archetype, and sample
 opponent decks weighted by TI or uniformly.
 
 **Training gate (two layers, spec 2026-10-15 §5b):**
-  1. Mechanics -- `data/mechanics_readiness.json` must be `ready` (no open
-     blocking mechanics gap). Checked once per load, before any deck is
-     examined; `MechanicsNotReadyError` otherwise.
+  1. Mechanics -- `data/mechanics_readiness.json` must be `ready` (no
+     mechanics obligation hand-flagged `blocks_training`; unflagged open gaps
+     do not close it). Checked once per load, before any deck is examined;
+     `MechanicsNotReadyError` otherwise.
   2. Light per-card -- every card of a decklist must be registered in the Rust
      engine and its card database, and admissible in
-     `data/card_admissibility.json` (tested, no failed ledger verdict, no
-     untriaged divergence). An unmeasured clause blocks nothing.
+     `data/card_admissibility.json`: in the committed registry, every DSL
+     construct its YAML uses behaviourally tested by a mechanics test
+     (lowering coverage), its own behavioural test when it has 4+ clauses or a
+     protection construct, no failed authoring verdict, no untriaged
+     divergence. Reasons: `unregistered`, `untested_lowering`,
+     `untested_card`, `failed_verdict`, `diverged_no_quirk`. An unmeasured
+     clause blocks nothing.
   Only those two committed `data/` artifacts are read at run time. No override
   admits a non-admissible deck; `legacy_clause_gate=True` only ADDS the old
   per-card oracle-readiness requirement for comparison runs.
@@ -130,11 +136,16 @@ def canonicalize_archetype(name: str) -> str:
 
 
 # ─── Training gate: two layers (spec 2026-10-15 §5b) ─────────────────
-# Layer 1, mechanics: `data/mechanics_readiness.json` must be `ready`. Checked
-#   once per load before any deck is examined (`require_mechanics_ready`).
+# Layer 1, mechanics: `data/mechanics_readiness.json` must be `ready` (no
+#   obligation flagged `blocks_training`). Checked once per load before any
+#   deck is examined (`require_mechanics_ready`).
 # Layer 2, light per-card: every card of a decklist is admissible in
-#   `data/card_admissibility.json` (`validate_admissible_deck`); rejection
-#   reason `not_admissible`, logged with the artifact's per-card reason.
+#   `data/card_admissibility.json` (`validate_admissible_deck`): lowering-covered
+#   plus the hybrid own-test rule, no failed verdict, no untriaged divergence;
+#   rejection reason `not_admissible`, logged with the artifact's per-card reason
+#   (`unregistered` / `untested_lowering` / `untested_card` / `failed_verdict` /
+#   `diverged_no_quirk`). The Architect pipeline (`architect_*`) reads the same
+#   artifacts through `architect_admission`.
 # Run time reads ONLY those two committed `data/` artifacts (training images
 # ship no `qa/`, ruling R5); a missing one stops training. Always on, for every
 # library path and every pool snapshot; no CLI or env override admits a
