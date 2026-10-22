@@ -3,7 +3,8 @@
 Scopes the card pool for a given archetype to a tractable action space,
 encoding deck modifications as discrete swap actions (remove one card,
 add another).  The pool is derived from archetype decklists in the deck
-library, filtered to implementable (frozen-script) cards only.
+library, filtered to implementable cards that are admissible under the
+training gate (`architect_admission`, rule 34) only.
 
 The action space is structured as:
   - Action 0: no-op (agent elects to stop swapping)
@@ -22,6 +23,7 @@ from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
+from digimon_gym.agents.architect_admission import admissible_card_ids
 from digimon_gym.agents.deck_pool import analyze_core
 from digimon_engine import CardDatabase, CardKind, load_implemented_card_ids
 
@@ -98,11 +100,14 @@ class CandidatePool:
             }
             raw_ids -= banned
 
-        # --- Filter to implementable, non-egg cards ---
+        # --- Filter to implementable, admissible, non-egg cards ---
+        # Admissibility is the training gate (rule 34; final review I5): a
+        # mutation can never add a card the gate would reject.
         implemented = load_implemented_card_ids()
+        admissible = admissible_card_ids(raw_ids)
         filtered: List[str] = []
         for cid in raw_ids:
-            if cid not in implemented:
+            if cid not in implemented or cid not in admissible:
                 continue
             entity = self._db.get_card(cid)
             if entity is not None and entity.card_kind == CardKind.DigiEgg:

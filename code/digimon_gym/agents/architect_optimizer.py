@@ -23,6 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from digimon_gym.agents.architect_admission import is_admissible_deck, require_training_gate
 from digimon_gym.agents.architect_agent import ArchitectDQN
 from digimon_gym.agents.architect_pool import CandidatePool, CardConstraint
 from digimon_gym.agents.architect_simulator import DeckSimulator
@@ -47,9 +48,11 @@ def _pick_best_decklist(
     """Pick the best decklist that has 100% card coverage.
 
     Selects the decklist with the highest source preference whose cards
-    are all present in the frozen manifest.  Returns ``None`` if no
-    decklist qualifies.
+    are all present in the frozen manifest AND admissible under the training
+    gate (`architect_admission`, rule 34).  Returns ``None`` if no decklist
+    qualifies.
     """
+    require_training_gate()
     candidates: List[Tuple[int, List[str]]] = []
 
     for entry in decklists:
@@ -65,8 +68,8 @@ def _pick_best_decklist(
         if not deck_ids:
             continue
 
-        # Check full coverage
-        if all(cid in implemented for cid in deck_ids):
+        # Check full coverage and admissibility
+        if all(cid in implemented for cid in deck_ids) and is_admissible_deck(deck_ids):
             candidates.append((pref, deck_ids))
 
     if not candidates:
