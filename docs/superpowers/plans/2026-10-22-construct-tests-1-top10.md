@@ -346,7 +346,7 @@ Task 1 first. Tasks 2–7 are independent (disjoint test files; the `src/` fixes
 ## Owner decisions this plan surfaces (answer any time; none blocks a task)
 
 1. **can_attack vs Q3185** (Task 5): a `CannotSuspend` Digimon attacking via "without suspending" — official Q&A + DCGO allow, engine refuses citing §11-2-5. **Resolved by owner 2026-10-22:** follow official Q3185 (`data/card_qa.json`, BT19-101, dated 2024-09-20). Implement row 8 and shared mask/execution eligibility in a separate Q3185 followup commit; see the resolved entry in `docs/RUST_ENGINE_GAPS.md`.
-2. **Language Standardization exclusions** (Task 4): implement Bandai's full "[X] in its name" exclusion table (BurningGreymon ≠ [Greymon], KendoGarurumon ≠ [Garurumon], BeelStarmon ≠ [Starmon], …) in `rules_name_contains`? Today only Indramon ≠ [Dramon] ships.
+2. **Language Standardization exclusions** (Task 4): **owner authorized 2026-10-22** the separate production fix for all 12 English exact-name/query exclusion pairs, including the existing Indramon exclusion. This supersedes Step 6's report-only constraint and Step 1's prohibition on testing these exclusions. Authority, scope, and evidence: [English name standardization](../../digimon-rules/english-name-standardization.md). Multilingual mappings and the adjacent MarineChimairamon/Kimeramon inclusion remain outside this exclusion fix.
 3. **`source_count` and face-down sources** (Task 5): §4-7-9 says face-down cards have no information; the implementer checks DCGO first and fixes unless DCGO counts them.
 4. **App Fusion link-card scope** (Task 3 gap): the commit consumes every link card; §8-4 places only the material pair's card.
 

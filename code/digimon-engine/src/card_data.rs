@@ -5,15 +5,27 @@ use std::path::Path;
 use crate::enums::{CardColor, CardKind};
 
 /// Match a rules-name substring with verified language-standardization exceptions.
-/// Bandai Language Standardization Rules p.4 excludes Indramon from [Dramon].
+/// The twelve English pairs in Bandai Language Standardization Rules (2026-05-29),
+/// pp. 2-4, 10, 12. See docs/digimon-rules/english-name-standardization.md.
 /// Apply this per name so a different granted alias can still satisfy the query.
 pub fn rules_name_contains(name: &str, needle: &str) -> bool {
     let name = name.to_lowercase();
     let needle = needle.to_lowercase();
-    if needle == "dramon" && name == "indramon" {
-        return false;
-    }
-    name.contains(&needle)
+    // Combined DUAL metadata must not bypass an exact face-name exclusion.
+    // Each face can satisfy the query independently; never join across faces.
+    name.split('/').map(str::trim).any(|name| {
+        let excluded = matches!(
+            (name, needle.as_str()),
+            ("pagumon", "agumon")
+                | ("demiveemon", "vee" | "veemon")
+                | ("kendogarurumon", "garurumon")
+                | ("burninggreymon" | "dorugreymon" | "dexdorugreymon", "greymon")
+                | ("indramon", "dramon")
+                | ("beelstarmon" | "beelstarmon (x antibody)", "starmon")
+                | ("blimpmon" | "masterblimpmon", "impmon")
+        );
+        !excluded && name.contains(&needle)
+    })
 }
 
 /// Digivolution cost entry from cards.json.

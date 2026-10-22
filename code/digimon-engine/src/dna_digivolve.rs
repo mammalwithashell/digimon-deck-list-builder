@@ -262,7 +262,7 @@ impl Game {
                 .any(|entry| match &entry.payload {
                     crate::modifiers::ModifierPayload::DigiXrosNames { aliases } => aliases
                         .iter()
-                        .any(|alias| alias.to_lowercase().contains(&required_name.to_lowercase())),
+                        .any(|alias| crate::card_data::rules_name_contains(alias, required_name)),
                     _ => false,
                 })
     }
@@ -1655,12 +1655,12 @@ fn card_data_matches_req_ext(
     }
     if !req.name_contains.is_empty() {
         let needle = req.name_contains.to_lowercase();
-        let printed_ok = meta.card_name.to_lowercase().contains(&needle);
+        let printed_ok = crate::card_data::rules_name_contains(&meta.card_name, &needle);
         if !printed_ok
             && !extras
                 .names
                 .iter()
-                .any(|n| n.to_lowercase().contains(&needle))
+                .any(|n| crate::card_data::rules_name_contains(n, &needle))
         {
             return false;
         }
