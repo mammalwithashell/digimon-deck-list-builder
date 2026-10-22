@@ -6288,3 +6288,18 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
   fix-or-file decision, retain the existing behavior and pin research row D.
   This is not a claim of CR conformance. Resolve the conflict before changing
   production payment gates. DCGO source was read from the populated base repo.
+
+### Q3185: CannotSuspend and attacks without suspending — resolved 2026-10-22
+
+Official Q3185 (BT19-101, 2024-09-20; local `data/card_qa.json`) explicitly
+allows an effect-granted attack without suspending when that Digimon cannot
+suspend. The shared `can_attack_without_suspending_inner` now honors this
+exception; ordinary attack declarations retain their CannotSuspend restriction.
+Both attack-choice masks and execution use this shared eligibility check.
+DCGO `Permanent.CanAttackTargetDigimon` agrees by consulting CanSuspend only
+when `withoutTap` is false. Identity/state construct row 8 and a real optional
+attacker/target selection regression cover the exception and attack completion.
+The execution regression also exposed attack counters being skipped with
+suspension. Committed attacks now increment both permanent and player counters
+regardless of suspension; the existing declaration-committed guard prevents
+resumed attacks from counting twice. Rejected declarations do not count.

@@ -1137,6 +1137,7 @@ fn attack_row(row: u8, ordinary: bool, free: bool) {
                         .grant_keyword(h, Keyword::Rush, Expiry::Permanent, 0);
                 }
                 6 => modifier(&mut r, h, ModifierType::CannotAttack),
+                8 => modifier(&mut r, h, ModifierType::CannotSuspend),
                 9 => modifier(&mut r, h, ModifierType::CannotAttackPlayer),
                 10 => modifier(&mut r, h, ModifierType::CanAttackUnsuspended),
                 _ => {}
@@ -1481,4 +1482,96 @@ fn source_count_no_matching_permanent_installs_no_prompt() {
     probe(&mut r);
     assert!(r.game.pending_selection.is_none());
     assert_eq!(r.memory(), 6, "continuation runs with no eligible host");
+}
+// Official Q3185 (BT19-101, 2024-09-20): "can't suspend" does not
+// prohibit an attack granted without suspending. DCGO Permanent.cs:2276.
+#[test]
+fn can_attack_row_8_cannot_suspend_without_suspending_exception() {
+    attack_row(8, false, true);
+}
+const Q3185_ATTACK: &str = r#"
+card: PROBE
+name: Q3185 attack probe
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: on_play
+    process:
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { can_attack: { targets: player, without_suspending: true } }
+          prompt: Choose an attacker
+      - may_attack_now:
+          attacker: attacker
+          targets: player
+          without_suspending: true
+          optional: true
+"#;
+#[test]
+fn q3185_without_suspending_mask_and_execution_agree() {
+    let mut r = runner(Q3185_ATTACK, &[]);
+    let a = r.place_on_field(0, "TARGET", Some(0));
+    let b = r.place_on_field(0, "TARGET", Some(0));
+    for h in [a, b] {
+        modifier(&mut r, h, ModifierType::CannotSuspend);
+    }
+    // Normal attacks still require a suspendable attacker.
+    let player_target = digimon_engine::action::space::SECURITY_TARGET;
+    assert_eq!(
+        build_action_mask(&r.game, 0)[encode_attack(a.index as u16, player_target) as usize],
+        0.0
+    );
+    probe(&mut r);
+    let p = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("two legal free attackers");
+    assert!(p.is_optional);
+    assert_eq!(
+        p.valid_action_ids,
+        vec![encode_attack(0, 0), encode_attack(0, 1)]
+    );
+    assert_eq!(
+        build_action_mask(&r.game, 0)[encode_attack(0, 1) as usize],
+        1.0
+    );
+    r.execute_action(0, encode_attack(0, 1)).unwrap();
+    let attack = encode_attack(b.index as u16, player_target);
+    let p = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("real attack target choice");
+    assert!(p.is_optional);
+    assert_eq!(p.valid_action_ids, vec![attack]);
+    assert_eq!(build_action_mask(&r.game, 0)[attack as usize], 1.0);
+    r.execute_action(0, attack).unwrap();
+    // Explicitly decline any defensive response; never auto-pick gameplay choices.
+    for _ in 0..4 {
+        let Some(p) = r.game.pending_selection.as_ref() else {
+            break;
+        };
+        let player = p.selecting_player;
+        assert_eq!(player, 1, "only defender responses may remain");
+        assert_eq!(build_action_mask(&r.game, player)[PASS as usize], 1.0);
+        r.execute_action(player, PASS).unwrap();
+    }
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(
+        r.game.players[0].battle_area[b.index as usize].attacks_this_turn,
+        1
+    );
+    assert!(!r.game.players[0].battle_area[b.index as usize].is_suspended);
+    assert_eq!(r.game.digimon_attacks_this_turn[0], 1);
+    assert_eq!(
+        r.game.players[0].battle_area[a.index as usize].attacks_this_turn,
+        0
+    );
+    assert!(
+        r.game.game_over,
+        "the selected attacker reaches the unguarded player"
+    );
 }

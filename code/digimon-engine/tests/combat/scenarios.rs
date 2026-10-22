@@ -308,6 +308,7 @@ fn attack_count_this_turn_increments() {
     assert_eq!(r.game.players[0].battle_area[0].attacks_this_turn, 0);
     r.attack_digimon(atk, def, false);
     assert_eq!(r.game.players[0].battle_area[0].attacks_this_turn, 1);
+    assert_eq!(r.game.digimon_attacks_this_turn[0], 1);
 }
 
 #[test]

@@ -452,15 +452,10 @@ impl Game {
         if !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle) {
             return false;
         }
-        // 11-2-5 is UNQUALIFIED: "An attack declaration can't be made using
-        // a Digimon that can't suspend" — it applies even to granted
-        // "without suspending" attacks. NOTE: DCGO diverges here
-        // (`CanAttackTargetDigimon` skips the `CanSuspend` consult when
-        // `withoutTap == true`); per source priority the rules manual
-        // governs over DCGO for pure rules questions.
-        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
-            return false;
-        }
+        // Official Q3185 (BT19-101) permits a granted attack without
+        // suspending even when the attacker cannot suspend. DCGO likewise
+        // skips CanSuspend when withoutTap is true. Ordinary attacks retain
+        // the CannotSuspend gate in can_attack_inner.
         // CannotAttack is a `WhenWouldAttack` cancel replacement, not a
         // can_attack rejection — see `can_attack`.
         // "Without suspending" bypasses only the suspend cost/unsuspended
@@ -4184,6 +4179,12 @@ impl Game {
         // attacker (11-2-5); keep the declaration's suspended state even if
         // the chokepoint no-op'd.
         perm.is_suspended = true;
+        self.count_attack(handle);
+        event_card
+    }
+
+    fn count_attack(&mut self, handle: PermanentHandle) {
+        let perm = &mut self.players[handle.player as usize].battle_area[handle.index as usize];
         perm.attacks_this_turn = perm.attacks_this_turn.saturating_add(1);
         if let Some(count) = self
             .digimon_attacks_this_turn
@@ -4191,7 +4192,6 @@ impl Game {
         {
             *count = count.saturating_add(1);
         }
-        event_card
     }
 
     fn handle_valid(&self, handle: PermanentHandle) -> bool {
@@ -4546,11 +4546,12 @@ impl Game {
             pa.declaration_committed = true;
         }
 
-        // Suspend + record attack — skipped for Overclock, which attacks
-        // without suspending.
+        // Every committed declaration counts, including Overclock and other
+        // attacks without suspending; only their suspension is skipped.
         let suspend_event = if !is_overclock {
             self.suspend_and_count_attack(attacker)
         } else {
+            self.count_attack(attacker);
             None
         };
         self.reevaluate_until_condition_modifiers_if_dirty();
