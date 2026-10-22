@@ -6261,3 +6261,30 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
 - **Residuals (fix round 1 review):**
   - **`EndOfTurnAction` window now comes after the non-turn player's effects.** The window (`MayAttack` grants, registered end-of-turn DNA routes) models turn-player end-of-turn actions. The non-turn player's [End of Opponent's Turn] effects now resolve before it, so an attacker using that window sees, for example, a played Ravemon before declaring. §15-4-3-5 orders the turn player's effects first. The window itself is a pre-existing approximation of effects that should pend in the pool.
   - **Three shared-change claims have no test yet.** [End of Opponent's Turn] effects now trigger again after a §6-6-4 swing-back, resolve before the ending player's "for the turn" expiries, and resolve before that window. Deferred.
+
+
+## Identity/state predicate follow-ups (2026-10-22)
+
+- **G-ATTACK-PREDICATE-DURING-ATTACK-2026-10-22 — open.** `can_attack`
+  enumerates targets without consulting `pending_attack`; CR 4.3 §11-2-4
+  prohibits a new attack declaration during an attack. The execution entry
+  already rejects a live `pending_attack` in `combat/mod.rs`; align the offered
+  `may_attack_now` choice with that execution gate in a separate combat task.
+- **G-PLAY-COST-ABSENT-VS-ZERO-2026-10-22 — open.** Digi-Egg CardData uses 0
+  for absent play cost, so `play_cost: { op: lte, value: N }` can match eggs.
+  Represent missing information or require an explicit kind guard; do not
+  conflate a missing cost with a printed zero (§§2-6-1, 2-7-1).
+- **G-CARD-NUMBER-ALIASES-2026-10-22 — open.** `card_number_is` matches only
+  printed IDs. RB1-004, RB1-006 and RB1-007's Rule card-number aliases are not
+  modeled (CR 4.3 §2-3-4-5). Alias metadata and all equality consumers need a
+  coordinated implementation.
+- **G-SOURCE-COUNT-FACE-DOWN-2026-10-22 — deferred, DCGO conflict.**
+  `source_count` reads printed identity even when a source is face down.
+  CR 4.3 §4-7-9 says that information cannot be referenced. BT25_085.cs
+  `PermanentWithTrashableCard` uses `DigivolutionOrLinkCards.Any(CanTrashCardSource)`;
+  `CanTrashCardSource` reads `IsOption`, which is `CardKinds.Contains(Option)`
+  and `CardKinds` reads `_cEntity_Base.cardKind` (CardSource.cs:3537,3606).
+  The selection also sets `canLookReverseCard: true`. Under the approved
+  fix-or-file decision, retain the existing behavior and pin research row D.
+  This is not a claim of CR conformance. Resolve the conflict before changing
+  production payment gates. DCGO source was read from the populated base repo.

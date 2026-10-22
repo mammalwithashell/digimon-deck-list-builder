@@ -769,13 +769,26 @@ fn eval_predicate_ref(
         }
     }
     if let Some(want) = pred.on_field {
+        // Historical DSL vocabulary: "on_field" means battle area, not the
+        // CR 3-4-6 field (which also includes breeding). A saved source handle
+        // is only a slot: after departure it can point to another physical card.
+        let in_battle_area = |h: PermanentHandle, require_source: bool| {
+            h.index != crate::action::space::BREEDING_TARGET as u8
+                && rctx.game.players[h.player as usize]
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some_and(|perm| {
+                        !require_source
+                            || perm
+                                .card_sources
+                                .iter()
+                                .chain(perm.linked_cards.iter())
+                                .any(|card| card.handle() == rctx.source_card)
+                    })
+        };
         let is_on_field = match subject {
-            PredicateSubject::Permanent(h) => {
-                h.index != crate::action::space::BREEDING_TARGET as u8
-            }
-            _ => rctx
-                .source_permanent
-                .is_some_and(|h| h.index != crate::action::space::BREEDING_TARGET as u8),
+            PredicateSubject::Permanent(h) => in_battle_area(h, false),
+            _ => rctx.source_permanent.is_some_and(|h| in_battle_area(h, true)),
         };
         if is_on_field != want {
             return false;
@@ -1529,6 +1542,10 @@ fn permanent_material_count(
 fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
     // If any subject-only field is set, this subjectless eval can't satisfy it.
     pred.kind.is_none()
+        && pred.source_count.is_none()
+        && pred.link_card_count.is_none()
+        && pred.can_attack.is_none()
+        && pred.can_change_orientation.is_none()
         && pred.can_play_from_effect_without_cost.is_none()
         && pred.can_play_to_breeding_from_hand.is_none()
         && pred.level_eq.is_none()
@@ -3195,6 +3212,17 @@ fn eval_card_fields(
     bindings: Option<&Bindings>,
     dual_ref: DualRef,
 ) -> bool {
+    // These leaves require a permanent. When this routine is delegated to
+    // from a permanent evaluator, formula_target carries that live subject;
+    // plain hand/trash/reveal/source Card subjects must not pass vacuously.
+    if formula_target.is_none()
+        && (pred.source_count.is_some()
+            || pred.link_card_count.is_some()
+            || pred.can_attack.is_some()
+            || pred.can_change_orientation.is_some())
+    {
+        return false;
+    }
     let data = match rctx.game.card_data_for_handle(card) {
         Some(d) => d,
         None => return false,

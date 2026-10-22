@@ -9190,3 +9190,43 @@ BT26-097 The Thunder Emperor Awakens: "[Main] By placing 1 of your Tamers with [
 
 - **Resolution:** no new vocabulary. A permanent source now resolves to its top card (`resolve_bottom_source_ref` → `Game::field_top_material_ref`) and goes through the field-top source move (engine entry G-ENGINE-PLACE-PERMANENT-AS-SOURCE-NO-LEAVE-WINDOW); `bind_placed_as` binds the placed card only on a real placement, through the existing `FieldSourceCaptured` / `FieldSourceFinalize` receipt expansion, which now also re-resolves the donor side's permanent bindings by identity after the move (`FieldSourceFinalize.rebind`, `#[serde(default)]`; runtime-only step, never in a pack).
 - **Cards:** BT26-097 (the only YAML with a permanent-bound `place_as_bottom_source` source, scan of 2026-10-21).
+
+
+## Identity/state construct audit (2026-10-22)
+
+### Own-number existential is not a source suspension cost [G-DSL-CARD-NUMBER-SELF-PROXY-2026-10-22] — open
+
+`any_permanent { card_number_is: <own id>, is_unsuspended: true }` finds
+another unsuspended copy even when the carrier is suspended. A subsequent
+`suspend: { target: source }` can therefore no-op while the benefit resolves.
+CR 4.3 §§15-7-2/4 require the processing condition to be payable. Use the
+existing `source_is_unsuspended` leaf and the appropriate suspension-eligibility
+check in a separate card sweep; add a lint against the self-proxy idiom.
+
+The recursive production YAML audit found **18 unique cards**; the original
+estimate of about 25 cards was not reproduced:
+`BT17-093`, `BT18-087`, `BT20-091`, `BT21-081`, `BT21-102`, `BT23-058`, `BT24-030`, `BT24-102`, `BT4-097`, `EX10-063`, `EX11-065`, `EX8-067`, `P-130`, `P-169`, `ST18-14`, `ST19-14`, `ST21-13`, `ST6-14`.
+No production card YAML is changed by the construct test task.
+
+### `on_field` vocabulary [G-DSL-ON-FIELD-BATTLE-AREA-2026-10-22]
+
+This leaf intentionally means **battle area**, not CR 4.3 §3-4-6's field
+(battle area plus breeding area). BT21-093 is its sole production user.
+The construct fixtures document that vocabulary; no rename or contract change
+is made. Departed-source and same-slot replacement identity are now revalidated.
+
+### App Fusion name-list semantics [G-DSL-APP-FUSION-NAME-IN-2026-10-22] — open
+
+The predicate `name_in` accepts exact, case-sensitive effective names and
+`also_treated_as` aliases (§§2-3-1-2, 2-3-4-3). The separate App Fusion
+`app_fusion_condition_names` / `card_name_equals` route checks printed names
+case-insensitively and ignores aliases. BT25-052 exemplifies that route;
+BT16-085 uses the normal predicate route. A separate App Fusion repair must
+align its material eligibility and execution with the predicate semantics.
+
+### Optional cost must not depend on its benefit [G-DSL-ST24-10-BENEFIT-GATE-2026-10-22] — open
+
+ST24-10 adds a DATA SQUAD-in-hand gate beside the two face-down Tamer-source
+payment gate. CR 4.3 §15-7-5 allows paying an executable optional condition even
+if its benefit cannot execute. The hand gate hides that legal choice. Keep
+this card correction separate; the construct tests prove payment eligibility.
