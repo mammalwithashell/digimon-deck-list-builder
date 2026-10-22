@@ -21,8 +21,12 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
     // only THEIR controller's Digimon being played / digivolving, so P0's plays no longer queue
     // them. Digests 6-8, 19-21, 27-29, 36, 50, 52-55 and 57 lost only those never-activating
     // queue entries (every other hashed token identical); actions and the rest are unchanged.
-    assert_eq!(rec.actions.len(), 65);
-    assert_eq!(rec.digests.len(), 65);
+    // Migrated 2026-10-21 for a declined folded "may" keeping its [Once Per Turn] (§15-14-1-4,
+    // Q1818; 9888747b0): P0's breeding-area BT21-001 pick declined at step 61 is refunded and
+    // re-offered on the next two attacks' security removals, so two declines (62) are inserted
+    // (now steps 63 and 65; 67 actions). Steps 1-59 are unchanged; digests 60-62 change.
+    assert_eq!(rec.actions.len(), 67);
+    assert_eq!(rec.digests.len(), 67);
     let deck = |d: &ReplayDeckRef| match d {
         ReplayDeckRef::Inline { cards } => cards.clone(),
         _ => panic!("regression fixture requires inline decks"),
