@@ -6389,3 +6389,41 @@ resumed attacks from counting twice. Rejected declarations do not count.
 - **Unmeasured:** armed player digivolve-cost reducers' applicability to DNA
   and App Fusion (CR 4.3 8-2-2-5, 8-4-2-3); DNA requirement-ordered stacking.
   The construct suite does not assert or repair these contracts.
+
+## Zone-movement construct audit (2026-10-22)
+
+- **G-ENGINE-ZONE-CARD-SELECTION-RANGES-2026-10-22 — open.**
+  `dsl_cards/step/zone_cards.rs::encode_zone_card` drops otherwise legal
+  candidates outside the existing action ranges: hand index >= 30, trash
+  index >= 45, stack/link combined index >= 12, or field index >= 14.
+  `select_zone_cards` can therefore omit legal choices. A coordinated
+  action/tensor contract plan is required; this audit changes neither.
+- **G-DSL-UNION-RETURN-N-SIMULTANEITY-2026-10-22 — open.**
+  EX7-043 encodes printed "return 3" as three sequential
+  `select_union_zone` / `return_union_bound_to_deck` pairs. The primitive
+  has a single-card receipt; this does not express one simultaneous move
+  (CR 4.3 3-1-3-3), so return observers can see three events instead of one
+  (15-5-2). Construct coverage does not certify that production sequence.
+- **G-DSL-DELETE-PERMANENTS-DUPLICATE-DISPATCH-2026-10-22 — maintenance.**
+  `permanent_mutations.rs` still has an unreachable `DeletePermanents` arm
+  that writes snapshots without the actual-deletion receipt. The dispatcher
+  first expands this variant in `deletion_results.rs`; that live path owns
+  deduplication, immunity, replacement windows and completed receipts.
+  Remove the obsolete fallback separately to avoid diverging semantics.
+- **Resolved locally:** field-Option relocation now captures the recipient's
+  battle identity before removing the Option and resolves it after field
+  compaction. Selected trash-list bottom return now preserves first-picked
+  deepest ordering and the returned receipt's selection order. Grouped
+  returns now collapse only their own `OnLeaveField` observer batch with
+  matching members retained (15-5-2); separate steps remain separate events.
+  `OnReturn` is an unused engine enum, not a DSL timing; the return observer
+  regression uses the genuine `on_leave_field` dispatch for returned objects.
+
+- **G-ENGINE-SEQUENTIAL-DELETION-OBSERVER-COMPACTION-2026-10-22 — open.**
+  In the Task 6 synthetic two-step deletion probe, an `on_any_deletion`
+  witness placed after both victims produced net zero memory instead of
+  two gains for its controller. With the witness before the victims, both
+  pending events survive and require trigger ordering. The batch variant
+  works with the witness after the victims. Queued observer identity across
+  consecutive compactions remains unresolved; the event-multiplicity
+  contrast anchors its witness before the victims to isolate batching.

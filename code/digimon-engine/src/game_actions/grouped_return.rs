@@ -134,9 +134,14 @@ impl Game {
                 );
             }
         }
+        let first_leave_observer = self.effect_queue.len();
         for (h, snapshot) in leave_events {
             self.fire_on_leave_field(h, snapshot);
         }
+        // CR 4.3 15-5-2: all departures in this return are one event.
+        // Retain matching members, as for deletion, without merging earlier
+        // or later returns queued by separate process steps.
+        self.collapse_simultaneous_deletion_event_batch(first_leave_observer);
         for owner in hand_events {
             self.fire_on_add_to_hand_by_effect(owner);
         }

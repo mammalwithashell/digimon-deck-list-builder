@@ -311,7 +311,8 @@ impl<'a> EffectContext<'a> {
         cards: &[CardHandle],
     ) -> Vec<CardHandle> {
         let mut moved = Vec::with_capacity(cards.len());
-        for &handle in cards {
+        // Insertion at index zero reverses iteration order.
+        for &handle in cards.iter().rev() {
             let Some(pos) = self
                 .game
                 .player(player)
@@ -325,6 +326,7 @@ impl<'a> EffectContext<'a> {
             self.move_card_to_deck(card, true);
             moved.push(handle);
         }
+        moved.reverse();
         moved
     }
 
