@@ -55,6 +55,7 @@ fn effect_initiated_free_play_emits_cost_paid_zero_and_no_alt_path() {
         cost_paid,
         cost_printed,
         via_alt_path,
+        effect_initiated,
         ..
     } = plays[0].clone()
     else {
@@ -62,6 +63,7 @@ fn effect_initiated_free_play_emits_cost_paid_zero_and_no_alt_path() {
     };
 
     assert_eq!(card_id, "PLAY-3");
+    assert!(effect_initiated);
     assert_eq!(cost_paid, 0, "effect-initiated free play pays no memory");
     assert_eq!(
         cost_printed, 3,
@@ -111,6 +113,7 @@ fn standard_play_from_hand_emits_cost_paid_post_discount_and_no_alt_path() {
         cost_paid,
         cost_printed,
         via_alt_path,
+        effect_initiated,
         ..
     } = plays[0].clone()
     else {
@@ -118,6 +121,7 @@ fn standard_play_from_hand_emits_cost_paid_post_discount_and_no_alt_path() {
     };
 
     assert_eq!(card_id, "PLAY-3");
+    assert!(!effect_initiated);
     assert_eq!(
         cost_paid, 2,
         "cost_paid SHALL reflect post-discount memory (3 printed - 1 reduce = 2)"

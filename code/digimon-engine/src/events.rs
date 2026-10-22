@@ -109,6 +109,8 @@ pub enum GameEvent {
         cost_paid: i16,
         cost_printed: i16,
         via_alt_path: Option<String>,
+        /// True when a resolving effect played the card (including tokens).
+        effect_initiated: bool,
     },
 
     /// `player` digivolved `top` onto a permanent at `field_index`.
@@ -135,6 +137,37 @@ pub enum GameEvent {
         was_dna: bool,
         was_blast_dna: bool,
         memory_paid: i16,
+    },
+
+    /// Observational arrival for routes without a legacy Digivolve event.
+    /// Separate so adding telemetry does not change reward occurrences.
+    EvalDigivolve {
+        seq: u64,
+        player: PlayerId,
+        top_card_id: String,
+        card_name: String,
+        field_index: u8,
+        from_stack_top: String,
+        was_dna: bool,
+        was_blast_dna: bool,
+        memory_paid: i16,
+    },
+
+    /// An egg hatched into raising, before OnHatch effects resolve.
+    Hatch {
+        seq: u64,
+        player: PlayerId,
+        card_id: String,
+        card_name: String,
+    },
+
+    /// A stack moved from raising into battle, before OnMove effects resolve.
+    BreedingMove {
+        seq: u64,
+        player: PlayerId,
+        card_id: String,
+        card_name: String,
+        field_index: u8,
     },
 
     /// A Digimon declared an attack.
@@ -300,6 +333,9 @@ impl GameEvent {
             | GameEvent::PhaseChange { seq, .. }
             | GameEvent::Play { seq, .. }
             | GameEvent::Digivolve { seq, .. }
+            | GameEvent::BreedingMove { seq, .. }
+            | GameEvent::EvalDigivolve { seq, .. }
+            | GameEvent::Hatch { seq, .. }
             | GameEvent::Attack { seq, .. }
             | GameEvent::Trash { seq, .. }
             | GameEvent::CardToHand { seq, .. }
@@ -325,6 +361,9 @@ impl GameEvent {
             GameEvent::PhaseChange { .. } => "PhaseChange",
             GameEvent::Play { .. } => "Play",
             GameEvent::Digivolve { .. } => "Digivolve",
+            GameEvent::BreedingMove { .. } => "BreedingMove",
+            GameEvent::EvalDigivolve { .. } => "EvalDigivolve",
+            GameEvent::Hatch { .. } => "Hatch",
             GameEvent::Attack { .. } => "Attack",
             GameEvent::Trash { .. } => "Trash",
             GameEvent::CardToHand { .. } => "CardToHand",

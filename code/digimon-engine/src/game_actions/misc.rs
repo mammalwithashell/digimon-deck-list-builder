@@ -1312,6 +1312,7 @@ impl Game {
             cost_paid: effective_cost as i16,
             cost_printed,
             via_alt_path: None,
+            effect_initiated,
         });
 
         // PUPPETS-G030 — `suppress_on_play` skips ONLY the played card's
