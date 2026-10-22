@@ -3,6 +3,7 @@
 //! Card-text idioms: BT16-085 / BT25-052 (names), BT25-092 / P-094 (sources),
 //! BT24-037 / EX13-077 (attack permission), EX3-024 / EX13-024 (orientation).
 //! `on_field` means battle area (BT21-093), narrower than CR 3-4-6.
+//! Tail idioms: BT24-083 / BT24-084 (raw memory threshold); BT24-034 (Tamer name exclusion).
 use digimon_engine::action::{
     build_action_mask,
     space::{encode_attack, PASS},
@@ -1574,4 +1575,124 @@ fn q3185_without_suspending_mask_and_execution_agree() {
         r.game.game_over,
         "the selected attacker reaches the unguarded player"
     );
+}
+
+// Raw gauge idiom: BT24-083 / BT24-084. Unlike own_memory_lte, this is
+// deliberately measured from the turn player's perspective, not the source's.
+const MEMORY_LTE_TAIL: &str = r#"
+card: TST-MEMORY-TAIL
+name: Memory threshold
+kind: tamer
+color: [red]
+cost: 0
+effects:
+  - when: on_play
+    condition: { memory_lte: 3 }
+    process:
+      - draw: { of: you, count: 1 }
+"#;
+#[test]
+fn tail_memory_lte_boundary_and_opposite_controller() {
+    for owner in [0, 1] {
+        for memory in [2, 3, 4] {
+            let mut r = runner(MEMORY_LTE_TAIL, &[]);
+            r.game.memory = memory;
+            let h = r.place_on_field(owner, "TST-MEMORY-TAIL", Some(0));
+            let before = r.hand_size(owner);
+            fire(&mut r, h);
+            assert_eq!(r.hand_size(owner), before + usize::from(memory <= 3));
+            assert_eq!(r.memory(), memory);
+            assert!(r.game.pending_selection.is_none());
+        }
+    }
+}
+
+// BT24-034's Tamer exclusion idiom; field identity includes name aliases.
+const TAMER_NAME_TAIL: &str = r#"
+card: TST-TAMER-NAME-TAIL
+name: Name exclusion probe
+kind: tamer
+color: [red]
+cost: 0
+effects:
+  - when: on_play
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter: { kind: tamer, name_not_shared_by_field_tamer: { of: you } }
+          prompt: Choose a Tamer with a new name
+      - play_from_hand_free: { of: you, hand_index: pick }
+"#;
+#[test]
+fn tail_name_not_shared_by_field_tamer_scope_alias_and_no_tamers() {
+    for (field_owner, field_kind, expected) in [
+        (0, CardKind::Tamer, vec![2, 3]),
+        (1, CardKind::Tamer, vec![0, 1, 2, 3]),
+        (0, CardKind::Digimon, vec![0, 1, 2, 3]),
+    ] {
+        let mut b = DebugRunner::builder()
+            .from_dsl_yaml(TAMER_NAME_TAIL)
+            .unwrap();
+        for (id, name) in [
+            ("TA", "Alice"),
+            ("TB", "Bob"),
+            ("TC", "Carol"),
+            ("TD", "Dave"),
+        ] {
+            b = b.add_card(card(id, name, 0, CardKind::Tamer, &[], &[CardColor::Red]));
+        }
+        let mut field = card(
+            "FIELD-NAMES",
+            "Alice",
+            0,
+            field_kind,
+            &[],
+            &[CardColor::Red],
+        );
+        field.also_treated_as = vec!["Bob".into()];
+        let mut r = b
+            .add_card(field)
+            .hand(0, &["TA", "TB", "TC", "TD"])
+            .deck(0, &["TC"; 20])
+            .deck(1, &["TC"; 20])
+            .memory(5)
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        r.place_on_field(field_owner, "FIELD-NAMES", Some(0));
+        let h = r.place_on_field(0, "TST-TAMER-NAME-TAIL", Some(0));
+        fire(&mut r, h);
+        let selection = r.game.pending_selection.as_ref().unwrap();
+        assert_eq!(selection.selecting_player, 0);
+        assert!(selection.is_optional);
+        assert_eq!(selection.valid_action_ids, expected);
+        for (a, legal) in build_action_mask(&r.game, 0).iter().enumerate() {
+            assert_eq!(
+                *legal,
+                if expected.contains(&(a as u16)) || a == PASS as usize {
+                    1.0
+                } else {
+                    0.0
+                },
+                "action {a}"
+            );
+        }
+        let before = r.game.players[0].battle_area.len();
+        let chosen = r.game.players[0].hand[2].handle();
+        r.execute_action(0, 2).unwrap();
+        assert!(r.game.pending_selection.is_none());
+        assert_eq!(r.hand_size(0), 3);
+        assert_eq!(r.game.players[0].battle_area.len(), before + 1);
+        assert_eq!(
+            r.game.players[0]
+                .battle_area
+                .last()
+                .unwrap()
+                .top_card()
+                .handle(),
+            chosen
+        );
+    }
 }

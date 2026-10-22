@@ -1,5 +1,6 @@
 //! Cost, result and event constructs: CR 4.3 Â§Â§15-7-1/4, 15-8-5, 15-5-2/3, 2-3, 11-6 and 15-16-13-2.
 //! Card-text idioms: EX4-073 / EX7-073 (count), EX13-045 / LM-020 (kind).
+//! Tail idioms: EX12-036 / EX13-018 (ally play); EX13-018 / EX13-039 (event source identity).
 use digimon_engine::action::{build_action_mask, space::PASS};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::{
@@ -1213,5 +1214,169 @@ fn source_trash_never_dispatches_unconditional_addition_observer() {
         2
     );
     assert_eq!(r.trash_size(0), 1);
+    assert!(r.game.pending_selection.is_none());
+}
+
+// EX12-036 / EX13-018: own play observers; EX13-018 / EX13-039:
+// event_target_is_source distinguishes the newly played carrier from observers.
+const ALLY_TAIL: &str = r#"
+card: TST-ALLY-TAIL
+name: Ally play observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_ally_played
+    process:
+      - draw: { of: you, count: 1 }
+"#;
+const EVENT_SELF_TAIL: &str = r#"
+card: TST-ALLY-TAIL
+name: Event self observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_ally_played
+    trigger_if: { event_target_is_source: true }
+    process:
+      - draw: { of: you, count: 1 }
+"#;
+const EVENT_OTHER_TAIL: &str = r#"
+card: TST-ALLY-TAIL
+name: Event other observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_ally_played
+    trigger_if: { event_target_is_source: false }
+    process:
+      - draw: { of: you, count: 1 }
+"#;
+fn tail_play(r: &mut DebugRunner, player: u8, id: &str) {
+    r.set_first_player(player);
+    r.game.memory = 5;
+    r.add_to_hand(player, id);
+    let action = (r.hand_size(player) - 1) as u16;
+    assert_eq!(build_action_mask(&r.game, player)[action as usize], 1.0);
+    r.game.decode_action(action, player);
+    assert!(r.game.pending_selection.is_none());
+}
+#[test]
+fn tail_on_ally_played_own_opponent_and_adjacent_digivolve() {
+    for player in [0, 1] {
+        let mut r = cost_runner(ALLY_TAIL, true);
+        r.place_on_field(0, "TST-ALLY-TAIL", Some(0));
+        let before = r.hand_size(0);
+        tail_play(&mut r, player, "BASE");
+        assert_eq!(r.hand_size(0), before + usize::from(player == 0));
+    }
+    let mut r = cost_runner(ALLY_TAIL, true);
+    r.place_on_field(0, "TST-ALLY-TAIL", Some(0));
+    let h = r.place_on_field(0, "BASE", Some(0));
+    let before = r.hand_size(0);
+    let action = digimon_engine::action::space::encode_digivolve(0, h.index.into());
+    assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+    r.game.decode_action(action, 0);
+    // One evolution card leaves hand and the ordinary evolution bonus draws one.
+    assert_eq!(r.hand_size(0), before);
+    assert!(r.game.pending_selection.is_none());
+}
+#[test]
+fn tail_event_target_is_source_live_self_other_and_adjacent_timing() {
+    for (yaml, self_draw, other_draw) in [(EVENT_SELF_TAIL, 1, 0), (EVENT_OTHER_TAIL, 0, 1)] {
+        let mut r = cost_runner(yaml, true);
+        let before = r.hand_size(0);
+        tail_play(&mut r, 0, "TST-ALLY-TAIL");
+        assert_eq!(r.hand_size(0), before + self_draw);
+        let before = r.hand_size(0);
+        tail_play(&mut r, 0, "BASE");
+        assert_eq!(r.hand_size(0), before + other_draw);
+    }
+    let mut r = cost_runner(EVENT_SELF_TAIL, true);
+    r.place_on_field(0, "TST-ALLY-TAIL", Some(0));
+    let h = r.place_on_field(0, "BASE", Some(0));
+    let before = r.hand_size(0);
+    let action = digimon_engine::action::space::encode_digivolve(0, h.index.into());
+    assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+    r.game.decode_action(action, 0);
+    assert_eq!(r.hand_size(0), before, "only the ordinary evolution draw");
+    assert!(r.game.pending_selection.is_none());
+}
+
+const EVENT_INHERITED_TAIL: &str = r#"
+card: TST-INHERITED-TAIL
+name: Inherited event identity
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_suspend
+    scope: inherited
+    trigger_if: { event_target_is_source: true }
+    process:
+      - draw: { of: you, count: 1 }
+"#;
+#[test]
+fn tail_event_target_is_source_inherited_physical_carrier() {
+    for attack_carrier in [true, false] {
+        let mut r = runner(EVENT_INHERITED_TAIL);
+        let carrier = r.place_stack(0, &["TST-INHERITED-TAIL", "PLAIN"]);
+        let other = r.place_on_field(0, "PLAIN", Some(0));
+        r.set_turn(2);
+        r.add_to_hand(1, "PLAIN");
+        let security = r.game.players[1].hand.pop().unwrap();
+        r.game.players[1].security.push(security);
+        let attacker = if attack_carrier { carrier } else { other };
+        let action = digimon_engine::action::space::encode_attack(
+            attacker.index.into(),
+            digimon_engine::action::space::SECURITY_TARGET,
+        );
+        assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
+        r.game.decode_action(action, 0);
+        assert_eq!(r.hand_size(0), usize::from(attack_carrier));
+        assert!(r.game.pending_selection.is_none());
+    }
+}
+
+const EVENT_ABSENT_TAIL: &str = r#"
+card: TST-ABSENT-TAIL
+name: Missing event target
+kind: tamer
+color: [red]
+cost: 0
+effects:
+  - when: on_lose_security
+    trigger_if: { event_target_is_source: true }
+    process:
+      - draw: { of: you, count: 1 }
+  - when: on_lose_security
+    trigger_if: { event_target_is_source: false }
+    process:
+      - gain_memory: 1
+"#;
+#[test]
+fn tail_event_target_is_source_absent_permanent_target() {
+    let mut r = runner(EVENT_ABSENT_TAIL);
+    r.place_on_field(0, "TST-ABSENT-TAIL", Some(0));
+    let card = r.game.players[0].deck[0].handle();
+    // A security-card event has a card but no permanent target. This explicit
+    // dispatch isolates the missing-target predicate; live dispatch is above.
+    r.game.enqueue_triggered(
+        EffectTiming::OnLoseSecurity,
+        TriggerSource::SecurityRevealed { defender: 0, card },
+    );
+    r.game.drain_effect_queue();
+    assert_eq!(r.hand_size(0), 0, "missing target must reject true");
+    assert_eq!(r.memory(), 1, "missing target must satisfy false");
     assert!(r.game.pending_selection.is_none());
 }
