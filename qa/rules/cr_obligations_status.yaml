@@ -42,6 +42,15 @@
   status: proven
   tests: ["ch03_areas::face_down_card_returned_to_hand_then_played_is_face_up_on_the_field", "ch03_areas::face_down_card_digivolved_into_is_a_face_up_top_card"]
   note: "A card that becomes a new permanent or a new top card is face-up: Permanent::new and Permanent::push_top (digivolution, DNA, Blast DNA) clear the face-down state a digivolution card carried (3-1-3-1-2), so a card stashed face-down under a Tamer and played or digivolved into from the hand is not trashed by the rule check (17-1-3-2-4; official Q&A Q6958's mechanism, G-ENGINE-PLAY-FROM-TRASH-OF-JUST-TRASHED-SOURCE-NOT-PLAYED)."
+"3-4-7-4":
+  status: proven
+  tests: ["ch03_areas::breeding_area_effects_without_a_breeding_reference_do_not_trigger", "ch03_areas::breeding_scoped_effect_triggers_only_in_the_breeding_area", "ch03_areas::breeding_area_persistent_effect_applies_only_with_a_breeding_reference"]
+  gap_id: "G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE"
+  note: "An effect explicitly specifies or references the breeding area when its clause's own gate (active_when / condition / trigger_if / a per-timing condition / an aura's while_condition) has a positive `in_breeding: true` or `zone: [breeding]` leaf at its top level or under all_of / any_of; the printed `[Breeding]` scope is authored that way (BT13-007, BT20-083). Lowering marks every effect of such a clause `Effect::breeding_zone` (`dsl_cards::clause_references_breeding_area`), and the breeding-area trigger dispatch (`enqueue_from_breeding_permanent`: the top card's own effects and the inherited effects under it) and the declarative pass (`materialize_declaratives_full`) consider only those (G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE too). Witnesses: BT21-001 Gigimon under a breeding Digimon is not offered on a security removal (DCGO `BT21_001.cs` requires `IsExistOnBattleAreaDigimon`); BT9-033 Pillomon in the breeding area locks no effect plays; BT20-083's `[Breeding]` inherited effect still triggers there and no longer from the battle area. Proof limit: [Main] activation from the breeding area is `<Training>` only (keyword path, unchanged); the BeforePayCost scan still gates breeding cost sources by card kind (Digi-Egg, `push_breeding_cost_sources`), not by this flag; effects GRANTED to a breeding-area carrier are not filtered."
+"3-4-7-7":
+  status: proven
+  tests: ["ch03_areas::opponents_breeding_area_digimon_does_not_meet_an_activation_condition", "ch03_areas::own_breeding_area_digimon_does_not_meet_a_main_activation_condition"]
+  note: "The rule's own example ('[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory' with the opponent's only Digimon in the breeding area) gains nothing, and a [Main] 'If you have a Digimon' condition is not met by your own breeding-area Digimon; the battle-area controls gain 1. The `any_permanent` existential both fixtures use scans battle areas only. Proof limit: existential / count activation conditions; a condition that names the breeding area explicitly (`in_breeding`, `zone: [breeding]`) is the exception and is not exercised here."
 "3-5-3":
   status: proven
   tests: ["ch03_areas::face_down_card_returned_to_hand_then_played_is_face_up_on_the_field"]
@@ -218,6 +227,11 @@
   tests: ["ch15_14_effect_icons::activated_you_may_effect_spends_its_once_per_turn", "ch15_14_effect_icons::security_zone_once_per_turn_effect_is_used_once_per_turn"]
   gap_id: "G-ENGINE-SECURITY-ZONE-OPT-UNTRACKED"
   note: "An [X Per Turn] effect used X times does not activate again that turn, for a permanent's effect and for a {Security} effect counted on its security card (Player::security_effect_activations). Proof limit: X = 1; triggered effects."
+"15-14-1-5-1":
+  status: proven
+  tests: ["ch03_areas::per_turn_uses_reset_when_the_turn_changes_in_both_field_areas"]
+  gap_id: "G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE"
+  note: "A [Once Per Turn] trigger used on a turn triggers again on its controller's next turn, for a battle-area Tamer and for a `[Breeding]` effect under the breeding-area Digimon: both turn-change resets (`Player::new_turn`, `Player::reset_effect_activations`) clear the breeding permanent's `effect_activations` too (they cleared battle-area permanents only, so a breeding-area use stayed counted). {Security} counts reset in the same place (15-14-1-2). Proof limit: X = 1; triggered effects; the reset is observed across one full round (P0, P1, P0)."
 "15-14-1-4":
   status: proven
   tests: ["ch15_14_effect_icons::declined_you_may_effect_keeps_its_once_per_turn", "ch15_14_effect_icons::activated_you_may_effect_spends_its_once_per_turn", "ch15_14_effect_icons::declined_optional_cost_of_an_activated_effect_spends_its_once_per_turn", "ch15_14_effect_icons::then_may_effect_with_both_halves_declined_keeps_its_once_per_turn", "ch15_14_effect_icons::then_may_effect_with_one_half_executed_spends_its_once_per_turn", "ch15_14_effect_icons::declined_security_zone_you_may_effect_keeps_its_once_per_turn"]
@@ -658,7 +672,7 @@
   note: "Persistent: with the topmost [Basemon] trashed from the sources, the next one is adopted at once."
 "3-4-7-6":
   status: proven
-  tests: ["ch16_processing_keywords::digisorption_not_offered_for_a_breeding_area_digivolution"]
+  tests: ["ch16_processing_keywords::digisorption_not_offered_for_a_breeding_area_digivolution", "ch03_areas::breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition"]
   note: "A breeding-area digivolution cannot meet <Digisorption>'s trigger condition (the rule's own example is a breeding digivolution not triggering 'when your Digimon digivolves'); DCGO BT2_047.cs gates on a battle-area permanent. Pinned with Task 16 (Plan 4)."
 "4-19-1":
   status: proven
