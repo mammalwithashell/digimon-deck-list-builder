@@ -6427,3 +6427,19 @@ resumed attacks from counting twice. Rejected declarations do not count.
   works with the witness after the victims. Queued observer identity across
   consecutive compactions remains unresolved; the event-multiplicity
   contrast anchors its witness before the victims to isolate batching.
+
+
+## Protection construct follow-up (2026-10-22)
+
+- **Resolved: formula DP-minus immunity.** `live_declarative_formula_sum` now applies the same controller-scope gate as materialized negative `ChangeDp` entries, per negative contribution (including linked formulas). Positive contributions and own effects remain applicable. Construct evidence: `tests/dsl/constructs/protection.rs`; this does not certify every production card.
+- **Resolved: stack grant omitted individual-source returns.** `grant_stack_protection_from_opponent_effects` now installs opponent-scoped `ImmuneFromStackReturn` alongside stack-trash and whole-permanent return protection. DCGO `BT26_029.cs:115` covers stacked-card hand/deck returns. Deletion still trashes the whole stack (CR 4.3 §§4-7-8, 4-16-3); this grant is not deletion immunity.
+- **Resolved: unpayable source suspension prevention offered.** Leading `suspend_and_cancel_all_matching_leaves { target: source }` now uses `SuspendSource` payability, including already suspended and CannotSuspend. CR 4.3 §15-7-4 reverses 3.6: an impossible optional processing condition cannot be chosen. Authored chosen-target filters remain responsible for qualifying their selectable payers.
+- **Open: Any-scoped bulk source-trash inconsistency.** `EffectContext::trash_all_sources` checks controller != target.player before stack immunity; individual source trash consults Any-scoped immunity for both controllers. This is a source-inspection finding, not a new behavioral certification. The opponent-scoped grant tested here is unaffected; a separate bulk-source-trash fix needs its own RED case.
+- **Unmeasured: protection scope after control change.** Narrow DP protection compares the effect controller against the protected permanent's current controller at read time. Control change can therefore flip own/opponent applicability. No control-change experiment was run in this construct task; do not treat this as a demonstrated rules defect.
+
+
+### Simultaneous non-batch leaves lose plural prevention [G-ENGINE-PLURAL-PREVENTION-NONBATCH-LEAVES] — OPEN (2026-10-22)
+
+Confirmed construct probe: an opponent effect places every opposing Digimon under its source via a `for_each` over the battle area and `place_as_bottom_source`. With two Guarded Digimon and an unsuspended once-per-turn payer using `suspend_and_cancel_all_matching_leaves`, one acceptance keeps only one Guarded Digimon; the other leaves (field count 2, expected 3 including payer). CR 4.3 §§3-1-3-3 and 15-8-5-4 require all matching simultaneous subjects of that cause to share prevention. Native deletion and hand/deck departure batches pass their plural tests; the gap is leave paths outside those windows. A reusable simultaneous departure window is required, not a one-card workaround.
+
+The full expected-behavior reproducer is parked at `.superpowers/sdd/2026-10-22-construct-tests/task7-nonbatch-reproducer.rs`, test `plural_nonbatch_simultaneous_tuck_probe`; observed failure is in `task7-expanded.log` in that directory. These are ignored local diagnostic artifacts. Per campaign plan the failing probe was removed from the active suite without changing its expected assertion; no ignored test or current-bug expectation is used as coverage. Security-placement and direct permanent-trash plural behavior remain unmeasured, not independently proven failures.

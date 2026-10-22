@@ -9272,3 +9272,20 @@ this card correction separate; the construct tests prove payment eligibility.
   see the existing BT25-089#2 OPT signal gap and the separately recorded
   G-ENGINE-APP-FUSE-PROCEDURE-2026-10-22. Literal lowering coverage does not
   establish training readiness or resolve these substrate gaps.
+
+
+## Narrow protection De-Digivolve scope [G-DSL-NARROW-PROTECTION-DEDIGIVOLVE-SCOPE] — OPEN (2026-10-22)
+
+BT16-055's printed De-Digivolve protection is unqualified, unlike BT26-029/085's opponent-effect scope. DCGO `BT16_055.cs:65-70` installs `ImmuneFromDeDigivolveClass` without the opponent condition used for DP-minus. The existing `grant_narrow_opponent_effect_protection` scopes both halves to opponent effects. Add a reusable `de_digivolve_scope: any|opponent` argument, preserving the existing opponent default, and separately migrate/test BT16-055's YAML. This task deliberately does not change that card. Own De-Digivolve passing the existing grant is an explicit BT26-scoped construct witness, not BT16 certification.
+
+## Paid plural prevention authoring lint — OPEN (2026-10-22)
+
+`suspend_and_cancel_all_matching_leaves.filter` is re-evaluated after payment for each simultaneous member. If it is stricter than the replacement's `active_when` subject qualification, even the triggering subject can leave after paying. An authoring lint should compare the subject conditions while excluding cost-availability gates; notably `source_is_unsuspended` must not be copied into the post-suspension filter. This is a source-inspection authoring hazard, not a claim that any particular production card fails. Source-target payment is now guarded centrally against unpayable suspension (CR 4.3 §15-7-4); chosen-target filters still must expose only payable candidates.
+
+
+## Protection-matrix subpaths without payment/removal vocabulary — OPEN (2026-10-22)
+
+The semantics sheet's illustrative N8 (own DP reduction as a paid cost) and M7 keyword-removal subpath are **not behaviorally measured** by this campaign. Ordinary own negative DP, opponent DP, suspension, and actual source-trash costs have behavioral witnesses; those are not substitutes for these two subpaths.
+
+- **G-DSL-DP-REDUCTION-PAYMENT-RECEIPT:** `add_dp_modifier` applies an effect but has no cost-specific success receipt or dependent-benefit gate. `ActivationCostKind` and `leading_cost_guard` have no DP-reduction payment variant. A faithful hypothetical "by reducing this Digimon's DP, benefit" witness requires a reusable paid-DP mutation/result contract; do not claim payment from an unconditional `add_dp_modifier` followed by a benefit. No production card has been identified as blocked by this illustrative row.
+- **G-DSL-KEYWORD-REMOVAL:** the step vocabulary exposes keyword grants and continuous grants, not keyword removal. `DisableEffect` is timing-scoped and is not a demonstrated keyword-removal substitute. A future removal/suppression primitive needs its own printed-card driver, rules adjudication and protection interaction tests. No claim is made that a current production card fails this operation.

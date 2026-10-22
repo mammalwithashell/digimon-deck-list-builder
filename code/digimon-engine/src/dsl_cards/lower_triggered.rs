@@ -1133,6 +1133,9 @@ pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
         }),
         CompiledStep::Suspend {
             target: CompiledBindingRef::Source,
+        }
+        | CompiledStep::SuspendAndCancelAllMatchingLeaves {
+            target: CompiledBindingRef::Source, ..
         } => Some(CostGuard::SuspendSource),
         CompiledStep::SelectOwnPermanent {
             filter,

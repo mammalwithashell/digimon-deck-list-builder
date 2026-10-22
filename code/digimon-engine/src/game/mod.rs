@@ -3749,6 +3749,11 @@ impl Game {
                     }
                 }
                 if let Some(value) = formula_fn(&ctx, target) {
+                    // DP-minus protection is per contribution, before summing:
+                    // positive and own-scoped auras must still apply.
+                    if !security_attack && value < 0 && self.dp_minus_is_blocked(target, controller) {
+                        continue;
+                    }
                     if security_attack {
                         total = if found { total.max(value) } else { value };
                     } else {
@@ -3818,6 +3823,11 @@ impl Game {
                     }
                 }
                 if let Some(value) = formula_fn(&ctx, target) {
+                    // DP-minus protection is per contribution, before summing:
+                    // positive and own-scoped auras must still apply.
+                    if !security_attack && value < 0 && self.dp_minus_is_blocked(target, controller) {
+                        continue;
+                    }
                     if security_attack {
                         total = if found { total.max(value) } else { value };
                     } else {
