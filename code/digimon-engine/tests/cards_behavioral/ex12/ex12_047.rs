@@ -18,6 +18,10 @@ fn resolve_first_action(runner: &mut DebugRunner) {
             .expect("selection must be pending");
         (pending.selecting_player, pending.valid_action_ids[0])
     };
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, player)[action as usize],
+        1.0
+    );
     runner
         .game
         .resolve_selection(player, action)
@@ -132,8 +136,8 @@ fn ex12_047_on_play_deletes_lowest_dp_returns_two_trash_and_applies_dp_modifiers
             .iter()
             .map(|card| card.card_id(&runner.game.card_data).to_string())
             .collect::<Vec<_>>(),
-        vec!["TRASH-Y".to_string(), "TRASH-R".to_string()],
-        "the two selected trash cards should move to opponent deck before the DP target prompt"
+        vec!["TRASH-R".to_string(), "TRASH-Y".to_string()],
+        "CR 4.3 3-1-3-4: selection order chooses placement order; first pick is deepest (deck index 0)"
     );
     assert_eq!(
         runner.pending_kind(),
@@ -154,7 +158,7 @@ fn ex12_047_on_play_deletes_lowest_dp_returns_two_trash_and_applies_dp_modifiers
             .iter()
             .map(|card| card.card_id(&runner.game.card_data).to_string())
             .collect::<Vec<_>>(),
-        vec!["TRASH-Y".to_string(), "TRASH-R".to_string()],
+        vec!["TRASH-R".to_string(), "TRASH-Y".to_string()],
         "the two selected trash cards should remain on the bottom of the opponent's deck"
     );
     assert_eq!(
