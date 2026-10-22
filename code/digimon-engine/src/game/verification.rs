@@ -190,6 +190,26 @@ impl Game {
             let mut face_up: Vec<u16> = player.face_up_security.iter().copied().collect();
             face_up.sort_unstable();
             debug_field(&mut h, "face_up_security", &face_up);
+            // `{Security}` [X Per Turn] counts (§15-14-1-2: the count is game
+            // state), sorted like a permanent's `effect_activations`. Only
+            // non-zero counts are hashed and only in V3, so a state with no
+            // counted `{Security}` activation (and every archival LegacyV2
+            // recording) keeps its digest.
+            if version == crate::recorder::VerificationDigestVersion::V3 {
+                let mut counts: Vec<((u16, u8), u8)> = player
+                    .security_effect_activations
+                    .iter()
+                    .filter(|(_, &count)| count > 0)
+                    .map(|(&(card, key), &count)| ((card.0, key), count))
+                    .collect();
+                counts.sort_unstable();
+                for ((card, key), count) in counts {
+                    token(&mut h, "security_effect_activation");
+                    field(&mut h, "security_effect_activation.card", card);
+                    field(&mut h, "security_effect_activation.key", key);
+                    field(&mut h, "security_effect_activation.count", count);
+                }
+            }
             debug_field(&mut h, "last_security_reveal", &player.last_security_reveal);
             debug_field(&mut h, "original_deck", &player.original_deck);
             debug_field(&mut h, "opaque_deck_state", &player.opaque_deck_state);
@@ -725,6 +745,50 @@ mod would_play_digest_tests {
             other.verification_digest(),
             other.clone().verification_digest()
         );
+    }
+}
+
+#[cfg(test)]
+mod security_activation_digest_tests {
+    use crate::card_source::CardHandle;
+    use crate::recorder::VerificationDigestVersion;
+
+    /// G-ENGINE-SECURITY-ZONE-OPT-UNTRACKED residual (final review I2): a
+    /// counted `{Security}` [OPT] use is game state (§15-14-1-2), so two
+    /// clones differing only in it must not be digest-equal; a refunded
+    /// (zero) count and an archival LegacyV2 digest are unchanged.
+    #[test]
+    fn counted_security_activation_is_hashed_and_clone_stable() {
+        let r = crate::debug_runner::DebugRunner::builder().start();
+        let before = r.game.verification_digest();
+        let legacy = r.game.verification_digest_with_version(VerificationDigestVersion::LegacyV2);
+        let mut counted = r.game.clone();
+        counted.players[0].record_security_activation(CardHandle(3), 0);
+        assert_ne!(counted.verification_digest(), before);
+        assert_eq!(
+            counted.verification_digest(),
+            counted.clone().verification_digest()
+        );
+        assert_eq!(
+            counted.verification_digest_with_version(VerificationDigestVersion::LegacyV2),
+            legacy
+        );
+        let mut other_key = r.game.clone();
+        other_key.players[0].record_security_activation(CardHandle(3), 1);
+        assert_ne!(other_key.verification_digest(), counted.verification_digest());
+        counted.players[0].unrecord_security_activation(CardHandle(3), 0);
+        assert_eq!(counted.verification_digest(), before, "a refunded count is no count");
+    }
+
+    #[test]
+    fn counted_security_activation_changes_the_loop_signature() {
+        let r = crate::debug_runner::DebugRunner::builder().start();
+        let site = crate::game::infinite_loop::LoopSite::Queue;
+        let before = r.game.loop_signature(site);
+        let mut counted = r.game.clone();
+        counted.players[1].record_security_activation(CardHandle(9), 2);
+        assert_ne!(counted.loop_signature(site), before);
+        assert_eq!(counted.loop_signature(site), counted.clone().loop_signature(site));
     }
 }
 

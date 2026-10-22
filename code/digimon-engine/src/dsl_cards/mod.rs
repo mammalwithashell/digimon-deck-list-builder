@@ -65,6 +65,71 @@ impl DslCardEffect {
     }
 }
 
+/// Whether a clause explicitly specifies or references the breeding area
+/// (CR 4.3 §3-4-7-4 "Effects on cards in breeding areas can't trigger or
+/// activate, except for effects that explicitly specify or reference breeding
+/// areas"; §3-4-7-6 / §3-4-7-7 for their trigger and activation conditions).
+///
+/// The authoring convention for a printed `[Breeding]` scope is a positive
+/// `in_breeding: true` (or `zone: [breeding]`) leaf in the clause's OWN gate:
+/// `active_when`, `condition`, `trigger_if`, a per-timing condition, or an
+/// aura's `while_condition` (BT13-007 King Drasil_7D6, BT20-083 Omekamon's
+/// inherited effect). Only the gate's top level and its `all_of` / `any_of`
+/// branches are read: a leaf under `not` is the opposite (EX2-007, BT9-047
+/// guard with `not: { in_breeding: true }`), and a leaf inside a nested
+/// existential describes some other card, not where this effect lives.
+/// A process step that merely targets the breeding area (BT13-093's
+/// `select_own_breeding_permanent`) does not make the effect one that can
+/// trigger from there.
+pub(crate) fn clause_references_breeding_area(
+    clause: &digimon_dsl::compiled::CompiledClause,
+) -> bool {
+    use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause as D};
+    let gates: Vec<&Option<CompiledPredicate>> = match clause {
+        CompiledClause::Triggered(t) => {
+            if t.timing_conditions
+                .iter()
+                .any(|tc| predicate_names_breeding_area(&tc.condition))
+            {
+                return true;
+            }
+            vec![&t.active_when, &t.condition, &t.trigger_if]
+        }
+        CompiledClause::Declarative(d) => match d {
+            D::Aura {
+                active_when,
+                while_condition,
+                ..
+            } => vec![active_when, while_condition],
+            D::CostReduction {
+                active_when,
+                condition,
+                ..
+            } => vec![active_when, condition],
+            D::Replacement { active_when, .. }
+            | D::Partition { active_when, .. }
+            | D::GrantKeyword { active_when, .. }
+            | D::Delay { active_when, .. }
+            | D::Succession { active_when, .. }
+            | D::FloodGate { active_when, .. }
+            | D::AltPathRegistration { active_when, .. } => vec![active_when],
+            _ => Vec::new(),
+        },
+    };
+    gates
+        .into_iter()
+        .flatten()
+        .any(predicate_names_breeding_area)
+}
+
+fn predicate_names_breeding_area(p: &CompiledPredicate) -> bool {
+    p.in_breeding == Some(true)
+        || p.zone
+            .contains(&digimon_dsl::compiled::CompiledZone::Breeding)
+        || p.all_of.iter().any(predicate_names_breeding_area)
+        || p.any_of.iter().any(predicate_names_breeding_area)
+}
+
 impl CardEffect for DslCardEffect {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         use digimon_dsl::compiled::{
@@ -157,7 +222,21 @@ impl CardEffect for DslCardEffect {
                 ));
             }
         }
+        // CR 4.3 §3-4-7-4: every effect lowered from a clause that references
+        // the breeding area carries `Effect::breeding_zone`. Applied to the
+        // range a clause appended once the next clause starts (or the loop
+        // ends), so an arm that `continue 'clause`s is still covered.
+        let mut breeding_range: Option<(usize, bool)> = None;
+        let mark_breeding = |out: &mut Vec<Effect>, range: Option<(usize, bool)>| {
+            if let Some((start, true)) = range {
+                for effect in &mut out[start..] {
+                    effect.breeding_zone = true;
+                }
+            }
+        };
         'clause: for (clause_index, clause, clause_kind, clause_use_req) in clauses.into_iter() {
+            mark_breeding(&mut out, breeding_range.take());
+            breeding_range = Some((out.len(), clause_references_breeding_area(clause)));
             match clause {
                 CompiledClause::Triggered(clause) => {
                     out.extend(lower_triggered::lower_for_kind_with_clause_index(
@@ -578,6 +657,7 @@ impl CardEffect for DslCardEffect {
                 },
             }
         }
+        mark_breeding(&mut out, breeding_range);
         out
     }
 

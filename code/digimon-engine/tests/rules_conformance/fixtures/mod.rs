@@ -29,17 +29,26 @@ const COMMON: &[&str] = &[
 ];
 
 /// Chapter 3 areas: a Tamer, the cards stashed face-down under it, and the
-/// Options that move one to another area (`ch03_areas.rs`).
+/// Options that move one to another area, plus the §3-4-7 breeding-area
+/// cards (`ch03_areas.rs`).
 const CH03: &[&str] = &[
     include_str!("ch03/AREA_EGG.yaml"),
     include_str!("ch03/AREA_LV3.yaml"),
     include_str!("ch03/AREA_LV4.yaml"),
     include_str!("ch03/AREA_TAMER.yaml"),
+    include_str!("ch03/BRD_AURA_LV3.yaml"),
+    include_str!("ch03/BRD_AURA_SCOPED_LV3.yaml"),
+    include_str!("ch03/BRD_OBS_EGG.yaml"),
+    include_str!("ch03/BRD_OBS_LV3.yaml"),
+    include_str!("ch03/BRD_SCOPED_EGG.yaml"),
+    include_str!("ch03/MAIN_IF_DIGIMON_MEM.yaml"),
     include_str!("ch03/MAIN_SRC_TO_HAND.yaml"),
     include_str!("ch03/MAIN_SRC_TO_DECK.yaml"),
     include_str!("ch03/MAIN_SRC_TO_SECURITY.yaml"),
     include_str!("ch03/MAIN_SOURCELESS_TO_SECURITY.yaml"),
     include_str!("ch03/MAIN_TRASH_UNDER.yaml"),
+    include_str!("ch03/OPT_SEC_MEM.yaml"),
+    include_str!("ch03/START_IF_OPP_DIGIMON_MEM.yaml"),
 ];
 
 /// §11-14 "Attacking", "Blocking", "Security Checks", "Battles" chapter

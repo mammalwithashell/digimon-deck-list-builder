@@ -449,6 +449,12 @@ impl Player {
         for perm in &mut self.battle_area {
             perm.new_turn();
         }
+        // §15-14-1-5-1: the breeding-area Digimon's [X Per Turn] uses reset
+        // with the turn too (a `[Breeding]` effect's counter lives on it).
+        // G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE.
+        if let Some(perm) = self.breeding_area.as_mut() {
+            perm.new_turn();
+        }
         self.security_effect_activations.clear();
     }
 
@@ -458,6 +464,9 @@ impl Player {
     /// counters remain owner-turn-scoped (cleared via `new_turn`).
     pub fn reset_effect_activations(&mut self) {
         for perm in &mut self.battle_area {
+            perm.effect_activations.clear();
+        }
+        if let Some(perm) = self.breeding_area.as_mut() {
             perm.effect_activations.clear();
         }
         self.security_effect_activations.clear();

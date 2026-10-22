@@ -286,8 +286,17 @@ impl Game {
             else {
                 continue;
             };
+            // CR 4.3 §3-4-7-4: a persistent effect of a card in the breeding
+            // area can't apply unless it explicitly specifies or references
+            // the breeding area (`Effect::breeding_zone`; BT13-007's
+            // `[Breeding]` clauses). G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE.
+            let in_breeding_area = source_permanent
+                .is_some_and(|h| h.index == crate::action::space::BREEDING_TARGET as u8);
             for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if in_breeding_area && !effect.breeding_zone {
                     continue;
                 }
                 if adopted_copy && !Game::is_adoptable_effect(effect) {
@@ -497,7 +506,8 @@ impl Game {
     /// `tick_declarative_effects` catches across the test corpus.
     ///
     /// `HashSet`/`HashMap`-valued state (`face_up_security`,
-    /// `effect_activations`) is folded in via order-independent digests so the
+    /// `effect_activations`, `security_effect_activations`) is folded in via
+    /// order-independent digests so the
     /// fingerprint is stable across iteration-order changes; the modifier
     /// registry is folded in via [`ModifierRegistry::nonmaterialized_digest`].
     fn declarative_fingerprint(&self) -> u64 {
@@ -530,6 +540,20 @@ impl Game {
                 .map(|&x| (x as u64).wrapping_mul(0x9E3779B97F4A7C15))
                 .fold(0u64, u64::wrapping_add);
             fus.hash(&mut h);
+            // `security_effect_activations` mirrors a permanent's
+            // `effect_activations` (folded in `hash_permanent_decl`); same
+            // order-independent summary over the non-zero counts.
+            let security_counts: Vec<u64> = player
+                .security_effect_activations
+                .values()
+                .filter(|&&v| v > 0)
+                .map(|&v| v as u64)
+                .collect();
+            security_counts.len().hash(&mut h);
+            security_counts
+                .iter()
+                .fold(0u64, |acc, &v| acc.wrapping_add(v))
+                .hash(&mut h);
             player.battle_area.len().hash(&mut h);
             for perm in &player.battle_area {
                 hash_permanent_decl(perm, &mut h);

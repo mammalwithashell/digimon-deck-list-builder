@@ -129,3 +129,26 @@ fn bt9_033_blocks_both_players_effect_playing_digimon_but_not_normal_play() {
     );
     assert_eq!(runner.game.player(0).hand.len(), 0);
 }
+
+/// Pillomon raised in the BREEDING area: its flood gate does not reference the
+/// breeding area, so it doesn't apply there (CR 4.3 §3-4-7-4; DCGO gates it
+/// on `IsExistOnBattleAreaDigimon`). Before
+/// G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE was fixed the declarative pass
+/// installed `CannotPlayDigimonByEffect` from the breeding area (BT9-047
+/// Pomumon carried a per-card `not: { in_breeding: true }` guard; Pillomon
+/// had none).
+#[test]
+fn bt9_033_in_breeding_area_does_not_lock_effect_plays() {
+    let mut runner = runner_with_pillomon();
+    runner.place_in_breeding(0, "BT9-033");
+    runner.game.tick_declarative_effects();
+    for player in [0, 1] {
+        assert!(
+            !runner
+                .game
+                .modifiers
+                .player_has(player, ModifierType::CannotPlayDigimonByEffect),
+            "Pillomon in the breeding area must not restrict player {player}"
+        );
+    }
+}

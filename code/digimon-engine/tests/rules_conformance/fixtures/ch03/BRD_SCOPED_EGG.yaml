@@ -1,0 +1,19 @@
+# BRD_SCOPED_EGG -- Digi-Egg, Lv.2, red. Inherited effect:
+#   [Breeding] [Your Turn] [Once Per Turn] When your opponent's security stack
+#   is removed from, gain 2 memory.
+# An effect that explicitly specifies the breeding area (the BT20-083 /
+# BT22-079 shape): it triggers there (§3-4-7-4's exception) and only there.
+card: BRD_SCOPED_EGG
+name: Nesttama
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+effects:
+  - scope: inherited
+    when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { in_breeding: true, your_turn: true }
+    summary: "[Breeding] [Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 2 memory."
+    process:
+      - gain_memory: 2
