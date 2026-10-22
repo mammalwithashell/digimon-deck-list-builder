@@ -1,0 +1,18 @@
+# BRD_OBS_LV3 -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [Your Turn] When your opponent's security stack is removed from, gain 1
+#   memory.
+# The same trigger printed face-up: as the top card of the Digimon in the
+# breeding area it can't trigger either (§3-4-7-4).
+card: BRD_OBS_LV3
+name: Watchmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_opponent_security_removed
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When your opponent's security stack is removed from, gain 1 memory."
+    process:
+      - gain_memory: 1

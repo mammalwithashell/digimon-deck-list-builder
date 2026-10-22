@@ -9,7 +9,10 @@
 //! synthetic card per file, authored to printed-style text (each clause's
 //! `summary:` is that text).
 //!
-//! Every test starts from a card placed face-down under a Tamer (§4-7-9) and
+//! The §3-4-7 breeding-area tests (end of file) stage a Digimon in the
+//! breeding area and check that its effects, and the conditions it could
+//! meet, don't count unless the effect references the breeding area. Every
+//! other test starts from a card placed face-down under a Tamer (§4-7-9) and
 //! moves it to another area. A card moved to another area is a new card that
 //! keeps none of its states (§3-1-3-1-2) and is placed by the new area's rule
 //! (§3-1-3-5); a face-down card that kept its face on the field would be
@@ -18,11 +21,15 @@
 
 use crate::fixtures;
 use crate::support::*;
-use digimon_engine::action::space::{encode_attack, SOURCE_SELECT_START};
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{
+    encode_attack, encode_digivolve, BREEDING_TARGET, SOURCE_SELECT_START,
+};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{PlaySource, PlayerId};
+use digimon_engine::enums::{GamePhase, PlaySource, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::SelectionKind;
 
 /// P0's `AREA_TAMER` with `stashed` face-down under it, `option` in P0's
 /// hand, and a vanilla Lv.3 Digimon on P0's field (a digivolution base).
@@ -362,5 +369,290 @@ fn face_down_card_digivolved_into_is_a_face_up_top_card() {
         !trash_ids(&r, 0).contains(&"AREA_LV4".to_string()),
         "it was not trashed: {:?}",
         trash_ids(&r, 0)
+    );
+}
+
+// ─── §3-4-7 breeding area ───────────────────────────────────────────────────
+
+/// Move the stack `card_ids` (bottom first) into `player`'s breeding area.
+/// Call before placing anything on that player's field (the stack is staged
+/// in the battle area first, then taken out of it).
+fn breed_stack(r: &mut DebugRunner, player: PlayerId, card_ids: &[&str]) {
+    let staged = r.place_stack(player, card_ids);
+    let perm = r.game.players[player as usize]
+        .battle_area
+        .remove(staged.index as usize);
+    r.game.players[player as usize].breeding_area = Some(perm);
+}
+
+/// P0 with `breeding` (bottom first) in the breeding area, a `LV5_PLAIN`
+/// attacker per entry of `attackers` (each `Some(card)` puts that card under
+/// it), and P1 with four no-text security cards.
+fn security_removal_board(
+    breeding: &[&str],
+    attackers: &[Option<&str>],
+) -> (DebugRunner, Vec<PermanentHandle>) {
+    let mut r = fixtures::builder(&[fixtures::ch03_cards()])
+        .deck(0, &[FILL; 8])
+        .deck(1, &[FILL; 8])
+        .security(1, &["AREA_TAMER"; 4])
+        .memory(0)
+        .start();
+    breed_stack(&mut r, 0, breeding);
+    let handles = attackers
+        .iter()
+        .map(|under| match under {
+            Some(card) => r.place_stack(0, &[card, "LV5_PLAIN"]),
+            None => r.place_on_field(0, "LV5_PLAIN", Some(0)),
+        })
+        .collect();
+    (r, handles)
+}
+
+/// Attack P1's security with `attacker`, resolve everything it triggers, and
+/// return the memory P0 gained.
+fn attack_and_count_memory(r: &mut DebugRunner, attacker: PermanentHandle) -> i16 {
+    let before = r.memory();
+    let sec_before = r.security_count(1);
+    r.attack_player(attacker, 1, false);
+    // The order of simultaneous memory gains doesn't change the total.
+    for _ in 0..8 {
+        match r.pending_selection() {
+            Some(sel) if sel.kind == SelectionKind::TriggerOrder => {
+                let (player, action) = (sel.selecting_player, sel.valid_action_ids[0]);
+                r.execute_action(player, action).expect("order pick");
+            }
+            Some(_) => step_prompt(r),
+            None => break,
+        }
+    }
+    assert!(r.pending_selection().is_none(), "the attack settled");
+    assert_eq!(r.security_count(1) + 1, sec_before, "one security card removed");
+    r.memory() - before
+}
+
+/// §3-4-7-4 "Effects on cards in breeding areas can't trigger or activate,
+/// except for effects that explicitly specify or reference breeding areas."
+///
+/// "[Your Turn] When your opponent's security stack is removed from, gain 1
+/// memory." is printed on P0's breeding-area top card (`BRD_OBS_LV3`) and
+/// inherited from the Digi-Egg under it (`BRD_OBS_EGG`, the Gigimon BT21-001
+/// shape; DCGO `BT21_001.cs` requires `IsExistOnBattleAreaDigimon`). A second
+/// `BRD_OBS_EGG` is under P0's battle-area attacker. One security removal
+/// triggers only the battle-area copy: 1 memory, no choice of order.
+#[test]
+fn breeding_area_effects_without_a_breeding_reference_do_not_trigger() {
+    cite!(
+        "3-4-7-4",
+        "6fc804d056e130e6d192ba06065b044d621aa24b516d77345c7733fdb4fa877f"
+    );
+    let (mut r, attackers) =
+        security_removal_board(&["BRD_OBS_EGG", "BRD_OBS_LV3"], &[Some("BRD_OBS_EGG")]);
+    let before = r.memory();
+    r.attack_player(attackers[0], 1, false);
+    assert!(
+        r.pending_selection().is_none(),
+        "only the battle-area inherited effect triggers, so nothing to order: {:?}",
+        r.pending_selection()
+    );
+    assert_eq!(r.memory() - before, 1, "the battle-area copy only");
+}
+
+/// §3-4-7-4's exception: "[Breeding] [Your Turn] [Once Per Turn] When your
+/// opponent's security stack is removed from, gain 2 memory."
+/// (`BRD_SCOPED_EGG`, the BT20-083 / BT22-079 shape) specifies the breeding
+/// area, so it triggers from under P0's breeding-area Digimon, and does not
+/// trigger from under a battle-area Digimon.
+#[test]
+fn breeding_scoped_effect_triggers_only_in_the_breeding_area() {
+    cite!(
+        "3-4-7-4",
+        "6fc804d056e130e6d192ba06065b044d621aa24b516d77345c7733fdb4fa877f"
+    );
+    let (mut r, attackers) =
+        security_removal_board(&["BRD_SCOPED_EGG", FILL], &[Some("BRD_SCOPED_EGG")]);
+    assert_eq!(
+        attack_and_count_memory(&mut r, attackers[0]),
+        2,
+        "the breeding-area copy only"
+    );
+}
+
+/// §3-4-7-4 for a persistent effect: "[All Turns] All of your opponent's
+/// Digimon get -1000 DP." on P0's breeding-area Digimon (`BRD_AURA_LV3`)
+/// doesn't apply; the same effect specifying the breeding area
+/// (`BRD_AURA_SCOPED_LV3`, "[Breeding] [All Turns] ...") does.
+#[test]
+fn breeding_area_persistent_effect_applies_only_with_a_breeding_reference() {
+    cite!(
+        "3-4-7-4",
+        "6fc804d056e130e6d192ba06065b044d621aa24b516d77345c7733fdb4fa877f"
+    );
+    for (breeding, want) in [("BRD_AURA_LV3", 7000), ("BRD_AURA_SCOPED_LV3", 6000)] {
+        let mut r = fixtures::builder(&[fixtures::ch03_cards()])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(3)
+            .start();
+        breed_stack(&mut r, 0, &[breeding]);
+        let target = r.place_on_field(1, "LV5_PLAIN", Some(0));
+        r.game.tick_declarative_effects();
+        assert_eq!(r.dp_of(target), Some(want), "{breeding} in the breeding area");
+    }
+}
+
+/// §3-4-7-6 "Trigger conditions can't be met by cards in breeding areas,
+/// except for effects that explicitly specify or reference breeding areas.
+/// (Example: Even if your Digimon in the breeding area digivolves during your
+/// turn, a "[Your Turn] When your Digimon digivolves, ..." effect doesn't
+/// trigger.)"
+///
+/// P0's `OBS_DIGIVOLVE_MEM` reads "[All Turns] When a Digimon digivolves, gain
+/// 1 memory." Digivolving P0's breeding-area Digimon into `AREA_LV4` (cost 2)
+/// leaves P0 at 5 - 2 = 3 memory; the same digivolution in the battle area
+/// triggers it (5 - 2 + 1 = 4).
+#[test]
+fn breeding_area_digivolution_does_not_meet_a_digivolve_trigger_condition() {
+    cite!(
+        "3-4-7-6",
+        "28cf3f5f581997bd3dd8df2fdac718cd968e073c9431706ec612efceda45cd52"
+    );
+    for in_breeding in [true, false] {
+        let mut r = fixtures::builder(&[fixtures::ch03_cards(), fixtures::ch15_04_cards()])
+            .hand(0, &["AREA_LV4"])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(5)
+            .start();
+        let target = if in_breeding {
+            breed_stack(&mut r, 0, &[FILL]);
+            BREEDING_TARGET
+        } else {
+            r.place_on_field(0, FILL, Some(0)).index as u16
+        };
+        r.place_on_field(0, "OBS_DIGIVOLVE_MEM", Some(0));
+        r.game.decode_action(encode_digivolve(0, target), 0);
+        assert!(
+            !hand_ids(&r, 0).contains(&"AREA_LV4".to_string()),
+            "digivolved into AREA_LV4"
+        );
+        resolve_prompts(&mut r);
+        let (want, place) = if in_breeding {
+            (3, "breeding")
+        } else {
+            (4, "battle")
+        };
+        assert_eq!(r.memory(), want, "{place}-area digivolution");
+    }
+}
+
+/// §3-4-7-7 "Activation conditions can't be met by cards in breeding areas,
+/// except for effects that explicitly specify or reference breeding areas.
+/// (Example: Even if your opponent has a Digimon in the breeding area at the
+/// start of your main phase, a "[Start of Your Main Phase] If your opponent
+/// has a Digimon, gain 1 memory" effect doesn't trigger.)"
+///
+/// The rule's example (`START_IF_OPP_DIGIMON_MEM`) with P1's only Digimon in
+/// the breeding area gains nothing; with it in the battle area, 1 memory.
+#[test]
+fn opponents_breeding_area_digimon_does_not_meet_an_activation_condition() {
+    cite!(
+        "3-4-7-7",
+        "9b432c5203ad07cce9b89a358a08db4ad93961731447a2d17920b8bb35890c2f"
+    );
+    for in_breeding in [true, false] {
+        let mut r = fixtures::builder(&[fixtures::ch03_cards()])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(3)
+            .start();
+        if in_breeding {
+            breed_stack(&mut r, 1, &[FILL]);
+        } else {
+            r.place_on_field(1, FILL, Some(0));
+        }
+        r.place_on_field(0, "START_IF_OPP_DIGIMON_MEM", Some(0));
+        r.set_phase(GamePhase::Breeding);
+        r.game.enter_main_phase();
+        resolve_prompts(&mut r);
+        let want = if in_breeding { 3 } else { 4 };
+        assert_eq!(r.memory(), want, "P1's Digimon in breeding: {in_breeding}");
+    }
+}
+
+/// §3-4-7-7 for an activated effect: "[Main] [Once Per Turn] If you have a
+/// Digimon, gain 1 memory." (`MAIN_IF_DIGIMON_MEM`) with P0's only Digimon in
+/// the breeding area gains nothing (whether or not its activation can be
+/// declared); with it in the battle area, 1 memory.
+#[test]
+fn own_breeding_area_digimon_does_not_meet_a_main_activation_condition() {
+    cite!(
+        "3-4-7-7",
+        "9b432c5203ad07cce9b89a358a08db4ad93961731447a2d17920b8bb35890c2f"
+    );
+    for in_breeding in [true, false] {
+        let mut r = fixtures::builder(&[fixtures::ch03_cards()])
+            .deck(0, &[FILL; 4])
+            .deck(1, &[FILL; 4])
+            .memory(3)
+            .start();
+        if in_breeding {
+            breed_stack(&mut r, 0, &[FILL]);
+        } else {
+            r.place_on_field(0, FILL, Some(0));
+        }
+        let tamer = r.place_on_field(0, "MAIN_IF_DIGIMON_MEM", Some(0));
+        if r.current_phase() != GamePhase::Main {
+            r.game.enter_main_phase();
+        }
+        let action = field_main_action(tamer);
+        if build_action_mask(&r.game, 0)[action as usize] > 0.0 {
+            r.game.decode_action(action, 0);
+            resolve_prompts(&mut r);
+        } else {
+            assert!(in_breeding, "the battle-area Digimon meets the condition");
+        }
+        let want = if in_breeding { 3 } else { 4 };
+        assert_eq!(r.memory(), want, "P0's Digimon in breeding: {in_breeding}");
+    }
+}
+
+/// §15-14-1-5-1 "The number of uses for an [X Per Turn] effect will be reset
+/// in the following circumstances. The turn changed."
+///
+/// P0 has `OPT_SEC_MEM` ("[Your Turn] [Once Per Turn] When your opponent's
+/// security stack is removed from, gain 1 memory.") in the battle area and
+/// `BRD_SCOPED_EGG` ("[Breeding] [Your Turn] [Once Per Turn] ... gain 2
+/// memory.") under its breeding-area Digimon. The first removal of P0's turn
+/// triggers both (+3), the second neither; after P1's turn, P0's next turn
+/// triggers both again, the breeding-area use included.
+#[test]
+fn per_turn_uses_reset_when_the_turn_changes_in_both_field_areas() {
+    cite!(
+        "15-14-1-5-1",
+        "3a540488a0a2ce4fc2a55778faddcbdad589c95ebcce125c98e68809f61c274f"
+    );
+    let (mut r, attackers) = security_removal_board(&["BRD_SCOPED_EGG", FILL], &[None, None]);
+    r.place_on_field(0, "OPT_SEC_MEM", Some(0));
+    assert_eq!(attack_and_count_memory(&mut r, attackers[0]), 3, "first use");
+    assert_eq!(
+        attack_and_count_memory(&mut r, attackers[1]),
+        0,
+        "[Once Per Turn]"
+    );
+    r.pass_turn();
+    resolve_prompts(&mut r);
+    assert_eq!(r.turn_player(), 1);
+    r.pass_turn();
+    resolve_prompts(&mut r);
+    assert_eq!(r.turn_player(), 0);
+    if r.current_phase() != GamePhase::Main {
+        r.game.enter_main_phase();
+        resolve_prompts(&mut r);
+    }
+    assert_eq!(
+        attack_and_count_memory(&mut r, attackers[0]),
+        3,
+        "both uses reset with the turn change"
     );
 }

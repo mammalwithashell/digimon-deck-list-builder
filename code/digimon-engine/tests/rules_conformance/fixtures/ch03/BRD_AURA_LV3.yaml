@@ -1,0 +1,19 @@
+# BRD_AURA_LV3 -- Digimon, Lv.3, red, 3000 DP, play cost 3.
+#   [All Turns] All of your opponent's Digimon get -1000 DP.
+# A persistent effect that does not reference the breeding area: it can't
+# activate while this Digimon is in the breeding area (§3-4-7-4).
+card: BRD_AURA_LV3
+name: Gloommon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - kind: aura
+    target:
+      of: opponent
+      zone: [battle_area]
+      kind: digimon
+    dp_modifier: -1000
+    summary: "[All Turns] All of your opponent's Digimon get -1000 DP."

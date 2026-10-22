@@ -471,3 +471,45 @@ fn bt21_001_opt_resets_after_end_turn() {
         "OPT must reset after end_turn; inherited should fire again on P0's next turn"
     );
 }
+
+// ─── Section 6: breeding area (CR 4.3 §3-4-7-4) ─────────────────────────────
+
+/// Gigimon under a Digimon in P0's BREEDING area: the inherited effect has no
+/// breeding-area reference, so a security removal on P0's turn offers nothing
+/// (CR 4.3 §3-4-7-4 / §3-4-7-6; DCGO `BT21_001.cs` `CanUseCondition` /
+/// `CanActivateCondition` require `IsExistOnBattleAreaDigimon(card)`).
+/// G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE: the breeding fan-out
+/// used to enqueue it (replay goldens 001 / 002 / 008).
+#[test]
+fn bt21_001_under_a_breeding_area_digimon_does_not_trigger() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-001")
+        .expect("BT21-001 in embedded DSL pack")
+        .add_card(make_filler("CARRIER"))
+        .add_card(make_filler("ATTACKER"))
+        .add_card(make_non_digimon_security_filler("SEC-P1"))
+        .add_card(make_reptile("REPTILE-HAND"))
+        .security(1, &["SEC-P1", "SEC-P1"])
+        .hand(0, &["REPTILE-HAND"])
+        .deck(0, &["CARRIER"; 4])
+        .deck(1, &["CARRIER"; 4])
+        .memory(10)
+        .start();
+
+    // Gigimon under CARRIER in P0's breeding area.
+    let breeding = runner.place_stack(0, &["BT21-001", "CARRIER"]);
+    let perm = runner.game.players[0]
+        .battle_area
+        .remove(breeding.index as usize);
+    runner.game.players[0].breeding_area = Some(perm);
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+
+    runner.attack_player(attacker, 1, false);
+
+    assert_eq!(runner.security_count(1), 1, "one security card removed");
+    assert!(
+        runner.pending_selection().is_none(),
+        "BT21-001 in the breeding area must not trigger: {:?}",
+        runner.pending_selection()
+    );
+}

@@ -1,0 +1,15 @@
+# START_IF_OPP_DIGIMON_MEM -- Tamer, red, play cost 2.
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+# The example of §3-4-7-7: a Digimon in the opponent's breeding area doesn't
+# meet the activation condition.
+card: START_IF_OPP_DIGIMON_MEM
+name: Census Tamer
+kind: tamer
+color: [red]
+cost: 2
+effects:
+  - when: start_of_your_main_phase
+    condition: { any_permanent: { of: opponent, kind: digimon } }
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    process:
+      - gain_memory: 1

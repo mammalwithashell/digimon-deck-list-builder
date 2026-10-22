@@ -41,11 +41,15 @@ effects:
                 source: self
                 target: kd
 
+  # [Breeding]: the effect specifies the breeding area, so it triggers only
+  # while the carrier is there (CR 4.3 §3-4-7-4; `in_breeding: true` is also
+  # what lets the breeding-area dispatch consider it at all).
   - scope: inherited
     when: on_own_security_removed
     optional: true
     active_when:
       all_of:
+        - in_breeding: true
         - opponents_turn: true
         - source_is_unsuspended: true
         - self_digivolution_sources_contain_name: "Omekamon"

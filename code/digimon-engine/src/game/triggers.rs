@@ -286,8 +286,17 @@ impl Game {
             else {
                 continue;
             };
+            // CR 4.3 §3-4-7-4: a persistent effect of a card in the breeding
+            // area can't apply unless it explicitly specifies or references
+            // the breeding area (`Effect::breeding_zone`; BT13-007's
+            // `[Breeding]` clauses). G-ENGINE-BREEDING-AREA-DECLARATIVES-ACTIVE.
+            let in_breeding_area = source_permanent
+                .is_some_and(|h| h.index == crate::action::space::BREEDING_TARGET as u8);
             for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
+                    continue;
+                }
+                if in_breeding_area && !effect.breeding_zone {
                     continue;
                 }
                 if adopted_copy && !Game::is_adoptable_effect(effect) {

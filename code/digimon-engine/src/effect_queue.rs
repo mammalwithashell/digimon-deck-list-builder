@@ -3679,12 +3679,20 @@ impl Game {
             });
         }
 
+        // CR 4.3 §3-4-7-4: effects on cards in the breeding area can't
+        // trigger or activate unless they explicitly specify or reference the
+        // breeding area (`Effect::breeding_zone`, set at lowering from the
+        // clause's `in_breeding` gate). Both scans below (the top card's own
+        // effects and the inherited effects of the cards under it) enqueue
+        // only those. DCGO gates the ordinary ones on
+        // `IsExistOnBattleAreaDigimon` (e.g. `BT21_001.cs`).
+        // G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE.
         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
             for (slot, effect) in effects.iter().enumerate() {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
-                if effect.inherited {
+                if effect.inherited || !effect.breeding_zone {
                     continue;
                 }
                 self.effect_queue.push_back(QueuedEffect {
@@ -3730,7 +3738,7 @@ impl Game {
                 continue;
             };
             for (slot, effect) in effects.iter().enumerate() {
-                if !effect.inherited {
+                if !effect.inherited || !effect.breeding_zone {
                     continue;
                 }
                 if !timing_flag_matches(effect, timing) {
