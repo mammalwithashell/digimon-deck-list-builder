@@ -1887,6 +1887,7 @@ impl Game {
             // alt-path; `via_alt_path` is reserved for
             // CompiledAltPathKind variants.
             via_alt_path: None,
+            effect_initiated: true,
         });
         // Effect-initiated play (`effect_initiated: true`) — helper wraps
         // OnPlay + OnEnterFieldAnyone + OnAllyPlayed in a deferred-drain
@@ -1984,6 +1985,7 @@ impl Game {
                 cost_paid: 0,
                 cost_printed,
                 via_alt_path: None,
+                effect_initiated: true,
             });
             entered.push((player_id, field_index, permanent, card));
         }
@@ -2091,6 +2093,7 @@ impl Game {
                 cost_paid: 0,
                 cost_printed,
                 via_alt_path: None,
+                effect_initiated: true,
             });
             entered.push(field_index);
         }

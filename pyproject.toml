@@ -23,6 +23,10 @@ train = [
 dev = [
     "pytest>=7.0",
 ]
+dashboard = [
+    "streamlit>=1.40,<1.50",
+    "wandb>=0.19",
+]
 
 [tool.setuptools.packages.find]
 where = ["code"]

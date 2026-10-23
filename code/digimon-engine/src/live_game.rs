@@ -1954,6 +1954,7 @@ mod tests {
             cost_paid: 3,
             cost_printed: 4,
             via_alt_path: None,
+            effect_initiated: false,
         };
         let v = serde_json::to_value(&ev).unwrap();
         assert_eq!(v["type"], "Play");

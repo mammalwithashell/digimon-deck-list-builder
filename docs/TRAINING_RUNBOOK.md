@@ -3,6 +3,9 @@
 Operational guide for the Digimon TCG RL training pipeline.
 For architecture details, see `../AGENTS.md`.
 
+For periodic per-card usage, entry routes, legal opportunities, W&B checkpoint
+Tables, and the local/W&B dashboard, see [Card evaluation](CARD_EVALUATION.md).
+
 > **Running training in the cloud?** See [CLOUD_TRAINING.md](CLOUD_TRAINING.md) —
 > end-to-end runbook for Hetzner/DO CPU droplets with Tailscale-based
 > TensorBoard access and rsync-mirrored `runs/` so `digimon-training-mcp`

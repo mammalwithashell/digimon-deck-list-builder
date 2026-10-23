@@ -2312,6 +2312,7 @@ impl Game {
         let event_card = self.player(defender).battle_area[field_idx]
             .top_card()
             .handle();
+        self.emit_eval_digivolve(handle, 0, true, true);
         self.fire_digivolve_event_triggers(handle, event_card, true, true);
     }
 

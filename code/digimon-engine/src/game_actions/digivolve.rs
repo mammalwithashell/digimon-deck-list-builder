@@ -915,6 +915,7 @@ impl Game {
             return false;
         }
         player.battle_area[field_index].digivolve(card, turn);
+        self.emit_eval_digivolve(PermanentHandle { player: player_id, index: field_index as u8 }, 0, false, false);
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         true
@@ -3274,6 +3275,8 @@ impl Game {
         // (§8-1-2-8 covers the empty-deck case: digivolution still happens,
         // just "without drawing a card" — which `draw()` already models.)
         self.player_mut(player_id).draw();
+
+        self.emit_eval_digivolve(target, effective_cost as i16, false, false);
 
         // 5. Fire WhenDigivolving triggers.
         self.fire_digivolve_event_triggers(target, event_card, true, false);

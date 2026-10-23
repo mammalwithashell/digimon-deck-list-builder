@@ -268,6 +268,11 @@ impl Game {
         let turn = self.turn_count;
         let ok = self.player_mut(player_id).hatch(turn);
         if ok {
+            let top = self.player(player_id).breeding_area.as_ref().unwrap().top_card();
+            let card_id = top.card_id(&self.card_data).to_string();
+            let card_name = top.card_name(&self.card_data).to_string();
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Hatch { seq, player: player_id, card_id, card_name });
             self.mark_until_condition_dirty();
             let n = self.players.len();
             for pid in 0..n {

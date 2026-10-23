@@ -253,6 +253,28 @@ impl Game {
     ) {
         let turn = self.turn_count;
         self.player_mut(target.player).battle_area[target.index as usize].digivolve(card, turn);
+        self.emit_eval_digivolve(target, 0, false, false);
+    }
+
+    /// Observational event for routes not covered by legacy reward events.
+    pub(crate) fn emit_eval_digivolve(
+        &mut self, target: PermanentHandle, memory_paid: i16, was_dna: bool, was_blast_dna: bool,
+    ) {
+        let perm = if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            self.player(target.player).breeding_area.as_ref()
+        } else {
+            self.player(target.player).battle_area.get(target.index as usize)
+        };
+        let Some(perm) = perm else { return; };
+        let top_card_id = perm.top_card().card_id(&self.card_data).to_string();
+        let card_name = perm.top_card().card_name(&self.card_data).to_string();
+        let from_stack_top = perm.card_sources.iter().rev().nth(1)
+            .map(|c| c.card_id(&self.card_data).to_string()).unwrap_or_default();
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::EvalDigivolve {
+            seq, player: target.player, top_card_id, card_name, field_index: target.index,
+            from_stack_top, was_dna, was_blast_dna, memory_paid,
+        });
     }
 
     pub(crate) fn remove_source_from_permanent(

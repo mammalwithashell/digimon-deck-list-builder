@@ -377,6 +377,9 @@ class DigimonEnv(gymnasium.Env):
             record_tensors=self.record_tensors,
         )
         self._step_count = 0
+        card_eval = getattr(self, "card_eval_collector", None)
+        if card_eval is not None:
+            card_eval.start_game(self.runner.to_ui_json(), (deck1, deck2), runner_seed)
         # Reset the no-op tripwire across episode/game boundaries: a fresh game
         # legitimately reproduces an identical early observation (e.g. turn 1,
         # empty board), which must not be mistaken for a stuck-action loop
@@ -411,6 +414,9 @@ class DigimonEnv(gymnasium.Env):
         if self.runner is None:
             raise RuntimeError("Environment must be reset before stepping.")
 
+        card_eval = getattr(self, "card_eval_collector", None)
+        if card_eval is not None:
+            card_eval.before_step(self._rl_state(), self.runner.to_ui_json(), self.action_mask(), action)
         self.runner.step(action)
         self._step_count += 1
 
@@ -480,16 +486,19 @@ class DigimonEnv(gymnasium.Env):
         # `emit_reward_occurrences=True` (set by `RewardProfileWrapper`
         # on its wrapped env). Drains events from the Rust runner via
         # `get_events_since_last_step` when present.
-        if self._reward_event_bus is not None:
+        if self._reward_event_bus is not None or card_eval is not None:
             drain_events = getattr(self.runner, "get_events_since_last_step", None)
             if drain_events is not None:
                 events = drain_events()
             else:
                 events = []
             rl_state = self._rl_state()
-            info["reward_occurrences"] = self._reward_event_bus.derive(
-                rl_state, events, self._step_count,
-            )
+            if self._reward_event_bus is not None:
+                info["reward_occurrences"] = self._reward_event_bus.derive(
+                    rl_state, events, self._step_count,
+                )
+            if card_eval is not None:
+                card_eval.after_step(rl_state, self.runner.to_ui_json(), events, terminated, truncated)
 
         return obs, reward, terminated, truncated, info
 

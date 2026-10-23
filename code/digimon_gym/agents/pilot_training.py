@@ -824,9 +824,11 @@ class WinRateCallback(BaseCallback):
                  eval_suite_path: str | None = None,
                  eval_sidecar_path: Optional[Path] = None,
                  game_log_writer: Optional[GameLogWriter] = None,
-                 verbose: int = 1):
+                 verbose: int = 1,
+                 card_eval_dir: Optional[Path] = None):
         super().__init__(verbose)
         self._eval_env_fn = eval_env_fn
+        self._card_eval_dir = card_eval_dir
         self._eval_env: Optional[gymnasium.Env] = None
         self.eval_freq = eval_freq
         self.n_eval_episodes = n_eval_episodes
@@ -997,6 +999,38 @@ class WinRateCallback(BaseCallback):
             self._eval_env = None
 
     def _run_evaluation(self):
+        """Scope card telemetry to this checkpoint and detach on every exit."""
+        if self._card_eval_dir is None:
+            return self._run_evaluation_inner()
+        from digimon_gym.agents.card_eval import CardEvalCollector, save_report, publish_report
+        import digimon_engine
+        if getattr(digimon_engine, "CARD_EVAL_EVENT_VERSION", 0) < 1:
+            raise RuntimeError("Card evaluation requires the updated Rust wheel: rebuild code/digimon-engine-py with maturin.")
+
+        if self._eval_env is None:
+            self._eval_env = self._eval_env_fn()
+        if self._eval_env is None:
+            return
+        inner = _unwrap_to_digimon_env(self._eval_env)
+        db = digimon_engine.CardDatabase()
+        collector = CardEvalCollector(int(self.num_timesteps), self._eval_window_idx, db.get_card)
+        collector.provenance = dict(inner._tensor_info(), action_space_size=ACTION_SPACE_SIZE,
+                                    evaluation="periodic", deterministic=True)
+        inner.card_eval_collector = collector
+        try:
+            return self._run_evaluation_inner()
+        finally:
+            inner.card_eval_collector = None
+            collector.finish_game(None, "evaluation_end")
+            report = collector.report()
+            try:
+                path = save_report(report, self._card_eval_dir)
+            except OSError:
+                logger.warning("Could not save card evaluation report", exc_info=True)
+            else:
+                publish_report(report, path)
+
+    def _run_evaluation_inner(self):
         """Run evaluation games and log win rate."""
         if self._eval_env is None:
             self._eval_env = self._eval_env_fn()
@@ -1039,6 +1073,9 @@ class WinRateCallback(BaseCallback):
         self._window_total_digivolve_driven_attacks = 0
 
         for game_idx in range(self.n_eval_episodes):
+            collector = getattr(_unwrap_to_digimon_env(eval_env), "card_eval_collector", None)
+            if collector is not None:
+                collector.context = {}
             obs, info = eval_env.reset()
             episode_reward = 0.0
             steps = 0
@@ -1047,6 +1084,18 @@ class WinRateCallback(BaseCallback):
             # In generalist mode the wrapper also sets deck1_archetype; in
             # gauntlet mode it's absent (agent always plays the same fixed deck).
             agent_archetype = info.get("deck1_archetype")
+            collector = getattr(_unwrap_to_digimon_env(eval_env), "card_eval_collector", None)
+            if collector is not None:
+                collector.context = dict(agent_archetype=agent_archetype or "",
+                                         opponent_archetype=opponent_archetype or "",
+                                         match_idx=game_idx)
+                # Outer deck wrappers add labels after the inner reset. Opponent
+                # opening steps may already have completed a game during reset.
+                for collected in collector.games:
+                    if not collected["context"]:
+                        collected["context"] = dict(collector.context)
+                if collector.current is not None:
+                    collector.current["context"] = dict(collector.context)
 
             # `add-reward-profiles` Group 10: per-game reward-breakdown
             # accumulator. Captures the sum of each component's
@@ -1144,6 +1193,9 @@ class WinRateCallback(BaseCallback):
                             game_digivolve_driven_attacks += 1
 
             total_reward += episode_reward
+            if collector is not None and collector.current is not None:
+                final = _unwrap_to_digimon_env(eval_env)._rl_state()
+                collector.finish_game(final.get("winner_id"), final.get("terminal_reason") or "evaluation_end")
             total_steps += steps
 
             # Read final digivolve counters from agent (p1) and opponent (p2).
@@ -3138,6 +3190,7 @@ def train(total_timesteps: int = 100_000,
         eval_suite_path=cfg.eval_suite,
         eval_sidecar_path=eval_sidecar_path,
         game_log_writer=eval_game_log_writer,
+        card_eval_dir=Path(tensorboard_log) / "eval_cards",
         verbose=verbose,
     )
     action_validity_cb = ActionValidityCallback()
