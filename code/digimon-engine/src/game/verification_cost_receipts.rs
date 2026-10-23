@@ -575,10 +575,14 @@ fn frames(g: &Game, path: &str, stack: &ResumeStack, out: &mut Vec<(String, Rece
                 );
             }
             F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) => {
+                if let Some(dna) = &s.dna_effect {
+                    outer(g, &format!("{path}/dna/outer"), &dna.outer_conts, out);
+                }
                 if let Some(effect) = &s.effect {
                     outer(g, &format!("{path}/effect/outer"), &effect.outer_conts, out);
                 }
             }
+            F::EffectDnaHandRoute(s) => outer(g, &format!("{path}/dna_route/outer"), &s.outer_conts, out),
             _ => {}
         }
     }
@@ -631,6 +635,9 @@ pub(super) fn write(h: &mut Sha256, g: &Game) {
                 reference(g, cont.pending_cost_payment()),
             )),
             AfterSelectionHook::DigivolveReducerChain { state, .. } => {
+                if let Some(dna) = &state.dna_effect {
+                    outer(g, &format!("hook/{i}/dna/outer"), &dna.outer_conts, &mut refs);
+                }
                 if let Some(effect) = &state.effect {
                     outer(
                         g,
@@ -645,6 +652,9 @@ pub(super) fn write(h: &mut Sha256, g: &Game) {
     }
     for (index, scope) in g.effect_digivolve_scopes.iter().enumerate() {
         outer(g, &format!("effect_scope/{index}/outer"), &scope.declaration.outer_conts, &mut refs);
+    }
+    for (index, scope) in g.effect_dna_would_scopes.iter().enumerate() {
+        outer(g, &format!("dna_would_scope/{index}/outer"), &scope.declaration.outer_conts, &mut refs);
     }
     if g.cost_payment_receipts.is_empty() && refs.iter().all(|(_, r)| matches!(r, ReceiptRef::None))
     {

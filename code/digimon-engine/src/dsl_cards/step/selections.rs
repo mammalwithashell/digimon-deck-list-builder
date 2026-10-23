@@ -56,6 +56,20 @@ fn bind_selected_battle_permanent(
     }
 }
 
+fn bind_selected_breeding_permanent(
+    game: &mut crate::game::Game, bindings: &mut Bindings, name: &str,
+    selected: crate::selection::BreedingPermanentSelectionRef,
+) {
+    let handle = PermanentHandle {
+        player: selected.player, index: crate::action::space::BREEDING_TARGET as u8,
+    };
+    if let Some(identity) = game.capture_source_play_host_identity(handle) {
+        bindings.insert_breeding_permanent_with_identity(name, selected, identity);
+    } else {
+        bindings.clear_for_merge(name);
+    }
+}
+
 fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Option<DistinctByMode> {
     use digimon_dsl::compiled::CompiledDistinctBy;
     d.map(|c| match c {
@@ -688,7 +702,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_breeding_permanent_ref(name, selection_ref);
+                        bind_selected_breeding_permanent(ctx.game, &mut b, name, selection_ref);
                     }
                     run_tail_preserving_trigger_context(
                         &mut ctx,
@@ -1257,6 +1271,9 @@ pub(crate) fn run_resume(
         }
         ResumeFrame::EffectDigivolveCostChoice(state) => {
             game.run_effect_digivolve_cost_choice_step(state, action_id);
+        }
+        ResumeFrame::EffectDnaHandRoute(state) => {
+            game.run_effect_dna_hand_route(state, action_id);
         }
         ResumeFrame::DigivolveReducerPrompt(state) => {
             game.run_digivolve_reducer_prompt_step(state, action_id, is_pass);
@@ -9397,7 +9414,7 @@ fn install_select_own_breeding_permanent(
         move |cb_ctx, target| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_breeding_permanent_ref(name, target);
+                bind_selected_breeding_permanent(cb_ctx.game, &mut b, name, target);
             }
             run_tail_preserving_trigger_context(
                 cb_ctx,

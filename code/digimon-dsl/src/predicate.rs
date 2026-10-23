@@ -214,6 +214,10 @@ pub struct PredicateSpec {
     /// declared by the consuming effect (printed, free, fixed or reduced).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_onto_with_cost: Option<DigivolveCostPredicate>,
+    /// A result, field or hand-material pick with at least one complete,
+    /// payable hand-partner DNA declaration. Prior picks are physical bindings.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dna_hand_candidate: Option<DnaHandCandidatePredicate>,
     /// Whether this physical candidate can be played free into its owner's
     /// battle area by the effect controller. Checks the owner's field capacity
     /// and the causing controller's effect-play prohibition independently.
@@ -1517,6 +1521,35 @@ pub struct DigivolveCostPredicate {
     /// cannot occur inside cost_reduction/cost_assignment clauses, including
     /// free or fixed-zero requests: affordability itself evaluates reducers.
     pub cost: crate::step::CostDelta,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DnaHandCandidateRole {
+    Result,
+    Field,
+    Partner,
+}
+
+/// Correlated stages of a field-plus-hand DNA choice. A field pick requires
+/// the prior result binding; a partner pick requires both prior bindings.
+/// Filters restrict the other materials at every stage. Cost must match the
+/// consuming evolution step; affordability probes never mutate the live game.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DnaHandCandidatePredicate {
+    pub role: DnaHandCandidateRole,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub result: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub field: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub field_filter: Option<Box<PredicateSpec>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub partner_filter: Option<Box<PredicateSpec>>,
+    pub cost: crate::step::CostDelta,
+    #[serde(default)]
+    pub ignore_requirements: bool,
 }
 
 /// Options for the `can_attack` permanent leaf â€” mirror the

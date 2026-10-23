@@ -32,6 +32,7 @@ use rand::seq::SliceRandom;
 mod breeding;
 mod cost;
 pub(crate) mod digivolve;
+pub(crate) mod effect_dna;
 mod field_top_source_move;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
 pub use helpers::DeDigivolveCountState;

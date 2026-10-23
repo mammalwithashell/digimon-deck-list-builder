@@ -18637,5 +18637,30 @@
   "BT7-090": {
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "[Security] Play this card without paying its memory cost."
+  },
+  "_note_EX12-026": "Official Bandai card bundle and card image checked 2026-10-22: the Rule box grants Aquatic in addition to Mollusk/Shambala/TB. Preserve the grant through ingestion.",
+  "EX12-026": {
+    "type_eng": [
+      "Mollusk",
+      "Shambala",
+      "TB",
+      "Aquatic"
+    ]
+  },
+  "_note_EX12-031": "Official Bandai card bundle and card image checked 2026-10-22: the Rule box grants Aquatic in addition to Mollusk/Shambala/TB. Preserve the grant through ingestion.",
+  "EX12-031": {
+    "type_eng": [
+      "Mollusk",
+      "Shambala",
+      "TB",
+      "Aquatic"
+    ]
+  },
+  "_note_BT22-023": "Official Bandai card bundle and card image checked 2026-10-22: the printed trait line is Holy Dragon/CS, not Mythical Dragon/CS.",
+  "BT22-023": {
+    "type_eng": [
+      "Holy Dragon",
+      "CS"
+    ]
   }
 }

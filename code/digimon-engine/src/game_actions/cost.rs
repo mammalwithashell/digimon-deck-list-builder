@@ -462,6 +462,38 @@ impl Game {
         effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
         affordability_probe: bool,
     ) -> Option<bool> {
+        self.try_prompt_digivolve_reducer_operation(acting_player, target, cost_target,
+            source, effect, None, affordability_probe)
+    }
+
+    pub(crate) fn try_prompt_dna_digivolve_reducer_chain(
+        &mut self,
+        declaration: super::effect_dna::EffectDnaHandDeclaration,
+        target: PermanentHandle,
+        cost_target: CostTargetContext,
+        affordability_probe: bool,
+    ) -> Option<bool> {
+        self.try_prompt_digivolve_reducer_operation(declaration.player, target, cost_target,
+            PlaySource::ByEffect, None, Some(declaration), affordability_probe)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn try_prompt_digivolve_reducer_operation(
+        &mut self,
+        acting_player: PlayerId,
+        target: PermanentHandle,
+        cost_target: CostTargetContext,
+        source: PlaySource,
+        effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
+        dna_effect: Option<super::effect_dna::EffectDnaHandDeclaration>,
+        affordability_probe: bool,
+    ) -> Option<bool> {
+        // CR 3-4-7-6: HPD, Digisorption and ordinary would-evolve payment
+        // effects do not trigger for a breeding host. The initiating effect's
+        // own explicit cost delta is applied by its declaration path.
+        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            return None;
+        }
         let top_colors = self
             .player(target.player)
             .battle_area
@@ -529,6 +561,7 @@ impl Game {
                 choosing_order: false,
                 affordability_probe,
                 effect,
+                dna_effect,
             }),
         )
     }
@@ -537,6 +570,26 @@ impl Game {
     /// controller, source handle and cost target, including arbitrary DSL
     /// selections. The chain resumes only after the entire payment settles.
     pub(crate) fn run_digivolve_reducer_chain_payment(
+        &mut self,
+        state: super::digivolve::DigivolveReducerState,
+        candidate: CostReductionCandidate,
+    ) -> Option<super::digivolve::DigivolveReducerState> {
+        let previous = (self.effect_source_player, self.effect_source_card,
+            self.effect_source_permanent, self.current_dna_origin, self.current_trigger_context.clone());
+        if let Some(dna) = &state.dna_effect {
+            self.effect_source_player = Some(dna.source_controller);
+            self.effect_source_card = Some(dna.source_card);
+            self.effect_source_permanent = dna.source_permanent;
+            self.current_dna_origin = Some(true);
+            self.current_trigger_context = dna.trigger_context.clone();
+        }
+        let result = self.run_digivolve_reducer_chain_payment_inner(state, candidate);
+        (self.effect_source_player, self.effect_source_card, self.effect_source_permanent,
+            self.current_dna_origin, self.current_trigger_context) = previous;
+        result
+    }
+
+    fn run_digivolve_reducer_chain_payment_inner(
         &mut self,
         mut state: super::digivolve::DigivolveReducerState,
         candidate: CostReductionCandidate,
@@ -1533,7 +1586,7 @@ impl Game {
                 continue;
             }
             let cond_ok = if let Some(cond) = &effect.condition {
-                let ctx = if let Some(target) = cost_target {
+                let mut ctx = if let Some(target) = cost_target {
                     EffectReadContext::new_with_cost_target(
                         self,
                         info.source_card,
@@ -1551,6 +1604,9 @@ impl Game {
                         info.controller,
                     )
                 };
+                if let Some(target) = cost_target {
+                    ctx.cost_is_digivolve = target.is_digivolve;
+                }
                 cond(&ctx)
             } else {
                 true
@@ -1576,6 +1632,10 @@ impl Game {
                         info.controller,
                     )
                 };
+                if let Some(target) = cost_target {
+                    ctx.cost_is_digivolve = target.is_digivolve;
+                    ctx.cost_target_permanents = target.target_permanents_vec();
+                }
                 process(&mut ctx);
             }
             if effect.max_per_turn > 0 {

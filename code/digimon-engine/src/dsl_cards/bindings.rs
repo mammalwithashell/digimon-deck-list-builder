@@ -127,6 +127,13 @@ pub struct EffectResultLogCursor {
 }
 
 impl Bindings {
+    /// Stable projection for new typed declarations; archival Debug stays unchanged.
+    pub(crate) fn canonical_verification_debug(&self) -> String {
+        let slots: std::collections::BTreeMap<_, _> = self.slots.iter().collect();
+        let played: std::collections::BTreeMap<_, _> = self.played_identity_pins.iter().collect();
+        let selected: std::collections::BTreeMap<_, _> = self.selected_identity_pins.iter().collect();
+        format!("{:?}", (slots, &self.cleared_slots, &self.result_log, played, selected))
+    }
     pub fn new() -> Self {
         Self::default()
     }
@@ -589,6 +596,28 @@ impl Bindings {
         breeding_ref: BreedingPermanentSelectionRef,
     ) {
         self.insert(name, BindingValue::BreedingPermanentRef(breeding_ref));
+    }
+
+    pub(crate) fn insert_breeding_permanent_with_identity(
+        &mut self, name: &str, breeding_ref: BreedingPermanentSelectionRef, identity: u64,
+    ) {
+        self.insert_breeding_permanent_ref(name, breeding_ref);
+        self.selected_identity_pins.insert(name.to_owned(), (breeding_ref.player, identity));
+    }
+
+    /// The binding's zone is part of the pin: a breeder moved to battle cannot
+    /// become the original breeding target of a parked effect.
+    pub(crate) fn resolve_selected_identity(
+        &self, game: &crate::game::Game, name: &str,
+    ) -> Option<PermanentHandle> {
+        let (player, identity) = self.selected_identity_pin(name)?;
+        if self.get_breeding_permanent_ref(name).is_some() {
+            game.resolve_source_play_host_identity(PermanentHandle {
+                player, index: crate::action::space::BREEDING_TARGET as u8,
+            }, identity)
+        } else {
+            game.resolve_digivolve_host_identity(player, identity)
+        }
     }
 
     pub fn get_permanent_list(&self, name: &str) -> Option<Vec<PermanentHandle>> {

@@ -1689,6 +1689,9 @@ fn validate_post_payment_plural_filter(
                             value.get("target").and_then(serde_json::Value::as_str)
                                 != Some("source")
                         }
+                        "dna_hand_candidate" => {
+                            value.get("result").is_some() || value.get("field").is_some()
+                        }
                         // Only event_target has a global trigger-context
                         // fallback in reference_play_cost. replacement_subject
                         // and ordinary names are still local bindings here.

@@ -1034,6 +1034,22 @@ fn compile_predicate(
                     &format!("{prefix}.can_digivolve_onto_with_cost.cost"), card_id, errors),
             }
         }),
+        dna_hand_candidate: p.dna_hand_candidate.as_ref().map(|spec| {
+            CompiledDnaHandCandidate {
+                role: spec.role,
+                result: spec.result.clone(),
+                field: spec.field.clone(),
+                field_filter: spec.field_filter.as_ref().map(|filter| Box::new(compile_predicate(
+                    filter, &format!("{prefix}.dna_hand_candidate.field_filter"), card_id, errors,
+                ))),
+                partner_filter: spec.partner_filter.as_ref().map(|filter| Box::new(compile_predicate(
+                    filter, &format!("{prefix}.dna_hand_candidate.partner_filter"), card_id, errors,
+                ))),
+                cost: compile_cost_delta(&spec.cost,
+                    &format!("{prefix}.dna_hand_candidate.cost"), card_id, errors),
+                ignore_requirements: spec.ignore_requirements,
+            }
+        }),
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
         can_move_from_breeding_by_effect: p.can_move_from_breeding_by_effect,

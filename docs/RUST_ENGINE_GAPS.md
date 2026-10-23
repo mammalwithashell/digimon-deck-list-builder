@@ -1918,39 +1918,57 @@ Printed-cost lookup shipped in the 2026-07-03 DNA workstream. `lower_dna_cost`
 reads the selected result's printed cost for field-pair, hand-partner and
 field-trash variants. Existing evidence: `tests/dna_printed_cost_dsl.rs`.
 The October source audit confirms this implementation; EX6-072's old comment
-that printed cost always becomes zero is stale. Payment lifecycle gaps are
-separate and remain open below.
+that printed cost always becomes zero is stale. The completed payment lifecycle is
+recorded separately below.
 
 ## Effect-initiated DNA recipe backstop [G-ENGINE-DNA-RECIPE-ENFORCEMENT] — RESOLVED SLICE
 
 Commit-time recipe checks shipped in the 2026-07-03 DNA workstream and accept
 both material assignments and slash colors. Hand-partner commit rejects a
 result used as its own physical material. This does not establish that every
-DSL selection offers only legal and payable continuations. EX6-072's static
-result/material filters still need the correlated eligibility capability below.
+DSL selection offers only legal and payable continuations. EX6-072 now uses
+the separately tested correlated eligibility and declaration capability below.
 
-## Effect DNA hand-partner declaration [G-ENGINE-EFFECT-DNA-HAND-PARTNER-DECLARATION] — OPEN (2026-10-22)
+## Effect breeding evolution [G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET] — RESOLVED HAND/TRASH SLICE (2026-10-22)
 
-EX6-072 remains blocked after two independent source reviews. The existing
-ordinary effect evolution declaration pins one host and one result. Its reducer
-advancement and affordability probe reconstruct one-host cost context, and its
-completion resumes ordinary evolution. It cannot safely stand in for a DNA
-operation with two materials, two origins and a chosen recipe orientation.
+The ordinary effect-evolution declaration now pins the breeding host's zone,
+physical identity and top through routes, clone/resume, commit, one draw,
+result/outer tails and breeding-appropriate event suppression. Eight shared
+regressions plus the full BT20-018/056/087 tests pass; ordinary effect evolution
+controls remain green. The initiating free/reduced policy applies, while
+ordinary field cost effects and evolution triggers do not activate in breeding.
+The separate Security-removal commit pipeline remains unsupported for breeding;
+both route-only/cost-aware predicates and direct execution reject it without
+mutation. This does not block the measured hand/trash consumers. No action or
+tensor change, or new live oracle confirmation, is claimed.
 
-Required: a typed DNA declaration carrying all physical identities, original
-zones, recipe/orientation, payer and effect context; shared correlated candidate
-and payment preflight; mandatory/optional interactive reducers and observers;
-DNA-specific revalidation, resume and commit. The real execution must surface
-all choices and use the same payment logic as the clone-only candidate probe.
-Correct the current hand-partner material order and inactive-player payment as
-part of that tested lifecycle. Do not claim admission from recipe-only masks.
+## Effect DNA hand-partner declaration [G-ENGINE-EFFECT-DNA-HAND-PARTNER-DECLARATION] — RESOLVED HAND-PARTNER SLICE (2026-10-22)
 
-The hand-partner verb has two direct YAML consumers, EX6-072 and BT17-095.
-Related effect field-pair and trash-partner paths also merit payment auditing;
-this is not a finding that every consumer has independently failed a card exam.
-No action-space or tensor change is inherently required. Exact acceptance
-controls and related consumers are recorded in `qa/archetype-qa/engine-gaps.md`.
-This is source assessment, not new runtime or oracle evidence.
+The typed hand-partner declaration now retains both materials and the result in
+original zones, physical identities and tops, every matching printed recipe and
+orientation, cost policy, payer, effect/DNA context and clause continuations.
+The field material's owner supplies both hand cards and pays; the initiating
+effect's controller is retained separately for immunity and replacement causes.
+`dna_hand_candidate` correlates the result, field and partner selections with
+clone-only payment probes. Hand materials stay inactive in hand until merge.
+Interactive reducer decisions and replacement windows revalidate those pins;
+stack order, one payment/draw and DNA result/trigger context survive resume.
+
+Runtime evidence: `effect_dna_hand_declaration` (15),
+`effect_dna_candidate_masks` (7), `effect_dna_nested_payment` (5),
+`effect_dna_observer_context` (3), and `effect_dna_delay_replacement` (4) all
+pass. Controls include equal-cost orientations, inactive payer, selected
+physical duplicates, stale origins, scalar observers, three-deep payment
+ancestry, parked DSL payment provenance and failed replacement cleanup.
+EX6-072's 12 full-card tests and BT17-095's four actual Delay compatibility
+controls pass. Independent spec and quality re-reviews approve the fixes.
+
+Interactive `BeforePayCostObserve` bodies remain the pre-existing unimplemented
+primitive documented in `game_actions/cost.rs`; scalar observers and interactive
+reducers are covered here. Related field-pair and trash-partner cards are not
+individually recertified. No action/tensor expansion or new live oracle
+confirmation is claimed. See `remaining-meta-repairs.md` under the construct
+campaign research directory for cumulative verification and admission.
 
 ## Store-champs June-2026 audit â€” Three Musketeers BeelStarmon + Galacticmon (2026-07-02)
 

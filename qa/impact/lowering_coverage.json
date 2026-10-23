@@ -3923,7 +3923,7 @@
    "untested_constructs": []
   },
   "BT17-095": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_this_option_to_hand",
@@ -3947,7 +3947,7 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:replacement",
@@ -3956,9 +3956,7 @@
     "trigger:when_would_leave_battle_area",
     "verb:cancel_replacement"
    ],
-   "untested_constructs": [
-    "verb:effect_initiated_dna_digivolve_hand_partner"
-   ]
+   "untested_constructs": []
   },
   "BT17-097": {
    "behaviourally_covered": true,
@@ -5449,6 +5447,45 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "BT20-018": {
+   "behaviourally_covered": true,
+   "clause_count": 6,
+   "constructs": [
+    "verb:de_digivolve",
+    "verb:delete_permanent",
+    "verb:effect_initiated_digivolve",
+    "verb:if",
+    "verb:select_opponent_permanent",
+    "verb:select_own_breeding_permanent",
+    "verb:select_union_zone",
+    "verb:trash_top_security",
+    "predicate:all_of",
+    "predicate:all_turns",
+    "predicate:can_digivolve_onto",
+    "predicate:color_is",
+    "predicate:during_attack",
+    "predicate:has_digivolve_candidate",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:level_lte",
+    "predicate:name_is",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:on_opponent_security_removed",
+    "timing:on_own_security_removed",
+    "timing:on_play",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Piercing"
+   ],
+   "effect_clause_count": 4,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "BT20-020": {
    "behaviourally_covered": true,
    "clause_count": 6,
@@ -5930,19 +5967,30 @@
    "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
+    "verb:effect_initiated_digivolve",
+    "verb:if",
     "verb:recover",
     "verb:select_opponent_permanent",
+    "verb:select_own_breeding_permanent",
+    "verb:select_union_zone",
     "verb:trash_top_security_and_cancel_replacement",
     "predicate:all_of",
     "predicate:all_turns",
+    "predicate:can_digivolve_onto",
     "predicate:color_is",
+    "predicate:during_attack",
+    "predicate:has_digivolve_candidate",
     "predicate:kind",
     "predicate:level_eq",
+    "predicate:level_lte",
     "predicate:name_is",
     "predicate:none_of",
+    "predicate:owner",
     "predicate:replacement_cause",
     "predicate:replacement_subject_is_mine",
     "predicate:security_count_gte",
+    "predicate:trait_has",
+    "predicate:zone",
     "timing:on_opponent_security_removed",
     "timing:on_own_security_removed",
     "timing:on_play",
@@ -6105,6 +6153,46 @@
     "timing:on_ally_played",
     "timing:on_play",
     "timing:when_digivolving"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "BT20-087": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:activation_cost",
+    "verb:effect_initiated_digivolve",
+    "verb:if",
+    "verb:play_from_security",
+    "verb:select_effect_choice",
+    "verb:select_hand",
+    "verb:select_own_breeding_permanent",
+    "verb:select_own_permanent",
+    "verb:set_memory",
+    "predicate:any_of",
+    "predicate:any_permanent",
+    "predicate:can_digivolve_onto_with_cost",
+    "predicate:count_gte",
+    "predicate:equals",
+    "predicate:event_target_kind",
+    "predicate:event_target_owner",
+    "predicate:event_target_trait_has",
+    "predicate:has_digivolve_candidate",
+    "predicate:kind",
+    "predicate:level_lte",
+    "predicate:memory_lte",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:on_ally_attack",
+    "timing:on_security",
+    "timing:start_of_your_turn"
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
@@ -25603,7 +25691,7 @@
    "untested_constructs": []
   },
   "EX6-072": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
     "verb:add_this_option_to_hand",
@@ -25614,6 +25702,7 @@
     "verb:select_trash",
     "predicate:all_of",
     "predicate:any_permanent",
+    "predicate:dna_hand_candidate",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:level_gte",
@@ -25623,13 +25712,11 @@
     "timing:on_security"
    ],
    "effect_clause_count": 2,
-   "has_card_test": false,
-   "lowering_covered": false,
+   "has_card_test": true,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "verb:effect_initiated_dna_digivolve_hand_partner"
-   ]
+   "untested_constructs": []
   },
   "EX7-005": {
    "behaviourally_covered": true,
@@ -39486,6 +39573,45 @@
    "tested_behaviourally": false,
    "tests": []
   },
+  "predicate:dna_hand_candidate": {
+   "kind": "predicate",
+   "name": "dna_hand_candidate",
+   "parsed_only": false,
+   "signals": {
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand",
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone",
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment",
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple",
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment"
+   ]
+  },
   "predicate:dna_origin": {
    "kind": "predicate",
    "name": "dna_origin",
@@ -43211,6 +43337,27 @@
     "dsl::dp_deletion_max_modifier.rs::without_the_modifier_the_printed_cap_holds": [
      "yaml_key"
     ],
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment": [
+     "yaml_key"
+    ],
     "dsl::effect_granted_attack.rs::force_attack_step_prompts_forced_attacker_controller": [
      "yaml_key"
     ],
@@ -44468,6 +44615,13 @@
     "dsl::dp_deletion_max_modifier.rs::source_joining_by_this_digivolve_counts_immediately",
     "dsl::dp_deletion_max_modifier.rs::stacked_deltas_sum",
     "dsl::dp_deletion_max_modifier.rs::without_the_modifier_the_printed_cap_holds",
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand",
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone",
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment",
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple",
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment",
     "dsl::effect_granted_attack.rs::force_attack_step_prompts_forced_attacker_controller",
     "dsl::effect_granted_attack.rs::redirect_attack_target_step_rewrites_active_attack_from_bound_selection",
     "dsl::folded_may_opt_refund.rs::activation_type_main_clause_is_not_rewritten",
@@ -44996,6 +45150,27 @@
      "yaml_key"
     ],
     "dsl::digivolve_ignore_level_and_tamer_base.rs::without_subject_level_leaves_strips_positive_positions_only": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment": [
      "yaml_key"
     ],
     "dsl::effect_refiring.rs::refire_card_effect_yaml_lowers_with_bound_card_and_timing": [
@@ -45660,6 +45835,13 @@
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_alt_path_trait_gate_still_applies",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::ignore_level_strips_the_alt_path_level_leaf_but_keeps_its_trait_gate",
     "dsl::digivolve_ignore_level_and_tamer_base.rs::without_subject_level_leaves_strips_positive_positions_only",
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand",
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone",
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment",
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple",
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment",
     "dsl::effect_refiring.rs::refire_card_effect_yaml_lowers_with_bound_card_and_timing",
     "dsl::group7_alt_path_registration.rs::alt_path_direction_from_defaults_when_omitted",
     "dsl::parse_alt_paths.rs::parse_burst_digivolve_with_extra_cost_and_teardown",
@@ -53352,6 +53534,27 @@
     "dsl::digivolve_target_predicates.rs::validator_rejects_unsupported_has_digivolve_candidate_zone": [
      "yaml_key"
     ],
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment": [
+     "yaml_key"
+    ],
     "dsl::phase2g_select_sources.rs::digi_burst_two_selects_exact_self_sources_and_fires_source_trash_once_per_event": [
      "yaml_key"
     ],
@@ -53414,6 +53617,13 @@
     "dsl::digivolve_target_predicates.rs::no_candidate_permanent_means_no_prompt_at_all",
     "dsl::digivolve_target_predicates.rs::validator_rejects_undeclared_can_digivolve_onto_binding",
     "dsl::digivolve_target_predicates.rs::validator_rejects_unsupported_has_digivolve_candidate_zone",
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand",
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone",
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment",
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple",
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment",
     "dsl::phase2g_select_sources.rs::digi_burst_two_selects_exact_self_sources_and_fires_source_trash_once_per_event",
     "dsl::phase2g_select_sources.rs::select_opponent_sources_clamp_to_available_clamps_min_and_max",
     "dsl::phase2g_select_sources.rs::select_opponent_sources_clamp_to_available_zero_candidates_skips_pick",
@@ -62539,15 +62749,41 @@
     "code/digimon-engine/src/dsl_cards/step/play_digivolve.rs"
    ],
    "name": "effect_initiated_dna_digivolve_hand_partner",
-   "near_miss_files": [
-    "src/dsl_cards/lower_replacement.rs",
-    "src/dsl_cards/step/play_digivolve.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand",
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone",
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment",
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple",
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment"
+   ]
   },
   "verb:effect_initiated_dna_digivolve_trash_partner": {
    "kind": "verb",
@@ -69785,6 +70021,27 @@
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost": [
      "yaml_key"
     ],
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment": [
+     "yaml_key"
+    ],
     "dsl::folded_may_opt_refund.rs::optional_cost_pick_is_not_rewritten": [
      "yaml_key"
     ],
@@ -70021,6 +70278,13 @@
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_declined_unchanged",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_dual_two_mandatory_faces",
     "dsl::constructs/play_digivolve_link.rs::play_or_use_from_hand_missing_delta_full_cost",
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand",
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone",
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment",
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple",
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment",
     "dsl::folded_may_opt_refund.rs::optional_cost_pick_is_not_rewritten",
     "dsl::group7_predicate_batch.rs::color_matches_any_field_digimon_compiles",
     "dsl::group7_predicate_batch.rs::color_matches_any_field_digimon_uses_dual_digimon_face_colors",
@@ -71655,6 +71919,27 @@
     "dsl::digivolve_target_predicates.rs::validator_rejects_unsupported_has_digivolve_candidate_zone": [
      "yaml_key"
     ],
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple": [
+     "yaml_key"
+    ],
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment": [
+     "yaml_key"
+    ],
     "dsl::group7_formula_batch.rs::binding_dp_formula_compiles": [
      "yaml_key"
     ],
@@ -71904,6 +72189,13 @@
     "dsl::digivolve_target_predicates.rs::no_candidate_permanent_means_no_prompt_at_all",
     "dsl::digivolve_target_predicates.rs::validator_rejects_undeclared_can_digivolve_onto_binding",
     "dsl::digivolve_target_predicates.rs::validator_rejects_unsupported_has_digivolve_candidate_zone",
+    "dsl::effect_dna_candidate_masks.rs::field_choice_is_correlated_with_selected_result_and_remaining_hand",
+    "dsl::effect_dna_candidate_masks.rs::partner_choice_excludes_result_and_incompatible_cards_on_live_and_clone",
+    "dsl::effect_dna_candidate_masks.rs::prior_field_binding_follows_compaction_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::prior_result_binding_follows_hand_reorder_but_not_departure",
+    "dsl::effect_dna_candidate_masks.rs::reducer_enabled_candidate_completes_the_same_player_visible_payment",
+    "dsl::effect_dna_candidate_masks.rs::result_choice_excludes_cards_without_a_complete_legal_triple",
+    "dsl::effect_dna_candidate_masks.rs::result_probe_uses_declared_cost_policy_and_does_not_consume_optional_payment",
     "dsl::group7_formula_batch.rs::binding_dp_formula_compiles",
     "dsl::group7_predicate_batch.rs::play_cost_lte_accepts_formula_threshold_yaml",
     "dsl::option_lifecycle_cluster.rs::gap1_dsl_place_self_under_permanent_no_candidate_select_self_skips_to_trash",
@@ -74495,12 +74787,12 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2023,
+  "behavioural_tests": 2030,
   "cards": {
-   "behaviourally_covered": 1055,
-   "lowering_covered": 1082,
-   "not_covered": 80,
-   "total": 1162
+   "behaviourally_covered": 1059,
+   "lowering_covered": 1086,
+   "not_covered": 78,
+   "total": 1164
   },
   "constructs": {
    "keyword": {
@@ -74514,11 +74806,11 @@
    },
    "predicate": {
     "parsed_only": 10,
-    "tested": 183,
-    "tested_behaviourally": 173,
-    "total": 218,
+    "tested": 184,
+    "tested_behaviourally": 174,
+    "total": 219,
     "untested": 35,
-    "used_by_cards": 192,
+    "used_by_cards": 193,
     "used_untested": 28
    },
    "timing": {
@@ -74532,12 +74824,12 @@
    },
    "verb": {
     "parsed_only": 6,
-    "tested": 175,
-    "tested_behaviourally": 169,
+    "tested": 176,
+    "tested_behaviourally": 170,
     "total": 183,
-    "untested": 8,
+    "untested": 7,
     "used_by_cards": 171,
-    "used_untested": 8
+    "used_untested": 7
    }
   },
   "ex13_lists": 568,
@@ -74559,6 +74851,7 @@
    "src/dsl_cards/mod.rs",
    "src/dsl_cards/modifier_map.rs",
    "src/dsl_cards/predicate.rs",
+   "src/dsl_cards/predicate_dna.rs",
    "src/dsl_cards/raw_rust.rs",
    "src/dsl_cards/source_stats.rs",
    "src/dsl_cards/step/as_selecting_player.rs",
@@ -74653,8 +74946,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 371,
-  "scanned_tests": 2421,
+  "scanned_files": 373,
+  "scanned_tests": 2428,
   "top_untested": [
    {
     "cards_blocked": 1,
@@ -74774,11 +75067,6 @@
    {
     "cards_blocked": 3,
     "construct": "predicate:rules_text_contains",
-    "ex13_lists_blocked": 4
-   },
-   {
-    "cards_blocked": 2,
-    "construct": "verb:effect_initiated_dna_digivolve_hand_partner",
     "ex13_lists_blocked": 4
    },
    {

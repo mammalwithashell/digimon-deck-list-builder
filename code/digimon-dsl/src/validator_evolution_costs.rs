@@ -3,7 +3,7 @@
 //! new read-only cost contract wherever a typed predicate/formula is embedded.
 
 use super::*;
-use crate::predicate::{DigivolveCandidatePredicate, DigivolveCostPredicate, PredicateSpec};
+use crate::predicate::{DigivolveCandidatePredicate, DigivolveCostPredicate, DnaHandCandidatePredicate, DnaHandCandidateRole, PredicateSpec};
 use crate::step::CostDelta;
 use serde_json::Value;
 
@@ -37,6 +37,7 @@ fn contains_cost_predicate(value: &Value) -> bool {
     match value {
         Value::Object(fields) => {
             fields.contains_key("can_digivolve_onto_with_cost")
+                || fields.contains_key("dna_hand_candidate")
                 || fields
                     .get("has_digivolve_candidate")
                     .is_some_and(|v| v.get("cost").is_some())
@@ -69,6 +70,34 @@ impl Audit<'_, '_> {
                 // cost_assignment deserialize alias serializes canonically.
                 let reducer =
                     reducer || fields.get("kind").and_then(Value::as_str) == Some("cost_reduction");
+                if let Some(value) = fields.get("dna_hand_candidate") {
+                    if let Ok(probe) = serde_json::from_value::<DnaHandCandidatePredicate>(value.clone()) {
+                        let leaf = field_path(path, "dna_hand_candidate");
+                        for (name, binding, required) in [
+                            ("result", &probe.result, probe.role != DnaHandCandidateRole::Result),
+                            ("field", &probe.field, probe.role == DnaHandCandidateRole::Partner),
+                        ] {
+                            if required != binding.is_some() {
+                                self.errors.push(ValidationError {
+                                    card_id: self.card_id.into(), path: format!("{leaf}.{name}"),
+                                    message: format!("{name} binding is {} for {:?} candidates",
+                                        if required { "required" } else { "not allowed" }, probe.role),
+                                });
+                            }
+                            if let Some(binding) = binding {
+                                report_if_undeclared_binding(binding, &format!("{leaf}.{name}"),
+                                    self.card_id, scope, self.errors);
+                            }
+                        }
+                        for (name, filter) in [("field_filter", &probe.field_filter), ("partner_filter", &probe.partner_filter)] {
+                            if let Some(filter) = filter {
+                                validate_predicate(filter, &format!("{leaf}.{name}"), self.card_id, self.ctx, self.errors);
+                                validate_predicate_binding_scope(filter, &format!("{leaf}.{name}"), self.card_id, scope, self.errors);
+                            }
+                        }
+                        self.cost(&probe.cost, &format!("{leaf}.cost"), scope, reducer);
+                    }
+                }
                 if let Some(value) = fields.get("can_digivolve_onto_with_cost") {
                     if let Ok(probe) =
                         serde_json::from_value::<DigivolveCostPredicate>(value.clone())

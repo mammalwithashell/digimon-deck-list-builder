@@ -33,10 +33,10 @@ fn verify(g:&Game,h:PermanentHandle,links:usize) {
 }
 fn exercise(route:u8) {
     let mut a=make_test_card("A","A");a.level=Some(6);
-    let mut b=make_test_card("B","B");b.level=Some(6);
+    let mut b=make_test_card("B","B");b.level=Some(5);
     let mut lower=make_test_card("SOURCE","Source");lower.also_treated_as=vec!["Static source alias".into()];
     let mut link=make_test_card("LINK","Link");link.ace_overflow=Some(-2);
-    let mut result=make_test_dna_card("RESULT","Result",6,6,0);result.level=Some(7);
+    let mut result=make_test_dna_card("RESULT","Result",6,5,0);result.level=Some(7);
     let mut r=DebugRunner::builder().add_card(a).add_card(b).add_card(result).add_card(lower)
         .add_card(link).add_card(make_test_card("DRAW","Draw"))
         .hand(0,&["RESULT","B","SOURCE","LINK","SOURCE","LINK"]).deck(0,&["DRAW";4]).memory(10).start();

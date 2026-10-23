@@ -69,7 +69,7 @@ pub(crate) struct DigivolveCostChoiceState {
 /// A cost choice inside an effect, independent of the main-action resume.
 /// Zone indices may move while parked; physical cards and the original zones
 /// remain pinned. A changed host top fails instead of following DNA materials.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct EffectDigivolveCostChoiceState {
     pub acting_player: PlayerId,
     pub source_ref: CardSourceRef,
@@ -77,6 +77,7 @@ pub(crate) struct EffectDigivolveCostChoiceState {
     pub source_carrier_top: Option<CardHandle>,
     pub source_carrier_identity: Option<u64>,
     pub target_player: PlayerId,
+    pub target_zone: Zone,
     pub target_top: CardHandle,
     pub target_identity: u64,
     pub dna_origin: Option<bool>,
@@ -89,6 +90,33 @@ pub(crate) struct EffectDigivolveCostChoiceState {
     /// Only the initiating DSL clause receives the completed result.
     pub result_clause: Option<(CardHandle, PlayerId)>,
     pub outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+// Preserve the archival battle-only declaration projection. Breeding is a
+// new declaration kind and includes its zone in every current digest.
+impl std::fmt::Debug for EffectDigivolveCostChoiceState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut d = f.debug_struct("EffectDigivolveCostChoiceState");
+        d.field("acting_player", &self.acting_player);
+        d.field("source_ref", &self.source_ref);
+        d.field("result_card", &self.result_card);
+        d.field("source_carrier_top", &self.source_carrier_top);
+        d.field("source_carrier_identity", &self.source_carrier_identity);
+        d.field("target_player", &self.target_player);
+        if self.target_zone != Zone::BattleArea { d.field("target_zone", &self.target_zone); }
+        d.field("target_top", &self.target_top);
+        d.field("target_identity", &self.target_identity);
+        d.field("dna_origin", &self.dna_origin);
+        d.field("cost_delta", &self.cost_delta);
+        d.field("waiver", &self.waiver);
+        d.field("source", &self.source);
+        d.field("printed_costs", &self.printed_costs);
+        d.field("effect_source_player", &self.effect_source_player);
+        d.field("trigger_context", &self.trigger_context);
+        d.field("result_clause", &self.result_clause);
+        d.field("outer_conts", &self.outer_conts);
+        d.finish()
+    }
 }
 
 /// An effect-owned declaration; distinct from the native action's single slot.
@@ -193,6 +221,8 @@ pub(crate) struct DigivolveReducerState {
     pub affordability_probe: bool,
     /// Effect declarations retain their zone, selected route and DSL continuations.
     pub effect: Option<EffectDigivolveCostChoiceState>,
+    /// DNA owns two material origins and resumes its merge, never ordinary evolution.
+    pub dna_effect: Option<super::effect_dna::EffectDnaHandDeclaration>,
 }
 
 /// make-engine-cloneable: first material pick for a normal DNA digivolve from
@@ -233,6 +263,7 @@ impl Game {
             use crate::resume::ResumeFrame as F;
             match stack.frames.last()? {
                 F::EffectDigivolveCostChoice(s) => Some(s.result_card),
+                F::EffectDnaHandRoute(s) => Some(s.result),
                 F::DigivolveReducerPrompt(s) | F::DigivolveReducerSuspend(s) => Some(s.result_card()),
                 F::ReplacementBody { inner, .. } | F::FieldTopSourceBatch { inner, .. }
                 | F::DelayCancelAfterSelection { inner, .. } | F::DelayHandDigivolveAfterSelection { inner, .. }
@@ -281,10 +312,7 @@ impl Game {
             .rev()
             .find(|s| {
                 s.identity.window_started
-                    && self.resolve_digivolve_host_identity(
-                        s.identity.player,
-                        s.identity.host_identity,
-                    ) == Some(h)
+                    && self.resolve_effect_digivolve_host(&s.declaration) == Some(h)
             })
             .map(|s| s.declaration.result_card)
     }
@@ -303,7 +331,7 @@ impl Game {
         };
         let scope = self.effect_digivolve_scopes.remove(index);
         let blocked = self
-            .resolve_digivolve_host_identity(scope.identity.player, scope.identity.host_identity)
+            .resolve_effect_digivolve_host(&scope.declaration)
             .is_some_and(|h| self.modifiers.has(h, ModifierType::CannotDigivolve));
         self.clear_would_digivolve_identity(&scope.identity);
         let previous_source = self.effect_source_player;
@@ -503,9 +531,8 @@ impl Game {
         &self,
         state: &EffectDigivolveCostChoiceState,
     ) -> Option<(CardSourceRef, PermanentHandle)> {
-        let target =
-            self.resolve_digivolve_host_identity(state.target_player, state.target_identity)?;
-        if self.player(target.player).battle_area[target.index as usize]
+        let target = self.resolve_effect_digivolve_host(state)?;
+        if self.digivolve_base_permanent(target)?
             .top_card()
             .handle()
             != state.target_top
@@ -513,6 +540,27 @@ impl Game {
             return None;
         }
         Some((self.resolve_effect_digivolve_choice_source(state)?, target))
+    }
+
+    fn effect_digivolve_target_zone(target: PermanentHandle) -> Zone {
+        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            Zone::BreedingArea
+        } else {
+            Zone::BattleArea
+        }
+    }
+
+    fn resolve_effect_digivolve_host(
+        &self, state: &EffectDigivolveCostChoiceState,
+    ) -> Option<PermanentHandle> {
+        let index = match state.target_zone {
+            Zone::BreedingArea => crate::action::space::BREEDING_TARGET as u8,
+            Zone::BattleArea => 0,
+            _ => return None,
+        };
+        self.resolve_source_play_host_identity(
+            PermanentHandle { player: state.target_player, index }, state.target_identity,
+        )
     }
 
     fn finish_effect_digivolve_continuations(
@@ -532,20 +580,12 @@ impl Game {
             }
         }
         if success {
-            if let Some(index) = self
-                .player(state.target_player)
-                .battle_area
-                .iter()
-                .position(|p| {
-                    p.card_sources
-                        .last()
-                        .is_some_and(|c| c.handle() == state.result_card)
+            if let Some(result) = self.resolve_effect_digivolve_host(&state).filter(|h| {
+                self.digivolve_base_permanent(*h).is_some_and(|p| {
+                    p.card_sources.last().is_some_and(|c| c.handle() == state.result_card)
                 })
+            })
             {
-                let result = PermanentHandle {
-                    player: state.target_player,
-                    index: index as u8,
-                };
                 for cont in &mut state.outer_conts {
                     if state.result_clause == Some((cont.source_card, cont.player)) {
                         cont.bindings.record_digivolved(result);
@@ -1325,7 +1365,7 @@ impl Game {
                 // Failure belongs to this effect declaration, not an enclosing
                 // native declaration waiting for its payment to finish.
                 self.remove_effect_digivolve_scope(effect.result_card);
-            } else {
+            } else if state.dna_effect.is_none() {
                 self.clear_digivolve_reducer_chain_credit();
             }
             return false;
@@ -1421,6 +1461,17 @@ impl Game {
         true
     }
 
+    /// Security removal has its own replacement/event continuation, whose
+    /// digivolve destination currently supports battle-area hosts only.
+    pub(crate) fn effect_digivolve_source_supported(
+        &self,
+        source_ref: CardSourceRef,
+        target: PermanentHandle,
+    ) -> bool {
+        target.index != crate::action::space::BREEDING_TARGET as u8
+            || !matches!(source_ref, CardSourceRef::Security(_, _))
+    }
+
     /// Read-only candidate legality for an effect that pays the specified
     /// cost. Existing route-only predicates intentionally do not call this:
     /// their consuming effects may waive or reduce the printed cost.
@@ -1431,8 +1482,10 @@ impl Game {
         target: PermanentHandle,
         cost_delta: CostDelta,
     ) -> bool {
-        let Some(host) = self.players.get(target.player as usize)
-            .and_then(|player| player.battle_area.get(target.index as usize)) else {
+        if !self.effect_digivolve_source_supported(source_ref, target) {
+            return false;
+        }
+        let Some(host) = self.digivolve_base_permanent(target) else {
             return false;
         };
         if self.modifiers.has(target, ModifierType::CannotDigivolve)
@@ -1456,7 +1509,7 @@ impl Game {
         probe.pending_player_digivolve_reduction = 0;
         probe.pending_interactive_digivolve_reduction = 0;
         probe.pending_cost_reduction_amount_override = None;
-        let target_identity = probe.capture_digivolve_host_identity(target);
+        let Some(target_identity) = probe.capture_source_play_host_identity(target) else { return false; };
         let (source_carrier_identity, source_carrier_top) = match source_ref {
             CardSourceRef::Material(carrier, _) | CardSourceRef::Link(carrier, _) => {
                 let identity = probe.capture_digivolve_host_identity(carrier);
@@ -1467,7 +1520,7 @@ impl Game {
         };
         let declaration = EffectDigivolveCostChoiceState {
             acting_player, source_ref, result_card, source_carrier_top, source_carrier_identity,
-            target_player: target.player, target_identity, target_top,
+            target_player: target.player, target_zone: Self::effect_digivolve_target_zone(target), target_identity, target_top,
             dna_origin: probe.current_dna_origin, cost_delta,
             waiver: DigivolveRequirementWaiver::None, source: PlaySource::ByEffect,
             printed_costs: Vec::new(), effect_source_player: probe.effect_source_player,
@@ -1574,13 +1627,16 @@ impl Game {
                 is_digivolve: true,
                 target_permanents: [Some(host), None],
             };
-            let reduction = std::mem::take(&mut branch.pending_player_digivolve_reduction)
-                + branch.scan_before_pay_cost_reduction_with_target(
+            let reduction = if declaration.target_zone == Zone::BreedingArea { 0 } else {
+                let reduction = std::mem::take(&mut branch.pending_player_digivolve_reduction)
+                    + branch.scan_before_pay_cost_reduction_with_target(
                     declaration.acting_player,
                     CostReductionKind::Digivolve,
                     Some(cost_target),
                 );
-            branch.scan_before_pay_cost_observers(declaration.acting_player, Some(cost_target));
+                branch.scan_before_pay_cost_observers(declaration.acting_player, Some(cost_target));
+                reduction
+            };
             if branch
                 .resolve_effect_digivolve_declaration(declaration)
                 .is_none()
@@ -1627,6 +1683,10 @@ impl Game {
         &self,
         state: &DigivolveReducerState,
     ) -> Option<(usize, usize)> {
+        if let Some(dna) = &state.dna_effect {
+            let (field, _, result) = self.resolve_effect_dna_hand(dna)?;
+            return Some((result, field.index as usize));
+        }
         if let Some(effect) = &state.effect {
             let (source, target) = self.resolve_effect_digivolve_declaration(effect)?;
             let source_index = match source {
@@ -1667,6 +1727,11 @@ impl Game {
             self.current_trigger_context = effect.trigger_context.clone();
             self.current_dna_origin = effect.dna_origin;
         }
+        if let Some(dna) = &state.dna_effect {
+            self.effect_source_player = Some(dna.source_controller);
+            self.current_trigger_context = dna.trigger_context.clone();
+            self.current_dna_origin = Some(true);
+        }
         let result = self.finish_player_digivolve_reducer_chain_inner(state);
         self.effect_source_player = previous_source;
         self.current_trigger_context = previous_trigger;
@@ -1686,6 +1751,9 @@ impl Game {
         }
         if declaration.affordability_probe {
             return false;
+        }
+        if let Some(dna) = declaration.dna_effect.clone() {
+            return self.resume_effect_dna_hand(dna, true).is_some();
         }
         if let Some(effect) = declaration.effect.clone() {
             let chosen = effect.printed_costs.first().copied();
@@ -1944,7 +2012,7 @@ impl Game {
             return;
         };
         if let Some(handle) =
-            self.resolve_digivolve_host_identity(resume.player, resume.host_identity)
+            self.resolve_source_play_host_identity(resume.permanent, resume.host_identity)
         {
             let subject = crate::modifiers::ModifierSubject::Permanent(handle);
             self.modifiers
@@ -2644,6 +2712,9 @@ impl Game {
         source: PlaySource,
         chosen_cost: Option<crate::dna_digivolve::DigivolveRouteMatch>,
     ) -> bool {
+        if !self.effect_digivolve_source_supported(source_ref, target) {
+            return false;
+        }
         let card = self
             .card_source_ref_peek(source_ref)
             .map(CardSource::handle);
@@ -2677,6 +2748,9 @@ impl Game {
         chosen_cost: Option<crate::dna_digivolve::DigivolveRouteMatch>,
         reducers_resolved: bool,
     ) -> bool {
+        if !self.effect_digivolve_source_supported(source_ref, target) {
+            return false;
+        }
         let ignore_color = matches!(
             waiver,
             DigivolveRequirementWaiver::Color | DigivolveRequirementWaiver::All
@@ -2710,17 +2784,11 @@ impl Game {
             return false;
         };
 
-        {
-            let target_player = self.player(target.player);
-            if (target.index as usize) >= target_player.battle_area.len() {
-                self.logger.log(&format!(
-                    "[Rejected] effect_initiated_digivolve: target index {} out of range (battle_area size={})",
-                    target.index,
-                    target_player.battle_area.len()
-                ));
-                return false;
-            }
-        }
+        let Some(host) = self.digivolve_base_permanent(target) else {
+            self.logger.log("[Rejected] effect_initiated_digivolve: target no longer present");
+            return false;
+        };
+        let target_zone = Self::effect_digivolve_target_zone(target);
 
         // 2. Find a matching evo cost.
         // A level-less target can still digivolve when it has no printed
@@ -2737,8 +2805,7 @@ impl Game {
         // the printed level-matched circles need a level; with none, the
         // route scan below simply finds no printed match.
         let base_level: Option<u8> = {
-            let target_player = self.player(target.player);
-            let perm = &target_player.battle_area[target.index as usize];
+            let perm = host;
             let identity = perm.synth_identity(&self.card_data, &self.modifiers, target);
             identity.level
         };
@@ -2823,8 +2890,8 @@ impl Game {
             }
             _ => None,
         };
-        let target_identity = self.capture_digivolve_host_identity(target);
-        let target_top = self.player(target.player).battle_area[target.index as usize]
+        let Some(target_identity) = self.capture_source_play_host_identity(target) else { return false; };
+        let target_top = self.digivolve_base_permanent(target).expect("captured evolution host")
             .top_card()
             .handle();
         let source_carrier_top = match source_ref {
@@ -2858,6 +2925,7 @@ impl Game {
                     source_carrier_top,
                     source_carrier_identity,
                     target_player: target.player,
+                    target_zone: Self::effect_digivolve_target_zone(target),
                     target_identity,
                     target_top,
                     dna_origin: self.current_dna_origin,
@@ -2900,9 +2968,10 @@ impl Game {
                         source_carrier_top,
                         source_carrier_identity,
                         target_player: target.player,
+                        target_zone: Self::effect_digivolve_target_zone(target),
                         target_identity,
                         dna_origin: self.current_dna_origin,
-                        target_top: self.player(target.player).battle_area[target.index as usize]
+                        target_top: self.digivolve_base_permanent(target).expect("captured evolution host")
                             .top_card()
                             .handle(),
                         cost_delta,
@@ -2927,6 +2996,7 @@ impl Game {
             source_carrier_top,
             source_carrier_identity,
             target_player: target.player,
+            target_zone: Self::effect_digivolve_target_zone(target),
             target_identity,
             target_top,
             dna_origin: self.current_dna_origin,
@@ -2964,8 +3034,9 @@ impl Game {
                 source_carrier_top,
                 source_carrier_identity,
                 target_player: target.player,
+                target_zone: Self::effect_digivolve_target_zone(target),
                 target_identity,
-                target_top: self.player(target.player).battle_area[target.index as usize]
+                target_top: self.digivolve_base_permanent(target).expect("captured evolution host")
                     .top_card()
                     .handle(),
                 dna_origin: self.current_dna_origin,
@@ -2999,20 +3070,22 @@ impl Game {
         // `target` permanent here is the one being digivolved into
         // (effect-initiated digivolves stack a hand/trash/security card
         // onto an existing battle-area permanent).
-        let total_reduction = self.scan_before_pay_cost_reduction_with_target(
-            player_id,
-            CostReductionKind::Digivolve,
-            Some(cost_target_ctx),
-        );
-        // Observer dispatch — G-BEFORE-PAY-COST-GAIN-MEMORY.
-        self.scan_before_pay_cost_observers(player_id, Some(cost_target_ctx));
+        // CR 3-4-7-6: ordinary would-digivolve effects cannot trigger on a
+        // breeding host. The initiating effect's explicit reduction remains.
+        let total_reduction = if target_zone == Zone::BreedingArea { 0 } else {
+            let amount = self.scan_before_pay_cost_reduction_with_target(
+                player_id, CostReductionKind::Digivolve, Some(cost_target_ctx),
+            );
+            self.scan_before_pay_cost_observers(player_id, Some(cost_target_ctx));
+            amount
+        };
         let effective_cost = (base_cost as i32 - total_reduction - chain_reduction).max(0) as u16;
 
-        let Some(target) = self.resolve_digivolve_host_identity(target.player, target_identity)
+        let Some(target) = self.resolve_source_play_host_identity(target, target_identity)
         else {
             return false;
         };
-        if self.player(target.player).battle_area[target.index as usize]
+        if self.digivolve_base_permanent(target).expect("captured evolution host")
             .top_card()
             .handle()
             != target_top
@@ -3026,8 +3099,9 @@ impl Game {
             source_carrier_top,
             source_carrier_identity,
             target_player: target.player,
+            target_zone: Self::effect_digivolve_target_zone(target),
             target_identity,
-            target_top: self.player(target.player).battle_area[target.index as usize]
+            target_top: self.digivolve_base_permanent(target).expect("captured evolution host")
                 .top_card()
                 .handle(),
             dna_origin: self.current_dna_origin,
@@ -3040,9 +3114,9 @@ impl Game {
             result_clause: None,
             outer_conts: Vec::new(),
         };
-        let Some(source_ref) = self.resolve_effect_digivolve_choice_source(&source_check) else {
+        if self.resolve_effect_digivolve_choice_source(&source_check).is_none() {
             return false;
-        };
+        }
         if let Some(scope) = self
             .effect_digivolve_scopes
             .iter_mut()
@@ -3052,12 +3126,18 @@ impl Game {
             scope.identity.effective_cost = effective_cost;
             scope.identity.window_started = true;
         }
-        let outcome = self.try_replace(
-            EffectTiming::WhenPermanentWouldDigivolve,
-            crate::replacement::ReplacementSubject::Permanent(target),
-            crate::replacement::ReplacementCause::OwnEffect,
-            Some(Zone::BattleArea),
-        );
+        // A source clause being active in breeding does not grant permission
+        // to observe another breeding evolution. No ordinary would event fires.
+        let outcome = if target_zone == Zone::BreedingArea {
+            crate::replacement::ReplacementOutcome::None
+        } else {
+            self.try_replace(
+                EffectTiming::WhenPermanentWouldDigivolve,
+                crate::replacement::ReplacementSubject::Permanent(target),
+                crate::replacement::ReplacementCause::OwnEffect,
+                Some(Zone::BattleArea),
+            )
+        };
         if self.pending_selection.is_some() {
             return false;
         }
@@ -3072,6 +3152,9 @@ impl Game {
         let Some((source_ref, target)) = self.resolve_effect_digivolve_declaration(state) else {
             return false;
         };
+        if !self.effect_digivolve_source_supported(source_ref, target) {
+            return false;
+        }
         if self.modifiers.has(target, ModifierType::CannotDigivolve)
             || (state.source == PlaySource::ByEffect
                 && self.modifiers.player_has(
@@ -3133,8 +3216,29 @@ impl Game {
 
         // 4. Move the card onto the target permanent's stack.
         let turn = self.turn_count;
-        self.player_mut(target.player).battle_area[target.index as usize]
-            .digivolve(taken.card, turn);
+        if state.target_zone == Zone::BreedingArea {
+            let from_stack_top = self.digivolve_base_permanent(target).unwrap()
+                .top_card().card_id(&self.card_data).to_owned();
+            let top_card_id = taken.card.card_id(&self.card_data).to_owned();
+            let card_name = taken.card.card_name(&self.card_data).to_owned();
+            self.player_mut(target.player).breeding_area.as_mut().unwrap().digivolve(taken.card, turn);
+            if let CardSourceRef::Material(source, _) = source_ref {
+                self.soft_remove_if_emptied(source);
+            }
+            self.player_mut(player_id).draw();
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::Digivolve {
+                seq, player: target.player, top_card_id, card_name,
+                field_index: crate::action::space::BREEDING_TARGET as u8,
+                from_stack_top, was_dna: false, was_blast_dna: false,
+                memory_paid: effective_cost as i16,
+            });
+            self.n_digivolutions[target.player as usize] += 1;
+            // Q4300/Q4389/Q4429: neither WhenDigivolving nor ordinary
+            // observers trigger. The caller still receives a completed result.
+            return true;
+        }
+        self.player_mut(target.player).battle_area[target.index as usize].digivolve(taken.card, turn);
 
         // 4a. Soft-remove an emptied Material source. If `source_ref` was
         // `Material(src, _)`, `take_card_source_ref` may have removed the

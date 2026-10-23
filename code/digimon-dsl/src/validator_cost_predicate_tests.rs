@@ -18,6 +18,40 @@ fn leaf(cost: &str) -> String {
     format!("{{ can_digivolve_onto_with_cost: {{ target: source, cost: {cost} }} }}")
 }
 
+#[test]
+fn dna_candidate_requires_prior_bindings_for_its_stage() {
+    for (args, path, message) in [
+        ("role: field, cost: printed", ".result", "required"),
+        ("role: partner, result: missing, field: missing_field, cost: printed", ".result", "missing"),
+        ("role: result, result: missing, cost: printed", ".result", "not allowed"),
+    ] {
+        let yaml = document(&format!(
+            "  - when: on_play\n    condition: {{ dna_hand_candidate: {{ {args} }} }}\n    process:\n      - gain_memory: 1"
+        ));
+        assert_error(&yaml, &format!("dna_hand_candidate{path}"), message);
+    }
+}
+
+#[test]
+fn dna_candidate_cost_checks_apply_to_nested_trigger_filters_and_reducers() {
+    for gate in ["condition", "trigger_if"] {
+        let yaml = trigger_gate(gate, "{reduce: {raw_rust: registered_cost_callback}}")
+            .replace("can_digivolve_onto_with_cost: { target: source,", "dna_hand_candidate: { role: result,");
+        assert_error(&yaml, "dna_hand_candidate.cost", "raw-Rust");
+    }
+    for cost in ["free", "printed", "0", "{ reduce: 1 }"] {
+        let yaml = declarative_filter("cost_reduction", cost)
+            .replace("can_digivolve_onto_with_cost: { target: source,", "dna_hand_candidate: { role: result,");
+        assert_error(&yaml, "dna_hand_candidate.cost", "inside cost_reduction");
+    }
+}
+
+#[test]
+fn dna_candidate_nested_material_filters_keep_binding_validation() {
+    let yaml = document("  - when: on_play\n    condition: { dna_hand_candidate: { role: result, cost: printed, partner_filter: { can_digivolve_onto: missing } } }\n    process:\n      - gain_memory: 1");
+    assert_error(&yaml, "partner_filter", "missing");
+}
+
 fn hand_count(cost: &str) -> String {
     format!(
         "{{ count_gte: {{ filter: {{ of: you, zone: [hand], all_of: [{}] }}, n: 1 }} }}",

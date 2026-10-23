@@ -823,6 +823,7 @@ pub struct Game {
     #[doc(hidden)]
     pub(crate) pending_would_digivolve_resume: Option<PendingWouldDigivolveResume>,
     pub(crate) effect_digivolve_scopes: Vec<crate::game_actions::digivolve::EffectDigivolveScope>,
+    pub(crate) effect_dna_would_scopes: Vec<crate::game_actions::effect_dna::EffectDnaWouldScope>,
 
     /// Player-scoped one-shot future-digivolve cost reducers
     /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`). Installed by a `[Main]` effect with
@@ -3049,30 +3050,16 @@ impl Game {
     /// merged permanent is topped with `result_index` (also a hand card —
     /// typically the Omnimon-name level-7 result).
     ///
-    /// This is the BT17-095-shaped DNA: the printed text "That Digimon and a
-    /// card in the hand may DNA digivolve into a Digimon card with [Omnimon]
-    /// in its name in the hand" — only one DNA material is a field permanent;
-    /// the second is materialised from hand inline. Mirrors DCGO's
-    /// `BT17_095.SuccessProcess` which builds a temporary `Permanent` from the
-    /// hand-card partner and runs `PlayCardClass.PlayCard` with `SetJogress`.
+    /// The field-plus-hand DNA commit keeps the hand partner in hand until
+    /// the merge. It never creates a temporary battle-area permanent or fires
+    /// play effects for that material. The printed left requirement is the
+    /// upper material and each material's internal source order is preserved.
+    /// The field slot survives while its old object state is reset.
     ///
-    /// ## Stacking order
-    ///
-    /// `target.card_sources ++ [hand_partner] ++ [result]`. `target` is the
-    /// `requirement1` material; the hand partner is `requirement2`. The merged
-    /// permanent stays at `target`'s index (no on-field permanent is removed).
-    ///
-    /// ## Triggers
-    ///
-    /// Identical to `dna_digivolve_inner`: self and global evolution triggers
-    /// are queued together before draining, all carrying the DNA origin marker.
-    ///
-    /// ## Returns
-    ///
-    /// `Some(merged_handle)` on success; `None` if `target` is out of range,
-    /// either hand index is out of range, the two hand indices coincide, or
-    /// `cost > 0` and `pay_memory` fails.
-    pub(crate) fn dna_digivolve_hand_partner_inner(
+    /// Evolution triggers are queued together with the DNA origin marker.
+    /// Both hand cards must be distinct and owned by the field controller;
+    /// memory payment is checked from that controller's perspective.
+    pub(crate) fn dna_digivolve_hand_partner_with_order(
         &mut self,
         target: PermanentHandle,
         hand_owner: PlayerId,
@@ -3080,6 +3067,7 @@ impl Game {
         result_index: usize,
         cost: u16,
         effect_initiated: bool,
+        field_is_upper: bool,
     ) -> Option<PermanentHandle> {
         use crate::enums::EffectTiming;
         use crate::selection::TriggerSource;
@@ -3095,7 +3083,7 @@ impl Game {
             return None;
         }
 
-        if cost > 0 && !self.pay_memory(cost) {
+        if target.player != hand_owner || !self.pay_memory_for(hand_owner, cost) {
             return None;
         }
 
@@ -3130,7 +3118,11 @@ impl Game {
         let turn = self.turn_count;
         {
             let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
-            perm.card_sources.push(partner_source);
+            if field_is_upper {
+                perm.card_sources.insert(0, partner_source);
+            } else {
+                perm.card_sources.push(partner_source);
+            }
             perm.push_top(result_source);
             perm.turn_digivolved = turn;
         }
@@ -3209,7 +3201,7 @@ impl Game {
     ///
     /// ## Triggers
     ///
-    /// Identical to `dna_digivolve_hand_partner_inner`: self and global evolution
+    /// Identical to `dna_digivolve_hand_partner_with_order`: self and global evolution
     /// triggers are queued together before draining with the DNA origin marker.
     ///
     /// ## Returns

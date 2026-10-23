@@ -547,6 +547,8 @@ pub enum ResumeFrame {
     DigivolveCostChoice(crate::game_actions::digivolve::DigivolveCostChoiceState),
     /// Effect-driven route choice retains its source, cost delta and DSL tails.
     EffectDigivolveCostChoice(crate::game_actions::digivolve::EffectDigivolveCostChoiceState),
+    /// A DNA declaration's printed recipe and material-order choice.
+    EffectDnaHandRoute(crate::game_actions::effect_dna::EffectDnaHandDeclaration),
     /// Player-scoped digivolve cost-reducer accept/decline prompt
     /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`). PASS declines (re-enter at full cost),
     /// accept runs `player_digivolve_reducer_accept`. A player-digivolve action,

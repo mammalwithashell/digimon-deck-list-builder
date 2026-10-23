@@ -1279,10 +1279,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // G-ENGINE-DNA-PRINTED-COST (gap 1): `cost: printed` pays the
             // result card's printed DNA cost against the {field target, hand
             // partner} pair (DCGO `payCost: true`).
-            let dna_cost = lower_dna_cost(cost, ctx, bindings, || {
-                ctx.printed_dna_cost_for_hand_partner(target_handle, partner_card, result_card)
-            });
-            let success = ctx.effect_initiated_dna_digivolve_with_hand_partner(
+            let dna_cost = lower_cost_delta(Some(cost), ctx, bindings);
+            let success = ctx.effect_initiated_dna_digivolve_with_hand_partner_cost(
                 target_handle,
                 partner_card,
                 result_card,
@@ -1291,6 +1289,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             );
             if let Some(played) = success {
                 bindings.record_digivolved(played);
+            } else if ctx.game.pending_selection.is_some() {
+                ctx.game.bind_effect_dna_clause_owner(result_card, ctx.source_card, ctx.player);
             }
             true
         }

@@ -24,7 +24,7 @@ fn bindings(game: &Game, path: &str, value: &Bindings, rows: &mut PinRows) {
         .map(|(name, player, identity)| {
             // Identities are allocated lazily in some engine entry paths. The
             // same number can name different live hosts in different branches.
-            let live = game.resolve_digivolve_host_identity(player, identity);
+            let live = value.resolve_selected_identity(game, &name);
             (name, player, identity, live)
         })
         .collect();
@@ -187,6 +187,9 @@ fn frames(game: &Game, path: &str, stack: &ResumeStack, rows: &mut PinRows) {
                 tails!(s, OuterOptionalTrigger);
             }
             F::DigivolveReducerPrompt(s) => {
+                if let Some(dna) = &s.dna_effect {
+                    outer(game, &format!("{path}/DigivolveReducerPrompt/dna/outer"), &dna.outer_conts, rows);
+                }
                 if let Some(effect) = &s.effect {
                     outer(
                         game,
@@ -197,6 +200,9 @@ fn frames(game: &Game, path: &str, stack: &ResumeStack, rows: &mut PinRows) {
                 }
             }
             F::DigivolveReducerSuspend(s) => {
+                if let Some(dna) = &s.dna_effect {
+                    outer(game, &format!("{path}/DigivolveReducerSuspend/dna/outer"), &dna.outer_conts, rows);
+                }
                 if let Some(effect) = &s.effect {
                     outer(
                         game,
@@ -208,6 +214,7 @@ fn frames(game: &Game, path: &str, stack: &ResumeStack, rows: &mut PinRows) {
             }
             F::NonDslCountCappedStep(s) => tails!(s, NonDslCountCappedStep),
             F::EffectDigivolveCostChoice(s) => tails!(s, EffectDigivolveCostChoice),
+            F::EffectDnaHandRoute(s) => tails!(s, EffectDnaHandRoute),
             F::RefireEffectChoice(s) => tails!(s, RefireEffectChoice),
             F::OptionModeSelect(s) => tails!(s, OptionModeSelect),
             F::DigiXrosMaterialSelection(s) => tails!(s, DigiXrosMaterialSelection),
@@ -277,6 +284,9 @@ pub(super) fn write(hasher: &mut Sha256, game: &Game) {
     }
     for (index, hook) in game.after_selection_resume_hooks.0.iter().enumerate() {
         if let AfterSelectionHook::DigivolveReducerChain { state, .. } = hook {
+            if let Some(dna) = &state.dna_effect {
+                outer(game, &format!("hook/{index}/dna/outer"), &dna.outer_conts, &mut rows);
+            }
             if let Some(effect) = &state.effect {
                 outer(
                     game,
@@ -294,6 +304,9 @@ pub(super) fn write(hasher: &mut Sha256, game: &Game) {
             &scope.declaration.outer_conts,
             &mut rows,
         );
+    }
+    for (index, scope) in game.effect_dna_would_scopes.iter().enumerate() {
+        outer(game, &format!("dna_would_scope/{index}/outer"), &scope.declaration.outer_conts, &mut rows);
     }
     for (index, effect) in game.scheduled_effects.iter().enumerate() {
         bindings(

@@ -17,6 +17,10 @@ use crate::permanent::PermanentHandle;
 use crate::selection::AttackTarget;
 use crate::trigger_context::AttackTargetChangeReason;
 
+#[path = "predicate_dna.rs"]
+mod dna;
+use dna::dna_hand_candidate;
+
 /// The subject a predicate is applied to.
 #[derive(Debug, Clone, Copy)]
 pub enum PredicateSubject {
@@ -136,6 +140,11 @@ fn eval_predicate_ref(
     // (e.g. `is_face_down` / `is_bottom_source`) stay evaluable at any
     // combinator nesting depth.
     let original_subject = subject;
+    if let Some(spec) = &pred.dna_hand_candidate {
+        if !dna_hand_candidate(spec, rctx, original_subject, bindings) {
+            return false;
+        }
+    }
     if let Some(want) = pred.can_move_from_breeding_by_effect {
         let player = match original_subject {
             PredicateSubject::BreedingPermanent(player) => player,
@@ -3738,7 +3747,8 @@ fn eval_card_fields(
         // `source` (when not shadowed by a real binding) is the effect's own
         // carrier permanent â€” "THIS Digimon may digivolve into ..." (EX13-055 /
         // EX13-057). G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
-        let target = if bindings.and_then(|b| b.selected_identity_pin(binding)).is_some() {
+        let target = if bindings.is_some_and(|b| b.selected_identity_pin(binding).is_some()
+            || b.get_breeding_permanent_ref(binding).is_some()) {
             // Match the consuming step after an observer or payment compacts
             // the field. A departed pinned host must not fall back to its old
             // slot, including when the binding shadows `source`.
@@ -3850,8 +3860,15 @@ fn resolve_cost_probe_target(
     name: &str,
 ) -> Option<PermanentHandle> {
     if let Some(bindings) = bindings {
-        if let Some((player, identity)) = bindings.selected_identity_pin(name) {
-            return rctx.game.resolve_digivolve_host_identity(player, identity);
+        if bindings.selected_identity_pin(name).is_some() {
+            return bindings.resolve_selected_identity(rctx.game, name);
+        }
+        if let Some(breeding) = bindings.get_breeding_permanent_ref(name) {
+            return rctx.game.player(breeding.player).breeding_area.as_ref()
+                .filter(|p| p.card_sources.iter().any(|c| c.handle() == breeding.card))
+                .map(|_| PermanentHandle {
+                    player: breeding.player, index: crate::action::space::BREEDING_TARGET as u8,
+                });
         }
         if let Some(BindingValue::PlayedPermanent { token, .. }) = bindings.get_ref(name) {
             let live = rctx.game.resolve_token_as_battle_area_top(*token)?;
@@ -3892,6 +3909,11 @@ fn can_card_digivolve_onto(
     target: PermanentHandle,
 ) -> bool {
     if permanent_for_handle(rctx, target).is_none() {
+        return false;
+    }
+    if rctx.game.locate_card_source_ref(card).is_some_and(|source_ref|
+        !rctx.game.effect_digivolve_source_supported(source_ref, target))
+    {
         return false;
     }
     // This probe serves effect-driven evolution choices. Route compatibility

@@ -6482,6 +6482,7 @@ impl Game {
                     at -= 1;
                 }
             }
+            crate::game_actions::effect_dna::order_nested_dna_payment_hooks(&mut indexed);
             for (index, mut hook) in indexed {
                 // Passing an immediate replacement declines that replacement,
                 // not the enclosing evolution used to pay this cost. Its

@@ -1,5 +1,9 @@
 # Meta admission follow-up: implementation and evidence boundary
 
+The subsequent [remaining meta repairs](remaining-meta-repairs.md) report tracks
+the four cards and three baseline suite failures left by this snapshot. The
+results below remain the historical a74 verification and admission record.
+
 This report covers the approved follow-up to the construct campaign and App Fuse
 repair on PR #745. The implementation adds 11 production YAML cards, repairs
 existing card flows, and extends shared selection, payment, protection and

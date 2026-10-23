@@ -452,12 +452,14 @@ code/tools/meta_loader.py -> data/deck_library.json -> MetaGauntlet.load()
 
 ## 4.5 Deck Admission
 
-`MetaGauntlet.load()` (and `load_generalist_deck_pool`, which wraps it) admits each decklist on its own:
+`MetaGauntlet.load()` (and `load_generalist_deck_pool`, which wraps it) uses the always-on two-layer gate in `docs/TRAINING_RUNBOOK.md`:
 
-1. Every card ID is playable (`gauntlet.load_playable_card_ids()`): registered in the Rust engine (`digimon_engine.load_implemented_card_ids()`) and present in the card database `RustHeadlessGame` loads (`data/cards.json`). A YAML spec alone registers a card without giving the runner its card data.
-2. No card has a not-ready verdict in `qa/qa-reports/validated_cards_dsl.json`: `PARTIAL`, `BLOCKED`, `AUDITED-DRIFT` or `AUDITED-MISSING-TESTS`. A playable card with no ledger entry counts as ready.
+1. Globally, `data/mechanics_readiness.json` must be ready: no mechanics obligation is flagged outcome-changing (`blocks_training`). Unflagged open gaps remain visible and are not thereby certified outcome-neutral. PR CI separately enforces rules conformance.
+2. Per decklist, every card must be playable (`gauntlet.load_playable_card_ids()`): registered in the compiled Rust engine and present in `data/cards.json`. Every card must also be admissible in `data/card_admissibility.json`. That artifact combines committed registration, behavioral lowering evidence, required card-specific tests and failing ledger/exam verdicts. A missing ledger entry alone does not establish admission. A YAML spec alone registers an effect without supplying its production card data.
 
-The ledger's `archetype` field is a batch label and is never matched against library archetype names. An archetype is eligible when at least one of its lists is admitted; `allowed_archetypes` narrows that set and logs, at INFO, each scoped name left with no admitted list.
+Runtime admission reads the two committed `data/` artifacts; training images need not contain `qa/`. Regenerate and check them using the runbook after their evidence inputs change. The optional legacy clause gate only adds restrictions and cannot bypass these layers. Admission is simulator training eligibility, not full oracle certification.
+
+The ledger's `archetype` field is a batch label and is never matched against library archetype names. An archetype is eligible when at least one of its lists is admitted; `allowed_archetypes` narrows that set and logs, at INFO, each scoped name left with no admitted list. A reported majority requires more than half of that archetype's lists in the explicitly named pool to pass; ties do not qualify.
 
 ---
 

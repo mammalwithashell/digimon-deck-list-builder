@@ -389,6 +389,11 @@ fn wrap_pending_selection_with_tail(
                 return;
             }
         }
+        if let Some(dna) = game.effect_dna_declaration_for_clause_mut(source_card, player) {
+            dna.outer_conts.push(cont);
+            game.pending_selection = Some(pending);
+            return;
+        }
         // Compose onto whatever frame is active. RunTail runs its conts after the
         // inner/decline tail; multi-pick frames run theirs at the TERMINAL (after
         // the final pick), so a wrap mid-accumulation still fires exactly once
@@ -411,9 +416,12 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ZoneCardPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::EffectDigivolveCostChoice(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::EffectDnaHandRoute(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigivolveReducerPrompt(s))
-            | Some(ResumeFrame::DigivolveReducerSuspend(s)) => s.effect.as_mut()
-                .expect("only effect reducer declarations can carry DSL tails").outer_conts.push(cont),
+            | Some(ResumeFrame::DigivolveReducerSuspend(s)) => {
+                if let Some(dna) = s.dna_effect.as_mut() { dna.outer_conts.push(cont); }
+                else { s.effect.as_mut().expect("only effect declarations can carry DSL tails").outer_conts.push(cont); }
+            }
             Some(ResumeFrame::DigivolveCostChoice(_))
             | Some(ResumeFrame::DnaDigivolveFirstMaterial(_))
             | Some(ResumeFrame::DnaDigivolveSecondMaterial(_)) => unreachable!(

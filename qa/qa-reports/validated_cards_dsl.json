@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-22",
+  "last_updated": "2026-10-23",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -4980,21 +4980,22 @@
     },
     "BT20-056": {
       "card_name": "Alphamon",
-      "validated_date": "2026-10-22",
-      "report": "meta-admission-followup-2026-10-22",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-10-23",
+      "report": "remaining-meta-repairs-2026-10-22",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-056.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_056.rs",
-      "test_count": 8,
-      "tests_passing": 8,
+      "test_count": 19,
+      "tests_passing": 19,
       "tests_ignored": 0,
       "patterns": [
         "G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET"
       ],
-      "notes": "Eight tests for existing authored clauses passed in batch3-card-executable-red.log. Card remains PARTIAL: the attack-context hand/trash evolution tail requires G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET. Attack predicates, union selection and breeding selectors already exist. No new oracle confirmation.",
-      "audit_note": "Authored 2026-06-15; one clause on a genuine residual gap."
+      "notes": "19/19 card behavioral tests pass in the cumulative full-card run; actual-image spec and code quality reviews approve all printed clauses. Shared evolution, ownership/provenance, clone controls, production-data checks and the complete aggregate/rerun history are recorded in remaining-meta-repairs.md. Simulator evidence only; no new live oracle confirmation.",
+      "audit_note": "Full-card repair supersedes the historical partial scope: mandatory Recovery plus the independent attack-only free hand/trash breeding evolution tail are tested.",
+      "integration_verification": "passed-focused"
     },
     "BT22-025": {
       "card_name": "UlforceVeedramon",
@@ -15551,49 +15552,58 @@
     },
     "BT20-018": {
       "card_name": "Ouryumon",
-      "validated_date": "2026-10-22",
-      "report": "meta-admission-followup-2026-10-22",
-      "status": "BLOCKED",
-      "gap_kind": "engine-gap",
+      "validated_date": "2026-10-23",
+      "report": "remaining-meta-repairs-2026-10-22",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Chronicle / Alphamon",
-      "test_count": 0,
-      "tests_passing": 0,
+      "test_count": 12,
+      "tests_passing": 12,
       "tests_ignored": 0,
       "patterns": [
         "G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET"
       ],
-      "notes": "Source-confirmed reusable lifecycle gap after independent review; no new per-card runtime or oracle pass claimed. See G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET."
+      "notes": "12/12 card behavioral tests pass in the cumulative full-card run; actual-image spec and code quality reviews approve all printed clauses. Shared evolution, ownership/provenance, clone controls, production-data checks and the complete aggregate/rerun history are recorded in remaining-meta-repairs.md. Simulator evidence only; no new live oracle confirmation.",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_018.rs",
+      "integration_verification": "passed-focused"
     },
     "BT20-087": {
       "card_name": "Kota Domoto & Yuji Musya",
-      "validated_date": "2026-10-22",
-      "report": "meta-admission-followup-2026-10-22",
-      "status": "BLOCKED",
-      "gap_kind": "engine-gap",
+      "validated_date": "2026-10-23",
+      "report": "remaining-meta-repairs-2026-10-22",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Chronicle / Alphamon",
-      "test_count": 0,
-      "tests_passing": 0,
+      "test_count": 12,
+      "tests_passing": 12,
       "tests_ignored": 0,
       "patterns": [
         "G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET"
       ],
-      "notes": "Source-confirmed reusable lifecycle gap after independent review; no new per-card runtime or oracle pass claimed. See G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET."
+      "notes": "12/12 card behavioral tests pass in the cumulative full-card run; actual-image spec and code quality reviews approve all printed clauses. Shared evolution, ownership/provenance, clone controls, production-data checks and the complete aggregate/rerun history are recorded in remaining-meta-repairs.md. Simulator evidence only; no new live oracle confirmation.",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-087.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_087.rs",
+      "integration_verification": "passed-focused"
     },
     "EX6-072": {
       "card_name": "Mega Digimon Assembly!",
-      "validated_date": "2026-10-22",
-      "report": "meta-admission-followup-2026-10-22",
-      "status": "BLOCKED",
-      "gap_kind": "engine-gap",
+      "validated_date": "2026-10-23",
+      "report": "remaining-meta-repairs-2026-10-22",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
       "archetype": "Chronicle / Alphamon",
-      "test_count": 0,
-      "tests_passing": 0,
+      "test_count": 12,
+      "tests_passing": 12,
       "tests_ignored": 0,
       "patterns": [
         "G-ENGINE-EFFECT-DNA-HAND-PARTNER-DECLARATION"
       ],
-      "notes": "Source-confirmed reusable lifecycle gap after independent review; no new per-card runtime or oracle pass claimed. See G-ENGINE-EFFECT-DNA-HAND-PARTNER-DECLARATION.",
-      "yaml_path": "code/digimon-engine/cards/_examples/EX6-072.yaml"
+      "notes": "12/12 card behavioral tests pass in the cumulative full-card run; actual-image spec and code quality reviews approve all printed clauses. Shared evolution, ownership/provenance, clone controls, production-data checks and the complete aggregate/rerun history are recorded in remaining-meta-repairs.md. Simulator evidence only; no new live oracle confirmation.",
+      "yaml_path": "code/digimon-engine/cards/_examples/EX6-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_072.rs",
+      "integration_verification": "passed-focused",
+      "audit_note": "Correlated legal/payable result and material choices, printed DNA cost and blue Security scope repaired after runtime RED."
     },
     "P-176": {
       "card_name": "Dorimon",

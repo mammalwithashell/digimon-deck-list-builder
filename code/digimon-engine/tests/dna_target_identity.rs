@@ -27,8 +27,8 @@ impl CardEffect for Transform {
 }
 fn exercise(mode:u8){
  let mut mat=make_test_card("MAT","Material");mat.level=Some(6);mat.dp=Some(2000);
- let mut partner=make_test_card("PARTNER","Partner");partner.level=Some(6);
- let mut result=make_test_dna_card("RESULT","Result",6,6,0);result.level=Some(7);result.dp=Some(5000);
+ let mut partner=make_test_card("PARTNER","Partner");partner.level=Some(5);
+ let mut result=make_test_dna_card("RESULT","Result",6,5,0);result.level=Some(7);result.dp=Some(5000);
  let mut attacker=make_test_card("ATT","Attacker");attacker.dp=Some(12000);
  let mut r=DebugRunner::builder().add_card(mat).add_card(partner).add_card(result).add_card(attacker)
   .add_card(make_test_card("BYST","Bystander")).add_card(make_test_card("DRAW","Draw"))

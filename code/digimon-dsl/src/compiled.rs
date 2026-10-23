@@ -436,6 +436,7 @@ pub struct CompiledPredicate {
     pub can_digivolve_onto: Option<String>,
     #[serde(default)]
     pub can_digivolve_onto_with_cost: Option<CompiledDigivolveCostPredicate>,
+    pub dna_hand_candidate: Option<CompiledDnaHandCandidate>,
     #[serde(default)]
     pub can_play_from_effect_without_cost: Option<bool>,
     #[serde(default)]
@@ -959,6 +960,17 @@ pub struct CompiledDigivolveCandidate {
 pub struct CompiledDigivolveCostPredicate {
     pub target: String,
     pub cost: CompiledCostDelta,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDnaHandCandidate {
+    pub role: crate::predicate::DnaHandCandidateRole,
+    pub result: Option<String>,
+    pub field: Option<String>,
+    pub field_filter: Option<Box<CompiledPredicate>>,
+    pub partner_filter: Option<Box<CompiledPredicate>>,
+    pub cost: CompiledCostDelta,
+    pub ignore_requirements: bool,
 }
 
 /// Compiled form of `no_face_up_security_named`. Exactly one of
