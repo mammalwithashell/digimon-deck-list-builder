@@ -643,7 +643,7 @@ mod rule_check_breeding_tests {
         let mut r = runner();
         let egg_index = r.add_to_hand(0, "RC-EGG");
         let egg = r.game.players[0].hand.remove(egg_index);
-        r.game.players[0].digitama_deck.push(egg);
+        r.game.players[0].put_on_digi_egg_deck_top(egg);
         r.game.drain_events();
         assert!(r.game.hatch(0));
         let events = r.game.drain_events();
