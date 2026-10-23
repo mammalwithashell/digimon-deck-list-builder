@@ -79,12 +79,10 @@ effects:
     process:
       - trash_top_security_and_cancel_replacement: { of: you }
 
-# Stubbed (genuine open engine/DSL gap G-BREEDING-DIGIVOLVE-UNION-ZONES, size L):
-# - The [On Play][When Digivolving] tail "if during an attack, 1 of your Digimon
-#   in the breeding area may digivolve into a level 6 or lower [Chronicle] trait
-#   Digimon card in the hand or trash without paying the cost" needs two missing
-#   substrate pieces: (1) effect-initiated digivolve that can target the
-#   BREEDING-AREA permanent (the engine hard-rejects target.index outside the
-#   battle area), and (2) a `during_attack` predicate (game.pending_attack).
-#   See qa/dsl-vocab-gaps.md and tests/cards_behavioral/bt20/bt20_056.rs ignored
-#   test bt20_056_during_attack_breeding_digivolves_chronicle_from_hand_or_trash.
+# Unauthored tail: during an attack, optionally digivolve a breeding-area
+# Digimon into a level 6 or lower Chronicle Digimon from hand/trash for free.
+# G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET remains open: the shared effect
+# evolution lifecycle assumes battle storage for identity, parked choices,
+# replacement attribution, commit, result capture and trigger dispatch.
+# Attack gating, union selection and breeding selectors already exist.
+# This card remains PARTIAL; no placeholder effect or empty test certifies it.

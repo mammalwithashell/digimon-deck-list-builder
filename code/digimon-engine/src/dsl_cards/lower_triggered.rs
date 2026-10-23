@@ -1115,6 +1115,10 @@ pub enum CostPickZone {
 pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
     let first = steps.first()?;
     match first {
+        CompiledStep::TrashTopSecurityAndCancelReplacement {
+            of: CompiledPlayerRef::You,
+            ..
+        } => Some(CostGuard::Security { n: 1 }),
         CompiledStep::TrashTopSecurity {
             of: CompiledPlayerRef::You,
             count,

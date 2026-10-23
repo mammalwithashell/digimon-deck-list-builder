@@ -19,10 +19,12 @@
     "X Antibody",
     "Chronicle"
   ],
-  "form_eng": [],
+  "form_eng": [
+    "In-Training"
+  ],
   "attribute_eng": [],
-  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand.",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand.",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

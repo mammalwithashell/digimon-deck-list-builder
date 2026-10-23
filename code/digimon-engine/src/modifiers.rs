@@ -1653,7 +1653,11 @@ impl ModifierRegistry {
             player: PlayerId,
             removed_index: u8,
         ) -> Option<PermanentHandle> {
-            if handle.player != player {
+            // Breeding uses a sentinel, not a battle-area vector index. Its
+            // modifiers and source attribution survive battle compaction.
+            if handle.player != player
+                || handle.index == crate::action::space::BREEDING_TARGET as u8
+            {
                 return Some(handle);
             }
             if handle.index == removed_index {

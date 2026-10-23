@@ -49,6 +49,15 @@ pub fn resolve_binding_ref(
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
         | CompiledBindingRef::OfPermanent(name) => {
+            if let Some((player, identity)) = bindings.selected_identity_pin(name) {
+                // A later choice can resume after field compaction or a stack
+                // change. Follow the selected permanent, and fail closed if it
+                // left; another permanent in its old slot is never a substitute.
+                return ctx
+                    .game
+                    .resolve_digivolve_host_identity(player, identity)
+                    .map(ResolvedBinding::Permanent);
+            }
             // PlayedPermanent bindings need engine-side identity resolution
             // (provenance token → strict top-card lookup). The strict
             // resolver `Game::resolve_token_as_battle_area_top` yields a

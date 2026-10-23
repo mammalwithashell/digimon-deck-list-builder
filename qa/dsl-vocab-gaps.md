@@ -4015,9 +4015,12 @@ one clause each on a genuine residual gap (RK is now 69 IMPLEMENTED / 3 PARTIAL 
 0 BLOCKED of 72). These are the only Royal-Knights-blocking gaps left.
 
 ### `G-BREEDING-DIGIVOLVE-UNION-ZONES` — attack-context breeding digivolve from hand/trash union
+
+**Re-audited 2026-10-22 (meta admission follow-up): still engine-blocked, with a narrower scope.** `during_attack`, hand/trash union selection, breeding selection bindings, and normal/special route enumeration already exist. The remaining gap is the zone-aware effect-digivolution lifecycle: `game_actions/digivolve.rs` assumes battle-area storage in target/identity capture, parked cost/reducer revalidation, replacement-zone attribution, commit, result capture, and trigger dispatch. Consumers are BT20-018, BT20-056, and BT20-087 (printed “on the field” includes breeding). The fix must preserve zone-pinned physical identity and suppress ordinary breeding self/observer digivolution effects (CR 4.3 §§3-4-6, 3-4-7-4, 3-4-7-6). Existing actions can represent these choices; do not author battle-only approximations. See `qa/archetype-qa/engine-gaps.md` entry `G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET`.
+
 - **Consumer:** BT20-056 Alphamon. "[On Play][When Digivolving] then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a Lv.6-or-lower [Chronicle] Digimon in your hand OR trash, free."
-- **Missing:** an effect-initiated digivolve where the DIGIVOLVING permanent is a breeding-area Digimon and the digivolve TARGET is sourced from a hand∪trash union, gated on an in-attack condition.
-- **Suggested API:** extend the effect-digivolve step to accept a breeding-area subject + a `from: { zones: [hand, trash] }` union target with a `during_attack` condition.
+- **Remaining capability:** zone-aware effect-digivolution identity, declaration/resume, replacement, commit and result handling for a breeding-area host. Attack gating and hand/trash candidate selection already exist.
+- **Implementation boundary:** extend the shared effect-digivolution lifecycle to breeding hosts while preserving existing source selection, route choices, physical identity and the rules that suppress breeding evolution triggers. A bounds-check change alone is insufficient.
 - **First test:** BT20-056 in play attacking, a breeding Digimon present, a Lv.6 [Chronicle] in hand and one in trash → assert both are offered as free digivolve targets onto the breeding Digimon.
 
 ### `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN` — effect-play observer with opponent's-turn suspend cost
@@ -8086,9 +8089,12 @@ one clause each on a genuine residual gap (RK is now 69 IMPLEMENTED / 3 PARTIAL 
 0 BLOCKED of 72). These are the only Royal-Knights-blocking gaps left.
 
 ### `G-BREEDING-DIGIVOLVE-UNION-ZONES` — attack-context breeding digivolve from hand/trash union
+
+**Re-audited 2026-10-22 (meta admission follow-up): still engine-blocked, with a narrower scope.** `during_attack`, hand/trash union selection, breeding selection bindings, and normal/special route enumeration already exist. The remaining gap is the zone-aware effect-digivolution lifecycle: `game_actions/digivolve.rs` assumes battle-area storage in target/identity capture, parked cost/reducer revalidation, replacement-zone attribution, commit, result capture, and trigger dispatch. Consumers are BT20-018, BT20-056, and BT20-087 (printed “on the field” includes breeding). The fix must preserve zone-pinned physical identity and suppress ordinary breeding self/observer digivolution effects (CR 4.3 §§3-4-6, 3-4-7-4, 3-4-7-6). Existing actions can represent these choices; do not author battle-only approximations. See `qa/archetype-qa/engine-gaps.md` entry `G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET`.
+
 - **Consumer:** BT20-056 Alphamon. "[On Play][When Digivolving] then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a Lv.6-or-lower [Chronicle] Digimon in your hand OR trash, free."
-- **Missing:** an effect-initiated digivolve where the DIGIVOLVING permanent is a breeding-area Digimon and the digivolve TARGET is sourced from a hand∪trash union, gated on an in-attack condition.
-- **Suggested API:** extend the effect-digivolve step to accept a breeding-area subject + a `from: { zones: [hand, trash] }` union target with a `during_attack` condition.
+- **Remaining capability:** zone-aware effect-digivolution identity, declaration/resume, replacement, commit and result handling for a breeding-area host. Attack gating and hand/trash candidate selection already exist.
+- **Implementation boundary:** extend the shared effect-digivolution lifecycle to breeding hosts while preserving existing source selection, route choices, physical identity and the rules that suppress breeding evolution triggers. A bounds-check change alone is insufficient.
 - **First test:** BT20-056 in play attacking, a breeding Digimon present, a Lv.6 [Chronicle] in hand and one in trash → assert both are offered as free digivolve targets onto the breeding Digimon.
 
 ### `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN` — effect-play observer with opponent's-turn suspend cost
@@ -9176,13 +9182,14 @@ EX2-068 High-Speed Plug-In D: "For the turn, 1 of your Digimon gains <Jamming> a
 - **Resolution:** `"CannotBeBlocked"` added to `KNOWN_MODIFIER_KEYS` (digimon-dsl validator) and `lookup_modifier_type("CannotBeBlocked") => ModifierType::CannotBeBlocked` (engine `dsl_cards/modifier_map.rs`); engine primitive in `docs/RUST_ENGINE_GAPS.md` [G-ENGINE-CANNOT-BE-BLOCKED]. Authoring: `add_modifier { target: <binding>, modifier: CannotBeBlocked, value: 1, expiry: end_of_turn }`. No pack-format change (string-keyed). Tests: `cards_behavioral -- ex2_068`.
 - **Not covered:** the blocker-qualified form ("by your opponent's Digimon with no digivolution cards", BT1-034 / BT2-029) — needs a predicate payload.
 
-### `has_digivolve_candidate` checks routes, not memory affordability [G-DSL-DIGIVOLVE-CANDIDATE-AFFORDABLE] — OPEN, minor (2026-10-21, EX13 lane c)
+### Cost-aware effect-evolution candidate probes [G-DSL-DIGIVOLVE-CANDIDATE-AFFORDABLE] — RESOLVED capability (2026-10-22)
 
-P-250 Ogremon (X Antibody) {Trash}[End of Your Turn]: "If your hand has 5 or fewer cards, 1 of your [Demon] trait Digimon may digivolve into this card." DCGO P_250.cs filters the target pick with `card.CanPlayCardTargetFrame(permanent.PermanentFrame, true, activateClass)` (PayCost: true), which rejects a target when `Owner.MaxMemoryCost < cost`. Our `has_digivolve_candidate` (and `can_digivolve_onto`) probe digivolve ROUTES only, so at a deeply negative end-of-turn memory a target whose digivolve cost can't be paid is still offered; the `effect_initiated_digivolve` then fails in `pay_memory` and nothing happens.
+P-250 Ogremon (X Antibody) exposed the need to filter a paid effect-evolution pick by payable routes. A route-only predicate may expose a choice that cannot pay its eventual cost.
 
-- **Impact:** the pick is optional ("may"), so choosing the unpayable target equals declining — game state never diverges. Only an extra, rules-illegal-looking option (CR 4.3 §1-3-11-1) is exposed to the action space.
-- **Proposed vocab:** an `affordable: true` flag on the `has_digivolve_candidate` / `can_digivolve_onto` specs that keeps only routes whose (effect-adjusted) digivolve cost keeps the controller's memory at or above the floor — the digivolve sibling of `affordable_with_cost_reduce` (BT26-084). Must use the same route cost the effect digivolve will charge (printed circle vs alt path).
-- **Cards:** P-250 (and any "may digivolve into this card" / "digivolve into ... paying the cost" pick filtered by these probes).
+- **Resolution:** `can_digivolve_onto_with_cost: {target: <binding>, cost: <delta>}` and optional `has_digivolve_candidate.cost` use the existing clone-only payment probe, with the consuming effect's printed, free, fixed or reduced cost. Formulas retain the original effect source and lexical bindings. The probe evaluates reducers and prohibitions; the real declaration still exposes payment choices. Omitted cost preserves the existing route-only contract.
+- **Validation:** both paid forms reject mutable raw-Rust cost callbacks and are forbidden anywhere in a cost-reduction/assignment clause, including free/fixed-zero costs, to avoid recursive reducer probing. Nested schema entry points, semantic payloads and lexical binding scopes have negative controls.
+- **Measured evidence:** `final-combined-repaired.log` has all 66 DSL-library tests and all 218 then-current shared/card checks passing; affordability, payment ownership and reveal candidate controls are wired into the permanent DSL suite. Final cumulative tier validation is reported separately in `meta-admission-followup.md`.
+- **Consumer boundary:** P-250 was not migrated or tested in this campaign. Its route-only YAML remains a follow-up; closing the reusable capability does not certify that card. The older `can_digivolve_onto` remains deliberately route-only.
 
 ### `place_as_bottom_source` with a permanent source: no leave window, no success binding [G-DSL-PLACE-PERMANENT-AS-SOURCE-RESULT] — RESOLVED (2026-10-21, EX13 final fix round)
 

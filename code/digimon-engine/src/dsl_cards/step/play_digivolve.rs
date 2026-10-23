@@ -103,6 +103,33 @@ pub(crate) fn lower_cost_delta(
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
 ) -> CostDelta {
+    lower_cost_delta_value(d, |formula| {
+        let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
+            player: ctx.player, index: 0,
+        });
+        crate::dsl_cards::formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
+    })
+}
+
+/// The predicate preflight and commit evaluate formulas in the same effect
+/// source context; the selected evolution host is not the formula's source.
+pub(crate) fn lower_cost_delta_read(
+    d: Option<&digimon_dsl::compiled::CompiledCostDelta>,
+    ctx: &crate::effect_context::EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> CostDelta {
+    lower_cost_delta_value(d, |formula| {
+        let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
+            player: ctx.player, index: 0,
+        });
+        crate::dsl_cards::formula_eval::evaluate_read_with_bindings(formula, ctx, target, bindings)
+    })
+}
+
+fn lower_cost_delta_value(
+    d: Option<&digimon_dsl::compiled::CompiledCostDelta>,
+    evaluate: impl FnOnce(&digimon_dsl::compiled::CompiledFormula) -> i32,
+) -> CostDelta {
     use digimon_dsl::compiled::CompiledCostDelta;
     match d {
         None | Some(CompiledCostDelta::Printed) => CostDelta::Reduce(0),
@@ -110,18 +137,7 @@ pub(crate) fn lower_cost_delta(
         Some(CompiledCostDelta::Literal(n)) => CostDelta::Fixed(*n as i16),
         Some(CompiledCostDelta::Reduce(n)) => CostDelta::Reduce(*n as i16),
         Some(CompiledCostDelta::ReduceFn(formula)) => {
-            let target = ctx
-                .source_permanent
-                .unwrap_or(crate::permanent::PermanentHandle {
-                    player: ctx.player,
-                    index: 0,
-                });
-            let raw = crate::dsl_cards::formula_eval::evaluate_with_bindings(
-                formula,
-                ctx,
-                target,
-                Some(bindings),
-            );
+            let raw = evaluate(formula);
             CostDelta::Reduce(raw.max(0).min(i16::MAX as i32) as i16)
         }
     }

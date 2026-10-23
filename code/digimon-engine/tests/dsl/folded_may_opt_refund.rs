@@ -184,6 +184,9 @@ const REVIEWED: &[&str] = &[
     "BT25-025#3", "BT25-039#3", "BT25-052#3", "BT25-053#3", "BT25-055#1", "BT25-055#2",
     "EX11-017#2", "EX12-045#1", "EX12-046#2",
     "EX12-065#1", "EX12-074#0", "EX9-033#3", "P-207#2",
+    // P-176's whole-effect may: p_176.rs tests decline preserving OPT and
+    // successful activation spending it until the next turn.
+    "P-176#0",
 ];
 
 #[test]

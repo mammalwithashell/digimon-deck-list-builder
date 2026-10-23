@@ -1,0 +1,68 @@
+# Card image and official Bandai bundle verified; DCGO BT20/Red/BT20_012.cs.
+card: BT20-012
+name: Ginryumon
+kind: digimon
+level: 4
+color: [red, black]
+cost: 5
+dp: 6000
+traits: [Beast Dragon, X Antibody, Chronicle]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Ryudamon
+        - all_of:
+            - level_eq: 3
+            - trait_has: Chronicle
+    cost: 2
+
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] This Digimon may digivolve into [Hisyaryumon] or a [Chronicle] trait Digimon card in the hand"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: digimon
+            - any_of:
+                - name_is: Hisyaryumon
+                - trait_has: Chronicle
+            - can_digivolve_onto: source
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: Hisyaryumon
+                  - trait_has: Chronicle
+              - can_digivolve_onto: source
+          bind_as: evolution
+          prompt: "This Digimon may digivolve into Hisyaryumon or a Chronicle Digimon in your hand"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evolution
+          cost: printed
+          ignore_requirements: false
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

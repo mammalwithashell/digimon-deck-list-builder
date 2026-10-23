@@ -127,6 +127,38 @@ fn security_activation_blocked_for_timing(
             .player_has(player, ModifierType::CannotActivateSecurityEffects)
 }
 
+/// BT20-015's inherited restriction follows the actual checking Digimon;
+/// it is not a defender-wide prohibition. Consult at collection and again
+/// before activation, since an earlier Security clause may change a live aura.
+/// Never consult while resuming an already activated body's process tail.
+fn checked_option_security_activation_blocked(
+    game: &mut Game,
+    player: PlayerId,
+    timing: EffectTiming,
+    card: CardHandle,
+) -> bool {
+    if timing != EffectTiming::SecuritySkill {
+        return false;
+    }
+    let Some(attacker) = game.security_resolution.as_ref().and_then(|state| {
+        (state.phase == crate::selection::SecurityPhase::SecuritySkillDrain
+            && state.defender == player
+            && state.revealed_card == card
+            && state.card_kind == CardKind::Option)
+            .then_some(state.attacker)
+            .flatten()
+    }) else {
+        return false;
+    };
+    // An earlier clause may move the checked card out of pending_security.
+    // The active resolution above still identifies its queued Security clauses.
+    if game.player(attacker.player).battle_area.get(attacker.index as usize).is_none() {
+        return false;
+    }
+    game.tick_declarative_effects();
+    game.modifiers.has(attacker, ModifierType::DoesNotActivateOptionSecurityEffects)
+}
+
 fn permanent_activation_blocked_for_timing(
     game: &Game,
     handle: PermanentHandle,
@@ -2982,6 +3014,9 @@ impl Game {
         card: CardHandle,
         trigger_context: Option<TriggerContext>,
     ) {
+        if checked_option_security_activation_blocked(self, defender, timing, card) {
+            return;
+        }
         let Some(pending) = self.pending_security.as_ref() else {
             return;
         };
@@ -3565,6 +3600,9 @@ impl Game {
                 .iter()
                 .enumerate()
                 .take(stack_len.saturating_sub(1))
+                // CR 4.3 4-7-9: face-down sources have no card information.
+                // Filter after enumerate so Succession keeps physical indices.
+                .filter(|(_, c)| !c.face_down)
                 .map(|(i, c)| {
                     (
                         c.card_id(&self.card_data).to_string(),
@@ -3724,6 +3762,8 @@ impl Game {
             perm.card_sources
                 .iter()
                 .take(stack_len.saturating_sub(1))
+                // Explicit breeding permission does not reveal hidden text.
+                .filter(|c| !c.face_down)
                 .map(|c| {
                     (
                         c.card_id(&self.card_data).to_string(),
@@ -4001,6 +4041,11 @@ impl Game {
     }
 
     fn queued_single_effect_gate_passes(&mut self, qe: &QueuedEffect, gate: QueuedGate) -> bool {
+        if gate == QueuedGate::Condition
+            && checked_option_security_activation_blocked(self, qe.controller, qe.timing, qe.source_card)
+        {
+            return false;
+        }
         // A provenance deletion whose played Digimon already left the battle
         // area has nothing to delete: DCGO attaches it to that permanent
         // (`EX11_022.cs`), so it vanishes with it. Not an orderable branch.
@@ -4469,6 +4514,9 @@ impl Game {
     /// effect removed from the registry, etc.) — same tolerance the legacy
     /// `fire_*` loops had.
     fn run_queued_effect(&mut self, mut qe: QueuedEffect) {
+        if checked_option_security_activation_blocked(self, qe.controller, qe.timing, qe.source_card) {
+            return;
+        }
         qe.source_kind = self.queued_effect_activation_kind(&qe);
         if qe.trigger_context.as_ref().is_some_and(|c| !c.simultaneous_play_members.is_empty()) {
             let members = self.matching_simultaneous_play_contexts(&qe);
@@ -5527,7 +5575,7 @@ impl Game {
                         }
                     }
                     SecurityRemovalDestination::Digivolve {
-                        player: _,
+                        player,
                         target,
                         turn,
                     } => {
@@ -5538,6 +5586,10 @@ impl Game {
                         {
                             let event_card = security.card.handle();
                             perm.digivolve(security.card, turn);
+                            // CR 4.3 §8-1-3-3: the draw belongs to the
+                            // digivolution procedure, including results from
+                            // security, and precedes When Digivolving effects.
+                            self.player_mut(player).draw();
                             completed_digivolve = Some((target, event_card));
                         } else {
                             let owner = security.card.owner;

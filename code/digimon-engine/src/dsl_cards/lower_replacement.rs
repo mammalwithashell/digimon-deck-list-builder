@@ -108,9 +108,9 @@ pub fn lower_with_raw_and_slot(
         builder = builder.paid_prevention_filter(active_when.cloned().unwrap_or_default());
     }
 
-    let mut suspension_probe = PaidPreventionProbe::default();
-    serde::Serialize::serialize(process.as_ref(), &mut suspension_probe).expect("typed prevention probe");
-    if let Some(filter) = suspension_probe.suspend_filter {
+    let mut plural_probe = PaidPreventionProbe::default();
+    serde::Serialize::serialize(process.as_ref(), &mut plural_probe).expect("typed prevention probe");
+    if let Some(filter) = plural_probe.plural_filter {
         builder = builder.prevention_all_matching().paid_prevention_filter(filter);
         runtime = runtime.with_opt_key(if once_per_turn {effect_slot}else{None})
             .with_opt_key_inherited(matches!(scope,CompiledScope::Inherited|CompiledScope::Linked));
@@ -3152,7 +3152,7 @@ fn process_has_paid_all_prevention(process: &[CompiledStep]) -> bool {
  probe.all_matching
 }
 #[derive(Default)]
-struct PaidPreventionProbe{found:bool,all_matching:bool,suspend_filter:Option<CompiledPredicate>,struct_names:Vec<&'static str>}
+struct PaidPreventionProbe{found:bool,all_matching:bool,plural_filter:Option<CompiledPredicate>,struct_names:Vec<&'static str>}
 impl PaidPreventionProbe {
  fn variant(&mut self,name:&str,variant:&str){
   self.found |= name=="CompiledStep" && matches!(variant,"DeleteSelfAndCancelLeave"|"DeleteSelfAndCancelAllMatchingLeaves");
@@ -3196,10 +3196,14 @@ impl serde::ser::SerializeMap for &mut PaidPreventionProbe {
 macro_rules! structure {($trait:ident)=>{impl serde::ser::$trait for &mut PaidPreventionProbe {
  type Ok=();type Error=serde_json::Error;
  fn serialize_field<T:serde::Serialize+?Sized>(&mut self,_k:&'static str,v:&T)->Result<(),Self::Error>{
-  if _k=="filter" && self.struct_names.last()==Some(&"SuspendAndCancelAllMatchingLeaves") {
-      let filter:CompiledPredicate=serde_json::from_value(serde_json::to_value(v)?)?;
-      if let Some(previous)=&self.suspend_filter { assert_eq!(previous,&filter,"one replacement must use one plural subject filter"); }
-      self.suspend_filter=Some(filter);
+  if (_k=="filter" && self.struct_names.last()==Some(&"SuspendAndCancelAllMatchingLeaves"))
+      || (_k=="all_matching" && self.struct_names.last()==Some(&"TrashTopSecurityAndCancelReplacement")) {
+      let value=serde_json::to_value(v)?;
+      if !value.is_null() {
+          let filter:CompiledPredicate=serde_json::from_value(value)?;
+          if let Some(previous)=&self.plural_filter { assert_eq!(previous,&filter,"one replacement must use one plural subject filter"); }
+          self.plural_filter=Some(filter);
+      }
   }
   v.serialize(&mut **self)
  }

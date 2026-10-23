@@ -47,6 +47,9 @@ mod dna_wire_order_rule_tests {
 
 #[path="native_play_tracking.rs"]
 mod native_play_tracking;
+#[cfg(test)]
+#[path = "identity_field_selection_tests.rs"]
+mod identity_field_selection_tests;
 use std::collections::HashMap;
 
 use digimon_engine::dcgo_recording::{FrameTarget, SelectionRow};
@@ -2023,6 +2026,85 @@ fn resolve_target_ref(
     ))
 }
 
+/// Resolve an explicitly authored card identity only among the live field
+/// prompt's legal candidates. The local replay consumes physical frames while
+/// the DCGO wire keeps the authored IDs; explicit `targets:` never take this
+/// compatibility path. Duplicate legal identities require physical targets.
+fn field_targets_for_card_ids(
+    game: &Game,
+    actor: PlayerId,
+    ids: &[String],
+) -> Result<Vec<FrameTarget>, String> {
+    use digimon_engine::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+
+    let pending = game.pending_selection.as_ref().ok_or("no live field prompt")?;
+    // Own/Opp describe the effect controller's field, not necessarily the
+    // chooser's field. Delegated choices must carry the actual target owner.
+    if matches!(pending.kind, SelectionKind::OwnField | SelectionKind::OppField)
+        && pending.zone_owner.is_none()
+    {
+        return Err("field ownership unavailable for relative field identity selection".into());
+    }
+    let mask = digimon_engine::action::mask::build_action_mask(game, actor);
+    let mut candidates = Vec::new();
+    for &action in &pending.valid_action_ids {
+        if !mask.get(action as usize).is_some_and(|value| *value > 0.0) {
+            continue;
+        }
+        let Some(offset) = action.checked_sub(ATTACK_START) else {
+            continue;
+        };
+        let (owner, slot) = match (pending.kind, pending.zone_owner) {
+            (SelectionKind::OwnField | SelectionKind::OppField, Some(owner))
+                if offset < TARGETS_PER_ATTACKER => {
+                (owner, offset)
+            }
+            // Per-color deletion already emits an absolute-owner band under
+            // OppField. Accept only that known owner's legal existing band.
+            (SelectionKind::OwnField | SelectionKind::OppField, Some(owner))
+                if offset / TARGETS_PER_ATTACKER == owner as u16 => {
+                (owner, offset % TARGETS_PER_ATTACKER)
+            }
+            (SelectionKind::AnyField, _) => {
+                ((offset / TARGETS_PER_ATTACKER) as PlayerId, offset % TARGETS_PER_ATTACKER)
+            }
+            _ => continue,
+        };
+        let Some(permanent) = game.players.get(owner as usize)
+            .and_then(|player| player.battle_area.get(slot as usize)) else {
+                continue;
+            };
+        let top = permanent.top_card();
+        if top.face_down || top.is_opaque_placeholder || top.is_token {
+            continue;
+        }
+        let target = FrameTarget { player: owner, frame: slot as i32 };
+        if !candidates.iter().any(|(_, previous): &(String, FrameTarget)| {
+            previous.player == target.player && previous.frame == target.frame
+        }) {
+            candidates.push((top.card_id(&game.card_data).to_owned(), target));
+        }
+    }
+
+    let mut targets: Vec<FrameTarget> = Vec::with_capacity(ids.len());
+    for id in ids {
+        let matches: Vec<_> = candidates.iter().filter(|(candidate, _)| candidate == id).collect();
+        let target = match matches.as_slice() {
+            [] => return Err(format!("card identity '{id}' has no legal field candidate")),
+            [(_, target)] => *target,
+            _ => return Err(format!(
+                "card identity '{id}' is ambiguous among {} legal field candidates; use targets:",
+                matches.len()
+            )),
+        };
+        if targets.iter().any(|previous| previous.player == target.player && previous.frame == target.frame) {
+            return Err(format!("card identity '{id}' repeats the same legal field candidate"));
+        }
+        targets.push(target);
+    }
+    Ok(targets)
+}
+
 /// Build the `SelectionRow` (for our own resolve path) and the `SelectWire`
 /// (for the emitted DCGO job) from one symbolic select payload, resolved
 /// against the CURRENT game state at lowering time.
@@ -2292,6 +2374,10 @@ fn build_selection_row(
                          (DCGO MultipleSkills / our TriggerOrder), but our engine's \
                          live prompt here is {kind:?}"
                     ))
+                }
+                Some(SelectionKind::OwnField | SelectionKind::OppField | SelectionKind::AnyField) => {
+                    row.targets = Some(field_targets_for_card_ids(game, actor, ids)
+                        .map_err(|error| format!("step {i}: {error}"))?);
                 }
                 _ => {
                     // No live prompt (our engine auto-resolved one DCGO still

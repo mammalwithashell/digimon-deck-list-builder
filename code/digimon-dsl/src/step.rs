@@ -290,7 +290,7 @@ pub enum StepSpec {
     /// battle area through the effect-initiated engine path. Pair with
     /// `select_own_breeding_permanent optional: true` when printed text says
     /// "you may move..." so the accept/decline choice stays visible.
-    MoveFromBreeding(PlayerArg),
+    MoveFromBreeding(MoveFromBreedingArgs),
 
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
@@ -369,7 +369,7 @@ pub enum StepSpec {
     TrashTopSecurity(TrashTopSecurityArgs),
     TrashBottomSecurity(PlayerArg),
     AddBottomSecurityToHand(PlayerArg),
-    TrashTopSecurityAndCancelReplacement(PlayerArg),
+    TrashTopSecurityAndCancelReplacement(TrashTopSecurityPreventionArgs),
     BounceSelf(EmptyArgs),
     /// Relocate THIS effect's source Option (an in-battle-area field Option)
     /// face-down under a chosen own permanent — a new Option-lifecycle exit
@@ -1541,6 +1541,29 @@ pub struct StructuredBindingRef {
 #[serde(deny_unknown_fields)]
 pub struct PlayerArg {
     pub of: PlayerRef,
+}
+
+/// Promote the real breeding permanent, optionally retaining that exact
+/// permanent for later steps. The result exists only after a successful move
+/// and follows its battle identity rather than a field position or card ID.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MoveFromBreedingArgs {
+    pub of: PlayerRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+}
+
+/// Atomic security payment and cancellation of one impending departure, or
+/// every matching subject in that simultaneous departure when specified.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashTopSecurityPreventionArgs {
+    pub of: PlayerRef,
+    /// Subject qualification only. Payment availability belongs in
+    /// `active_when`, since this filter is evaluated after payment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub all_matching: Option<PredicateSpec>,
 }
 
 /// Args for `return_top_security_to_deck` (G-DSL-RETURN-TOP-SECURITY-TO-DECK).

@@ -3361,10 +3361,11 @@ impl Walk for digimon_dsl::compiled::CompiledDigivolveCandidate {
             "COMPOSITE",
             serde_json::Value::Null,
         );
-        let digimon_dsl::compiled::CompiledDigivolveCandidate { of, zones, filter } = self;
+        let digimon_dsl::compiled::CompiledDigivolveCandidate { of, zones, filter, cost } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         zones.walk(c, &format!("{}.zones", path), "UNCLASSIFIED_STRING");
         filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
+        cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
     }
 }
 impl Walk for digimon_dsl::compiled::CompiledFaceUpSecurityNamed {

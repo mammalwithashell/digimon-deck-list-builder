@@ -146,8 +146,9 @@ mod tests {
         run_example_suite_test(|| {
             let (specs, errs) = load_dir_ok(&examples_dir());
             assert!(errs.is_empty());
+            assert!(!specs.is_empty(), "example fixtures must not be empty");
             let registry = CardRegistry::from_specs("phase1b-test", &specs).expect("compile");
-            assert_eq!(registry.len(), 13);
+            assert_eq!(registry.len(), specs.len());
             assert!(registry.lookup("BT17-015").is_some());
         });
     }

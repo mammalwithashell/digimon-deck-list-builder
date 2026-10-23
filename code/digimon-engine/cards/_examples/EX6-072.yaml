@@ -22,13 +22,11 @@ effects:
   # Printed: "[Main] 1 of your level 6 Digimon and 1 card in the hand may DNA
   # digivolve into a level 7 Digimon card in your hand."
   #
-  # BLOCKED-ON-SUBSTRATE (recipe + cost): see substrate gaps. This YAML is the
-  # faithful-as-possible expression given current vocabulary; it (a) does not pay
-  # the result card's printed DNA digivolution cost (cost: printed clamps to 0 in
-  # play_digivolve.rs), and (b) does not validate the two chosen materials against
-  # the result card's printed DNA recipe (dna_digivolve_hand_partner_inner merges
-  # unconditionally), so an illegal pairing would currently be accepted. Both are
-  # pre-existing engine gaps shared by EX3-008 / BT17-095.
+  # BLOCKED: G-ENGINE-EFFECT-DNA-HAND-PARTNER-DECLARATION.
+  # Printed DNA cost lookup and recipe validation at commit already exist.
+  # Missing correlated legal selection masks, recipe-defined material order,
+  # both-material reducer/payment context, and a typed DNA resume/commit path
+  # prevent faithful admission. This example is not a ready implementation.
   - when: main_from_hand
     optional: true
     summary: "[Main] You may DNA digivolve 1 of your L6 Digimon + 1 hand card into a L7 Digimon card in hand"
@@ -45,7 +43,7 @@ effects:
               - level_eq: 7
           prompt: "Select a level 7 Digimon card in hand to DNA digivolve into"
       # First DNA material — a level-6 Digimon permanent on your field
-      # (DCGO IsLevel6Permanent; recipe restriction unexpressible statically).
+      # (DCGO IsLevel6Permanent; correlated recipe masks remain unsupported).
       - select_own_permanent:
           bind_as: dna_field_material
           optional: true
@@ -55,7 +53,7 @@ effects:
               - level_eq: 6
           prompt: "Select 1 of your level 6 Digimon as a DNA digivolution material"
       # Second DNA material — any 1 card in hand (DCGO IsCardInHand = always true;
-      # recipe restriction is the substrate gap, not expressible here).
+      # correlated recipe masks remain unsupported here).
       - select_hand:
           of: you
           bind_as: dna_hand_material
@@ -63,8 +61,8 @@ effects:
           filter: {}
           prompt: "Select 1 card in hand as the other DNA digivolution material"
       # Merge: field material + hand material, topped by the level-7 result.
-      # cost: printed records intent to pay the DNA cost (currently lowers to 0 —
-      # substrate gap #1). ignore_requirements: false (normal DNA).
+      # Printed DNA cost and final recipe checks exist; the effect declaration
+      # lifecycle described above remains blocked.
       - effect_initiated_dna_digivolve_hand_partner:
           target: dna_field_material
           hand_partner: dna_hand_material

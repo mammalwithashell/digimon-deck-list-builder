@@ -22,6 +22,28 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
+    /// Shared eligibility for a real breeding-to-battle move. Both the action
+    /// and effect paths use this so a DSL cost prompt cannot offer a move the
+    /// eventual commit would reject.
+    pub fn can_move_from_breeding_by_effect(&self, player_id: PlayerId) -> bool {
+        if self.game_over {
+            return false;
+        }
+        let Some(player) = self.players.get(player_id as usize) else {
+            return false;
+        };
+        if player.battle_area.len() >= self.rules.field_slots as usize
+            || player.breeding_area.as_ref()
+                .and_then(|perm| perm.top_card().digimon_dp(&self.card_data)).is_none()
+        {
+            return false;
+        }
+        !self.modifiers.has(
+            PermanentHandle { player: player_id, index: crate::action::space::BREEDING_TARGET as u8 },
+            ModifierType::CannotMove,
+        )
+    }
+
     /// Move from breeding to battle area for a player.
     ///
     /// Phase 8 Task 5: after the egg is promoted to `battle_area`, every
@@ -36,39 +58,19 @@ impl Game {
     /// Process the Training trash list in reverse index order so earlier
     /// deletes don't shift later indices out from under us.
     pub fn move_from_breeding(&mut self, player_id: PlayerId) -> bool {
-        if self.game_over {
-            return false;
-        }
-        let field_slots = self.rules.field_slots;
-        {
-            let player = self.player(player_id);
-            if player.battle_area.len() >= field_slots as usize {
-                return false;
-            }
-            let can_move = player
-                .breeding_area
-                .as_ref()
-                .and_then(|perm| perm.top_card().digimon_dp(&self.card_data))
-                .is_some();
-            if !can_move {
-                return false;
-            }
-        }
-        // Track C / D consult site: `CannotMove` on the breeding-area permanent
-        // blocks the breeding → battle move (player-action AND effect-driven —
-        // `move_from_breeding_by_effect` delegates here). Distinct from
-        // `CannotSuspend` which only blocks orientation flips. The canonical
-        // breeding handle is `{ player, index: BREEDING_TARGET }`; modifier
-        // installers should target that handle to gate the move.
-        let breeding_handle = crate::permanent::PermanentHandle {
-            player: player_id,
-            index: crate::action::space::BREEDING_TARGET as u8,
-        };
-        if self
-            .modifiers
-            .has(breeding_handle, crate::enums::ModifierType::CannotMove)
-        {
-            return false;
+        self.move_from_breeding_with_identity(player_id).is_some()
+    }
+
+    /// Commit a move and retain the resulting incarnation before observers
+    /// can change the field. Some means the move happened, even if that host
+    /// subsequently left during an observer; consumers resolve the identity
+    /// again rather than substituting a later occupant of its original slot.
+    pub(crate) fn move_from_breeding_with_identity(
+        &mut self,
+        player_id: PlayerId,
+    ) -> Option<(PermanentHandle, u64)> {
+        if !self.can_move_from_breeding_by_effect(player_id) {
+            return None;
         }
 
         let player = self.player_mut(player_id);
@@ -86,6 +88,7 @@ impl Game {
                 .battle_area
                 .last()
                 .map(|permanent| permanent.top_card().handle());
+            let moved_identity = self.capture_digivolve_host_identity(moved_handle);
 
             if let Some(card) = moved_card {
                 self.enqueue_triggered(
@@ -135,9 +138,9 @@ impl Game {
                 );
             }
 
-            true
+            Some((moved_handle, moved_identity))
         } else {
-            false
+            None
         }
     }
 

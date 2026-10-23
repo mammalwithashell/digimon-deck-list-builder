@@ -2044,7 +2044,9 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = phase;
         self.game.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            // The chooser may be overridden without changing whose field the
+            // callback indexes. Keep that target ownership available to clients.
+            zone_owner: Some(target_player),
             kind,
             selecting_player,
             previous_phase,

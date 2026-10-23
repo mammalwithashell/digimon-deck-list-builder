@@ -658,6 +658,12 @@ fn collect_candidates_inner(
         // `<Succession>`: an adopted source's top-scope replacements apply too.
         let adopted = game.succession_source_indices(h);
         for (source_index, source) in perm.card_sources.iter().enumerate() {
+            // CR 4.3 §4-7-9: a face-down card under another card has no
+            // referencable card information, including replacement effects.
+            // This scan also revalidates candidates after a parked decision.
+            if source_index + 1 < stack_size && source.face_down {
+                continue;
+            }
             let is_adopted = adopted.contains(&source_index);
             let card_id = source.card_id(&game.card_data).to_string();
             let source_card = source.handle();

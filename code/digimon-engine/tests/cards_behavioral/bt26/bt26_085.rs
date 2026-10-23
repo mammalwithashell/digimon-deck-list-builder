@@ -11,36 +11,25 @@
 //! DCGO: BT26/White/BT26_085.cs.
 
 use super::support::*;
-use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::{
+    build_action_mask,
+    space::{PASS, PLAY_HAND_START, TRASH_EFFECT_START},
+};
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, EffectTiming, Keyword, ModifierType};
+use digimon_engine::enums::{CardColor, EffectTiming, Expiry, Keyword, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::replacement::ReplacementCause;
 
 const CARD_ID: &str = "BT26-085";
 
-/// Stand-in for [Chronomon: Destroy Mode] (BT26-060 is BLOCKED on
-/// <Succession>): carries its printed "[Giant Slayer]: cost 5" digivolve route.
-const DESTROY_MODE_YAML: &str = r#"
-card: T-DM
-name: "Chronomon: Destroy Mode"
-kind: digimon
-level: 7
-color: [black, red]
-cost: 16
-dp: 16000
-traits: [Shaman, TS]
-alt_paths:
-  - kind: digivolve
-    from: { name_contains: "Giant Slayer" }
-    cost: 5
-"#;
+const DESTROY_MODE: &str = "BT26-060";
 
 fn setup() -> DebugRunner {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT26-085")
-        .from_dsl_yaml(DESTROY_MODE_YAML)
-        .expect("destroy mode stand-in")
+        .dsl_card(DESTROY_MODE)
+        .expect("production Chronomon: Destroy Mode")
         .add_card(filler("FILLER"))
         .add_card(digimon("SH2", "Sh Two", CardColor::Red, 2, 0, &["Shaman"]))
         .add_card(digimon("CH3", "Chronomon Three", CardColor::Red, 3, 3, &[]))
@@ -63,6 +52,45 @@ fn setup() -> DebugRunner {
         .start();
     r.set_first_player(0);
     r
+}
+
+fn assert_choice_mask(r: &DebugRunner, expected: &[u16], optional: bool) {
+    let selection = r.game.pending_selection.as_ref().expect("player choice");
+    assert_eq!(selection.selecting_player, 0);
+    assert_eq!(selection.is_optional, optional);
+    let actual: Vec<_> = selection
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|a| *a != PASS)
+        .collect();
+    assert_eq!(actual, expected, "{}", selection.prompt);
+    let mask = build_action_mask(&r.game, 0);
+    for (a, enabled) in mask.iter().enumerate() {
+        assert_eq!(
+            *enabled,
+            if expected.contains(&(a as u16)) || (optional && a == PASS as usize) {
+                1.0
+            } else {
+                0.0
+            },
+            "mask at {a}"
+        );
+    }
+    assert!(build_action_mask(&r.game, 1).iter().all(|v| *v == 0.0));
+}
+
+fn accept_replacement(r: &mut DebugRunner) {
+    let ids: Vec<_> = r
+        .pending_selection_view()
+        .expect("replacement offer")
+        .valid_action_ids
+        .into_iter()
+        .filter(|a| *a != PASS)
+        .collect();
+    assert_eq!(ids.len(), 1);
+    assert_choice_mask(r, &ids, true);
+    r.execute_action(0, ids[0]).unwrap();
 }
 
 #[test]
@@ -161,34 +189,55 @@ fn bt26_085_on_play_grants_opponent_scoped_dp_and_stack_trash_immunity() {
 }
 
 #[test]
-fn bt26_085_would_leave_digivolves_into_destroy_mode_from_trash_free() {
-    let mut r = setup();
-    let h = r.place_on_field(0, CARD_ID, Some(0));
-    push_trash(&mut r, 0, "T-DM");
-    let mem = r.memory();
-    r.game
-        .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
-    let v = r.pending_selection_view().expect("replacement offered");
-    assert!(v.is_optional, "skippable");
-    drain_first(&mut r);
-    let _ = r.auto_resolve();
-    assert_eq!(
-        field_ids(&r, 0),
-        vec!["T-DM"],
-        "digivolved instead of leaving"
-    );
-    assert_eq!(
-        sources(
-            &r,
-            digimon_engine::permanent::PermanentHandle {
-                player: 0,
-                index: 0
-            }
-        ),
-        1
-    );
-    assert_eq!(r.memory(), mem, "without paying the cost");
-    assert!(trash_ids(&r, 0).is_empty());
+fn bt26_085_would_leave_chooses_production_destroy_mode_from_hand_or_trash_free() {
+    for choose_trash in [false, true] {
+        let mut r = setup();
+        let h = r.place_on_field(0, CARD_ID, Some(0));
+        push_hand(&mut r, 0, DESTROY_MODE);
+        push_trash(&mut r, 0, DESTROY_MODE);
+        push_hand(&mut r, 0, "SH6");
+        push_trash(&mut r, 0, "SH6");
+        let mem = r.memory();
+        r.game
+            .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+        accept_replacement(&mut r);
+        // Both printed zones remain visible, and non-Destroy Mode cards are excluded.
+        assert_choice_mask(&r, &[PLAY_HAND_START, TRASH_EFFECT_START], false);
+        r.execute_action(
+            0,
+            if choose_trash {
+                TRASH_EFFECT_START
+            } else {
+                PLAY_HAND_START
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            field_ids(&r, 0),
+            vec![DESTROY_MODE],
+            "production card replaces the leave"
+        );
+        assert_eq!(sources(&r, h), 1);
+        assert_eq!(r.memory(), mem, "without paying the cost");
+        assert_eq!(
+            hand_ids(&r, 0)
+                .iter()
+                .filter(|id| id.as_str() == DESTROY_MODE)
+                .count(),
+            usize::from(choose_trash)
+        );
+        assert_eq!(
+            trash_ids(&r, 0)
+                .iter()
+                .filter(|id| id.as_str() == DESTROY_MODE)
+                .count(),
+            usize::from(!choose_trash)
+        );
+        assert!(hand_ids(&r, 0).contains(&"SH6".to_string()));
+        assert!(trash_ids(&r, 0).contains(&"SH6".to_string()));
+        assert!(!trash_ids(&r, 0).contains(&CARD_ID.to_string()));
+        assert!(r.game.pending_selection.is_none());
+    }
 }
 
 #[test]
@@ -205,13 +254,24 @@ fn bt26_085_would_leave_without_destroy_mode_or_declined_leaves() {
 
     let mut r = setup();
     let h = r.place_on_field(0, CARD_ID, Some(0));
-    push_hand(&mut r, 0, "T-DM");
+    push_hand(&mut r, 0, DESTROY_MODE);
+    push_trash(&mut r, 0, DESTROY_MODE);
     r.game
         .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+    let ids: Vec<_> = r
+        .pending_selection_view()
+        .unwrap()
+        .valid_action_ids
+        .into_iter()
+        .filter(|a| *a != PASS)
+        .collect();
+    assert_choice_mask(&r, &ids, true);
     pass(&mut r, 0);
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).is_empty());
-    assert_eq!(hand_ids(&r, 0), vec!["T-DM"]);
+    assert_eq!(hand_ids(&r, 0), vec![DESTROY_MODE]);
+    assert!(trash_ids(&r, 0).contains(&DESTROY_MODE.to_string()));
+    assert!(trash_ids(&r, 0).contains(&CARD_ID.to_string()));
 }
 
 #[test]
@@ -219,8 +279,8 @@ fn bt26_085_would_leave_is_not_once_per_turn() {
     let mut r = setup();
     let h = r.place_on_field(0, CARD_ID, Some(0));
     let other = r.place_on_field(0, CARD_ID, Some(0));
-    push_trash(&mut r, 0, "T-DM");
-    push_hand(&mut r, 0, "T-DM");
+    push_trash(&mut r, 0, DESTROY_MODE);
+    push_hand(&mut r, 0, DESTROY_MODE);
     r.game
         .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
     drain_first(&mut r);
@@ -240,5 +300,30 @@ fn bt26_085_would_leave_is_not_once_per_turn() {
     );
     drain_first(&mut r);
     let _ = r.auto_resolve();
-    assert_eq!(field_ids(&r, 0), vec!["T-DM", "T-DM"]);
+    assert_eq!(field_ids(&r, 0), vec![DESTROY_MODE, DESTROY_MODE]);
+}
+
+#[test]
+fn bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave() {
+    let mut r = setup();
+    let h = r.place_on_field(0, CARD_ID, Some(0));
+    push_hand(&mut r, 0, DESTROY_MODE);
+    push_trash(&mut r, 0, DESTROY_MODE);
+    let memory = r.memory();
+    r.game
+        .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+    accept_replacement(&mut r);
+    assert_choice_mask(&r, &[PLAY_HAND_START, TRASH_EFFECT_START], false);
+    // The selected payment is legal at offer time, but cannot commit after this gate.
+    r.game.modifiers.add(
+        h,
+        ModifierEntry::simple(ModifierType::CannotDigivolve, 0, Expiry::Permanent, 0),
+    );
+    r.execute_action(0, TRASH_EFFECT_START).unwrap();
+    assert!(field_ids(&r, 0).is_empty());
+    assert_eq!(hand_ids(&r, 0), vec![DESTROY_MODE]);
+    assert!(trash_ids(&r, 0).contains(&DESTROY_MODE.to_string()));
+    assert!(trash_ids(&r, 0).contains(&CARD_ID.to_string()));
+    assert_eq!(r.memory(), memory);
+    assert!(r.game.pending_selection.is_none());
 }

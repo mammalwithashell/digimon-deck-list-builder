@@ -309,17 +309,9 @@ fn bt20_056_ouryuken_replacement_does_not_fire_for_own_effect_leave() {
     );
 }
 
-// ─────────────────── Stubbed clause (genuine open gap) ───────────────────
-
-// The [On Play][When Digivolving] "if during an attack, 1 breeding-area Digimon
-// may digivolve into a level<=6 [Chronicle] Digimon from hand or trash without
-// paying the cost" clause requires two genuinely-missing substrate pieces
-// (gap G-BREEDING-DIGIVOLVE-UNION-ZONES, status OPEN, size L):
-//   1. effect-initiated digivolve that can target the BREEDING-AREA permanent
-//      (the engine hard-rejects target.index >= battle_area.len()), and
-//   2. a `during_attack` predicate leaf (game.pending_attack.is_some()).
-// Authoring it would require editing shared engine/DSL source, which is out of
-// scope for this card-author task. Stubbed and gap-routed.
-#[ignore = "pending: G-BREEDING-DIGIVOLVE-UNION-ZONES — during-attack breeding-area digivolve into a Lv<=6 [Chronicle] from hand/trash needs effect-initiated breeding digivolve + a during_attack predicate (open engine/DSL substrate)"]
-#[test]
-fn bt20_056_during_attack_breeding_digivolves_chronicle_from_hand_or_trash() {}
+// Remaining source-confirmed capability gap (no passing or failing test claimed):
+// the attack-context hand/trash evolution tail needs a breeding-aware effect
+// evolution lifecycle. `during_attack`, union-zone selection and breeding
+// selectors already exist. See G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET.
+// Keep this card PARTIAL until identity, parked choices, replacement attribution,
+// commit/result capture and breeding trigger suppression are implemented/tested.

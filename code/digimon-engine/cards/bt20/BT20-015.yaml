@@ -1,0 +1,65 @@
+# Printed image and official bundle: red/black Lv.4 circles, each cost 4.
+# DCGO BT20_015.cs: optional breeding play and an independent attack-only tail.
+card: BT20-015
+name: Hisyaryumon
+kind: digimon
+level: 5
+color: [red, black]
+cost: 7
+dp: 7000
+traits: [Beast Dragon, X Antibody, Chronicle]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Ginryumon
+        - all_of:
+            - level_eq: 4
+            - trait_has: Chronicle
+    cost: 3
+effects:
+  - when: [on_play, when_digivolving]
+    process:
+      - select_hand:
+          of: you
+          bind_as: chosen
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: Dorumon
+                  - name_is: Ryudamon
+              - can_play_to_breeding_from_hand: true
+          prompt: "You may play 1 Dorumon or Ryudamon into your empty breeding area"
+      - play_to_breeding_from_hand: { of: you, hand_index: chosen }
+      - if:
+          condition: { during_attack: true }
+          then:
+            - select_own_permanent:
+                bind_as: boosted
+                filter: { kind: digimon }
+                prompt: "Choose 1 Digimon to gain Security A. +1 and +5000 DP"
+            - grant_keyword:
+                target: boosted
+                keyword: SecurityAttackPlus
+                value: 1
+                expiry: end_of_opponents_turn
+            - add_dp_modifier:
+                target: boosted
+                value: 5000
+                expiry: end_of_opponents_turn
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    target: {}
+    modifier: DoesNotActivateOptionSecurityEffects
+    summary: "Your Turn: this Digimon does not activate Security effects on Option cards it checks"

@@ -1421,6 +1421,82 @@ impl Game {
         true
     }
 
+    /// Read-only candidate legality for an effect that pays the specified
+    /// cost. Existing route-only predicates intentionally do not call this:
+    /// their consuming effects may waive or reduce the printed cost.
+    pub(crate) fn can_effect_digivolve_from_source_with_cost(
+        &self,
+        acting_player: PlayerId,
+        source_ref: CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: CostDelta,
+    ) -> bool {
+        let Some(host) = self.players.get(target.player as usize)
+            .and_then(|player| player.battle_area.get(target.index as usize)) else {
+            return false;
+        };
+        if self.modifiers.has(target, ModifierType::CannotDigivolve)
+            || self.modifiers.player_has(acting_player, ModifierType::CannotDigivolveDigimonByEffect)
+        {
+            return false;
+        }
+        let Some(card) = self.card_source_ref_peek(source_ref) else { return false; };
+        let result_card = card.handle();
+        let target_top = host.top_card().handle();
+        let routes: Vec<_> = self.all_digivolve_routes_for_card(card, target).into_iter()
+            .filter(|route| !route.app_fusion).collect();
+        if routes.is_empty() { return false; }
+
+        let mut probe = self.clone();
+        // An installed caller choice is not part of this payment search.
+        // Keep physical state/provenance, but isolate the probe's own frames.
+        probe.pending_selection = None;
+        probe.pending_selection_resume = None;
+        probe.after_selection_resume_hooks.0.clear();
+        probe.pending_player_digivolve_reduction = 0;
+        probe.pending_interactive_digivolve_reduction = 0;
+        probe.pending_cost_reduction_amount_override = None;
+        let target_identity = probe.capture_digivolve_host_identity(target);
+        let (source_carrier_identity, source_carrier_top) = match source_ref {
+            CardSourceRef::Material(carrier, _) | CardSourceRef::Link(carrier, _) => {
+                let identity = probe.capture_digivolve_host_identity(carrier);
+                let top = probe.player(carrier.player).battle_area[carrier.index as usize].top_card().handle();
+                (Some(identity), Some(top))
+            }
+            _ => (None, None),
+        };
+        let declaration = EffectDigivolveCostChoiceState {
+            acting_player, source_ref, result_card, source_carrier_top, source_carrier_identity,
+            target_player: target.player, target_identity, target_top,
+            dna_origin: probe.current_dna_origin, cost_delta,
+            waiver: DigivolveRequirementWaiver::None, source: PlaySource::ByEffect,
+            printed_costs: Vec::new(), effect_source_player: probe.effect_source_player,
+            trigger_context: probe.current_trigger_context.clone(), result_clause: None,
+            outer_conts: Vec::new(),
+        };
+        let cost_target = CostTargetContext {
+            card: result_card, from_hand: matches!(source_ref, CardSourceRef::Hand(_, _)),
+            is_digivolve: true, target_permanents: [Some(target), None],
+        };
+        let effective_delta = probe.effect_digivolve_cost_delta(acting_player, cost_delta);
+        routes.into_iter().any(|route| probe.effect_digivolve_route_is_affordable(
+            &declaration, cost_target, effective_delta.resolve(route.memory_cost), route,
+        ))
+    }
+
+    /// The effect's explicit reduction is subject to the same prohibition
+    /// whether checking a candidate or committing a selected route.
+    fn effect_digivolve_cost_delta(&self, player: PlayerId, delta: CostDelta) -> CostDelta {
+        match delta {
+            CostDelta::Reduce(n) if n > 0 && (
+                self.modifiers.player_has(player, ModifierType::CannotReduceCost)
+                || self.modifiers.player_has(player, ModifierType::CannotReduceDigivolveCost)
+                || self.modifiers.any_other_player_has(player, ModifierType::OpponentCannotReduceDigivolveCost)
+            ) => CostDelta::Reduce(0),
+            other => other,
+        }
+    }
+
     /// Existential search over the same legal payment prompts used at commit.
     /// Only isolated clones consume payments or OPTs; the live declaration
     /// retains every player choice, including an optional decline.
@@ -1511,8 +1587,8 @@ impl Game {
             {
                 continue;
             }
-            let payable = (i32::from(base_cost) - reduction).max(0);
-            if i32::from(branch.memory) - payable >= i32::from(branch.rules.memory_range.0) {
+            let payable = (i32::from(base_cost) - reduction).max(0) as u16;
+            if branch.can_pay_memory_for(declaration.acting_player, payable) {
                 return true;
             }
         }
@@ -1741,7 +1817,7 @@ impl Game {
         self.current_phase = GamePhase::SelectTarget;
         let resumed = state.clone();
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            zone_owner: Some(state.acting_player),
             kind: SelectionKind::OwnField,
             selecting_player: state.acting_player,
             previous_phase,
@@ -2734,24 +2810,7 @@ impl Game {
         // can't reduce digivolution costs" voids it (Q&A Q7148: the digivolve
         // still happens, at the unreduced cost). Mirrors the gates in
         // `collect_before_pay_cost_reducers`.
-        let effective_delta = match cost_delta {
-            crate::enums::CostDelta::Reduce(n)
-                if n > 0
-                    && (self
-                        .modifiers
-                        .player_has(player_id, ModifierType::CannotReduceCost)
-                        || self
-                            .modifiers
-                            .player_has(player_id, ModifierType::CannotReduceDigivolveCost)
-                        || self.modifiers.any_other_player_has(
-                            player_id,
-                            ModifierType::OpponentCannotReduceDigivolveCost,
-                        )) =>
-            {
-                crate::enums::CostDelta::Reduce(0)
-            }
-            other => other,
-        };
+        let effective_delta = self.effect_digivolve_cost_delta(player_id, cost_delta);
         let cost_target_ctx = CostTargetContext {
             card: evo_card_handle,
             from_hand: matches!(source_ref, CardSourceRef::Hand(_, _)),
@@ -3026,7 +3085,7 @@ impl Game {
         // 3. Remove the card from its source and pay memory. If payment fails,
         // restore the source exactly where it came from.
         if let crate::enums::CardSourceRef::Security(defender, index) = source_ref {
-            if !self.pay_memory(effective_cost) {
+            if !self.pay_memory_for(player_id, effective_cost) {
                 self.logger.log(&format!(
                     "[Rejected] effect_initiated_digivolve: cannot pay memory cost {} (current memory={})",
                     effective_cost, self.memory
@@ -3063,7 +3122,7 @@ impl Game {
                 .log("[Rejected] effect_initiated_digivolve: source ref changed before take");
             return false;
         };
-        if !self.pay_memory(effective_cost) {
+        if !self.pay_memory_for(player_id, effective_cost) {
             self.logger.log(&format!(
                 "[Rejected] effect_initiated_digivolve: cannot pay memory cost {} (current memory={})",
                 effective_cost, self.memory

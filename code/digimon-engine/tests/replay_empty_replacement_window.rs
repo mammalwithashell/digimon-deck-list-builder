@@ -1,9 +1,11 @@
 //! Preserve the recorded legal path across empty replacement windows.
 //! This test consumes the committed recording; it never regenerates digests.
 use digimon_engine::{
+    action::space,
     card_data::CardData,
     recorder::{ReplayDeckRef, VerificationReplayRecording},
     runners::HeadlessRunner,
+    selection::SelectionKind,
 };
 #[test]
 fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
@@ -12,7 +14,7 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
     let path=root.join("qa/replay-goldens/refresh_v2_generated_greedy_001_digilab_0286bd08d2eb_vs_digilab_03052bcf3884_seed_40521419.replay.json");
     let rec: VerificationReplayRecording =
         serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
-    assert_eq!(rec.engine_schema_version, 1, "schema retained; only reviewed source-attribution step53 migrated");
+    assert_eq!(rec.engine_schema_version, 1, "schema retained across the documented curated migrations");
     let digest_version = digimon_engine::recorder::VerificationDigestVersion::from_engine_schema(rec.engine_schema_version).unwrap();
     // Migrated 2026-10-17 for the §15-7-1 optional-condition prompt (da93979e8): one accept
     // action (59) inserted after step 44, so the recorded path now has 65 actions and digests.
@@ -29,8 +31,15 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
     // (CR 4.3 §3-4-7-4; G-ENGINE-BREEDING-AREA-INHERITED-TRIGGERS-ACTIVE): the breeding-area
     // BT21-001 is never offered, so its three declines (steps 61, 63, 65) are removed
     // (64 actions). Digests 1-59 are unchanged.
-    assert_eq!(rec.actions.len(), 64);
-    assert_eq!(rec.digests.len(), 64);
+    // Migrated 2026-10-22 for P-103's mandatory red-card add and independent reveal cleanup:
+    // replace its two illegal declines with explicit physical red-card picks and insert the
+    // sole remainder's mandatory deck-bottom choice (66 actions). Remap later choices by
+    // physical source/target handles, preserving BT24-082 acceptance at step 46, both
+    // BT24-016 source-attributed observers at step 56, and the real pending clone at step 59
+    // with its complete seven-action suffix. The original 64-action historical trace was
+    // independently verified before constructing this corrected production replay.
+    assert_eq!(rec.actions.len(), 66);
+    assert_eq!(rec.digests.len(), 66);
     let deck = |d: &ReplayDeckRef| match d {
         ReplayDeckRef::Inline { cards } => cards.clone(),
         _ => panic!("regression fixture requires inline decks"),
@@ -61,7 +70,45 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
             "legal action at {}",
             i + 1
         );
+        if let Some((source, selected, remainder)) = match i {
+            12 => Some((101, 66, false)),
+            13 => Some((101, 91, true)),
+            49 => Some((49, 10, false)),
+            50 => Some((49, 52, true)),
+            _ => None,
+        } {
+            let pending = runner.game.pending_selection.as_ref().expect("P-103 choice");
+            assert_eq!(pending.source_card.0, source);
+            assert_eq!(
+                runner.game.card_data_for_handle(pending.source_card).unwrap().card_id,
+                "P-103"
+            );
+            assert_eq!(pending.kind, if remainder {
+                SelectionKind::OrderedPermutation { remaining: 1 }
+            } else {
+                SelectionKind::Reveal
+            });
+            assert!(!pending.is_optional, "both P-103 choices are mandatory");
+            assert_eq!(runner.get_action_mask()[space::PASS as usize], 0.0);
+            let revealed_index = action.action_id.checked_sub(space::SEL_REVEAL_START)
+                .expect("physical revealed-card choice") as usize;
+            assert_eq!(runner.game.revealed_cards[revealed_index].handle().0, selected);
+        }
+        if i == 45 {
+            let pending = runner.game.pending_selection.as_ref().expect("curated BT24-082 accept");
+            assert_eq!(pending.kind, SelectionKind::Replacement);
+            assert_eq!(pending.source_card.0, 43);
+            assert_eq!(runner.game.card_data_for_handle(pending.source_card).unwrap().card_id, "BT24-082");
+            assert_eq!(action.action_id, space::REPLACEMENT_ACCEPT);
+        }
         runner.step(action.action_id);
+        if i == 13 || i == 50 {
+            let source = if i == 13 { 101 } else { 49 };
+            assert!(runner.game.revealed_cards.is_empty(), "P-103 finishes reveal cleanup");
+            assert!(runner.game.pending_selection.is_none());
+            assert!(runner.game.players[action.seat as usize].battle_area.iter()
+                .any(|p| p.top_card().handle().0 == source), "P-103 reaches Delay placement");
+        }
         assert_eq!(
             runner.game.verification_digest_with_version(digest_version),
             rec.digests[i],
@@ -88,7 +135,7 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
                 i + 1
             );
         }
-        if i == 53 {
+        if i == 55 {
             use digimon_engine::enums::EffectTiming;
             use digimon_engine::trigger_context::EventCause;
             let affected: Vec<_> = runner.game.effect_queue.iter()
@@ -104,11 +151,10 @@ fn empty_replacement_window_preserves_recorded_path_and_pending_clone() {
                 assert_eq!(source.source_permanent, Some(digimon_engine::permanent::PermanentHandle {player:0,index:0}));
             }
         }
-        if i == 56 {
-            assert!(
-                runner.game.pending_selection.is_some(),
-                "clone actual pending step57"
-            );
+        if i == 58 {
+            let pending = runner.game.pending_selection.as_ref().expect("clone actual pending step59");
+            assert_eq!(pending.kind, SelectionKind::Hand);
+            assert_eq!(pending.source_card.0, 8);
             let mut branch = make();
             branch.game = runner.game.clone();
             assert_eq!(branch.get_action_mask(), runner.get_action_mask());

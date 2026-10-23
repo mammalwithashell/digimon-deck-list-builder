@@ -1,6 +1,8 @@
 use sha2::{Digest, Sha256};
 #[path = "verification_cost_receipts.rs"]
 mod cost_receipt_hash;
+#[path = "verification_selected_pins.rs"]
+mod selected_pin_hash;
 
 use crate::card_source::CardSource;
 use crate::game::Game;
@@ -40,6 +42,7 @@ impl Game {
         }
 
         if version == VerificationDigestVersion::V3 {
+            selected_pin_hash::write(&mut h, self);
             let carriers = crate::replacement::verification_plural_carriers(self);
             if !carriers.is_empty() {
                 debug_field(&mut h, "replacement_plural_carrier_identities", &carriers);

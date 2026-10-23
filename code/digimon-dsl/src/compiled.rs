@@ -435,9 +435,15 @@ pub struct CompiledPredicate {
     #[serde(default)]
     pub can_digivolve_onto: Option<String>,
     #[serde(default)]
+    pub can_digivolve_onto_with_cost: Option<CompiledDigivolveCostPredicate>,
+    #[serde(default)]
     pub can_play_from_effect_without_cost: Option<bool>,
     #[serde(default)]
     pub can_play_to_breeding_from_hand: Option<bool>,
+    /// Subject must be an existing breeding permanent. Compare its real move
+    /// eligibility, including field capacity and CannotMove, to this value.
+    #[serde(default)]
+    pub can_move_from_breeding_by_effect: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     /// `dp_lte` is the DP maximum of a DELETION effect ("delete 1 Digimon with
@@ -937,13 +943,22 @@ pub struct CompiledExistential {
 
 /// Compiled form of `has_digivolve_candidate` — "some card in `zones` of `of`
 /// matches `filter` and has a normal-digivolve route onto the subject
-/// permanent". `zones` is validated to `Hand` / `Trash` only.
+/// permanent". Zones are `Hand` / `Trash` / owner-filtered `Reveal`.
+/// An explicit cost opts into payment feasibility; None keeps route-only
+/// compatibility with existing free-evolution card scripts.
 /// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledDigivolveCandidate {
     pub of: CompiledPlayerRef,
     pub zones: Vec<CompiledZone>,
     pub filter: Option<Box<CompiledPredicate>>,
+    pub cost: Option<CompiledCostDelta>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDigivolveCostPredicate {
+    pub target: String,
+    pub cost: CompiledCostDelta,
 }
 
 /// Compiled form of `no_face_up_security_named`. Exactly one of
@@ -2001,6 +2016,8 @@ pub enum CompiledStep {
     },
     MoveFromBreeding {
         of: CompiledPlayerRef,
+        #[serde(default)]
+        bind_as: Option<String>,
     },
     PlayFromHand {
         of: CompiledPlayerRef,
@@ -2231,6 +2248,8 @@ pub enum CompiledStep {
     },
     TrashTopSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
+        /// Post-payment subject filter; omission retains singular prevention.
+        all_matching: Option<CompiledPredicate>,
     },
     BounceSelf,
     PlaceSelfAtSecurity {

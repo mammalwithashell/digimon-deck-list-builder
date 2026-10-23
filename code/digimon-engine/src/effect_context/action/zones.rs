@@ -239,6 +239,14 @@ impl<'a> EffectContext<'a> {
         self.game.move_from_breeding_by_effect(player)
     }
 
+    /// Preserve the identity captured at promotion, before move observers.
+    pub(crate) fn move_from_breeding_with_identity(
+        &mut self,
+        player: PlayerId,
+    ) -> Option<(PermanentHandle, u64)> {
+        self.game.move_from_breeding_with_identity(player)
+    }
+
     /// Bounce a permanent to its owner's hand. See `Game::return_to_hand`.
     pub fn return_to_hand(
         &mut self,

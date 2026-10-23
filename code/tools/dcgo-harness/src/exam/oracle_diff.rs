@@ -398,14 +398,25 @@ mod tests {
 
     #[test]
     fn a_diverged_recorded_run_reports_its_first_divergence() {
+        // Preserve the historical evidence on disk. The negative control is
+        // an explicitly synthetic memory difference in a temporary copy.
+        let work = tempfile::tempdir().unwrap();
+        let sidecar = work.path().join("ST23-04-effect0.state.jsonl");
+        std::fs::copy(fixture("ST23-04-effect0.jsonl"), work.path().join("ST23-04-effect0.jsonl")).unwrap();
+        let original = std::fs::read_to_string(fixture("ST23-04-effect0.state.jsonl")).unwrap();
+        std::fs::write(&sidecar, crate::exam::test_support::with_synthetic_st23_memory_divergence(&original)).unwrap();
         let od = diff_against_sidecar(
             &scenario_text("ST23-04-effect0"),
-            &fixture("ST23-04-effect0.state.jsonl"),
+            &sidecar,
             &crate::exam::test_support::load_card_data(),
         )
         .unwrap();
         assert!(!od.report.is_clean());
-        assert_eq!(od.report.first().map(|d| d.step), Some(14));
+        let first = od.report.first().expect("synthetic memory divergence");
+        assert_eq!(first.step, 12);
+        assert_eq!(first.diffs[0].path, "memory");
+        assert_eq!(first.diffs[0].ours, "-3");
+        assert_eq!(first.diffs[0].dcgo, "-2");
     }
 
     #[test]

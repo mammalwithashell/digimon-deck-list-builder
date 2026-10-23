@@ -1912,18 +1912,45 @@ Digivolving] trims "both players' security stacks so they have 3 cards left" â�
 - **Cards closed:** BT21-084, BT23-079, P-241, BT24-087 (trash + System/Life/Transmutation filter) â€” all PARTIALâ†’IMPLEMENTED. **BT25-089** had its app-fuse rider shipped too, but remains PARTIAL on the *separate* `G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES` DSL gap (the [Main] link source "from your Digimon's digivolution cards"), which is unrelated to App Fuse.
 - **Tests:** `tests/cards_behavioral/app_fuse_primitive.rs` (8 primitive tests) + `tests/app_fuse_commit.rs` (zone-parameterized commit) + per-card app-fuse tests on the 5 cards. Spec: `docs/superpowers/specs/2026-06-13-effect-initiated-app-fuse-design.md`; plan: `docs/superpowers/plans/2026-06-13-effect-initiated-app-fuse.md`.
 
-## Effect-initiated DNA digivolve does not pay the result card's printed DNA cost  [G-ENGINE-DNA-PRINTED-COST]
-**Status: RESOLVED (2026-07-03, DNA workstream).** `lower_dna_cost` routes `cost: printed` through printed-cost lookup (pair/hand-partner/field-trash variants); cost 0/free users unaffected. Tests: tests/dna_printed_cost_dsl.rs (4).
-Surfaced by: EX6-072 Mega Digimon Assembly! (migrate-examples-to-dsl, 2026-06-14); PRE-EXISTING, shared by EX3-008 (`cost: printed`) and BT17-095.
-`effect_initiated_dna_digivolve` / `effect_initiated_dna_digivolve_hand_partner` take a `cost: CostDelta`; `cost: printed` lowers via `lower_cost_delta` to `Reduce(0)` (play_digivolve.rs â€” "DNA printed-cost lookup is not available here"), so the result card's printed `dna_costs` are never deducted from memory. DCGO passes `payCost=true`.
-Fix: a `cost: printed`/`dna_printed` that resolves the result card's printed DNA digivolution cost and pays it for the effect-initiated DNA verbs.
-Status: open (pre-existing; affects all effect-initiated DNA cards).
+## Effect-initiated DNA printed cost [G-ENGINE-DNA-PRINTED-COST] — RESOLVED
 
-## Effect-initiated DNA digivolve does not validate the result card's printed recipe  [G-ENGINE-DNA-RECIPE-ENFORCEMENT]
-**Status: RESOLVED (2026-07-03, DNA workstream).** Commit-time recipe backstop on all three effect-initiated DNA verbs (both orderings, slash-colours) + mask-level exclusion already via dna_pair_can_reach_hand_card (pinned). Also fixed the latent card_store fingerprint bug (dna_costs content now hashed).
-Surfaced by: EX6-072; PRE-EXISTING, shared by BT17-095 / EX3-008.
-`Game::dna_digivolve_hand_partner_inner` (game/mod.rs:1895) merges the two chosen materials unconditionally â€” it does NOT validate them against the result card's printed DNA recipe (`jogressCondition`). DCGO gates with `CardSource.CanJogressFromTargetPermanents` (each material vs the result's `jogressCondition.elements[i].EvoRootCondition`). DSL selection filters are static and cannot depend on the dynamically-chosen result, so enforcement must live in the engine primitive (validate/abort illegal pairings; ideally restrict the candidate set).
-Status: open (pre-existing; affects effect-initiated DNA cards).
+Printed-cost lookup shipped in the 2026-07-03 DNA workstream. `lower_dna_cost`
+reads the selected result's printed cost for field-pair, hand-partner and
+field-trash variants. Existing evidence: `tests/dna_printed_cost_dsl.rs`.
+The October source audit confirms this implementation; EX6-072's old comment
+that printed cost always becomes zero is stale. Payment lifecycle gaps are
+separate and remain open below.
+
+## Effect-initiated DNA recipe backstop [G-ENGINE-DNA-RECIPE-ENFORCEMENT] — RESOLVED SLICE
+
+Commit-time recipe checks shipped in the 2026-07-03 DNA workstream and accept
+both material assignments and slash colors. Hand-partner commit rejects a
+result used as its own physical material. This does not establish that every
+DSL selection offers only legal and payable continuations. EX6-072's static
+result/material filters still need the correlated eligibility capability below.
+
+## Effect DNA hand-partner declaration [G-ENGINE-EFFECT-DNA-HAND-PARTNER-DECLARATION] — OPEN (2026-10-22)
+
+EX6-072 remains blocked after two independent source reviews. The existing
+ordinary effect evolution declaration pins one host and one result. Its reducer
+advancement and affordability probe reconstruct one-host cost context, and its
+completion resumes ordinary evolution. It cannot safely stand in for a DNA
+operation with two materials, two origins and a chosen recipe orientation.
+
+Required: a typed DNA declaration carrying all physical identities, original
+zones, recipe/orientation, payer and effect context; shared correlated candidate
+and payment preflight; mandatory/optional interactive reducers and observers;
+DNA-specific revalidation, resume and commit. The real execution must surface
+all choices and use the same payment logic as the clone-only candidate probe.
+Correct the current hand-partner material order and inactive-player payment as
+part of that tested lifecycle. Do not claim admission from recipe-only masks.
+
+The hand-partner verb has two direct YAML consumers, EX6-072 and BT17-095.
+Related effect field-pair and trash-partner paths also merit payment auditing;
+this is not a finding that every consumer has independently failed a card exam.
+No action-space or tensor change is inherently required. Exact acceptance
+controls and related consumers are recorded in `qa/archetype-qa/engine-gaps.md`.
+This is source assessment, not new runtime or oracle evidence.
 
 ## Store-champs June-2026 audit â€” Three Musketeers BeelStarmon + Galacticmon (2026-07-02)
 

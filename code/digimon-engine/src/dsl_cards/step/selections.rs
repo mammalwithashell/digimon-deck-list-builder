@@ -37,6 +37,25 @@ use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind};
 use crate::trigger_context::TriggerContext;
 
+fn bind_selected_battle_permanent(
+    game: &mut crate::game::Game,
+    bindings: &mut Bindings,
+    name: &str,
+    handle: PermanentHandle,
+) {
+    if game
+        .players
+        .get(handle.player as usize)
+        .and_then(|player| player.battle_area.get(handle.index as usize))
+        .is_some()
+    {
+        let identity = game.capture_digivolve_host_identity(handle);
+        bindings.insert_selected_permanent_with_identity(name, handle, identity);
+    } else {
+        bindings.clear_for_merge(name);
+    }
+}
+
 fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Option<DistinctByMode> {
     use digimon_dsl::compiled::CompiledDistinctBy;
     d.map(|c| match c {
@@ -441,7 +460,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_permanent(name, h);
+                        bind_selected_battle_permanent(ctx.game, &mut b, name, h);
                     }
                     match post {
                         None => {
@@ -699,7 +718,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_permanent(name, handle);
+                        bind_selected_battle_permanent(ctx.game, &mut b, name, handle);
                     }
                     run_tail_preserving_trigger_context(
                         &mut ctx,
@@ -1046,7 +1065,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_permanent(name, left);
+                        bind_selected_battle_permanent(ctx.game, &mut b, name, left);
                     }
                     install_select_any_permanent(
                         &mut ctx,
@@ -1301,7 +1320,7 @@ pub(crate) fn run_resume(
                 game.resolve_source_move_anchor(target, false),
             ) {
                 for cont in &mut outer_conts {
-                    cont.bindings.insert_permanent(&name, host);
+                    bind_selected_battle_permanent(game, &mut cont.bindings, &name, host);
                 }
             }
             run_outer_conts(game, outer_conts);
@@ -2702,9 +2721,19 @@ pub(crate) fn install_count_capped_permanent_resume_step(
     // G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N.
     let is_optional = picked >= effective_min || (state.optional_zero && picked == 0);
     let valid_action_ids: Vec<u16> = state.candidates.iter().map(|(a, _)| *a).collect();
+    let zone_owner = match state.field_kind {
+        SelectionKind::OwnField | SelectionKind::OppField => state
+            .candidates
+            .first()
+            .map(|(_, handle)| handle.player)
+            .filter(|owner| {
+                state.candidates.iter().all(|(_, handle)| handle.player == *owner)
+            }),
+        _ => None,
+    };
     game.current_phase = crate::enums::GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
-        zone_owner: None,
+        zone_owner,
         kind: state.field_kind,
         selecting_player: state.selecting_player,
         previous_phase: state.previous_phase,
@@ -2931,7 +2960,7 @@ fn install_per_color_delete_resume_step(
     let prompt = state.prompt.replace("{color}", color_name(color));
     game.current_phase = GamePhase::SelectTarget;
     game.pending_selection = Some(PendingSelection {
-        zone_owner: None,
+        zone_owner: Some(state.opponent),
         kind: SelectionKind::OppField,
         selecting_player: state.selecting_player,
         previous_phase: state.previous_phase,
@@ -4348,6 +4377,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 compose_then_tail(then, tail),
+                tail.to_vec(),
                 bindings,
                 runtime.clone(),
             ) {
@@ -6150,7 +6180,7 @@ fn install_select_own_permanent(
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_permanent(name, handle);
+                bind_selected_battle_permanent(cb_ctx.game, &mut b, name, handle);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
@@ -7205,7 +7235,7 @@ fn install_select_opponent_permanent(
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_permanent(name, handle);
+                bind_selected_battle_permanent(cb_ctx.game, &mut b, name, handle);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
@@ -7424,7 +7454,7 @@ fn install_select_any_permanent(
             );
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_permanent(name, handle);
+                bind_selected_battle_permanent(cb_ctx.game, &mut b, name, handle);
             }
             run_tail_preserving_trigger_context(
                 &mut cb_ctx,
@@ -7584,7 +7614,7 @@ fn install_select_dna_pair(
                 override_pin,
             );
             let mut b = bindings.clone();
-            b.insert_permanent(&bind_left_as, left);
+            bind_selected_battle_permanent(cb_ctx.game, &mut b, &bind_left_as, left);
             install_select_any_permanent(
                 &mut cb_ctx,
                 right_filter,
@@ -8097,6 +8127,15 @@ fn install_count_capped_permanent_step(
     // G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N.
     let is_optional = picked >= effective_min || (optional_zero && picked == 0);
     let valid_action_ids = candidates.iter().map(|(action, _)| *action).collect();
+    // Relative field prompts address one candidate board even when the
+    // chooser differs. Derive that owner from the actual callback handles.
+    let zone_owner = match field_kind {
+        SelectionKind::OwnField | SelectionKind::OppField => candidates
+            .first()
+            .map(|(_, handle)| handle.player)
+            .filter(|owner| candidates.iter().all(|(_, handle)| handle.player == *owner)),
+        _ => None,
+    };
     let shared_cb: Arc<
         Mutex<Option<Box<dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync>>>,
     > = Arc::new(Mutex::new(Some(final_callback)));
@@ -8105,7 +8144,7 @@ fn install_count_capped_permanent_step(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
-        zone_owner: None,
+        zone_owner,
         // Reuse the single-target field-selection kind so the frontend's
         // field-click router (which keys off `OppField`/`OwnField`, not the
         // phase or id range) can map board clicks to these picks. The
@@ -8247,10 +8286,12 @@ fn install_select_reveal(
     prompt: String,
     optional: bool,
     tail: Vec<CompiledStep>,
+    decline_tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
 ) -> bool {
     let tail = Arc::new(tail);
+    let decline_tail = Arc::new(decline_tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
@@ -8266,6 +8307,10 @@ fn install_select_reveal(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
+    let tail_for_decline = Arc::clone(&decline_tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     let parked = ctx.select_reveal(
         &prompt,
         optional,
@@ -8305,8 +8350,25 @@ fn install_select_reveal(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Declining the optional pick skips its scoped `then`, but independent
+    // following processes still run (notably trashing the revealed remainder).
+    // Keep the legacy callback and cloneable VM continuation equivalent.
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind_and_override(
+                    game, source_card, source_permanent, source_kind, player, override_pin,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx, trigger_for_decline.clone(), &tail_for_decline,
+                    &mut b, &runtime_for_decline,
+                );
+            }));
+        }
+    }
     // Park the data frame alongside the closure (coexistence): driven by
-    // `run_resume`'s Reveal arm. No on_decline → decline None.
+    // `run_resume`'s Reveal arm, including the same non-aborting decline tail.
     if ctx.game.pending_selection.is_some() {
         ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RunTail {
@@ -8324,7 +8386,14 @@ fn install_select_reveal(
                 bindings: bindings_for_resume,
                 runtime: runtime_for_resume,
                 trigger_context: trigger_for_resume,
-                decline: crate::resume::ResumeDecline::None,
+                decline: if optional {
+                    crate::resume::ResumeDecline::RunTail {
+                        tail: decline_tail,
+                        aborts_clause: false,
+                    }
+                } else {
+                    crate::resume::ResumeDecline::None
+                },
             }],
         });
     }

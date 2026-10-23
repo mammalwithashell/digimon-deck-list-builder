@@ -209,6 +209,11 @@ pub struct PredicateSpec {
     /// permanent ("THIS Digimon may digivolve into ..."), with no `bind_as`
     /// needed. G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE (EX13-055 / EX13-057).
     pub can_digivolve_onto: Option<String>,
+    /// Opt-in complete payment check for a physical result card. Unlike the
+    /// route-only leaf above, searches legal reducer choices using the cost
+    /// declared by the consuming effect (printed, free, fixed or reduced).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_digivolve_onto_with_cost: Option<DigivolveCostPredicate>,
     /// Whether this physical candidate can be played free into its owner's
     /// battle area by the effect controller. Checks the owner's field capacity
     /// and the causing controller's effect-play prohibition independently.
@@ -218,6 +223,11 @@ pub struct PredicateSpec {
     /// checks the effect controller's play prohibition, not battle-area capacity.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_to_breeding_from_hand: Option<bool>,
+    /// Existing breeding-permanent subject only. True if its owner can move
+    /// it to battle by effect; false if that existing permanent cannot move.
+    /// Non-breeding subjects and an empty breeding slot match neither value.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_move_from_breeding_by_effect: Option<bool>,
 
     // Leaf â€” permanent-only
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -259,14 +269,17 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub link_card_count: Option<SourceCountPredicate>,
     /// Permanent-subject predicate. True when at least one card in the listed
-    /// zones (`hand` / `trash`) of player `of` satisfies the nested card
+    /// zones (`hand` / `trash` / `reveal`) of player `of` satisfies the nested card
     /// `filter` AND can normally digivolve onto this permanent (same route
     /// enumeration as `can_digivolve_onto`). Models DCGO's per-permanent
     /// `CanDigivolveDigimon` gate â€” `HasMatchConditionOwnersHand(ValidTarget(â€¦,
     /// Root.Hand, permanent)) || HasMatchConditionOwnersCardInTrash(ValidTarget(â€¦,
     /// Root.Trash, permanent))` â€” used to restrict "1 of your Digimon may
     /// digivolve into â€¦" target picks to Digimon that actually have a legal
-    /// result card. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092).
+    /// result card. `reveal` scans only cards owned by `of` in the shared pool
+    /// (BT9-104). Optional `cost` additionally checks the consuming effect's
+    /// payment, including its reducers (EX5-070); omission keeps route-only
+    /// semantics. G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST (BT25-092).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_digivolve_candidate: Option<DigivolveCandidatePredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1471,21 +1484,39 @@ pub struct SourceCountPredicate {
 
 /// Payload for the `has_digivolve_candidate` permanent-subject leaf â€” "some
 /// card in `zone` of player `of` matches `filter` and can digivolve onto this
-/// permanent". Only `hand` and `trash` are valid zones (DCGO
-/// `SelectCardEffect.Root.Hand` / `Root.Trash`).
+/// permanent". `hand`, `trash`, and owner-filtered `reveal` are valid zones.
+/// An omitted `cost` checks routes only; an explicit cost also checks that
+/// the consuming effect's payment is possible with its existing reducers.
+/// An explicit cost is forbidden inside cost_reduction/cost_assignment
+/// clauses because affordability evaluation itself visits those reducers.
 /// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DigivolveCandidatePredicate {
-    /// Whose hand / trash to scan. Defaults to `you`.
+    /// Whose hand / trash / revealed cards to scan. Defaults to `you`.
     #[serde(default = "default_level_aggregate_of")]
     pub of: PlayerRef,
-    /// Zones to scan â€” each must be `hand` or `trash`.
+    /// Zones to scan: `hand`, `trash`, or `reveal`.
     pub zone: Vec<Zone>,
     /// Card-shape filter each candidate result card must satisfy (evaluated
     /// as a `Card` subject). Omit to accept any Digimon card with a route.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub filter: Option<Box<PredicateSpec>>,
+    /// Match the consuming effect_initiated_digivolve cost when payment
+    /// matters. Omit to preserve the route-only gate used by free effects.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<crate::step::CostDelta>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DigivolveCostPredicate {
+    /// Named permanent binding, or `source` for the effect's live carrier.
+    pub target: String,
+    /// Must match the consuming effect_initiated_digivolve step. This predicate
+    /// cannot occur inside cost_reduction/cost_assignment clauses, including
+    /// free or fixed-zero requests: affordability itself evaluates reducers.
+    pub cost: crate::step::CostDelta,
 }
 
 /// Options for the `can_attack` permanent leaf â€” mirror the
