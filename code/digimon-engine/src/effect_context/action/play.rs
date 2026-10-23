@@ -134,6 +134,7 @@ impl<'a> EffectContext<'a> {
             cost_paid: 0,
             cost_printed,
             via_alt_path: None,
+            effect_initiated: true,
         });
         self.game.enqueue_triggered(
             crate::enums::EffectTiming::OnEnterFieldAnyone,

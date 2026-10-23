@@ -1635,6 +1635,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             cost_paid,
             cost_printed,
             via_alt_path,
+            effect_initiated,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
@@ -1646,6 +1647,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             // the existing top-level keys stay stable.
             let meta = PyDict::new_bound(py);
             meta.set_item("cost_paid", *cost_paid)?;
+            meta.set_item("effect_initiated", *effect_initiated)?;
             meta.set_item("cost_printed", *cost_printed)?;
             meta.set_item(
                 "via_alt_path",
@@ -1667,6 +1669,9 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             was_blast_dna,
             memory_paid,
             ..
+        } | GameEvent::EvalDigivolve {
+            player, top_card_id, card_name, field_index, from_stack_top,
+            was_dna, was_blast_dna, memory_paid, ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", top_card_id.as_str())?;
@@ -1683,6 +1688,17 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             meta.set_item("was_blast_dna", *was_blast_dna)?;
             meta.set_item("memory_paid", *memory_paid)?;
             d.set_item("meta", meta)?;
+        }
+        GameEvent::BreedingMove { player, card_id, card_name, field_index, .. } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+            d.set_item("source_slot", *field_index)?;
+        }
+        GameEvent::Hatch { player, card_id, card_name, .. } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
         }
         GameEvent::Attack {
             player,
@@ -1894,6 +1910,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;
+    m.add("CARD_EVAL_EVENT_VERSION", 1)?;
     m.add("ACTION_SCHEMA_VERSION", ::digimon_engine::action::space::SCHEMA_VERSION)?;
     // Source-selection sub-range boundaries — Python callers (digimon_gym)
     // pin ACTION_SOURCE_END to SOURCE_SELECT_END - 1, and use the breeding

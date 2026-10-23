@@ -1312,6 +1312,7 @@ impl Game {
         let turn = self.turn_count;
         self.player_mut(target.player).battle_area[target.index as usize]
             .digivolve(pending.card, turn);
+        self.emit_eval_digivolve(target, 0, false, false);
         self.player_mut(target.player).draw();
 
         // Arts digivolve runs the ≤0-DP rules-check immediately (before the
@@ -1375,6 +1376,9 @@ impl Game {
         if let Some(breeding) = self.player_mut(owner).breeding_area.as_mut() {
             breeding.digivolve(pending.card, turn);
         }
+        self.emit_eval_digivolve(PermanentHandle {
+            player: owner, index: crate::action::space::BREEDING_TARGET as u8,
+        }, 0, false, false);
         self.player_mut(owner).draw();
         self.check_turn_end();
         true
