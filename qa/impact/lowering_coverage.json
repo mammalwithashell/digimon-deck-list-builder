@@ -74787,7 +74787,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2030,
+  "behavioural_tests": 2033,
   "cards": {
    "behaviourally_covered": 1059,
    "lowering_covered": 1086,
@@ -74947,7 +74947,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 373,
-  "scanned_tests": 2428,
+  "scanned_tests": 2431,
   "top_untested": [
    {
     "cards_blocked": 1,

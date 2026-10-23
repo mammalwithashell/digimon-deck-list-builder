@@ -91,7 +91,7 @@ def main() -> None:
     ap.add_argument("--champions", default="models/champions/registry.json")
     ap.add_argument("--n", type=int, default=40, help="seat-balanced games per anchor")
     ap.add_argument("--seed", type=int, default=777)
-    ap.add_argument("--profile", default="standard_lite_deck_v2")
+    ap.add_argument("--profile", default=None)
     ap.add_argument("--device", default="auto", help="auto|cpu|cuda")
     ap.add_argument("--layout-hash", default=None, help="override candidate layout hash")
     ap.add_argument("--no-greedy", action="store_true")
@@ -104,7 +104,13 @@ def main() -> None:
     args = ap.parse_args()
 
     cand_zip = resolve_candidate(args.candidate)
-    lhash = candidate_layout_hash(cand_zip, args.layout_hash)
+    candidate = _load_candidate(cand_zip, args.device)
+    from model_contract import validate_checkpoint
+    contract = validate_checkpoint(candidate, args.profile)
+    args.profile = contract["observation_profile"]
+    lhash = contract["tensor_layout_hash"]
+    if args.layout_hash is not None and args.layout_hash != lhash:
+        raise ValueError("--layout-hash differs from candidate's validated training contract")
     if args.deck_pool_snapshot:
         from digimon_engine import load_implemented_card_ids
         pool = GeneralistDeckPool.from_snapshot(
@@ -122,7 +128,6 @@ def main() -> None:
           f"{ChampionRegistry.load(args.champions).names()}")
     print(f"games/anchor: {args.n} (seat-balanced)  seed={args.seed}\n", flush=True)
 
-    candidate = _load_candidate(cand_zip, args.device)
     registry = ChampionRegistry.load(args.champions)
 
     results = evaluate_against_anchors(

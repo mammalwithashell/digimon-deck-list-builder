@@ -57,6 +57,7 @@
 //! - the first simulation is spent evaluating the root (so root visit
 //!   totals are `simulations - 1`).
 
+use crate::search::profiling::{measure, span};
 use std::collections::BTreeMap;
 
 use rand::rngs::StdRng;
@@ -126,6 +127,25 @@ pub fn determinized_search(
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
 ) -> SearchResult {
+    determinized_search_batched(registry, root, viewer, evaluator, config, 1)
+}
+
+/// PIMC evaluation batching across independent worlds. Batch size one is the
+/// serial reference; IS-MCTS remains serial. World seeds, individual tree
+/// order and world-order aggregation do not depend on the batch size.
+pub fn determinized_search_batched(
+    registry: &CardRegistry,
+    root: &Game,
+    viewer: PlayerId,
+    evaluator: &mut dyn PolicyValueFn,
+    config: &DeterminizedConfig,
+    evaluation_batch_size: usize,
+) -> SearchResult {
+    let _profile = span("determinized_search_batched");
+    assert!(
+        evaluation_batch_size > 0,
+        "evaluation batch size must be positive"
+    );
     assert_eq!(
         root.players.len(),
         2,
@@ -147,9 +167,16 @@ pub fn determinized_search(
          (an opponent-owned pending selection references their re-dealt hand)"
     );
 
-    let canon = canonicalize_hidden(root, viewer);
+    let canon = measure("canonicalize", || canonicalize_hidden(root, viewer));
     match config.mode {
-        DeterminizationMode::Pimc => pimc_search(registry, &canon, viewer, evaluator, config),
+        DeterminizationMode::Pimc => pimc_search(
+            registry,
+            &canon,
+            viewer,
+            evaluator,
+            config,
+            evaluation_batch_size,
+        ),
         DeterminizationMode::IsMcts => ismcts_search(registry, &canon, viewer, evaluator, config),
     }
 }
@@ -162,6 +189,7 @@ fn pimc_search(
     viewer: PlayerId,
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
+    evaluation_batch_size: usize,
 ) -> SearchResult {
     // Respect the TOTAL simulation budget. A naive `(sims / worlds).max(1)`
     // per-world floor would overshoot (sims=1, worlds=8 → 8 sims), so clamp
@@ -183,23 +211,36 @@ fn pimc_search(
     let mut value_sum = 0.0f64;
     let mut sims_total = 0u32;
 
-    for world_idx in 0..worlds {
-        let world_seed = derive_seed(config.search.seed, STREAM_WORLD, world_idx as u64);
-        let world = sample_world(canon, viewer, world_seed);
-        check_root_surface(&world, viewer, &mut ref_legal, world_idx);
-
-        let world_config = SearchConfig {
-            simulations: per_world,
-            seed: derive_seed(world_seed, STREAM_SEARCH, world_idx as u64),
-            ..config.search.clone()
+    let batch_size = evaluation_batch_size.min(worlds as usize);
+    for first_world in (0..worlds as usize).step_by(batch_size) {
+        let end = (first_world + batch_size).min(worlds as usize);
+        let mut roots = Vec::with_capacity(end - first_world);
+        let mut configs = Vec::with_capacity(end - first_world);
+        for world_idx in first_world..end {
+            let world_seed = derive_seed(config.search.seed, STREAM_WORLD, world_idx as u64);
+            let world = sample_world(canon, viewer, world_seed);
+            check_root_surface(&world, viewer, &mut ref_legal, world_idx as u32);
+            roots.push(world);
+            configs.push(SearchConfig {
+                simulations: per_world,
+                seed: derive_seed(world_seed, STREAM_SEARCH, world_idx as u64),
+                ..config.search.clone()
+            });
+        }
+        let results = if batch_size == 1 {
+            vec![mcts.search(&roots[0], evaluator, &configs[0])]
+        } else {
+            mcts.search_batch(&roots, evaluator, &configs)
         };
-        let result = mcts.search(&world, evaluator, &world_config);
-        sims_total += result.simulations_run;
-        value_sum += result.root_value as f64;
-        for ((action, v), (action_q, q)) in result.root_visits.iter().zip(result.root_q.iter()) {
-            debug_assert_eq!(action, action_q, "visits/q must be parallel");
-            *visits.entry(*action).or_insert(0) += v;
-            *weighted_q.entry(*action).or_insert(0.0) += (*q as f64) * (*v as f64);
+        for result in results {
+            sims_total += result.simulations_run;
+            value_sum += result.root_value as f64;
+            for ((action, v), (action_q, q)) in result.root_visits.iter().zip(result.root_q.iter())
+            {
+                debug_assert_eq!(action, action_q, "visits/q must be parallel");
+                *visits.entry(*action).or_insert(0) += v;
+                *weighted_q.entry(*action).or_insert(0.0) += (*q as f64) * (*v as f64);
+            }
         }
     }
 
@@ -268,7 +309,7 @@ fn ismcts_search(
                 break (terminal_value(&world, viewer), viewer);
             }
             let pid = decision_player(&world);
-            let mask = build_action_mask(&world, pid);
+            let mask = measure("mask", || build_action_mask(&world, pid));
             let legal = legal_set(&mask);
             if legal.is_empty() {
                 debug_assert!(false, "non-terminal state with empty action mask");
@@ -447,6 +488,7 @@ fn legal_set(mask: &[f32]) -> Vec<u16> {
 /// (D1: chance frozen by world choice) and, in debug builds, the full
 /// Phase 1 invariant checker on every sampled world.
 fn sample_world(canon: &Game, viewer: PlayerId, seed: u64) -> Game {
+    let _profile = span("sample_world");
     let world = materialize(canon, viewer, seed);
     debug_assert!(
         world.reveal_source.is_none(),
@@ -472,7 +514,7 @@ fn check_root_surface(
         viewer,
         "world {world_idx}: decision player diverged from the viewer"
     );
-    let legal = legal_set(&build_action_mask(world, viewer));
+    let legal = legal_set(&measure("mask", || build_action_mask(world, viewer)));
     match ref_legal {
         None => *ref_legal = Some(legal),
         Some(reference) => assert_eq!(
@@ -508,7 +550,7 @@ fn evaluate(
 /// the viewer's infoset (see module docs — the strong no-X-ray form). A
 /// pure hidden-to-hidden rearrangement: infoset-preserving by definition.
 fn canonicalize_hidden(root: &Game, viewer: PlayerId) -> Game {
-    let mut canon = root.clone();
+    let mut canon = measure("clone", || root.clone());
     // Viewer: own hand is known (untouched); deck ∪ face-down security is
     // the hidden pool.
     canonicalize_player_hidden(&mut canon.players[viewer as usize], false);

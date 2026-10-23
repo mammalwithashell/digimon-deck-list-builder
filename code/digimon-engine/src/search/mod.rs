@@ -9,10 +9,12 @@
 //!
 //! Layout:
 //!   - [`evaluator`] — the [`PolicyValueFn`] abstraction (+ the stub
-//!     [`UniformEvaluator`]); batch-shaped for Phase 4 leaf batching.
+//!     [`UniformEvaluator`]); shared by serial and independent-tree batching.
 //!   - [`mcts`] — the PUCT search core ([`Mcts`], [`SearchConfig`],
 //!     [`SearchResult`]) with identity-keyed value backup and forced-node
 //!     auto-advance (search-granularity decision documented there).
+//!   - `mcts::batched` — cooperative independent-tree evaluation scheduling,
+//!     preserving per-tree selection/evaluation/backup order.
 //!   - `onnx_adapter` — `PolicyValueFn` for the task-0.3
 //!     `inference::BatchedPolicyValueEvaluator` (kept separate so the core
 //!     never touches `ort`).
@@ -28,8 +30,15 @@ mod determinized;
 mod dirichlet;
 mod evaluator;
 mod mcts;
+mod memoized;
 mod onnx_adapter;
 
-pub use determinized::{determinized_search, DeterminizationMode, DeterminizedConfig};
+pub use determinized::{
+    determinized_search, determinized_search_batched, DeterminizationMode, DeterminizedConfig,
+};
 pub use evaluator::{EvalRequest, Evaluation, PolicyValueFn, UniformEvaluator};
 pub use mcts::{decision_player, Mcts, SearchConfig, SearchResult};
+pub use memoized::MemoizedEvaluator;
+
+/// Opt-in native search timing diagnostics.
+pub mod profiling;

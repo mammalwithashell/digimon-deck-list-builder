@@ -27,10 +27,11 @@
 //! A depth-alternating negation would be wrong; see
 //! `tests/search/perfect_information.rs`.
 //!
-//! The evaluator is called with batch = 1 for now; the batch-shaped
-//! [`PolicyValueFn`] API is deliberate so Phase 4 leaf batching (+ virtual
-//! loss) is an internal change.
+//! `search` is the batch-one serial reference. `search_batch` cooperatively
+//! batches the next leaf of independent trees without virtual loss or
+//! speculative same-tree selection; each tree retains its serial order.
 
+use crate::search::profiling::{measure, span};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 
@@ -43,7 +44,10 @@ use crate::observation::{
 };
 
 use super::dirichlet::sample_dirichlet;
-use super::evaluator::{EvalRequest, PolicyValueFn};
+use super::evaluator::{EvalRequest, Evaluation, PolicyValueFn};
+
+#[path = "batched.rs"]
+mod batched;
 
 /// Tunables for one search. `Default` is a sensible AlphaZero-style setting
 /// for interactive budgets.
@@ -162,6 +166,16 @@ struct Node {
     edges: Vec<Edge>,
 }
 
+enum PreparedNode {
+    Ready(Node, f32),
+    Evaluate {
+        game: Game,
+        mover: PlayerId,
+        mask: Vec<f32>,
+        legal: Vec<u16>,
+    },
+}
+
 /// PUCT-MCTS searcher. Holds the card registry needed to build observation
 /// tensors for the evaluator; one instance is reusable across searches.
 pub struct Mcts<'a> {
@@ -182,6 +196,7 @@ impl<'a> Mcts<'a> {
         evaluator: &mut dyn PolicyValueFn,
         config: &SearchConfig,
     ) -> SearchResult {
+        let _profile = span("search");
         debug_assert!(
             root.rules.player_count == 2,
             "search assumes two-player zero-sum backup"
@@ -189,7 +204,8 @@ impl<'a> Mcts<'a> {
         let mut rng = StdRng::seed_from_u64(config.seed);
         let mut arena: Vec<Node> = Vec::new();
 
-        let (root_node, _root_eval) = self.make_node(root.clone(), false, evaluator, config);
+        let (root_node, _root_eval) =
+            self.make_node(measure("clone", || root.clone()), false, evaluator, config);
         if root_node.terminal_value.is_some() || root_node.edges.is_empty() {
             return SearchResult {
                 root_visits: Vec::new(),
@@ -229,7 +245,7 @@ impl<'a> Mcts<'a> {
                     // evaluator (its edges/priors already exist; we just
                     // refuse to descend further).
                     let node = &arena[cur];
-                    let mask = build_action_mask(&node.game, node.mover);
+                    let mask = measure("mask", || build_action_mask(&node.game, node.mover));
                     let obs = build_observation_tensor(
                         &node.game,
                         node.mover,
@@ -246,8 +262,10 @@ impl<'a> Mcts<'a> {
                     None => {
                         // ── Expansion + evaluation ───────────────────────
                         let parent = &arena[cur];
-                        let mut game = parent.game.clone();
-                        game.decode_action(parent.edges[edge_idx].action, parent.mover);
+                        let mut game = measure("clone", || parent.game.clone());
+                        measure("step", || {
+                            game.decode_action(parent.edges[edge_idx].action, parent.mover)
+                        });
                         let (node, value) = self.make_node(game, true, evaluator, config);
                         let mover = node.mover;
                         let child_idx = arena.len();
@@ -309,11 +327,29 @@ impl<'a> Mcts<'a> {
     /// computed WITHOUT calling the evaluator — else the evaluator's value.
     fn make_node(
         &self,
-        mut game: Game,
+        game: Game,
         auto_advance: bool,
         evaluator: &mut dyn PolicyValueFn,
         config: &SearchConfig,
     ) -> (Node, f32) {
+        let prepared = self.prepare_node(game, auto_advance, config);
+        match prepared {
+            PreparedNode::Ready(node, value) => (node, value),
+            prepared => {
+                let request = self.node_request(&prepared, config);
+                let evaluations = evaluator.evaluate_batch(&[request]);
+                self.finish_node(prepared, &evaluations[0])
+            }
+        }
+    }
+
+    fn prepare_node(
+        &self,
+        mut game: Game,
+        auto_advance: bool,
+        config: &SearchConfig,
+    ) -> PreparedNode {
+        let _profile = span("prepare_node");
         let mut mask = if auto_advance {
             advance_forced_chain(&mut game, config.max_decisions)
         } else {
@@ -323,7 +359,7 @@ impl<'a> Mcts<'a> {
         let mover = decision_player(&game);
         if game.game_over {
             let tv = terminal_value(&game, mover);
-            return (
+            return PreparedNode::Ready(
                 Node {
                     game,
                     mover,
@@ -335,7 +371,7 @@ impl<'a> Mcts<'a> {
         }
 
         if mask.is_empty() {
-            mask = build_action_mask(&game, mover);
+            mask = measure("mask", || build_action_mask(&game, mover));
         }
         let legal: Vec<u16> = mask
             .iter()
@@ -348,7 +384,7 @@ impl<'a> Mcts<'a> {
             // unreachable in a well-formed game. Treat as a drawn terminal
             // rather than poisoning the tree.
             debug_assert!(false, "non-terminal state with empty action mask");
-            return (
+            return PreparedNode::Ready(
                 Node {
                     game,
                     mover,
@@ -359,12 +395,39 @@ impl<'a> Mcts<'a> {
             );
         }
 
-        let obs = build_observation_tensor(&game, mover, self.registry, config.observation_profile);
-        let evaluations = evaluator.evaluate_batch(&[EvalRequest {
-            obs,
+        PreparedNode::Evaluate {
+            game,
+            mover,
+            mask,
+            legal,
+        }
+    }
+
+    fn node_request(&self, prepared: &PreparedNode, config: &SearchConfig) -> EvalRequest {
+        let _profile = span("node_request");
+        let PreparedNode::Evaluate {
+            game, mover, mask, ..
+        } = prepared
+        else {
+            unreachable!("terminal nodes do not need inference");
+        };
+        EvalRequest {
+            obs: build_observation_tensor(game, *mover, self.registry, config.observation_profile),
             mask: mask.clone(),
-        }]);
-        let evaluation = &evaluations[0];
+        }
+    }
+
+    fn finish_node(&self, prepared: PreparedNode, evaluation: &Evaluation) -> (Node, f32) {
+        let _profile = span("finish_node");
+        let PreparedNode::Evaluate {
+            game,
+            mover,
+            mask,
+            legal,
+        } = prepared
+        else {
+            unreachable!("terminal nodes are already complete");
+        };
         debug_assert_eq!(
             evaluation.policy.len(),
             mask.len(),
@@ -429,7 +492,7 @@ pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
     let mut forced_steps = 0u32;
     while !game.game_over && forced_steps < cap {
         let pid = decision_player(game);
-        mask = build_action_mask(game, pid);
+        mask = measure("mask", || build_action_mask(game, pid));
         let mut only_action = None;
         let mut legal_count = 0u32;
         for (i, &m) in mask.iter().enumerate() {
@@ -444,7 +507,9 @@ pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
         if legal_count != 1 {
             break;
         }
-        game.decode_action(only_action.expect("single legal action"), pid);
+        measure("step", || {
+            game.decode_action(only_action.expect("single legal action"), pid)
+        });
         mask.clear(); // state changed; recompute (or terminal)
         forced_steps += 1;
     }

@@ -10,7 +10,7 @@
 
 #![allow(unused_imports, dead_code)]
 
-use digimon_engine::action::{build_action_mask, PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::{build_action_mask, PASS, PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -76,6 +76,81 @@ fn push_to_trash(runner: &mut DebugRunner, p: u8, card_id: &str) -> CardHandle {
     let h = cs.handle();
     runner.game.players[p as usize].trash.push(cs);
     h
+}
+
+fn assembly_payment_fixture(memory: i16) -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(ASSEMBLY_CARD_YAML).unwrap()
+        .add_card(material("WARG", "WarGreymon"))
+        .add_card(material("METG", "MetalGarurumon"))
+        .hand(0, &["T-ASM"])
+        .memory(memory)
+        .start();
+    runner.skip_mulligan();
+    push_to_trash(&mut runner, 0, "WARG");
+    push_to_trash(&mut runner, 0, "METG");
+    runner
+}
+
+#[test]
+fn assembly_cannot_decline_when_reduction_is_required_to_pay_in_live_and_cloned_games() {
+    // CR 1-3-11-4: declaring a 15-cost play at zero memory commits the
+    // player to the Assembly reduction needed to keep payment within -10.
+    let mut runner = assembly_payment_fixture(0);
+    assert_eq!(build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize], 1.0);
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert!(!runner.game.pending_selection.as_ref().unwrap().is_optional,
+        "Assembly cannot be declined when the unreduced play cannot be paid");
+    assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize], 0.0);
+    assert!(!runner.game.pending_selection.as_ref().unwrap().prompt.contains("skip"));
+
+    let mut cloned = runner.game.clone();
+    for game in [&mut runner.game, &mut cloned] {
+        for action in [TRASH_EFFECT_START, TRASH_EFFECT_START + 1] {
+            let mask = build_action_mask(game, 0);
+            assert_eq!(mask[PASS as usize], 0.0, "required materials stay mandatory after cloning/picking");
+            assert_eq!(mask[action as usize], 1.0);
+            game.decode_action(action, 0);
+        }
+        assert!(game.pending_selection.is_none());
+        assert!(game.players[0].hand.is_empty());
+        assert!(game.players[0].trash.is_empty());
+        assert_eq!(game.players[0].battle_area[0].card_sources.len(), 3);
+        assert_eq!(game.turn_player(), 1);
+        assert_eq!(game.memory, 9, "the opponent receives the reduced 9-cost payment");
+    }
+}
+
+#[test]
+fn assembly_decline_tracks_the_exact_unreduced_payment_boundary() {
+    for (memory, may_decline) in [(4, false), (5, true)] {
+        let mut runner = assembly_payment_fixture(memory);
+        runner.game.decode_action(PLAY_HAND_START, 0);
+        assert_eq!(runner.game.pending_selection.as_ref().unwrap().is_optional, may_decline);
+        assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize] > 0.5, may_decline);
+        if may_decline {
+            runner.game.decode_action(PASS, 0);
+            assert!(runner.game.players[0].hand.is_empty());
+            assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 1);
+            assert_eq!(runner.game.players[0].trash.len(), 2);
+            assert_eq!(runner.game.memory, 10);
+        }
+    }
+}
+
+#[test]
+fn assembly_decline_uses_the_effects_reduced_cost_instead_of_printed_cost() {
+    use digimon_engine::enums::{CostDelta, PlaySource};
+    let mut runner = assembly_payment_fixture(0);
+    runner.game.play_from_hand_with_cost(0, 0, CostDelta::Reduce(5), PlaySource::ByEffect);
+    assert!(runner.game.pending_selection.as_ref().unwrap().is_optional,
+        "15 minus the effect's 5-cost reduction is payable without Assembly");
+    assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize], 1.0);
+    runner.game.decode_action(PASS, 0);
+    assert!(runner.game.players[0].hand.is_empty());
+    assert_eq!(runner.game.players[0].battle_area[0].card_sources.len(), 1);
+    assert_eq!(runner.game.players[0].trash.len(), 2);
+    assert_eq!(runner.game.memory, 10);
 }
 
 /// Playing an Assembly card with both materials in trash must surface the

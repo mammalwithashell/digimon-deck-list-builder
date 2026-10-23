@@ -160,6 +160,12 @@ def main() -> None:
 
     for path in [mlp_path, mlp_value_path, lstm_path]:
         extend_to_current_contract(path)
+    lite_contract = current_contract("standard_lite_v2")
+    lite_path = fixtures_dir / "mlp_lite_value.onnx"
+    lite = onnx.load(str(mlp_value_path))
+    next(v for v in lite.graph.input if v.name == "obs").type.tensor_type.shape.dim[1].dim_value = lite_contract["tensor_size"]
+    onnx.save(lite, str(lite_path))
+    embed_onnx_contract(lite_path, lite_contract)
     obs = np.pad(obs, (0, CONTRACT["tensor_size"] - OBS_SIZE))
     mask = np.pad(mask, (0, CONTRACT["action_space_size"] - ACTION_SIZE))
 
