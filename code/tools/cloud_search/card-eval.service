@@ -1,0 +1,17 @@
+[Unit]
+Description=Periodic per-card policy evaluation for Digimon search training
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/digimon-search/image.env
+ExecStart=/usr/bin/docker run --name digimon-search-card-eval --rm --init --network=none --memory=2g --cpus=1 --cpu-shares=128 --mount type=bind,src=/opt/digimon-search/experiment,dst=/experiment,readonly --mount type=bind,src=/opt/digimon-search/card-evaluation,dst=/card-evaluation --mount type=bind,src=/opt/digimon-search/deployment/card-eval,dst=/evaluation,readonly --mount type=bind,src=/opt/digimon-search/deployment/card-eval/anchored_eval.py,dst=/app/code/digimon_gym/agents/anchored_eval.py,readonly --mount type=bind,src=/opt/digimon-search/deployment/card-eval/card_eval.py,dst=/app/code/digimon_gym/agents/card_eval.py,readonly --mount type=bind,src=/opt/digimon-search/deployment/card-eval/anchored_eval_cli.py,dst=/app/code/tools/anchored_eval_cli.py,readonly ${SEARCH_IMAGE} python /evaluation/card_eval_worker.py
+ExecStop=-/usr/bin/docker stop --time=30 digimon-search-card-eval
+Restart=on-failure
+RestartSec=60
+TimeoutStopSec=45
+Nice=15
+
+[Install]
+WantedBy=multi-user.target
