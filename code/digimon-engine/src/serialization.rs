@@ -319,6 +319,7 @@ pub fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
         }
         ModifierType::CannotActivateWhenAttackingEffects => "CannotActivateWhenAttackingEffects",
         ModifierType::CannotActivateSecurityEffects => "CannotActivateSecurityEffects",
+        ModifierType::DoesNotActivateOptionSecurityEffects => "DoesNotActivateOptionSecurityEffects",
         // Attack grants / mandates
         ModifierType::MayAttack => "MayAttack",
         ModifierType::ForceAttack => "ForceAttack",

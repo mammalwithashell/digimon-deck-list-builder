@@ -198,7 +198,7 @@ impl Game {
 
                 let stack_size = perm.card_sources.len();
                 for (source_index, source) in perm.card_sources.iter().enumerate() {
-                    if source_index + 1 >= stack_size {
+                    if source_index + 1 >= stack_size || source.face_down {
                         continue;
                     }
                     sources.push((

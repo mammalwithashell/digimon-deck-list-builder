@@ -87,13 +87,6 @@ steps:
     pass: {}
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
-  expect:
-    prompt: OptionalSkill
 - actor: 1
   do:
     pass: {}
@@ -132,7 +125,7 @@ interaction:
   source: probe
   kind: positive
 assert:
-- at: 14
+- at: 13
   that:
     p0.field:
     - card_id: BT20-025
@@ -141,7 +134,7 @@ assert:
       - EX3-018
     - card_id: BT20-042
       sources: []
-- at: 15
+- at: 14
   that:
     p0.field:
     - card_id: BT20-025

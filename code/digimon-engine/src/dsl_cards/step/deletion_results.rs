@@ -15,17 +15,25 @@ pub(super) fn expand(step:&CompiledStep,ctx:&mut EffectContext<'_>,bindings:&Bin
             }
             scanned
         },
-        CompiledStep::DeletePermanent {target} => match resolve_binding_ref(target,ctx,bindings) {Some(ResolvedBinding::Permanent(h))=>vec![h],_=>Vec::new()},
+        CompiledStep::DeletePermanent {target} | CompiledStep::DeleteForCostReduction {target} => match resolve_binding_ref(target,ctx,bindings) {Some(ResolvedBinding::Permanent(h))=>vec![h],_=>Vec::new()},
         CompiledStep::DeletePermanents {targets} => targets.iter().filter_map(|target|match resolve_binding_ref(target,ctx,bindings){Some(ResolvedBinding::Permanent(h))=>Some(h),_=>None}).collect(),
-        // Preserve bound-list sequential semantics until separately migrated.
+        CompiledStep::DeleteBoundPermanents {binding} => bindings.get_permanent_list(binding).unwrap_or_default(),
         _=>return None,
     };
     targets.sort_by_key(|h|(h.player,h.index));targets.dedup();
     targets.retain(|h|ctx.game.player(h.player).battle_area.get(h.index as usize).is_some() && ctx.can_affect_permanent(*h));
     if targets.is_empty(){return Some(Vec::new());}
+    let cost_credit = if matches!(step, CompiledStep::DeleteForCostReduction { .. }) {
+        targets.first().map(|h| {
+            let identity = ctx.game.capture_digivolve_host_identity(*h);
+            let cost = ctx.game.player(h.player).battle_area[h.index as usize]
+                .top_card().play_cost(&ctx.game.card_data) as i32;
+            (h.player, identity, cost)
+        })
+    } else { None };
     let captured=targets.into_iter().map(|h|(h.player,ctx.game.capture_digivolve_host_identity(h))).collect();
     let receipt=ctx.game.allocate_deletion_receipt();
-    Some(vec![CompiledStep::DeleteCapturedBatch{receipt,targets:captured},CompiledStep::DeleteReceiptFinalize{receipt}])
+    Some(vec![CompiledStep::DeleteCapturedBatch{receipt,targets:captured},CompiledStep::DeleteReceiptFinalize{receipt,cost_credit}])
 }
 
 pub(super) fn try_run(step:&CompiledStep,ctx:&mut EffectContext<'_>,bindings:&mut Bindings)->bool {
@@ -39,9 +47,15 @@ pub(super) fn try_run(step:&CompiledStep,ctx:&mut EffectContext<'_>,bindings:&mu
             }
             true
         },
-        CompiledStep::DeleteReceiptFinalize{receipt}=>{
+        CompiledStep::DeleteReceiptFinalize{receipt,cost_credit}=>{
             if let Some(index)=ctx.game.deletion_receipts.iter().position(|(id,_)|id==receipt){
                 let (_,completed)=ctx.game.deletion_receipts.remove(index);
+                if let Some((player, identity, cost)) = cost_credit {
+                    if *cost > 0 && completed.iter().any(|(handle, _, _, (_, actual))|
+                        handle.player == *player && actual == identity) {
+                        *ctx.game.pending_cost_reduction_amount_override.get_or_insert(0) += *cost;
+                    }
+                }
                 for (handle,dp,is_digimon,_) in completed {bindings.record_deleted(handle,dp,is_digimon);}
             }
             true

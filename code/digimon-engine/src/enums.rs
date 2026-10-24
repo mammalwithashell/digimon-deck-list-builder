@@ -1063,6 +1063,11 @@ pub enum ModifierType {
     /// with `defenderCondition: null`. Appended to preserve existing IDs.
     /// G-ENGINE-CANNOT-BE-BLOCKED (EX2-068).
     CannotBeBlocked,
+    /// Permanent-scoped: Option cards checked by this attacking Digimon do
+    /// not activate their [Security] effects (BT20-015 inherited). Other
+    /// attackers, non-Option Security effects, and security-removal timings
+    /// are unaffected. Appended to preserve existing modifier IDs.
+    DoesNotActivateOptionSecurityEffects,
 }
 
 /// When a modifier expires.

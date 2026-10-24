@@ -49,6 +49,22 @@ pub fn resolve_binding_ref(
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
         | CompiledBindingRef::OfPermanent(name) => {
+            if bindings.selected_identity_pin(name).is_some() {
+                // A later choice can resume after field compaction or a stack
+                // change. Follow the selected permanent, and fail closed if it
+                // left; another permanent in its old slot is never a substitute.
+                return bindings.resolve_selected_identity(ctx.game, name)
+                    .map(ResolvedBinding::Permanent);
+            }
+            if let Some(breeding) = bindings.get_breeding_permanent_ref(name) {
+                // Compatibility for explicitly constructed unpinned bindings.
+                // Runtime selectors always install a stack identity above.
+                return ctx.game.player(breeding.player).breeding_area.as_ref()
+                    .filter(|p| p.card_sources.iter().any(|c| c.handle() == breeding.card))
+                    .map(|_| ResolvedBinding::Permanent(PermanentHandle {
+                        player: breeding.player, index: crate::action::space::BREEDING_TARGET as u8,
+                    }));
+            }
             // PlayedPermanent bindings need engine-side identity resolution
             // (provenance token → strict top-card lookup). The strict
             // resolver `Game::resolve_token_as_battle_area_top` yields a

@@ -269,12 +269,18 @@ fn cloned_source_cost_rechecks_protection_added_after_first_pick() {
     r.place_on_field(1, "PLAIN", Some(0));
     r.game.enter_main_phase();
     r.game.tick_declarative_effects();
+    let sources_before: Vec<_> = r.game.players[0].battle_area[0]
+        .card_sources
+        .iter()
+        .map(|c| c.handle())
+        .collect();
     let first_card = r.game.players[0].battle_area[0].card_sources[1].handle();
     let action = digimon_engine::action::FIELD_EFFECT_START
         + digimon_engine::action::FIELD_EFFECT_SLOT_FOR_MAIN;
     assert_eq!(build_action_mask(&r.game, 0)[action as usize], 1.0);
     r.game.decode_action(action, 0);
     let first = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    assert_eq!(build_action_mask(&r.game, 0)[first as usize], 1.0);
     r.game.resolve_selection(0, first).unwrap();
     let mut cloned = r.game.clone();
     for game in [&mut r.game, &mut cloned] {
@@ -284,16 +290,26 @@ fn cloned_source_cost_rechecks_protection_added_after_first_pick() {
                 .with_payload(ModifierPayload::ProtectedSourceCards(vec![first_card])),
         );
         let second = game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        assert_eq!(build_action_mask(game, 0)[second as usize], 1.0);
         game.resolve_selection(0, second).unwrap();
         assert!(!game.players[1].battle_area[0].is_suspended);
         assert_eq!(
             game.players[0].trash.len(),
-            1,
-            "only the unprotected selected card paid"
+            0,
+            "CR 4.3 15-7-4: an unpayable optional cost moves no selected sources"
+        );
+        assert_eq!(
+            game.players[0].battle_area[0]
+                .card_sources
+                .iter()
+                .map(|c| c.handle())
+                .collect::<Vec<_>>(),
+            sources_before,
+            "atomic cost rejection preserves every source identity and its order"
         );
         assert!(
             game.pending_selection.is_none(),
-            "no benefit target selection after partial payment"
+            "no benefit target selection after unpayable cost"
         );
     }
 }

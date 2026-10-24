@@ -714,9 +714,7 @@ pub fn matches_generic_name_requirement(card: &CardData, required_name: &str) ->
 }
 
 fn name_matches(candidate: &str, required_name: &str) -> bool {
-    candidate
-        .to_lowercase()
-        .contains(&required_name.to_lowercase())
+    crate::card_data::rules_name_contains(candidate, required_name)
 }
 
 pub fn matches_digixros_name_requirement_for_test(card: &CardData, required_name: &str) -> bool {

@@ -7742,6 +7742,14 @@
         "level": 2,
         "memory_cost": 1
       }
+    ],
+    "type_eng": [
+      "Beast",
+      "X Antibody",
+      "Chronicle"
+    ],
+    "form_eng": [
+      "Rookie"
     ]
   },
   "BT20-011": {
@@ -7770,6 +7778,9 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "form_eng": [
+      "Champion"
     ]
   },
   "BT20-015": {
@@ -7784,6 +7795,9 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "form_eng": [
+      "Ultimate"
     ]
   },
   "BT20-018": {
@@ -8102,6 +8116,9 @@
         "level": 2,
         "memory_cost": 1
       }
+    ],
+    "form_eng": [
+      "Rookie"
     ]
   },
   "BT20-050": {
@@ -8130,6 +8147,9 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "form_eng": [
+      "Champion"
     ]
   },
   "BT20-052": {
@@ -8158,6 +8178,9 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "form_eng": [
+      "Ultimate"
     ]
   },
   "BT20-054": {
@@ -18588,5 +18611,56 @@
       "Champion"
     ]
   },
-  "_note_P-250": "P-250 Ogremon (X Antibody), ingested 2026-10-21 from digimoncard.io for the EX13 meta run. The API drops the second (Black) digivolve circle and the Champion form; the official Bandai DB (data/card_bundles/P-250.md) prints Purple Lv.3/3 AND Black Lv.3/3, form Champion."
+  "_note_P-250": "P-250 Ogremon (X Antibody), ingested 2026-10-21 from digimoncard.io for the EX13 meta run. The API drops the second (Black) digivolve circle and the Champion form; the official Bandai DB (data/card_bundles/P-250.md) prints Purple Lv.3/3 AND Black Lv.3/3, form Champion.",
+  "BT20-095": {
+    "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 [Chronicle] trait card among them to the hand. Return the rest to the top or bottom of the deck. Then, place this card in the battle area.\r\n[All Turns] When any of your [Chronicle] trait Digimon are deleted, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By moving your level 3 or higher Digimon from the breeding area to the battle area, it may digivolve into a [Chronicle] trait Digimon card in the hand or trash without paying the cost.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] You may play 1 [Chronicle] trait card with a play cost of 5 or less from your hand or trash without paying the cost. Then, place this card in the battle area."
+  },
+  "P-176": {
+    "form_eng": [
+      "In-Training"
+    ]
+  },
+  "P-204": {
+    "security_effect_description_eng": "[Security] Activate this card's [Main] effects.",
+    "inherited_effect_description_eng": ""
+  },
+  "EX5-070": {
+    "effect_description_eng": "While you have a Digimon, you can ignore this card's color requirements.\r\n[Security] Add this card to the hand.\r\n[Main] 1 of your Digimon without [X Antibody] in its digivolution cards may digivolve into a Digimon card with the [X Antibody] trait in your hand with the digivolution cost reduced by 1. If it did, place this card as its bottom digivolution card.\r\n(Rule) Name: Also treated as [X Antibody]."
+  },
+  "BT9-104": {
+    "effect_description_eng": "While you have a Digimon with [X Antibody] in its traits in play, you may use this card without meeting its color requirements.\r\n[Main] Reveal the top 3 cards of your deck. You may digivolve 1 of your Digimon into a Digimon card with [X Antibody] in its traits among them without paying its memory cost. Trash the rest. Then, place 1 card with [X Antibody] in its traits from your trash under 1 of your Digimon with [X Antibody] in its traits as its bottom digivolution card.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] You may reveal the top 3 cards of your deck. Add 1 card with [X Antibody] in its traits among them to your hand. Trash the rest."
+  },
+  "BT7-090": {
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying its memory cost."
+  },
+  "_note_EX12-026": "Official Bandai card bundle and card image checked 2026-10-22: the Rule box grants Aquatic in addition to Mollusk/Shambala/TB. Preserve the grant through ingestion.",
+  "EX12-026": {
+    "type_eng": [
+      "Mollusk",
+      "Shambala",
+      "TB",
+      "Aquatic"
+    ]
+  },
+  "_note_EX12-031": "Official Bandai card bundle and card image checked 2026-10-22: the Rule box grants Aquatic in addition to Mollusk/Shambala/TB. Preserve the grant through ingestion.",
+  "EX12-031": {
+    "type_eng": [
+      "Mollusk",
+      "Shambala",
+      "TB",
+      "Aquatic"
+    ]
+  },
+  "_note_BT22-023": "Official Bandai card bundle and card image checked 2026-10-22: the printed trait line is Holy Dragon/CS, not Mythical Dragon/CS.",
+  "BT22-023": {
+    "type_eng": [
+      "Holy Dragon",
+      "CS"
+    ]
+  }
 }

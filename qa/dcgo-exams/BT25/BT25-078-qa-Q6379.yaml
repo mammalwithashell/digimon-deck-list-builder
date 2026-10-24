@@ -64,10 +64,6 @@ steps:
   - actor: 0
     do: { play: { card: BT25-078, from: hand } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: our engine's outer accept/decline gate for an effect our YAML marks
-  # optional; DCGO builds it optional: false and asks nothing here.
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
   # SIM-ONLY: our engine's branch choice ("Add a [Three Musketeers] card to hand"),
   # named by LABEL -- an EffectChoice branch carries no number `value:` could
   # match. DCGO decides the branch AFTER the pick, from the picked card's trait.
@@ -105,7 +101,7 @@ steps:
 expect_ruling:
   q_id: Q6379
   assert:
-  - at: 7
+  - at: 6
     that:
       p0.hand:
       - BT21-074
@@ -162,7 +158,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 1
-- at: 4
+- at: 3
   that:
     _backfilled: true
     memory: -3
@@ -188,7 +184,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 1
-- at: 7
+- at: 6
   that:
     _backfilled: true
     memory: -3

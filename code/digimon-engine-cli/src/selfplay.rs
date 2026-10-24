@@ -14,7 +14,7 @@ use std::process::ExitCode;
 use digimon_engine::card_data::CardData;
 use digimon_engine::inference::BatchedPolicyValueEvaluator;
 use digimon_engine::search::{
-    DeterminizationMode, DeterminizedConfig, PolicyValueFn, UniformEvaluator,
+    DeterminizationMode, DeterminizedConfig, MemoizedEvaluator, PolicyValueFn, UniformEvaluator,
 };
 use digimon_engine::selfplay::{run_self_play, SelfPlayConfig};
 
@@ -81,8 +81,10 @@ pub fn run(
     uniform: bool,
     decks_path: PathBuf,
     games: u32,
+    game_start: u32,
     sims: u32,
     worlds: u32,
+    eval_batch_size: usize,
     mode: String,
     seed: u64,
     out: PathBuf,
@@ -91,7 +93,43 @@ pub fn run(
     shard_rows: usize,
     tensor_profile: Option<String>,
     card_data: HashMap<String, CardData>,
+    admission_dir: PathBuf,
 ) -> ExitCode {
+    if eval_batch_size == 0 {
+        eprintln!("--eval-batch-size must be positive");
+        return ExitCode::from(2);
+    }
+    // Opt in for a frozen deterministic MLP only. This never caches engine
+    // legality or tree results; an exact observation+mask hit reuses only the
+    // same network output. Zero retains the uncached reference path.
+    let cache_entries = match std::env::var("DIGIMON_SEARCH_EVAL_CACHE_ENTRIES") {
+        Ok(value) => match value.parse::<usize>() {
+            Ok(entries) => entries,
+            Err(_) => {
+                eprintln!("DIGIMON_SEARCH_EVAL_CACHE_ENTRIES must be a non-negative integer");
+                return ExitCode::from(2);
+            }
+        },
+        Err(std::env::VarError::NotPresent) => 0,
+        Err(err) => {
+            eprintln!("cannot read DIGIMON_SEARCH_EVAL_CACHE_ENTRIES: {err}");
+            return ExitCode::from(2);
+        }
+    };
+    let (decks, deck_names) = match load_deck_pool(&decks_path) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("error loading deck pool: {e}");
+            return ExitCode::from(2);
+        }
+    };
+    let admission = match crate::admission::validate_pool(&decks, &card_data, &admission_dir) {
+        Ok(record) => record,
+        Err(e) => {
+            eprintln!("training admission rejected: {e}");
+            return ExitCode::from(2);
+        }
+    };
     let mode = match mode.as_str() {
         "pimc" => DeterminizationMode::Pimc,
         "ismcts" | "is-mcts" => DeterminizationMode::IsMcts,
@@ -118,8 +156,19 @@ pub fn run(
                         return ExitCode::from(2);
                     }
                 };
-                match BatchedPolicyValueEvaluator::load(path) {
-                    Ok(e) => (Box::new(e), path.to_string_lossy().to_string(), profile),
+                match BatchedPolicyValueEvaluator::load_for_profile(path, profile) {
+                    Ok(e) => {
+                        if let Err(err) = e.require_terminal_value() {
+                            eprintln!("{err}");
+                            return ExitCode::from(2);
+                        }
+                        let evaluator: Box<dyn PolicyValueFn> = if cache_entries == 0 {
+                            Box::new(e)
+                        } else {
+                            Box::new(MemoizedEvaluator::new(e, cache_entries))
+                        };
+                        (evaluator, path.to_string_lossy().to_string(), profile)
+                    }
                     Err(e) => {
                         eprintln!(
                             "error loading policy+value model {} (needs a task-0.2 export \
@@ -151,26 +200,21 @@ pub fn run(
             }
         };
 
-    let (decks, deck_names) = match load_deck_pool(&decks_path) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("error loading deck pool: {e}");
-            return ExitCode::from(2);
-        }
-    };
-
     let mut config = SelfPlayConfig {
         games,
+        game_start,
         seed,
         temperature_decisions,
         decision_cap,
         shard_rows,
+        evaluation_batch_size: eval_batch_size,
         search: DeterminizedConfig::default(),
     };
     config.search.mode = mode;
     config.search.worlds = worlds;
     config.search.search.simulations = sims;
     config.search.search.observation_profile = profile;
+    let active_cache_entries = if uniform { 0 } else { cache_entries };
 
     eprintln!(
         "selfplay: {} games, {} decks, mode {:?}, {} worlds x {} total sims, profile {}, evaluator {}",
@@ -181,6 +225,10 @@ pub fn run(
         sims,
         profile.as_str(),
         model_desc
+    );
+    eprintln!("exact-input evaluator cache: {active_cache_entries} entries");
+    eprintln!(
+        "independent-world evaluation batch size: {eval_batch_size} (IS-MCTS remains serial)"
     );
 
     match run_self_play(
@@ -193,6 +241,19 @@ pub fn run(
         &model_desc,
     ) {
         Ok(stats) => {
+            let path = out.join("manifest.json");
+            let stamped = (|| -> Result<(), Box<dyn std::error::Error>> {
+                let mut manifest: serde_json::Value =
+                    serde_json::from_str(&std::fs::read_to_string(&path)?)?;
+                manifest["admission"] = admission;
+                manifest["search"]["evaluator_cache_entries"] = active_cache_entries.into();
+                std::fs::write(&path, serde_json::to_string_pretty(&manifest)?)?;
+                Ok(())
+            })();
+            if let Err(e) = stamped {
+                eprintln!("cannot stamp admission into manifest: {e}");
+                return ExitCode::from(1);
+            }
             eprintln!(
                 "done: {} games ({} truncated), {} rows in {} shard(s), wins P0 {} / P1 {}, \
                  {} decisions ({} forced) → {}",

@@ -31,15 +31,13 @@
 #      `canNoSelect:true` Tamer pick (the "may") → trash bottom face-down. If
 #      trashed, a `canNoSelect:true` SelectHandEffect over [Glowing Dawn] cards
 #      → ChangeCostClass -3 → PlayOptionCards / PlayPermanentCards (payCost).
-#   → Modelled as two clauses on the same trigger:
-#     Clause A (mandatory): add_dp_modifier +3000 to self, expiry
-#       end_of_opponents_turn.
-#     Clause B (optional, your-turn): the OUTER optional accept/decline gate IS
-#       DCGO's trash-pick canNoSelect (decline = don't trash / don't play). On
-#       accept: trash_bottom_face_down_source_under_tamer (process cost — aborts
-#       if no eligible Tamer), then an OPTIONAL select_hand over [Glowing Dawn]
-#       cards (the hand-pick canNoSelect), then play_or_use_from_hand cost_delta
-#       reduce 3 (kind-routing unified verb — G-PLAY-OR-USE-FROM-HAND).
+#   → One mandatory effect, in printed order (CR 4.3 §§15-1-2, 15-1-4):
+#     add_dp_modifier +3000 to self, expiry end_of_opponents_turn, then if
+#     your turn, OPTIONAL trash_bottom_face_down_source_under_tamer (decline
+#     or unpayable cost skips the tail), then OPTIONAL select_hand over
+#     [Glowing Dawn] cards → play_or_use_from_hand cost_delta reduce 3.
+#     Both choices stay inside the shared effect; the mandatory DP increase
+#     cannot be declined or reordered after the optional payment/payload.
 # Inherited [End of Attack][OPT]: trash bottom FD under a Tamer (process
 #   activation cost), then if this Digimon has [Glowing Dawn], unsuspend self.
 
@@ -65,43 +63,41 @@ effects:
     keyword: Alliance
     summary: "<Alliance>"
 
-  # ─── [On Play][When Digivolving] (A) this Digimon +3000 DP until opp turn end
+  # ─── [On Play][When Digivolving] +3000 DP, then optional paid play/use ───────
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends"
+    summary: "[On Play][When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if it's your turn, by trashing a bottom face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card from hand with the cost reduced by 3"
     process:
       - add_dp_modifier:
           target: source
           value: 3000
           expiry: end_of_opponents_turn
 
-  # ─── [On Play][When Digivolving] (B) if your turn, by trashing a bottom
-  #     face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card
-  #     from hand with the cost reduced by 3 ────────────────────────────────────
-  - when: [on_play, when_digivolving]
-    optional: true
-    active_when: { your_turn: true }
-    summary: "[On Play][When Digivolving] If your turn, by trashing a bottom face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card from hand with the cost reduced by 3"
-    process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
-      - select_hand:
-          of: you
-          bind_as: gd_pick
-          optional: true
-          filter: { trait_has: "Glowing Dawn" }
-          prompt: "You may play or use 1 [Glowing Dawn] card from your hand with the cost reduced by 3"
-      - play_or_use_from_hand:
-          of: you
-          hand_index: gd_pick
-          cost_delta: { reduce: 3 }
+      - if:
+          condition: { your_turn: true }
+          then:
+            # Declining payment preserves the source and skips the payload.
+            - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
+            # The player may decline this pick even after paying the cost.
+            - select_hand:
+                of: you
+                bind_as: gd_pick
+                optional: true
+                filter: { trait_has: "Glowing Dawn" }
+                prompt: "You may play or use 1 [Glowing Dawn] card from your hand with the cost reduced by 3"
+            - play_or_use_from_hand:
+                of: you
+                hand_index: gd_pick
+                cost_delta: { reduce: 3 }
 
   # ─── Inherited [End of Attack][OPT] trash FD under Tamer → unsuspend self ──
   - scope: inherited
     when: end_of_attack
     once_per_turn: true
     optional: true
-    active_when:
-      source_permanent_trait_has: "Glowing Dawn"
     summary: "[Inherited][End of Attack][OPT] By trashing a bottom face-down card under a Tamer, this [Glowing Dawn] Digimon unsuspends"
     process:
       - trash_bottom_face_down_source_under_tamer: { of: you }
-      - unsuspend: { target: source }
+      - if:
+          condition: { source_permanent_trait_has: "Glowing Dawn" }
+          then:
+            - unsuspend: { target: source }

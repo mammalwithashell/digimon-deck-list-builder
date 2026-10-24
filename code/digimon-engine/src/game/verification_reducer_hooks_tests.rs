@@ -1,6 +1,13 @@
 use crate::{action::{build_action_mask,encode_digivolve,space::PASS},debug_runner::DebugRunner,enums::GamePhase,resume::AfterSelectionHook};
 fn parked()->crate::game::Game {
- let mut r=DebugRunner::builder().from_dsl_yaml(include_str!("../../cards/bt4/BT4-011.yaml")).unwrap()
+ // Hybrid's treated-as route reads the result's printed evolution circle.
+ // Supply exactly the metadata the former permissive fixture loader inferred;
+ // the production YAML's kind-restricted alternative is not a printed row.
+ let spec: digimon_dsl::CardSpec = serde_yml::from_str(include_str!("../../cards/bt4/BT4-011.yaml")).unwrap();
+ let compiled = digimon_dsl::compile::compile(&spec).unwrap();
+ let mut agunimon = crate::debug_runner::card_data_for_test_from_compiled(&compiled);
+ agunimon.evo_costs = vec![crate::card_data::EvoCost { card_color: 0, level: 3, memory_cost: 2 }];
+ let mut r=DebugRunner::builder().add_card(agunimon).from_dsl_yaml(include_str!("../../cards/bt4/BT4-011.yaml")).unwrap()
   .from_dsl_yaml(include_str!("../../cards/st1/ST1-12.yaml")).unwrap()
   .from_dsl_yaml(include_str!("../../cards/st1/ST1-03.yaml")).unwrap()
   .from_dsl_yaml(r#"
@@ -37,7 +44,14 @@ fn legacy_reducer_digest_remains_explicit_and_current_clones_agree() {
     let game = parked();
     let clone = game.clone();
     assert_eq!(game.verification_digest(), clone.verification_digest());
-    assert_eq!(game.verification_digest_with_version(VerificationDigestVersion::LegacyV2), 12021496225411690432);
+    assert_eq!(game.pending_selection.as_ref().unwrap().zone_owner, Some(0));
+    // This archived constant predates explicit field-prompt ownership. Recreate
+    // that one historical metadata field on a clone only; the live fixture and
+    // current digests keep the real owner. Never replace the pinned constant.
+    let mut archival = game.clone();
+    archival.pending_selection.as_mut().unwrap().zone_owner = None;
+    assert_eq!(archival.verification_digest_with_version(VerificationDigestVersion::LegacyV2), 12021496225411690432);
+    assert_ne!(game.verification_digest_with_version(VerificationDigestVersion::LegacyV2), archival.verification_digest_with_version(VerificationDigestVersion::LegacyV2));
     assert_ne!(game.verification_digest(), game.verification_digest_with_version(VerificationDigestVersion::LegacyV2));
 }
 

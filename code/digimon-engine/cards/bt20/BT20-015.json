@@ -20,7 +20,9 @@
     "X Antibody",
     "Chronicle"
   ],
-  "form_eng": [],
+  "form_eng": [
+    "Ultimate"
+  ],
   "attribute_eng": [
     "Vaccine"
   ],
@@ -30,6 +32,11 @@
   "evo_costs": [
     {
       "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 5,
       "level": 4,
       "memory_cost": 4
     }

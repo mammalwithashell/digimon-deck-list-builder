@@ -77,7 +77,7 @@ fn bt24_085_yaml_compiles_with_option_use_and_may_attack_clause() {
     assert_eq!(compiled.cost, Some(4));
     assert_eq!(
         compiled.color,
-        vec![CompiledColor::Yellow, CompiledColor::Red]
+        vec![CompiledColor::Green, CompiledColor::Red]
     );
     assert!(compiled.traits.iter().any(|t| t == "TS"));
 

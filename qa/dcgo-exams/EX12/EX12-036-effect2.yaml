@@ -193,6 +193,13 @@ steps:
     do: { digivolve: { from: field.0, using: EX12-036 } }
     expect: { prompt: main_phase }
   - actor: 0
+    do:
+      select:
+        cards:
+        - EX12-036
+        ordinal: 0
+        sim_only: true
+  - actor: 0
     do: { pass: {} }
     expect: { prompt: main_phase }
   # T4 (p1, memory 3): hard-play MarineBullmon (3 -> -4).
@@ -241,7 +248,7 @@ assert:
   # would otherwise have sent it to (both trashes are empty) -- while Ryugumon
   # itself continued to p0's hand. p1's MarineBullmon stands suspended with
   # its tucked Gasamon.
-  - at: 15
+  - at: 16
     that:
       p0.field:
         - { card_id: EX12-063, dp: 7000, suspended: false, sources: [] }

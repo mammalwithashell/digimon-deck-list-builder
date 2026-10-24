@@ -71,9 +71,20 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             ctx.hatch(p);
             true
         }
-        CompiledStep::MoveFromBreeding { of } => {
+        CompiledStep::MoveFromBreeding { of, bind_as } => {
             let p = resolve_player(ctx, *of);
-            ctx.move_from_breeding_by_effect(p);
+            if let Some(name) = bind_as {
+                // Publish absence through parked continuation overlays; a
+                // failed second move must not reuse an earlier paid result.
+                bindings.clear_for_merge(name);
+            }
+            if let Some((captured, identity)) = ctx.move_from_breeding_with_identity(p) {
+                if let Some(name) = bind_as {
+                    if let Some(live) = ctx.game.resolve_digivolve_host_identity(captured.player, identity) {
+                        bindings.insert_selected_permanent_with_identity(name, live, identity);
+                    }
+                }
+            }
             true
         }
         CompiledStep::TrashTopSecurity {

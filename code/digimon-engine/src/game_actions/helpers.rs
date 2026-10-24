@@ -138,6 +138,57 @@ impl Game {
         );
     }
 
+    /// A committed security play removes one card (CR 4.3 15-15-3-2).
+    /// Queue the same loss/own/opponent chain as other effect removals, but
+    /// do not move the card: the successful play commit owns it. No observer
+    /// drains until the play and its event bundle have finished (15-8-3-2).
+    pub(crate) fn enqueue_security_play_removal(
+        &mut self,
+        defender: PlayerId,
+        effect_player: PlayerId,
+        card: &CardSource,
+    ) {
+        let handle = card.handle();
+        let previous = self.pending_security.replace(crate::selection::PendingSecurity {
+            defender,
+            card: card.clone(),
+            played: true,
+        });
+        let previous_effect = self.pending_security_loss_effect_initiated;
+        self.pending_security_loss_effect_initiated = true;
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnLoseSecurity,
+            crate::selection::TriggerSource::SecurityRevealed { defender, card: handle },
+        );
+        self.pending_security_loss_effect_initiated = previous_effect;
+        self.pending_security = previous;
+
+        let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnOwnSecurityRemoved,
+            crate::selection::TriggerSource::SecurityRemoved {
+                affected_player: defender,
+                observer_player: defender,
+                source_player: effect_player,
+                card: handle,
+                cause,
+            },
+        );
+        let opponent = self.next_clockwise(defender);
+        if opponent != defender {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnOpponentSecurityRemoved,
+                crate::selection::TriggerSource::SecurityRemoved {
+                    affected_player: defender,
+                    observer_player: opponent,
+                    source_player: effect_player,
+                    card: handle,
+                    cause,
+                },
+            );
+        }
+    }
+
     /// Tier-2 replacement-window dispatch for facade "would-be-X" operations.
     /// Fires `timing` for `subject` (cause inferred from `cause_player`), then
     /// reports whether the operation may PROCEED: `false` if a selection parked

@@ -20,14 +20,12 @@
 #      Draw 1, +1 -> 2. Armalizamon (BT25-049, GREEN Lv.4) over Ukkomon for 2
 #      -> 0 (its "may suspend" declined). Murasamemon (ST23-04) over Armalizamon for 3 -> -3
 #      (GREEN Lv.4 -> only the "Lv.4 w/[Glowing Dawn]: Cost 3" route).
-#   ST23-04 [On Play][When Digivolving] -- ours models it as TWO clauses (A the
-#      -5000, B the optional play); DCGO as ONE shared ActivateClass, so our
-#      TriggerOrder between them is a `sim_only` row (ordinal 0 = A).
-#      A: -5000 DP to Birdramon (5000 -> 0, deleted at the rule check).
-#      B: it is p0's turn -> yes (`sim_only`: DCGO's "may" is the canNoSelect
-#      Tamer pick itself), BT26-089 picked, its bottom face-down ST23-06
+#   ST23-04 [On Play][When Digivolving] is ONE effect in both engines:
+#      -5000 DP to Birdramon (5000 -> 0; rule deletion waits for this effect
+#      to finish), then the optional Tamer pick. BT26-089 is picked, its
+#      bottom face-down ST23-06
 #      trashed, ST23-12 played from hand for 3 - 3 = 0 (memory stays -3);
-#      ST23-12's own [On Play] declined.
+#      ST23-12's [On Play] cannot activate: the Tamer has no face-down card left.
 #
 # PROMPT SHAPE (card YAML DCGO crosscheck of ST23_04.cs: shared OP/WD,
 # optional:false; mandatory SelectPermanentEffect -5000; then if owner's turn
@@ -35,9 +33,11 @@
 # SelectPermanentEffect, then a canNoSelect SelectHandEffect over [Glowing
 # Dawn] cards -> ChangeCostClass -3 -> PlayPermanentCards):
 #   DCGO rows: SPE(opp) -> SPE(Tamer) -> SelectHandEffect.
-#   Ours adds two `sim_only` rows (TriggerOrder between our two clauses; the
-#   optional-clause yes). ST23-12's [On Play] decline: ours Replacement,
-#   DCGO canNoSelect SPE (unasserted).
+#   No TriggerOrder or optional-clause confirm is inserted between these
+#   processes. ST23-12 opens no further prompt with its cost unavailable.
+# The historical JSONL files remain unmodified. Divergence unit tests inject
+# an explicit synthetic memory difference into a temporary sidecar copy;
+# they no longer depend on the repaired early 0-DP deletion bug.
 card: ST23-04
 clause: ST23-04#effect#0
 seed: 424242
@@ -88,25 +88,19 @@ steps:
     do: { digivolve: { from: field.1, using: ST23-04 } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { cards: [ST23-04], ordinal: 0, sim_only: true } }
-  - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
   - actor: 0
     do: { select: { targets: [own.field.0] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
   - actor: 0
     do: { select: { cards: [ST23-12] } }
     expect: { prompt: SelectHandEffect }
-  - actor: 0
-    do: { select: { decline: true } }
   - actor: 1
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
-  - at: 17
+  - at: 14
     that:
       turn: 4
       p0.memory: -3

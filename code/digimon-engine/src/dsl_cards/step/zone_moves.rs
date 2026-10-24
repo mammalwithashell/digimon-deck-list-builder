@@ -206,7 +206,11 @@ pub fn try_run(
         }
         CompiledStep::AddTopSecurityToHand { of } => {
             let p = resolve_player(ctx, *of);
-            ctx.add_top_security_to_hand(p);
+            if let Some(card) = ctx.game.player(p).security.last().map(|c| c.handle()) {
+                if ctx.add_top_security_to_hand(p) {
+                    bindings.record_added_to_hand(card);
+                }
+            }
             true
         }
         CompiledStep::AddBottomSecurityToHand { of } => {
@@ -284,7 +288,14 @@ pub fn try_run(
             let required = min_count.map(usize::from).unwrap_or(selected.len());
             // A declared short payment (e.g. optional 0/1 picks for a cost of
             // two) is a decline; do not move even those selected cards.
-            if selected.len() < required {
+            if selected.len() < required || selected.iter().any(|source| {
+                ctx.source_card_trash_blocked(source.permanent, source.card)
+                    || !ctx.game.player(source.permanent.player).battle_area
+                        .get(source.permanent.index as usize).is_some_and(|perm| {
+                            perm.card_sources.iter().take(perm.card_sources.len().saturating_sub(1))
+                                .any(|card| card.handle() == source.card)
+                        })
+            }) {
                 ctx.cost_unpayable = true;
                 return true;
             }

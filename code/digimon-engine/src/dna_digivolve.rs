@@ -13,7 +13,7 @@
 //! `CardData` with `dna_costs` populated.
 
 use crate::card_data::{CardData, DnaCost, DnaRequirement};
-use crate::card_source::CardSource;
+use crate::card_source::{CardHandle, CardSource};
 use crate::digixros::matches_digixros_name_requirement;
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
@@ -60,6 +60,44 @@ impl DnaMaterialExtras {
 }
 
 impl Game {
+    /// Every printed hand-partner DNA recipe and legal orientation, rather
+    /// than a first-match cost lookup. The cards remain in their original areas.
+    pub(crate) fn effect_dna_hand_recipe_routes(
+        &self, player: PlayerId, field: PermanentHandle, partner: CardHandle,
+        result: CardHandle, ignore_requirements: bool,
+    ) -> Vec<crate::game_actions::effect_dna::EffectDnaHandRoute> {
+        use crate::game_actions::effect_dna::EffectDnaHandRoute;
+        if field.player != player || partner == result { return Vec::new(); }
+        let Some(owner) = self.players.get(player as usize) else { return Vec::new(); };
+        let Some(field_perm) = owner.battle_area.get(field.index as usize) else { return Vec::new(); };
+        let Some(partner) = owner.hand.iter().find(|c| c.handle() == partner) else { return Vec::new(); };
+        let Some(result) = owner.hand.iter().find(|c| c.handle() == result) else { return Vec::new(); };
+        let result_meta = &self.card_data[result.data_index];
+        let partner_meta = &self.card_data[partner.data_index];
+        if !matches!(result_meta.card_kind, crate::enums::CardKind::Digimon | crate::enums::CardKind::Dual) { return Vec::new(); }
+        let extras = self.dna_material_extras(field, result);
+        let mut routes = Vec::new();
+        for (index, cost) in result_meta.dna_costs.iter().enumerate() {
+            if perm_matches_req_ext(field_perm, &extras, &cost.requirement1, &self.card_data)
+                && card_data_matches_req(partner_meta, &cost.requirement2) {
+                routes.push(EffectDnaHandRoute { requirement_index: Some(index),
+                    field_is_upper: true, memory_cost: cost.memory_cost });
+            }
+            if perm_matches_req_ext(field_perm, &extras, &cost.requirement2, &self.card_data)
+                && card_data_matches_req(partner_meta, &cost.requirement1) {
+                routes.push(EffectDnaHandRoute { requirement_index: Some(index),
+                    field_is_upper: false, memory_cost: cost.memory_cost });
+            }
+        }
+        if routes.is_empty() && ignore_requirements {
+            for field_is_upper in [true, false] {
+                routes.push(EffectDnaHandRoute { requirement_index: None,
+                    field_is_upper, memory_cost: 0 });
+            }
+        }
+        routes
+    }
+
     /// The result-scoped DNA identity extras `material` carries when it is
     /// evaluated as a DNA material for `result` (a card in hand / trash).
     /// Reads the `ModifierType::DnaMaterialIdentity` entries the material's
@@ -262,7 +300,7 @@ impl Game {
                 .any(|entry| match &entry.payload {
                     crate::modifiers::ModifierPayload::DigiXrosNames { aliases } => aliases
                         .iter()
-                        .any(|alias| alias.to_lowercase().contains(&required_name.to_lowercase())),
+                        .any(|alias| crate::card_data::rules_name_contains(alias, required_name)),
                     _ => false,
                 })
     }
@@ -1655,12 +1693,12 @@ fn card_data_matches_req_ext(
     }
     if !req.name_contains.is_empty() {
         let needle = req.name_contains.to_lowercase();
-        let printed_ok = meta.card_name.to_lowercase().contains(&needle);
+        let printed_ok = crate::card_data::rules_name_contains(&meta.card_name, &needle);
         if !printed_ok
             && !extras
                 .names
                 .iter()
-                .any(|n| n.to_lowercase().contains(&needle))
+                .any(|n| crate::card_data::rules_name_contains(n, &needle))
         {
             return false;
         }

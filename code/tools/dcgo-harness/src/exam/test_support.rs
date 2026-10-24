@@ -62,6 +62,25 @@ pub fn st1_decks() -> (Vec<String>, Vec<String>) {
     (main, egg)
 }
 
+/// Deliberate negative control for the oracle harness tests, applied only to
+/// temporary copies. ST23-04's historical early-DP-deletion mismatch is now
+/// repaired, so it must not be the mechanism keeping divergence tests red.
+/// Recorded step 16 is the Tamer pick, corrected scenario step 12.
+pub fn with_synthetic_st23_memory_divergence(sidecar: &str) -> String {
+    let mut changed = 0;
+    let rows = sidecar.lines().map(|line| {
+        let mut row: serde_json::Value = serde_json::from_str(line).unwrap();
+        if row["step"] == 16 {
+            assert_eq!(row["memory"], -3, "historical fixture changed");
+            row["memory"] = serde_json::json!(-2);
+            changed += 1;
+        }
+        serde_json::to_string(&row).unwrap()
+    }).collect::<Vec<_>>();
+    assert_eq!(changed, 1, "synthetic mismatch needs exactly one recorded row");
+    format!("{}\n", rows.join("\n"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

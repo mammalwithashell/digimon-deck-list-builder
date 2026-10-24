@@ -279,6 +279,7 @@ impl Game {
         self.field_source_receipts.clear();
         self.abort_would_digivolve_declaration();
         self.abort_effect_digivolve_scopes();
+        self.effect_dna_would_scopes.clear();
         self.pending_security_moves.clear();
         self.security_placement_receipts.clear();
         self.current_deletion_receipt = None;

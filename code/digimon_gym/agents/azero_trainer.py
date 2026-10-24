@@ -16,6 +16,13 @@ one ``--export-onnx`` hop produces the next generation's driver input.
 Sliding-window replay buffer (D10): pass multiple ``--shards`` directories
 (the last N generations); rows are pooled and shuffled together.
 
+Shards and checkpoints must carry the same live seven-field model contract.
+``terminated.npy`` distinguishes terminal draws from safety-cap truncations;
+only completed rows contribute to value loss. ``calibrate_value`` fits the
+critic-specific layers with a whole-game validation split while freezing the
+actor and shared features. Its marker records terminal-outcome target semantics,
+not a claim of statistically calibrated win probabilities.
+
 Sparse-π detail worth knowing: the driver enumerates **every root-legal
 action** in a row's sparse entries (0-visit edges included), so a row's
 action list doubles as the legality mask at that decision — the masked
@@ -40,6 +47,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
+from model_contract import validate_checkpoint, validate_contract
 
 SCHEMA = "selfplay-shards-v1"
 
@@ -55,6 +63,8 @@ class ShardDataset:
     z: np.ndarray  # (N,) f32 in {-1, 0, +1}
     action_dim: int
     observation_profile: str
+    terminated: np.ndarray
+    game_ids: np.ndarray
     manifests: list[dict] = field(default_factory=list)
 
     def __len__(self) -> int:
@@ -63,15 +73,23 @@ class ShardDataset:
 
 def load_shards(dirs: list[Path]) -> ShardDataset:
     """Load + concatenate shard dirs, validating cross-dir consistency."""
-    obs_parts, off_parts, act_parts, vis_parts, z_parts = [], [], [], [], []
+    obs_parts, off_parts, act_parts, vis_parts, z_parts, end_parts, game_parts = [], [], [], [], [], [], []
     manifests: list[dict] = []
     obs_dim = action_dim = None
     profile = None
+    game_base = 0
     for d in dirs:
         manifest_path = d / "manifest.json"
         manifest = json.loads(manifest_path.read_text())
         if manifest.get("schema") != SCHEMA:
             raise ValueError(f"{manifest_path}: schema {manifest.get('schema')!r}, expected {SCHEMA!r}")
+        contract = validate_contract(manifest.get("model_contract"), manifest["observation_profile"])
+        if contract["observation_profile"] != manifest["observation_profile"]:
+            raise ValueError(f"{manifest_path}: observation_profile differs from contract")
+        if contract["tensor_size"] != manifest["obs_dim"] or contract["action_space_size"] != manifest["action_dim"]:
+            raise ValueError(f"{manifest_path}: dimensions differ from model contract")
+        if manifest.get("value_target") != "terminal_outcome":
+            raise ValueError(f"{manifest_path}: value_target must be terminal_outcome")
         if obs_dim is None:
             obs_dim = int(manifest["obs_dim"])
             action_dim = int(manifest["action_dim"])
@@ -85,6 +103,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                     f"!= {profile!r} — refusing to mix profiles in one buffer"
                 )
         manifests.append(manifest)
+        max_game = -1
         for shard in manifest["shards"]:
             s = d / shard["dir"]
             obs = np.load(s / "obs.npy")
@@ -92,9 +111,17 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
             act = np.load(s / "policy_actions.npy")
             vis = np.load(s / "policy_visits.npy")
             z = np.load(s / "z.npy")
+            terminated = np.load(s / "terminated.npy")
+            games = np.load(s / "game_id.npy")
             rows = obs.shape[0]
-            if rows != shard["rows"] or off.shape[0] != rows + 1 or z.shape[0] != rows:
+            if rows != shard["rows"] or off.shape[0] != rows + 1 or z.shape[0] != rows or terminated.shape != (rows,) or games.shape != (rows,):
                 raise ValueError(f"{s}: row bookkeeping inconsistent")
+            if not np.all(np.isin(z, [-1., 0., 1.])) or not np.all(np.isin(terminated, [0, 1])):
+                raise ValueError(f"{s}: invalid terminal targets")
+            if off[0] != 0 or off[-1] != len(act) or len(act) != len(vis) or not np.all(np.diff(off) > 0):
+                raise ValueError(f"{s}: invalid sparse policy offsets")
+            if obs.shape[1] != manifest["obs_dim"] or not np.isfinite(obs).all() or not np.isfinite(vis).all() or np.any(vis < 0) or np.any(act < 0) or np.any(act >= manifest["action_dim"]):
+                raise ValueError(f"{s}: invalid observations or policy targets")
             # Rebase this shard's offsets onto the pooled nnz axis. The
             # first shard keeps its leading 0; later shards drop theirs
             # (it duplicates the previous shard's final offset).
@@ -104,6 +131,10 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
             act_parts.append(act)
             vis_parts.append(vis.astype(np.float32, copy=False))
             z_parts.append(z.astype(np.float32, copy=False))
+            end_parts.append(terminated.astype(bool))
+            game_parts.append(games.astype(np.int64) + game_base)
+            max_game = max(max_game, int(games.max(initial=-1)))
+        game_base += max_game + 1
     if obs_dim is None:
         raise ValueError("no shard directories given")
 
@@ -116,6 +147,8 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
         z=np.concatenate(z_parts),
         action_dim=action_dim,
         observation_profile=profile,
+        terminated=np.concatenate(end_parts),
+        game_ids=np.concatenate(game_parts),
         manifests=manifests,
     )
 
@@ -160,8 +193,12 @@ def train(
     import torch
     from sb3_contrib import MaskablePPO
 
+    torch.manual_seed(seed)
     ds = load_shards(shard_dirs)
+    if not ds.terminated.any():
+        raise ValueError("No completed-game value targets; refusing to label an untrained critic terminal_outcome")
     model = MaskablePPO.load(str(init_from), device=device)
+    validate_checkpoint(model, ds.observation_profile)
     policy = model.policy
     if int(np.prod(policy.observation_space.shape)) != ds.obs.shape[1]:
         raise ValueError(
@@ -171,7 +208,7 @@ def train(
     if int(policy.action_space.n) != ds.action_dim:
         raise ValueError(f"model action dim {policy.action_space.n} != shard {ds.action_dim}")
 
-    truncated = int((ds.z == 0.0).sum())
+    truncated = int((~ds.terminated).sum())
     print(
         f"azero_trainer: {len(ds)} rows from {len(shard_dirs)} dir(s), "
         f"obs_dim {ds.obs.shape[1]}, profile {ds.observation_profile}, "
@@ -214,7 +251,8 @@ def train(
             masked_logits = logits.masked_fill(~mask_t, torch.finfo(logits.dtype).min)
             logp = torch.log_softmax(masked_logits, dim=-1)
             policy_loss = -(pi_t * logp.masked_fill(~mask_t, 0.0)).sum(dim=-1).mean()
-            value_loss = torch.nn.functional.mse_loss(values, z_t)
+            terminal = torch.as_tensor(ds.terminated[idx], device=dev)
+            value_loss = torch.nn.functional.mse_loss(values[terminal], z_t[terminal]) if terminal.any() else values.sum() * 0.0
             loss = policy_loss + value_coef * value_loss
 
             optimizer.zero_grad()
@@ -236,6 +274,8 @@ def train(
         )
 
     policy.set_training_mode(False)
+    if value_coef > 0:
+        model.digimon_value_semantics = "terminal_outcome"
     out.parent.mkdir(parents=True, exist_ok=True)
     model.save(str(out))
     print(f"saved {out}", flush=True)
@@ -264,8 +304,81 @@ def train(
         "truncated_rows": truncated,
         "epochs": history,
         "out": str(out),
+        "model_contract": validate_checkpoint(model, ds.observation_profile),
         "export_onnx": str(export_onnx) if export_onnx else None,
     }
+
+
+def calibrate_value(init_from: Path, shard_dirs: list[Path], out: Path,
+                    epochs: int = 8, batch_size: int = 256, lr: float = 1e-3,
+                    device: str = "auto", seed: int = 0) -> dict:
+    """Refit only the critic on completed games, keeping the actor bitwise fixed.
+
+    Split by complete game, never by individual decision. This changes the
+    training target to terminal outcome; held-out error measures calibration
+    quality rather than asserting that fitting alone proves calibration.
+    """
+    import torch
+    from sb3_contrib import MaskablePPO
+    torch.manual_seed(seed)
+    ds = load_shards(shard_dirs)
+    model = MaskablePPO.load(str(init_from), device=device)
+    validate_checkpoint(model, ds.observation_profile)
+    policy = model.policy
+    policy.set_training_mode(False)
+    rng = np.random.default_rng(seed)
+    groups = np.unique(ds.game_ids[ds.terminated])
+    if len(groups) < 2:
+        raise ValueError("Value calibration needs at least two completed games for a held-out split")
+    rng.shuffle(groups)
+    heldout_games = groups[:max(1, len(groups) // 5)]
+    heldout = ds.terminated & np.isin(ds.game_ids, heldout_games)
+    fit = np.flatnonzero(ds.terminated & ~heldout)
+    dev = policy.device
+    # Shared feature extraction stays frozen; only critic-specific layers
+    # change, so policy priors are exactly preserved during calibration.
+    params = list(policy.mlp_extractor.value_net.parameters()) + list(policy.value_net.parameters())
+    optimizer = torch.optim.Adam(params, lr=lr)
+    torch.nn.init.zeros_(policy.value_net.weight)
+    torch.nn.init.zeros_(policy.value_net.bias)
+
+    def predict(idx):
+        obs = torch.as_tensor(ds.obs[idx], device=dev)
+        with torch.no_grad():
+            features = policy.extract_features(obs)
+            if not policy.share_features_extractor:
+                features = features[1]
+        return policy.value_net(policy.mlp_extractor.forward_critic(features)).squeeze(-1)
+
+    def metrics(indices):
+        squared = []
+        with torch.no_grad():
+            for start in range(0, len(indices), batch_size):
+                idx = indices[start:start + batch_size]
+                prediction = predict(idx).clamp(-1, 1)
+                squared.extend(((prediction - torch.as_tensor(ds.z[idx], device=dev)) ** 2).cpu().tolist())
+        return float(np.mean(squared))
+
+    history = []
+    for epoch in range(epochs):
+        order = rng.permutation(fit)
+        for start in range(0, len(order), batch_size):
+            idx = order[start:start + batch_size]
+            loss = torch.nn.functional.mse_loss(predict(idx), torch.as_tensor(ds.z[idx], device=dev))
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+        history.append({"epoch": epoch, "fit_mse": metrics(fit), "heldout_mse": metrics(np.flatnonzero(heldout))})
+        print(f"value calibration: {history[-1]}", flush=True)
+    model.digimon_value_semantics = "terminal_outcome"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    model.save(str(out))
+    report = {"fit_rows": len(fit), "heldout_rows": int(heldout.sum()),
+              "excluded_truncated_rows": int((~ds.terminated).sum()),
+              "completed_games": len(groups), "history": history,
+              "value_semantics": "terminal_outcome", "actor_frozen": True}
+    out.with_suffix(".calibration.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return report
 
 
 def build_parser() -> argparse.ArgumentParser:

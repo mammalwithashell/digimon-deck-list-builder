@@ -26,9 +26,43 @@ effects:
     keyword: Barrier
 
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Recovery +1 (Deck)"
+    summary: "Recovery +1 (Deck); then during an attack, a breeder may evolve into a Lv.6 or lower Chronicle from hand or trash for free"
     process:
       - recover: { of: you, count: 1 }
+      - if:
+          condition: { during_attack: true }
+          then:
+            - select_own_breeding_permanent:
+                bind_as: breeder
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - has_digivolve_candidate:
+                        of: you
+                        zone: [hand, trash]
+                        filter:
+                          kind: digimon
+                          level_lte: 6
+                          trait_has: Chronicle
+                prompt: "Digivolve your breeding Digimon into a level 6 or lower Chronicle for free?"
+                then:
+                  - select_union_zone:
+                      of: you
+                      zones: [hand, trash]
+                      bind_as: evolution
+                      optional: true
+                      cost: false
+                      filter:
+                        kind: digimon
+                        level_lte: 6
+                        trait_has: Chronicle
+                        can_digivolve_onto: breeder
+                      prompt: "Choose a level 6 or lower Chronicle Digimon in hand or trash"
+                  - effect_initiated_digivolve:
+                      target: breeder
+                      source: evolution
+                      cost: free
 
   # ─── [All Turns][OPT] security removed → 1 opp Digimon -8000 DP ──────────────
   #
@@ -78,13 +112,3 @@ effects:
     summary: "[Inherited][All Turns][OPT] If [Alphamon: Ouryuken] would leave the battle area other than by your effects, by trashing your top security card, it doesn't leave"
     process:
       - trash_top_security_and_cancel_replacement: { of: you }
-
-# Stubbed (genuine open engine/DSL gap G-BREEDING-DIGIVOLVE-UNION-ZONES, size L):
-# - The [On Play][When Digivolving] tail "if during an attack, 1 of your Digimon
-#   in the breeding area may digivolve into a level 6 or lower [Chronicle] trait
-#   Digimon card in the hand or trash without paying the cost" needs two missing
-#   substrate pieces: (1) effect-initiated digivolve that can target the
-#   BREEDING-AREA permanent (the engine hard-rejects target.index outside the
-#   battle area), and (2) a `during_attack` predicate (game.pending_attack).
-#   See qa/dsl-vocab-gaps.md and tests/cards_behavioral/bt20/bt20_056.rs ignored
-#   test bt20_056_during_attack_breeding_digivolves_chronicle_from_hand_or_trash.

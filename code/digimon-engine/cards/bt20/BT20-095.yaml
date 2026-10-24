@@ -1,0 +1,89 @@
+# Official corrected text removes Chronicle from the moved breeding Digimon.
+# The deletion trigger and digivolution result still require Chronicle.
+# https://world.digimoncard.com/rule/pdf/errata_card_list.pdf?20250516= (page 2)
+card: BT20-095
+name: Fellowship of Hope's Keepers
+kind: option
+color: [black]
+cost: 3
+traits: [X Antibody, Chronicle]
+
+effects:
+  - when: main_from_hand
+    summary: "Reveal 3; add 1 Chronicle card; return the rest to the top or bottom; place this card"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: chronicle
+              filter: { trait_has: Chronicle }
+              min: 1
+              max: 1
+          prompt: "Add 1 Chronicle card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: chronicle }
+      - place_remainder_on_deck: { of: you, position: choice }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: on_any_deletion
+    active_when:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: Chronicle
+    summary: "When your Chronicle Digimon is deleted, Delay: by moving your Lv.3+ breeder, it may digivolve into a Chronicle Digimon from hand or trash for free"
+    process:
+      # Delay's outer choice pays the Option first. The move is a separate
+      # optional condition and is legal even without an evolution candidate.
+      - select_own_breeding_permanent:
+          optional: true
+          filter:
+            kind: digimon
+            level_gte: 3
+            can_move_from_breeding_by_effect: true
+          prompt: "Move your level 3 or higher Digimon from breeding to battle?"
+          then:
+            - move_from_breeding: { of: you, bind_as: moved }
+            - if:
+                condition: { binding_present: moved }
+                then:
+                  - select_union_zone:
+                      of: you
+                      zones: [hand, trash]
+                      bind_as: evolution
+                      optional: true
+                      cost: false
+                      filter:
+                        kind: digimon
+                        trait_has: Chronicle
+                        can_digivolve_onto: moved
+                      prompt: "Digivolve the moved Digimon into a Chronicle Digimon from hand or trash for free?"
+                  - effect_initiated_digivolve:
+                      target: moved
+                      source: evolution
+                      cost: free
+
+  - when: on_security
+    summary: "You may play 1 Chronicle card costing 5 or less from hand or trash for free; then place this card"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: played
+          optional: true
+          cost: false
+          filter:
+            all_of:
+              - trait_has: Chronicle
+              - play_cost_lte: 5
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 Chronicle card costing 5 or less from hand or trash for free?"
+      - if:
+          condition: { binding_present: played }
+          then:
+            - play_union_bound_free: { binding: played }
+      - place_self_as_delay_option: {}

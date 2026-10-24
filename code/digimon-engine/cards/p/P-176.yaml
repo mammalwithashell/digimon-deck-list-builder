@@ -1,0 +1,44 @@
+# Card image and official Bandai bundle verified; DCGO P/Black/P_176.cs.
+# CR 4.3 8-1-3: meet a printed requirement, pay its cost, and draw one.
+# The whole effect is optional: declining the folded hand pick preserves OPT.
+card: P-176
+name: Dorimon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Lesser, X Antibody, Chronicle]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] This Digimon may digivolve into a Chronicle Digimon card in the hand"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: digimon
+            - trait_has: Chronicle
+            - can_digivolve_onto_with_cost: { target: source, cost: printed }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: evolution
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Chronicle
+              - can_digivolve_onto_with_cost: { target: source, cost: printed }
+          prompt: "This Digimon may digivolve into a Chronicle Digimon in your hand"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evolution
+          cost: printed
+          ignore_requirements: false

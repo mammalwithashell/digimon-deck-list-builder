@@ -45,6 +45,60 @@ def test_seat_balanced_seed_alternates_parity():
     assert parities == [0, 1, 0, 1, 0, 1]
 
 
+def test_failed_eval_preserves_repro_and_does_not_become_a_draw(monkeypatch, tmp_path):
+    import json
+    from digimon_gym.agents import anchored_eval
+
+    class Inner:
+        def __init__(self, **kwargs):
+            assert kwargs["record_actions"]
+        def get_recording(self):
+            return {"actions": [{"action_id": 0}], "initial_state": {}}
+
+    class Wrapper:
+        def __init__(self, inner, opponent_fn): pass
+        def reset(self, seed):
+            raise RuntimeError("payment loop")
+
+    monkeypatch.setenv("DIGIMON_EVAL_FAILURE_DIR", str(tmp_path))
+    monkeypatch.setattr(anchored_eval, "DigimonEnv", Inner)
+    monkeypatch.setattr(anchored_eval, "OpponentWrapper", Wrapper)
+    with pytest.raises(RuntimeError, match="payment loop"):
+        anchored_eval.play_one(None, None, ["A"], ["B"], 42, "standard_lite_v2")
+    context = json.loads(next(tmp_path.glob("*.context.json")).read_text())
+    assert context["seed"] == 42 and context["deck1"] == ["A"]
+    recording = json.loads(next(tmp_path.glob("*.recording.json")).read_text())
+    assert recording["actions"] == [{"action_id": 0}]
+
+
+@pytest.mark.parametrize("reason", ["step_limit", "crash", "mutual_deckout"])
+def test_engine_safety_termination_is_not_scored_as_a_draw(monkeypatch, reason):
+    from digimon_gym.agents import anchored_eval
+
+    class Inner:
+        is_game_over = True
+        winner_id = None
+
+        def __init__(self, **kwargs): pass
+        def terminal_outcome(self):
+            return {"game_over": True, "winner_id": None, "reason": reason}
+
+    class Wrapper:
+        def __init__(self, inner, opponent_fn): self.inner = inner
+        def reset(self, seed): return None, {}
+
+    monkeypatch.delenv("DIGIMON_EVAL_FAILURE_DIR", raising=False)
+    monkeypatch.setattr(anchored_eval, "DigimonEnv", Inner)
+    monkeypatch.setattr(anchored_eval, "OpponentWrapper", Wrapper)
+    monkeypatch.setattr(anchored_eval, "_unwrap_to_digimon_env", lambda env: env.inner)
+    monkeypatch.setattr(anchored_eval, "MAX_STEPS", 0)
+    if reason in {"step_limit", "crash"}:
+        with pytest.raises(RuntimeError, match=reason):
+            anchored_eval.play_one(None, None, ["A"], ["B"], 42, "standard_lite_v2")
+    else:
+        assert anchored_eval.play_one(None, None, ["A"], ["B"], 42, "standard_lite_v2") is None
+
+
 # ---- integration: a mirror matchup must NOT be degenerate ----
 # Catches the passive-opponent bug (where the first player always wins, making
 # a model-vs-itself land at exactly 0% or 100% instead of ~50%).

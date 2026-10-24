@@ -17,6 +17,10 @@ use crate::permanent::PermanentHandle;
 use crate::selection::AttackTarget;
 use crate::trigger_context::AttackTargetChangeReason;
 
+#[path = "predicate_dna.rs"]
+mod dna;
+use dna::dna_hand_candidate;
+
 /// The subject a predicate is applied to.
 #[derive(Debug, Clone, Copy)]
 pub enum PredicateSubject {
@@ -136,6 +140,27 @@ fn eval_predicate_ref(
     // (e.g. `is_face_down` / `is_bottom_source`) stay evaluable at any
     // combinator nesting depth.
     let original_subject = subject;
+    if let Some(spec) = &pred.dna_hand_candidate {
+        if !dna_hand_candidate(spec, rctx, original_subject, bindings) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.can_move_from_breeding_by_effect {
+        let player = match original_subject {
+            PredicateSubject::BreedingPermanent(player) => player,
+            PredicateSubject::Permanent(handle)
+                if handle.index == crate::action::space::BREEDING_TARGET as u8 => handle.player,
+            _ => return false,
+        };
+        // `false` means an existing breeder with an unavailable move, not an
+        // absent subject or a card/permanent in an unrelated zone.
+        if rctx.game.players.get(player as usize)
+            .and_then(|owner| owner.breeding_area.as_ref()).is_none()
+            || rctx.game.can_move_from_breeding_by_effect(player) != want
+        {
+            return false;
+        }
+    }
     let subject = if let PredicateSubject::Source(sref) = subject {
         if let Some(want) = pred.is_face_down {
             let actual = rctx
@@ -769,13 +794,26 @@ fn eval_predicate_ref(
         }
     }
     if let Some(want) = pred.on_field {
+        // Historical DSL vocabulary: "on_field" means battle area, not the
+        // CR 3-4-6 field (which also includes breeding). A saved source handle
+        // is only a slot: after departure it can point to another physical card.
+        let in_battle_area = |h: PermanentHandle, require_source: bool| {
+            h.index != crate::action::space::BREEDING_TARGET as u8
+                && rctx.game.players[h.player as usize]
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some_and(|perm| {
+                        !require_source
+                            || perm
+                                .card_sources
+                                .iter()
+                                .chain(perm.linked_cards.iter())
+                                .any(|card| card.handle() == rctx.source_card)
+                    })
+        };
         let is_on_field = match subject {
-            PredicateSubject::Permanent(h) => {
-                h.index != crate::action::space::BREEDING_TARGET as u8
-            }
-            _ => rctx
-                .source_permanent
-                .is_some_and(|h| h.index != crate::action::space::BREEDING_TARGET as u8),
+            PredicateSubject::Permanent(h) => in_battle_area(h, false),
+            _ => rctx.source_permanent.is_some_and(|h| in_battle_area(h, true)),
         };
         if is_on_field != want {
             return false;
@@ -1529,8 +1567,14 @@ fn permanent_material_count(
 fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
     // If any subject-only field is set, this subjectless eval can't satisfy it.
     pred.kind.is_none()
+        && pred.source_count.is_none()
+        && pred.link_card_count.is_none()
+        && pred.can_attack.is_none()
+        && pred.can_change_orientation.is_none()
         && pred.can_play_from_effect_without_cost.is_none()
         && pred.can_play_to_breeding_from_hand.is_none()
+        && pred.can_move_from_breeding_by_effect.is_none()
+        && pred.can_digivolve_onto_with_cost.is_none()
         && pred.level_eq.is_none()
         && pred.level_eq_binding.is_none()
         && pred.level_lte_binding.is_none()
@@ -3195,6 +3239,17 @@ fn eval_card_fields(
     bindings: Option<&Bindings>,
     dual_ref: DualRef,
 ) -> bool {
+    // These leaves require a permanent. When this routine is delegated to
+    // from a permanent evaluator, formula_target carries that live subject;
+    // plain hand/trash/reveal/source Card subjects must not pass vacuously.
+    if formula_target.is_none()
+        && (pred.source_count.is_some()
+            || pred.link_card_count.is_some()
+            || pred.can_attack.is_some()
+            || pred.can_change_orientation.is_some())
+    {
+        return false;
+    }
     let data = match rctx.game.card_data_for_handle(card) {
         Some(d) => d,
         None => return false,
@@ -3692,17 +3747,43 @@ fn eval_card_fields(
         // `source` (when not shadowed by a real binding) is the effect's own
         // carrier permanent â€” "THIS Digimon may digivolve into ..." (EX13-055 /
         // EX13-057). G-DSL-CAN-DIGIVOLVE-ONTO-SOURCE.
-        let target = bindings.and_then(|b| b.get_permanent(binding)).or_else(|| {
-            if binding == "source" {
-                rctx.source_permanent
-            } else {
-                None
-            }
-        });
+        let target = if bindings.is_some_and(|b| b.selected_identity_pin(binding).is_some()
+            || b.get_breeding_permanent_ref(binding).is_some()) {
+            // Match the consuming step after an observer or payment compacts
+            // the field. A departed pinned host must not fall back to its old
+            // slot, including when the binding shadows `source`.
+            resolve_cost_probe_target(rctx, bindings, binding)
+        } else {
+            // Keep legacy unpinned bindings and the implicit source fallback
+            // unchanged. This remains a route-only probe, with no cost check.
+            bindings.and_then(|b| b.get_permanent(binding)).or_else(|| {
+                if binding == "source" {
+                    rctx.source_permanent
+                } else {
+                    None
+                }
+            })
+        };
         let Some(target) = target else {
             return false;
         };
         if !can_card_digivolve_onto(rctx, card, target) {
+            return false;
+        }
+    }
+    if let Some(spec) = &pred.can_digivolve_onto_with_cost {
+        let Some(target) = resolve_cost_probe_target(rctx, bindings, &spec.target) else {
+            return false;
+        };
+        let Some(source_ref) = rctx.game.locate_card_source_ref(card) else {
+            return false;
+        };
+        let cost = crate::dsl_cards::step::play_digivolve::lower_cost_delta_read(
+            Some(&spec.cost), rctx, bindings,
+        );
+        if !rctx.game.can_effect_digivolve_from_source_with_cost(
+            target.player, source_ref, target, cost,
+        ) {
             return false;
         }
     }
@@ -3772,6 +3853,48 @@ fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle
     can_card_digivolve_onto(rctx, card, source_handle)
 }
 
+/// Cost-aware picks resolve stable identities, never a selected host's stale slot.
+fn resolve_cost_probe_target(
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+    name: &str,
+) -> Option<PermanentHandle> {
+    if let Some(bindings) = bindings {
+        if bindings.selected_identity_pin(name).is_some() {
+            return bindings.resolve_selected_identity(rctx.game, name);
+        }
+        if let Some(breeding) = bindings.get_breeding_permanent_ref(name) {
+            return rctx.game.player(breeding.player).breeding_area.as_ref()
+                .filter(|p| p.card_sources.iter().any(|c| c.handle() == breeding.card))
+                .map(|_| PermanentHandle {
+                    player: breeding.player, index: crate::action::space::BREEDING_TARGET as u8,
+                });
+        }
+        if let Some(BindingValue::PlayedPermanent { token, .. }) = bindings.get_ref(name) {
+            let live = rctx.game.resolve_token_as_battle_area_top(*token)?;
+            if let Some((player, identity)) = bindings.played_identity_pin(name) {
+                return (rctx.game.resolve_digivolve_host_identity(player, identity) == Some(live))
+                    .then_some(live);
+            }
+            return Some(live);
+        }
+        if bindings.get_ref(name).is_some() {
+            return bindings.get_permanent(name);
+        }
+    }
+    if name != "source" || rctx.source_permanent.is_none() {
+        return None;
+    }
+    // Follow the actual carrier after field compaction. A source that left
+    // the field must not make an unrelated permanent in its old slot legal.
+    match rctx.game.resolve_provenance_token(
+        crate::trigger_context::ProvenanceToken::from(rctx.source_card),
+    ) {
+        Some(crate::trigger_context::EventSubject::Permanent(handle)) => Some(handle),
+        _ => None,
+    }
+}
+
 /// Shared route probe behind `can_digivolve_from_source` (target = the
 /// effect's source permanent) and `can_digivolve_onto` / `has_digivolve_candidate`
 /// (target = an arbitrary bound permanent): true when `card` has at least one
@@ -3786,6 +3909,11 @@ fn can_card_digivolve_onto(
     target: PermanentHandle,
 ) -> bool {
     if permanent_for_handle(rctx, target).is_none() {
+        return false;
+    }
+    if rctx.game.locate_card_source_ref(card).is_some_and(|source_ref|
+        !rctx.game.effect_digivolve_source_supported(source_ref, target))
+    {
         return false;
     }
     // This probe serves effect-driven evolution choices. Route compatibility
@@ -3813,13 +3941,15 @@ fn can_card_digivolve_onto(
 }
 
 /// `has_digivolve_candidate` â€” permanent-subject probe: does any card in the
-/// listed hand/trash zones of `of` satisfy `filter` AND have a normal-digivolve
+/// listed hand/trash/reveal zones of `of` satisfy `filter` AND have a normal-digivolve
 /// route onto `handle`? DCGO BT25_092 `CanDigivolveDigimon(permanent)` =
 /// `HasMatchConditionOwnersHand(ValidTarget(â€¦, Root.Hand, permanent)) ||
 /// HasMatchConditionOwnersCardInTrash(ValidTarget(â€¦, Root.Trash, permanent))`.
 /// The nested filter is evaluated as a card subject (same evaluator a
 /// `select_union_zone` hand/trash pick uses), so the permanent gate and the
-/// later result pick agree on the candidate set.
+/// later result pick agree on the candidate set. Explicit `cost` also checks
+/// the consuming effect's payment using the normal declaration preflight;
+/// omitted cost preserves the route-only semantics of existing free effects.
 /// G-DSL-DIGIVOLVE-FROM-UNION-WITH-SOURCE-TRASH-COST.
 fn permanent_has_digivolve_candidate(
     spec: &digimon_dsl::compiled::CompiledDigivolveCandidate,
@@ -3833,11 +3963,17 @@ fn permanent_has_digivolve_candidate(
             let cards: &[crate::card_source::CardSource] = match zone {
                 CompiledZone::Hand => &state.hand,
                 CompiledZone::Trash => &state.trash,
+                CompiledZone::Reveal => &rctx.game.revealed_cards,
                 // Validated away at compile time; defensively contribute
                 // nothing rather than scanning an unsupported zone.
                 _ => continue,
             };
             for card in cards {
+                // The reveal pool is shared by both players, unlike their
+                // hand/trash vectors. Match the explicit owner selector.
+                if matches!(zone, CompiledZone::Reveal) && card.owner != player {
+                    continue;
+                }
                 let h = card.handle();
                 // Full predicate eval (not the bare `eval_card_fields` leaf
                 // path) so combinator filters â€” e.g. "a red OR blue Digimon
@@ -3853,7 +3989,23 @@ fn permanent_has_digivolve_candidate(
                         continue;
                     }
                 }
-                if can_card_digivolve_onto(rctx, h, handle) {
+                let can_digivolve = if let Some(cost) = &spec.cost {
+                    let Some(source_ref) = rctx.game.locate_card_source_ref(h) else {
+                        continue;
+                    };
+                    // Evaluate against the original effect source and local
+                    // bindings, exactly as the consuming DSL step does. The
+                    // prospective host must not replace formula context.
+                    let delta = crate::dsl_cards::step::play_digivolve::lower_cost_delta_read(
+                        Some(cost), rctx, bindings,
+                    );
+                    rctx.game.can_effect_digivolve_from_source_with_cost(
+                        handle.player, source_ref, handle, delta,
+                    )
+                } else {
+                    can_card_digivolve_onto(rctx, h, handle)
+                };
+                if can_digivolve {
                     return true;
                 }
             }

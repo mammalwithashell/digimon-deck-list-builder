@@ -32,6 +32,7 @@ use rand::seq::SliceRandom;
 mod breeding;
 mod cost;
 pub(crate) mod digivolve;
+pub(crate) mod effect_dna;
 mod field_top_source_move;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
 pub use helpers::DeDigivolveCountState;
@@ -954,6 +955,7 @@ impl Game {
                     resume.suppress_on_play,
                     resume.origin.enters_suspended(),
                     resume.origin.source_play_receipt(),
+                    matches!(resume.origin, PendingWouldPlayOrigin::SecurityTop { .. }),
                 );
                 self.effect_source_player = previous_controller;
                 if played.is_none() {
@@ -1198,7 +1200,7 @@ impl Game {
         }
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            zone_owner: Some(owner),
             kind: SelectionKind::OwnField,
             selecting_player: owner,
             previous_phase,
@@ -2033,7 +2035,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            zone_owner: Some(owner),
             kind: SelectionKind::OwnField,
             selecting_player: owner,
             previous_phase,
@@ -4175,6 +4177,9 @@ impl Game {
             .modifiers
             .player_has(observer, ModifierType::CannotAddSecurityByEffect)
             || self
+                .modifiers
+                .player_has(player, ModifierType::CannotAddSecurityByEffect)
+            || self
                 .player(observer)
                 .battle_area
                 .iter()
@@ -4662,8 +4667,8 @@ fn assembly_assign_keyed(
 }
 
 /// Install the trash selection for assembly element `element_idx`, chaining
-/// to the next element on resolution. Element 0 is the optional gate
-/// (declining plays the card at full cost); later elements are required
+/// to the next element on resolution. Element 0 can be declined only when
+/// payment without Assembly is affordable; later elements are required
 /// (exact count, DCGO `canEndNotMax: false`). After the final element the
 /// play is finished at the reduced cost and the chosen materials are placed
 /// under the new permanent.
@@ -4686,6 +4691,17 @@ fn install_assembly_element(
     let is_last = element_idx + 1 >= elements.len();
     let source_card = target_card;
     let distinct_by = assembly_element_distinct_mode(game, target_card, element_idx);
+    // CR 1-3-11-4: when Assembly is needed to pay a declared play, its
+    // otherwise optional processing must be completed. Use the same typed
+    // cost calculation as commit so effect reductions/assignments survive.
+    let can_decline = is_first
+        && game.card_data_for_handle(target_card).is_some_and(|card| {
+            let cost = params.total_reduction.final_cost(
+                params.cost_delta.resolve(card.play_cost) as i32,
+                0,
+            );
+            game.can_pay_memory_for(player, cost)
+        });
 
     // Distinctness across elements: exclude handles already picked.
     let exclude = picked_so_far.clone();
@@ -4697,14 +4713,15 @@ fn install_assembly_element(
         eval_predicate(&filter_pred, &rctx, PredicateSubject::Card(cs.handle()))
     };
 
-    // Every element requires its exact printed count. The first element may
-    // decline at zero via is_optional_zero below; after a pick it cannot end
+    // Every element requires its exact printed count. An affordable first
+    // element may decline at zero; after a pick it cannot end
     // early (Assembly rules 7-3-2-4/5, optional zero 7-3-2-7/9).
     let min = count;
     let max = count;
     let prompt = format!(
-        "Assembly: select {} card(s) from trash to place under (No Selection to skip).",
-        count
+        "Assembly: select {} card(s) from trash to place under{}.",
+        count,
+        if can_decline { " (No Selection to skip)" } else { "" }
     );
 
     let elements_for_cb = std::sync::Arc::clone(&elements);
@@ -4723,7 +4740,7 @@ fn install_assembly_element(
         min,
         max,
         &prompt,
-        is_first, // is_optional_zero: only the gate (element 0) may finish at 0 picks
+        can_decline,
         distinct_by,
         filter,
         move |cctx, picks| {
@@ -4766,7 +4783,7 @@ fn install_assembly_element(
                     zone: CountCappedZone::Trash,
                     min,
                     max,
-                    is_optional_zero: is_first,
+                    is_optional_zero: can_decline,
                     distinct_by,
                     candidate_actions: pending.valid_action_ids.clone(),
                     accum: Vec::new(),

@@ -30,7 +30,7 @@ impl Game {
     /// `ModifierType::ImmuneFromDPMinus` entry, negative `ChangeDp`
     /// modifiers are filtered out before summing — the protection
     /// narrows to DP-minus only, leaving positive `ChangeDp` and the
-    /// dynamic aura bonus untouched.
+    /// positive dynamic aura contributions untouched.
     ///
     /// PUPPETS-G024 (2026-05-20): each `ImmuneFromDPMinus` entry's
     /// `effect_immunity_filter.controller` now scopes which negative
@@ -50,17 +50,6 @@ impl Game {
             .battle_area
             .get(handle.index as usize)?;
         let base = perm.base_dp_for_rules(&self.card_data, &self.modifiers, handle)?;
-        let immunity_scopes: Vec<EffectControllerFilter> = self
-            .modifiers
-            .get(handle, ModifierType::ImmuneFromDPMinus)
-            .iter()
-            .map(|entry| {
-                entry
-                    .effect_immunity_filter
-                    .map(|f| f.controller)
-                    .unwrap_or(EffectControllerFilter::Any)
-            })
-            .collect();
         let change_dp_sum: i32 = self
             .modifiers
             .get(handle, ModifierType::ChangeDp)
@@ -69,15 +58,7 @@ impl Game {
                 if entry.value >= 0 {
                     return true;
                 }
-                // Negative delta — suppress if any ImmuneFromDPMinus
-                // entry's scope covers this delta's source.
-                let from_opponent = entry.source_player != handle.player;
-                let suppressed = immunity_scopes.iter().any(|scope| match scope {
-                    EffectControllerFilter::Any => true,
-                    EffectControllerFilter::OpponentOnly => from_opponent,
-                    EffectControllerFilter::OwnOnly => !from_opponent,
-                });
-                !suppressed
+                !self.dp_minus_is_blocked(handle, entry.source_player)
             })
             .map(|entry| entry.value)
             .sum();
@@ -89,6 +70,17 @@ impl Game {
         // +0 DP, not a negative delta. The ≤0 rules check still fires —
         // a floored 0 is exactly the deletable state.
         Some((base + bonus).max(0))
+    }
+
+    /// Shared controller-scope gate for materialized and live formula DP deltas.
+    pub(crate) fn dp_minus_is_blocked(&self, target: PermanentHandle, controller: PlayerId) -> bool {
+        self.modifiers.get(target, ModifierType::ImmuneFromDPMinus).iter().any(|entry| {
+            match entry.effect_immunity_filter.map(|f| f.controller).unwrap_or(EffectControllerFilter::Any) {
+                EffectControllerFilter::Any => true,
+                EffectControllerFilter::OpponentOnly => controller != target.player,
+                EffectControllerFilter::OwnOnly => controller == target.player,
+            }
+        })
     }
 
     /// Sum the attacker's digivolution-stack DP adjustments that apply to

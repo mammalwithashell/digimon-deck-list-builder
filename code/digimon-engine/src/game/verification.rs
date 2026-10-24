@@ -1,6 +1,8 @@
 use sha2::{Digest, Sha256};
 #[path = "verification_cost_receipts.rs"]
 mod cost_receipt_hash;
+#[path = "verification_selected_pins.rs"]
+mod selected_pin_hash;
 
 use crate::card_source::CardSource;
 use crate::game::Game;
@@ -40,6 +42,9 @@ impl Game {
         }
 
         if version == VerificationDigestVersion::V3 {
+            selected_pin_hash::write(&mut h, self);
+            let dna = crate::game_actions::effect_dna::verification_rows(self);
+            if !dna.is_empty() { debug_field(&mut h, "effect_dna_declarations", &dna); }
             let carriers = crate::replacement::verification_plural_carriers(self);
             if !carriers.is_empty() {
                 debug_field(&mut h, "replacement_plural_carrier_identities", &carriers);
@@ -1219,7 +1224,7 @@ effects:
         let card=prov.source_card;let host=PermanentHandle{player:0,index:0};let top=r.game.players[0].battle_area[0].top_card().handle();
         let identity=r.game.capture_digivolve_host_identity(host);
         r.game.effect_digivolve_scopes.push(EffectDigivolveScope{
-            declaration:EffectDigivolveCostChoiceState{acting_player:0,source_ref:CardSourceRef::Hand(0,0),result_card:card,source_carrier_top:None,source_carrier_identity:None,target_player:0,target_top:top,target_identity:identity,dna_origin:None,cost_delta:CostDelta::Free,waiver:DigivolveRequirementWaiver::None,source:PlaySource::ByEffect,printed_costs:vec![],effect_source_player:Some(0),trigger_context:None,result_clause:None,outer_conts:vec![cont]},
+            declaration:EffectDigivolveCostChoiceState{acting_player:0,source_ref:CardSourceRef::Hand(0,0),result_card:card,source_carrier_top:None,source_carrier_identity:None,target_player:0,target_zone:crate::enums::Zone::BattleArea,target_top:top,target_identity:identity,dna_origin:None,cost_delta:CostDelta::Free,waiver:DigivolveRequirementWaiver::None,source:PlaySource::ByEffect,printed_costs:vec![],effect_source_player:Some(0),trigger_context:None,result_clause:None,outer_conts:vec![cont]},
             identity:crate::game::PendingWouldDigivolveResume{window_started:true,host_identity:identity,treated_identity_orders:None,player:0,permanent:host,card,effective_cost:0,app_fusion:false}});
         r
     }

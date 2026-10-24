@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-21",
+  "last_updated": "2026-10-23",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -1374,20 +1374,22 @@
     },
     "P-103": {
       "card_name": "Offense Training",
-      "validated_date": "2026-05-21",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/p/P-103.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_103.rs",
-      "test_count": 23,
+      "test_count": 25,
       "patterns": [
         "A2",
         "E2",
         "E1"
       ],
-      "notes": "Re-attempt 2026-05-21: fully completed. [Main] reveal-2/add-red + place-self; [Main]<Delay> digivolve into red Digimon cost-2; [Security] place self. <Delay> trigger corrected on_play->delayed (player-initiated, matches P-035/P-037) per review fix. 23/23 tests pass, 0 ignored. Reviewer APPROVED after fix."
+      "notes": "Re-attempt 2026-05-21: fully completed. [Main] reveal-2/add-red + place-self; [Main]<Delay> digivolve into red Digimon cost-2; [Security] place self. <Delay> trigger corrected on_play->delayed (player-initiated, matches P-035/P-037) per review fix. 23/23 tests pass, 0 ignored. Reviewer APPROVED after fix. Follow-up 2026-10-22: the printed Main red-card addition is mandatory when an eligible card exists; no-match still orders all remaining cards and places Delay. New mask regression failed before optional:false; all 25 card tests now pass in final-integration-green.log. Delay/Security behavior unchanged. Simulator-only evidence; no new oracle certification.",
+      "tests_passing": 25,
+      "tests_ignored": 0
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
@@ -4978,22 +4980,22 @@
     },
     "BT20-056": {
       "card_name": "Alphamon",
-      "validated_date": "2026-06-15",
-      "report": "royal-knights-author-remaining-2026-06-15",
-      "status": "PARTIAL",
-      "gap_kind": "engine/dsl-gap",
+      "validated_date": "2026-10-23",
+      "report": "remaining-meta-repairs-2026-10-22",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-056.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_056.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
+      "test_count": 19,
+      "tests_passing": 19,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET"
       ],
-      "notes": "Barrier/Recovery/security-removed -8000 observer authored; remaining: during-attack breeding digivolve into Lv<=6 [Chronicle] from hand/trash union (G-BREEDING-DIGIVOLVE-UNION-ZONES, genuinely open).",
-      "audit_note": "Authored 2026-06-15; one clause on a genuine residual gap."
+      "notes": "19/19 card behavioral tests pass in the cumulative full-card run; actual-image spec and code quality reviews approve all printed clauses. Shared evolution, ownership/provenance, clone controls, production-data checks and the complete aggregate/rerun history are recorded in remaining-meta-repairs.md. Simulator evidence only; no new live oracle confirmation.",
+      "audit_note": "Full-card repair supersedes the historical partial scope: mandatory Recovery plus the independent attack-only free hand/trash breeding evolution tail are tested.",
+      "integration_verification": "passed-focused"
     },
     "BT22-025": {
       "card_name": "UlforceVeedramon",
@@ -6405,19 +6407,19 @@
     },
     "BT25-089": {
       "card_name": "Kazuki & Itsuki",
-      "validated_date": "2026-07-10",
-      "report": "buglist-faithfulness-campaign-2026-07",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-10-22",
+      "report": "docs/superpowers/research/2026-10-22-construct-tests/app-fuse-opt-followup.md",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
       "archetype": "BT25 link-ts slice",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-089.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_089.rs",
-      "test_count": 7,
+      "test_count": 16,
       "patterns": [
         "B1",
         "B3"
       ],
-      "notes": "Blocked 2026-10-21 (Plan 2 Task 6 fix round 2): clause #2 '[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse' spends its [Once Per Turn] when the app fuse is passed, against Q1818 / CR 4.3 §15-14-1-4 and DCGO BT25_089.cs (RemoveUse when nothing executed). `app_fuse` reports no result to the clause, so neither the folded-may refund nor `refund_opt` can see the pass: needs the app-fuse result signal (G-DSL-FOLDED-MAY-OPT-REFUND-AUDIT residual). Previous note: Prior PARTIAL closed: own_digimon_sources link zone consumed; cost reduce:2; traits added"
+      "notes": "App Fuse result/OPT residual closed: explicit success receipt and whole-effect refund preserve OPT for no eligible pair, either decline, and rejected stale choices; committed fusion consumes OPT. All 16 BT25-089 tests pass in the integrated card target; focused mechanics cover nested receipt reuse, scope rebinding, stable host identity and both prompt clones. Separate App Fuse procedure draw/cost/link-retention and effect-link timing gaps remain tracked; this verdict is not DCGO or full-fidelity certification. Prior PARTIAL closures: own_digimon_sources link zone consumed; cost reduce:2; traits added."
     },
     "BT25-052": {
       "card_name": "Logimon",
@@ -7180,14 +7182,16 @@
     },
     "BT25-043": {
       "card_name": "Habakirimon",
-      "validated_date": "2026-06-15",
-      "report": "glowing-dawn-archetype",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-043.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_043.rs",
-      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+      "notes": "Corrected most-security payment guards and legal menu choices; one paid optional security cost protects every qualifying member of a simultaneous departure group. Tie, empty-security, decline and mixed-group controls pass. Ungrouped repeated tuck operations remain outside the simultaneous-group claim. Focused simulator checks pass in shared-batch1-final-green.log (157 shared/card checks); live oracle status is tracked separately.",
+      "test_count": 21,
+      "tests_passing": 21
     },
     "BT25-044": {
       "card_name": "Junomon",
@@ -9115,19 +9119,20 @@
     },
     "P-241": {
       "card_name": "Yujin Ozora",
-      "validated_date": "2026-07-10",
-      "report": "buglist-faithfulness-campaign-2026-07",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
       "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (promo)",
       "yaml_path": "code/digimon-engine/cards/p/P-241.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_241.rs",
-      "test_count": 13,
+      "test_count": 16,
       "patterns": [
         "B1",
         "B3"
       ],
-      "notes": "Behavior faithful; false DCGO-ABSENT + stale PARTIAL headers corrected; +2 tests"
+      "notes": "Production central/split data integrated with append-only registry index 4480. Existing choices, cost, App Fuse, expiry, turn and metadata tests pass; source data integrity and split parity verified. Focused simulator checks pass in shared-batch1-final-green.log (157 shared/card checks); live oracle status is tracked separately.",
+      "tests_passing": 16
     },
     "EX11-002": {
       "card_name": "Hiyarimon",
@@ -9434,39 +9439,41 @@
     },
     "ST23-04": {
       "card_name": "Murasamemon",
-      "validated_date": "2026-06-15",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/st23/ST23-04.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_04.rs",
-      "test_count": 8,
+      "test_count": 14,
       "patterns": [
         "H10",
         "GLOWING-DAWN-ALT-DIGIVOLVE",
         "G-PLAY-OR-USE-FROM-HAND"
       ],
-      "notes": "<Alliance>; Lv.4 [Glowing Dawn] alt-digivolve cost 3; [On Play][When Digivolving] (A) 1 opp Digimon -5000 DP for the turn (mandatory) + (B) if your turn, by trashing a bottom face-down card under a Tamer (optional engagement gate = DCGO canNoSelect trash), you MAY play or use 1 [Glowing Dawn] card from hand at cost-3 (optional select_hand carries the hand-pick canNoSelect); inherited [End of Attack][OPT] trash-FD -> unsuspend Glowing Dawn self. ALL IMPLEMENTED on the new unified play-or-use substrate (G-PLAY-OR-USE-FROM-HAND: EffectContext::play_or_use_from_hand_with_cost + use_option_from_hand_with_cost + DSL play_or_use_from_hand verb; routes Digimon/Tamer play, Option use, Dual face-choice).",
-      "audit_note": "Faithful to printed text + DCGO ST23_04.cs (SharedActivateCoroutine: -5000 DP UntilEachTurnEnd, then IsOwnerTurn canNoSelect Tamer trash -> canNoSelect SelectHand over GlowingDawn -> ChangeCost -3 -> PlayOption/PlayPermanent payCost). Tests cover play GD Digimon at cost-3, use GD Option at cost-3, FD-trash paid, optional decline, no-GD-in-hand negative."
+      "notes": "Mandatory DP payload and optional own-turn payment/play-use tail resolve as one effect, preserving zero-DP timing. Inherited Tamer cost remains legally payable on a non-Glowing-Dawn host; unsuspend is separately trait-gated. Strict choice, cost and negative controls pass. Focused simulator checks pass in shared-batch1-final-green.log (157 shared/card checks); live oracle status is tracked separately.",
+      "audit_note": "Faithful to printed text + DCGO ST23_04.cs (SharedActivateCoroutine: -5000 DP UntilEachTurnEnd, then IsOwnerTurn canNoSelect Tamer trash -> canNoSelect SelectHand over GlowingDawn -> ChangeCost -3 -> PlayOption/PlayPermanent payCost). Tests cover play GD Digimon at cost-3, use GD Option at cost-3, FD-trash paid, optional decline, no-GD-in-hand negative.",
+      "tests_passing": 14
     },
     "ST23-08": {
       "card_name": "Monarchlizamon",
-      "validated_date": "2026-06-15",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/st23/ST23-08.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_08.rs",
-      "test_count": 7,
+      "test_count": 10,
       "patterns": [
         "H10",
         "GLOWING-DAWN-ALT-DIGIVOLVE",
         "G-PLAY-OR-USE-FROM-HAND"
       ],
-      "notes": "<Alliance>; Lv.4 [Glowing Dawn] alt-digivolve cost 3; [On Play][When Digivolving] (A) this +3000 DP until opp turn end (mandatory) + (B) if your turn, by trashing a bottom face-down card under a Tamer, you MAY play or use 1 [Glowing Dawn] card from hand at cost-3; inherited [End of Attack][OPT] trash-FD -> unsuspend Glowing Dawn self. ALL IMPLEMENTED on the unified play-or-use substrate (G-PLAY-OR-USE-FROM-HAND). Mirror of ST23-04 except clause A buffs self instead of debuffing an opponent.",
-      "audit_note": "Faithful to printed text + DCGO ST23_08.cs (Green; +3000 UntilOpponentTurnEnd then same canNoSelect Tamer-trash -> canNoSelect GlowingDawn SelectHand -> ChangeCost -3 -> Play/Use). Tests cover play GD Digimon at cost-3, use GD Option at cost-3, optional decline."
+      "notes": "Mandatory DP buff precedes optional own-turn payment/play-use tail within one effect. Inherited cost may be paid on a non-Glowing-Dawn host; its unsuspend remains trait-gated. Off-turn, unpayable and decline controls pass. Focused simulator checks pass in shared-batch1-final-green.log (157 shared/card checks); live oracle status is tracked separately.",
+      "audit_note": "Faithful to printed text + DCGO ST23_08.cs (Green; +3000 UntilOpponentTurnEnd then same canNoSelect Tamer-trash -> canNoSelect GlowingDawn SelectHand -> ChangeCost -3 -> Play/Use). Tests cover play GD Digimon at cost-3, use GD Option at cost-3, optional decline.",
+      "tests_passing": 10
     },
     "ST23-06": {
       "card_name": "Gekkomon",
@@ -9540,14 +9547,16 @@
     },
     "ST23-05": {
       "card_name": "Habakirimon",
-      "validated_date": "2026-06-15",
-      "report": "glowing-dawn-archetype",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Glowing Dawn (BEATBREAK)",
       "yaml_path": "code/digimon-engine/cards/st23/ST23-05.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_05.rs",
-      "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+      "notes": "Corrected most-security guards/menu masks and plural optional leave prevention. Direct simultaneous-group, payment, decline, ownership/trait and empty-security controls pass. Focused simulator checks pass in shared-batch1-final-green.log (157 shared/card checks); live oracle status is tracked separately.",
+      "test_count": 16,
+      "tests_passing": 16
     },
     "ST23-07": {
       "card_name": "Armalizamon",
@@ -11650,14 +11659,16 @@
     },
     "BT26-085": {
       "card_name": "Giant Slayer",
-      "validated_date": "2026-10-03",
-      "report": "bt26-priority",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "TS / Iliad (Chronomon line)",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-085.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_085.rs",
-      "notes": "TDD vs DCGO BT26_085.cs; Collision/Reboot/Blocker; Assembly -5 with 5 different levels (widened G-ENGINE-ASSEMBLY-DISTINCT-BY); On Play opp-scoped DP + stack-trash immunity (grant_narrow_opponent_effect_protection + NEW grant_stack_trash_immunity_from_opponent_effects); would-leave replacement digivolves into [Chronomon: Destroy Mode] from hand/trash free (widened G-ENGINE-EFFECT-DIGIVOLVE-FROM-LEVELLESS). Tested with a Destroy Mode stand-in since BT26-060 is BLOCKED."
+      "notes": "Behavior tests now use production BT26-060 Destroy Mode. Stack-trash immunity, actual effect-evolution success/failure and stable selected-host identity regressions pass; no stand-in is used for the replacement result. Focused simulator checks pass in shared-batch1-final-green.log (157 shared/card checks); live oracle status is tracked separately.",
+      "test_count": 8,
+      "tests_passing": 8
     },
     "BT26-101": {
       "card_name": "Cross Arts",
@@ -15486,6 +15497,217 @@
       "tests_passing": 9,
       "tests_ignored": 0,
       "notes": "Independent spec and code review passed. All focused tests pass against the freshly rebuilt embedded production registry in the 204-test supplied-deck harness; no failures or ignored tests. No DCGO confirmation or training-readiness claim."
+    },
+    "BT20-010": {
+      "card_name": "Ryudamon",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_010.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "notes": "Actual-image audit, spec and quality reviews, and all per-card behavioral tests pass in the 39-test first batch. Includes printed/special route and legal player-choice coverage. Simulator evidence; no new live oracle claim."
+    },
+    "BT20-012": {
+      "card_name": "Ginryumon",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-012.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_012.rs",
+      "test_count": 8,
+      "tests_passing": 8,
+      "notes": "Actual-image audit, spec and quality reviews, and all per-card behavioral tests pass in the 39-test first batch. Includes printed/special route and legal player-choice coverage. Simulator evidence; no new live oracle claim."
+    },
+    "BT20-048": {
+      "card_name": "Dorumon",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_048.rs",
+      "test_count": 12,
+      "tests_passing": 12,
+      "notes": "Actual-image audit, spec and quality reviews, and all per-card behavioral tests pass in the 39-test first batch. Includes printed/special route and legal player-choice coverage. Simulator evidence; no new live oracle claim."
+    },
+    "BT20-051": {
+      "card_name": "Raptordramon",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-051.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_051.rs",
+      "test_count": 12,
+      "tests_passing": 12,
+      "notes": "Actual-image audit, spec and quality reviews, and all per-card behavioral tests pass in the 39-test first batch. Includes printed/special route and legal player-choice coverage. Simulator evidence; no new live oracle claim."
+    },
+    "BT20-018": {
+      "card_name": "Ouryumon",
+      "validated_date": "2026-10-23",
+      "report": "remaining-meta-repairs-2026-10-22",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Chronicle / Alphamon",
+      "test_count": 12,
+      "tests_passing": 12,
+      "tests_ignored": 0,
+      "patterns": [
+        "G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET"
+      ],
+      "notes": "12/12 card behavioral tests pass in the cumulative full-card run; actual-image spec and code quality reviews approve all printed clauses. Shared evolution, ownership/provenance, clone controls, production-data checks and the complete aggregate/rerun history are recorded in remaining-meta-repairs.md. Simulator evidence only; no new live oracle confirmation.",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_018.rs",
+      "integration_verification": "passed-focused"
+    },
+    "BT20-087": {
+      "card_name": "Kota Domoto & Yuji Musya",
+      "validated_date": "2026-10-23",
+      "report": "remaining-meta-repairs-2026-10-22",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Chronicle / Alphamon",
+      "test_count": 12,
+      "tests_passing": 12,
+      "tests_ignored": 0,
+      "patterns": [
+        "G-ENGINE-EFFECT-DIGIVOLVE-BREEDING-TARGET"
+      ],
+      "notes": "12/12 card behavioral tests pass in the cumulative full-card run; actual-image spec and code quality reviews approve all printed clauses. Shared evolution, ownership/provenance, clone controls, production-data checks and the complete aggregate/rerun history are recorded in remaining-meta-repairs.md. Simulator evidence only; no new live oracle confirmation.",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-087.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_087.rs",
+      "integration_verification": "passed-focused"
+    },
+    "EX6-072": {
+      "card_name": "Mega Digimon Assembly!",
+      "validated_date": "2026-10-23",
+      "report": "remaining-meta-repairs-2026-10-22",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Chronicle / Alphamon",
+      "test_count": 12,
+      "tests_passing": 12,
+      "tests_ignored": 0,
+      "patterns": [
+        "G-ENGINE-EFFECT-DNA-HAND-PARTNER-DECLARATION"
+      ],
+      "notes": "12/12 card behavioral tests pass in the cumulative full-card run; actual-image spec and code quality reviews approve all printed clauses. Shared evolution, ownership/provenance, clone controls, production-data checks and the complete aggregate/rerun history are recorded in remaining-meta-repairs.md. Simulator evidence only; no new live oracle confirmation.",
+      "yaml_path": "code/digimon-engine/cards/_examples/EX6-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_072.rs",
+      "integration_verification": "passed-focused",
+      "audit_note": "Correlated legal/payable result and material choices, printed DNA cost and blue Security scope repaired after runtime RED."
+    },
+    "P-176": {
+      "card_name": "Dorimon",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/p/P-176.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_176.rs",
+      "test_count": 10,
+      "tests_passing": 10,
+      "tests_ignored": 0,
+      "notes": "10 focused card tests pass in batch2-cost-and-owner-green-attempt.log; combined first/second batches 98/98. Printed image and final spec/quality reviews complete. Simulator evidence only; shared substrate validation and final aggregate checks tracked separately, no oracle promotion."
+    },
+    "P-204": {
+      "card_name": "Release of the Sealed Knight!",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/p/P-204.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_204.rs",
+      "test_count": 14,
+      "tests_passing": 14,
+      "tests_ignored": 0,
+      "notes": "14 focused card tests pass in batch2-cost-and-owner-green-attempt.log; combined first/second batches 98/98. Printed image and final spec/quality reviews complete. Simulator evidence only; shared substrate validation and final aggregate checks tracked separately, no oracle promotion."
+    },
+    "BT20-015": {
+      "card_name": "Hisyaryumon",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-015.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_015.rs",
+      "test_count": 18,
+      "tests_passing": 18,
+      "tests_ignored": 0,
+      "notes": "18 focused card tests pass in batch2-cost-and-owner-green-attempt.log; combined first/second batches 98/98. Printed image and final spec/quality reviews complete. Simulator evidence only; shared substrate validation and final aggregate checks tracked separately, no oracle promotion."
+    },
+    "BT20-053": {
+      "card_name": "Grademon",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "AUDITED-OK",
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-053.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_053.rs",
+      "test_count": 17,
+      "tests_passing": 17,
+      "tests_ignored": 0,
+      "notes": "17 focused card tests pass in batch2-cost-and-owner-green-attempt.log; combined first/second batches 98/98. Printed image and final spec/quality reviews complete. Simulator evidence only; shared substrate validation and final aggregate checks tracked separately, no oracle promotion."
+    },
+    "BT20-095": {
+      "card_name": "Fellowship of Hope's Keepers",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-095.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_095.rs",
+      "test_count": 20,
+      "tests_passing": 20,
+      "tests_ignored": 0,
+      "notes": "20 focused card tests pass in final-combined-repaired.log; combined Chronicle target 176/176. Printed text, rulings, and independent spec/quality reviews complete. Simulator evidence only; cumulative integration and tier checks are tracked separately, with no oracle promotion."
+    },
+    "EX5-070": {
+      "card_name": "X Antibody Proto Form",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/ex5/EX5-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex5/ex5_070.rs",
+      "test_count": 20,
+      "tests_passing": 20,
+      "tests_ignored": 0,
+      "notes": "20 focused card tests pass in final-combined-repaired.log; combined Chronicle target 176/176. Printed text, rulings, and independent spec/quality reviews complete. Simulator evidence only; cumulative integration and tier checks are tracked separately, with no oracle promotion."
+    },
+    "BT7-090": {
+      "card_name": "Kota Domoto",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt7/BT7-090.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt7/bt7_090.rs",
+      "test_count": 14,
+      "tests_passing": 14,
+      "tests_ignored": 0,
+      "notes": "14 focused card tests pass in final-combined-repaired.log; combined Chronicle target 176/176. Printed text, rulings, and independent spec/quality reviews complete. Simulator evidence only; cumulative integration and tier checks are tracked separately, with no oracle promotion."
+    },
+    "BT9-104": {
+      "card_name": "X Digivolution!",
+      "validated_date": "2026-10-22",
+      "report": "meta-admission-followup-2026-10-22",
+      "status": "IMPLEMENTED",
+      "archetype": "Chronicle / Alphamon",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_104.rs",
+      "test_count": 16,
+      "tests_passing": 16,
+      "tests_ignored": 0,
+      "notes": "16 focused card tests pass in final-combined-repaired.log; combined Chronicle target 176/176. Printed text, rulings, and independent spec/quality reviews complete. Simulator evidence only; cumulative integration and tier checks are tracked separately, with no oracle promotion."
     }
   }
 }

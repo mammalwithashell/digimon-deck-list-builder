@@ -636,66 +636,68 @@ fn bt22_008_eot_inherited_no_target_silent_skip() {
 
 #[test]
 fn bt22_008_eot_strict_surfaces_partner_selection() {
-    // STRICT version: pins the EXACT runtime surface. CORRECT scenario for
-    // inherited effects: BT22-008 must be a digivolution SOURCE under a
-    // carrier permanent (e.g. under a Greymon-line card), NOT the top card.
-    // The "[Inherited]" tag in printed text means the effect activates when
-    // BT22-008 is a source, not when it's the top of its own stack.
-    let mut runner = runner_for_eot_dna();
-    // Carrier stack: BT22-008 (source) + CARRIER-TOP (top card). BT22-008's
-    // inherited [EoT] clause now activates because BT22-008 is under the
-    // carrier.
-    let _carrier = runner.place_stack(0, &[CARD_ID, "PARTNER"]);
-    // Plus another partner Digimon on field so partner_filter has an
-    // eligible candidate beyond the carrier.
-    let _partner2 = runner.place_on_field(0, "PARTNER", None);
-    push_to_hand(&mut runner, 0, "TARGET");
+    use digimon_engine::action::{build_action_mask, encode_attack, PLAY_HAND_START};
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+    use digimon_engine::enums::CardColor;
 
-    // Diagnostic: state BEFORE fire_end_of_your_turn
-    eprintln!(
-        "BEFORE fire: pending_kind={:?}, queue_len={}, field_len={}",
-        runner.pending_kind(),
-        runner.game.effect_queue.len(),
-        runner.game.players[0].battle_area.len()
-    );
-    for (i, p) in runner.game.players[0].battle_area.iter().enumerate() {
-        eprintln!(
-            "  field[{}]: sources={:?}",
-            i,
-            p.card_sources
-                .iter()
-                .map(|c| runner.game.card_data[c.data_index].card_id.clone())
-                .collect::<Vec<_>>()
-        );
-    }
+    let mut runner = runner_for_eot_dna();
+    // CR 4.3 8-2-3-1: the hand card must have DNA requirements met by
+    // both materials. A generic Digimon with no DNA cost is not a target.
+    let target = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "TARGET")
+        .unwrap();
+    let requirement = DnaRequirement {
+        level: 4,
+        card_colors: vec![CardColor::Red],
+        name_contains: String::new(),
+        text_contains: String::new(),
+    };
+    target.level = Some(5);
+    target.dna_costs = vec![DnaCost {
+        requirement1: requirement.clone(),
+        requirement2: requirement,
+        memory_cost: 0,
+    }];
+    runner.place_stack(0, &[CARD_ID, "PARTNER"]);
+    let partner = runner.place_on_field(0, "PARTNER", None);
+    push_to_hand(&mut runner, 0, "TARGET");
 
     runner.game.fire_end_of_your_turn(0);
 
-    let pending_kind_before = runner.pending_kind();
-    let queue_len_before = runner.game.effect_queue.len();
-    eprintln!(
-        "AFTER fire: queue_len={}, pending_kind={:?}",
-        queue_len_before, pending_kind_before
+    let partner_action = encode_attack(0, partner.index as u16);
+    let pending = runner
+        .pending_selection()
+        .expect("eligible inherited DNA offers partner choice");
+    assert_eq!(pending.valid_action_ids, vec![partner_action]);
+    assert!(pending.is_optional);
+    assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize], 1.0);
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[partner_action as usize],
+        1.0
     );
-    if let Some(ps) = runner.pending_selection() {
-        eprintln!(
-            "PENDING: kind={:?}, prompt={}, valid_action_ids={:?}, is_optional={}",
-            ps.kind, ps.prompt, ps.valid_action_ids, ps.is_optional
-        );
-    }
-
-    // Dump the event log for diagnostic.
-    for ev in runner.game.events.iter() {
-        eprintln!("EVENT: {:?}", ev);
-    }
-
-    assert!(
-        queue_len_before > 0 || pending_kind_before.is_some(),
-        "EoT inherited DNA trigger MUST be enqueued or already surface a prompt; \
-         queue_len={}, pending_kind={:?}",
-        queue_len_before,
-        pending_kind_before
+    runner.execute_action(0, partner_action).unwrap();
+    assert_eq!(
+        runner.pending_selection().unwrap().valid_action_ids,
+        vec![PLAY_HAND_START]
     );
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0
+    );
+    runner.execute_action(0, PLAY_HAND_START).unwrap();
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(runner.game.players[0].battle_area.len(), 1);
+    let result = &runner.game.players[0].battle_area[0];
+    assert_eq!(result.top_card().card_id(&runner.game.card_data), "TARGET");
+    assert_eq!(
+        result.card_sources.len(),
+        4,
+        "both material stacks become DNA sources"
+    );
+    assert_eq!(runner.game.memory, 3, "printed zero DNA cost is paid");
 }
 
 #[test]

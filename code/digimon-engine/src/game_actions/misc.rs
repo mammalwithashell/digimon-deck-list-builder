@@ -98,7 +98,7 @@ impl Game {
             self.pending_assembly_materials = prepared.assembly;
             let played = self.commit_play_from_hand_card_inner(declaration.player, declaration.card,
                 declaration.effective_cost, declaration.effect_initiated, declaration.suppress_on_play,
-                declaration.origin.enters_suspended(), Some(receipt), true, true);
+                declaration.origin.enters_suspended(), Some(receipt), true, true, false);
             self.pending_assembly_materials = previous_assembly;
             self.effect_source_player = previous_controller;
             if let Some(index) = played {
@@ -308,6 +308,7 @@ impl Game {
             suppress_on_play,
             origin.enters_suspended(),
             origin.source_play_receipt(),
+            matches!(origin, PendingWouldPlayOrigin::SecurityTop { .. }),
         );
         self.pending_digixros_transaction = None;
         committed
@@ -607,6 +608,7 @@ impl Game {
             suppress_on_play,
             suspended,
             source_play_receipt,
+            false, // DigiXros is declared from hand, never security.
         );
         self.pending_digixros_transaction = None;
         committed
@@ -1189,9 +1191,10 @@ impl Game {
         suppress_on_play: bool,
         suspended: bool,
         source_play_receipt: Option<u64>,
+        from_security: bool,
     ) -> Option<usize> {
         self.commit_play_from_hand_card_inner(player_id, target_card, effective_cost,
-            effect_initiated, suppress_on_play, suspended, source_play_receipt, false, false)
+            effect_initiated, suppress_on_play, suspended, source_play_receipt, false, false, from_security)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1199,6 +1202,7 @@ impl Game {
         &mut self, player_id: PlayerId, target_card: crate::card_source::CardHandle,
         effective_cost: u16, effect_initiated: bool, suppress_on_play: bool,
         suspended: bool, source_play_receipt: Option<u64>, prepaid: bool, simultaneous_prechecked: bool,
+        from_security: bool,
     ) -> Option<usize> {
         if self.player(player_id).battle_area.len() >= self.rules.field_slots as usize {
             return None;
@@ -1222,6 +1226,12 @@ impl Game {
 
         let turn = self.turn_count;
         let card = self.player_mut(player_id).hand.remove(hand_index);
+        if from_security {
+            // The hand transit was provisional. All refusal points have now
+            // passed, including resumed would-play windows. Enqueue before
+            // field insertion so the entering card cannot observe itself.
+            self.enqueue_security_play_removal(player_id, controller, &card);
+        }
         let mut perm = crate::permanent::Permanent::new(card, turn);
         // G-PLAY-ENTERS-SUSPENDED (Q28 / EX5-060 "plays ... suspended"):
         // a flagged play enters the battle area suspended, BEFORE the

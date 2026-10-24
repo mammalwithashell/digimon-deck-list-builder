@@ -15,6 +15,7 @@
 //! 256 MB-stack thread (same mitigation as `tests/clone_fuzz/main.rs`).
 //! Run: RUST_MIN_STACK=268435456 cargo test --test search
 
+mod batching;
 mod determinized;
 mod midgame;
 mod perfect_information;

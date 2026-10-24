@@ -2,11 +2,13 @@
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
 mod activation_cost;
+mod name_standardization;
 mod add_modifier_typed_payload;
 mod also_treated_as;
 mod assembly_play;
 mod attack_history_predicate;
 mod collapse_then_tail;
+mod constructs;
 mod cross_check;
 mod battle_deleter;
 mod delay;
@@ -175,3 +177,4 @@ mod zone_movement_verbs;
 
 mod assembly_material_equivalence;
 mod folded_may_opt_refund;
+mod effect_dna_candidate_masks;

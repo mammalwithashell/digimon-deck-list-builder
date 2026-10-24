@@ -244,6 +244,11 @@ fn cannot_suspend_rejects_attack_declaration_at_api() {
         AttackResult::Invalid,
         "Digimon-target declarations are equally rejected"
     );
+    assert_eq!(
+        r.game.players[tp as usize].battle_area[locked.index as usize].attacks_this_turn,
+        0
+    );
+    assert_eq!(r.game.digimon_attacks_this_turn[tp as usize], 0);
 }
 
 /// Expiry restores the ability: once the modifier expires the same Digimon

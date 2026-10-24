@@ -37,6 +37,39 @@ use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind};
 use crate::trigger_context::TriggerContext;
 
+fn bind_selected_battle_permanent(
+    game: &mut crate::game::Game,
+    bindings: &mut Bindings,
+    name: &str,
+    handle: PermanentHandle,
+) {
+    if game
+        .players
+        .get(handle.player as usize)
+        .and_then(|player| player.battle_area.get(handle.index as usize))
+        .is_some()
+    {
+        let identity = game.capture_digivolve_host_identity(handle);
+        bindings.insert_selected_permanent_with_identity(name, handle, identity);
+    } else {
+        bindings.clear_for_merge(name);
+    }
+}
+
+fn bind_selected_breeding_permanent(
+    game: &mut crate::game::Game, bindings: &mut Bindings, name: &str,
+    selected: crate::selection::BreedingPermanentSelectionRef,
+) {
+    let handle = PermanentHandle {
+        player: selected.player, index: crate::action::space::BREEDING_TARGET as u8,
+    };
+    if let Some(identity) = game.capture_source_play_host_identity(handle) {
+        bindings.insert_breeding_permanent_with_identity(name, selected, identity);
+    } else {
+        bindings.clear_for_merge(name);
+    }
+}
+
 fn map_distinct_by(d: Option<digimon_dsl::compiled::CompiledDistinctBy>) -> Option<DistinctByMode> {
     use digimon_dsl::compiled::CompiledDistinctBy;
     d.map(|c| match c {
@@ -441,7 +474,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_permanent(name, h);
+                        bind_selected_battle_permanent(ctx.game, &mut b, name, h);
                     }
                     match post {
                         None => {
@@ -669,7 +702,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_breeding_permanent_ref(name, selection_ref);
+                        bind_selected_breeding_permanent(ctx.game, &mut b, name, selection_ref);
                     }
                     run_tail_preserving_trigger_context(
                         &mut ctx,
@@ -699,7 +732,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_permanent(name, handle);
+                        bind_selected_battle_permanent(ctx.game, &mut b, name, handle);
                     }
                     run_tail_preserving_trigger_context(
                         &mut ctx,
@@ -1046,7 +1079,7 @@ pub(crate) fn run_resume(
                     );
                     let mut b = bindings;
                     if let Some(name) = &bind_as {
-                        b.insert_permanent(name, left);
+                        bind_selected_battle_permanent(ctx.game, &mut b, name, left);
                     }
                     install_select_any_permanent(
                         &mut ctx,
@@ -1239,6 +1272,9 @@ pub(crate) fn run_resume(
         ResumeFrame::EffectDigivolveCostChoice(state) => {
             game.run_effect_digivolve_cost_choice_step(state, action_id);
         }
+        ResumeFrame::EffectDnaHandRoute(state) => {
+            game.run_effect_dna_hand_route(state, action_id);
+        }
         ResumeFrame::DigivolveReducerPrompt(state) => {
             game.run_digivolve_reducer_prompt_step(state, action_id, is_pass);
         }
@@ -1301,7 +1337,7 @@ pub(crate) fn run_resume(
                 game.resolve_source_move_anchor(target, false),
             ) {
                 for cont in &mut outer_conts {
-                    cont.bindings.insert_permanent(&name, host);
+                    bind_selected_battle_permanent(game, &mut cont.bindings, &name, host);
                 }
             }
             run_outer_conts(game, outer_conts);
@@ -1325,7 +1361,7 @@ pub(crate) fn run_resume(
             // Ordinary deletion-result continuations require the same boundary.
             let receipt = outer_conts.first().and_then(|c| c.tail.first()).and_then(|step| {
                 match step {
-                    CompiledStep::DeleteReceiptFinalize { receipt }
+                    CompiledStep::DeleteReceiptFinalize { receipt, .. }
                     | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. }
                     | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } => Some(*receipt),
                     _ => None,
@@ -1466,19 +1502,27 @@ pub(crate) fn run_resume(
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::AppFuseHostSelection(mut state) => {
-            if is_pass {
+            if is_pass && state.receipt.is_none() {
                 return;
             }
             let outer_conts = std::mem::take(&mut state.outer_conts);
-            crate::effect_context::run_app_fuse_host_selection_step(game, state, action_id);
+            if is_pass {
+                crate::effect_context::publish_app_fuse_receipt(game, state.receipt.as_ref(), None);
+            } else {
+                crate::effect_context::run_app_fuse_host_selection_step(game, state, action_id);
+            }
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::AppFuseResultSelection(mut state) => {
-            if is_pass {
+            if is_pass && state.receipt.is_none() {
                 return;
             }
             let outer_conts = std::mem::take(&mut state.outer_conts);
-            crate::effect_context::run_app_fuse_result_selection_step(game, state, action_id);
+            if is_pass {
+                crate::effect_context::publish_app_fuse_receipt(game, state.receipt.as_ref(), None);
+            } else {
+                crate::effect_context::run_app_fuse_result_selection_step(game, state, action_id);
+            }
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::ArtsDigivolveSelection(mut state) => {
@@ -2694,9 +2738,19 @@ pub(crate) fn install_count_capped_permanent_resume_step(
     // G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N.
     let is_optional = picked >= effective_min || (state.optional_zero && picked == 0);
     let valid_action_ids: Vec<u16> = state.candidates.iter().map(|(a, _)| *a).collect();
+    let zone_owner = match state.field_kind {
+        SelectionKind::OwnField | SelectionKind::OppField => state
+            .candidates
+            .first()
+            .map(|(_, handle)| handle.player)
+            .filter(|owner| {
+                state.candidates.iter().all(|(_, handle)| handle.player == *owner)
+            }),
+        _ => None,
+    };
     game.current_phase = crate::enums::GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
-        zone_owner: None,
+        zone_owner,
         kind: state.field_kind,
         selecting_player: state.selecting_player,
         previous_phase: state.previous_phase,
@@ -2923,7 +2977,7 @@ fn install_per_color_delete_resume_step(
     let prompt = state.prompt.replace("{color}", color_name(color));
     game.current_phase = GamePhase::SelectTarget;
     game.pending_selection = Some(PendingSelection {
-        zone_owner: None,
+        zone_owner: Some(state.opponent),
         kind: SelectionKind::OppField,
         selecting_player: state.selecting_player,
         previous_phase: state.previous_phase,
@@ -3535,7 +3589,7 @@ pub(crate) fn run_outer_conts(
         if let Some(latest) = fresh.as_ref() {
             merged.merge_slots_from(latest);
         }
-        drain_or_rewrap_pending_tail(
+        if let Some(updated) = super::drain_or_rewrap_pending_tail_with_bindings(
             game,
             cont.source_card,
             cont.source_permanent,
@@ -3544,7 +3598,13 @@ pub(crate) fn run_outer_conts(
             merged,
             cont.runtime,
             cont.trigger_context,
-        );
+        ) {
+            if let Some(latest) = fresh.as_mut() {
+                latest.merge_slots_from(&updated);
+            } else {
+                fresh = Some(updated);
+            }
+        }
     }
 }
 
@@ -4334,6 +4394,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 compose_then_tail(then, tail),
+                tail.to_vec(),
                 bindings,
                 runtime.clone(),
             ) {
@@ -4756,13 +4817,12 @@ pub fn try_install(
             if min > max || *max == 0 {
                 return InstallResult::Continue;
             }
-            // When no digivolution sources exist at all (unfiltered), and the
-            // clause requires at least one pick (min > 0), the cost cannot be
-            // paid: abort the outer continuation silently. For min == 0, no
-            // sources means the player implicitly picks 0 — the `then` body
-            // with an empty binding is a no-op anyway, so advancing to the
-            // outer tail (`Continue`) is correct for that case.
-            if !has_own_source_candidates(ctx) {
+            // A min-zero trash-cost picker must run its empty payment tail:
+            // min_count may still require cards, aborting the outer continuation.
+            // Preserve the existing no-source behavior of non-cost selections.
+            if !has_own_source_candidates(ctx)
+                && (*min > 0 || !source_selection_pays_trash_cost(then, bind_as.as_deref()))
+            {
                 return if *min > 0 {
                     InstallResult::TailAlreadyRan
                 } else {
@@ -6137,7 +6197,7 @@ fn install_select_own_permanent(
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_permanent(name, handle);
+                bind_selected_battle_permanent(cb_ctx.game, &mut b, name, handle);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
@@ -7192,7 +7252,7 @@ fn install_select_opponent_permanent(
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_permanent(name, handle);
+                bind_selected_battle_permanent(cb_ctx.game, &mut b, name, handle);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
@@ -7411,7 +7471,7 @@ fn install_select_any_permanent(
             );
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_permanent(name, handle);
+                bind_selected_battle_permanent(cb_ctx.game, &mut b, name, handle);
             }
             run_tail_preserving_trigger_context(
                 &mut cb_ctx,
@@ -7571,7 +7631,7 @@ fn install_select_dna_pair(
                 override_pin,
             );
             let mut b = bindings.clone();
-            b.insert_permanent(&bind_left_as, left);
+            bind_selected_battle_permanent(cb_ctx.game, &mut b, &bind_left_as, left);
             install_select_any_permanent(
                 &mut cb_ctx,
                 right_filter,
@@ -8084,6 +8144,15 @@ fn install_count_capped_permanent_step(
     // G-DSL-COUNT-CAPPED-ANY-PLAYER-ZERO-OR-N.
     let is_optional = picked >= effective_min || (optional_zero && picked == 0);
     let valid_action_ids = candidates.iter().map(|(action, _)| *action).collect();
+    // Relative field prompts address one candidate board even when the
+    // chooser differs. Derive that owner from the actual callback handles.
+    let zone_owner = match field_kind {
+        SelectionKind::OwnField | SelectionKind::OppField => candidates
+            .first()
+            .map(|(_, handle)| handle.player)
+            .filter(|owner| candidates.iter().all(|(_, handle)| handle.player == *owner)),
+        _ => None,
+    };
     let shared_cb: Arc<
         Mutex<Option<Box<dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync>>>,
     > = Arc::new(Mutex::new(Some(final_callback)));
@@ -8092,7 +8161,7 @@ fn install_count_capped_permanent_step(
 
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
-        zone_owner: None,
+        zone_owner,
         // Reuse the single-target field-selection kind so the frontend's
         // field-click router (which keys off `OppField`/`OwnField`, not the
         // phase or id range) can map board clicks to these picks. The
@@ -8234,10 +8303,12 @@ fn install_select_reveal(
     prompt: String,
     optional: bool,
     tail: Vec<CompiledStep>,
+    decline_tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
 ) -> bool {
     let tail = Arc::new(tail);
+    let decline_tail = Arc::new(decline_tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
@@ -8253,6 +8324,10 @@ fn install_select_reveal(
     let runtime_for_resume = runtime.clone();
     let trigger_for_resume = trigger_context.clone();
     let override_pin = ctx.override_selecting_player();
+    let tail_for_decline = Arc::clone(&decline_tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     let parked = ctx.select_reveal(
         &prompt,
         optional,
@@ -8292,8 +8367,25 @@ fn install_select_reveal(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Declining the optional pick skips its scoped `then`, but independent
+    // following processes still run (notably trashing the revealed remainder).
+    // Keep the legacy callback and cloneable VM continuation equivalent.
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind_and_override(
+                    game, source_card, source_permanent, source_kind, player, override_pin,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx, trigger_for_decline.clone(), &tail_for_decline,
+                    &mut b, &runtime_for_decline,
+                );
+            }));
+        }
+    }
     // Park the data frame alongside the closure (coexistence): driven by
-    // `run_resume`'s Reveal arm. No on_decline → decline None.
+    // `run_resume`'s Reveal arm, including the same non-aborting decline tail.
     if ctx.game.pending_selection.is_some() {
         ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RunTail {
@@ -8311,7 +8403,14 @@ fn install_select_reveal(
                 bindings: bindings_for_resume,
                 runtime: runtime_for_resume,
                 trigger_context: trigger_for_resume,
-                decline: crate::resume::ResumeDecline::None,
+                decline: if optional {
+                    crate::resume::ResumeDecline::RunTail {
+                        tail: decline_tail,
+                        aborts_clause: false,
+                    }
+                } else {
+                    crate::resume::ResumeDecline::None
+                },
             }],
         });
     }
@@ -8925,6 +9024,16 @@ fn park_source_multi_resume_frame(
     let Some(pending) = ctx.game.pending_selection.as_ref() else {
         return;
     };
+    // CR 15-7-4: an impossible trash cost must not expose a mandatory pick.
+    if source_selection_pays_trash_cost(&state.inner_tail, state.bind_as.as_deref())
+        && state.candidates.len() < usize::from(state.min)
+    {
+        ctx.game.current_phase = pending.previous_phase;
+        ctx.game.pending_selection = None;
+        ctx.game.pending_selection_resume = None;
+        ctx.cost_unpayable = true;
+        return;
+    }
     state.selecting_player = pending.selecting_player;
     state.previous_phase = pending.previous_phase;
     ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
@@ -9305,7 +9414,7 @@ fn install_select_own_breeding_permanent(
         move |cb_ctx, target| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_breeding_permanent_ref(name, target);
+                bind_selected_breeding_permanent(cb_ctx.game, &mut b, name, target);
             }
             run_tail_preserving_trigger_context(
                 cb_ctx,

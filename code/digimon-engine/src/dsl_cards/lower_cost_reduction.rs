@@ -293,7 +293,11 @@ pub fn lower_with_formula(
                 if let Some(receipt) = ctx.game.active_cost_payment_receipt {
                     body.push(CompiledStep::CompleteCostPayment { receipt });
                 }
-                let outcome = run_steps_with_runtime(&body, ctx, &mut bindings, &runtime);
+                // An interactive payment resumes after the declaring DNA
+                // operation has restored its caller's ambient context. Keep
+                // the actual declaration origin with the parked payment body.
+                let payment_runtime = runtime.clone().with_dna_origin(ctx.game.current_dna_origin);
+                let outcome = run_steps_with_runtime(&body, ctx, &mut bindings, &payment_runtime);
                 // A PARKED pay_cost (an interactive step like
                 // `trash_bottom_face_down_source_under_tamer`'s Tamer pick) will
                 // be paid when its selection resolves; it returns `false` here

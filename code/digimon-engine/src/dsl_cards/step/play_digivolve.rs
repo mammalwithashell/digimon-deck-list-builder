@@ -103,6 +103,33 @@ pub(crate) fn lower_cost_delta(
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
 ) -> CostDelta {
+    lower_cost_delta_value(d, |formula| {
+        let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
+            player: ctx.player, index: 0,
+        });
+        crate::dsl_cards::formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
+    })
+}
+
+/// The predicate preflight and commit evaluate formulas in the same effect
+/// source context; the selected evolution host is not the formula's source.
+pub(crate) fn lower_cost_delta_read(
+    d: Option<&digimon_dsl::compiled::CompiledCostDelta>,
+    ctx: &crate::effect_context::EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> CostDelta {
+    lower_cost_delta_value(d, |formula| {
+        let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
+            player: ctx.player, index: 0,
+        });
+        crate::dsl_cards::formula_eval::evaluate_read_with_bindings(formula, ctx, target, bindings)
+    })
+}
+
+fn lower_cost_delta_value(
+    d: Option<&digimon_dsl::compiled::CompiledCostDelta>,
+    evaluate: impl FnOnce(&digimon_dsl::compiled::CompiledFormula) -> i32,
+) -> CostDelta {
     use digimon_dsl::compiled::CompiledCostDelta;
     match d {
         None | Some(CompiledCostDelta::Printed) => CostDelta::Reduce(0),
@@ -110,18 +137,7 @@ pub(crate) fn lower_cost_delta(
         Some(CompiledCostDelta::Literal(n)) => CostDelta::Fixed(*n as i16),
         Some(CompiledCostDelta::Reduce(n)) => CostDelta::Reduce(*n as i16),
         Some(CompiledCostDelta::ReduceFn(formula)) => {
-            let target = ctx
-                .source_permanent
-                .unwrap_or(crate::permanent::PermanentHandle {
-                    player: ctx.player,
-                    index: 0,
-                });
-            let raw = crate::dsl_cards::formula_eval::evaluate_with_bindings(
-                formula,
-                ctx,
-                target,
-                Some(bindings),
-            );
+            let raw = evaluate(formula);
             CostDelta::Reduce(raw.max(0).min(i16::MAX as i32) as i16)
         }
     }
@@ -1173,8 +1189,20 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             from_zone,
             result_filter,
             optional,
+            bind_as,
         } => {
-            ctx.initiate_effect_app_fuse(*from_zone, result_filter.as_ref(), *optional);
+            let receipt = bind_as.as_ref().map(|name| {
+                // Clear locally. Synchronous no-pair results must not publish
+                // a tombstone into another clause's future selection.
+                bindings.clear_for_merge(name);
+                crate::effect_context::AppFuseReceipt {
+                    name: name.clone(),
+                    bindings: bindings.clone(),
+                }
+            });
+            ctx.initiate_effect_app_fuse_with_receipt(
+                *from_zone, result_filter.as_ref(), *optional, receipt,
+            );
             true
         }
         CompiledStep::EffectInitiatedDnaDigivolve {
@@ -1251,10 +1279,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // G-ENGINE-DNA-PRINTED-COST (gap 1): `cost: printed` pays the
             // result card's printed DNA cost against the {field target, hand
             // partner} pair (DCGO `payCost: true`).
-            let dna_cost = lower_dna_cost(cost, ctx, bindings, || {
-                ctx.printed_dna_cost_for_hand_partner(target_handle, partner_card, result_card)
-            });
-            let success = ctx.effect_initiated_dna_digivolve_with_hand_partner(
+            let dna_cost = lower_cost_delta(Some(cost), ctx, bindings);
+            let success = ctx.effect_initiated_dna_digivolve_with_hand_partner_cost(
                 target_handle,
                 partner_card,
                 result_card,
@@ -1263,6 +1289,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             );
             if let Some(played) = success {
                 bindings.record_digivolved(played);
+            } else if ctx.game.pending_selection.is_some() {
+                ctx.game.bind_effect_dna_clause_owner(result_card, ctx.source_card, ctx.player);
             }
             true
         }

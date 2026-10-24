@@ -20,33 +20,29 @@
 //!
 //! # Patterns this test file covers
 //!
-//! - Clause A (Main): `select_effect_choice` (From hand / From trash) +
-//!   branching `select_hand`/`select_trash` + `play_from_*_free` (the
-//!   G-DSL-UNION-PLAY-FREE workaround for hand-or-trash optional play).
+//! - Clause A (Main): optional `select_union_zone` across hand and trash,
+//!   followed by `play_union_bound_free` from the selected card's origin.
 //!   Final step: `place_self_as_delay_option` to seat this Option as a
 //!   Delay-Option permanent.
 //! - Clause B (All Turns leave-watcher): `kind: replacement` with
 //!   `trigger: when_would_leave_battle_area` filtered by
 //!   `replacement_subject_is_mine: true` + `level_eq: 6` +
 //!   `name_contains: Greymon|Garurumon` + `none_of: [replacement_cause: battle]`.
-//!   Process pays the Delay cost (`delete_permanent: { target: source }`) but
-//!   the DNA-digivolve-into-Omnimon body is omitted (BLOCKED on
-//!   G-DSL-DNA-FROM-HAND-PARTNER).
-//! - Clause C (Security inherited): same `select_effect_choice` workaround +
+//!   Process pays the Delay cost, selects the Omnimon result and hand partner,
+//!   then uses `effect_initiated_dna_digivolve_hand_partner`. Tests cover the
+//!   successful merge, leaving-material preservation, and independent clones
+//!   at result, partner, and permitted material-order prompts.
+//! - Clause C (Security inherited): optional union-zone play followed by the
 //!   `add_this_option_to_hand` tail.
 //!
-//! # Known gaps
+//! # Shared capabilities exercised
 //!
-//! - **G-DSL-UNION-PLAY-FREE**: `select_union_zone` binds a Card-typed
-//!   binding, but `play_from_hand_free` / `play_from_trash_free` need
-//!   HandIndex / TrashIndex bindings. Workaround: `select_effect_choice` +
-//!   branching. Tests that would assert auto-collapse to the populated zone
-//!   (the DCGO `SetBool(...)` shortcut) are #[ignore]'d.
-//! - **G-DSL-DNA-FROM-HAND-PARTNER**: `effect_initiated_dna_digivolve`
-//!   requires both DNA materials to be on-field permanents. BT17-095's second
-//!   material lives in the hand. The DNA-into-Omnimon sub-clause is omitted
-//!   from Clause B's process; behavioral tests for the DNA branch are
-//!   #[ignore]'d.
+//! - **G-DSL-UNION-PLAY-FREE — CLOSED**: zone-tagged union bindings support
+//!   free play from either origin without a separate zone-choice prompt.
+//! - **G-DSL-DNA-FROM-HAND-PARTNER — CLOSED**: the field-plus-hand DNA path
+//!   and its resumable decisions are exercised below. These synthetic result
+//!   cards have no printed DNA recipe; the current YAML ignores requirements,
+//!   so their order prompts expose both permitted material orders.
 
 #![allow(unused_imports, dead_code)]
 
@@ -799,10 +795,11 @@ fn bt17_095_replacement_dna_consumes_leaving_subject_into_merged_permanent() {
     );
 }
 
-/// make-engine-cloneable: the Delay-cost DNA reward's two hand-card prompts
+/// make-engine-cloneable: the Delay-cost DNA reward's hand-card and order prompts
 /// must be resume-driven. A clone taken at the Omnimon-result prompt advances
 /// to the partner prompt without touching the original; a clone taken at the
-/// partner prompt performs the DNA merge without touching the original.
+/// partner prompt advances to the material-order prompt. Choosing the same
+/// legal order from cloned prompts performs identical, independent DNA merges.
 #[test]
 fn bt17_095_delay_dna_prompts_clone_faithfully() {
     let greymon = make_l6_digimon_named("BT17095-FIELD-GREY-CLONE", "Greymon");
@@ -892,6 +889,7 @@ fn bt17_095_delay_dna_prompts_clone_faithfully() {
         .game
         .resolve_selection(result_player, result_action)
         .expect("original picks Omnimon result");
+    assert_eq!(runner.game.verification_digest(), clone_at_result.verification_digest());
 
     let (partner_player, partner_action) = {
         let sel = runner
@@ -913,17 +911,25 @@ fn bt17_095_delay_dna_prompts_clone_faithfully() {
     };
 
     let mut clone_at_partner = runner.game.clone();
+    let partner_digest = runner.game.verification_digest();
     clone_at_partner
         .resolve_selection(partner_player, partner_action)
         .expect("clone picks hand partner");
-    clone_at_partner.drain_effect_queue();
-    assert!(
-        clone_at_partner.players[0]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&clone_at_partner.card_data) == "BT17095-OMNI-CLONE"),
-        "clone performs the DNA merge"
-    );
+    let (route_player, route_action) = {
+        let sel = clone_at_partner.pending_selection.as_ref()
+            .expect("DNA declaration exposes both permitted material orders");
+        assert_eq!(sel.kind, digimon_engine::selection::SelectionKind::EffectChoice);
+        assert_eq!(sel.valid_action_ids.len(), 2);
+        assert!(!sel.is_optional);
+        assert!(clone_at_partner.pending_selection_resume.is_some(),
+            "DNA material-order prompt must be resume-driven");
+        let mask = digimon_engine::action::build_action_mask(&clone_at_partner, sel.selecting_player);
+        assert_eq!(mask[digimon_engine::action::space::PASS as usize], 0.0);
+        for &action in &sel.valid_action_ids { assert_eq!(mask[action as usize], 1.0); }
+        (sel.selecting_player, sel.valid_action_ids[0])
+    };
+    assert_eq!(runner.game.verification_digest(), partner_digest,
+        "advancing the partner-prompt clone cannot change the original");
     assert!(
         runner.game.pending_selection.is_some(),
         "resolving the partner-prompt clone leaves the original at the partner prompt"
@@ -936,10 +942,33 @@ fn bt17_095_delay_dna_prompts_clone_faithfully() {
         "original has not merged while the partner-prompt clone resolved"
     );
 
+    let route_digest = clone_at_partner.verification_digest();
+    let mut clone_at_route = clone_at_partner.clone();
+    clone_at_route.resolve_selection(route_player, route_action)
+        .expect("route-prompt clone chooses a legal material order");
+    clone_at_route.drain_effect_queue();
+    assert!(clone_at_route.pending_selection.is_none());
+    assert!(clone_at_route.players[0].battle_area.iter()
+        .any(|p| p.top_card().card_id(&clone_at_route.card_data) == "BT17095-OMNI-CLONE"),
+        "choosing the order performs the DNA merge");
+    assert_eq!(clone_at_partner.verification_digest(), route_digest,
+        "resolving the route-prompt clone leaves its original parked");
+    assert!(clone_at_partner.players[0].battle_area.iter()
+        .all(|p| p.top_card().card_id(&clone_at_partner.card_data) != "BT17095-OMNI-CLONE"));
+    clone_at_partner.resolve_selection(route_player, route_action)
+        .expect("partner-prompt clone chooses the same material order");
+    clone_at_partner.drain_effect_queue();
+    assert_eq!(clone_at_partner.verification_digest(), clone_at_route.verification_digest());
+
     runner
         .game
         .resolve_selection(partner_player, partner_action)
         .expect("original picks hand partner");
+    assert_eq!(runner.game.verification_digest(), route_digest,
+        "the original reaches the same material-order decision as its clone");
+    assert_eq!(digimon_engine::action::build_action_mask(&runner.game, route_player)[route_action as usize], 1.0);
+    runner.game.resolve_selection(route_player, route_action)
+        .expect("original chooses the same legal material order");
     runner.game.drain_effect_queue();
     assert!(
         runner.game.players[0]
@@ -948,6 +977,7 @@ fn bt17_095_delay_dna_prompts_clone_faithfully() {
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17095-OMNI-CLONE"),
         "original reaches the same DNA merge as the clone"
     );
+    assert_eq!(runner.game.verification_digest(), clone_at_route.verification_digest());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

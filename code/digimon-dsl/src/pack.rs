@@ -37,7 +37,10 @@ use std::collections::BTreeSet;
 // 0.24.0 adds `play_from_hand_free.suspended` and
 // `grant_triggered_effect.trigger_if`, and the `can_gain_memory` predicate
 // leaf. Rebuild packs; bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.24.0";
+// 0.25.0 adds an explicit plural subject filter to atomic security-paid
+// replacement prevention. Rebuild packs; bincode layouts differ.
+// 0.26.0 adds correlated, payment-aware hand-partner DNA candidate predicates.
+pub const PACK_FORMAT_VERSION: &str = "0.26.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

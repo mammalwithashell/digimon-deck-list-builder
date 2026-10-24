@@ -147,6 +147,16 @@ steps:
   do:
     select:
       decline: true
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      decline: true
+      sim_only: true
+- actor: 0
+  do:
+    select:
+      decline: true
       dcgo_only: true
   expect:
     prompt: OptionalSkill
@@ -776,7 +786,7 @@ assert:
     p1.trash:
     - ST2-09
     turn: 5
-- at: 20
+- at: 22
   that:
     _backfilled: true
     memory: 3

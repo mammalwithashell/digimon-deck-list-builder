@@ -31,3 +31,22 @@ On a fully-known (already-determinized) game with a known optimal line, the sear
 #### Scenario: Known win is found
 - **WHEN** the search runs with sufficient simulations on a perfect-information position with a forced win
 - **THEN** the search's preferred action lies on the winning line
+
+### Requirement: Independent-tree batching preserves the serial search
+PIMC SHALL support batching neural evaluations across independent world trees. With a
+deterministic, batch-independent evaluator, batching SHALL preserve each tree's
+sequential selection/evaluation/backup order, seeds, simulation count, depth
+cap, legal actions, and returned visits, Q values and root value. No tree SHALL
+select another simulation before its pending evaluation has been backed up.
+
+#### Scenario: Batched and serial PIMC agree
+- **WHEN** the same root, seeds, worlds, budgets and evaluator run with batch size one or a larger size
+- **THEN** the complete SearchResult is identical, including non-uniform value backups and partial batches
+
+#### Scenario: Terminal and capped paths retain their semantics
+- **WHEN** some independent trees terminate, hit a depth cap, or have zero simulations
+- **THEN** each retains its serial evaluation and backup behavior without adding simulations or evaluators for terminal states
+
+#### Scenario: Batching retains the no-X-ray invariant
+- **WHEN** concealed cards are permuted hidden-to-hidden while the viewer infoset and seeds remain fixed
+- **THEN** batched PIMC returns the same result

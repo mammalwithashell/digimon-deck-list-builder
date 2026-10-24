@@ -258,6 +258,7 @@ impl Game {
             pending_link_host: None,
             pending_would_digivolve_resume: None,
             effect_digivolve_scopes: Vec::new(),
+            effect_dna_would_scopes: Vec::new(),
             player_digivolve_cost_reducers: Vec::new(),
             pending_player_digivolve_reduction: 0,
             pending_interactive_digivolve_reduction: 0,
@@ -452,6 +453,7 @@ impl Game {
         self.pending_link_host = None;
         self.pending_would_digivolve_resume = None;
         self.effect_digivolve_scopes.clear();
+        self.effect_dna_would_scopes.clear();
         self.player_digivolve_cost_reducers = Vec::new();
         self.pending_player_digivolve_reduction = 0;
         self.pending_interactive_digivolve_reduction = 0;

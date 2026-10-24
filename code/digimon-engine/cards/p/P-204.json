@@ -21,8 +21,8 @@
   "form_eng": [],
   "attribute_eng": [],
   "effect_description_eng": "[Main] By trashing 1 card with the [X Antibody] or [Chronicle] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card in the battle area.\r\n[All Turns] When Digimon attack players, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Grademon] or Digimon with the [Chronicle] trait may digivolve into [Alphamon] or a level 6 or lower Digimon card with the [Chronicle] trait in the hand without paying the cost.",
-  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
-  "security_effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Activate this card's [Main] effects.",
   "evo_costs": [],
   "xros_req": ""
 }

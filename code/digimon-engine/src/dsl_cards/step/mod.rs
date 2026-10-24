@@ -248,10 +248,29 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     source_permanent: Option<PermanentHandle>,
     player: PlayerId,
     outer_tail: Vec<CompiledStep>,
-    mut bindings: Bindings,
+    bindings: Bindings,
     runtime: StepRuntime,
     tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
 ) {
+    let _ = drain_or_rewrap_pending_tail_with_bindings(
+        game, source_card, source_permanent, player, outer_tail, bindings,
+        runtime, tail_trigger_context,
+    );
+}
+
+/// Resolve a lexical tail and return its current scope. This keeps synchronous
+/// receipt clears local while allowing enclosing typed continuations to see them.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn drain_or_rewrap_pending_tail_with_bindings(
+    game: &mut Game,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    player: PlayerId,
+    outer_tail: Vec<CompiledStep>,
+    mut bindings: Bindings,
+    runtime: StepRuntime,
+    tail_trigger_context: Option<crate::trigger_context::TriggerContext>,
+) -> Option<Bindings> {
     if game.pending_selection.is_some() {
         wrap_pending_selection_with_tail(
             game,
@@ -263,11 +282,11 @@ pub(crate) fn drain_or_rewrap_pending_tail(
             runtime,
             tail_trigger_context,
         );
-        return;
+        return None;
     }
 
     if outer_tail.is_empty() {
-        return;
+        return Some(bindings);
     }
 
     // Re-assert the trigger context the tail was AUTHORED under (captured at
@@ -301,6 +320,7 @@ pub(crate) fn drain_or_rewrap_pending_tail(
     run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
     (game.effect_source_player, game.effect_source_card, game.effect_source_permanent) = previous_source;
     game.current_trigger_context = previous;
+    Some(bindings)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -369,6 +389,11 @@ fn wrap_pending_selection_with_tail(
                 return;
             }
         }
+        if let Some(dna) = game.effect_dna_declaration_for_clause_mut(source_card, player) {
+            dna.outer_conts.push(cont);
+            game.pending_selection = Some(pending);
+            return;
+        }
         // Compose onto whatever frame is active. RunTail runs its conts after the
         // inner/decline tail; multi-pick frames run theirs at the TERMINAL (after
         // the final pick), so a wrap mid-accumulation still fires exactly once
@@ -391,9 +416,12 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ZoneCardPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::EffectDigivolveCostChoice(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::EffectDnaHandRoute(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigivolveReducerPrompt(s))
-            | Some(ResumeFrame::DigivolveReducerSuspend(s)) => s.effect.as_mut()
-                .expect("only effect reducer declarations can carry DSL tails").outer_conts.push(cont),
+            | Some(ResumeFrame::DigivolveReducerSuspend(s)) => {
+                if let Some(dna) = s.dna_effect.as_mut() { dna.outer_conts.push(cont); }
+                else { s.effect.as_mut().expect("only effect declarations can carry DSL tails").outer_conts.push(cont); }
+            }
             Some(ResumeFrame::DigivolveCostChoice(_))
             | Some(ResumeFrame::DnaDigivolveFirstMaterial(_))
             | Some(ResumeFrame::DnaDigivolveSecondMaterial(_)) => unreachable!(
@@ -706,7 +734,7 @@ fn run_steps_with_runtime_inner(
                         .field_source_receipts
                         .retain(|(id, _)| id != receipt);
                 }
-                if let CompiledStep::DeleteReceiptFinalize { receipt } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = remaining {
+                if let CompiledStep::DeleteReceiptFinalize { receipt, .. } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = remaining {
                     ctx.game.deletion_receipts.retain(|(id, _)| id != receipt);
                 }
                 if let CompiledStep::SourcePlayFinalize { receipt, .. } = remaining {
@@ -719,7 +747,7 @@ fn run_steps_with_runtime_inner(
             return RunOutcome::Synchronous;
         }
         let step = &steps[i];
-        if let CompiledStep::DeleteReceiptFinalize { receipt } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = step {
+        if let CompiledStep::DeleteReceiptFinalize { receipt, .. } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = step {
             ctx.game
                 .resume_deletion_batch_rest_for_receipt(Some(*receipt));
             if ctx.game.pending_selection.is_some() {

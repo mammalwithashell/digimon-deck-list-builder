@@ -910,6 +910,16 @@ across both engines.
 
 ### 10.1 🟡 Greedy heuristic re-implemented in Rust
 
+**2026-10-23 search-pilot correction:** the EX13-060 decline/retry cycle was
+an engine mask error, not a greedy-policy error. CR 1-3-11-4 requires Assembly
+when its reduction is needed to pay a declared play. The first material prompt
+and its cloneable resume state now allow decline only when the cost without
+Assembly is payable, including existing effect reductions and assigned costs.
+The broad greedy material-preference workaround was removed; every policy
+receives the corrected mask. Declining remains legal for payable plays.
+Regression: `greedy_completes_assembly_payment_instead_of_declining_and_retrying_play`
+in `tests/policies/greedy.rs`.
+
 **Python** — [`code/digimon_gym/digimon_gym.py::greedy_policy`](../code/digimon_gym/digimon_gym.py) inspects full game state (phases, hand/field, level/DP/cost) and prioritizes Digivolve > Attack > Play > Pass in Main and Hatch > Move > Pass in Breeding. Tie-breaks are deterministic by (level, DP, -cost, -hand_idx, -field_idx).
 
 **Rust** — [`code/digimon-engine/src/policies/greedy.rs`](../code/digimon-engine/src/policies/greedy.rs) hand-ports the same baseline phase structure. `greedy_action(game, mask) -> u16` is wired into `PlayerKind::Greedy` in `code/src-tauri/src/engine_commands.rs::run_agent_steps`, replacing the pre-port `first_valid_action` placeholder. Rust intentionally refines setup sequencing: legal search/resource-flow plays and Tamers happen before keep-turn digivolves, legal Digimon plays prefer lower-level curve starters before expensive high-level hard-plays, attacks prefer security pressure before board trades after checking for lethal swings, and Breeding holds a vanilla Lv.3 when there is no matching evolution in hand. DSL-lowered effects mark resource-flow metadata from `Draw`/`AddToHandFrom*` steps, with printed text/keyword fallback for older hand-written effects. Python still sorts hand plays by raw play cost first.

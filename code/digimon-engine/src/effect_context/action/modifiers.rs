@@ -521,6 +521,7 @@ impl<'a> EffectContext<'a> {
     ///   - `ImmuneFromStackTrashing` with an `OpponentOnly` immunity filter
     ///     (the stack-peel consult sites honor the filter, so the
     ///     controller's own source trashing still applies);
+    ///   - `ImmuneFromStackReturn` for individual source returns, with the same filter;
     ///   - `CannotBeDeDigivolved` (de-digivolve trashes the top stacked card);
     ///   - `CannotBeReturnedToHand` / `CannotBeReturnedToDeck`.
     /// The three replacement modifiers use `passive_replacement()` so their
@@ -545,6 +546,14 @@ impl<'a> EffectContext<'a> {
                 source_kind: None,
                 controller: EffectControllerFilter::OpponentOnly,
             }),
+        );
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(ModifierType::ImmuneFromStackReturn, 0, expiry, self.player)
+                .with_effect_immunity_filter(EffectImmunityFilter {
+                    source_kind: None,
+                    controller: EffectControllerFilter::OpponentOnly,
+                }),
         );
         for modifier in [
             ModifierType::CannotBeDeDigivolved,

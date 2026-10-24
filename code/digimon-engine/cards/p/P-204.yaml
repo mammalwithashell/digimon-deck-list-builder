@@ -1,0 +1,102 @@
+# Printed card image and official Q5199:
+# https://world.digimoncard.com/cards/?card_no=P-204&search=true
+# The optional discard pays for BOTH Draw 2 and the following placement.
+# DCGO reference: Assets/Scripts/CardEffect/P/Black/P_204.cs.
+card: P-204
+name: Release of the Sealed Knight!
+kind: option
+color: [black]
+cost: 3
+traits: [X Antibody, Chronicle]
+effects:
+  - when: main_from_hand
+    summary: "[Main] By trashing 1 [X Antibody] or [Chronicle] card from hand, Draw 2. Then, place this card in the battle area"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter:
+            any_of:
+              - trait_has: X Antibody
+              - trait_has: Chronicle
+          prompt: "Trash 1 [X Antibody] or [Chronicle] card to draw 2 and place this Option"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+            - place_self_as_delay_option: {}
+
+  # Event-gated Delay scans both owners on the single on_ally_attack broadcast.
+  # No owner gate: the printed trigger includes either player's Digimon.
+  - kind: delay
+    trigger: on_ally_attack
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_is_player: true
+    summary: "[All Turns] When Digimon attack players, Delay: 1 own [Grademon] or [Chronicle] Digimon may digivolve into [Alphamon] or a level 6 or lower [Chronicle] Digimon in hand without paying the cost"
+    process:
+      - select_own_permanent:
+          bind_as: host
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: Grademon
+                  - trait_has: Chronicle
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of:
+                          - name_is: Alphamon
+                          - all_of:
+                              - trait_has: Chronicle
+                              - level_lte: 6
+          prompt: "Choose 1 of your [Grademon] or [Chronicle] Digimon to digivolve"
+      - if:
+          condition: { binding_present: host }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evolution
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_is: Alphamon
+                        - all_of:
+                            - trait_has: Chronicle
+                            - level_lte: 6
+                    - can_digivolve_onto: host
+                prompt: "Digivolve into [Alphamon] or a level 6 or lower [Chronicle] Digimon without paying the cost"
+            - effect_initiated_digivolve:
+                target: host
+                from_hand: evolution
+                cost: free
+                ignore_requirements: false
+
+  - when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter:
+            any_of:
+              - trait_has: X Antibody
+              - trait_has: Chronicle
+          prompt: "Trash 1 [X Antibody] or [Chronicle] card to draw 2 and place this Option"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+            - place_self_as_delay_option: {}

@@ -101,6 +101,14 @@ fn search_finds_forced_win_over_losing_pass() {
             ..SearchConfig::default()
         };
         let result = mcts.search(&r.game, &mut evaluator, &config);
+        assert_eq!(
+            mcts.search_batch(
+                &[r.game.clone(), r.game.clone()],
+                &mut UniformEvaluator,
+                &[config.clone(), config.clone()]
+            ),
+            vec![result.clone(), result.clone()]
+        );
 
         assert_eq!(result.simulations_run, 200);
         assert_eq!(
@@ -176,6 +184,14 @@ fn q_does_not_flip_across_consecutive_same_player_decisions() {
             ..SearchConfig::default()
         };
         let result = mcts.search(&r.game, &mut evaluator, &config);
+        assert_eq!(
+            mcts.search_batch(
+                &[r.game.clone(), r.game.clone()],
+                &mut UniformEvaluator,
+                &[config.clone(), config.clone()]
+            ),
+            vec![result.clone(), result.clone()]
+        );
 
         assert_eq!(result.simulations_run, 200);
         // Both breeding actions funnel into the SAME player's winning Main

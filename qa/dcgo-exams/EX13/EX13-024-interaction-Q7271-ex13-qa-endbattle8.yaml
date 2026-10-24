@@ -119,11 +119,6 @@ steps:
       from: hand
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -177,7 +172,7 @@ assert: []
 expect_ruling:
   q_id: Q7271
   assert:
-  - at: 22
+  - at: 21
     that:
       memory: -4
       p0.field:

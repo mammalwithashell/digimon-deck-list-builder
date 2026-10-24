@@ -467,3 +467,78 @@ fn fallback_does_not_pick_concede_even_with_lone_low_id_action() {
     assert_ne!(picked, CONCEDE_GAME);
     assert_eq!(picked, 99, "greedy should return the non-CONCEDE action");
 }
+
+#[test]
+fn greedy_completes_assembly_payment_instead_of_declining_and_retrying_play() {
+    // EX13-060's captured held-out game: at 0 memory a 13-cost card is
+    // playable via Assembly -5. CR 1-3-11-4 makes those materials mandatory;
+    // the engine mask must prevent any policy from declining unpaid play.
+    let yaml = r#"
+card: TEST-GREEDY-ASSEMBLY
+name: Assembly Candidate
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 13000
+alt_paths:
+  - kind: assembly
+    materials:
+      - { name_contains: Material5, zones: [trash], stack_under: true }
+      - { name_contains: Material4, zones: [trash], stack_under: true }
+      - { name_contains: Material3, zones: [trash], stack_under: true }
+    cost: 5
+"#;
+    let mut builder = DebugRunner::builder().from_dsl_yaml(yaml).unwrap();
+    for (id, name, level) in [
+        ("TEST-GM5", "Material5", 5),
+        ("TEST-GM4", "Material4", 4),
+        ("TEST-GM3", "Material3", 3),
+    ] {
+        let mut card = make_test_card(id, name);
+        card.level = Some(level);
+        builder = builder.add_card(card);
+    }
+    let mut runner = builder.hand(0, &["TEST-GREEDY-ASSEMBLY"]).memory(0).start();
+    runner.skip_mulligan();
+    for id in ["TEST-GM5", "TEST-GM4", "TEST-GM3"] {
+        let index = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == id)
+            .unwrap();
+        let instance = runner.game.next_card_index();
+        runner.game.players[0]
+            .trash
+            .push(digimon_engine::card_source::CardSource::new(
+                index, 0, instance,
+            ));
+    }
+    for _ in 0..12 {
+        if runner.game.players[0].hand.is_empty() {
+            break;
+        }
+        let mask = digimon_engine::action::build_action_mask(&runner.game, 0);
+        let action = greedy_action(&runner.game, &mask);
+        assert!(mask[action as usize] > 0.5);
+        if runner.game.pending_selection.is_some() {
+            assert!(!runner.game.pending_selection.as_ref().unwrap().is_optional);
+            assert_eq!(mask[PASS as usize], 0.0, "unpayable decline must be masked for every policy");
+            assert_ne!(
+                action, PASS,
+                "complete legal Assembly material picks instead of aborting the declared play"
+            );
+        }
+        runner.game.decode_action(action, 0);
+    }
+    let permanent = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "TEST-GREEDY-ASSEMBLY")
+        .expect("Assembly play must finish");
+    assert_eq!(permanent.card_sources.len(), 4);
+    assert_eq!(runner.game.players[0].trash.len(), 0);
+    assert_eq!(runner.game.turn_player(), 1);
+    assert_eq!(runner.game.memory, 8, "the reduced 8-cost payment passes 8 memory to the next turn");
+}

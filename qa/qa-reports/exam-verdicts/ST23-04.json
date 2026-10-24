@@ -1,54 +1,146 @@
 {
-  "version": 1,
-  "last_updated": "2026-10-21T14:46:28.317339+00:00",
+  "version": 3,
+  "last_updated": "2026-10-22T23:00:03.122246100+00:00",
   "clauses": {
     "ST23-04#effect#0": {
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "005e5d579cee610abb1aa7f30d86aad0616fc96b92e44435d1c2e63489190712",
       "clause_id": "ST23-04#effect#0",
       "card_id": "ST23-04",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Special Digivolution Condition",
       "text_sha256": "0a2b682b1080a44a868aef0c995e33409bc1a7dac16aea7861a516542ae07202",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-04-effect0.yaml",
-      "reason": "DIVERGED at step 14 (compared 14 of 18 ours / 14 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
-      "triage": "ours_wrong",
-      "citation": "G-CARD-ST23-04-ONE-EFFECT-SPLIT-INTO-TWO-TRIGGERS (docs/RUST_ENGINE_GAPS.md): the printed [On Play][When Digivolving] '-5000 ... Then, ... you may play or use' is ONE effect (CR 4.3 §15-1-2, §15-1-4) but is authored as two triggered clauses, so a rule check runs between them (§17-1-2-2: none during effect processing) and the 0-DP Birdramon is deleted before the Tamer pick; DCGO keeps it on the field until the effect ends. Re-diffed 2026-10-21: same LEAD at step 14",
-      "recorded_at": "2026-10-05T16:36:43.632975900+00:00"
+      "recorded_at": "2026-10-22T22:59:58.362838100+00:00",
+      "job_id": "exam-ST23-04-effect0",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "oracle_evidence": {
+        "comparison_mode": "saved_dcgo_recording",
+        "job_outcome": "completed",
+        "denominator": "compared 15 of 15 ours / 15 dcgo steps",
+        "dcgo_artifact_sha256": "84de466717db2f30f2d0d5d5fe01c52a3ffbf944484ec920c0bcd3eedba16617",
+        "action_space_hash": "711d23bf24fb921edb691f4826c7cbbe1807205f071facb1152348042e5aab6c",
+        "raw_files": [
+          {
+            "source": "C:\\Users\\james\\AppData\\LocalLow\\DCGO\\DCGO\\dcgo_recordings\\20261022T225403Z_fa2d54fef78f4222955d129f1322b576.state.jsonl",
+            "preserved": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-recordings/20261022T225403Z_fa2d54fef78f4222955d129f1322b576.state.jsonl",
+            "sha256": "dc222932705d46b09f5fd41192fc4947d981c9e4d2dbe63b6bdaf5456c07c153"
+          },
+          {
+            "source": "C:\\Users\\james\\AppData\\LocalLow\\DCGO\\DCGO\\dcgo_recordings\\20261022T225403Z_fa2d54fef78f4222955d129f1322b576.jsonl",
+            "preserved": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-recordings/20261022T225403Z_fa2d54fef78f4222955d129f1322b576.jsonl",
+            "sha256": "6aa002503f0bc51b99b8bb63399de6bd308af1e01b6aafcb2c47fdf850413233"
+          }
+        ],
+        "source_book": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-clause-text.json",
+        "source_book_sha256": "e4e67711bb526642045e4f63a0124df1a7c760aa570be0348636a1a048bd318e",
+        "comparison_log": ".superpowers/sdd/2026-10-22-meta-admission/gd-record-ST23-04-effect0.log"
+      }
     },
     "ST23-04#effect#1": {
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "75954b3cbec1e90afd589f5472ee4bea8e421491874be447caa4cefabe91f5a4",
       "clause_id": "ST23-04#effect#1",
       "card_id": "ST23-04",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "0cd820ef4adfa8bcc70f0a32465ac5487d7e1544f031510314254d0d908ff0b1",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-04-effect1.yaml",
-      "reason": "DIVERGED at step 14 (compared 14 of 25 ours / 14 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
-      "triage": "ours_wrong",
-      "citation": "G-CARD-ST23-04-ONE-EFFECT-SPLIT-INTO-TWO-TRIGGERS (docs/RUST_ENGINE_GAPS.md): the printed [On Play][When Digivolving] '-5000 ... Then, ... you may play or use' is ONE effect (CR 4.3 §15-1-2, §15-1-4) but is authored as two triggered clauses, so a rule check runs between them (§17-1-2-2: none during effect processing) and the 0-DP Birdramon is deleted before the Tamer pick; DCGO keeps it on the field until the effect ends. Re-diffed 2026-10-21: same LEAD at step 14",
-      "recorded_at": "2026-10-05T16:36:44.428383400+00:00"
+      "recorded_at": "2026-10-22T22:59:59.962117300+00:00",
+      "job_id": "exam-ST23-04-effect1",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "oracle_evidence": {
+        "comparison_mode": "saved_dcgo_recording",
+        "job_outcome": "completed",
+        "denominator": "compared 23 of 23 ours / 23 dcgo steps",
+        "dcgo_artifact_sha256": "84de466717db2f30f2d0d5d5fe01c52a3ffbf944484ec920c0bcd3eedba16617",
+        "action_space_hash": "711d23bf24fb921edb691f4826c7cbbe1807205f071facb1152348042e5aab6c",
+        "raw_files": [
+          {
+            "source": "C:\\Users\\james\\AppData\\LocalLow\\DCGO\\DCGO\\dcgo_recordings\\20261022T225427Z_e5fd2e5927454eafb55823ceffd043bc.state.jsonl",
+            "preserved": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-recordings/20261022T225427Z_e5fd2e5927454eafb55823ceffd043bc.state.jsonl",
+            "sha256": "c9086f6dcab9b9f95aadc4ecc3107def86d99e538046b1f43da3a9d2e300e57d"
+          },
+          {
+            "source": "C:\\Users\\james\\AppData\\LocalLow\\DCGO\\DCGO\\dcgo_recordings\\20261022T225427Z_e5fd2e5927454eafb55823ceffd043bc.jsonl",
+            "preserved": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-recordings/20261022T225427Z_e5fd2e5927454eafb55823ceffd043bc.jsonl",
+            "sha256": "3abceeeb7d13dcfbde5b2249fdf0315d7e509a681c4ced05aead9cb093769ae9"
+          }
+        ],
+        "source_book": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-clause-text.json",
+        "source_book_sha256": "e4e67711bb526642045e4f63a0124df1a7c760aa570be0348636a1a048bd318e",
+        "comparison_log": ".superpowers/sdd/2026-10-22-meta-admission/gd-record-ST23-04-effect1.log"
+      }
     },
     "ST23-04#effect#2": {
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "527b70110fef51d3cb08c55f1f97ea5d8ea1f267da4f0fa4d43767a20c361aa0",
       "clause_id": "ST23-04#effect#2",
       "card_id": "ST23-04",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Effect",
       "text_sha256": "cf2336c13ecb6a57bb78bcd9259bf1551cb3e3f434c7648c470cae25c62b7b17",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-04-effect2.yaml",
-      "reason": "DIVERGED at step 14 (compared 14 of 18 ours / 14 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
-      "triage": "ours_wrong",
-      "citation": "G-CARD-ST23-04-ONE-EFFECT-SPLIT-INTO-TWO-TRIGGERS (docs/RUST_ENGINE_GAPS.md): the printed [On Play][When Digivolving] '-5000 ... Then, ... you may play or use' is ONE effect (CR 4.3 §15-1-2, §15-1-4) but is authored as two triggered clauses, so a rule check runs between them (§17-1-2-2: none during effect processing) and the 0-DP Birdramon is deleted before the Tamer pick; DCGO keeps it on the field until the effect ends. Re-diffed 2026-10-21: same LEAD at step 14",
-      "recorded_at": "2026-10-05T16:36:45.119205800+00:00"
+      "recorded_at": "2026-10-22T23:00:00.989757600+00:00",
+      "job_id": "exam-ST23-04-effect2",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "oracle_evidence": {
+        "comparison_mode": "saved_dcgo_recording",
+        "job_outcome": "completed",
+        "denominator": "compared 15 of 15 ours / 15 dcgo steps",
+        "dcgo_artifact_sha256": "84de466717db2f30f2d0d5d5fe01c52a3ffbf944484ec920c0bcd3eedba16617",
+        "action_space_hash": "711d23bf24fb921edb691f4826c7cbbe1807205f071facb1152348042e5aab6c",
+        "raw_files": [
+          {
+            "source": "C:\\Users\\james\\AppData\\LocalLow\\DCGO\\DCGO\\dcgo_recordings\\20261022T225500Z_cde45900c06e46bbb1f8f359137ce75a.state.jsonl",
+            "preserved": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-recordings/20261022T225500Z_cde45900c06e46bbb1f8f359137ce75a.state.jsonl",
+            "sha256": "dc222932705d46b09f5fd41192fc4947d981c9e4d2dbe63b6bdaf5456c07c153"
+          },
+          {
+            "source": "C:\\Users\\james\\AppData\\LocalLow\\DCGO\\DCGO\\dcgo_recordings\\20261022T225500Z_cde45900c06e46bbb1f8f359137ce75a.jsonl",
+            "preserved": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-recordings/20261022T225500Z_cde45900c06e46bbb1f8f359137ce75a.jsonl",
+            "sha256": "d61934f25d6627af6d8edc525ca37f1afe0b7e7d3ca32d719995885913711f48"
+          }
+        ],
+        "source_book": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-clause-text.json",
+        "source_book_sha256": "e4e67711bb526642045e4f63a0124df1a7c760aa570be0348636a1a048bd318e",
+        "comparison_log": ".superpowers/sdd/2026-10-22-meta-admission/gd-record-ST23-04-effect2.log"
+      }
     },
     "ST23-04#inherited#0": {
+      "semantic_fingerprint_version": 1,
+      "semantic_sha256": "5d043a2de1c27a15b85285a5a8e4205afe4c8e825c0951da944ca29ccf303539",
       "clause_id": "ST23-04#inherited#0",
       "card_id": "ST23-04",
-      "verdict": "diverged",
+      "verdict": "confirmed",
       "label": "Inherited Effect",
       "text_sha256": "3dc24fce998a78519232b48757cc3c2e1f0e36b2f8159894f413e8656ca680e7",
       "scenario_path": "qa/dcgo-exams/ST23/ST23-04-inherited0.yaml",
-      "reason": "DIVERGED at step 14 (compared 14 of 27 ours / 14 dcgo steps (2 sim-only row(s) with no DCGO prompt); trace truncated)",
-      "triage": "ours_wrong",
-      "citation": "G-CARD-ST23-04-ONE-EFFECT-SPLIT-INTO-TWO-TRIGGERS (docs/RUST_ENGINE_GAPS.md): the printed [On Play][When Digivolving] '-5000 ... Then, ... you may play or use' is ONE effect (CR 4.3 §15-1-2, §15-1-4) but is authored as two triggered clauses, so a rule check runs between them (§17-1-2-2: none during effect processing) and the 0-DP Birdramon is deleted before the Tamer pick; DCGO keeps it on the field until the effect ends. Re-diffed 2026-10-21: same LEAD at step 14",
-      "recorded_at": "2026-10-05T16:36:46.081107500+00:00"
+      "recorded_at": "2026-10-22T23:00:03.122246100+00:00",
+      "job_id": "exam-ST23-04-inherited0",
+      "dcgo_build": "7221db7e525fa04217b1d0a6c04515b1cb3e479a",
+      "oracle_evidence": {
+        "comparison_mode": "saved_dcgo_recording",
+        "job_outcome": "completed",
+        "denominator": "compared 24 of 24 ours / 24 dcgo steps",
+        "dcgo_artifact_sha256": "84de466717db2f30f2d0d5d5fe01c52a3ffbf944484ec920c0bcd3eedba16617",
+        "action_space_hash": "711d23bf24fb921edb691f4826c7cbbe1807205f071facb1152348042e5aab6c",
+        "raw_files": [
+          {
+            "source": "C:\\Users\\james\\AppData\\LocalLow\\DCGO\\DCGO\\dcgo_recordings\\20261022T225525Z_0fa6c686c1c542e887623cd531d05dda.state.jsonl",
+            "preserved": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-recordings/20261022T225525Z_0fa6c686c1c542e887623cd531d05dda.state.jsonl",
+            "sha256": "32f4002dfb738f0f5e52876f239dacdbca823d649dab35da509109f5070651cb"
+          },
+          {
+            "source": "C:\\Users\\james\\AppData\\LocalLow\\DCGO\\DCGO\\dcgo_recordings\\20261022T225525Z_0fa6c686c1c542e887623cd531d05dda.jsonl",
+            "preserved": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-recordings/20261022T225525Z_0fa6c686c1c542e887623cd531d05dda.jsonl",
+            "sha256": "bef0abc17f4af05fc7996873133a32b4158f3bff7a2319856305b089578aae42"
+          }
+        ],
+        "source_book": ".superpowers/sdd/2026-10-22-meta-admission/gd-fresh-clause-text.json",
+        "source_book_sha256": "e4e67711bb526642045e4f63a0124df1a7c760aa570be0348636a1a048bd318e",
+        "comparison_log": ".superpowers/sdd/2026-10-22-meta-admission/gd-record-ST23-04-inherited0.log"
+      }
     }
   }
 }

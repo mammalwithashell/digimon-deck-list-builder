@@ -1,0 +1,33 @@
+# Printed image / official bundle; DCGO BT7/Black/BT7_090.cs.
+card: BT7-090
+name: Kota Domoto
+kind: tamer
+color: [black]
+cost: 4
+traits: []
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 memory or less, set your memory to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_play
+    summary: "[On Play] Reveal 4; add 1 [X Antibody] card to your hand; bottom the rest in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: chosen
+              min: 1
+              max: 1
+              filter: { trait_has: X Antibody }
+          prompt: "Add 1 card with the [X Antibody] trait to your hand"
+      - add_to_hand_from_reveal: { of: you, card: chosen }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying its memory cost"
+    process:
+      - play_from_security: {}

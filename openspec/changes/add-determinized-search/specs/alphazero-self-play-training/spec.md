@@ -1,5 +1,26 @@
 ## ADDED Requirements
 
+### Requirement: Scheduling preserves seeded games and supports explicit recovery
+Dynamic scheduling SHALL assign global game indices independent of workers and
+preserve serial deck sampling, game/search seeds, legal actions, search budgets,
+noise, temperature and training targets. Only completed chunks SHALL become
+visible to training. Explicit resume SHALL validate frozen inputs and committed
+output hashes, permit changed worker counts, and reject incompatible settings.
+Workers SHALL have bounded retries/deadlines, controller ownership, heartbeat
+reporting and cleanup on interruption on Windows and Linux.
+
+#### Scenario: Worker scaling preserves all targets
+- **WHEN** the same master seed, global game range, model and search settings run with different worker counts
+- **THEN** every observation, sparse policy, mover, game ID and terminal label is identical in global game order
+
+#### Scenario: An interrupted chunk is not training data
+- **WHEN** a worker or controller stops before a chunk is published
+- **THEN** completed chunks are retained, incomplete attempts remain private, and an explicit compatible resume reruns only uncommitted chunks
+
+#### Scenario: Changed inputs or damaged output reject resume
+- **WHEN** a model, executable, card/admission data, deck pool, search setting or committed output hash changes
+- **THEN** resume fails before launching workers or consuming the changed data
+
 ### Requirement: Self-play produces MCTS-improved training targets
 Self-play SHALL generate training records of `(infoset-observation, search-policy π, game-outcome z)`, where π is the MCTS root-visit distribution at each decision and z is the eventual game result from the deciding player's perspective.
 

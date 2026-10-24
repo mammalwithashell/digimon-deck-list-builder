@@ -16,12 +16,16 @@
 //! DCGO reference (READ-ONLY): DCGO/Assets/Scripts/CardEffect/BT20/Black/BT20_056.cs
 
 use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
-use digimon_engine::card_data::CardData;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::action::{build_action_mask, space};
+use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::CardKind;
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword};
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{
+    AttackState, AttackTarget, PendingAttack, SelectionKind, TriggerSource,
+};
 
 // ────────────────────────────── helpers ──────────────────────────────
 
@@ -235,7 +239,7 @@ fn bt20_056_ouryuken_inherited_replacement_declined_lets_it_leave() {
         .game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
 
-    let view = runner
+    runner
         .pending_selection_view()
         .expect("inherited leave-prevention prompt");
     assert!(runner.pending_is_optional());
@@ -309,17 +313,476 @@ fn bt20_056_ouryuken_replacement_does_not_fire_for_own_effect_leave() {
     );
 }
 
-// ─────────────────── Stubbed clause (genuine open gap) ───────────────────
+// Complete-card regression fixtures. Attack windows below isolate the printed
+// conditional tail; these are simulator tests, not DCGO oracle scenarios.
+// CR 4.3 3-4-7-4/6: breeding evolution does not trigger ordinary WD effects.
 
-// The [On Play][When Digivolving] "if during an attack, 1 breeding-area Digimon
-// may digivolve into a level<=6 [Chronicle] Digimon from hand or trash without
-// paying the cost" clause requires two genuinely-missing substrate pieces
-// (gap G-BREEDING-DIGIVOLVE-UNION-ZONES, status OPEN, size L):
-//   1. effect-initiated digivolve that can target the BREEDING-AREA permanent
-//      (the engine hard-rejects target.index >= battle_area.len()), and
-//   2. a `during_attack` predicate leaf (game.pending_attack.is_some()).
-// Authoring it would require editing shared engine/DSL source, which is out of
-// scope for this card-author task. Stubbed and gap-routed.
-#[ignore = "pending: G-BREEDING-DIGIVOLVE-UNION-ZONES — during-attack breeding-area digivolve into a Lv<=6 [Chronicle] from hand/trash needs effect-initiated breeding digivolve + a during_attack predicate (open engine/DSL substrate)"]
+const ID: &str = "BT20-056";
+
+fn colored(id: &str, level: u8, color: CardColor) -> CardData {
+    let mut card = make_digimon(id, id, level, 12000);
+    card.colors = vec![color];
+    card
+}
+
+fn evolution(id: &str, level: u8, chronicle: bool, base: u8, color: CardColor) -> CardData {
+    let mut card = colored(id, level, CardColor::Black);
+    if chronicle {
+        card.traits = vec!["Chronicle".into()];
+    }
+    card.evo_costs = vec![EvoCost {
+        card_color: color as u8,
+        level: base,
+        memory_cost: 7,
+    }];
+    card
+}
+
+fn full_builder(owner: u8, hand: &[&str]) -> DebugRunnerBuilder {
+    let mut tamer = evolution("TAMER", 6, true, 5, CardColor::Black);
+    tamer.card_kind = CardKind::Tamer;
+    tamer.level = None;
+    tamer.dp = None;
+    DebugRunner::builder()
+        .dsl_card(ID)
+        .unwrap()
+        .add_card(colored("FILL", 3, CardColor::Black))
+        .add_card(colored("BASE-B", 5, CardColor::Black))
+        .add_card(colored("BASE-Y", 5, CardColor::Yellow))
+        .add_card(colored("BASE-P", 5, CardColor::Purple))
+        .add_card(colored("MID", 4, CardColor::Black))
+        .add_card(colored("OTHER", 6, CardColor::Blue))
+        .add_card(evolution("EVO6", 6, true, 5, CardColor::Black))
+        .add_card(evolution("EVO5", 5, true, 5, CardColor::Black))
+        .add_card(evolution("EVO7", 7, true, 5, CardColor::Black))
+        .add_card(evolution("NO-TRAIT", 6, false, 5, CardColor::Black))
+        .add_card(evolution("WRONG-COLOR", 6, true, 5, CardColor::Purple))
+        .add_card(evolution("WRONG-LEVEL", 6, true, 4, CardColor::Black))
+        .add_card(tamer)
+        .add_card(make_digimon("OURYUKEN", "Alphamon: Ouryuken", 7, 13000))
+        .add_card(make_digimon(
+            "NEAR-OURYUKEN",
+            "Alphamon: Ouryuken (X Antibody)",
+            7,
+            13000,
+        ))
+        .hand(owner, hand)
+        .deck(0, &["FILL"; 30])
+        .deck(1, &["FILL"; 30])
+        .security(0, &["FILL"; 5])
+        .security(1, &["FILL"; 5])
+        .memory(10)
+}
+
+fn full_ready(owner: u8, mut r: DebugRunner) -> DebugRunner {
+    r.set_first_player(owner);
+    r.skip_mulligan();
+    r.game.enter_main_phase();
+    r
+}
+
+fn choices(r: &DebugRunner, owner: u8, count: usize, optional: bool) -> Vec<u16> {
+    let p = r
+        .pending_selection()
+        .expect("printed choice must be exposed");
+    assert_eq!(p.selecting_player, owner);
+    assert_eq!(p.is_optional, optional, "{}", p.prompt);
+    let ids: Vec<_> = p
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|a| *a != PASS)
+        .collect();
+    assert_eq!(ids.len(), count, "{}: {:?}", p.prompt, ids);
+    for (action, actual) in build_action_mask(&r.game, owner).iter().enumerate() {
+        let legal = ids.contains(&(action as u16)) || (optional && action == PASS as usize);
+        assert_eq!(*actual, if legal { 1.0 } else { 0.0 }, "mask {action}");
+    }
+    assert!(build_action_mask(&r.game, 1 - owner)
+        .iter()
+        .all(|v| *v == 0.0));
+    ids
+}
+
+fn choose(r: &mut DebugRunner, owner: u8, action: u16) {
+    assert_eq!(build_action_mask(&r.game, owner)[action as usize], 1.0);
+    r.execute_action(owner, action).expect("legal choice");
+}
+
+fn zone_action(r: &DebugRunner, owner: u8, id: &str, trash: bool) -> u16 {
+    let p = &r.game.players[owner as usize];
+    let zone = if trash { &p.trash } else { &p.hand };
+    let index = zone
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == id)
+        .unwrap();
+    (if trash {
+        space::TRASH_EFFECT_START
+    } else {
+        space::PLAY_HAND_START
+    }) + index as u16
+}
+
+fn breeder_id(r: &DebugRunner, owner: u8) -> Option<&str> {
+    r.game.players[owner as usize]
+        .breeding_area
+        .as_ref()
+        .map(|p| p.top_card().card_id(&r.game.card_data))
+}
+
+fn fire_full(r: &mut DebugRunner, host: PermanentHandle, evo: bool) {
+    if evo {
+        r.game.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            TriggerSource::Permanent(host),
+        );
+        r.game.drain_effect_queue();
+    } else {
+        r.fire_on_play(host.player, host.index as usize);
+    }
+}
+
+fn attack_window(r: &mut DebugRunner, attacker: PermanentHandle) {
+    r.set_first_player(attacker.player);
+    r.game.pending_attack = Some(PendingAttack {
+        attacker,
+        original_target: AttackTarget::Player(1 - attacker.player),
+        effective_target: AttackTarget::Player(1 - attacker.player),
+        effective_target_removed: false,
+        is_blocked: false,
+        blocker: None,
+        is_vortex: false,
+        is_overclock: false,
+        declaration_committed: true,
+        cancelled: false,
+        battle_occurred: false,
+        battle_defender_deleted: false,
+        effect_battle_piercing_pending: false,
+        security_check_started: false,
+        return_phase: GamePhase::Main,
+        state: AttackState::Declared,
+        counter_depth: 0,
+    });
+}
+
 #[test]
-fn bt20_056_during_attack_breeding_digivolves_chronicle_from_hand_or_trash() {}
+fn bt20_056_printed_routes_cost_three_and_recovery_occurs_on_evolution() {
+    for (base, legal) in [
+        ("BASE-B", true),
+        ("BASE-Y", true),
+        ("BASE-P", false),
+        ("MID", false),
+    ] {
+        let mut r = full_ready(0, full_builder(0, &[ID]).start());
+        let host = r.place_on_field(0, base, Some(0));
+        let action = space::encode_digivolve(0, host.index as u16);
+        assert_eq!(
+            build_action_mask(&r.game, 0)[action as usize] > 0.0,
+            legal,
+            "{base}"
+        );
+        if legal {
+            r.game.decode_action(action, 0);
+            assert_eq!(r.memory(), 7);
+            assert_eq!(r.security_count(0), 6);
+            assert_eq!(r.game.players[0].deck.len(), 28, "draw plus Recovery");
+            assert!(r.game.has_keyword(host, Keyword::Barrier));
+            assert_eq!(r.effective_dp(host), Some(11000));
+            assert!(r.pending_selection().is_none());
+        }
+    }
+}
+
+#[test]
+fn bt20_056_recovery_is_mandatory_for_both_timings_and_controllers_without_attack() {
+    for owner in [0, 1] {
+        for evo in [false, true] {
+            let mut r = full_ready(owner, full_builder(owner, &["EVO6"]).start());
+            let host = r.place_on_field(owner, ID, Some(0));
+            r.place_in_breeding(owner, "BASE-B");
+            fire_full(&mut r, host, evo);
+            assert_eq!(r.security_count(owner), 6);
+            assert_eq!(r.game.players[owner as usize].deck.len(), 29);
+            assert_eq!(r.hand_size(owner), 1);
+            assert_eq!(breeder_id(&r, owner), Some("BASE-B"));
+            assert!(r.pending_selection().is_none());
+        }
+    }
+}
+
+#[test]
+fn bt20_056_barrier_cost_may_be_accepted_or_declined_only_for_battle_deletion() {
+    for owner in [0, 1] {
+        for accept in [false, true] {
+            let mut r = full_ready(owner, full_builder(owner, &[]).start());
+            let host = r.place_on_field(owner, ID, Some(0));
+            r.game
+                .delete_permanent_with_cause(host, ReplacementCause::Battle);
+            assert_eq!(
+                r.pending_selection_view().unwrap().kind,
+                SelectionKind::Replacement
+            );
+            assert_eq!(choices(&r, owner, 1, true), vec![REPLACEMENT_ACCEPT]);
+            choose(
+                &mut r,
+                owner,
+                if accept { REPLACEMENT_ACCEPT } else { PASS },
+            );
+            assert_eq!(permanent_exists(&r, owner as usize, ID), accept);
+            assert_eq!(r.security_count(owner), if accept { 4 } else { 5 });
+            assert!(r.pending_selection().is_none());
+        }
+    }
+    let mut r = full_ready(0, full_builder(0, &[]).start());
+    let host = r.place_on_field(0, ID, Some(0));
+    r.game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    assert!(r.pending_selection().is_none());
+    assert!(!permanent_exists(&r, 0, ID));
+    assert_eq!(r.security_count(0), 5);
+}
+
+#[test]
+fn bt20_056_attack_tail_evolves_from_hand_or_trash_for_both_controllers_and_attackers() {
+    for owner in [0, 1] {
+        for evo in [false, true] {
+            for trash in [false, true] {
+                for own_attack in [false, true] {
+                    let mut r = full_ready(owner, full_builder(owner, &[ID]).start());
+                    if trash {
+                        let card = r.game.players[owner as usize].hand.remove(0);
+                        r.game.players[owner as usize].trash.push(card);
+                    }
+                    let host = r.place_on_field(owner, ID, Some(0));
+                    let foe = r.place_on_field(1 - owner, "OTHER", Some(0));
+                    r.place_in_breeding(owner, "BASE-B");
+                    attack_window(&mut r, if own_attack { host } else { foe });
+                    let memory = r.memory();
+                    let hand = r.hand_size(owner);
+                    fire_full(&mut r, host, evo);
+                    assert_eq!(
+                        r.security_count(owner),
+                        6,
+                        "Recovery precedes optional evolution"
+                    );
+                    let pick = choices(&r, owner, 1, true)[0];
+                    choose(&mut r, owner, pick);
+                    let action = zone_action(&r, owner, ID, trash);
+                    assert!(choices(&r, owner, 1, true).contains(&action));
+                    let mut clone = DebugRunner::wrap(r.game.clone());
+                    for game in [&mut r, &mut clone] {
+                        choose(game, owner, action);
+                        assert_eq!(breeder_id(game, owner), Some(ID));
+                        assert_eq!(game.battle_area_size(owner), 1);
+                        assert_eq!(game.memory(), memory, "free evolution preserves memory");
+                        assert_eq!(
+                            game.game.players[owner as usize].deck.len(),
+                            28,
+                            "Recovery and exactly one draw"
+                        );
+                        assert_eq!(game.hand_size(owner), hand + usize::from(trash));
+                        assert_eq!(
+                            game.security_count(owner),
+                            6,
+                            "breeding Alphamon does not trigger Recovery"
+                        );
+                        assert!(game.pending_selection().is_none());
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn bt20_056_attack_tail_union_masks_filter_trait_level_kind_and_evolution_requirements() {
+    for owner in [0, 1] {
+        let mut r = full_ready(
+            owner,
+            full_builder(
+                owner,
+                &[
+                    ID,
+                    "EVO6",
+                    "EVO5",
+                    "EVO7",
+                    "NO-TRAIT",
+                    "WRONG-COLOR",
+                    "WRONG-LEVEL",
+                    "TAMER",
+                ],
+            )
+            .start(),
+        );
+        let card = r.game.players[owner as usize].hand.remove(1);
+        r.game.players[owner as usize].trash.push(card);
+        let host = r.place_on_field(owner, ID, Some(0));
+        r.place_in_breeding(owner, "BASE-B");
+        attack_window(&mut r, host);
+        fire_full(&mut r, host, false);
+        let pick = choices(&r, owner, 1, true)[0];
+        choose(&mut r, owner, pick);
+        let actions = choices(&r, owner, 3, true);
+        for (id, trash) in [(ID, false), ("EVO5", false), ("EVO6", true)] {
+            assert!(actions.contains(&zone_action(&r, owner, id, trash)), "{id}");
+        }
+        for id in ["EVO7", "NO-TRAIT", "WRONG-COLOR", "WRONG-LEVEL", "TAMER"] {
+            assert_eq!(
+                build_action_mask(&r.game, owner)[zone_action(&r, owner, id, false) as usize],
+                0.0,
+                "{id}"
+            );
+        }
+        let action = zone_action(&r, owner, "EVO5", false);
+        choose(&mut r, owner, action);
+        assert_eq!(breeder_id(&r, owner), Some("EVO5"));
+    }
+}
+
+#[test]
+fn bt20_056_attack_tail_decline_at_each_stage_preserves_recovery() {
+    for owner in [0, 1] {
+        for decline_card in [false, true] {
+            let mut r = full_ready(owner, full_builder(owner, &["EVO6"]).start());
+            let host = r.place_on_field(owner, ID, Some(0));
+            r.place_in_breeding(owner, "BASE-B");
+            attack_window(&mut r, host);
+            fire_full(&mut r, host, false);
+            let pick = choices(&r, owner, 1, true)[0];
+            if decline_card {
+                choose(&mut r, owner, pick);
+                choices(&r, owner, 1, true);
+            }
+            choose(&mut r, owner, PASS);
+            assert_eq!(r.security_count(owner), 6);
+            assert_eq!(r.game.players[owner as usize].deck.len(), 29);
+            assert_eq!(r.hand_size(owner), 1);
+            assert_eq!(breeder_id(&r, owner), Some("BASE-B"));
+            assert!(r.pending_selection().is_none());
+        }
+    }
+}
+
+#[test]
+fn bt20_056_attack_tail_requires_breeder_and_legal_candidate_but_recovery_still_runs() {
+    for reason in ["no breeder", "no candidate", "wrong requirement"] {
+        let mut r = full_ready(
+            0,
+            full_builder(
+                0,
+                &[if reason == "no candidate" {
+                    "NO-TRAIT"
+                } else {
+                    "EVO6"
+                }],
+            )
+            .start(),
+        );
+        let host = r.place_on_field(0, ID, Some(0));
+        if reason != "no breeder" {
+            r.place_in_breeding(
+                0,
+                if reason == "wrong requirement" {
+                    "BASE-P"
+                } else {
+                    "BASE-B"
+                },
+            );
+        }
+        attack_window(&mut r, host);
+        fire_full(&mut r, host, false);
+        assert!(r.pending_selection().is_none(), "{reason}");
+        assert_eq!(r.security_count(0), 6, "{reason}");
+        assert_eq!(r.hand_size(0), 1);
+    }
+}
+
+#[test]
+fn bt20_056_attack_tail_is_independent_of_successful_recovery() {
+    let mut r = full_ready(0, full_builder(0, &["EVO6"]).deck(0, &[]).start());
+    let host = r.place_on_field(0, ID, Some(0));
+    r.place_in_breeding(0, "BASE-B");
+    attack_window(&mut r, host);
+    fire_full(&mut r, host, false);
+    choices(&r, 0, 1, true);
+    assert_eq!(r.security_count(0), 5);
+    choose(&mut r, 0, PASS);
+    assert_eq!(breeder_id(&r, 0), Some("BASE-B"));
+}
+
+#[test]
+fn bt20_056_security_debuff_choice_is_mandatory_excludes_tamers_and_expires_and_resets() {
+    for owner in [0, 1] {
+        let mut r = full_ready(owner, full_builder(owner, &[]).start());
+        let host = r.place_on_field(owner, ID, Some(0));
+        let first = r.place_on_field(1 - owner, "OTHER", Some(0));
+        let second = r.place_on_field(1 - owner, "BASE-B", Some(0));
+        r.place_on_field(1 - owner, "TAMER", Some(0));
+        trash_top_security_via_effect(&mut r, host, 1 - owner);
+        let actions = choices(&r, owner, 2, false);
+        assert_eq!(r.pending_selection().unwrap().zone_owner, Some(1 - owner));
+        assert_eq!(
+            actions,
+            vec![
+                space::encode_attack(0, first.index as u16),
+                space::encode_attack(0, second.index as u16),
+            ]
+        );
+        // OppField carries the side; single-field selections use 100 + slot.
+        let pick = space::encode_attack(0, second.index as u16);
+        assert!(actions.contains(&pick));
+        choose(&mut r, owner, pick);
+        assert_eq!(r.dp_of(first), Some(12000));
+        assert_eq!(r.dp_of(second), Some(4000));
+        trash_top_security_via_effect(&mut r, host, owner);
+        assert!(r.pending_selection().is_none());
+        assert_eq!(build_action_mask(&r.game, owner)[PASS as usize], 1.0);
+        r.game.decode_action(PASS, owner);
+        assert_eq!(r.game.turn_player(), 1 - owner);
+        assert_eq!(r.dp_of(second), Some(12000), "for-the-turn debuff expires");
+        trash_top_security_via_effect(&mut r, host, owner);
+        let pick = choices(&r, owner, 2, false)[0];
+        choose(&mut r, owner, pick);
+        assert_eq!(r.dp_of(first), Some(4000), "OPT resets on opponent's turn");
+    }
+}
+
+#[test]
+fn bt20_056_inherited_replacement_masks_and_opt_hold_for_both_controllers() {
+    for owner in [0, 1] {
+        let mut r = full_ready(owner, full_builder(owner, &[]).start());
+        let host = r.place_stack(owner, &[ID, "OURYUKEN"]);
+        r.game
+            .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+        let actions = choices(&r, owner, 1, true);
+        assert_eq!(actions, vec![REPLACEMENT_ACCEPT]);
+        choose(&mut r, owner, REPLACEMENT_ACCEPT);
+        assert!(permanent_exists(&r, owner as usize, "OURYUKEN"));
+        assert_eq!(r.security_count(owner), 4);
+        r.game
+            .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+        assert!(r.pending_selection().is_none());
+        assert!(!permanent_exists(&r, owner as usize, "OURYUKEN"));
+        assert_eq!(
+            r.security_count(owner),
+            4,
+            "second leave cannot pay again this turn"
+        );
+    }
+}
+
+#[test]
+fn bt20_056_inherited_replacement_requires_exact_name_and_available_security() {
+    for (top, security) in [("NEAR-OURYUKEN", true), ("OURYUKEN", false)] {
+        let mut r = full_ready(0, full_builder(0, &[]).start());
+        if !security {
+            r.game.players[0].security.clear();
+        }
+        let host = r.place_stack(0, &[ID, top]);
+        r.game
+            .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+        assert!(r.pending_selection().is_none());
+        assert!(!permanent_exists(&r, 0, top));
+        assert_eq!(r.security_count(0), if security { 5 } else { 0 });
+    }
+}

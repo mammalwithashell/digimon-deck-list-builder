@@ -57,11 +57,6 @@ steps:
       from: hand
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -177,7 +172,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 1
-- at: 3
+- at: 2
   that:
     _backfilled: true
     memory: -7
@@ -205,7 +200,7 @@ assert:
     p1.trash: []
     phase: Breeding
     turn: 2
-- at: 4
+- at: 3
   that:
     _backfilled: true
     memory: -7
@@ -233,7 +228,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 2
-- at: 5
+- at: 4
   that:
     _backfilled: true
     memory: -1
@@ -264,7 +259,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 2
-- at: 6
+- at: 5
   that:
     _backfilled: true
     memory: 3
@@ -295,6 +290,38 @@ assert:
     p1.security: 5
     p1.trash: []
     phase: Breeding
+    turn: 3
+- at: 6
+  that:
+    _backfilled: true
+    memory: 3
+    p0.field:
+    - card_id: EX3-041
+      dp: 7000
+      suspended: false
+      sources: []
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - EX3-024
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST2-09
+      dp: 7000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    p1.security: 5
+    p1.trash: []
+    phase: Main
     turn: 3
 - at: 7
   that:
@@ -326,40 +353,8 @@ assert:
     - BT3-093
     p1.security: 5
     p1.trash: []
-    phase: Main
     turn: 3
 - at: 8
-  that:
-    _backfilled: true
-    memory: 3
-    p0.field:
-    - card_id: EX3-041
-      dp: 7000
-      suspended: false
-      sources: []
-    p0.hand:
-    - BT1-090
-    - BT1-090
-    - BT3-093
-    - BT3-093
-    - EX3-024
-    p0.security: 5
-    p0.trash: []
-    p1.field:
-    - card_id: ST2-09
-      dp: 7000
-      suspended: false
-      sources: []
-    p1.hand:
-    - BT1-090
-    - BT1-090
-    - BT3-093
-    - BT3-093
-    - BT3-093
-    p1.security: 5
-    p1.trash: []
-    turn: 3
-- at: 9
   that:
     _backfilled: true
     memory: 0
@@ -392,7 +387,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 3
-- at: 10
+- at: 9
   that:
     _backfilled: true
     memory: -3
@@ -425,6 +420,39 @@ assert:
     p1.security: 5
     p1.trash: []
     phase: Breeding
+    turn: 4
+- at: 10
+  that:
+    _backfilled: true
+    memory: -3
+    p0.field:
+    - card_id: EX3-024
+      dp: 12000
+      suspended: false
+      sources:
+      - EX3-041
+    p0.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    p0.security: 5
+    p0.trash: []
+    p1.field:
+    - card_id: ST2-09
+      dp: 7000
+      suspended: false
+      sources: []
+    p1.hand:
+    - BT1-090
+    - BT1-090
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    - BT3-093
+    p1.security: 5
+    p1.trash: []
     turn: 4
 - at: 11
   that:
@@ -458,42 +486,9 @@ assert:
     - BT3-093
     p1.security: 5
     p1.trash: []
-    turn: 4
-- at: 12
-  that:
-    _backfilled: true
-    memory: -3
-    p0.field:
-    - card_id: EX3-024
-      dp: 12000
-      suspended: false
-      sources:
-      - EX3-041
-    p0.hand:
-    - BT1-090
-    - BT1-090
-    - BT3-093
-    - BT3-093
-    - BT3-093
-    p0.security: 5
-    p0.trash: []
-    p1.field:
-    - card_id: ST2-09
-      dp: 7000
-      suspended: false
-      sources: []
-    p1.hand:
-    - BT1-090
-    - BT1-090
-    - BT3-093
-    - BT3-093
-    - BT3-093
-    - BT3-093
-    p1.security: 5
-    p1.trash: []
     phase: Main
     turn: 4
-- at: 13
+- at: 12
   that:
     _backfilled: true
     memory: -3
@@ -526,7 +521,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 4
-- at: 14
+- at: 13
   that:
     _backfilled: true
     memory: -3

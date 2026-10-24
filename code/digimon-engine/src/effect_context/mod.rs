@@ -17,8 +17,8 @@ pub(crate) mod selections;
 
 pub(crate) use action::play::TrashPlayOutcome;
 pub(crate) use action::app_fuse::{
-    run_app_fuse_host_selection_step, run_app_fuse_result_selection_step,
-    AppFuseHostSelectionState, AppFuseResultSelectionState,
+    publish_app_fuse_receipt, run_app_fuse_host_selection_step, run_app_fuse_result_selection_step,
+    AppFuseHostSelectionState, AppFuseReceipt, AppFuseResultSelectionState,
 };
 
 pub use selections::{
@@ -1705,6 +1705,30 @@ impl<'a> EffectContext<'a> {
     // ─── Breeding-area mutations ──────────────────────────────────────
 
     // ─── Combat mutations (Phase 9 Task 2) ────────────────────────────
+}
+
+/// Shared partner eligibility for the DNA step and its clause-level offer guard.
+/// A partner must reach at least one filtered hand target, rather than merely
+/// satisfying an independent material filter.
+pub(crate) fn dna_partner_has_target(
+    game: &Game,
+    controller: PlayerId,
+    anchor: PermanentHandle,
+    partner: PermanentHandle,
+    ignore_requirements: bool,
+    partner_filter: &dyn Fn(&Game, PermanentHandle) -> bool,
+    target_filter: &dyn Fn(&Game, usize) -> bool,
+) -> bool {
+    anchor != partner
+        && anchor.player == controller
+        && partner.player == controller
+        && game.player(controller).battle_area.get(anchor.index as usize).is_some()
+        && partner_filter(game, partner)
+        && (0..game.player(controller).hand.len()).any(|i| {
+            target_filter(game, i)
+                && (ignore_requirements
+                    || dna_pair_can_reach_hand_card(game, controller, anchor, partner, i))
+        })
 }
 
 /// Can the `{anchor, partner}` battle-area pair legally DNA-digivolve into the
