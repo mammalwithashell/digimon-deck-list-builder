@@ -173,6 +173,7 @@ def main():
     parser.add_argument("--online", action="store_true", default=os.environ.get("WANDB_MODE") == "online")
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--interval", type=int, default=30)
+    parser.add_argument("--card-eval-root", type=Path, default=Path("/card-evaluation"))
     args = parser.parse_args()
     if args.online and not (args.entity and args.project):
         parser.error("Online logging requires an explicit W&B entity and project")
@@ -201,15 +202,26 @@ def main():
         while True:
             now = time.time()
             metrics = collect(args.root, now)
+            card_status = read_json(args.card_eval_root / "status.json")
+            if card_status:
+                metrics["card_eval/worker_status"] = card_status["status"]
+                metrics["card_eval/worker_failed"] = int(card_status["status"] == "failed" or
+                    (card_status.get("last_result") or {}).get("status") == "failed")
             payloads = [metrics]
             for event in epoch_events(args.root, args.training_log):
                 key = str(event["train/epoch"])
                 if local["epochs"].get(key) != event:
                     payloads.append(event)
                     local["epochs"][key] = event
+            queued = {r.get("card_report") for r in recover_spool(spool)}
             with spool.open("a", encoding="utf-8") as out:
                 for payload in payloads:
                     out.write(json.dumps({"seq": local["next_seq"], "payload": payload}) + "\n")
+                    local["next_seq"] += 1
+                for path in sorted(args.card_eval_root.glob("window-*/reports/checkpoint_*.json")):
+                    if str(path) in queued:
+                        continue
+                    out.write(json.dumps({"seq": local["next_seq"], "card_report": str(path)}) + "\n")
                     local["next_seq"] += 1
                 out.flush()
                 os.fsync(out.fileno())
@@ -220,10 +232,20 @@ def main():
                     for line in spool.read_text().splitlines():
                         record = json.loads(line)
                         if record["seq"] > local["uploaded"]:
-                            run.log(record["payload"], step=record["seq"])
+                            if "card_report" in record:
+                                from digimon_gym.agents.card_eval import publish_report
+                                path = Path(record["card_report"])
+                                report = read_json(path)
+                                if not report or not publish_report(report, path, run,
+                                        step=record["seq"], wait=True):
+                                    raise RuntimeError(f"Card report not uploaded: {path.name}")
+                                local["card_reports_uploaded"] = local.get("card_reports_uploaded", 0) + 1
+                            else:
+                                run.log(record["payload"], step=record["seq"])
                             local["uploaded"] = record["seq"]
                     run.summary["pipeline_stage"] = metrics["pipeline/stage"]
-                    run.summary["per_card_metrics_available"] = False
+                    run.summary["per_card_metrics_available"] = local.get("card_reports_uploaded", 0) > 0
+                    run.summary["card_reports_uploaded"] = local.get("card_reports_uploaded", 0)
                     files = stable_checkpoint_files(args.root, now)
                     if files:
                         signature = hashlib.sha256(b"".join(p.name.encode() + p.read_bytes() for p in sorted(files))).hexdigest()
@@ -241,7 +263,8 @@ def main():
             print(json.dumps({"stage": metrics["pipeline/stage"], "spooled_records": local["next_seq"],
                               "last_enqueued_wandb_record": local["uploaded"]}), flush=True)
             terminal = metrics["pipeline/stage"] in ("complete", "failed")
-            if args.once or (terminal and upload_ok and now - (read_json(args.root / "experiment_state.json") or {}).get("time_unix", now) > 90):
+            cards_finished = not args.card_eval_root.exists() or (card_status or {}).get("status") == "stopped"
+            if args.once or (terminal and cards_finished and upload_ok and now - (read_json(args.root / "experiment_state.json") or {}).get("time_unix", now) > 90):
                 if run:
                     run.finish(exit_code=int(metrics["pipeline/stage"] == "failed"))
                 return

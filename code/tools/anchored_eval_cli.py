@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import glob
+import hashlib
 import json
 import os
 import re
@@ -95,6 +96,11 @@ def main() -> None:
     ap.add_argument("--device", default="auto", help="auto|cpu|cuda")
     ap.add_argument("--layout-hash", default=None, help="override candidate layout hash")
     ap.add_argument("--no-greedy", action="store_true")
+    ap.add_argument("--card-eval-dir", type=Path, help="atomic per-card evaluation reports")
+    ap.add_argument("--checkpoint-step", type=int, default=0)
+    ap.add_argument("--eval-window", type=int, default=0)
+    ap.add_argument("--eval-panel", default="validation")
+    ap.add_argument("--eval-context", type=Path, help="extra scheduling provenance JSON")
     ap.add_argument("--deck-pool-snapshot", default=None,
                     help="frozen deck_pool_snapshot.json (preferred — reproducible, "
                          "and the exact decks a run trained on)")
@@ -130,11 +136,42 @@ def main() -> None:
 
     registry = ChampionRegistry.load(args.champions)
 
-    results = evaluate_against_anchors(
-        candidate, lhash, registry, pool,
-        n=args.n, base_seed=args.seed, tensor_profile=args.profile,
-        include_greedy=not args.no_greedy,
-    )
+    collector = None
+    if args.card_eval_dir:
+        import digimon_engine
+        from digimon_gym.agents.card_eval import CardEvalCollector, save_report
+        if getattr(digimon_engine, "CARD_EVAL_EVENT_VERSION", 0) < 1:
+            raise RuntimeError("Card evaluation requires CARD_EVAL_EVENT_VERSION >= 1; rebuild the Rust wheel")
+        db = digimon_engine.CardDatabase()
+        collector = CardEvalCollector(args.checkpoint_step, args.eval_window, db.get_card)
+        collector.provenance = json.loads(args.eval_context.read_text(encoding="utf-8")) if args.eval_context else {}
+        collector.provenance.update(contract, evaluation_mode="policy_only", panel=args.eval_panel,
+            candidate_sha256=hashlib.sha256(Path(cand_zip).read_bytes()).hexdigest(),
+            card_eval_event_version=digimon_engine.CARD_EVAL_EVENT_VERSION,
+            base_seed=args.seed, requested_games_per_anchor=args.n,
+            snapshot_sha256=hashlib.sha256(Path(args.deck_pool_snapshot).read_bytes()).hexdigest() if args.deck_pool_snapshot else None,
+            anchors_sha256=hashlib.sha256(Path(args.champions).read_bytes()).hexdigest(),
+            anchor_model_hashes={champ.name: hashlib.sha256(Path(champ.weights_path).read_bytes()).hexdigest()
+                for champ in registry.compatible(lhash)},
+            deterministic=True, status="running")
+    try:
+        results = evaluate_against_anchors(
+            candidate, lhash, registry, pool,
+            n=args.n, base_seed=args.seed, tensor_profile=args.profile,
+            include_greedy=not args.no_greedy,
+            **({"collector": collector} if collector is not None else {}),
+        )
+        if collector is not None:
+            collector.provenance["status"] = "complete"
+    except BaseException as error:
+        if collector is not None:
+            collector.provenance.update(status="failed", error=str(error))
+        raise
+    finally:
+        if collector is not None:
+            collector.finish_game(None, "evaluation_end")
+            path = save_report(collector.report(), args.card_eval_dir)
+            print(f"card evaluation report: {path}", flush=True)
 
     print("================ ANCHORED RESULTS ================")
     for name, rec in results.items():

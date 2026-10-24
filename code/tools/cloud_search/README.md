@@ -68,10 +68,36 @@ remaining self-play time while progress is fresh. Diagnostic throughput stays
 separate from health-check and training throughput. Fitting losses appear per
 epoch; meta-validation and same-list pet evaluation have separate metric keys.
 Stable model checkpoints and metadata upload as versioned W&B artifacts.
-This sidecar does not collect per-card opportunity/choice tables or send
-email/Slack alerts. SDK system statistics are disabled because the sidecar's
+The logger publishes per-card reports produced by the independent evaluator
+described below. It does not send email/Slack alerts. SDK system statistics are disabled because the sidecar's
 CPU/memory usage would not describe the training container. A stale scheduler
 heartbeat flags stalled progress; the
 monitor does not restart a failed training job. Its SDK files and JSONL spool
 remain on disk if publication fails; the local upload cursor means SDK enqueue,
 not server acknowledgment.
+
+## Scheduled card evaluation
+
+Install `card-eval.service` as `digimon-search-card-eval.service`. Create
+`/opt/digimon-search/card-evaluation` for results and
+`/opt/digimon-search/deployment/card-eval` for the versioned Python overlay.
+The overlay contains `card_eval_worker.py`, `anchored_eval_cli.py`,
+`anchored_eval.py`, and `card_eval.py` from this revision. The service binds
+these Python modules over the pinned CI image; verify that image exports
+`CARD_EVAL_EVENT_VERSION >= 1`. Record overlay hashes alongside deployment
+provenance. A future image built from this revision contains the same code.
+
+The monitor service also mounts evaluation results read-only and uses the
+updated publisher. Start the evaluator and restart only the monitor; training
+does not need to restart. Baseline and periodic windows use the frozen seed
+until a new model ZIP is stable. Defaults are 24 games per anchor per panel,
+every two hours, plus each new checkpoint and final completion. See
+`docs/CARD_EVALUATION.md` for interpretation, configuration and dashboard filters.
+
+Keep the evaluator's output and schedule across restarts. `status.json` exposes
+failures and `window-*/reports/checkpoint_*.json` contains atomic local reports.
+The monitor waits for the final evaluator window before finishing its W&B run.
+To disable evaluation, stop its service and remove the evaluation result mount
+from the monitor service (preserve the directory for harvest). Evaluation
+failure never stops or resumes training. Copy this directory when harvesting
+the experiment; the original checkpoint backup helper covers training files.
