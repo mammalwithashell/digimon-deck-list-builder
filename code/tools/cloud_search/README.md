@@ -42,3 +42,36 @@ every ten minutes. Transfers are hash-verified. Backups pause if that machine
 is offline; the remote experiment continues. The helper never deletes a server
 or remote data. The controller and backup helper refuse competing ownership or
 implicit experiment restart. Investigate failed runs before explicit resume.
+
+## W&B monitoring
+
+`wandb_monitor.py` is a separate read-only sidecar. Install `monitor.service`
+and `monitor-journal.service` as `digimon-search-monitor.service` and
+`digimon-search-journal.service`; create `/opt/digimon-search/monitor` first.
+The training container retains its network isolation and never receives W&B
+credentials. The monitor uses the same pinned image, a read-only experiment
+mount, a separate writable monitor directory, and at most 0.25 CPU / 1 GiB.
+Starting or restarting it does not restart training.
+
+Create a root-only `monitor/credentials.env` (mode 0600). With `WANDB_MODE=offline`
+the monitor only spools JSONL locally. For online publishing set `WANDB_MODE=online`,
+`WANDB_API_KEY`, `WANDB_ENTITY`, and `WANDB_PROJECT` in that file. Never commit or
+print its contents. Restart only the monitor after changing these values.
+Use a unique `--run-id` for each new experiment; preserve it and the monitor
+state directory on logger restarts. This experiment defaults to
+`english-meta-pets-20261024`. Online startup writes the run URL to
+`monitor/state/wandb_run.json` and backfills spooled records.
+
+Metrics include pipeline stage, committed games and positions, positions/sec,
+games/hour, truncation rate, worker count, heartbeat age, and an estimated
+remaining self-play time while progress is fresh. Diagnostic throughput stays
+separate from health-check and training throughput. Fitting losses appear per
+epoch; meta-validation and same-list pet evaluation have separate metric keys.
+Stable model checkpoints and metadata upload as versioned W&B artifacts.
+This sidecar does not collect per-card opportunity/choice tables or send
+email/Slack alerts. SDK system statistics are disabled because the sidecar's
+CPU/memory usage would not describe the training container. A stale scheduler
+heartbeat flags stalled progress; the
+monitor does not restart a failed training job. Its SDK files and JSONL spool
+remain on disk if publication fails; the local upload cursor means SDK enqueue,
+not server acknowledgment.

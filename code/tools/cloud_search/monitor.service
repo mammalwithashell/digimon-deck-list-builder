@@ -1,0 +1,17 @@
+[Unit]
+Description=Read-only W&B monitor for Digimon search experiment
+After=docker.service network-online.target digimon-search-journal.service
+Requires=docker.service
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/digimon-search/image.env
+ExecStart=/usr/bin/docker run --name digimon-search-monitor --rm --init --memory=1g --cpus=0.25 --cpu-shares=128 --env-file /opt/digimon-search/monitor/credentials.env --mount type=bind,src=/opt/digimon-search/experiment,dst=/experiment,readonly --mount type=bind,src=/opt/digimon-search/deployment,dst=/deployment,readonly --mount type=bind,src=/opt/digimon-search/monitor,dst=/monitor ${SEARCH_IMAGE} python /deployment/wandb_monitor.py
+ExecStop=-/usr/bin/docker stop --time=30 digimon-search-monitor
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=45
+Nice=15
+
+[Install]
+WantedBy=multi-user.target
