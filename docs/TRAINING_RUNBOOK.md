@@ -1237,3 +1237,30 @@ independent samples. Use the existing card dashboard's Local reports source.
 --resume` regenerates reports from verified completed results. The earlier build's
 score is contextual, never pooled into the new panel. See the
 [confirmation protocol](superpowers/research/2026-10-23-search-budget-confirmation.md).
+
+### Quarantining verified bad self-play games
+
+Keep committed shard arrays and `chunk_commit.json` intact. To exclude a verified
+bad game from both policy and value fitting, place `training_exclusions.json`
+beside that chunk's `manifest.json`:
+
+```json
+{
+  "schema": "selfplay-training-exclusions-v1",
+  "manifest_sha256": "<SHA-256 of manifest.json bytes>",
+  "games": [{"game_id": 875, "reason": "Verified repeated-state loop"}]
+}
+```
+
+IDs refer to that chunk's original `game_id.npy`, before loader rebasing. The
+loader verifies the manifest hash, nonempty reasons, unique IDs, and that every
+excluded ID exists; invalid exclusions stop fitting. Other games in the same
+chunk remain eligible. The trainer reports `excluded_rows`, `excluded_games`,
+and `training_exclusions` in its summary. These are explicit exclusions, separate
+from the default handling of truncations: unquarantined truncated rows still
+contribute policy loss, while their value loss is masked.
+
+The generation driver imports the trainer after collection. Any operational
+Python overlay applied to an already-running container must record its original
+and replacement hashes and be reinstalled on an explicit resume into a fresh
+container. A local source edit alone does not change a running cloud job.
