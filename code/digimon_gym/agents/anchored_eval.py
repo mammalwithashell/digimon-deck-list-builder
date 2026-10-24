@@ -20,6 +20,10 @@ opponent MUST go through the wrapper.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+import os
+from pathlib import Path
+import time
 from typing import Callable, Dict, Optional
 
 import numpy as np
@@ -68,26 +72,46 @@ def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
              tensor_profile: str) -> Optional[int]:
     """Play one game: agent (player 1) = ``model.predict``; player 2 driven by
     ``opponent_fn`` via ``OpponentWrapper``. Returns winner_id (1, 2, or None)."""
+    failure_dir = os.environ.get("DIGIMON_EVAL_FAILURE_DIR")
+    inner = DigimonEnv(deck1=deck1, deck2=deck2, tensor_profile=tensor_profile,
+                       record_actions=bool(failure_dir))
     env = OpponentWrapper(
-        DigimonEnv(deck1=deck1, deck2=deck2, tensor_profile=tensor_profile),
+        inner,
         opponent_fn=opponent_fn,
     )
-    obs, _info = env.reset(seed=seed)  # OpponentWrapper.reset resets opponent state
-    state = None
-    episode_start = np.array([True])
-    steps = 0
-    done = False
-    while not done and steps < MAX_STEPS:
-        mask = _unwrap_to_digimon_env(env).action_mask()
-        action, state = agent_model.predict(
-            obs, state=state, episode_start=episode_start,
-            deterministic=True, action_masks=mask,
-        )
-        obs, _r, terminated, truncated, _info = env.step(int(action))
-        episode_start = np.array([False])
-        steps += 1
-        done = terminated or truncated
-    return _unwrap_to_digimon_env(env).winner_id
+    try:
+        obs, _info = env.reset(seed=seed)  # reset opponent recurrent state
+        state = None
+        episode_start = np.array([True])
+        steps = 0
+        done = False
+        while not done and steps < MAX_STEPS:
+            mask = _unwrap_to_digimon_env(env).action_mask()
+            action, state = agent_model.predict(
+                obs, state=state, episode_start=episode_start,
+                deterministic=True, action_masks=mask,
+            )
+            obs, _r, terminated, truncated, _info = env.step(int(action))
+            episode_start = np.array([False])
+            steps += 1
+            done = terminated or truncated
+        if not inner.is_game_over:
+            raise RuntimeError(f"Anchored evaluation hit a safety cap without a terminal outcome (seed {seed})")
+        outcome = inner.terminal_outcome()
+        if outcome.get("reason") in {"step_limit", "crash"}:
+            raise RuntimeError(f"Anchored evaluation ended with {outcome['reason']} (seed {seed})")
+        return _unwrap_to_digimon_env(env).winner_id
+    except Exception as exc:
+        if failure_dir:
+            folder = Path(failure_dir)
+            folder.mkdir(parents=True, exist_ok=True)
+            stem = f"seed-{seed}-{time.time_ns()}"
+            (folder / f"{stem}.context.json").write_text(json.dumps({
+                "seed": seed, "profile": tensor_profile, "deck1": deck1, "deck2": deck2,
+                "error": str(exc)}, indent=2), encoding="utf-8")
+            (folder / f"{stem}.recording.json").write_text(
+                json.dumps(inner.get_recording(), indent=2), encoding="utf-8")
+        raise
 
 
 def play_matchup(agent_model, opponent_fn, deck_pool, n: int, base_seed: int,

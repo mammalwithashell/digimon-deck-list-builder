@@ -90,3 +90,52 @@ fn search_builds_observations_in_the_configured_profile() {
         }
     });
 }
+
+#[test]
+fn exact_input_memoization_preserves_search_results() {
+    use digimon_engine::search::{
+        decision_player, determinized_search, DeterminizedConfig, MemoizedEvaluator,
+        UniformEvaluator,
+    };
+    run_big_stack(|| {
+        let card_data = load_card_data();
+        let registry = CardRegistry::from_cards(&card_data);
+        let game = fresh_game(&card_data);
+        let mut cached = MemoizedEvaluator::new(UniformEvaluator, 128);
+        for seed in [7, 19, 41] {
+            let config = SearchConfig {
+                simulations: 32,
+                seed,
+                observation_profile: ObservationProfileId::StandardLiteV2,
+                ..SearchConfig::default()
+            };
+            let search = Mcts::new(&registry);
+            let expected = search.search(&game, &mut UniformEvaluator, &config);
+            assert_eq!(search.search(&game, &mut cached, &config), expected);
+            assert_eq!(search.search(&game, &mut cached, &config), expected);
+            let config = DeterminizedConfig {
+                worlds: 4,
+                search: config,
+                ..Default::default()
+            };
+            let expected = determinized_search(
+                &registry,
+                &game,
+                decision_player(&game),
+                &mut UniformEvaluator,
+                &config,
+            );
+            assert_eq!(
+                determinized_search(
+                    &registry,
+                    &game,
+                    decision_player(&game),
+                    &mut cached,
+                    &config
+                ),
+                expected
+            );
+        }
+        assert!(cached.hits() > 0);
+    });
+}

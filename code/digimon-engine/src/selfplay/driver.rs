@@ -37,7 +37,9 @@ use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::observation::build_observation_tensor;
 use crate::rules::Rules;
-use crate::search::{determinized_search, DeterminizedConfig, PolicyValueFn};
+use crate::search::{
+    determinized_search_batched, DeterminizationMode, DeterminizedConfig, PolicyValueFn,
+};
 
 use super::npy;
 
@@ -48,6 +50,8 @@ use super::npy;
 pub struct SelfPlayConfig {
     /// Games to play.
     pub games: u32,
+    /// Global first game index, independent of worker assignment.
+    pub game_start: u32,
     /// Master seed: deck sampling, game shuffles, temperature sampling,
     /// and per-decision search seeds all derive from it.
     pub seed: u64,
@@ -60,6 +64,9 @@ pub struct SelfPlayConfig {
     /// Flush a shard once at least this many rows have accumulated
     /// (checked on game boundaries so z backfill stays shard-local).
     pub shard_rows: usize,
+    /// Maximum independent PIMC worlds evaluated together. One is the serial
+    /// reference; IS-MCTS remains serial regardless of this setting.
+    pub evaluation_batch_size: usize,
     /// The determinized-search settings (mode, worlds, sims, PUCT,
     /// Dirichlet, observation profile).
     pub search: DeterminizedConfig,
@@ -69,10 +76,12 @@ impl Default for SelfPlayConfig {
     fn default() -> Self {
         Self {
             games: 16,
+            game_start: 0,
             seed: 0,
             temperature_decisions: 16,
             decision_cap: 600,
             shard_rows: 4096,
+            evaluation_batch_size: 1,
             search: DeterminizedConfig::default(),
         }
     }
@@ -100,6 +109,7 @@ struct PendingRecord {
     game_id: u32,
     /// Filled at game end.
     z: f32,
+    terminated: bool,
 }
 
 /// Rows accumulated toward the next shard flush.
@@ -113,6 +123,7 @@ struct ShardBuffer {
 
 impl ShardBuffer {
     fn flush(&mut self, out_dir: &Path) -> Result<(), String> {
+        let _span = crate::search::profiling::span("shard_io");
         if self.records.is_empty() {
             return Ok(());
         }
@@ -125,6 +136,7 @@ impl ShardBuffer {
         let mut actions: Vec<i32> = Vec::new();
         let mut visits: Vec<f32> = Vec::new();
         let mut z: Vec<f32> = Vec::with_capacity(rows);
+        let mut terminated: Vec<u8> = Vec::with_capacity(rows);
         let mut mover: Vec<u8> = Vec::with_capacity(rows);
         let mut game_id: Vec<i32> = Vec::with_capacity(rows);
         offsets.push(0);
@@ -135,6 +147,7 @@ impl ShardBuffer {
             visits.extend(r.visits.iter().map(|&v| v as f32));
             offsets.push(actions.len() as i64);
             z.push(r.z);
+            terminated.push(u8::from(r.terminated));
             mover.push(r.mover);
             game_id.push(r.game_id as i32);
         }
@@ -144,6 +157,7 @@ impl ShardBuffer {
         npy::write_i32_1d(&dir.join("policy_actions.npy"), &actions)?;
         npy::write_f32_1d(&dir.join("policy_visits.npy"), &visits)?;
         npy::write_f32_1d(&dir.join("z.npy"), &z)?;
+        npy::write_u8_1d(&dir.join("terminated.npy"), &terminated)?;
         npy::write_u8_1d(&dir.join("mover.npy"), &mover)?;
         npy::write_i32_1d(&dir.join("game_id.npy"), &game_id)?;
 
@@ -188,6 +202,15 @@ pub fn run_self_play(
     out_dir: &Path,
     model_desc: &str,
 ) -> Result<SelfPlayStats, String> {
+    crate::search::profiling::reset(std::env::var("DIGIMON_SEARCH_PROFILE").as_deref() == Ok("1"));
+    let game_end = config
+        .game_start
+        .checked_add(config.games)
+        .filter(|&end| end <= i32::MAX as u32)
+        .ok_or("global game range exceeds signed shard game IDs")?;
+    if config.evaluation_batch_size == 0 {
+        return Err("evaluation batch size must be positive".into());
+    }
     if decks.is_empty() {
         return Err("empty deck pool".into());
     }
@@ -195,7 +218,8 @@ pub fn run_self_play(
 
     // One registry for the whole run (registry construction is the deep /
     // expensive part; HeadlessRunner rebuilds it per game, we must not).
-    let registry = CardRegistry::from_cards(card_data);
+    let registry =
+        crate::search::profiling::measure("registry", || CardRegistry::from_cards(card_data));
     let profile = config.search.search.observation_profile;
 
     let mut deck_rng = StdRng::seed_from_u64(derive_seed(config.seed, 0, 0));
@@ -208,14 +232,22 @@ pub fn run_self_play(
         written: Vec::new(),
     };
     let mut game_decks: Vec<(usize, usize)> = Vec::with_capacity(config.games as usize);
+    let started = std::time::Instant::now();
+    let trace_decisions = std::env::var_os("DIGIMON_SELFPLAY_TRACE_DECISIONS").is_some();
 
-    for game_idx in 0..config.games {
+    // Preserve the original sequential deck-sampling stream exactly.
+    for _ in 0..config.game_start {
+        let _ = deck_rng.gen_range(0..decks.len());
+        let _ = deck_rng.gen_range(0..decks.len());
+    }
+    for game_idx in config.game_start..game_end {
         let di = deck_rng.gen_range(0..decks.len());
         let dj = deck_rng.gen_range(0..decks.len());
         game_decks.push((di, dj));
 
         let deck_lists = vec![decks[di].clone(), decks[dj].clone()];
         let game_seed = derive_seed(config.seed, 1, game_idx as u64);
+        eprintln!("game {game_idx} start: seed {game_seed}, decks {di} vs {dj}");
         let mut game = Game::new(&deck_lists, card_data, Rules::standard(), Some(game_seed))
             .map_err(|e| format!("game {game_idx} ({di} vs {dj}): {e}"))?;
         // Same contract as HeadlessRunner: turn 1 is exposed during the
@@ -229,6 +261,20 @@ pub fn run_self_play(
 
         while !game.game_over && decisions < config.decision_cap {
             let pid = decision_player(&game);
+            if trace_decisions {
+                eprintln!(
+                    "game {game_idx} decision {decisions}: player {pid}, phase {:?}, memory {}",
+                    game.current_phase, game.memory
+                );
+                let trace = serde_json::json!({"game": game_idx, "game_seed": game_seed,
+                    "decision": decisions, "search_seed": derive_seed(config.seed, 3 + game_idx as u64, decisions as u64),
+                    "scenario": game.to_scenario()});
+                std::fs::write(
+                    out_dir.join("current-decision.json"),
+                    serde_json::to_vec(&trace).unwrap(),
+                )
+                .map_err(|e| format!("writing decision trace: {e}"))?;
+            }
             let mask = build_action_mask(&game, pid);
             if buffer.action_dim == 0 {
                 buffer.action_dim = mask.len();
@@ -249,6 +295,12 @@ pub fn run_self_play(
                 }
                 1 => {
                     // Forced: apply without search, emit no record (D10).
+                    if trace_decisions {
+                        eprintln!(
+                            "game {game_idx} decision {decisions}: forced action {}",
+                            legal[0]
+                        );
+                    }
                     game.decode_action(legal[0], pid);
                     decisions += 1;
                     stats.forced_decisions_total += 1;
@@ -260,7 +312,14 @@ pub fn run_self_play(
             let mut search_cfg = config.search.clone();
             search_cfg.search.seed =
                 derive_seed(config.seed, 3 + game_idx as u64, decisions as u64);
-            let result = determinized_search(&registry, &game, pid, evaluator, &search_cfg);
+            let result = determinized_search_batched(
+                &registry,
+                &game,
+                pid,
+                evaluator,
+                &search_cfg,
+                config.evaluation_batch_size,
+            );
 
             // Record BEFORE acting: obs is the pre-action state the π
             // target was computed for.
@@ -305,15 +364,29 @@ pub fn run_self_play(
                 mover: pid,
                 game_id: game_idx,
                 z: 0.0,
+                terminated: false,
             });
 
+            if trace_decisions {
+                eprintln!("game {game_idx} decision {decisions}: search action {action}");
+            }
             game.decode_action(action, pid);
             decisions += 1;
             non_forced += 1;
         }
 
         // z backfill for this game's records.
-        let truncated = !game.game_over;
+        let truncated = !game.game_over
+            || matches!(
+                game.terminal_outcome_reason,
+                Some(
+                    crate::game::TerminalOutcomeReason::StepLimit
+                        | crate::game::TerminalOutcomeReason::Crash
+                )
+            );
+        for r in &mut buffer.records[game_first_record..] {
+            r.terminated = !truncated;
+        }
         if truncated {
             stats.truncated_games += 1; // z stays 0.0 (D10)
         } else if let Some(w) = game.winner {
@@ -324,6 +397,15 @@ pub fn run_self_play(
         }
         stats.games += 1;
         stats.decisions_total += decisions as u64;
+        let progress = serde_json::json!({"games": stats.games, "requested_games": config.games,
+            "truncated_games": stats.truncated_games, "wins": stats.wins,
+            "elapsed_seconds": started.elapsed().as_secs_f64(), "decisions": stats.decisions_total});
+        std::fs::write(
+            out_dir.join("progress.json"),
+            serde_json::to_vec_pretty(&progress).unwrap(),
+        )
+        .map_err(|e| format!("writing progress: {e}"))?;
+        eprintln!("game {game_idx} complete: {} decisions, winner {:?}, truncated {truncated}, elapsed {:.1}s", decisions, game.winner, started.elapsed().as_secs_f64());
 
         if buffer.records.len() >= config.shard_rows {
             stats.rows += buffer.records.len();
@@ -341,6 +423,8 @@ pub fn run_self_play(
         "obs_dim": buffer.obs_dim,
         "action_dim": buffer.action_dim,
         "observation_profile": profile.as_str(),
+        "model_contract": crate::inference::contract::ModelContract::for_profile(&crate::observation::observation_layout(profile)),
+        "value_target": "terminal_outcome",
         "search": {
             "mode": format!("{:?}", config.search.mode),
             "worlds": config.search.worlds,
@@ -349,9 +433,14 @@ pub fn run_self_play(
             "dirichlet_alpha": config.search.search.dirichlet_alpha,
             "dirichlet_epsilon": config.search.search.dirichlet_epsilon,
             "max_decisions": config.search.search.max_decisions,
+            "evaluation_batch_size_requested": config.evaluation_batch_size,
+            "evaluation_batch_size": if config.search.mode == DeterminizationMode::IsMcts { 1 }
+                else { config.evaluation_batch_size.min(config.search.worlds.max(1).min(config.search.search.simulations.max(1)) as usize) },
         },
         "temperature_decisions": config.temperature_decisions,
         "decision_cap": config.decision_cap,
+        "profiling": crate::search::profiling::snapshot(),
+        "game_start": config.game_start,
         "seed": config.seed,
         "games": stats.games,
         "rows": stats.rows,
@@ -366,7 +455,7 @@ pub fn run_self_play(
             .iter()
             .map(|(d, r)| serde_json::json!({ "dir": d, "rows": r }))
             .collect::<Vec<_>>(),
-        "z_semantics": "±1 terminal outcome from the record's mover perspective; 0 = decision-cap truncated game",
+        "z_semantics": "±1 terminal outcome from mover perspective; 0 = draw or truncation; terminated.npy distinguishes them, exclude truncated rows from value training",
         "policy_semantics": "raw root visit counts over root-legal actions (sparse via offsets); normalize before use",
     });
     let manifest_path = out_dir.join("manifest.json");

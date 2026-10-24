@@ -265,8 +265,7 @@ mod tests {
     #[test]
     fn standard_has_official_restriction() {
         let r = Rules::standard();
-        // 3 banned + 47 restricted = 50 entries
-        assert_eq!(r.restriction.card_limits.len(), 50);
+        assert_eq!(r.restriction, CardRestriction::official_eng());
         assert_eq!(r.restriction.choice_groups.len(), 2);
         assert!(r.allowed_card_rarity_mask.is_none());
     }
@@ -374,7 +373,7 @@ mod tests {
     #[test]
     fn titan_boss_has_official_restriction() {
         let r = Rules::titan_boss();
-        assert_eq!(r.restriction.card_limits.len(), 50);
+        assert_eq!(r.restriction, CardRestriction::official_eng());
         assert_eq!(r.restriction.choice_groups.len(), 2);
     }
 
@@ -389,7 +388,7 @@ mod tests {
     #[test]
     fn titan_team_has_official_restriction() {
         let r = Rules::titan_team();
-        assert_eq!(r.restriction.card_limits.len(), 50);
+        assert_eq!(r.restriction, CardRestriction::official_eng());
         assert_eq!(r.restriction.choice_groups.len(), 2);
     }
 
@@ -402,7 +401,8 @@ mod tests {
             .filter(|(_, v)| **v == 0)
             .map(|(k, _)| k.as_str())
             .collect();
-        assert_eq!(banned.len(), 3);
+        assert_eq!(banned.len(), 4);
+        assert_eq!(r.card_limits.get("BT15-003"), Some(&0));
         assert_eq!(r.card_limits.get("BT2-090"), Some(&0));
         assert_eq!(r.card_limits.get("BT5-109"), Some(&0));
         assert_eq!(r.card_limits.get("EX5-065"), Some(&0));
@@ -412,7 +412,7 @@ mod tests {
     fn official_restricted_count() {
         let r = CardRestriction::official_eng();
         let restricted = r.card_limits.values().filter(|v| **v == 1).count();
-        assert_eq!(restricted, 47);
+        assert_eq!(restricted, 53);
     }
 
     #[test]

@@ -215,18 +215,7 @@ fn card_id_for_handle(game: &Game, handle: crate::card_source::CardHandle) -> St
 fn material_source_ids(game: &Game, valid: &[u16]) -> Option<(Vec<String>, u16)> {
     use crate::action::space::SOURCES_PER_FIELD;
     use crate::effect_context::selections::{material_zone_geometry, material_zone_slice};
-    use crate::resume::{ResumeFrame, ResumeSelectKind};
-
-    let stack = game.pending_selection_resume.as_ref()?;
-    // Frames run inner-to-outer, so the live prompt is the innermost one —
-    // same traversal as `permutation_remaining_ids`.
-    let perm = stack.frames.iter().rev().find_map(|f| match f {
-        ResumeFrame::RunTail {
-            select_kind: ResumeSelectKind::Material { perm },
-            ..
-        } => Some(*perm),
-        _ => None,
-    })?;
+    let perm = pending_material_source_carrier(game)?;
 
     let (source_count, range_start) = material_zone_geometry(game, perm)?;
     let band = range_start..range_start.saturating_add(SOURCES_PER_FIELD);
@@ -457,6 +446,24 @@ fn active_selection_frame(stack: &crate::resume::ResumeStack) -> Option<&crate::
         | F::DelayPlayFromHandAfterSelection {inner,..} | F::DelayPlayFromUnionAfterSelection {inner,..}
         | F::DelayBodyAfterCost {inner,..} => active_selection_frame(inner),
         frame => Some(frame),
+    }
+}
+
+/// The live source-selection carrier, including selections parked inside a
+/// replacement or payment continuation. Suspended outer frames never supply
+/// identities for the active inner prompt. Shared with the exam adapter's
+/// prompt-class check so identity resolution and wire classification agree.
+pub fn pending_material_source_carrier(game: &Game) -> Option<crate::permanent::PermanentHandle> {
+    use crate::resume::{ResumeFrame, ResumeSelectKind};
+    if !matches!(game.pending_selection.as_ref()?.kind, SelectionKind::Material) {
+        return None;
+    }
+    match active_selection_frame(game.pending_selection_resume.as_ref()?)? {
+        ResumeFrame::RunTail {
+            select_kind: ResumeSelectKind::Material { perm },
+            ..
+        } => Some(*perm),
+        _ => None,
     }
 }
 fn active_zone_card_pick(stack: &crate::resume::ResumeStack) -> Option<&crate::dsl_cards::step::zone_cards::ZoneCardPickState> {
@@ -1883,6 +1890,49 @@ mod tests {
         assert_eq!(
             resolve_next(&runner.game, &card_row("MAT-B"), 0),
             Ok(Some(base + 1))
+        );
+    }
+
+    #[test]
+    fn material_pick_follows_nested_replacement_frames_and_the_carriers_owner() {
+        let mut runner = runner_with_cards(&["MAT-A", "MAT-B", "MAT-TOP"]);
+        runner.place_stack(0, &["MAT-B", "MAT-A", "MAT-TOP"]);
+        let carrier = runner.place_stack(1, &["MAT-A", "MAT-B", "MAT-TOP"]);
+        let base = material_range_start(&runner.game, carrier);
+        park_material_selection(&mut runner.game, carrier, vec![base, base + 1]);
+        for _ in 0..2 {
+            let inner = runner.game.pending_selection_resume.take().unwrap();
+            runner.game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::ReplacementBody {
+                    inner: Box::new(inner),
+                    outer_conts: vec![],
+                }],
+            });
+        }
+        assert_eq!(
+            resolve_next(&runner.game, &card_row("MAT-B"), 0),
+            Ok(Some(base + 1))
+        );
+    }
+
+    #[test]
+    fn material_pick_never_uses_an_older_frame_when_the_live_inner_frame_is_not_material() {
+        let mut runner = runner_with_cards(&["MAT-A", "MAT-TOP"]);
+        let carrier = runner.place_stack(0, &["MAT-A", "MAT-TOP"]);
+        let base = material_range_start(&runner.game, carrier);
+        park_material_selection(&mut runner.game, carrier, vec![base]);
+        let stack = runner.game.pending_selection_resume.as_mut().unwrap();
+        let mut inner = stack.clone();
+        if let ResumeFrame::RunTail { select_kind, .. } = &mut inner.frames[0] {
+            *select_kind = ResumeSelectKind::Hand { of_player: 0 };
+        }
+        stack.frames.push(ResumeFrame::ReplacementBody {
+            inner: Box::new(inner),
+            outer_conts: vec![],
+        });
+        assert!(
+            resolve_next(&runner.game, &card_row("MAT-A"), 0).is_err(),
+            "an outer suspended material frame cannot lend its card identities to another prompt"
         );
     }
 

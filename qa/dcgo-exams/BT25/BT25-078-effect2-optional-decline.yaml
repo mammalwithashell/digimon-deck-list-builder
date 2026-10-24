@@ -2,9 +2,11 @@
 # "may" is DECLINED. DCGO registers the effect optional: false and carries the "may" on the
 # reveal pick's canNoSelect, so its decline is "pick nothing" -> all 3 revealed cards
 # (Sparrowmon, Callismon, Titamon + SkullBaluchimon) are ordered to the deck bottom and
-# the hand / digivolution stack stay untouched. Our engine declines at its outer
-# accept/decline gate (the reveal pick after the branch is non-optional), a different
-# prompt position but the same observable outcome: no card added, nothing placed.
+# the hand / digivolution stack stay untouched. Our engine reveals mandatorily, then
+# selects the optional source-placement branch. None of these three cards has the
+# Three Musketeers trait (EX7-051 only mentions it in text), so that branch places
+# nothing and returns all three. The separate archetype test exercises declining
+# a source pick that actually has an eligible card.
 card: BT25-078
 clause: BT25-078#effect#2
 interaction: {id: "probe:BT25-078#effect#2:optional_decline", source: probe, kind: positive}
@@ -28,14 +30,25 @@ steps:
   - actor: 0
     do: { play: { card: BT25-078, from: hand } }
     expect: { prompt: main_phase }
-  # SIM-ONLY: decline at our outer gate.
+  # SIM-ONLY: choose the optional source-placement route; no eligible source.
   - actor: 0
-    do: { select: { decline: true, sim_only: true } }
+    do:
+      select:
+        choice: bottom digivolution card
+        sim_only: true
   # DCGO-ONLY: the reveal pick, declined via canNoSelect.
   - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: SelectCardEffect }
-  # DCGO-ONLY: deck-bottom ordering of all 3 revealed cards.
+  # Explicit deck-bottom ordering of all 3 cards on each engine.
+  - actor: 0
+    do:
+      select:
+        cards:
+        - EX7-051
+        - BT25-058
+        - BT24-081
+        sim_only: true
   - actor: 0
     do: { select: { cards: [EX7-051, BT25-058, BT24-081], dcgo_only: true } }
     expect: { prompt: SelectCardEffect }
@@ -91,7 +104,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 1
-- at: 5
+- at: 6
   that:
     _backfilled: true
     memory: -3

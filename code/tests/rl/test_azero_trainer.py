@@ -22,11 +22,23 @@ import gymnasium as gym  # noqa: E402
 import torch  # noqa: E402
 from sb3_contrib import MaskablePPO  # noqa: E402
 
-from digimon_gym.agents.azero_trainer import load_shards, train  # noqa: E402
+from digimon_gym.agents.azero_trainer import calibrate_value, load_shards, train  # noqa: E402
 
 OBS_DIM = 12
 ACTION_DIM = 9
 PROFILE = "test_profile_v0"
+
+
+def _contract():
+    return dict(observation_profile=PROFILE, tensor_version=2, feature_schema_version="test-v1",
+                tensor_size=OBS_DIM, tensor_layout_hash="test-hash", action_space_size=ACTION_DIM,
+                action_schema_version=1)
+
+
+@pytest.fixture(autouse=True)
+def synthetic_contract_registry(monkeypatch):
+    # Synthetic network dimensions only. Production validation remains strict.
+    monkeypatch.setattr("model_contract.current_contract", lambda profile: _contract())
 
 
 class _TinyEnv(gym.Env):
@@ -71,8 +83,9 @@ def _write_shard_dir(root: Path, rows: int, seed: int) -> Path:
     np.save(shard / "policy_actions.npy", np.asarray(actions, np.int32))
     np.save(shard / "policy_visits.npy", np.asarray(visits, np.float32))
     np.save(shard / "z.npy", z)
+    np.save(shard / "terminated.npy", np.ones(rows, np.uint8))
     np.save(shard / "mover.npy", np.zeros(rows, np.uint8))
-    np.save(shard / "game_id.npy", np.zeros(rows, np.int32))
+    np.save(shard / "game_id.npy", np.arange(rows, dtype=np.int32) // 2)
     (root / "manifest.json").write_text(
         json.dumps(
             {
@@ -80,6 +93,8 @@ def _write_shard_dir(root: Path, rows: int, seed: int) -> Path:
                 "obs_dim": OBS_DIM,
                 "action_dim": ACTION_DIM,
                 "observation_profile": PROFILE,
+                "model_contract": _contract(),
+                "value_target": "terminal_outcome",
                 "shards": [{"dir": "shard-000", "rows": rows}],
             }
         )
@@ -104,6 +119,7 @@ def test_loader_stitches_multiple_dirs(tmp_path):
 def test_train_moves_policy_and_value_toward_targets(tmp_path):
     shard_dir = _write_shard_dir(tmp_path / "gen0", rows=32, seed=2)
     model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0)
+    model.digimon_contract = _contract()
     init_zip = tmp_path / "init.zip"
     model.save(str(init_zip))
 
@@ -145,5 +161,49 @@ def test_loader_rejects_profile_mismatch(tmp_path):
     manifest = json.loads((b / "manifest.json").read_text())
     manifest["observation_profile"] = "other_profile"
     (b / "manifest.json").write_text(json.dumps(manifest))
-    with pytest.raises(ValueError, match="observation_profile"):
+    with pytest.raises(ValueError, match="profile"):
         load_shards([a, b])
+
+
+def test_critic_calibration_preserves_actor_and_excludes_truncations(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=80, seed=3)
+    ended = np.ones(80, np.uint8)
+    ended[-10:] = 0
+    np.save(directory / "shard-000" / "terminated.npy", ended)
+    model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0, seed=0, device="cpu")
+    model.digimon_contract = _contract()
+    with torch.no_grad():
+        model.policy.value_net.bias.fill_(50.)  # a shaped-return head must be reset
+    model.save(str(tmp_path / "seed.zip"))
+    summary = calibrate_value(tmp_path / "seed.zip", [directory], tmp_path / "calibrated.zip",
+                              epochs=20, batch_size=16, lr=1e-2, device="cpu")
+    calibrated = MaskablePPO.load(str(tmp_path / "calibrated.zip"), device="cpu")
+    obs = torch.as_tensor(load_shards([directory]).obs)
+    with torch.no_grad():
+        before = model.policy.get_distribution(obs).distribution.probs
+        after = calibrated.policy.get_distribution(obs).distribution.probs
+    assert torch.equal(before, after)
+    assert summary["excluded_truncated_rows"] == 10
+    assert summary["fit_rows"] + summary["heldout_rows"] == 70
+    assert summary["history"][-1]["heldout_mse"] < 0.5
+    assert calibrated.digimon_value_semantics == "terminal_outcome"
+
+
+def test_loader_rejects_same_shape_stale_action_semantics(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=4, seed=0)
+    path = directory / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["model_contract"]["action_schema_version"] += 1
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="action_schema_version"):
+        load_shards([directory])
+
+
+def test_loader_requires_terminal_semantics_and_completion_flags(tmp_path):
+    directory = _write_shard_dir(tmp_path / "data", rows=4, seed=0)
+    path = directory / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["value_target"] = "shaped_return"
+    path.write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="terminal_outcome"):
+        load_shards([directory])

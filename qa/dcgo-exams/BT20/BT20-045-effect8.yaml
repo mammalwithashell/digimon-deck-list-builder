@@ -115,6 +115,12 @@ steps:
     prompt: main_phase
 - actor: 0
   do:
+    select:
+      cards:
+      - ST2-09
+      sim_only: true
+- actor: 0
+  do:
     pass: {}
   expect:
     prompt: main_phase
@@ -540,7 +546,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 5
-- at: 13
+- at: 14
   that:
     _backfilled: true
     memory: 3

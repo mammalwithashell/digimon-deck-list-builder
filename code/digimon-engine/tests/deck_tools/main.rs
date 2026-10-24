@@ -428,24 +428,25 @@ fn make_legal_pauper_deck() -> Vec<String> {
 }
 
 fn is_banned_or_restricted(card_id: &str) -> bool {
-    // Mirror of `deck_tools.rs::BANNED_CARDS` and `RESTRICTED_CARDS`. These
-    // constants are private to the `deck_tools` module, so duplicating
-    // them here is the price of the test-side filter — keep them in sync
-    // when the validator's lists change.
-    const BANNED: &[&str] = &["BT2-090", "BT5-109", "EX5-065"];
-    const RESTRICTED: &[&str] = &[
-        "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110", "BT14-002",
-        "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069", "BT19-040", "BT2-047",
-        "BT2-069", "BT3-054", "BT3-103", "BT4-104", "BT4-111", "BT6-100", "BT6-104", "BT7-038",
-        "BT7-064", "BT7-069", "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068",
-        "EX2-039", "EX2-070", "EX3-057", "EX4-006", "EX4-019", "EX4-030", "EX5-015", "EX5-018",
-        "EX5-062", "P-008", "P-025", "P-029", "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
-    ];
-    const CHOICE_GROUP_MEMBERS: &[&str] =
-        &["EX2-007", "EX7-064", "BT20-037", "BT17-035", "EX8-037"];
-    BANNED.contains(&card_id)
-        || RESTRICTED.contains(&card_id)
-        || CHOICE_GROUP_MEMBERS.contains(&card_id)
+    let rules = digimon_engine::rules::CardRestriction::official_eng_ref();
+    rules.card_limits.contains_key(card_id)
+        || rules
+            .choice_groups
+            .iter()
+            .any(|(a, b)| a.iter().chain(b).any(|c| c == card_id))
+}
+
+#[test]
+fn english_restrictions_include_effective_2026_updates() {
+    let r = digimon_engine::rules::CardRestriction::official_eng_ref();
+    assert_eq!(r.card_limits.get("BT15-003"), Some(&0));
+    for card in [
+        "EX1-066", "EX8-012", "BT14-033", "BT23-032", "BT3-092", "BT10-080", "EX5-059", "EX5-061",
+    ] {
+        assert_eq!(r.card_limits.get(card), Some(&1), "{card}");
+    }
+    assert!(!r.card_limits.contains_key("BT9-099"));
+    assert!(!r.card_limits.contains_key("EX4-019"));
 }
 
 fn is_eden_restricted_or_choice_member(card_id: &str) -> bool {

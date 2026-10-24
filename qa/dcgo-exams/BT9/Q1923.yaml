@@ -199,7 +199,7 @@ steps:
   do:
     play:
       card: EX2-046
-      from: hand
+      from: hand.2
 - actor: 0
   do:
     select:

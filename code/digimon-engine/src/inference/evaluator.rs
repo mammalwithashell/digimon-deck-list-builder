@@ -41,6 +41,11 @@ pub fn masked_softmax(logits: &[f32], mask: &[f32]) -> Result<Vec<f32>, Inferenc
     }
     let mut max_legal = f32::NEG_INFINITY;
     for (&l, &m) in logits.iter().zip(mask.iter()) {
+        if m >= 0.5 && !l.is_finite() {
+            return Err(InferenceError::RuntimeFailed(
+                "non-finite legal policy logit".into(),
+            ));
+        }
         if m >= 0.5 && l > max_legal {
             max_legal = l;
         }
@@ -72,18 +77,27 @@ pub fn masked_softmax(logits: &[f32], mask: &[f32]) -> Result<Vec<f32>, Inferenc
 /// (and the LSTM value head lives in a companion graph — see export_onnx).
 pub struct BatchedPolicyValueEvaluator {
     session: Session,
+    obs_size: usize,
+    terminal_value: bool,
 }
 
 impl BatchedPolicyValueEvaluator {
     pub fn load(path: &Path) -> Result<Self, InferenceError> {
+        Self::load_for_profile(path, crate::observation::default_observation_profile())
+    }
+
+    pub fn load_for_profile(
+        path: &Path,
+        profile: crate::observation::ObservationProfileId,
+    ) -> Result<Self, InferenceError> {
+        let layout = crate::observation::observation_layout(profile);
         let session = Session::builder()
+            .map_err(|e| InferenceError::LoadFailed(e.to_string()))?
+            .with_intra_threads(1)
             .map_err(|e| InferenceError::LoadFailed(e.to_string()))?
             .commit_from_file(path)
             .map_err(|e| InferenceError::LoadFailed(e.to_string()))?;
-        super::contract::validate_session_contract(
-            &session,
-            &crate::tensor_profiles::default_profile(),
-        )?;
+        super::contract::validate_session_contract(&session, &layout)?;
         let output_names: Vec<String> = session
             .outputs()
             .iter()
@@ -94,7 +108,24 @@ impl BatchedPolicyValueEvaluator {
         if !(has_logits && has_value) {
             return Err(InferenceError::UnsupportedOutputs(output_names));
         }
-        Ok(Self { session })
+        let terminal_value = session
+            .metadata()
+            .ok()
+            .and_then(|m| m.custom("digimon_value_semantics"))
+            .is_some_and(|v| v == "terminal_outcome");
+        Ok(Self {
+            session,
+            obs_size: layout.tensor_size,
+            terminal_value,
+        })
+    }
+
+    pub fn require_terminal_value(&self) -> Result<(), InferenceError> {
+        if self.terminal_value {
+            Ok(())
+        } else {
+            Err(InferenceError::LoadFailed("search self-play requires terminal_outcome value calibration; shaped-return PPO values are not compatible".into()))
+        }
     }
 
     /// Evaluate a batch. `obs` rows must all have the same length; `masks`
@@ -105,6 +136,7 @@ impl BatchedPolicyValueEvaluator {
         obs: &[&[f32]],
         masks: &[&[f32]],
     ) -> Result<Vec<EvalResult>, InferenceError> {
+        let _profile = crate::search::profiling::span("inference_total");
         if obs.is_empty() {
             return Ok(Vec::new());
         }
@@ -116,6 +148,12 @@ impl BatchedPolicyValueEvaluator {
             )));
         }
         let width = obs[0].len();
+        if width != self.obs_size {
+            return Err(InferenceError::ShapeMismatch(format!(
+                "obs width {width} != selected profile width {}",
+                self.obs_size
+            )));
+        }
         let mut flat = Vec::with_capacity(obs.len() * width);
         for row in obs {
             if row.len() != width {
@@ -131,11 +169,13 @@ impl BatchedPolicyValueEvaluator {
             .map_err(|e| InferenceError::ShapeMismatch(e.to_string()))?;
         let obs_value =
             Value::from_array(obs_arr).map_err(|e| InferenceError::RuntimeFailed(e.to_string()))?;
+        let inference_span = crate::search::profiling::span("onnx_run");
         let outputs = self
             .session
             .run(ort::inputs!["obs" => obs_value])
             .map_err(|e| InferenceError::RuntimeFailed(e.to_string()))?;
 
+        drop(inference_span);
         let (logits_shape, logits) = outputs
             .get("logits")
             .ok_or_else(|| InferenceError::UnsupportedOutputs(vec!["logits".into()]))?
@@ -166,13 +206,22 @@ impl BatchedPolicyValueEvaluator {
                 obs.len()
             )));
         }
+        if values.iter().any(|v| !v.is_finite()) {
+            return Err(InferenceError::RuntimeFailed(
+                "non-finite value output".into(),
+            ));
+        }
 
         let mut results = Vec::with_capacity(obs.len());
         for (i, mask) in masks.iter().enumerate() {
             let row = &logits[i * action_size..(i + 1) * action_size];
             results.push(EvalResult {
                 policy: masked_softmax(row, mask)?,
-                value: values[i],
+                value: if self.terminal_value {
+                    values[i].clamp(-1.0, 1.0)
+                } else {
+                    values[i]
+                },
             });
         }
         Ok(results)

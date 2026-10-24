@@ -39,8 +39,6 @@ steps:
     do: { play: { card: BT25-078, from: hand } }
     expect: { prompt: main_phase }
   - actor: 0
-    do: { select: { yes: true, sim_only: true } }
-  - actor: 0
     do: { select: { choice: "bottom digivolution card", sim_only: true } }
   - actor: 0
     do: { select: { cards: [EX7-071] } }
@@ -160,7 +158,7 @@ assert:
     p1.trash: []
     phase: Main
     turn: 3
-- at: 7
+- at: 6
   that:
     _backfilled: true
     memory: 0
@@ -181,7 +179,7 @@ assert:
     p1.security: 5
     p1.trash: []
     turn: 3
-- at: 11
+- at: 10
   that:
     _backfilled: true
     memory: 0

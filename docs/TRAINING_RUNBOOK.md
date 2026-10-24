@@ -1071,3 +1071,169 @@ never admits a deck they reject) for transition comparison runs; only that path
 reads the report and can raise `OracleReadinessMissingError`. Spec:
 `docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md` (§4.7 is
 superseded as a gate).
+
+## Independent-world search evaluation batching
+
+Native search self-play and `run_selfplay_generation.py` accept
+`--eval-batch-size` (default 4). This batches the next required evaluation of
+independent PIMC world trees; each tree finishes its own evaluation and backup
+before selecting another simulation. It uses no virtual loss or speculative
+same-tree leaves. `--eval-batch-size 1` is the serial reference. IS-MCTS remains
+serial. The search simulation budget and world count are separate knobs:
+`--sims 320 --worlds 4` remains 320 total simulations, not 320 per world.
+
+Native manifests record requested and effective evaluation batch sizes. Game
+workers remain separate processes (`--procs`); within each worker the independent
+trees cooperate on one thread and share one batched ONNX evaluator. Batch size
+is bounded by available worlds, so increasing it above the world count creates
+no additional simulations or worlds. The evaluator must be deterministic and
+batch-independent. Compare complete search results and recorded targets against
+batch size one when changing model/runtime/provider, not merely model argmaxes.
+
+The optional exact-input output cache remains controlled independently by
+`DIGIMON_SEARCH_EVAL_CACHE_ENTRIES` (default zero); use matching cache settings
+when measuring batching. The Windows native CLI uses mimalloc. Compare generated
+decision positions/sec as well as games/hour on the same hardware, model, pool
+and search budget. Inference-only speedups are not full-game speedups.
+
+Use fresh output directories for validation and retries. Do not relabel partial
+shards or a user-stopped generation as complete, and do not reuse truncated
+diagnostic prefixes as terminal-outcome training data.
+
+### Dynamic native search scheduling and recovery
+
+`run_selfplay_generation.py` defaults to `--scheduling dynamic --chunk-games 16`.
+The controller assigns the next chunk to whichever process becomes available.
+All workers use one master seed and global game indices (`selfplay --game-start`),
+preserving the serial deck RNG stream and per-game/search/action seeds. Search
+simulations, sampled worlds, depth caps, noise and temperature are unchanged.
+Changing concurrency cannot change targets. Legacy `--scheduling static` retains
+the historical per-worker seed scheme and does not support partial resume.
+
+Completed chunks appear under `genN/shards/proc<global-first-game>/`, sorted by
+game ID, with hashed `chunk_commit.json` records. Workers write private
+`genN/attempts/` directories; incomplete attempts never enter the training window.
+`schedule.json` freezes inputs/settings. `scheduler_progress.json` reports
+committed games/rows, active PIDs and heartbeat time; `scheduler_events.jsonl`
+records dispatches, completions and retries. Keep failed attempts/logs for diagnosis.
+Reported native game completions inside an unfinished chunk are not committed
+training rows. The maximum recomputation is the active chunks, not the generation.
+
+Use explicit `--resume-selfplay` with the same run directory and frozen inputs.
+Resume validates native executable, model/metadata, deck/card/admission data,
+search/environment settings and every committed array hash. It permits a changed
+`--procs`, but rejects changed chunk partition, incompatible inputs, corrupt data,
+legacy untracked outputs, or generations already containing training artifacts.
+There is no automatic resume of a user-stopped run. This resumes the self-play
+stage of an explicitly invoked generation command; once complete, that command
+continues to its configured training/evaluation stages. To perform diagnostics
+without any training, use the benchmark tool below instead.
+
+Defaults are one retry and a 3600-second **whole-chunk** deadline, including
+startup (`--worker-retries`, `--worker-timeout-seconds`). Set the deadline above
+the measured slow-chunk tail on the target machine. A deterministic crash still
+fails after bounded retries; it is never dropped from the requested game set.
+Ctrl-C/SIGTERM stops dispatch and terminates/drains owned child processes. Kernel
+file locks prevent simultaneous controllers and release on process death.
+
+### Development measurements versus unattended Linux runs
+
+Use bounded diagnostics in new directories, with `PYTHONPATH=code`:
+
+```bash
+python -m tools.benchmark_search_workers profile --cli /path/to/digimon-engine-cli \
+  --model /path/to/seed.onnx --decks /path/to/decks.json --cards-json data/cards.json \
+  --out runs/profile-new --games 2 --decision-cap 40
+python -m tools.benchmark_search_workers scale --cli /path/to/digimon-engine-cli \
+  --model /path/to/seed.onnx --decks /path/to/decks.json --cards-json data/cards.json \
+  --out runs/scaling-new --workers 1 2 4 --games 8 --chunk-games 1 --decision-cap 40
+```
+
+Profiling toggles `DIGIMON_SEARCH_PROFILE=1` and checks all target arrays against
+an unprofiled reference. Native manifest spans report inclusive and exclusive
+wall time; sum **self_seconds**, not overlapping inclusive totals. Timings cover
+registered search regions, not all allocations or effects individually. Use
+`perf`/flamegraphs on Linux for deeper hotspots once coarse spans identify a region.
+The scaling benchmark uses the identical global game set and verifies all saved
+arrays across worker counts. It reports wall-clock generated positions/sec,
+budgeted simulations/sec, truncations, native chunk durations and native-work
+utilization (not CPU utilization). Deliberately capped rows are not outcome data.
+Both tools leave training stopped. Profile overhead and process startup are
+visible; short prefixes are not full-game production ETAs.
+
+For cloud Linux, build the native release executable for Linux in the frozen
+training image; do not copy the Windows executable or infer Linux allocator
+performance from Windows. Re-run profiling and scaling on the actual instance,
+respecting its CPU quota/affinity and memory limit. Increase the game set and
+repeat count, then measure representative full games and chunk sizes (for
+example 4/8/16) before selecting concurrency/deadlines. More workers can increase
+contention. One native inference thread per worker remains the default.
+
+Store schedules, attempts, shards and checkpoints on the same persistent local
+POSIX volume. Publication assumes same-filesystem atomic rename and working OS
+locks; object-store mounts and unverified network filesystems are unsuitable.
+Hashes detect corruption, but this is process-interruption recovery, not a
+power-loss durability guarantee for native array writes. Keep off-host backups.
+Use a process-group-aware supervisor (for systemd, `KillMode=control-group` and
+a bounded stop timeout) so a hard-killed controller cannot leave orphan workers.
+Make any supervisor restart policy explicit; never enable one for a run stopped
+by the user. Alert on stale controller heartbeat, exhausted retries, disk space,
+memory pressure, or absent committed progress over the calibrated slow-chunk
+interval. A fresh heartbeat alone does not prove a worker is making progress.
+
+### Frozen-model search-budget evaluation
+
+`search_quality` is a diagnostic native example, separate from the self-play
+training driver. Build with `cargo build --release -p digimon-engine --example
+search_quality`. With `PYTHONPATH=code`, invoke:
+
+```bash
+python -m tools.search_quality_study \
+  --engine target/release/examples/search_quality \
+  --model models/<frozen-run>/seed.onnx \
+  --snapshot models/<frozen-run>/heldout_snapshot.json \
+  --cards-json data/cards.json --out runs/<new-budget-study> --workers 4
+```
+
+On Windows use the actual isolated Cargo target and `.exe` suffix. The tool
+freezes model, executable, card/admission and held-out-pool hashes. It creates
+replayable decision roots, compares a simulation/world grid, runs six abstract
+tactical controls, selects two alternatives using declared proxy criteria, and
+runs seat/deck-balanced full games against the baseline plus fixed greedy and
+policy-only anchors. Root noise is zero for competitive evaluation. Training
+exploration settings and model weights are untouched; no trainer is imported.
+
+Outputs include `plan.json`, `corpus.json`, per-job requests/results and hashes,
+`study_progress.json`, `sweep_summary.json`, and `evaluation_summary.json`.
+`--stage sweep`/`evaluate` supports staged execution; `--resume` is explicit and
+validates completed output hashes. A failed native job stops the study and
+preserves logs/results. Unknown uncommitted result files are not overwritten.
+The existing model run's user-stopped pipeline state, when present, is hashed
+and checked before dispatch. Do not point output at the training run directory.
+
+Read the [preregistered protocol](superpowers/research/2026-10-23-search-budget-study.md)
+before interpreting results. Higher-budget agreement is not tactical ground
+truth, the small paired panel is exploratory, and synthetic controls do not
+certify real card interactions. A fixed-model budget recommendation does not
+establish the best budget for learning at equal total training compute, nor does
+it enable closed-decklist beliefs or model promotion.
+
+For the expanded 640/4-versus-320/4 panel with main's per-card statistics, use
+`python -m tools.search_budget_confirmation --engine <new-native-example>
+--parent-study runs/<completed-budget-study> --out runs/<fresh-confirmation>
+--workers 4`. Build into a separate Cargo target to preserve the earlier frozen
+executable. The confirmation uses fresh seeds and all ordered pairings of the
+same eight lists, with fixed sample size and reversed-budget seats. It reuses
+`CardEvalCollector` offline on actual-game events and masks, never search-rollout
+events. This path uses the native executable directly and requires no training
+wheel rebuild. No training job is resumed or model fit.
+
+The output includes `summary.json`, `report.md`, `cards.csv`, `routes.csv`, and
+dashboard-compatible reports under `eval_cards/s640-w4` and `eval_cards/s320-w4`.
+In each report player1 is the named budget, regardless of native seat; the two
+reports describe the same games from opposite roles and must not be added as
+independent samples. Use the existing card dashboard's Local reports source.
+`--resume` validates frozen identities and committed jobs; `--analyze-only
+--resume` regenerates reports from verified completed results. The earlier build's
+score is contextual, never pooled into the new panel. See the
+[confirmation protocol](superpowers/research/2026-10-23-search-budget-confirmation.md).

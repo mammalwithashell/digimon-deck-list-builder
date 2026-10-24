@@ -16,10 +16,15 @@ use digimon_engine::live_game::LiveGame;
 use digimon_engine::view::Perspective;
 use serde_json::Value;
 
+mod admission;
 mod debug_repl;
 mod replay_view;
 mod selfplay;
 mod winprob;
+
+#[cfg(windows)]
+#[global_allocator]
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 /// Top-level CLI parser.
 #[derive(Parser, Debug)]
@@ -106,8 +111,7 @@ enum Command {
         #[arg(long, default_value_t = 256)]
         batch: usize,
         /// Observation profile for the model's input tensors. Defaults to
-        /// the profile recorded in `<model>.meta.json` (written by the
-        /// exporter), falling back to the engine default.
+        /// the profile recorded in the model's embedded training contract.
         #[arg(long)]
         tensor_profile: Option<String>,
     },
@@ -130,12 +134,19 @@ enum Command {
         /// Games to play.
         #[arg(long, default_value_t = 16)]
         games: u32,
+        /// Global first game ID; preserves serial seeds and deck sampling.
+        #[arg(long, default_value_t = 0)]
+        game_start: u32,
         /// TOTAL simulations per decision (PIMC divides them across worlds).
         #[arg(long, default_value_t = 160)]
         sims: u32,
         /// Sampled worlds K (PIMC only).
         #[arg(long, default_value_t = 4)]
         worlds: u32,
+        /// Maximum independent PIMC worlds per neural-evaluation batch.
+        /// One retains the serial reference. IS-MCTS remains serial.
+        #[arg(long, default_value_t = 4)]
+        eval_batch_size: usize,
         /// Determinization mode: `pimc` (default) or `ismcts`.
         #[arg(long, default_value = "pimc")]
         mode: String,
@@ -156,7 +167,7 @@ enum Command {
         #[arg(long, default_value_t = 4096)]
         shard_rows: usize,
         /// Observation profile override. Defaults to the model's
-        /// `<model>.meta.json`, falling back to the engine default.
+        /// embedded training contract.
         #[arg(long)]
         tensor_profile: Option<String>,
     },
@@ -254,8 +265,10 @@ fn run() -> ExitCode {
             uniform,
             decks,
             games,
+            game_start,
             sims,
             worlds,
+            eval_batch_size,
             mode,
             seed,
             out,
@@ -276,8 +289,10 @@ fn run() -> ExitCode {
                 uniform,
                 decks,
                 games,
+                game_start,
                 sims,
                 worlds,
+                eval_batch_size,
                 mode,
                 seed,
                 out,
@@ -286,6 +301,13 @@ fn run() -> ExitCode {
                 shard_rows,
                 tensor_profile,
                 card_data,
+                cli.cards_json
+                    .clone()
+                    .or_else(default_cards_json_path)
+                    .expect("card data path resolved above")
+                    .parent()
+                    .expect("card data parent directory")
+                    .to_path_buf(),
             )
         }
         Command::Pool => {

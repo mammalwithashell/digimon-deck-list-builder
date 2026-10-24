@@ -268,6 +268,17 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
 
     # Verify round-trip
     write_export_metadata(output_path, observation_layout, training_contract=validate_checkpoint(model, observation_layout.id), value_head="inline")
+    value_semantics = getattr(model, "digimon_value_semantics", None)
+    if value_semantics is not None:
+        import onnx
+        graph = onnx.load(str(output_path))
+        prop = graph.metadata_props.add()
+        prop.key, prop.value = "digimon_value_semantics", value_semantics
+        onnx.save(graph, str(output_path))
+        meta_path = Path(f"{output_path}.meta.json")
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta["value_semantics"] = value_semantics
+        meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     _verify_mlp(policy, wrapper, output_path, tensor_size)
 
 

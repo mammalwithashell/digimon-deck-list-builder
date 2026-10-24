@@ -790,14 +790,28 @@ impl ScenarioAdapter {
                 if !answered_next {
                     return Err(format!(
                         "step {i}: our engine asks a selection here; the scenario must \
-                         answer it with a `select:` step (pending kind: {:?}, prompt: '{}'){}",
+                         answer it with a `select:` step (pending kind: {:?}, prompt: '{}'){}{}",
                         pending.kind,
                         pending.prompt,
                         if i + 1 == s.steps.len() {
                             " -- the line ends while the prompt is still parked"
                         } else {
                             ""
-                        }
+                        },
+                        if std::env::var_os("DIGIMON_EXAM_DEBUG_SNAPSHOT").is_some() {
+                            format!("\n  live-prefix: {}", serde_json::json!({
+                                "next_step": i + 1,
+                                "actor": pending.selecting_player,
+                                "kind": format!("{:?}", pending.kind),
+                                "optional": pending.is_optional,
+                                "prompt": pending.prompt,
+                                "candidates": pending.valid_action_ids.iter().map(|id|
+                                    (*id, crate::exam::run::candidate_card(&game, pending, *id))
+                                ).collect::<Vec<_>>(),
+                                "labels": format!("{:?}", pending.effect_choices),
+                                "projection": crate::exam::projection::StateProjection::from_game(&game, i as u32 + 1),
+                            }))
+                        } else { String::new() }
                     ));
                 }
             }
@@ -1218,21 +1232,7 @@ fn dcgo_prompt_name(kind: &SelectionKind) -> Option<&'static str> {
 /// will resolve an identity — deliberately the same test, so the prompt this
 /// asserts a class for is exactly the prompt the identity payload can answer.
 fn is_digivolution_source_pick(game: &Game) -> bool {
-    use digimon_engine::resume::{ResumeFrame, ResumeSelectKind};
-    let Some(stack) = game.pending_selection_resume.as_ref() else {
-        return false;
-    };
-    // Frames run inner-to-outer, so the live prompt is the innermost one —
-    // same traversal `material_source_ids` uses.
-    stack.frames.iter().rev().any(|f| {
-        matches!(
-            f,
-            ResumeFrame::RunTail {
-                select_kind: ResumeSelectKind::Material { .. },
-                ..
-            }
-        )
-    })
+    digimon_engine::runners::selection_resolve::pending_material_source_carrier(game).is_some()
 }
 
 /// The same mapping, resolved with the live game and the step's PAYLOAD in

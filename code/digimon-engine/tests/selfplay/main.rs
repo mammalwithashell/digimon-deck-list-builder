@@ -69,11 +69,13 @@ fn run_test() {
 
     let mut config = SelfPlayConfig {
         games: 2,
+        game_start: 0,
         seed: 7,
         temperature_decisions: 6,
         decision_cap: 600,
         // Force a mid-run flush so the multi-shard path is exercised.
         shard_rows: 8,
+        evaluation_batch_size: 2,
         search: DeterminizedConfig::default(),
     };
     config.search.worlds = 2;
@@ -210,5 +212,37 @@ fn run_test() {
         "records must come from BOTH seats"
     );
 
+    // Each original shard is a complete game (shard_rows=8). Re-running
+    // global game 1 independently must reproduce all bytes. No worker
+    // assignment may change decks, seeds or targets.
+    config.games = 1;
+    config.game_start = 1;
+    let chunk_dir = out_dir.join("chunk-one");
+    run_self_play(
+        &card_data,
+        &decks,
+        &names,
+        &mut evaluator,
+        &config,
+        &chunk_dir,
+        "uniform",
+    )
+    .unwrap();
+    for name in [
+        "obs",
+        "policy_offsets",
+        "policy_actions",
+        "policy_visits",
+        "z",
+        "terminated",
+        "mover",
+        "game_id",
+    ] {
+        assert_eq!(
+            std::fs::read(out_dir.join("shard-001").join(format!("{name}.npy"))).unwrap(),
+            std::fs::read(chunk_dir.join("shard-000").join(format!("{name}.npy"))).unwrap(),
+            "global game IDs must preserve serial output: {name}"
+        );
+    }
     let _ = std::fs::remove_dir_all(&out_dir);
 }

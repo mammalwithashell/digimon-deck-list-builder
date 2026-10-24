@@ -3,9 +3,9 @@
 //! The search is decoupled from any concrete network runtime: it only needs
 //! a function from (observation tensor, action mask) to (masked policy over
 //! the 2192-action space, scalar value in `[-1, 1]` for the player to
-//! move). The API is batch-shaped even though the v1 search calls it with
-//! batch = 1 — leaf batching (collect pending leaves, evaluate together,
-//! back up) lands in Phase 4 without an interface change.
+//! move). The serial reference uses batch one. Independent PIMC world trees
+//! cooperate through `Mcts::search_batch`, evaluating one pending leaf per
+//! tree together before each tree resumes its own sequential selection.
 //!
 //! Concrete implementations:
 //!   - [`UniformEvaluator`] — the stub: uniform priors over legal actions,

@@ -55,11 +55,6 @@ steps:
       from: hand
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      'yes': true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -91,18 +86,13 @@ steps:
       from: hand
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      'yes': true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
   expect:
     prompt: breeding_action
 assert:
-- at: 9
+- at: 7
   that:
     memory: -5
     p0.field:
