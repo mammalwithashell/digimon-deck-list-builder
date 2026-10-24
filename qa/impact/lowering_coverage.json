@@ -9757,6 +9757,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:binding_present",
+    "predicate:count_gte",
     "predicate:dp_lte",
     "predicate:kind",
     "predicate:level_eq",
