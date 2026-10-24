@@ -127,8 +127,17 @@ steps:
   # `count: 2` until 2026-09-21, which aborted this line before the candidate multiset
   # was ever compared ('expected count 2 but DCGO asked for count 1').
   - actor: 0
-    do: { select: { cards: [BT25-028], ordinal: 0, dcgo_only: true } }
-    expect: { prompt: MultipleSkills, count: 1, candidates: [BT25-028, BT25-028] }
+    do:
+      select:
+        cards:
+        - BT25-028
+        ordinal: 0
+    expect:
+      prompt: MultipleSkills
+      count: 1
+      candidates:
+      - BT25-028
+      - BT25-028
   # The mandatory delete, a real choice: Agumon (p1 slot 1), not Biyomon.
   - actor: 0
     do: { select: { targets: [opp.field.1] } }

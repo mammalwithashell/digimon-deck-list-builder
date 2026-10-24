@@ -87,11 +87,6 @@ steps:
       from: hand
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -114,11 +109,6 @@ steps:
       from: hand
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      'yes': true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
@@ -148,18 +138,13 @@ steps:
     pass: {}
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 1
   do:
     pass: {}
   expect:
     prompt: breeding_action
 assert:
-- at: 13
+- at: 11
   that:
     p0.field:
     - card_id: EX3-018
@@ -172,7 +157,7 @@ assert:
       sources: []
     phase: Breeding
     turn: 6
-- at: 16
+- at: 14
   that:
     p0.field:
     - card_id: EX3-018
@@ -183,7 +168,7 @@ assert:
       sources: []
     - card_id: BT20-042
       sources: []
-- at: 17
+- at: 15
   that:
     p0.field:
     - card_id: EX3-018

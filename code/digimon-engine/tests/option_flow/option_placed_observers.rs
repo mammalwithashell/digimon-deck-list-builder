@@ -6,12 +6,12 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
 
-struct OnOptionPlacedWitness(Arc<Mutex<u32>>);
+struct OnOptionPlacedWitness(Arc<Mutex<u32>>, bool);
 
 impl CardEffect for OnOptionPlacedWitness {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         let seen = self.0.clone();
-        vec![Effect::on_play(card)
+        let effect = Effect::on_play(card)
             .name("Royal Knight option placed witness")
             .timing(EffectTiming::OnOptionPlaced)
             .condition(|ctx| {
@@ -22,8 +22,9 @@ impl CardEffect for OnOptionPlacedWitness {
             .process(move |ctx| {
                 ctx.gain_memory(1);
                 *seen.lock().unwrap() += 1;
-            })
-            .build()]
+            });
+        let effect = if self.1 { effect.breeding_zone() } else { effect };
+        vec![effect.build()]
     }
 }
 
@@ -109,6 +110,7 @@ impl CardEffect for InheritedOnOptionPlacedWitness {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         let seen = self.seen.clone();
         let effect = Effect::inherited(card)
+            .breeding_zone()
             .name("Inherited OnOptionPlaced witness")
             .timing(EffectTiming::OnOptionPlaced)
             .condition(|ctx| ctx.event_card().is_some())
@@ -183,7 +185,7 @@ fn on_option_placed_fires_for_training_link_and_security_placement_with_event_ca
     r.register_effect("NON-RK-LINK", Arc::new(LinkAnyHost));
     r.register_effect(
         "KING-DRASIL",
-        Arc::new(OnOptionPlacedWitness(witness.clone())),
+        Arc::new(OnOptionPlacedWitness(witness.clone(), true)),
     );
     r.place_in_breeding(0, "KING-DRASIL");
     let host = r.place_on_field(0, "HOST", Some(0));
@@ -286,6 +288,41 @@ fn link_on_option_placed_selection_resumes_on_link_after_choice_resolves() {
         1,
         "OnLink resumes after the placed-option selection resolves"
     );
+}
+
+#[test]
+fn ordinary_option_placed_observer_is_inactive_in_breeding_but_active_in_battle() {
+    let seen = Arc::new(Mutex::new(0));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("RK-DELAY-A", true))
+        .add_card(option_card("RK-DELAY-B", true))
+        .add_card(digimon_card("ORDINARY-OBSERVER"))
+        .hand(0, &["RK-DELAY-A", "RK-DELAY-B"])
+        .memory(0)
+        .start();
+    r.register_effect("RK-DELAY-A", Arc::new(DelayNoop));
+    r.register_effect("RK-DELAY-B", Arc::new(DelayNoop));
+    r.register_effect(
+        "ORDINARY-OBSERVER",
+        Arc::new(OnOptionPlacedWitness(seen.clone(), false)),
+    );
+    r.place_in_breeding(0, "ORDINARY-OBSERVER");
+    r.game.enter_main_phase();
+    assert_eq!(
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
+        digimon_engine::selection::OptionPlayResult::Trashed
+    );
+    assert_eq!(
+        *seen.lock().unwrap(),
+        0,
+        "CR 3-4-7-4 excludes ordinary breeding effects"
+    );
+    r.place_on_field(0, "ORDINARY-OBSERVER", Some(0));
+    assert_eq!(
+        crate::hand_declaration::declare_from_hand(&mut r.game, 0, 0),
+        digimon_engine::selection::OptionPlayResult::Trashed
+    );
+    assert_eq!(*seen.lock().unwrap(), 1, "the battle-area copy still triggers");
 }
 
 #[test]

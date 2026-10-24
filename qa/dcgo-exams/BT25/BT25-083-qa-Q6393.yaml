@@ -51,6 +51,11 @@ steps:
   # prompt when the pick has zero candidates (docs/DCGO_EXAM.md, "DCGO parks
   # vacuous optional-cost gates our engine skips"). Declined on the wire.
   - actor: 0
+    do:
+      select:
+        decline: true
+        sim_only: true
+  - actor: 0
     do: { select: { decline: true, dcgo_only: true } }
     expect: { prompt: OptionalSkill }
   # Impmon costs 3 (memory 3 -> 0): the turn does not end on its own; pass.
@@ -136,7 +141,7 @@ steps:
 expect_ruling:
   q_id: Q6393
   assert:
-  - at: 24
+  - at: 25
     that:
       p0.field:
       - {card_id: BT6-068, dp: 2000, suspended: false, sources: []}

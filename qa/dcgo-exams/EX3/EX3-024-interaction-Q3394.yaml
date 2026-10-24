@@ -64,11 +64,6 @@ steps:
       from: hand
   expect:
     prompt: main_phase
-- actor: 0
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 1
   do:
     hatch: {}
@@ -141,7 +136,7 @@ steps:
 expect_ruling:
   q_id: Q3394
   assert:
-  - at: 14
+  - at: 13
     that:
       p0.field:
       - card_id: EX3-024

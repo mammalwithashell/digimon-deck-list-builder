@@ -66,11 +66,6 @@ steps:
       from: hand
   expect:
     prompt: main_phase
-- actor: 1
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 0
   do:
     pass: {}
@@ -93,11 +88,6 @@ steps:
     pass: {}
   expect:
     prompt: main_phase
-- actor: 1
-  do:
-    select:
-      decline: true
-      sim_only: true
 - actor: 0
   do:
     pass: {}
@@ -133,7 +123,7 @@ assert: []
 expect_ruling:
   q_id: Q7362
   assert:
-  - at: 13
+  - at: 11
     that:
       memory: -2
       p0.field:
@@ -144,7 +134,7 @@ expect_ruling:
       p1.field:
       - card_id: EX3-020
         suspended: false
-  - at: 14
+  - at: 12
     that:
       memory: -2
       p0.field:
@@ -156,7 +146,7 @@ expect_ruling:
       - card_id: EX3-020
         suspended: true
       p1.trash: []
-  - at: 15
+  - at: 13
     that:
       memory: -2
       p0.field:

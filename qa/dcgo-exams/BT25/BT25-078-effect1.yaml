@@ -94,9 +94,6 @@ steps:
   - actor: 0
     do: { move: { from: breeding } }
     expect: { prompt: breeding_action }
-  # SIM-ONLY: our outer accept/decline gate (DCGO: optional: false, no gate).
-  - actor: 0
-    do: { select: { yes: true, sim_only: true } }
   # SIM-ONLY: our branch choice -- "Place a [Three Musketeers] trait card as bottom
   # digivolution card", named by LABEL (an EffectChoice branch carries no number
   # `value:` could match).
@@ -138,7 +135,7 @@ assert:
   # clause placed underneath. The hand is the opening five minus Gazimon plus the
   # T3 draw, the digivolution draw and the T5 draw
   # -- Hurricane Screw Shot did NOT go to hand.
-  - at: 15
+  - at: 14
     that:
       turn: 5
       p0.memory: 3
