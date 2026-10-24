@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
+import io
 import os
 import uuid
 from pathlib import Path
 from typing import List
 
+from PIL import Image
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,11 +71,21 @@ async def upload_asset(
     asset_dir = ASSETS_ROOT / user.id / asset_type
     asset_dir.mkdir(parents=True, exist_ok=True)
     file_path = asset_dir / f"{asset_id}.{ext}"
-    file_path.write_bytes(content)
+    await asyncio.to_thread(file_path.write_bytes, content)
 
     file_url = str(file_path)
 
-    # TODO: Generate thumbnail with Pillow when needed
+    thumbnail_url = None
+    if file.content_type in {"image/png", "image/jpeg", "image/webp"}:
+        thumb_path = asset_dir / f"{asset_id}_thumb.webp"
+
+        def _generate_thumbnail():
+            with Image.open(io.BytesIO(content)) as img:
+                img.thumbnail((256, 256))
+                img.save(thumb_path, format="WEBP")
+
+        await asyncio.to_thread(_generate_thumbnail)
+        thumbnail_url = str(thumb_path)
 
     asset = UserAsset(
         id=asset_id,
@@ -80,6 +93,7 @@ async def upload_asset(
         asset_type=asset_type,
         name=name,
         file_url=file_url,
+        thumbnail_url=thumbnail_url,
         file_size_bytes=file_size,
         mime_type=file.content_type,
     )
@@ -114,12 +128,23 @@ async def delete_asset(
         raise HTTPException(status_code=403, detail="Access denied")
 
     # Delete file from filesystem
-    try:
-        file_path = Path(asset.file_url)
-        if file_path.exists():
-            file_path.unlink()
-    except OSError:
-        pass  # File may already be gone
+    def _delete_files():
+        try:
+            file_path = Path(asset.file_url)
+            if file_path.exists():
+                file_path.unlink()
+        except OSError:
+            pass  # File may already be gone
+
+        if asset.thumbnail_url:
+            try:
+                thumb_path = Path(asset.thumbnail_url)
+                if thumb_path.exists():
+                    thumb_path.unlink()
+            except OSError:
+                pass
+
+    await asyncio.to_thread(_delete_files)
 
     await db.delete(asset)
     await db.commit()
