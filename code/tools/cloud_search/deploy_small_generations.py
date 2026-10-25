@@ -62,7 +62,10 @@ def main():
         replay_window=3, replay_cap_games=1000, evaluation_games_per_archetype_per_anchor=200)
     (root / 'campaign-plan.json').write_text(json.dumps(plan, indent=2))
     legacy = json.loads((old / 'deployment-plan.json').read_text())
+    revision = subprocess.check_output(['docker', 'image', 'inspect', '--format',
+        '{{index .Config.Labels "org.opencontainers.image.revision"}}', image], text=True).strip()
     legacy.update(image=image, controller_commit=source['commit'], inputs=inputs,
+        image_source_commit=revision or None, ci_run=source.get('image_ci_run'),
         generation=dict(games=1000, generations=4, simulations=320, worlds=4, evaluation_batch_size=4,
             workers=8, replay_window=3, replay_cap_games=1000, archetype_count=12),
         evaluation=dict(games_per_archetype_per_anchor=200, checkpoint_only=True, automatic_promotion=False),
