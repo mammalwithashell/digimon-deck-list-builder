@@ -87,11 +87,15 @@ reconstructed from visit distributions.
 One card-data inconsistency was found during the image check: **EX12-032
 WereGarurumon** prints level-4 materials on both sides of its DNA requirement,
 and its YAML agrees, but the card data loaded by the frozen image records level
-5 on both sides. Local and frozen `cards.json` hashes match. The Main DNA matcher
-reads card-data requirements, so this discrepancy may distort opportunities.
-This audit does not repair it or certify its runtime consequences with a
-behavioral regression. Treat current Virus Busters opportunity counts as the
-frozen simulator's behavior, not proof of correct printed-card coverage.
+5 on both sides. Local and frozen `cards.json` hashes matched at audit time.
+The [subsequent reproduction and fix](2026-10-25-virus-busters-dna-data.md) shows
+that runtime DSL enrichment preserved the legal level-4 route while also
+retaining the illegal level-5 route. This did not block legal level-4 DNA. The
+repository data is now corrected; the live image and historical audit remain
+unchanged. Treat those opportunity counts as frozen simulator behavior, not
+proof of correct printed-card coverage. Eleven of generation 2's teacher-positive
+DNA decisions target EX12-032 and need material-route verification before being
+used as evidence of a policy-quality failure.
 
 The appropriate follow-up is a route-specific analysis within these capable
 lists, plus a focused EX12-032 data/behavior check. Increasing DNA preference

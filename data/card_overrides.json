@@ -18662,5 +18662,9 @@
       "Holy Dragon",
       "CS"
     ]
+  },
+  "_note_EX12-032": "Printed card image and DCGO EX12_032.cs require Blue/Yellow Lv.4 + Purple/Red Lv.4, cost 0. The ingested DNA line incorrectly said Lv.5 on both sides. Override the source text so parsed dna_costs are regenerated consistently.",
+  "EX12-032": {
+    "xros_req": "[Digivolve] Lv.4 w/[Garurumon] in name or w/[NSo]/[VB] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.4 + Purple/Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
   }
 }
