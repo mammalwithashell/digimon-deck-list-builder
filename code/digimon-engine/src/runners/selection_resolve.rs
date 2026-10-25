@@ -1006,6 +1006,27 @@ pub fn resolve_next(
 
     // ── Single-value payloads ────────────────────────────────────────────
     if let Some(b) = payload.bool_value {
+        if let Some(choice) = pending.card_choice.as_ref() {
+            use crate::owned_card_choice::CardChoiceOperation;
+            let page=choice.view(game,pending.selecting_player);
+            let mask=crate::action::build_action_mask(game,pending.selecting_player);
+            if !b {
+                if pending.is_optional && mask[PASS as usize] > 0.5 { return Ok(Some(PASS)); }
+                return Err("recorded 'no' on an owned choice that cannot be declined".into());
+            }
+            // A boolean describes one fixed operation, never a navigation or
+            // an arbitrary choice between physical cards. Private identity is
+            // unnecessary for accepting the sole offered operation.
+            if page.inspection_only || page.page_count != "1" {
+                return Err("recorded 'yes' cannot choose among an inspected or paginated card pool".into());
+            }
+            let commits:Vec<_>=page.rows.iter().filter(|row| matches!(row.operation,CardChoiceOperation::CommitCard)
+                && mask.get(row.action_id as usize).is_some_and(|v|*v>0.5)).map(|row|row.action_id).collect();
+            return match commits.as_slice() {
+                [one]=>Ok(Some(*one)),
+                _=>Err(format!("recorded 'yes' requires one legal physical commit, found {}",commits.len())),
+            };
+        }
         // A binary "you may" gate that the engine models as a two-branch
         // EffectChoice rather than an optional prompt (see `yes_no_branches`).
         if let Some((yes, no)) = yes_no_branches(pending) {
@@ -3199,6 +3220,60 @@ effects:
             assert_eq!(resolve_next(&r.game,&row(0,1),1),Ok(Some(PASS)),"wrapped={wrapped}");
             assert_eq!(resolve_next(&r.game.clone(),&row(0,1),1),Ok(Some(PASS)));
             assert_eq!(resolve_next(&r.game,&row(0,1),2),Ok(None),"never issue closing PASS twice");
+        }
+    }
+}
+
+#[cfg(test)]
+mod owned_boolean_replay_tests {
+    use super::*;
+    use crate::{debug_runner::{DebugRunner,make_test_card},effect_context::EffectContext,
+        owned_card_choice::CardChoiceOperation};
+    fn row(yes:bool)->SelectionRow { serde_json::from_value(serde_json::json!({"step":0,"actor":0,"prompt":"generic_bool","bool_value":yes})).unwrap() }
+    fn fixture(count:usize,security:bool)->DebugRunner {
+        let mut r=DebugRunner::builder().add_card(make_test_card("PICK","Pick"))
+            .hand(0,&vec!["PICK";count.max(1)]).security(0,&["PICK"]).start();
+        r.skip_mulligan();r.game.enter_main_phase();
+        let source=r.game.players[0].hand[0].handle();
+        if security {
+            crate::dsl_cards::step::run_steps(&[digimon_dsl::compiled::CompiledStep::MayAddTopSecurityToHand {of:digimon_dsl::compiled::CompiledPlayerRef::You}],
+                &mut EffectContext::new(&mut r.game,source,None,0),&mut crate::dsl_cards::bindings::Bindings::new());
+        } else {
+            EffectContext::new(&mut r.game,source,None,0).select_union_zone(0,crate::selection::UnionZoneSet::HAND,None,None,"choose a card",true,|_,_,_|true,|_,_,_|{});
+        }
+        r
+    }
+    #[test]
+    fn owned_bool_yes_selects_single_commit_and_no_selects_decline() {
+        let r=fixture(1,false);
+        let pending=r.game.pending_selection.as_ref().unwrap();
+        assert!(pending.valid_action_ids.contains(&PASS));
+        let action=pending.card_choice.as_ref().unwrap().view(&r.game,0).rows.into_iter().find(|row| matches!(row.operation,CardChoiceOperation::CommitCard)).unwrap().action_id;
+        for game in [r.game.clone(),r.game.clone()] {
+            assert_eq!(resolve_next(&game,&row(true),0),Ok(Some(action)));
+            assert_eq!(resolve_next(&game,&row(false),0),Ok(Some(PASS)));
+            assert_eq!(crate::action::build_action_mask(&game,0)[action as usize],1.0);
+        }
+    }
+    #[test]
+    fn owned_bool_fixed_top_accepts_without_revealing_private_identity() {
+        let mut r=fixture(1,true);
+        let view=r.pending_selection_view().unwrap();
+        let commit=view.card_choice.unwrap().rows.into_iter().find(|row| matches!(row.operation,CardChoiceOperation::CommitCard)).unwrap();
+        assert!(!commit.identity_visible);assert!(commit.card_id.is_none());
+        let action=resolve_next(&r.game,&row(true),0).unwrap().unwrap();
+        assert_eq!(action,commit.action_id);
+        let top=r.game.players[0].security.last().unwrap().handle();
+        r.game.resolve_selection(0,action).unwrap();
+        assert_eq!(r.game.players[0].hand.last().unwrap().handle(),top);
+        assert!(r.game.players[0].security.is_empty());
+    }
+    #[test]
+    fn owned_bool_refuses_multiple_cards_and_a_single_row_on_a_later_page() {
+        for count in [2,29] {
+            let mut r=fixture(count,false);
+            if count==29 { r.game.resolve_selection(0,crate::card_choice_page::CARD_CHOICE_NEXT).unwrap(); }
+            assert!(resolve_next(&r.game,&row(true),0).is_err(),"boolean cannot choose among {count} physical cards");
         }
     }
 }
