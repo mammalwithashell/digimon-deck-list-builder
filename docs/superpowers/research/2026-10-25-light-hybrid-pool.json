@@ -1,5 +1,5 @@
 {
-  "status": "prepared_waiting_for_model_strategy",
+  "status": "fresh_restart_authorized_building",
   "main_revision": "054a06b12",
   "archetypes": 13,
   "distinct_lists": 21,
@@ -17,7 +17,7 @@
   "fresh_replay": true,
   "evaluation_games_per_archetype_per_anchor": 200,
   "evaluation_total_per_checkpoint": 5200,
-  "model_strategy": null,
+  "model_strategy": "fresh initialization on schema 2; no inherited weights or replay",
   "old_checkpoint_preserved": true,
   "required_contract": {
     "observation_profile": "standard_lite_v2",
@@ -137,5 +137,7 @@
     "accepted": false,
     "reason": "Incompatible model contract: feature_schema_version, tensor_size, tensor_layout_hash, action_schema_version"
   },
-  "admission_runtime": "Isolated final main wheel in C:/Users/james/.codex/build-targets/light-hybrid-training-venv; combined-image runtime verification still required"
+  "admission_runtime": "Isolated final main wheel in C:/Users/james/.codex/build-targets/light-hybrid-training-venv; combined-image runtime verification still required",
+  "seed_bootstrap_games": 400,
+  "image_ci_run": 40216231750
 }
