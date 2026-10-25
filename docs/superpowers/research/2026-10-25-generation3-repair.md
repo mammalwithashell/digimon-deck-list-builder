@@ -41,6 +41,14 @@ that every possible training loop has been eliminated.
 
 ## Continuation contract
 
+The plan below describes the validated schema-1 continuation image. It has
+not been started. The subsequent merge of main at `054a06b12` admits the saved
+Light Hybrid list but changes the active model contract to 9,434 observations
+and action schema 2. Checkpoint 2 is rejected by that contract. The new
+13-archetype pool and two 1,100-game generation plan are prepared in
+`2026-10-25-light-hybrid-pool.json`; restart remains pending an explicit model
+strategy. Neither the preserved checkpoint nor its metadata has been changed.
+
 `deploy_repaired_continuation.py` prepares a separate campaign from checkpoint
 2 and never mounts or copies prior-engine replay shards. Two 1,000-game
 generations finish the originally approved four updates. The first update
@@ -55,3 +63,25 @@ controller retains fail-on-truncation, no automatic restart, and no automatic
 promotion. Immutable image digest, source revision, checkpoint, inputs, and
 runtime hashes are verified before start. Linux image validation must pass
 before writing a successful parent-validation report or starting the service.
+
+## Image validation and main integration
+
+The schema-1 CPU image from commit `52750be64631e09b376491b8560513f76a0e2fe1`
+built successfully in GitHub Actions run `40213459155`. Its immutable digest is
+`sha256:3502b10431373a0538e8a970dde0b3460847879155e87e4d55c6df79869c2d96`.
+Linux preflight passed all 27 full games (the three recorded failing seeds plus
+24 additional games), with the preserved checkpoint and unchanged 320/4/4
+search settings. No game crashed or reached the decision cap. The old-image
+control failed the orphan-choice check as expected. This evidence applies to
+that image, not to a new image incorporating Light Hybrid.
+
+After merging main, the three recorded-prefix regressions, all 206 Light
+Hybrid behavioral tests, and 182 mask/observation tests pass. Main-wheel
+contract and owned-choice binding checks also pass (32 Python tests), and
+all 13 tier-0 checks pass. Game 340's two archived source choices are
+translated to schema-2 page actions by their recorded owner, carrier, source
+position, and printed card ID. The original action IDs remain in the fixture;
+the test requires exactly one matching physical choice. The opt-in frozen
+checkpoint search test now requires a compatible current-contract model.
+Historical exact-checkpoint search evidence remains tied to the schema-1
+revision above.

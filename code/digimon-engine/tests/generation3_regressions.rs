@@ -53,7 +53,37 @@ fn replay(id: u64, count: usize) -> (HeadlessRunner, serde_json::Value) {
         .enumerate()
     {
         let p = s["player"].as_u64().unwrap() as u8;
-        let a = s["action"].as_u64().unwrap() as u16;
+        let mut a = s["action"].as_u64().unwrap() as u16;
+        // The archived schema-1 actions at decisions 61/83 encoded a physical
+        // source slot. Schema 2 presents that same pinned card as a page row.
+        // Evidence records the owner/carrier/position/printed identity; never
+        // substitute an arbitrary legal action just to make a replay pass.
+        if let Some(choice) = s.get("physical_choice") {
+            use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+            let owner = r
+                .game
+                .pending_selection
+                .as_ref()
+                .unwrap()
+                .card_choice
+                .as_ref()
+                .unwrap();
+            let matches: Vec<_> = owner
+                .view(&r.game, p)
+                .rows
+                .into_iter()
+                .filter(|row| {
+                    matches!(row.operation, CardChoiceOperation::CommitCard)
+                        && matches!(row.zone, Some(CardChoiceZone::BattleSource))
+                        && row.owner == Some(choice["owner"].as_u64().unwrap() as u8)
+                        && row.carrier_slot == Some(choice["carrier_slot"].as_u64().unwrap() as u8)
+                        && row.position.as_deref() == choice["position"].as_str()
+                        && row.card_id.as_deref() == choice["card_id"].as_str()
+                })
+                .collect();
+            assert_eq!(matches.len(), 1, "one exact physical replay choice at {i}");
+            a = matches[0].action_id;
+        }
         assert_eq!(decision_player(&r.game), p, "actor at {i}");
         assert!(
             build_action_mask(&r.game, p)[a as usize] > 0.0,
@@ -158,8 +188,8 @@ fn generation3_game340_search_continuation_does_not_panic() {
 }
 
 #[test]
-#[ignore = "requires the frozen cloud checkpoint supplied by GEN3_MODEL"]
-fn generation3_game340_frozen_checkpoint_search() {
+#[ignore = "requires a current-contract model supplied by GEN3_MODEL; original schema-1 checkpoint is incompatible"]
+fn generation3_game340_explicit_checkpoint_search() {
     let (r, c) = replay(340, 111);
     let registry = CardRegistry::from_cards(
         &CardData::load_from_str(

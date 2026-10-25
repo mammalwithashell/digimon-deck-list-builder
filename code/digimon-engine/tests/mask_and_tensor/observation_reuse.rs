@@ -199,6 +199,7 @@ fn pending_selection_mask_reuse_preserves_both_observers() {
         is_optional: true,
         prompt: "choose".into(),
         effect_choices: None,
+        card_choice: None,
         source_card: r.game.players[0].battle_area[0].top_card().handle(),
         source_permanent: Some(handle),
         source_kind: EffectSourceKind::Digimon,

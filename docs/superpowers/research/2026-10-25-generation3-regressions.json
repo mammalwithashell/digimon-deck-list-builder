@@ -884,7 +884,15 @@
         },
         {
           "player": 1,
-          "action": 2000
+          "action": 2000,
+          "physical_choice": {
+            "zone": "battle_source",
+            "owner": 1,
+            "carrier_slot": 0,
+            "position": "0",
+            "card_id": "EX12-026",
+            "evidence": "Captured from immutable repaired schema-1 image 3502b104 before action 2000; mapped to schema-2 owned physical row without changing the selected card."
+          }
         },
         {
           "player": 1,
@@ -972,7 +980,15 @@
         },
         {
           "player": 1,
-          "action": 2001
+          "action": 2001,
+          "physical_choice": {
+            "zone": "battle_source",
+            "owner": 1,
+            "carrier_slot": 0,
+            "position": "1",
+            "card_id": "EX12-046",
+            "evidence": "Captured from immutable repaired schema-1 image 3502b104 before action 2001; mapped to schema-2 owned physical row without changing the selected card."
+          }
         },
         {
           "player": 1,
