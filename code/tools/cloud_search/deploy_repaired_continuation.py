@@ -72,6 +72,7 @@ def main():
             for p in directory.iterdir() if p.is_file()}
         plan = dict(generations=2, games=1000, workers=8, seed=40261025, image=args.image,
             files=inputs, runtime_files=runtime, controller_commit=args.commit,
+            deployment_script_sha256=sha256(Path(__file__)),
             parent_run='english-meta-pets-4x1000-20261025', parent_checkpoint=2,
             replay_window=3, replay_cap_games=1000, fresh_replay=True,
             evaluation_games_per_archetype_per_anchor=200)
@@ -81,7 +82,8 @@ def main():
             ci_run=args.ci_run, parent_run=plan['parent_run'], parent_checkpoint=2, inputs=inputs,
             generation=dict(games=1000, generations=2, simulations=320, worlds=4,
                 evaluation_batch_size=4, workers=8, replay_window=3, replay_cap_games=1000,
-                archetype_count=12, fresh_replay=True))
+                archetype_count=12, fresh_replay=True, parent_run=plan['parent_run'],
+                parent_checkpoint=2, parent_checkpoint_sha256=report['checkpoint_sha256']))
         (root / 'deployment-plan.json').write_text(json.dumps(legacy, indent=2))
         (root / 'experiment_state.json').write_text(json.dumps(dict(stage='prepared', generation_index=0)))
     plan = json.loads((root / 'campaign-plan.json').read_text())
