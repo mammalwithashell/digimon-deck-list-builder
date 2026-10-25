@@ -157,7 +157,8 @@ def balanced_deck_pairs(deck_pool, games_per_archetype: int, seed: int):
 
 
 def play_matchup(agent_model, opponent_fn, deck_pool, n: int, base_seed: int,
-                 tensor_profile: str, collector=None, anchor_name="", games_per_archetype=None) -> MatchRecord:
+                 tensor_profile: str, collector=None, anchor_name="", games_per_archetype=None,
+                 on_progress=None) -> MatchRecord:
     """Play ``n`` seat-balanced games of ``agent_model`` vs ``opponent_fn``.
     Decks are sampled from ``deck_pool`` (both seats) with a seeded RNG; the
     first player alternates each game. Returns an agent-perspective record."""
@@ -176,8 +177,14 @@ def play_matchup(agent_model, opponent_fn, deck_pool, n: int, base_seed: int,
                 agent_archetype=first.archetype_name, opponent_archetype=second.archetype_name,
                 agent_deck_id=first.deck_id, opponent_deck_id=second.deck_id)
             extra["collector"] = collector
+        progress = dict(anchor=anchor_name, archetype=first.archetype_name,
+                        opponent_archetype=second.archetype_name, index=i)
+        if on_progress is not None:
+            on_progress(dict(progress, event="game_started"))
         winner = play_one(agent_model, opponent_fn, d1, d2,
                           _seat_balanced_seed(base_seed, i), tensor_profile, **extra)
+        if on_progress is not None:
+            on_progress(dict(progress, event="game_completed"))
         if winner == 1:
             rec.wins += 1
         elif winner == 2:
@@ -198,6 +205,7 @@ def evaluate_against_anchors(
     include_greedy: bool = True,
     collector=None,
     games_per_archetype=None,
+    on_progress=None,
 ) -> Dict[str, MatchRecord]:
     """Score ``candidate_model`` against greedy plus every layout-compatible
     champion in ``registry``, seat-balanced. Returns ``{anchor_name: record}``.
@@ -207,6 +215,8 @@ def evaluate_against_anchors(
         extra = {"collector": collector, "anchor_name": name} if collector is not None else {}
         if games_per_archetype is not None:
             extra["games_per_archetype"] = games_per_archetype
+        if on_progress is not None:
+            extra.update(on_progress=on_progress, anchor_name=name)
         return extra
     if include_greedy:
         results["greedy"] = play_matchup(

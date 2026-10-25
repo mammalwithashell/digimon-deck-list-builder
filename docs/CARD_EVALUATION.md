@@ -153,3 +153,69 @@ a time. Failures and timeouts are recorded outside training; restart and retry
 state are persistent. The separate W&B monitor uploads atomic reports as Tables
 and `card-evaluation` artifacts, retaining failed uploads for retry. Training
 search quality is unchanged, although concurrent evaluation consumes some CPU.
+
+## Live experiment dashboard
+
+`code/tools/training_dashboard.py` combines experiment progress with the existing
+card reports. It is a read-only local view: search throughput and collection ETA,
+saved checkpoints, fixed-opponent results, paired seed intervals, per-archetype
+outcomes, and candidate card/entry-route metrics. It does not control training.
+The older card-report dashboard remains available for inspecting individual
+local or W&B artifacts.
+
+Install the existing optional `dashboard` dependencies and put `code` on
+`PYTHONPATH`. Create a local, gitignored configuration such as
+`runs/training-dashboard/config.json`:
+
+```json
+{
+  "host": "USER@TRAINING_HOST",
+  "identity_file": "/path/to/ssh/key",
+  "root": "/opt/digimon-search/EXPERIMENT",
+  "cards_json": "/path/to/checkout/data/cards.json"
+}
+```
+
+Omit `host` and `identity_file` for a local experiment directory. The collector
+supports seed-comparison roots and the standalone experiment layout. Start these
+as separate processes from the checkout:
+
+```text
+python -m tools.cloud_search.sync_dashboard --config runs/training-dashboard/config.json --out runs/training-dashboard
+python -m streamlit run code/tools/training_dashboard.py --server.address 127.0.0.1 --server.port 8501 --server.headless true
+```
+
+Open `http://127.0.0.1:8501`. Set `DIGIMON_DASHBOARD_CACHE` if the cache lives
+elsewhere. The sync process reads through SSH every 60 seconds; the UI rereads
+the local cache every 30 seconds. `--once` performs one refresh when a continuous
+sync worker is not running; a lock prevents competing writers. These processes
+must remain running and do not automatically restart after a machine reboot.
+No W&B token is needed: run links come from the experiment's monitor metadata.
+
+Reports are reduced remotely once per file signature, then cached locally.
+Deleted/archived reports are removed, unreadable reports are flagged, and failed
+refreshes preserve the last snapshot with a stale-data warning. Completed windows
+are selected once per seed/checkpoint/panel; resume archives never contribute.
+Win rates use actual game outcomes. DNA denominators use exact lists with
+printed DNA targets; held-out eligibility is unmeasured unless the local card
+catalog matches the frozen experiment's hash. Effect-only DNA is not inferred.
+Search throughput counts commits in the current scheduler invocation, excluding
+games retained from an earlier invocation; unavailable event logs suppress ETA.
+
+New `anchored_eval_cli` processes write a five-second evaluation heartbeat next
+to their card-report directory (`<panel>-progress.json`), or to `--progress-path`.
+It records completed games, current matchup and a bounded panel ETA without
+changing game seeds, masks, policies or search settings. Output failures are
+logged without failing evaluation. Existing images need rebuilding to emit it;
+older runs show completed-panel counts only. A saved model is not evidence that
+its evaluation is complete, and collection ETA excludes fitting and evaluation.
+
+For a compact status response without opening the UI:
+
+```text
+python -m tools.cloud_search.dashboard_snapshot --cache runs/training-dashboard --summary
+```
+
+Read `sync_status.json` too, to distinguish a recent snapshot from a failed
+refresh. The personal `digimon-training-monitor` Codex skill uses this interface
+and the evidence rules above; install it separately from the repository.

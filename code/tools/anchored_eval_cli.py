@@ -103,6 +103,7 @@ def main() -> None:
     ap.add_argument("--eval-window", type=int, default=0)
     ap.add_argument("--eval-panel", default="validation")
     ap.add_argument("--eval-context", type=Path, help="extra scheduling provenance JSON")
+    ap.add_argument("--progress-path", type=Path, help="optional live evaluation heartbeat JSON")
     ap.add_argument("--deck-pool-snapshot", default=None,
                     help="frozen deck_pool_snapshot.json (preferred — reproducible, "
                          "and the exact decks a run trained on)")
@@ -162,6 +163,13 @@ def main() -> None:
             anchor_model_hashes={champ.name: hashlib.sha256(Path(champ.weights_path).read_bytes()).hexdigest()
                 for champ in registry.compatible(lhash)},
             deterministic=True, status="running")
+    progress = None
+    progress_path = args.progress_path or (args.card_eval_dir.parent / f"{args.eval_panel}-progress.json" if args.card_eval_dir else None)
+    if progress_path:
+        from tools.cloud_search.eval_progress import EvaluationProgress
+        progress = EvaluationProgress(progress_path,
+            total=args.n*(int(not args.no_greedy) + len(registry.compatible(lhash))),
+            panel=args.eval_panel, checkpoint=args.checkpoint_step)
     try:
         results = evaluate_against_anchors(
             candidate, lhash, registry, pool,
@@ -169,12 +177,17 @@ def main() -> None:
             include_greedy=not args.no_greedy,
             **({"games_per_archetype": args.games_per_archetype} if args.games_per_archetype is not None else {}),
             **({"collector": collector} if collector is not None else {}),
+            **({"on_progress": progress.event} if progress is not None else {}),
         )
         if collector is not None:
             collector.provenance["status"] = "complete"
+        if progress is not None:
+            progress.finish("complete")
     except BaseException as error:
         if collector is not None:
             collector.provenance.update(status="failed", error=str(error))
+        if progress is not None:
+            progress.finish("failed", error)
         raise
     finally:
         if collector is not None:

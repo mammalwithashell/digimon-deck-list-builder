@@ -1345,3 +1345,9 @@ into an altered corpus, or fit from partial outputs. DNA denominators are exact
 lists containing printed DNA targets, not archetype names. Per-action net hand
 changes are available; gross draw/search/retrieval counts remain unmeasured
 where native events do not distinguish them.
+
+For a live, read-only local dashboard of progress, checkpoint comparisons and
+card behavior, see [Live experiment dashboard](CARD_EVALUATION.md#live-experiment-dashboard).
+Its SSH collector caches compact summaries and never starts or stops training.
+The dashboard distinguishes stale observations, saved models, completed
+evaluation panels and per-game progress (when supported by the deployed image).
