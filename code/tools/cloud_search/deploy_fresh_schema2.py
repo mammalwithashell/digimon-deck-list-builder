@@ -47,6 +47,7 @@ def main():
             or not any(c['label'] == 'light-hybrid' and c['games'] >= 4
                        for c in report.get('native', []))
             or initialization.get('inherited_weights') is not False
+            or initialization.get('image') != args.image
             or initialization.get('seed_sha256') != sha256(parent / 'model.zip')
             or sha256(source / 'inputs/seed.zip') != sha256(parent / 'model.zip')):
         raise ValueError('Validation does not bind this image and checkpoint')
@@ -92,6 +93,11 @@ def main():
             evaluation_games_per_archetype_per_anchor=200)
         (root / 'campaign-plan.json').write_text(json.dumps(plan, indent=2))
         legacy = json.loads((old / 'deployment-plan.json').read_text())
+        # Old host identity is useful; old source/archive evidence is not the
+        # provenance of a newly initialized model and must not survive by accident.
+        for key in ('source_archive_sha256', 'controller_sha256', 'preflight',
+                    'parent_run', 'parent_checkpoint', 'source_commit'):
+            legacy.pop(key, None)
         legacy.update(image=args.image, image_source_commit=args.commit, controller_commit=args.commit,
             ci_run=args.ci_run, initialization=plan['initialization'], inherited_weights=False, inputs=inputs,
             generation=dict(games=1100, generations=2, simulations=320, worlds=4,

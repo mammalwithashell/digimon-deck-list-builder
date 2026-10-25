@@ -2,6 +2,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import shutil
 
@@ -47,6 +48,8 @@ def main():
     anchors['champions'][0]['weights_path'] = '/experiment/inputs/seed.zip'
     (inputs / 'anchors.json').write_text(json.dumps(anchors, indent=2))
     evidence = dict(initialization='fresh', inherited_weights=False, contract=contract,
+        image=os.environ['DIGIMON_DEPLOYED_IMAGE'],
+        initializer_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         initialization_seed=50261025, bootstrap_games=400, bootstrap_truncated_games=0,
         bootstrap_rows=sum(s['rows'] for s in manifest['shards']),
         seed_sha256=hashlib.sha256((inputs / 'seed.zip').read_bytes()).hexdigest())
