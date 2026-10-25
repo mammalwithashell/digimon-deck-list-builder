@@ -48,11 +48,11 @@ impl Game {
             return 0.0;
         };
         let is_under = source_index + 1 < stack_size;
-        let card_id = source.card_id(&self.card_data).to_string();
-        let Some(impl_) = self.effect_registry.get(&card_id) else {
+        let Some(effects) =
+            self.registry_effects(source.card_id(&self.card_data), source.handle())
+        else {
             return 0.0;
         };
-        let effects = impl_.effects(source.handle());
 
         let (total, used) = Self::source_opt_counts(permanent, source.handle(), is_under, &effects);
         let available = total - used;

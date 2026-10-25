@@ -15,20 +15,34 @@ from tools.selfplay_scheduler import _read_commit, atomic_json, controller_lock,
 
 REMOTE_INDEX = r'''
 from pathlib import Path
-import hashlib,json,tarfile
+import hashlib,json,os,tarfile,time,zipfile
 root=Path('/opt/digimon-search/experiment')
 chunks=sorted(str(p.parent.relative_to(root/'generation')) for p in (root/'generation').glob('gen*/shards/proc*/chunk_commit.json'))
-archive=root.parent/'checkpoint-backup.tar.gz'
-with tarfile.open(archive,'w:gz') as out:
-    for p in root.rglob('*'):
-        rel=p.relative_to(root)
-        if not p.is_file() or p.is_symlink(): continue
-        if 'attempts' in rel.parts or p.suffix=='.npy' or p.name.endswith('.tmp'): continue
-        out.add(p,arcname=str(rel),recursive=False)
 state=json.loads((root/'experiment_state.json').read_text()) if (root/'experiment_state.json').exists() else {'stage':'pending'}
-print(json.dumps({'chunks':chunks,'state':state,'archive_sha256':hashlib.sha256(archive.read_bytes()).hexdigest()}))
+files=[p for p in sorted(root.rglob('*')) if p.is_file() and not p.is_symlink()
+       and 'attempts' not in p.relative_to(root).parts and p.suffix!='.npy' and not p.name.endswith('.tmp')]
+# Checkpoints are written in place (SB3 save), not atomically: archive only
+# zips that are quiet for a minute and pass a CRC check, else skip the round.
+unstable=[]
+now=time.time()
+for p in files:
+    if p.suffix!='.zip': continue
+    try:
+        with zipfile.ZipFile(p) as z:
+            ok=now-p.stat().st_mtime>=60 and z.testzip() is None
+    except (zipfile.BadZipFile,OSError):
+        ok=False
+    if not ok: unstable.append(p.relative_to(root).as_posix())
+archive=root.parent/'checkpoint-backup.tar.gz'
+digest=None
+if not unstable:
+    partial=archive.with_name(archive.name+'.partial')
+    with tarfile.open(partial,'w:gz') as out:
+        for p in files: out.add(p,arcname=p.relative_to(root).as_posix(),recursive=False)
+    os.replace(partial,archive)
+    digest=hashlib.sha256(archive.read_bytes()).hexdigest()
+print(json.dumps({'chunks':chunks,'state':state,'archive_sha256':digest,'unstable':unstable}))
 '''
-
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -57,11 +71,18 @@ def main():
                     saved = json.loads((temporary / "chunk_commit.json").read_text())
                     _read_commit(temporary, saved["game_start"], saved["games"], saved["seed"])
                     temporary.rename(target)
-                temporary = args.out / "checkpoint-backup.tar.gz.partial"
-                subprocess.run(scp + [f"{args.host}:/opt/digimon-search/checkpoint-backup.tar.gz", str(temporary)], check=True, timeout=300)
-                if sha256(temporary) != index["archive_sha256"]:
-                    raise ValueError("Checkpoint archive transfer hash mismatch")
-                temporary.replace(args.out / "checkpoint-backup.tar.gz")
+                if index["unstable"]:
+                    # Keep the last good archive; retry once the writes settle.
+                    print(f"Checkpoint archive skipped; still being written: {index['unstable']}", flush=True)
+                else:
+                    temporary = args.out / "checkpoint-backup.tar.gz.partial"
+                    subprocess.run(scp + [f"{args.host}:/opt/digimon-search/checkpoint-backup.tar.gz", str(temporary)], check=True, timeout=300)
+                    if sha256(temporary) != index["archive_sha256"]:
+                        raise ValueError("Checkpoint archive transfer hash mismatch")
+                    current = args.out / "checkpoint-backup.tar.gz"
+                    if current.exists():
+                        current.replace(args.out / "checkpoint-backup.previous.tar.gz")
+                    temporary.replace(current)
                 atomic_json(args.out / "backup_status.json", {"time_unix": time.time(), **index})
                 print(json.dumps({"time_unix": time.time(), "chunks_backed_up": len(index["chunks"]), "state": index["state"]}), flush=True)
                 if not args.watch or index["state"]["stage"] in ("complete", "failed"):

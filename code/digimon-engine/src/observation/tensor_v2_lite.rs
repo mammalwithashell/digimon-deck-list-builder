@@ -201,10 +201,10 @@ fn write_stack_effect_features(
         if !disclose_totals && !visible_row {
             continue;
         }
-        let Some(implementation) = game.effect_registry.get(source.card_id(&game.card_data)) else {
+        let Some(effects) = game.registry_effects(source.card_id(&game.card_data), source.handle())
+        else {
             continue;
         };
-        let effects = implementation.effects(source.handle());
         let (source_total, source_used) = Game::source_opt_counts(
             permanent,
             source.handle(),

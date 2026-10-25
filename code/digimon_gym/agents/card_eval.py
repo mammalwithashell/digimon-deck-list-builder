@@ -205,12 +205,16 @@ def save_report(report: dict, directory: Path) -> Path:
     return path
 
 
-def publish_report(report: dict, path: Path, run=None, *, step=None, wait=False):
+def publish_report(report: dict, path: Path, run=None, *, step=None, wait=False,
+                   skip_artifact=False, on_artifact_logged=None):
     """Version each checkpoint artifact, and log queryable card/route tables.
 
     PPO leaves the W&B step implicit because TensorBoard sync owns that clock.
     A standalone monitor can supply its own step and wait for artifact upload.
     Returns True on publication; failure retains the local report for retry.
+    A caller retrying after the artifact was already logged passes
+    ``skip_artifact`` (``on_artifact_logged`` reports that point) so a retry
+    never creates a second artifact version for the same report.
     """
     try:
         import wandb
@@ -243,9 +247,12 @@ def publish_report(report: dict, path: Path, run=None, *, step=None, wait=False)
                 payload[f"card_eval/{name}"] = table
                 if provenance.get("panel"):
                     payload[f"card_eval/{provenance['panel']}/{name}"] = table
-        logged = run.log_artifact(artifact, aliases=["latest", f"step-{report['checkpoint_step']}-{report['window_id']}"])
-        if wait:
-            logged.wait()
+        if not skip_artifact:
+            logged = run.log_artifact(artifact, aliases=["latest", f"step-{report['checkpoint_step']}-{report['window_id']}"])
+            if wait:
+                logged.wait()
+            if on_artifact_logged is not None:
+                on_artifact_logged()
         run.log(payload, **({"step": step} if step is not None else {}))
         return True
     except Exception:

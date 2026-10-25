@@ -23,22 +23,39 @@ def read_json(path):
         return {}
 
 
-def checkpoints(root, now, stable_seconds=60):
+# A checkpoint whose evaluation fails is retried this many times in total
+# before it is marked attempted, so one bad file cannot block the schedule.
+MAX_ATTEMPTS = 3
+
+
+def checkpoints(root, now, stable_seconds=60, cache=None):
+    """Stable, CRC-valid checkpoints. ``cache`` maps path -> (size, mtime_ns,
+    sha256) so unchanged files are not re-read on every poll."""
+    cache = {} if cache is None else cache
     result = [(0, root / "inputs/seed.zip")]
     for directory in (root / "generation").glob("gen*"):
         if directory.name[3:].isdigit():
             result.append((int(directory.name[3:]) + 1, directory / "model.zip"))
     ready = []
     for step, path in sorted(result):
-        if not path.exists() or now - path.stat().st_mtime < stable_seconds:
+        if not path.exists():
             continue
-        try:
-            with zipfile.ZipFile(path) as archive:
-                if archive.testzip() is not None:
-                    continue
-        except (zipfile.BadZipFile, OSError):
+        stat = path.stat()
+        if now - stat.st_mtime < stable_seconds:
             continue
-        ready.append({"step": step, "path": str(path), "sha256": sha256(path)})
+        cached = cache.get(str(path))
+        if cached and cached[:2] == (stat.st_size, stat.st_mtime_ns):
+            digest = cached[2]
+        else:
+            try:
+                with zipfile.ZipFile(path) as archive:
+                    if archive.testzip() is not None:
+                        continue
+            except (zipfile.BadZipFile, OSError):
+                continue
+            digest = sha256(path)
+            cache[str(path)] = (stat.st_size, stat.st_mtime_ns, digest)
+        ready.append({"step": step, "path": str(path), "sha256": digest})
     return ready
 
 
@@ -63,6 +80,22 @@ def advance_generation(state, index):
         # Keep unique report IDs and checkpoint history across continuation,
         # but re-evaluate the active checkpoint on the newly deployed engine.
         state.update(generation_index=index, final_attempted=False, next_due_unix=0)
+
+
+def record_result(state, checkpoint, reason, result):
+    """Fold one window's result into the schedule state. A failed checkpoint
+    stays due as ``new_checkpoint`` until it has failed MAX_ATTEMPTS times."""
+    digest = checkpoint["sha256"]
+    failures = state.setdefault("failures", {})
+    if result["status"] == "complete":
+        failures.pop(digest, None)
+    else:
+        failures[digest] = failures.get(digest, 0) + 1
+    attempted = state.setdefault("attempted", [])
+    if digest not in attempted and (result["status"] == "complete" or failures[digest] >= MAX_ATTEMPTS):
+        attempted.append(digest)
+    if reason == "final":
+        state["final_attempted"] = True
 
 
 def evaluate_window(root, out, checkpoint, window, reason, args):
@@ -129,6 +162,7 @@ def main():
     with controller_lock(args.out / "worker.lock"):
         state_path = args.out / "schedule.json"
         state = read_json(state_path)
+        hash_cache = {}
         # Reserve window IDs before launching, so interrupted runs are retained.
         while True:
             now = time.time()
@@ -136,7 +170,7 @@ def main():
             pipeline = pipeline_state.get("stage")
             advance_generation(state, pipeline_state.get('generation_index', 0))
             terminal = pipeline in ("complete", "failed")
-            due = due_checkpoint(checkpoints(args.root, now), state, now, args.interval_seconds, terminal)
+            due = due_checkpoint(checkpoints(args.root, now, cache=hash_cache), state, now, args.interval_seconds, terminal)
             if due:
                 checkpoint, reason = due
                 window = state.get("next_window", 0)
@@ -148,9 +182,7 @@ def main():
                     result = evaluate_window(args.root, args.out, checkpoint, window, reason, args)
                 except Exception as error:
                     result = dict(status="failed", window=window, error=str(error), time_unix=time.time())
-                state.setdefault("attempted", []).append(checkpoint["sha256"])
-                if reason == "final":
-                    state["final_attempted"] = True
+                record_result(state, checkpoint, reason, result)
                 state.update(last_result=result, next_due_unix=time.time() + args.interval_seconds)
                 atomic_json(state_path, state)
                 atomic_json(args.out / "status.json", dict(result, worker_status="waiting"))

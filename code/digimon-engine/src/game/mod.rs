@@ -435,6 +435,14 @@ pub struct EffectsCache(
             Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
         >,
     >,
+    /// Registry-only memo for [`Game::registry_effects`]: `CardEffect::effects`
+    /// is a pure function of `(card, handle)`, so no invalidation is needed.
+    std::cell::RefCell<
+        std::collections::HashMap<
+            (usize, crate::card_source::CardHandle),
+            Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
+        >,
+    >,
 );
 
 impl std::fmt::Debug for EffectsCache {
@@ -3901,6 +3909,32 @@ impl Game {
         built
     }
 
+    /// Memoized `effect_registry.get(card_id).effects(handle)`: the registry
+    /// list alone, WITHOUT the keyword auto-effects `effects_for_card` appends.
+    /// For per-source OPT / DP queries (observation tensor) whose counts and
+    /// slot keys are defined over the registry list.
+    pub(crate) fn registry_effects(
+        &self,
+        card_id: &str,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        let build = || {
+            self.effect_registry
+                .get(card_id)
+                .map(|impl_| std::sync::Arc::new(impl_.effects(handle)))
+        };
+        let Some(&data_index) = self.card_id_index.get(card_id) else {
+            return build();
+        };
+        let key = (data_index, handle);
+        if let Some(cached) = self.effects_cache.1.borrow().get(&key) {
+            return cached.clone();
+        }
+        let built = build();
+        self.effects_cache.1.borrow_mut().insert(key, built.clone());
+        built
+    }
+
     /// Owned, un-memoized variant of [`Game::effects_for_card`] for the few
     /// callers that mutate the returned vec (`game_actions/cost.rs`,
     /// `game_actions/options.rs`). Rebuilds every call — acceptable because
@@ -4234,11 +4268,11 @@ impl Game {
         let mut used = 0u32;
         for (source_index, source) in permanent.card_sources.iter().enumerate() {
             let is_under = source_index + 1 < stack_size;
-            let card_id = source.card_id(&self.card_data).to_string();
-            let Some(impl_) = self.effect_registry.get(&card_id) else {
+            let Some(effects) =
+                self.registry_effects(source.card_id(&self.card_data), source.handle())
+            else {
                 continue;
             };
-            let effects = impl_.effects(source.handle());
             let counts = Self::source_opt_counts(permanent, source.handle(), is_under, &effects);
             total += counts.0;
             used += counts.1;

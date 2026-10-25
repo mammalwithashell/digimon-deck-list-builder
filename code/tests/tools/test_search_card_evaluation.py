@@ -24,6 +24,41 @@ def test_schedule_baseline_interval_new_model_and_restart():
     assert worker.due_checkpoint([first, second], state, 99999, 7200, True) is None
 
 
+def test_failed_checkpoint_is_retried_until_the_attempt_cap():
+    first = {"step": 0, "sha256": "a"}
+    second = {"step": 1, "sha256": "b"}
+    state = {}
+    for attempt in range(worker.MAX_ATTEMPTS):
+        assert worker.due_checkpoint([first, second], state, 0, 7200) == (first, "new_checkpoint")
+        worker.record_result(state, first, "new_checkpoint", {"status": "failed"})
+    # Capped: the schedule moves on instead of retrying one bad file forever.
+    assert state["failures"]["a"] == worker.MAX_ATTEMPTS
+    assert worker.due_checkpoint([first, second], state, 0, 7200) == (second, "new_checkpoint")
+    worker.record_result(state, second, "new_checkpoint", {"status": "failed"})
+    worker.record_result(state, second, "new_checkpoint", {"status": "complete"})
+    assert state["attempted"] == ["a", "b"] and "b" not in state["failures"]
+
+
+def test_unchanged_checkpoint_is_not_rehashed(tmp_path, monkeypatch):
+    path = tmp_path / "inputs/seed.zip"
+    path.parent.mkdir()
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("weights", "ready")
+    cache, hashed = {}, []
+    real = worker.sha256
+    monkeypatch.setattr(worker, "sha256", lambda p: hashed.append(p) or real(p))
+    now = path.stat().st_mtime + 100
+    first = worker.checkpoints(tmp_path, now, cache=cache)
+    assert worker.checkpoints(tmp_path, now, cache=cache) == first
+    assert len(hashed) == 1
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("weights", "changed!")
+    import os
+    os.utime(path, ns=(path.stat().st_atime_ns, path.stat().st_mtime_ns + 10**9))
+    assert worker.checkpoints(tmp_path, now + 10, cache=cache)[0]["sha256"] != first[0]["sha256"]
+    assert len(hashed) == 2
+
+
 def test_partial_checkpoint_is_not_evaluated(tmp_path):
     path = tmp_path / "inputs/seed.zip"
     path.parent.mkdir()
@@ -128,7 +163,7 @@ def test_monitor_retries_card_artifact_without_step_collision(tmp_path, monkeypa
         def finish(self, **kw): pass
     monkeypatch.setattr(wandb, "init", lambda **kwargs: Run())
     success = [False]
-    def publish(report, path, run, step, wait):
+    def publish(report, path, run, step, wait, **kwargs):
         assert wait
         published.append(step)
         return success[0]
@@ -143,3 +178,36 @@ def test_monitor_retries_card_artifact_without_step_collision(tmp_path, monkeypa
     assert published == [1, 1]  # failed attempt retried; successful report deduplicated
     assert logged == [0, 2, 3]
     assert len([r for r in wandb_monitor.recover_spool(state / "metrics.jsonl") if "card_report" in r]) == 1
+
+
+def test_monitor_retry_after_logged_artifact_skips_a_second_version(tmp_path, monkeypatch):
+    import sys
+    import wandb
+    from tools.cloud_search import wandb_monitor
+    from digimon_gym.agents import card_eval
+    root, state, cards = tmp_path / "experiment", tmp_path / "monitor", tmp_path / "cards"
+    root.mkdir()
+    path = cards / "window-000000/reports/checkpoint_0_id.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"window_id": "id"}))
+    class Run:
+        step, url, id = 0, "https://example.test/run", "test"
+        summary = {}
+        def define_metric(self, *a, **kw): pass
+        def log(self, payload, step): pass
+        def finish(self, **kw): pass
+    monkeypatch.setattr(wandb, "init", lambda **kwargs: Run())
+    calls = []
+    def publish(report, path, run, step, wait, skip_artifact, on_artifact_logged):
+        calls.append(skip_artifact)
+        if not skip_artifact:
+            on_artifact_logged()
+        return len(calls) > 1  # first call: artifact logged, then the table log fails
+    monkeypatch.setattr(card_eval, "publish_report", publish)
+    monkeypatch.setattr(sys, "argv", ["monitor", "--root", str(root), "--state-dir", str(state),
+        "--card-eval-root", str(cards), "--online", "--entity", "test", "--project", "test", "--once"])
+    wandb_monitor.main()
+    wandb_monitor.main()
+    assert calls == [False, True]
+    saved = json.loads((state / "publisher.json").read_text())
+    assert saved["uploaded"] >= 1 and saved["card_reports_uploaded"] == 1

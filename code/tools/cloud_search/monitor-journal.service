@@ -4,7 +4,10 @@ After=systemd-journald.service
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/journalctl --unit=digimon-search --follow --output=cat --no-pager --lines=all
+# Follows the experiment unit, which must be installed as digimon-search.service.
+# The cursor file resumes after the last mirrored entry, so a restart does not
+# append the whole history again (--lines=all applies only on first start).
+ExecStart=/usr/bin/journalctl --unit=digimon-search --follow --output=cat --no-pager --lines=all --cursor-file=/opt/digimon-search/monitor/journal.cursor
 StandardOutput=append:/opt/digimon-search/monitor/training.log
 Restart=on-failure
 RestartSec=30

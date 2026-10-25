@@ -2,7 +2,13 @@
 
 Mounted deployment controller; engine, trainer and dependencies come from the
 CI image. Diagnostics and health checks are never generation training data.
+
+`--resume` continues a FAILED run: inputs are re-validated, stages recorded in
+completed_stages.json are skipped, a partial diagnostic/health directory is
+moved aside (never deleted), and an unfinished generation resumes through
+run_selfplay_generation's hash-checked `--resume-selfplay`.
 """
+import argparse
 from pathlib import Path
 import hashlib
 import json
@@ -32,10 +38,36 @@ def run(*arguments):
     subprocess.run([sys.executable, *map(str, arguments)], check=True)
 
 
-def main():
-    if (ROOT / "started.json").exists():
-        raise RuntimeError("Experiment already started; investigate and resume explicitly")
-    atomic_json(ROOT / "started.json", {"time_unix": time.time()})
+def completed():
+    path = ROOT / "completed_stages.json"
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+def mark_complete(name):
+    atomic_json(ROOT / "completed_stages.json", [*completed(), name])
+
+
+def set_aside(path):
+    """Preserve a partial output so a resumed stage gets the fresh directory it requires."""
+    if path.exists():
+        path.rename(path.with_name(f"{path.name}.failed-{time.time_ns()}"))
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--resume", action="store_true", help="explicitly continue a failed run")
+    args = parser.parse_args([] if argv is None else argv)
+    if args.resume:
+        previous = json.loads((ROOT / "experiment_state.json").read_text()) if (ROOT / "experiment_state.json").exists() else {}
+        if not (ROOT / "started.json").exists() or previous.get("stage") != "failed":
+            raise RuntimeError("--resume requires a started experiment whose last stage is 'failed'")
+        atomic_json(ROOT / "resumed.json", {"time_unix": time.time(), "previous": previous,
+                                            "completed_stages": completed()})
+    else:
+        if (ROOT / "started.json").exists():
+            raise RuntimeError("Experiment already started; investigate, then rerun with --resume")
+        atomic_json(ROOT / "started.json", {"time_unix": time.time()})
+    done = completed()
     stage("input_validation")
     plan = json.loads((ROOT / "deployment-plan.json").read_text())
     for name, digest in plan["inputs"].items():
@@ -55,50 +87,64 @@ def main():
     validate_checkpoint(MaskablePPO.load(INPUTS / "seed.zip", device="cpu"), "standard_lite_v2")
     diag = ROOT / "diagnostics"
     common = ["--cli", CLI, "--model", INPUTS / "seed.onnx", "--decks", INPUTS / "decks.json", "--cards-json", APP / "data/cards.json"]
-    stage("batch_parity")
-    run(APP / "code/tools/benchmark_search_batching.py", *common, "--out", diag / "batch-parity", "--seeds", "24261024", "24261025")
-    stage("worker_scaling")
-    run(APP / "code/tools/benchmark_search_workers.py", "scale", *common, "--out", diag / "scaling", "--workers", "2", "4", "6", "8", "--games", "16", "--repeats", "2", "--chunk-games", "2", "--decision-cap", "40")
-    report = json.loads((diag / "scaling/benchmark.json").read_text())
-    if not report["all_target_arrays_equal"]:
-        raise ValueError("Worker-count target parity failed")
-    throughput = {}
-    for case in report["cases"]:
-        throughput.setdefault(case["workers"], []).append(case["positions_generated_per_second"])
-    workers = max(throughput, key=lambda n: sum(throughput[n]) / len(throughput[n]))
-    atomic_json(ROOT / "worker_selection.json", {"workers": workers, "prefix_positions_per_second": throughput, "complete_game_eta_pending": True})
-    stage("health_check", workers=workers)
-    health = []
-    for sims in (160, 320):
-        folder = ROOT / f"check-{sims}"
-        started = time.monotonic()
-        directories = run_selfplay_stage(CLI, folder, str(INPUTS / "seed.onnx"), False,
-            INPUTS / "decks.json", 100, workers, sims, 4, "pimc", 25261024, 16, 1200, 4096,
-            APP / "data/cards.json", "implemented", eval_batch_size=4, chunk_games=4,
-            worker_timeout_seconds=7200)
-        manifests = [json.loads((p / "manifest.json").read_text()) for p in directories]
-        elapsed = time.monotonic() - started
-        summary = {"simulations": sims, "games": sum(m["games"] for m in manifests),
-            "truncated_games": sum(m["truncated_games"] for m in manifests),
-            "rows": sum(m["rows"] for m in manifests), "elapsed_seconds": elapsed,
-            "games_per_hour": sum(m["games"] for m in manifests) * 3600 / elapsed}
-        atomic_json(folder / "summary.json", summary)
-        health.append(summary)
-        if summary["games"] != 100 or summary["truncated_games"] > 5:
-            raise RuntimeError(f"Expanded-pool health gate failed: {summary}")
-    atomic_json(ROOT / "health_summary.json", {"runs": health, "games": 200,
-        "generation_eta_hours": plan["generation"]["games"] / health[-1]["games_per_hour"]})
-    stage("generation", workers=workers, games=plan["generation"]["games"])
-    run(APP / "code/tools/run_selfplay_generation.py",
-        "--run-dir", ROOT / "generation", "--seed-model", INPUTS / "seed.zip",
-        "--seed-model-onnx", INPUTS / "seed.onnx", "--decks", INPUTS / "decks.json",
-        "--cli-bin", CLI, "--cards-json", APP / "data/cards.json",
-        "--generations", "1", "--games", str(plan["generation"]["games"]),
-        "--procs", str(workers), "--chunk-games", "4", "--worker-timeout-seconds", "7200",
-        "--sims", "320", "--worlds", "4", "--eval-batch-size", "4", "--decision-cap", "1200",
-        "--epochs", "2", "--batch-size", "512", "--lr", "0.0001", "--train-device", "cpu",
-        "--eval-n", "300", "--deck-pool-snapshot", INPUTS / "heldout_snapshot.json",
-        "--champions", INPUTS / "anchors.json", "--seed", "26261024")
+    if "batch_parity" not in done:
+        stage("batch_parity")
+        set_aside(diag / "batch-parity")
+        run(APP / "code/tools/benchmark_search_batching.py", *common, "--out", diag / "batch-parity", "--seeds", "24261024", "24261025")
+        mark_complete("batch_parity")
+    if "worker_scaling" not in done:
+        stage("worker_scaling")
+        set_aside(diag / "scaling")
+        run(APP / "code/tools/benchmark_search_workers.py", "scale", *common, "--out", diag / "scaling", "--workers", "2", "4", "6", "8", "--games", "16", "--repeats", "2", "--chunk-games", "2", "--decision-cap", "40")
+        report = json.loads((diag / "scaling/benchmark.json").read_text())
+        if not report["all_target_arrays_equal"]:
+            raise ValueError("Worker-count target parity failed")
+        throughput = {}
+        for case in report["cases"]:
+            throughput.setdefault(case["workers"], []).append(case["positions_generated_per_second"])
+        workers = max(throughput, key=lambda n: sum(throughput[n]) / len(throughput[n]))
+        atomic_json(ROOT / "worker_selection.json", {"workers": workers, "prefix_positions_per_second": throughput, "complete_game_eta_pending": True})
+        mark_complete("worker_scaling")
+    workers = json.loads((ROOT / "worker_selection.json").read_text())["workers"]
+    if "health_check" not in done:
+        stage("health_check", workers=workers)
+        health = []
+        for sims in (160, 320):
+            folder = ROOT / f"check-{sims}"
+            set_aside(folder)
+            started = time.monotonic()
+            directories = run_selfplay_stage(CLI, folder, str(INPUTS / "seed.onnx"), False,
+                INPUTS / "decks.json", 100, workers, sims, 4, "pimc", 25261024, 16, 1200, 4096,
+                APP / "data/cards.json", "implemented", eval_batch_size=4, chunk_games=4,
+                worker_timeout_seconds=7200)
+            manifests = [json.loads((p / "manifest.json").read_text()) for p in directories]
+            elapsed = time.monotonic() - started
+            summary = {"simulations": sims, "games": sum(m["games"] for m in manifests),
+                "truncated_games": sum(m["truncated_games"] for m in manifests),
+                "rows": sum(m["rows"] for m in manifests), "elapsed_seconds": elapsed,
+                "games_per_hour": sum(m["games"] for m in manifests) * 3600 / elapsed}
+            atomic_json(folder / "summary.json", summary)
+            health.append(summary)
+            if summary["games"] != 100 or summary["truncated_games"] > 5:
+                raise RuntimeError(f"Expanded-pool health gate failed: {summary}")
+        atomic_json(ROOT / "health_summary.json", {"runs": health, "games": 200,
+            "generation_eta_hours": plan["generation"]["games"] / health[-1]["games_per_hour"]})
+        mark_complete("health_check")
+    if "generation" not in done:
+        stage("generation", workers=workers, games=plan["generation"]["games"])
+        # An interrupted generation keeps its committed chunks; resume them.
+        resume_selfplay = ["--resume-selfplay"] if (ROOT / "generation/gen0").exists() else []
+        run(APP / "code/tools/run_selfplay_generation.py",
+            "--run-dir", ROOT / "generation", "--seed-model", INPUTS / "seed.zip",
+            "--seed-model-onnx", INPUTS / "seed.onnx", "--decks", INPUTS / "decks.json",
+            "--cli-bin", CLI, "--cards-json", APP / "data/cards.json",
+            "--generations", "1", "--games", str(plan["generation"]["games"]),
+            "--procs", str(workers), "--chunk-games", "4", "--worker-timeout-seconds", "7200",
+            "--sims", "320", "--worlds", "4", "--eval-batch-size", "4", "--decision-cap", "1200",
+            "--epochs", "2", "--batch-size", "512", "--lr", "0.0001", "--train-device", "cpu",
+            "--eval-n", "300", "--deck-pool-snapshot", INPUTS / "heldout_snapshot.json",
+            "--champions", INPUTS / "anchors.json", "--seed", "26261024", *resume_selfplay)
+        mark_complete("generation")
     stage("pet_deck_evaluation")
     with (ROOT / "pet_anchored_eval.txt").open("w") as log:
         subprocess.run([sys.executable, str(APP / "code/tools/anchored_eval_cli.py"),
@@ -106,12 +152,13 @@ def main():
             "--n", "300", "--seed", "27261024", "--device", "cpu", "--profile", "standard_lite_v2",
             "--deck-pool-snapshot", str(INPUTS / "pet_evaluation_snapshot.json")],
             stdout=log, stderr=subprocess.STDOUT, check=True)
+    mark_complete("pet_deck_evaluation")
     stage("complete", automatic_promotion=False)
 
 
 if __name__ == "__main__":
     try:
-        main()
+        main(sys.argv[1:])
     except Exception as error:
         stage("failed", error=str(error), automatic_restart=False)
         raise

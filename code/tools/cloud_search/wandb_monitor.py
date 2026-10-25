@@ -169,10 +169,18 @@ def wandb_config(root):
         "automatic_promotion": False}
 
 
-def stable_checkpoint_files(root, now, stable_seconds=60):
+def file_signature(files):
+    """Identity of a checkpoint file set by name, size and mtime (no reads)."""
+    return hashlib.sha256(json.dumps(sorted(
+        (p.name, p.stat().st_size, p.stat().st_mtime_ns) for p in files)).encode()).hexdigest()
+
+
+def stable_checkpoint_files(root, now, stable_seconds=60, skip_signatures=()):
     directory = root / "generation" / f"gen{active_generation(root)}"
     model = directory / "model.zip"
     if not model.exists() or now - model.stat().st_mtime < stable_seconds:
+        return []
+    if file_signature([model]) in skip_signatures:
         return []
     try:
         with zipfile.ZipFile(model) as archive:
@@ -205,9 +213,15 @@ def main():
         state_path = args.state_dir / "publisher.json"
         local = read_json(state_path) or {"next_seq": 0, "epochs": {}, "uploaded": -1, "artifacts": []}
         spool = args.state_dir / "metrics.jsonl"
-        if spool.exists():
-            records = recover_spool(spool)
-            local["next_seq"] = max(local["next_seq"], max((r["seq"] + 1 for r in records), default=0))
+        records = recover_spool(spool)
+        local["next_seq"] = max(local["next_seq"], max((r["seq"] + 1 for r in records), default=0))
+        # Kept in memory: the spool is parsed once at startup, then read only
+        # from the first not-yet-uploaded byte (`upload_offset`).
+        queued = {r.get("card_report") for r in records}
+        local.setdefault("upload_offset", 0)
+        local.setdefault("model_signatures", [])
+        if local["upload_offset"] > (spool.stat().st_size if spool.exists() else 0):
+            local["upload_offset"] = 0
         run = None
         if args.online:
             import wandb
@@ -236,7 +250,6 @@ def main():
                 if local["epochs"].get(key) != event:
                     payloads.append(event)
                     local["epochs"][key] = event
-            queued = {r.get("card_report") for r in recover_spool(spool)}
             with spool.open("a", encoding="utf-8") as out:
                 for payload in payloads:
                     out.write(json.dumps({"seq": local["next_seq"], "payload": payload}) + "\n")
@@ -245,6 +258,7 @@ def main():
                     if str(path) in queued:
                         continue
                     out.write(json.dumps({"seq": local["next_seq"], "card_report": str(path)}) + "\n")
+                    queued.add(str(path))
                     local["next_seq"] += 1
                 out.flush()
                 os.fsync(out.fileno())
@@ -252,26 +266,34 @@ def main():
             upload_ok = True
             if run:
                 try:
-                    for line in spool.read_text().splitlines():
-                        record = json.loads(line)
-                        if record["seq"] > local["uploaded"]:
-                            if "card_report" in record:
-                                from digimon_gym.agents.card_eval import publish_report
-                                path = Path(record["card_report"])
-                                report = read_json(path)
-                                if not report or not publish_report(report, path, run,
-                                        step=record["seq"], wait=True):
-                                    raise RuntimeError(f"Card report not uploaded: {path.name}")
-                                local["card_reports_uploaded"] = local.get("card_reports_uploaded", 0) + 1
-                            else:
-                                run.log(record["payload"], step=record["seq"])
-                            local["uploaded"] = record["seq"]
+                    with spool.open("rb") as pending:
+                        pending.seek(local["upload_offset"])
+                        for line in pending:
+                            record = json.loads(line)
+                            if record["seq"] > local["uploaded"]:
+                                if "card_report" in record:
+                                    from digimon_gym.agents.card_eval import publish_report
+                                    path = Path(record["card_report"])
+                                    report = read_json(path)
+                                    seq = record["seq"]
+                                    # A retry after a partial failure must not log
+                                    # a second artifact version for the same report.
+                                    if not report or not publish_report(report, path, run,
+                                            step=seq, wait=True,
+                                            skip_artifact=local.get("card_artifact_seq") == seq,
+                                            on_artifact_logged=lambda: local.update(card_artifact_seq=seq)):
+                                        raise RuntimeError(f"Card report not uploaded: {path.name}")
+                                    local["card_reports_uploaded"] = local.get("card_reports_uploaded", 0) + 1
+                                else:
+                                    run.log(record["payload"], step=record["seq"])
+                                local["uploaded"] = record["seq"]
+                            local["upload_offset"] += len(line)
                     run.summary["pipeline_stage"] = metrics["pipeline/stage"]
                     run.summary["per_card_metrics_available"] = local.get("card_reports_uploaded", 0) > 0
                     run.summary["card_reports_uploaded"] = local.get("card_reports_uploaded", 0)
-                    files = stable_checkpoint_files(args.root, now)
+                    files = stable_checkpoint_files(args.root, now, skip_signatures=local["model_signatures"])
                     if files:
-                        signature = hashlib.sha256(b"".join(p.name.encode() + p.read_bytes() for p in sorted(files))).hexdigest()
+                        signature = file_signature(files)
                         if signature not in local["artifacts"]:
                             artifact = wandb.Artifact(f"checkpoint-{args.run_id}", type="model",
                                 metadata={"generation": active_generation(args.root), "automatic_promotion": False})
@@ -279,6 +301,7 @@ def main():
                                 artifact.add_file(str(file), name=file.name)
                             run.log_artifact(artifact, aliases=["latest", f"generation-{active_generation(args.root)}"]).wait()
                             local["artifacts"].append(signature)
+                            local["model_signatures"].append(file_signature([args.root / "generation" / f"gen{active_generation(args.root)}" / "model.zip"]))
                 except Exception as error:
                     upload_ok = False
                     print(f"W&B upload error; durable spool retained: {type(error).__name__}: {error}", flush=True)

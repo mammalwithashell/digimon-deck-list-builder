@@ -593,11 +593,11 @@ impl Game {
             return 0;
         };
         let is_adopted = self.succession_source_indices(perm).contains(&source_index);
-        let card_id = source.card_id(&self.card_data).to_string();
-        let Some(impl_) = self.effect_registry.get(&card_id) else {
+        let Some(effects) =
+            self.registry_effects(source.card_id(&self.card_data), source.handle())
+        else {
             return 0;
         };
-        let effects = impl_.effects(source.handle());
 
         self.source_dp_from_effects(perm, source_index, is_adopted, &effects)
     }
@@ -610,8 +610,16 @@ impl Game {
         effects: &[Effect],
     ) -> i32 {
         use crate::effect_context::EffectReadContext;
-        let permanent = &self.players[perm.player as usize].battle_area[perm.index as usize];
-        let source = &permanent.card_sources[source_index];
+        let Some(permanent) = self
+            .players
+            .get(perm.player as usize)
+            .and_then(|p| p.battle_area.get(perm.index as usize))
+        else {
+            return 0;
+        };
+        let Some(source) = permanent.card_sources.get(source_index) else {
+            return 0;
+        };
         let stack_size = permanent.card_sources.len();
         let mut total = 0i32;
         for effect in effects.iter() {

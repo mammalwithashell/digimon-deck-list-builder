@@ -65,3 +65,44 @@ def test_health_gate_controls_generation(launch, monkeypatch, truncated, passes)
         with pytest.raises(RuntimeError, match="health gate failed"):
             experiment.main()
         assert not any(c[0].endswith("run_selfplay_generation.py") for c in calls)
+
+
+def test_resume_requires_a_failed_run(launch):
+    root, _ = launch
+    with pytest.raises(RuntimeError, match="--resume requires"):
+        experiment.main(["--resume"])
+    experiment.main.__globals__["atomic_json"](root / "started.json", {})
+    experiment.stage("generation")
+    with pytest.raises(RuntimeError, match="--resume requires"):
+        experiment.main(["--resume"])
+
+
+def test_resume_skips_completed_stages_and_resumes_selfplay(launch, monkeypatch):
+    root, calls = launch
+
+    def fake_stage(*args, **kwargs):
+        directory = args[1]
+        directory.mkdir(parents=True)
+        (directory / "manifest.json").write_text(json.dumps({"games": 100, "truncated_games": 0, "rows": 1000}))
+        return [directory]
+    monkeypatch.setattr(experiment, "run_selfplay_stage", fake_stage)
+    original = experiment.run
+
+    def interrupted(*args):
+        original(*args)
+        if str(args[0]).endswith("run_selfplay_generation.py"):
+            (root / "generation/gen0").mkdir(parents=True)
+            raise RuntimeError("worker timeout")
+    monkeypatch.setattr(experiment, "run", interrupted)
+    with pytest.raises(RuntimeError, match="worker timeout"):
+        experiment.main()
+    experiment.stage("failed", error="worker timeout")
+    assert json.loads((root / "completed_stages.json").read_text()) == ["batch_parity", "worker_scaling", "health_check"]
+
+    calls.clear()
+    monkeypatch.setattr(experiment, "run", original)
+    experiment.main(["--resume"])
+    assert [c[0].rsplit("/", 1)[-1].rsplit("\\", 1)[-1] for c in calls] == ["run_selfplay_generation.py"]
+    assert calls[0][-1] == "--resume-selfplay"
+    assert json.loads((root / "experiment_state.json").read_text())["stage"] == "complete"
+    assert (root / "resumed.json").exists()

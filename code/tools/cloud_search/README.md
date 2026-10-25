@@ -30,6 +30,9 @@ existing eight-list panel was used for budget tuning; neither that panel nor
 same-list pet evaluation is untouched promotion evidence. Add distinct variants
 later to test deck-list generalization.
 
+Install `experiment.service` as **`digimon-search.service`**: the journal
+mirror (`monitor-journal.service`) follows that exact unit name, and per-epoch
+training losses never reach the monitor under any other name.
 `experiment.service` supervises the container without automatic restart and
 stops it after 48 hours. This is a workload limit, **not a billing limit**:
 Hetzner charges until the server is deleted. Keep it until artifacts are
@@ -42,6 +45,19 @@ every ten minutes. Transfers are hash-verified. Backups pause if that machine
 is offline; the remote experiment continues. The helper never deletes a server
 or remote data. The controller and backup helper refuse competing ownership or
 implicit experiment restart. Investigate failed runs before explicit resume.
+The archive step skips any round in which a checkpoint `.zip` is under a
+minute old or fails its CRC check, and keeps the previous good archive as
+`checkpoint-backup.previous.tar.gz`.
+
+To resume a run whose `experiment_state.json` stage is `failed`, run the
+controller once by hand with `--resume` (same image and mounts as the
+service, appending `--resume` to `python /deployment/run_experiment.py`).
+Inputs are re-validated; stages listed in `completed_stages.json` are skipped;
+a partial diagnostic or health-check directory is renamed `*.failed-<ns>`
+rather than deleted; and an unfinished generation continues through
+`run_selfplay_generation.py --resume-selfplay`, which re-checks frozen input
+and committed chunk hashes. A generation that already wrote training
+artifacts is refused rather than overwritten.
 
 ## W&B monitoring
 
