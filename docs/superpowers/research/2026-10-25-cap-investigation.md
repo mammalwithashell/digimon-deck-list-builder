@@ -116,3 +116,36 @@ No card, engine, search-budget, training configuration or running service was
 changed during this investigation. The new campaign remained active in baseline
 evaluation at the final live check. Replays and findings are investigation
 evidence; neither defect is claimed fixed or deployed.
+
+## Follow-up repair: nested Delay hand-play continuation
+
+The Rust replay confirmed the first lost choice: accepting EX12-070 at decision
+178 enters `install_delay_play_from_hand_after_paid`. Its `finish_owned_leave`
+opens another leave-replacement selection. The hand reward then overwrote that
+selection and its resume stack, inheriting the transient EffectChoice phase.
+
+The hand-only flow now preserves that inner prompt and arms the existing
+`DelayPlayFromHandAfterSelection` continuation. This matches the sibling
+union-zone flow. The reward resumes only after the inner operation finishes;
+there is no blanket phase reset, action suppression, or search-budget change.
+
+`tests/selection/selfplay_phase_resume.rs` reconstructs the recorded seed/decks
+and first 179 actions. The corrected continuation has an additional legal
+replacement choice, so the old suffix cannot be replayed verbatim. The test
+branches over accepting/declining that replacement and playing/declining the
+reward, compares legal masks and UI state after cloned resumption, and requires
+completion into playable Main or GameOver without an orphaned prompt phase.
+
+Game 340's Manekimon cancellation cycle remains unresolved. The existing
+cancel/refund behavior is intentional in both the card test and DCGO reference;
+this patch does not consume OPT on cancellation or hide the activation. The old
+collection remains excluded from training. The cloud service is unchanged;
+the repaired engine must be built into a new image before a future campaign
+can use it.
+
+Validation: the initial Rust replay failed with `EffectChoice` instead of Main,
+matching the recorded defect. After repair, all four continuation branches
+complete with a winner (not a loop draw), with original/clone masks and UI states
+matching after each choice. Selection: 80 passed; replacement: 126 passed;
+combat: 299 passed, 1 pre-existing ignored; Option flow: 143 passed. All 13 tier-0
+checks passed. These are focused engine checks, not a full-engine or DCGO run.
