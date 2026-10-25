@@ -1,0 +1,870 @@
+{
+  "scope": "Acting-seat DNA-capable list cohorts; Main-phase non-forced rows only",
+  "pool_sha256": "5860cf948cd49d9ab4e1ac23b271dfffbccbac69d78288ed4123af1ef410b06a",
+  "cards_sha256": "6c9e8437dbb29b73628b7e527d3e6b01dcf5af9371e9825595710057a15936a4",
+  "layout_hash": "sha256:c2ff377e261fe572163179e32d97414d68e2fd8d89c5441dae586b4a2caa691b",
+  "lists": [
+    {
+      "index": 0,
+      "name": "Chronicle:sha256:1999cd9092aeb395a441f5d3742447c67d438f5d2e3cb85d1d603d1030983d9e:slot0",
+      "dna_targets": {
+        "BT20-060": 3
+      },
+      "target_names": {
+        "BT20-060": "Alphamon: Ouryuken"
+      }
+    },
+    {
+      "index": 1,
+      "name": "Chronicle:sha256:9b88c4d4eb0cbc9cdc3e008aaf8e4fa56a9e7c432af1462660d5d3ca55ef1667:slot1",
+      "dna_targets": {
+        "BT20-060": 3
+      },
+      "target_names": {
+        "BT20-060": "Alphamon: Ouryuken"
+      }
+    },
+    {
+      "index": 2,
+      "name": "Chronomon:sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45:slot0",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 3,
+      "name": "Chronomon:sha256:669dde3b66c2fd2413d68a2852e98451aea3cb965b1f05c8dcfa7d5e1dbd3b7c:slot1",
+      "dna_targets": {
+        "BT24-037": 2
+      },
+      "target_names": {
+        "BT24-037": "Silphymon"
+      }
+    },
+    {
+      "index": 4,
+      "name": "Examon:sha256:5b5768b35b03b03e3f2eaa71559894048a64124fe220e0b697128205bd1327e7:slot0",
+      "dna_targets": {
+        "EX13-045": 3,
+        "BT23-047": 3
+      },
+      "target_names": {
+        "EX13-045": "Examon",
+        "BT23-047": "Examon"
+      }
+    },
+    {
+      "index": 5,
+      "name": "Examon:sha256:ecf3707ed727b5c387405df128d58dacc5d023c4918e4dae1d4403641feb3182:slot1",
+      "dna_targets": {
+        "BT23-047": 3,
+        "EX13-045": 3
+      },
+      "target_names": {
+        "BT23-047": "Examon",
+        "EX13-045": "Examon"
+      }
+    },
+    {
+      "index": 6,
+      "name": "Glowing Dawn:sha256:6138b0f6817397f411eb4ee63bdb8621734654abc1985729222702abe51db9aa:slot0",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 7,
+      "name": "Glowing Dawn:sha256:6450b71c5fd25cdaa4e8576dd6dfaaf8a64613c5167d84d88d110e41908ddff4:slot1",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 8,
+      "name": "Medusamon:sha256:cb7d6d3088e6156bcc9ae5a00e6f3e54adb7beeaaee0812d33602d918bab3df0:slot0",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 9,
+      "name": "Medusamon:sha256:cb7d6d3088e6156bcc9ae5a00e6f3e54adb7beeaaee0812d33602d918bab3df0:slot1",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 10,
+      "name": "SW:sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4:slot0",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 11,
+      "name": "SW:sha256:4fd3d5327ae45a5bcf7841604b8b62f8d981be6011e407c342a9962d68b4dcd4:slot1",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 12,
+      "name": "ShineGreymon Data Squad:sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6:slot0",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 13,
+      "name": "ShineGreymon Data Squad:sha256:33b02609d458ac33fd4bf16c367e141f9a67260e22cad24e3f3dfd1e89852ed6:slot1",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 14,
+      "name": "TS Jupitermon:sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f:slot0",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 15,
+      "name": "TS Jupitermon:sha256:a5f669a3186ff0815eed5305feafcf203002b5dec48e3d7bf75466595c497602:slot1",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 16,
+      "name": "TS Mervamon:sha256:6b15071bcc6afb27f3fd189aff60f7fc5988c78aa16d03733bccb076e0e1e53b:slot0",
+      "dna_targets": {
+        "BT24-037": 2
+      },
+      "target_names": {
+        "BT24-037": "Silphymon"
+      }
+    },
+    {
+      "index": 17,
+      "name": "TS Mervamon:sha256:db1b53ddae3e76ccdc970fbf764cd72246745b0f0d836fa73aa0353cda5f872e:slot1",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 18,
+      "name": "Three Musketeers:sha256:5845efd1061bdb129b6e9a6b4a27f4e3e34a3e5d3da423716d27d10a271d2135:slot0",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 19,
+      "name": "Three Musketeers:sha256:7d848d1be79508f9be2dfbaa928c7880cfd8f0a6e178ebc3b07700aebc0db146:slot1",
+      "dna_targets": {},
+      "target_names": {}
+    },
+    {
+      "index": 20,
+      "name": "Toho Braves:sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd:slot0",
+      "dna_targets": {
+        "BT8-084": 1
+      },
+      "target_names": {
+        "BT8-084": "Kimeramon"
+      }
+    },
+    {
+      "index": 21,
+      "name": "Toho Braves:sha256:e20c6f6087b0d12d5b1019dd7a4693e1fcb6bcfad2a6275000f0cb922eb86c30:slot1",
+      "dna_targets": {
+        "BT16-077": 1
+      },
+      "target_names": {
+        "BT16-077": "Dinobeemon"
+      }
+    },
+    {
+      "index": 22,
+      "name": "Virus Busters:sha256:5f47ea0fddfcd3b14ae2bedef0a557c9ff6b8c2ee9f72fe57bd892a5a99569c3:slot0",
+      "dna_targets": {
+        "EX12-032": 4,
+        "EX12-044": 3,
+        "EX12-035": 4,
+        "EX12-037": 3
+      },
+      "target_names": {
+        "EX12-032": "WereGarurumon",
+        "EX12-044": "Angewomon",
+        "EX12-035": "MetalGarurumon",
+        "EX12-037": "Omnimon"
+      }
+    },
+    {
+      "index": 23,
+      "name": "Virus Busters:sha256:5f47ea0fddfcd3b14ae2bedef0a557c9ff6b8c2ee9f72fe57bd892a5a99569c3:slot1",
+      "dna_targets": {
+        "EX12-032": 4,
+        "EX12-044": 3,
+        "EX12-035": 4,
+        "EX12-037": 3
+      },
+      "target_names": {
+        "EX12-032": "WereGarurumon",
+        "EX12-044": "Angewomon",
+        "EX12-035": "MetalGarurumon",
+        "EX12-037": "Omnimon"
+      }
+    }
+  ],
+  "model_sha256": {
+    "0": "f92782e86354e85400db81bd092924c984ee691d2d8c3b3d61e1a007babbed19",
+    "1": "8d1480f2d00048d567c5bc438759259dfbccad869f38d51dfd43ceb2f34becae",
+    "2": "7d60ee9c8520a21598c9e2bd0e32cd05cf6a65c1bb082ca7af57a434ee7daba0"
+  },
+  "generations": {
+    "1": {
+      "totals": {
+        "games": 1000,
+        "games_with_capable_seat": 657,
+        "all_rows": 76042
+      },
+      "lists": {
+        "0": {
+          "appearances": 83,
+          "rows": 2538,
+          "main_rows": 1079,
+          "opportunities": 0,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0,
+          "appearances_with_opportunity": 0,
+          "appearances_with_teacher_preference": 0
+        },
+        "1": {
+          "appearances": 93,
+          "rows": 2891,
+          "main_rows": 1161,
+          "opportunities": 0,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0,
+          "appearances_with_opportunity": 0,
+          "appearances_with_teacher_preference": 0
+        },
+        "3": {
+          "appearances": 79,
+          "rows": 3067,
+          "main_rows": 1053,
+          "opportunities": 3,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.05625000037252903,
+          "appearances_with_opportunity": 1,
+          "appearances_with_teacher_preference": 0
+        },
+        "4": {
+          "appearances": 78,
+          "rows": 2583,
+          "main_rows": 953,
+          "opportunities": 94,
+          "teacher_argmax": 5,
+          "teacher_mass_sum": 5.309374959906563,
+          "appearances_with_opportunity": 22,
+          "appearances_with_teacher_preference": 5
+        },
+        "5": {
+          "appearances": 92,
+          "rows": 3050,
+          "main_rows": 1129,
+          "opportunities": 62,
+          "teacher_argmax": 6,
+          "teacher_mass_sum": 3.765625003958121,
+          "appearances_with_opportunity": 23,
+          "appearances_with_teacher_preference": 6
+        },
+        "16": {
+          "appearances": 83,
+          "rows": 4266,
+          "main_rows": 1321,
+          "opportunities": 4,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.06875000009313226,
+          "appearances_with_opportunity": 1,
+          "appearances_with_teacher_preference": 0
+        },
+        "20": {
+          "appearances": 80,
+          "rows": 3742,
+          "main_rows": 1274,
+          "opportunities": 4,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.02500000037252903,
+          "appearances_with_opportunity": 2,
+          "appearances_with_teacher_preference": 0
+        },
+        "21": {
+          "appearances": 84,
+          "rows": 3371,
+          "main_rows": 1203,
+          "opportunities": 0,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0,
+          "appearances_with_opportunity": 0,
+          "appearances_with_teacher_preference": 0
+        },
+        "22": {
+          "appearances": 93,
+          "rows": 2555,
+          "main_rows": 1248,
+          "opportunities": 99,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 1.671875006519258,
+          "appearances_with_opportunity": 32,
+          "appearances_with_teacher_preference": 0
+        },
+        "23": {
+          "appearances": 72,
+          "rows": 2159,
+          "main_rows": 1009,
+          "opportunities": 69,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 1.3343750059138983,
+          "appearances_with_opportunity": 19,
+          "appearances_with_teacher_preference": 0
+        }
+      },
+      "models_by_list": {
+        "0": {
+          "0": {},
+          "1": {},
+          "2": {}
+        },
+        "1": {
+          "0": {},
+          "1": {},
+          "2": {}
+        },
+        "3": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.0735039934515953
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.06438164785504341
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.08104007504880428
+          }
+        },
+        "4": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 4.271541189402342,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.5891692796722054
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 3.758454698137939,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.6020536739379168
+          },
+          "2": {
+            "route_argmax": 1,
+            "route_mass_sum": 4.543152451980859,
+            "teacher_positive_route_argmax": 1,
+            "teacher_positive_route_mass_sum": 0.7505392534658313
+          }
+        },
+        "5": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.0684656309895217,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.2053102944046259
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 1.9543593795970082,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.22723919712007046
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.4660932277329266,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.3032257817685604
+          }
+        },
+        "16": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.1618453897535801
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.14413559809327126
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.15497113019227982
+          }
+        },
+        "20": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.10330275446176529
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.08195048896595836
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.08646650053560734
+          }
+        },
+        "21": {
+          "0": {},
+          "1": {},
+          "2": {}
+        },
+        "22": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 3.1827114573679864
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.8427859754301608
+          },
+          "2": {
+            "route_argmax": 2,
+            "route_mass_sum": 3.317694033961743
+          }
+        },
+        "23": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.3441398283466697
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.0434151184745133
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.3695179985370487
+          }
+        }
+      },
+      "capable_totals": {
+        "appearances": 837,
+        "rows": 30222,
+        "main_rows": 11430,
+        "opportunities": 335,
+        "teacher_argmax": 11,
+        "teacher_mass_sum": 12.23124997713603,
+        "appearances_with_opportunity": 100,
+        "appearances_with_teacher_preference": 11
+      },
+      "archetypes": {
+        "Chronicle": {
+          "appearances": 176,
+          "rows": 5429,
+          "main_rows": 2240,
+          "opportunities": 0,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0,
+          "appearances_with_opportunity": 0,
+          "appearances_with_teacher_preference": 0
+        },
+        "Chronomon": {
+          "appearances": 79,
+          "rows": 3067,
+          "main_rows": 1053,
+          "opportunities": 3,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.05625000037252903,
+          "appearances_with_opportunity": 1,
+          "appearances_with_teacher_preference": 0
+        },
+        "Examon": {
+          "appearances": 170,
+          "rows": 5633,
+          "main_rows": 2082,
+          "opportunities": 156,
+          "teacher_argmax": 11,
+          "teacher_mass_sum": 9.074999963864684,
+          "appearances_with_opportunity": 45,
+          "appearances_with_teacher_preference": 11
+        },
+        "TS Mervamon": {
+          "appearances": 83,
+          "rows": 4266,
+          "main_rows": 1321,
+          "opportunities": 4,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.06875000009313226,
+          "appearances_with_opportunity": 1,
+          "appearances_with_teacher_preference": 0
+        },
+        "Toho Braves": {
+          "appearances": 164,
+          "rows": 7113,
+          "main_rows": 2477,
+          "opportunities": 4,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.02500000037252903,
+          "appearances_with_opportunity": 2,
+          "appearances_with_teacher_preference": 0
+        },
+        "Virus Busters": {
+          "appearances": 165,
+          "rows": 4714,
+          "main_rows": 2257,
+          "opportunities": 168,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 3.0062500124331564,
+          "appearances_with_opportunity": 51,
+          "appearances_with_teacher_preference": 0
+        }
+      }
+    },
+    "2": {
+      "totals": {
+        "games": 1000,
+        "games_with_capable_seat": 630,
+        "all_rows": 82020
+      },
+      "lists": {
+        "0": {
+          "appearances": 79,
+          "rows": 2540,
+          "main_rows": 963,
+          "opportunities": 2,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.0,
+          "appearances_with_opportunity": 2,
+          "appearances_with_teacher_preference": 0
+        },
+        "1": {
+          "appearances": 62,
+          "rows": 1989,
+          "main_rows": 801,
+          "opportunities": 0,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0,
+          "appearances_with_opportunity": 0,
+          "appearances_with_teacher_preference": 0
+        },
+        "3": {
+          "appearances": 84,
+          "rows": 3582,
+          "main_rows": 1120,
+          "opportunities": 1,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.00937500037252903,
+          "appearances_with_opportunity": 1,
+          "appearances_with_teacher_preference": 0
+        },
+        "4": {
+          "appearances": 90,
+          "rows": 3528,
+          "main_rows": 1205,
+          "opportunities": 63,
+          "teacher_argmax": 4,
+          "teacher_mass_sum": 3.699999997857958,
+          "appearances_with_opportunity": 20,
+          "appearances_with_teacher_preference": 4
+        },
+        "5": {
+          "appearances": 62,
+          "rows": 2342,
+          "main_rows": 766,
+          "opportunities": 107,
+          "teacher_argmax": 4,
+          "teacher_mass_sum": 4.006250021979213,
+          "appearances_with_opportunity": 21,
+          "appearances_with_teacher_preference": 4
+        },
+        "16": {
+          "appearances": 98,
+          "rows": 5603,
+          "main_rows": 1620,
+          "opportunities": 30,
+          "teacher_argmax": 2,
+          "teacher_mass_sum": 1.4562499979510903,
+          "appearances_with_opportunity": 6,
+          "appearances_with_teacher_preference": 2
+        },
+        "20": {
+          "appearances": 70,
+          "rows": 2856,
+          "main_rows": 990,
+          "opportunities": 3,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.05312500172294676,
+          "appearances_with_opportunity": 1,
+          "appearances_with_teacher_preference": 0
+        },
+        "21": {
+          "appearances": 77,
+          "rows": 3361,
+          "main_rows": 1144,
+          "opportunities": 6,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.2343750074505806,
+          "appearances_with_opportunity": 1,
+          "appearances_with_teacher_preference": 0
+        },
+        "22": {
+          "appearances": 103,
+          "rows": 3427,
+          "main_rows": 1479,
+          "opportunities": 162,
+          "teacher_argmax": 13,
+          "teacher_mass_sum": 9.137499990873039,
+          "appearances_with_opportunity": 40,
+          "appearances_with_teacher_preference": 10
+        },
+        "23": {
+          "appearances": 70,
+          "rows": 2267,
+          "main_rows": 983,
+          "opportunities": 71,
+          "teacher_argmax": 4,
+          "teacher_mass_sum": 3.609374998603016,
+          "appearances_with_opportunity": 24,
+          "appearances_with_teacher_preference": 4
+        }
+      },
+      "models_by_list": {
+        "0": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.049227028619498014
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.04963370459154248
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.05073872208595276
+          }
+        },
+        "1": {
+          "0": {},
+          "1": {},
+          "2": {}
+        },
+        "3": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.02953983284533024
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.02866993471980095
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.030753515660762787
+          }
+        },
+        "4": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.837564234621823,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.5788229256868362
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.6769596887752414,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.5970415286719799
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 3.3271604673936963,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.7897425070405006
+          }
+        },
+        "5": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.819594348780811,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.15990051999688148
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.4764432492665946,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.1454859832301736
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.859272097237408,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.19646724127233028
+          }
+        },
+        "16": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.8282381538301706,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.04221503436565399
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.7671742583625019,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.03638744726777077
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.9266536766663194,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.048216188326478004
+          }
+        },
+        "20": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.09013009443879128
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.07663768902420998
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.08735580369830132
+          }
+        },
+        "21": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.12657495494931936
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.11576377274468541
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 0.14691995363682508
+          }
+        },
+        "22": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 4.894043042790145,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.5427154777571559
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 4.624054428655654,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.5349509101361036
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 5.701144304592162,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.6877525355666876
+          }
+        },
+        "23": {
+          "0": {
+            "route_argmax": 0,
+            "route_mass_sum": 3.0579001549631357,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.37542884796857834
+          },
+          "1": {
+            "route_argmax": 0,
+            "route_mass_sum": 2.8013807465322316,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.3559656962752342
+          },
+          "2": {
+            "route_argmax": 0,
+            "route_mass_sum": 3.3386362488381565,
+            "teacher_positive_route_argmax": 0,
+            "teacher_positive_route_mass_sum": 0.40170668810606003
+          }
+        }
+      },
+      "capable_totals": {
+        "appearances": 795,
+        "rows": 31495,
+        "main_rows": 11071,
+        "opportunities": 445,
+        "teacher_argmax": 27,
+        "teacher_mass_sum": 22.206250016810372,
+        "appearances_with_opportunity": 116,
+        "appearances_with_teacher_preference": 24
+      },
+      "archetypes": {
+        "Chronicle": {
+          "appearances": 141,
+          "rows": 4529,
+          "main_rows": 1764,
+          "opportunities": 2,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.0,
+          "appearances_with_opportunity": 2,
+          "appearances_with_teacher_preference": 0
+        },
+        "Chronomon": {
+          "appearances": 84,
+          "rows": 3582,
+          "main_rows": 1120,
+          "opportunities": 1,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.00937500037252903,
+          "appearances_with_opportunity": 1,
+          "appearances_with_teacher_preference": 0
+        },
+        "Examon": {
+          "appearances": 152,
+          "rows": 5870,
+          "main_rows": 1971,
+          "opportunities": 170,
+          "teacher_argmax": 8,
+          "teacher_mass_sum": 7.706250019837171,
+          "appearances_with_opportunity": 41,
+          "appearances_with_teacher_preference": 8
+        },
+        "TS Mervamon": {
+          "appearances": 98,
+          "rows": 5603,
+          "main_rows": 1620,
+          "opportunities": 30,
+          "teacher_argmax": 2,
+          "teacher_mass_sum": 1.4562499979510903,
+          "appearances_with_opportunity": 6,
+          "appearances_with_teacher_preference": 2
+        },
+        "Toho Braves": {
+          "appearances": 147,
+          "rows": 6217,
+          "main_rows": 2134,
+          "opportunities": 9,
+          "teacher_argmax": 0,
+          "teacher_mass_sum": 0.28750000917352736,
+          "appearances_with_opportunity": 2,
+          "appearances_with_teacher_preference": 0
+        },
+        "Virus Busters": {
+          "appearances": 173,
+          "rows": 5694,
+          "main_rows": 2462,
+          "opportunities": 233,
+          "teacher_argmax": 17,
+          "teacher_mass_sum": 12.746874989476055,
+          "appearances_with_opportunity": 64,
+          "appearances_with_teacher_preference": 14
+        }
+      }
+    }
+  },
+  "raw_result_sha256": "f272ee79743915e0c1ba9f73ca0de2f4ca08a95662ca784a14090cccfe9585a7",
+  "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:a98d312fd98a32db0f4c594c004b8aa245321486643c1221c492dcc55dd6f413",
+  "raw_refs": "/opt/digimon-search/dna-cohort-audit-20261025/result.json"
+}

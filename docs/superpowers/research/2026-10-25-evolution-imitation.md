@@ -46,9 +46,14 @@ in action-ID order. Route probability sums visits over all actions in that route
 | DNA | 445 | 27 | 6.07% | 4.99% |
 
 Generation 1 had 534 battle-preferred positions out of 12,793 opportunities and
-11 DNA-preferred positions out of 335. Generation 2 improves those counts, but DNA
-still has only 27 preferred examples among 82,020 rows. That is a coverage concern
-as well as a learning concern. It does not show whether more DNA would win games.
+11 DNA-preferred positions out of 335. Generation 2 improves those counts. The
+absolute number of DNA-positive examples is small, but the whole mixed-deck
+dataset is not an appropriate denominator for DNA use: many lists lack DNA
+targets. The [DNA-capable deck follow-up](2026-10-25-dna-deck-cohorts.md) identifies
+10 eligible slots and narrows generation 2 to 795 deck appearances, 31,495
+recorded positions and 445 legal Main-phase DNA opportunities. Search prefers
+DNA at 27 of those opportunities; checkpoint 2 at none. This establishes an
+imitation gap on those states, not that more DNA would necessarily win games.
 
 ## What the network retains on those exact positions
 
