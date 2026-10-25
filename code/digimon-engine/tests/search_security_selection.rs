@@ -22,11 +22,49 @@ fn schema2_game268_security_selection_has_same_root_actions_in_every_world() {
     let legal = |mask: Vec<f32>| mask.iter().enumerate().filter_map(|(i, v)| (*v > 0.5).then_some(i)).collect::<Vec<_>>();
     let expected = legal(build_action_mask(&runner.game, player));
     assert!(runner.game.pending_selection.as_ref().unwrap().card_choice.is_some());
-    for seed in 0..32 {
+    fn mix(mut x: u64) -> u64 {
+        x = x.wrapping_add(0x9E3779B97F4A7C15);
+        x = (x ^ (x >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+        x = (x ^ (x >> 27)).wrapping_mul(0x94D049BB133111EB);
+        x ^ (x >> 31)
+    }
+    let actual_worlds = (0..4u64).map(|i| mix(case["search_seed"].as_u64().unwrap()
+        ^ mix(0xD1B54A32D192ED03u64.wrapping_add(mix(i)))));
+    for seed in (0..32).chain(actual_worlds) {
         let world = materialize(&runner.game, player, seed);
-        assert_eq!(legal(build_action_mask(&world, player)), expected, "world {seed}");
+        assert_eq!(legal(build_action_mask(&world, player)), expected, "world {seed}; source {:?}; sampled {:?}",
+            runner.game.pending_selection, world.pending_selection);
         digimon_engine::determinize::check_world_invariants(&runner.game, player, &world).unwrap();
     }
+    use digimon_engine::{card_registry::CardRegistry, search::{determinized_search_batched,
+        DeterminizedConfig, SearchConfig, UniformEvaluator}};
+    let config = DeterminizedConfig { worlds: 4, search: SearchConfig {
+        simulations: 4, seed: case["search_seed"].as_u64().unwrap(), ..Default::default()
+    }, ..Default::default() };
+    let result = determinized_search_batched(&CardRegistry::from_cards(&cards),
+        &runner.game, player, &mut UniformEvaluator, &config, 4);
+    assert_eq!(result.root_visits.iter().map(|(a, _)| *a as usize).collect::<Vec<_>>(), expected);
+
+    // Private inspection must survive canonicalization as well as sampling.
+    // Check actual root evaluator inputs, not just the materializer in isolation.
+    runner.game.pending_selection.as_mut().unwrap().card_choice.as_mut().unwrap()
+        .grant_security_inspection(player, &[0]);
+    use digimon_engine::search::{PolicyValueFn, EvalRequest, Evaluation};
+    struct VerifyRoots { expected: Vec<f32>, seen: usize }
+    impl PolicyValueFn for VerifyRoots {
+        fn evaluate_batch(&mut self, requests: &[EvalRequest]) -> Vec<Evaluation> {
+            for request in requests {
+                if self.seen < 4 { assert_eq!(request.obs, self.expected, "known inspection changed in a sampled root"); }
+                self.seen += 1;
+            }
+            UniformEvaluator.evaluate_batch(requests)
+        }
+    }
+    let registry = CardRegistry::from_cards(&cards);
+    let mut evaluator = VerifyRoots { expected: digimon_engine::observation::build_observation_tensor(
+        &runner.game, player, &registry, config.search.observation_profile), seen: 0 };
+    determinized_search_batched(&registry, &runner.game, player, &mut evaluator, &config, 4);
+    assert!(evaluator.seen >= 4);
 }
 
 #[test]

@@ -182,7 +182,8 @@ impl DevelopmentPolicy {
             if selection.kind == crate::selection::SelectionKind::TriggerOrder {
                 self.resolution_context = selection.effect_choices.as_ref()
                     .and_then(|choices| choices.iter().find(|choice| choice.action_id == action))
-                    .map(|choice| format!("{}/{:?}/{:?}", choice.label, choice.source_kind, choice.timing))
+                    .map(|choice| format!("{}/{:?}/{:?}/{:?}/{}", choice.label, choice.source_kind,
+                        choice.timing, choice.source_card, selection.valid_action_ids.len()))
                     .unwrap_or_default();
             }
             if selection.prompt == crate::selection::DNA_FIRST_MATERIAL_PROMPT {
@@ -365,8 +366,8 @@ fn semantic_signature(game: &Game, player: PlayerId, valid: &[u16]) -> String {
         key.push('/');
     }
     if let Some(selection) = &game.pending_selection {
-        key.push_str(&format!("/{:?}/{}/{:?}/{:?}", selection.kind, selection.prompt,
-            selection.source_permanent, selection.source_kind));
+        key.push_str(&format!("/{:?}/{}/{:?}/{:?}/{:?}", selection.kind, selection.prompt,
+            selection.source_permanent, selection.source_kind, selection.source_card));
         if let Some(choices) = &selection.effect_choices {
             for choice in choices {
                 key.push_str(&format!("/{}/{}/{:?}", choice.action_id, choice.label, choice.timing));
@@ -377,6 +378,18 @@ fn semantic_signature(game: &Game, player: PlayerId, valid: &[u16]) -> String {
             key.push_str(&view.page_index);
             for row in view.rows {
                 key.push_str(&row_key(&row));
+            }
+        }
+    }
+    // Deferred multi-payment picks have not changed zones yet. Remaining count
+    // and selected public Tamer slots are the player's own selection history,
+    // unlike captured bindings, hidden identities, or a growing prompt counter.
+    if let Some(stack) = &game.pending_selection_resume {
+        for frame in &stack.frames {
+            if let crate::resume::ResumeFrame::RunTail { select_kind:
+                crate::resume::ResumeSelectKind::FieldPermanent { post: Some(
+                    crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSourcesPick { remaining, picked }), .. }, .. } = frame {
+                key.push_str(&format!("/payment_remaining:{remaining}/picked:{picked:?}"));
             }
         }
     }

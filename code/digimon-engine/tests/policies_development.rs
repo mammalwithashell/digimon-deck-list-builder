@@ -7,9 +7,19 @@ use digimon_engine::policies::{DevelopmentPolicy, Policy};
 
 #[test]
 fn successive_visible_trigger_choices_are_not_a_nonprogress_loop() {
+    replay_teacher_regression(include_str!(
+        "../../../docs/superpowers/research/2026-10-25-development-progress-regression.json"));
+}
+
+#[test]
+fn nested_tamer_payment_choices_are_not_a_nonprogress_loop() {
+    replay_teacher_regression(include_str!(
+        "../../../docs/superpowers/research/2026-10-25-development-hand-progress-regression.json"));
+}
+
+fn replay_teacher_regression(fixture: &str) {
     use digimon_engine::{card_data::CardData, runners::HeadlessRunner, search::decision_player};
-    let case: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../docs/superpowers/research/2026-10-25-development-progress-regression.json")).unwrap();
+    let case: serde_json::Value = serde_json::from_str(fixture).unwrap();
     let cards = CardData::load_from_str(&std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"), "/../../data/cards.json")).unwrap()).unwrap();
     let deck = |key: &str| case[key].as_array().unwrap().iter()

@@ -552,11 +552,19 @@ fn evaluate(
 /// pure hidden-to-hidden rearrangement: infoset-preserving by definition.
 fn canonicalize_hidden(root: &Game, viewer: PlayerId) -> Game {
     let mut canon = measure("clone", || root.clone());
+    let inspected = root.pending_selection.as_ref().and_then(|s| s.card_choice.as_ref())
+        .and_then(|choice| choice.inspected_security_owner(viewer));
     // Viewer: own hand is known (untouched); deck ∪ face-down security is
     // the hidden pool.
-    canonicalize_player_hidden(&mut canon.players[viewer as usize], false);
+    canonicalize_player_hidden(&mut canon.players[viewer as usize], false, inspected == Some(viewer));
     // Opponent: hand is hidden too.
-    canonicalize_player_hidden(&mut canon.players[(1 - viewer) as usize], true);
+    canonicalize_player_hidden(&mut canon.players[(1 - viewer) as usize], true, inspected == Some(1 - viewer));
+    if let Some(mut selection) = canon.pending_selection.take() {
+        if let Some(choice) = &mut selection.card_choice {
+            choice.rebind_sampled_security(root, &canon);
+        }
+        canon.pending_selection = Some(selection);
+    }
     canon
 }
 
@@ -570,7 +578,7 @@ fn card_key(c: &CardSource) -> (usize, u16) {
 /// security), sort by [`card_key`], and redistribute deterministically
 /// (hand → face-down security slots → deck). Pinned (face-up) security
 /// cards keep their slots. The digitama deck is sorted in place.
-fn canonicalize_player_hidden(p: &mut Player, include_hand: bool) {
+fn canonicalize_player_hidden(p: &mut Player, include_hand: bool, security_inspected: bool) {
     let mut pool: Vec<CardSource> = std::mem::take(&mut p.deck);
     let hand_count = p.hand.len();
     if include_hand {
@@ -580,7 +588,7 @@ fn canonicalize_player_hidden(p: &mut Player, include_hand: bool) {
     let old_security = std::mem::take(&mut p.security);
     let mut slots: Vec<Option<CardSource>> = Vec::with_capacity(old_security.len());
     for c in old_security {
-        if face_up.contains(&c.card_index) {
+        if security_inspected || face_up.contains(&c.card_index) {
             slots.push(Some(c));
         } else {
             pool.push(c);

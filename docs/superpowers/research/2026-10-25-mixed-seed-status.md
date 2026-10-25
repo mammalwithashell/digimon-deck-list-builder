@@ -60,3 +60,28 @@ The guard now tracks the visible trigger choice, rather than arbitrary prompt
 IDs. The captured prefix is a regression fixture. This partial corpus is not
 qualified and will never be fitted. Full qualification runs in fresh directories
 on the tested Linux image before any seed fitting or search comparison.
+
+
+## Full-image qualification caught additional paths
+
+Image `training-search-v2026.10.25.3` / source `266bf6b95` passed CI, but its
+32-game cloud preflight reproduced game 268 at decision 117. The materializer
+regression alone missed `canonicalize_hidden`, which repartitioned security
+before sampling and invalidated the menu there. The regression now invokes
+`determinized_search_batched` with the actual search seed; it failed before the
+canonicalization repair and passes afterward. Both stages rebind blind slot
+pins and preserve entitled private inspection. A recording evaluator also
+checks that all four inspected root observations match the real visible root.
+
+A separate full mixed-teacher qualification completed 123 games before rejecting
+game 123 (Glowing Dawn versus TS Jupitermon). Its two-card payment collects two
+Tamer picks before moving either card, so an unchanged board was legitimate.
+The teacher now includes remaining payment count and selected public Tamer slots
+in its progress signature, without inspecting captured bindings or hidden card
+identities. Trigger provenance also distinguishes physical sources and the
+remaining simultaneous choices. The recorded game now completes.
+
+Both failed outputs remain preserved on the cloud host. Neither was fitted:
+`mixed-seed-image-validation-20261025/` and
+`mixed-seed-teacher-qualification-v3/`. Corrected preflight must run in a fresh
+`mixed-seed-image-validation-v4-20261025/` directory before launch.
