@@ -93,3 +93,32 @@ pub fn build_observation_tensor(
         }
     }
 }
+
+/// Reuse a legal mask already computed for this exact game state and observer.
+/// Callers must not pass a mask from another world, player, phase or earlier state.
+/// This only changes projection work; the mask remains the engine's legality oracle.
+pub fn build_observation_tensor_with_mask(
+    game: &Game,
+    player_id: PlayerId,
+    registry: &CardRegistry,
+    profile: ObservationProfileId,
+    mask: &[f32],
+) -> Vec<f32> {
+    assert_eq!(mask.len(), crate::action::ACTION_SPACE_SIZE);
+    match profile {
+        ObservationProfileId::StandardCompactV1 => {
+            tensor_v1::build_tensor_standard_compact_v1(game, player_id, registry)
+        }
+        ObservationProfileId::StandardLiteV2 => {
+            tensor_v2_lite::build_tensor_standard_lite_v2_with_mask(game, player_id, registry, mask)
+        }
+        ObservationProfileId::StandardLiteDeckV2 => {
+            tensor_v2_lite_deck::build_tensor_standard_lite_deck_v2_with_mask(
+                game, player_id, registry, mask,
+            )
+        }
+        ObservationProfileId::StandardFullV2 => {
+            tensor_v2_full::build_tensor_standard_full_v2_with_mask(game, player_id, registry, mask)
+        }
+    }
+}

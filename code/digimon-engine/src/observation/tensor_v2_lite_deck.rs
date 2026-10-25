@@ -2,14 +2,24 @@ use crate::card_registry::CardRegistry;
 use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::tensor_profiles::standard::{v2_lite, v2_lite_deck as layout};
-use crate::tensor_v2_lite::build_tensor_standard_lite_v2;
+use crate::tensor_v2_lite::build_tensor_standard_lite_v2_with_mask;
 
 pub fn build_tensor_standard_lite_deck_v2(
     game: &Game,
     player_id: PlayerId,
     registry: &CardRegistry,
 ) -> Vec<f32> {
-    let lite = build_tensor_standard_lite_v2(game, player_id, registry);
+    let mask = crate::action::build_action_mask(game, player_id);
+    build_tensor_standard_lite_deck_v2_with_mask(game, player_id, registry, &mask)
+}
+
+pub(crate) fn build_tensor_standard_lite_deck_v2_with_mask(
+    game: &Game,
+    player_id: PlayerId,
+    registry: &CardRegistry,
+    mask: &[f32],
+) -> Vec<f32> {
+    let lite = build_tensor_standard_lite_v2_with_mask(game, player_id, registry, mask);
     let mut tensor = vec![0.0f32; layout::TENSOR_SIZE];
     tensor[..v2_lite::OFF_RESERVED].copy_from_slice(&lite[..v2_lite::OFF_RESERVED]);
     write_original_decklist(&mut tensor, game, player_id, registry);

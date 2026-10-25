@@ -77,6 +77,14 @@ Top-level sections:
 
 `standard_lite_v2` card ID positions total `572`; scalar positions total `7838`. These lists, the section table, layout hash, tensor version, and feature schema version are exported by `digimon_engine.get_observation_layout("standard_lite_v2")`.
 
+Observation construction may reuse an engine-produced action mask through
+`build_observation_tensor_with_mask`, provided the mask belongs to the exact
+same immutable game state and observer. Lite-derived profiles share that mask
+across their affordance features and combine source-effect inspection within
+one build. No dynamic results persist across state changes. These are
+implementation optimizations: tensor values, redaction, layout and schema
+versions remain unchanged.
+
 The source-kind features in pending effect-choice rows currently encode four
 single categories: Digimon, Tamer, Option and Rule. The engine's compound
 `DigimonAndTamer` origin has no bucket in this profile and is encoded as all

@@ -35,7 +35,7 @@ use crate::card_data::CardData;
 use crate::card_registry::CardRegistry;
 use crate::enums::PlayerId;
 use crate::game::Game;
-use crate::observation::build_observation_tensor;
+use crate::observation::build_observation_tensor_with_mask;
 use crate::rules::Rules;
 use crate::search::{
     determinized_search_batched, DeterminizationMode, DeterminizedConfig, PolicyValueFn,
@@ -323,7 +323,7 @@ pub fn run_self_play(
 
             // Record BEFORE acting: obs is the pre-action state the π
             // target was computed for.
-            let obs = build_observation_tensor(&game, pid, &registry, profile);
+            let obs = build_observation_tensor_with_mask(&game, pid, &registry, profile, &mask);
             if buffer.obs_dim == 0 {
                 buffer.obs_dim = obs.len();
             }

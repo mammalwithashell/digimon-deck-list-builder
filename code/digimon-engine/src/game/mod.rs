@@ -4239,21 +4239,9 @@ impl Game {
                 continue;
             };
             let effects = impl_.effects(source.handle());
-            for (slot, effect) in effects.iter().enumerate() {
-                if effect.max_per_turn == 0 {
-                    continue;
-                }
-                if is_under != effect.inherited {
-                    continue;
-                }
-                total += 1;
-                // Shared-OPT groups count on their group key (`Game::opt_slot_key`).
-                let key = effect.shared_opt_group.unwrap_or(slot as u8);
-                let count = permanent.activation_count(source.handle(), key);
-                if count >= effect.max_per_turn {
-                    used += 1;
-                }
-            }
+            let counts = Self::source_opt_counts(permanent, source.handle(), is_under, &effects);
+            total += counts.0;
+            used += counts.1;
         }
         (total, used)
     }

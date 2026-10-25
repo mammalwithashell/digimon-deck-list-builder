@@ -69,7 +69,7 @@ use crate::card_source::CardSource;
 use crate::determinize::materialize;
 use crate::enums::PlayerId;
 use crate::game::Game;
-use crate::observation::build_observation_tensor;
+use crate::observation::build_observation_tensor_with_mask;
 use crate::player::Player;
 
 use super::dirichlet::sample_dirichlet;
@@ -533,7 +533,8 @@ fn evaluate(
     mask: &[f32],
     search: &SearchConfig,
 ) -> (Vec<f32>, f32) {
-    let obs = build_observation_tensor(world, pid, registry, search.observation_profile);
+    let obs =
+        build_observation_tensor_with_mask(world, pid, registry, search.observation_profile, mask);
     let mut evaluations = evaluator.evaluate_batch(&[EvalRequest {
         obs,
         mask: mask.to_vec(),
