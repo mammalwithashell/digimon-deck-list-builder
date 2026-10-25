@@ -372,6 +372,68 @@ effects:
 }
 
 #[test]
+fn optional_retrieval_selects_a_visible_evolution_bridge() {
+    let yaml = r#"
+card: DEV-RETRIEVE
+name: Retrieval
+kind: tamer
+color: [red]
+cost: 0
+effects:
+  - when: on_play
+    process:
+      - select_trash:
+          of: you
+          filter: {}
+          bind_as: pick
+          optional: true
+          prompt: Retrieve one card
+      - add_to_hand_from_trash: {of: you, card: pick}
+"#;
+    let cards = position(2, 5).game.card_data.clone();
+    let mut builder = DebugRunner::builder().from_dsl_yaml(yaml).unwrap();
+    for card in cards.iter().cloned() { builder = builder.add_card(card); }
+    let mut r = builder.hand(0, &["DEV-RETRIEVE", "DEV-3", "DEV-4"])
+        .deck(0, &["DEV-3"; 10]).memory(5).start();
+    r.skip_mulligan();
+    r.place_stack(0, &["DEV-3"]);
+    for _ in 0..2 {
+        let card = r.game.players[0].hand.remove(1);
+        r.game.players[0].trash.push(card);
+    }
+    r.play(0, 0);
+    let mask = build_action_mask(&r.game, 0);
+    let decision = DevelopmentPolicy::default().decide(&r.game, &mask).unwrap();
+    assert_eq!(decision.action, TRASH_EFFECT_START + 1);
+    r.execute_action(0, decision.action).unwrap();
+    assert!(r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "DEV-4"));
+}
+
+#[test]
+fn stale_security_menu_uses_legal_refresh_then_rebinds() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = position(2, 5);
+    let host = r.place_stack(0, &["DEV-3"]);
+    let top = r.game.players[0].battle_area[host.index as usize].top_card().handle();
+    // Install a real menu, then simulate a security-order invalidation.
+    let cards: Vec<_> = r.game.players[0].deck.drain(..2).collect();
+    r.game.players[0].security.extend(cards);
+    EffectContext::new(&mut r.game, top, Some(host), 0).select_security(0,
+        "Refresh blind security", false, |_, _| true, |_, _| {});
+    r.game.players[0].security.swap(0, 1);
+    let mut teacher = DevelopmentPolicy::default();
+    let mask = build_action_mask(&r.game, 0);
+    let refresh = teacher.decide(&r.game, &mask).unwrap().action;
+    assert_eq!(refresh, 59);
+    r.execute_action(0, refresh).unwrap();
+    let mask = build_action_mask(&r.game, 0);
+    let commit = teacher.decide(&r.game, &mask).unwrap().action;
+    assert_eq!(commit, 30);
+    r.execute_action(0, commit).unwrap();
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
 fn empty_or_concede_only_masks_fail_instead_of_fabricating_a_choice() {
     let r = position(2, 1);
     let mut mask = vec![0.0; ACTION_SPACE_SIZE];

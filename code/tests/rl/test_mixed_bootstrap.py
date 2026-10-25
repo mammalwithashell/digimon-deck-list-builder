@@ -43,3 +43,28 @@ def test_sampling_equalizes_seats_and_preserves_game_boundaries():
 def test_reject_unbalanced_round_counts():
     with pytest.raises(ValueError):
         make_schedule({"a": ["a"]}, seed=1, rounds=7)
+
+
+def test_fit_rejects_failed_or_tampered_corpora_before_training(tmp_path, monkeypatch):
+    from tools.cloud_search.mixed_bootstrap import digest, fit, write_json
+    from tools import english_meta_search_job
+    calls = []
+    monkeypatch.setattr(english_meta_search_job, "bootstrap", lambda *a, **k: calls.append(k))
+    provenance = dict(seed=7, arm="mixed", schedule=[dict(game_id=0)])
+    write_json(tmp_path / "provenance.json", provenance)
+    write_json(tmp_path / "qualification.json", dict(qualified=True, games=[dict(game_id=0)]))
+    shard = tmp_path / "bootstrap_shards/game-00000/obs.npy"
+    shard.parent.mkdir(parents=True)
+    shard.write_bytes(b"original bytes")
+    import hashlib
+    write_json(tmp_path / "bootstrap_shards/manifest.json", dict(truncated_games=0, games=1,
+        bootstrap_provenance_sha256=digest(provenance), shards=[dict(dir="game-00000",
+        sha256={"obs.npy": hashlib.sha256(shard.read_bytes()).hexdigest()})]))
+    write_json(tmp_path / "failure.json", dict(error="decision cap"))
+    with pytest.raises(ValueError, match="unqualified"):
+        fit(tmp_path, 7)
+    (tmp_path / "failure.json").unlink()
+    shard.write_bytes(b"altered bytes")
+    with pytest.raises(ValueError, match="hash mismatch"):
+        fit(tmp_path, 7)
+    assert not calls, "neither policy nor value fitting may consume failed/tampered data"

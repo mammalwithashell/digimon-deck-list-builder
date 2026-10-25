@@ -120,3 +120,14 @@ def test_spooling_restart_preserves_sequence_and_does_not_write_experiment(tmp_p
     assert before == {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
     assert "private" not in json.dumps(monitor.wandb_config(root))
     assert "do not publish" not in json.dumps(monitor.wandb_config(root))
+
+
+def test_seed_comparison_logs_bootstrap_qualification_separately(tmp_path):
+    corpus = tmp_path / "corpus"
+    write(tmp_path, "deployment-plan.json", {"bootstrap_corpus": str(corpus), "bootstrap_arm": "mixed"})
+    write(corpus, "progress.json", {"completed": 23, "requested": 416, "capped": 0, "elapsed_seconds": 100})
+    result = monitor.collect(tmp_path, 200)
+    assert result["bootstrap/completed"] == 23
+    assert result["bootstrap/requested"] == 416
+    assert "selfplay/committed_games" not in result
+    assert monitor.wandb_config(tmp_path)["bootstrap_arm"] == "mixed"

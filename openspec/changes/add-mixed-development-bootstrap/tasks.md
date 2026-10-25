@@ -2,7 +2,7 @@
 
 - [x] 1.1 Inventory native effective-cost/action-benefit metadata and event coverage for raising, battle, activated/effect and DNA evolution, draw, search, retrieval, filtering and payment; record unknown coverage explicitly.
 - [x] 1.2 Add failing tactical fixtures for useful evolution versus hard play, modest versus excessive memory handoff, immediate public combat priorities, normal evolution replacement, inactive draw text and DNA material tradeoffs.
-- [ ] 1.3 Add failing pending-choice fixtures for optional draw/retrieval, evolution-line-preserving discard, page rebinding with duplicate IDs, invalidation, no-progress cycles and clean per-seat game reset.
+- [x] 1.3 Add failing pending-choice fixtures for optional draw/retrieval, evolution-line-preserving discard, page rebinding with duplicate IDs, invalidation, no-progress cycles and clean per-seat game reset.
 - [x] 1.4 Add hidden-zone permutation tests and cost-quote versus actual-payment parity checks without modifying tensor/action contracts.
 
 ## 2. Development teacher
@@ -10,8 +10,8 @@
 - [x] 2.1 Implement versioned read-only candidate features using engine legality and available native cost metadata; report unsupported benefit/cost cases rather than inventing results.
 - [x] 2.2 Implement `development_v1` with recorded feature scores, evolution/resource preferences, tactical priorities, memory/body penalties and deterministic tie breaks; retain greedy defaults.
 - [x] 2.3 Implement per-seat pending-choice strategy state, bounded permitted page inspection, physical candidate rebinding, progress detection and reset semantics.
-- [ ] 2.4 Expose explicit teacher selection through PyO3 and the Rust Policy interface; verify actual decision-player routing and native/binding action parity.
-- [ ] 2.5 Run tactical, information-boundary, legality, clone/state and existing greedy regressions; calibrate initial score scales against the pinned fixture expectations and freeze versioned weights.
+- [x] 2.4 Expose explicit teacher selection through PyO3 and the Rust Policy interface; verify actual decision-player routing and native/binding action parity.
+- [x] 2.5 Run tactical, information-boundary, legality, clone/state and existing greedy regressions; calibrate initial score scales against the pinned fixture expectations and freeze versioned weights.
 
 ## 3. Mixed bootstrap collection and fitting
 
