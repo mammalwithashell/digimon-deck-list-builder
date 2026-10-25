@@ -38,6 +38,11 @@ def main():
     parent = source / 'generation/gen0'
     report = json.loads(args.validation.read_text())
     initialization = json.loads((source / 'inputs/initialization.json').read_text())
+    parity_path = source / 'validation/batch-parity/benchmark.json'
+    parity = json.loads(parity_path.read_text())
+    if len(parity.get('comparisons', [])) != 2 or not all(
+            c['arrays_equal'] and all(c['arrays_equal'].values()) for c in parity['comparisons']):
+        raise ValueError('Fresh-model serial/batched search parity must pass')
     if (report.get('status') != 'passed' or report.get('image') != args.image
             or report.get('checkpoint_sha256') != sha256(parent / 'model.zip')
             or report.get('source_commit') != args.commit
@@ -70,6 +75,7 @@ def main():
         shutil.copytree(source / 'inputs', root / 'inputs')
         (root / 'validation').mkdir()
         shutil.copy2(args.validation, root / 'validation/generation0-recovery.json')
+        shutil.copy2(parity_path, root / 'validation/batch-parity.json')
         target = root / 'generation/gen0'
         target.mkdir(parents=True)
         for path in parent.glob('model.*'):
