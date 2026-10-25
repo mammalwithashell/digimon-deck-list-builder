@@ -186,7 +186,7 @@ def collect_bootstrap(run_dir: Path, games: int, seed: int):
     return directory
 
 
-def bootstrap(run_dir: Path, games: int, seed: int):
+def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda"):
     import gymnasium as gym
     import torch
     from sb3_contrib import MaskablePPO
@@ -215,11 +215,11 @@ def bootstrap(run_dir: Path, games: int, seed: int):
         directory=collect_bootstrap(run_dir,games,seed)
     imitation=run_dir / "greedy_imitation.zip"
     if not imitation.exists():
-        summary=train(init,[directory],imitation,epochs=4,batch_size=256,lr=2e-4,value_coef=0.,device="cuda",seed=seed)
+        summary=train(init,[directory],imitation,epochs=4,batch_size=256,lr=2e-4,value_coef=0.,device=device,seed=seed)
         write_json(run_dir / "imitation_summary.json",summary)
     calibrated=run_dir / "seed.zip"
     if not calibrated.exists():
-        calibrate_value(imitation,[directory],calibrated,epochs=8,batch_size=256,lr=5e-4,device="cuda",seed=seed)
+        calibrate_value(imitation,[directory],calibrated,epochs=8,batch_size=256,lr=5e-4,device=device,seed=seed)
     export_mlp(str(calibrated),str(run_dir / "seed.onnx"),get_tensor_profile(PROFILE))
     write_json(run_dir / "anchors.json",{"version":1,"champions":[{"name":"frozen-bootstrap",
         "weights_path":str(calibrated.resolve()),"algorithm":"mlp","observation_profile":PROFILE,
@@ -305,6 +305,7 @@ def main():
     parser.add_argument("--games",type=int,default=400)
     parser.add_argument("--seed",type=int,default=20261023)
     parser.add_argument("--procs",type=int,default=4)
+    parser.add_argument("--bootstrap-device", choices=["cpu", "cuda"], default="cuda")
     args=parser.parse_args()
     os.environ["DIGIMON_CARDS_JSON"] = str(ROOT / "data/cards.json")
     os.environ["DIGIMON_EVAL_FAILURE_DIR"] = str((args.run_dir / "eval_failures").resolve())
@@ -313,7 +314,7 @@ def main():
         parser.error(f"{args.phase} requires --cli-bin")
     if args.phase=="prepare":
         prepare(args.run_dir,args.cli_bin)
-    elif args.phase=="bootstrap":bootstrap(args.run_dir,args.games,args.seed)
+    elif args.phase=="bootstrap":bootstrap(args.run_dir,args.games,args.seed,args.bootstrap_device)
     elif args.phase=="check":check(args.run_dir,args.cli_bin,args.procs,args.seed)
     elif args.phase=="generation":generation(args.run_dir,args.cli_bin,args.procs,args.seed)
     else:pipeline(args.run_dir,args.cli_bin,args.games,args.procs,args.seed)

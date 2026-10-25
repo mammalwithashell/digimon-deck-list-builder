@@ -61,11 +61,13 @@ def main():
     parser.add_argument('--root', type=Path, default=Path('/experiment'))
     parser.add_argument('--out', type=Path, default=Path('/diagnostic'))
     parser.add_argument('--fixture', type=Path, default=Path('/diagnostic/regressions.json'))
+    parser.add_argument('--checkpoint-generation', type=int, default=2)
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
+    checkpoint = args.root / f'generation/gen{args.checkpoint_generation}'
     report = dict(status='running', image=os.environ['DIGIMON_DEPLOYED_IMAGE'],
         source_commit=args.source_commit,
-        checkpoint_sha256=sha256(args.root / 'generation/gen2/model.zip'),
+        checkpoint_sha256=sha256(checkpoint / 'model.zip'),
         validator_sha256=sha256(Path(__file__)), started_unix=time.time(),
         search=dict(simulations=320, worlds=4, batch=4, decision_cap=1200))
     path = args.out / 'validation.json'
@@ -75,17 +77,26 @@ def main():
         from sb3_contrib import MaskablePPO
         from model_contract import validate_checkpoint, validate_contract
         report['contract'] = validate_checkpoint(MaskablePPO.load(
-            args.root / 'generation/gen2/model.zip', device='cpu'), 'standard_lite_v2')
-        validate_contract(json.loads((args.root / 'generation/gen2/model.onnx.meta.json').read_text()),
+            checkpoint / 'model.zip', device='cpu'), 'standard_lite_v2')
+        validate_contract(json.loads((checkpoint / 'model.onnx.meta.json').read_text()),
                           'standard_lite_v2')
+        from digimon_gym.agents.gauntlet import validate_admissible_deck, require_mechanics_ready
+        require_mechanics_ready()
+        decks = json.loads((args.root / 'inputs/decks.json').read_text())
+        registered = set(digimon_engine.load_implemented_card_ids())
+        for deck in decks:
+            validate_admissible_deck(deck['cards'], label=deck['name'])
+            assert set(deck['cards']) <= registered
+            assert digimon_engine.validate_deck(deck['cards']).is_valid
+        report['validated_deck_slots'] = len(decks)
         report['card_eval_event_version'] = digimon_engine.CARD_EVAL_EVENT_VERSION
         report['replays'] = replay_checks(args.fixture)
 
-        def native(label, seed, start, games):
+        def native(label, seed, start, games, decks_path=None):
             out = args.out / label
             cmd = ['digimon-engine-cli', '--pool', 'implemented', '--cards-json', '/app/data/cards.json',
-                'selfplay', '--model', str(args.root / 'generation/gen2/model.onnx'),
-                '--decks', str(args.root / 'inputs/decks.json'), '--games', str(games),
+                'selfplay', '--model', str(checkpoint / 'model.onnx'),
+                '--decks', str(decks_path or args.root / 'inputs/decks.json'), '--games', str(games),
                 '--game-start', str(start), '--seed', str(seed), '--sims', '320', '--worlds', '4',
                 '--eval-batch-size', '4', '--temperature-decisions', '16', '--decision-cap', '1200',
                 '--tensor-profile', 'standard_lite_v2', '--out', str(out)]
@@ -98,8 +109,13 @@ def main():
             print(json.dumps(result), flush=True)
             return result
 
-        cases = [(f'regression-{gid}', 30561025, gid, 1) for gid in (340, 521, 858)]
+        cases = [(f'seed-check-{gid}', 30561025, gid, 1) for gid in (340, 521, 858)]
         cases += [(f'health-{i}', 40361025, i, 4) for i in range(0, 24, 4)]
+        light = [deck for deck in decks if deck['name'].startswith('Light Hybrid:')]
+        if light:
+            light_path = args.out / 'light-hybrid-decks.json'
+            light_path.write_text(json.dumps(light))
+            cases.append(('light-hybrid', 50361025, 0, 4, light_path))
         with ThreadPoolExecutor(max_workers=4) as pool:
             report['native'] = list(pool.map(lambda values: native(*values), cases))
         report.update(status='passed', full_games=sum(c['games'] for c in report['native']))
