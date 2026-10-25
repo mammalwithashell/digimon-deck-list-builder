@@ -1,0 +1,194 @@
+{
+  "batch_size": 4,
+  "requested_ids": 20,
+  "batches": [
+    {
+      "batch": 1,
+      "review": "Independent spec and quality review completed for implemented cards; explicit blockers retained.",
+      "cards": [
+        {
+          "card_id": "EX7-002",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 8,
+          "gap_kind": null,
+          "notes": "Official observation and image checked; behavioral RED then GREEN; independent spec and quality review passed. Focused Rust evidence only; not DCGO parity or complete deck admission."
+        },
+        {
+          "card_id": "BT6-022",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 4,
+          "gap_kind": null,
+          "notes": "Official observation and image checked; behavioral RED then GREEN; independent spec and quality review passed. Focused Rust evidence only; not DCGO parity or complete deck admission."
+        },
+        {
+          "card_id": "BT17-020",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 8,
+          "gap_kind": null,
+          "notes": "Official observation and image checked; behavioral RED then GREEN; independent spec and quality review passed. Focused Rust evidence only; not DCGO parity or complete deck admission."
+        },
+        {
+          "card_id": "P-249",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 9,
+          "gap_kind": null,
+          "notes": "Official-derived production metadata published via supported pre-cutover append-only tooling; all prior indices preserved. Missing-YAML RED then nine behavioral GREEN tests; independent image/spec/quality review approved. No live DCGO parity."
+        }
+      ]
+    },
+    {
+      "batch": 2,
+      "review": "Independent spec and quality review completed for implemented cards; explicit blockers retained.",
+      "cards": [
+        {
+          "card_id": "BT18-067",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 6,
+          "gap_kind": null,
+          "notes": "Official observation/image/DCGO cross-check; image-confirmed circles and correct Security scope where applicable. Observed missing-YAML RED then focused GREEN; independent batch spec/quality review passed. Not DCGO parity or full-deck admission."
+        },
+        {
+          "card_id": "BT18-077",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 10,
+          "gap_kind": null,
+          "notes": "Official observation/image/DCGO cross-check; image-confirmed circles and correct Security scope where applicable. Observed missing-YAML RED then focused GREEN; independent batch spec/quality review passed. Not DCGO parity or full-deck admission."
+        },
+        {
+          "card_id": "BT18-094",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 7,
+          "gap_kind": null,
+          "notes": "Official observation/image/DCGO cross-check; image-confirmed circles and correct Security scope where applicable. Observed missing-YAML RED then focused GREEN; independent batch spec/quality review passed. Not DCGO parity or full-deck admission."
+        },
+        {
+          "card_id": "BT7-038",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 9,
+          "gap_kind": null,
+          "notes": "Observed missing-YAML RED then focused GREEN. Independent spec/quality review approved; uses reviewed hand-cost primitive."
+        }
+      ]
+    },
+    {
+      "batch": 3,
+      "review": "Independent spec and quality review completed for implemented cards; explicit blockers retained.",
+      "cards": [
+        {
+          "card_id": "BT17-023",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 10,
+          "gap_kind": null,
+          "notes": "Focused card GREEN and independent spec/quality review. Runtime-wide gate regeneration and integration verification tracked separately; not DCGO parity."
+        },
+        {
+          "card_id": "BT18-037",
+          "mode": "BLOCKED",
+          "verdict": "BLOCKED",
+          "tests_passed": 9,
+          "gap_kind": "engine",
+          "notes": "G-ACTION-COMPLETE-SECURITY-SELECTION: nine shallow behavioral tests pass, but actual boundary audit passed index-9 control and failed to expose the eligible security card at index 10. Deep witness explicitly ignored pending coordinated contract migration; see light-hybrid-training/security-capacity-audit.json."
+        },
+        {
+          "card_id": "BT18-063",
+          "mode": "BLOCKED",
+          "verdict": "BLOCKED",
+          "tests_passed": 13,
+          "gap_kind": "engine",
+          "notes": "G-ACTION-COMPLETE-SOURCE-SELECTION: 13 shallow card tests passed and were reviewed, but actual deep-source audit failed to expose an eligible Tamer at index 12. Index-11 controls passed. Deep witnesses explicitly ignored pending coordinated contract change; see light-hybrid-training/source-capacity-audit.json and OpenSpec plan."
+        },
+        {
+          "card_id": "BT18-076",
+          "mode": "BLOCKED",
+          "verdict": "BLOCKED",
+          "tests_passed": 13,
+          "gap_kind": "engine",
+          "notes": "G-ACTION-COMPLETE-SOURCE-SELECTION: 13 shallow card tests passed and were reviewed, but actual deep-source audit failed to expose an eligible Tamer at index 12. Index-11 controls passed. Deep witnesses explicitly ignored pending coordinated contract change; see light-hybrid-training/source-capacity-audit.json and OpenSpec plan."
+        }
+      ]
+    },
+    {
+      "batch": 4,
+      "review": "Independent spec and quality review completed for implemented cards; explicit blockers retained.",
+      "cards": [
+        {
+          "card_id": "AD1-015",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 11,
+          "gap_kind": null,
+          "notes": "Focused card GREEN and independent spec/quality review. Runtime-wide gate regeneration and integration verification tracked separately; not DCGO parity."
+        },
+        {
+          "card_id": "BT18-081",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 9,
+          "gap_kind": null,
+          "notes": "Focused card GREEN and independent spec/quality review. Runtime-wide gate regeneration and integration verification tracked separately; not DCGO parity."
+        },
+        {
+          "card_id": "P-153",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 13,
+          "gap_kind": null,
+          "notes": "Thirteen behavioral tests pass, including completed payment, pending replacement cancellation/decline, foreign owner, cloned continuation and carrier compaction. Independent spec/quality review approved the receipt primitive and card repair. Simulator evidence; runtime gate/integration reported separately, no new live DCGO parity. Exact three-color and normal route masks/payment verified; typed Hybrid form retained."
+        },
+        {
+          "card_id": "BT18-042",
+          "mode": "BLOCKED",
+          "verdict": "BLOCKED",
+          "tests_passed": 0,
+          "gap_kind": "engine",
+          "notes": "G-ACTION-COMPLETE-SOURCE-SELECTION: actual RED exposed only 12 of 13 eligible choices. Witness explicitly ignored pending coordinated contract change; no production YAML or readiness claim. See openspec/changes/support-complete-digivolution-source-choices/. Selected-source security cost also needs a completed success receipt."
+        }
+      ]
+    },
+    {
+      "batch": 5,
+      "review": "Independent spec and quality review completed for implemented cards; explicit blockers retained.",
+      "cards": [
+        {
+          "card_id": "BT18-088",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 10,
+          "gap_kind": null,
+          "notes": "Ten behavioral tests pass after independent review: activation decline preserves OPT, accepted activation spends it even when processing is declined/impossible, and Q3046 permits activation without an illegal nested attack. Thirteen-source placement uses the repaired full count bound. Shared immediate-attack guard preserves deferred keyword activation; 33 focused controls pass. No active action/tensor contract change or new live DCGO parity."
+        },
+        {
+          "card_id": "AD1-023",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 9,
+          "gap_kind": null,
+          "notes": "Focused behavioral GREEN and independent spec/quality review. Runtime gate/integration verification reported separately; no new live DCGO parity."
+        },
+        {
+          "card_id": "BT18-097",
+          "mode": "IMPLEMENT",
+          "verdict": "IMPLEMENTED",
+          "tests_passed": 6,
+          "gap_kind": null,
+          "notes": "Focused behavioral GREEN and independent spec/quality review. Runtime gate/integration verification reported separately; no new live DCGO parity."
+        },
+        {
+          "card_id": "BT16-082",
+          "mode": "AUDIT",
+          "verdict": "BASELINE_ADMITTED",
+          "notes": "Existing production implementation and gate qualification retained; no new implementation claim."
+        }
+      ]
+    }
+  ]
+}

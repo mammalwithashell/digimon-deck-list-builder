@@ -441,13 +441,13 @@ fn blitzgreymon_digi_burst_buffs_an_agumon_blocker() {
     runner
         .execute_action(
             0,
-            encode_source_select(blitz.index as u16, 0).expect("first source pick"),
+            crate::owned_choices::source_action(&runner.game, blitz, 0),
         )
         .expect("pick first Digi-Burst source");
     runner
         .execute_action(
             0,
-            encode_source_select(blitz.index as u16, 1).expect("second source pick"),
+            crate::owned_choices::source_action(&runner.game, blitz, 1),
         )
         .expect("pick second Digi-Burst source");
 

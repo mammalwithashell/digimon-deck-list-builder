@@ -1,0 +1,8 @@
+
+running 2 tests
+test trash_material_exposed_when_only_vemmon_on_field ... ok
+test trash_material_hidden_when_non_vemmon_digimon_present ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.11s
+
+SUITE_EXIT 0

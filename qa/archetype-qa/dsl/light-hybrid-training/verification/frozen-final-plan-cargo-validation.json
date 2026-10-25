@@ -1,0 +1,10 @@
+{
+  "suites": 93,
+  "full_suite_required": true,
+  "actual_cargo_test_targets": 291,
+  "discovered_test_targets": 291,
+  "selected_side_targets": 70,
+  "all_selected_targets_real": true,
+  "uncertain_targets": [],
+  "scope_limit": "Planning proof only; does not assert aggregate completion."
+}

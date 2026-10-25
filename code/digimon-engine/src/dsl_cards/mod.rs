@@ -346,6 +346,7 @@ impl CardEffect for DslCardEffect {
                         active_when,
                         reduction_timing,
                         when_playing_this,
+                        when_digivolving_this,
                         when_any_ally_played,
                         when_any_ally_digivolves_into,
                         condition,
@@ -372,6 +373,7 @@ impl CardEffect for DslCardEffect {
                         // `active_when` instead of dropping the clause silently.
                         // (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET.)
                         if !*when_playing_this
+                            && !*when_digivolving_this
                             && when_any_ally_played.is_none()
                             && when_any_ally_digivolves_into.is_none()
                             && active_when.is_none()
@@ -438,6 +440,7 @@ impl CardEffect for DslCardEffect {
                                     when_any_ally_digivolves_into.clone(),
                                     shared_opt_group,
                                 );
+                                effect.when_digivolving_this = *when_digivolving_this;
                                 effect.cost_assignment = *set_cost;
                                 if let Some(value) = set_cost {
                                     effect.name = format!("Set play cost to {value}");

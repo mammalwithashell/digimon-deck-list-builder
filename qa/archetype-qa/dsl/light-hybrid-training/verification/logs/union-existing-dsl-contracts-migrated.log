@@ -1,0 +1,344 @@
+   Compiling digimon-engine v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-engine)
+warning: unused imports: `Expiry`, `ModifierType`, and `Zone`
+   --> code\digimon-engine\src\cards\keyword_effects.rs:126:34
+    |
+126 | use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
+    |                                  ^^^^^^           ^^^^^^^^^^^^  ^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `effect_attack_target_action_ids_with_options` and `effect_attack_target_action_ids`
+  --> code\digimon-engine\src\effect_context\mod.rs:37:5
+   |
+37 |     effect_attack_target_action_ids, effect_attack_target_action_ids_with_options,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `SECURITY_TARGET`, `decode_attack`, and `encode_attack`
+  --> code\digimon-engine\src\effect_context\mod.rs:39:28
+   |
+39 | use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
+   |                            ^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused imports: `AttackError`, `AttackInitiator`, `AttackOpen`, `AttackResult`, and `TargetConstraint`
+  --> code\digimon-engine\src\effect_context\mod.rs:42:21
+   |
+42 | use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
+   |                     ^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `DigiXrosMaterialValidationError`, `DigiXrosMaterialZone`, `DigiXrosTransaction`, and `DigiXrosZoneAllowance`
+  --> code\digimon-engine\src\effect_context\mod.rs:44:29
+   |
+44 |     DigiXrosMaterialOrigin, DigiXrosMaterialValidationError, DigiXrosMaterialZone,
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+45 |     DigiXrosTransaction, DigiXrosZoneAllowance,
+   |     ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::dsl_cards::bindings::Bindings`
+  --> code\digimon-engine\src\effect_context\mod.rs:47:5
+   |
+47 | use crate::dsl_cards::bindings::Bindings;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::dsl_cards::step::StepRuntime`
+  --> code\digimon-engine\src\effect_context\mod.rs:48:5
+   |
+48 | use crate::dsl_cards::step::StepRuntime;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `TimingFilter` and `enumerate_refireable_effects`
+  --> code\digimon-engine\src\effect_context\mod.rs:49:21
+   |
+49 | use crate::effect::{enumerate_refireable_effects, ReFireableEffect, TimingFilter};
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^                    ^^^^^^^^^^^^
+
+warning: unused imports: `DelayTrigger`, `EffectTiming`, `Expiry`, `GamePhase`, `Keyword`, `ModifierType`, `PlaySource`, and `StackPosition`
+  --> code\digimon-engine\src\effect_context\mod.rs:51:15
+   |
+51 |     CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, GamePhase, Keyword,
+   |               ^^^^^^^^^^^^                    ^^^^^^^^^^^^  ^^^^^^  ^^^^^^^^^  ^^^^^^^
+52 |     ModifierType, PlaySource, PlayerId, StackPosition,
+   |     ^^^^^^^^^^^^  ^^^^^^^^^^            ^^^^^^^^^^^^^
+
+warning: unused import: `crate::game::PendingWouldPlayOrigin`
+  --> code\digimon-engine\src\effect_context\mod.rs:55:5
+   |
+55 | use crate::game::PendingWouldPlayOrigin;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `EffectControllerFilter`, `EffectImmunityFilter`, `ModifierEntry`, and `PlayerModifierEntry`
+  --> code\digimon-engine\src\effect_context\mod.rs:58:5
+   |
+58 |     EffectControllerFilter, EffectImmunityFilter, ModifierEntry, PlayerModifierEntry,
+   |     ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ReplacementSubject`
+  --> code\digimon-engine\src\effect_context\mod.rs:62:44
+   |
+62 | use crate::replacement::{ReplacementCause, ReplacementSubject};
+   |                                            ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::scheduled_effects::ScheduledEffect`
+  --> code\digimon-engine\src\effect_context\mod.rs:64:5
+   |
+64 | use crate::scheduled_effects::ScheduledEffect;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `AttackTarget`, `DeclineCallback`, `PendingSelection`, and `SelectionKind`
+  --> code\digimon-engine\src\effect_context\mod.rs:65:24
+   |
+65 | use crate::selection::{AttackTarget, DeclineCallback, PendingSelection, SelectionKind};
+   |                        ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused import: `build_registry`
+  --> code\digimon-engine\src\game\mod.rs:10:20
+   |
+10 | use crate::cards::{build_registry, CardEffectRegistry};
+   |                    ^^^^^^^^^^^^^^
+
+warning: unused import: `OriginalDeckCardCount`
+  --> code\digimon-engine\src\game\mod.rs:16:21
+   |
+16 | use crate::player::{OriginalDeckCardCount, Player};
+   |                     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:2915:13
+     |
+2915 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:2916:13
+     |
+2916 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:3098:13
+     |
+3098 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:3099:13
+     |
+3099 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:3248:13
+     |
+3248 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:3249:13
+     |
+3249 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `PendingWouldDigivolveResume` and `PendingWouldPlayResume`
+  --> code\digimon-engine\src\game_actions\mod.rs:20:5
+   |
+20 |     PendingWouldDigivolveResume, PendingWouldLinkResume, PendingWouldPlayOrigin,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+21 |     PendingWouldPlayResume,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `OptionPlayResult` and `QueuedEffect`
+  --> code\digimon-engine\src\game_actions\mod.rs:25:5
+   |
+25 |     OptionPlayResult, OptionResolutionPhase, OptionSubtype, OptionUseSource, PendingOption,
+   |     ^^^^^^^^^^^^^^^^
+26 |     PendingSelection, QueuedEffect, SelectionKind, TriggerSource,
+   |                       ^^^^^^^^^^^^
+
+warning: unused import: `ReplacementOutcome`
+    --> code\digimon-engine\src\game_actions\mod.rs:4186:34
+     |
+4186 |         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+     |                                  ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `PathBuf`
+  --> code\digimon-engine\src\selfplay\driver.rs:28:23
+   |
+28 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+
+error[E0277]: `F` cannot be shared between threads safely
+    --> code\digimon-engine\src\effect_context\selections.rs:1242:35
+     |
+1242 |         owner.set_security_filter(move |game, index| filter(game, index));
+     |               ------------------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `F` cannot be shared between threads safely
+     |               |
+     |               required by a bound introduced by this call
+     |
+     = note: required for `std::sync::Arc<F>` to implement `Send`
+note: required because it's used within this closure
+    --> code\digimon-engine\src\effect_context\selections.rs:1242:35
+     |
+1242 |         owner.set_security_filter(move |game, index| filter(game, index));
+     |                                   ^^^^^^^^^^^^^^^^^^
+note: required by a bound in `OwnedCardChoice::set_security_filter`
+    --> code\digimon-engine\src\owned_card_choice.rs:303:41
+     |
+ 302 |     pub(crate) fn set_security_filter<F>(&mut self, filter: F)
+     |                   ------------------- required by a bound in this associated function
+ 303 |     where F: Fn(&Game, usize) -> bool + Send + Sync + 'static {
+     |                                         ^^^^ required by this bound in `OwnedCardChoice::set_security_filter`
+help: use parentheses to call this type parameter
+     |
+1242 |         owner.set_security_filter(move |game, index| filter(game, index)(/* &game::Game */, /* usize */));
+     |                                                                         ++++++++++++++++++++++++++++++++
+help: consider further restricting type parameter `F` with trait `Sync`
+     |
+1233 |         F: Fn(&Game, usize) -> bool + std::marker::Sync,
+     |                                     +++++++++++++++++++
+
+error[E0277]: `F` cannot be sent between threads safely
+    --> code\digimon-engine\src\effect_context\selections.rs:1242:35
+     |
+1242 |         owner.set_security_filter(move |game, index| filter(game, index));
+     |               ------------------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `F` cannot be sent between threads safely
+     |               |
+     |               required by a bound introduced by this call
+     |
+     = note: required for `std::sync::Arc<F>` to implement `Send`
+note: required because it's used within this closure
+    --> code\digimon-engine\src\effect_context\selections.rs:1242:35
+     |
+1242 |         owner.set_security_filter(move |game, index| filter(game, index));
+     |                                   ^^^^^^^^^^^^^^^^^^
+note: required by a bound in `OwnedCardChoice::set_security_filter`
+    --> code\digimon-engine\src\owned_card_choice.rs:303:41
+     |
+ 302 |     pub(crate) fn set_security_filter<F>(&mut self, filter: F)
+     |                   ------------------- required by a bound in this associated function
+ 303 |     where F: Fn(&Game, usize) -> bool + Send + Sync + 'static {
+     |                                         ^^^^ required by this bound in `OwnedCardChoice::set_security_filter`
+help: use parentheses to call this type parameter
+     |
+1242 |         owner.set_security_filter(move |game, index| filter(game, index)(/* &game::Game */, /* usize */));
+     |                                                                         ++++++++++++++++++++++++++++++++
+help: consider further restricting type parameter `F` with trait `Send`
+     |
+1233 |         F: Fn(&Game, usize) -> bool + std::marker::Send,
+     |                                     +++++++++++++++++++
+
+error[E0277]: `F` cannot be sent between threads safely
+    --> code\digimon-engine\src\effect_context\selections.rs:2126:58
+     |
+2126 |             .select_hand(of_player, prompt, is_optional, filter, callback);
+     |              -----------                                 ^^^^^^ `F` cannot be sent between threads safely
+     |              |
+     |              required by a bound introduced by this call
+     |
+note: required by a bound in `effect_context::selections::<impl effect_context::EffectContext<'a>>::select_hand`
+    --> code\digimon-engine\src\effect_context\selections.rs:408:39
+     |
+ 400 |     pub fn select_hand<F, C>(
+     |            ----------- required by a bound in this associated function
+...
+ 408 |         F: Fn(&Game, usize) -> bool + Send + Sync + 'static,
+     |                                       ^^^^ required by this bound in `effect_context::selections::<impl EffectContext<'a>>::select_hand`
+help: use parentheses to call this type parameter
+     |
+2126 |             .select_hand(of_player, prompt, is_optional, filter(/* &game::Game */, /* usize */), callback);
+     |                                                                ++++++++++++++++++++++++++++++++
+help: consider further restricting type parameter `F` with trait `Send`
+     |
+2120 |         F: Fn(&crate::game::Game, usize) -> bool + std::marker::Send,
+     |                                                  +++++++++++++++++++
+
+error[E0277]: `F` cannot be shared between threads safely
+    --> code\digimon-engine\src\effect_context\selections.rs:2126:58
+     |
+2126 |             .select_hand(of_player, prompt, is_optional, filter, callback);
+     |              -----------                                 ^^^^^^ `F` cannot be shared between threads safely
+     |              |
+     |              required by a bound introduced by this call
+     |
+note: required by a bound in `effect_context::selections::<impl effect_context::EffectContext<'a>>::select_hand`
+    --> code\digimon-engine\src\effect_context\selections.rs:408:46
+     |
+ 400 |     pub fn select_hand<F, C>(
+     |            ----------- required by a bound in this associated function
+...
+ 408 |         F: Fn(&Game, usize) -> bool + Send + Sync + 'static,
+     |                                              ^^^^ required by this bound in `effect_context::selections::<impl EffectContext<'a>>::select_hand`
+help: use parentheses to call this type parameter
+     |
+2126 |             .select_hand(of_player, prompt, is_optional, filter(/* &game::Game */, /* usize */), callback);
+     |                                                                ++++++++++++++++++++++++++++++++
+help: consider further restricting type parameter `F` with trait `Sync`
+     |
+2120 |         F: Fn(&crate::game::Game, usize) -> bool + std::marker::Sync,
+     |                                                  +++++++++++++++++++
+
+warning: unused import: `rand::seq::SliceRandom`
+  --> code\digimon-engine\src\game_actions\mod.rs:28:5
+   |
+28 | use rand::seq::SliceRandom;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> code\digimon-engine\src\determinize\invariants.rs:91:9
+   |
+91 |     let mut add_all = |cards: &[crate::card_source::CardSource], ms: &mut CardMultiset| {
+   |         ----^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `action_id`
+    --> code\digimon-engine\src\dsl_cards\step\selections.rs:3324:5
+     |
+3324 |     action_id: u16,
+     |     ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_action_id`
+     |
+     = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> code\digimon-engine\src\dsl_cards\step\zone_cards.rs:612:18
+    |
+612 |         let Some(mut c) = ctx.game.take_card_by_handle(card) else {
+    |                  ----^
+    |                  |
+    |                  help: remove this `mut`
+
+warning: unused variable: `source_card`
+   --> code\digimon-engine\src\effect_context\action\security.rs:518:13
+    |
+518 |         let source_card = {
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_card`
+
+warning: unused variable: `top_card`
+   --> code\digimon-engine\src\effect_context\action\security.rs:560:13
+    |
+560 |         let top_card = {
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_top_card`
+
+warning: unused variable: `action_id`
+   --> code\digimon-engine\src\effect_context\selections.rs:601:55
+    |
+601 |             callback: Box::new(move |game: &mut Game, action_id: u16| {
+    |                                                       ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_action_id`
+
+warning: variable does not need to be mutable
+   --> code\digimon-engine\src\game\snapshot.rs:166:13
+    |
+166 |         let mut push = |cs: &CardSource, ids: &mut Vec<String>| {
+    |             ----^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: unused variable: `action_id`
+   --> code\digimon-engine\src\game_actions\misc.rs:795:9
+    |
+795 |         action_id: u16,
+    |         ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_action_id`
+
+For more information about this error, try `rustc --explain E0277`.
+warning: `digimon-engine` (lib) generated 35 warnings
+error: could not compile `digimon-engine` (lib) due to 4 previous errors; 35 warnings emitted

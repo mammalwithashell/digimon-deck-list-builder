@@ -1,0 +1,93 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "AD1-023",
+    "card_type": "Tamer",
+    "colors": [
+      "Black",
+      "Yellow",
+      "Purple"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Black",
+          "Yellow",
+          "Purple"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "tamer",
+        "level": null,
+        "name": "J.P., Koji, & Koichi",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Security] Play this card without paying the cost.\n[Start of Your Main Phase] [On Play] You may place up to 2 [Hybrid] trait cards with different colors from your hand or trash under this Tamer. If this effect placed, ＜Draw 1＞. Then, if there are 4 or more [Hybrid] trait cards under this Tamer, gain 2 memory.\n(Rule) Name: Also treated as [J.P. Shibayama]/[Koji Minamoto]/[Koichi Kimura]."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[All Turns] [Once Per Turn] When this Digimon with the [Hybrid] or [Ten Warriors] trait would leave the battle area, by adding your top security card to the hand, it doesn't leave."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "J.P., Koji, & Koichi",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522035",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/AD1-023.png?260529",
+      "printing_id": "AD1-023"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, you can.\nIf referencing \"with different XX\" and a card has multiple instances of information for an XX card, part of the differing portions can be referenced and be treated as differing combinations.",
+        "date": "Mar. 13, 2026",
+        "number": "Q6113",
+        "question": "Can I choose different combinations of red/blue 2-color cards as cards \"with different colors\"?"
+      },
+      {
+        "answer": "Yes, you can.",
+        "date": "Mar. 13, 2026",
+        "number": "Q6114",
+        "question": "Can I process the part of the effect after \"then\" in this card's [Start of Your Main Phase] effect without placing cards under this card?"
+      }
+    ],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] Play this card without paying the cost.\n[Start of Your Main Phase] [On Play] You may place up to 2 [Hybrid] trait cards with different colors from your hand or trash under this Tamer. If this effect placed, ＜Draw 1＞. Then, if there are 4 or more [Hybrid] trait cards under this Tamer, gain 2 memory.\n(Rule) Name: Also treated as [J.P. Shibayama]/[Koji Minamoto]/[Koichi Kimura]."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] [Once Per Turn] When this Digimon with the [Hybrid] or [Ten Warriors] trait would leave the battle area, by adding your top security card to the hand, it doesn't leave."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "636e6bd1463677a297e9457cc3f7520cfe69842f84f3b1d04684f0c060ca1e04",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522035:AD1-023:AD1-023",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522035"
+}

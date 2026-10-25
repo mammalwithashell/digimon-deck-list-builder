@@ -1,4 +1,7 @@
 mod armor_purge;
+#[path = "../support/owned_card_choice.rs"]
+mod owned_choices;
+
 mod decoy;
 mod evade;
 mod fortitude;

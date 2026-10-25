@@ -1,0 +1,55 @@
+{
+  "status": "frozen_green",
+  "scope": "Canonical EX11-022/038/053/057/065 and EX12-031 physical choice fixture migration",
+  "red": {
+    "EX11-022": [
+      11,
+      2,
+      0
+    ],
+    "EX11-038": [
+      4,
+      2,
+      0
+    ],
+    "EX11-053": [
+      6,
+      3,
+      0
+    ],
+    "EX11-057": [
+      19,
+      1,
+      0
+    ],
+    "EX11-065": [
+      16,
+      2,
+      0
+    ],
+    "EX12-031": [
+      20,
+      1,
+      1
+    ]
+  },
+  "red_log_pattern": "logs/<lowercase_id_with_underscore>-physical-red.log",
+  "green": {
+    "passed": 85,
+    "failed": 0,
+    "ignored": 1,
+    "seconds": 164.96,
+    "cargo_exit": 0,
+    "log": "logs/ex-source-six-modules-green.log",
+    "target": "light_hybrid_ex_source_fixtures"
+  },
+  "coverage": [
+    "Complete canonical modules with existing assertions and old ignore retained",
+    "Puppet DP and trait filter by exact hand/trash physical rows",
+    "King Drasil source carrier restriction and exact self attachment",
+    "Cross-carrier source picks freshly resolved between selections",
+    "Mineral hand/source costs preserve draw and memory outcomes",
+    "Decode Digimon kind and level witness selection across both actors and cloned decline"
+  ],
+  "limits": "Test-only fixtures, no production changes, no new ignore, no ledger promotion. Final inclusive aggregate proof pending."
+}

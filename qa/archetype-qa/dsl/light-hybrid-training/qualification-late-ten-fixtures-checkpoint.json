@@ -1,0 +1,64 @@
+{
+  "scope": "Ten canonical late card modules; test fixture migration",
+  "cards": [
+    "bt23_072",
+    "bt23_076",
+    "bt24_007",
+    "bt24_009",
+    "bt24_013",
+    "bt24_021",
+    "bt24_026",
+    "bt24_042",
+    "bt24_045",
+    "bt24_089"
+  ],
+  "actual_red": {
+    "log": "verification/logs/qualification-late-ten-card-red.log",
+    "passed": 149,
+    "failed": 35,
+    "ignored": 0,
+    "binary": "C:/Users/james/.codex/build-targets/light-hybrid-replay/debug/deps/cards_behavioral-fccdda01a7d2293d.exe"
+  },
+  "production_edits": false,
+  "final_proof": {
+    "status": "passed",
+    "passed": 184,
+    "failed": 0,
+    "ignored": 0,
+    "batches": {
+      "F": 52,
+      "G": 86,
+      "H": 46
+    },
+    "log": "verification/logs/qualification-late-ten-final.log",
+    "log_sha256": "274103b777d491d137f2a2b91372d8a469f239ea8c13cdd32dac9dcb5a870ec7",
+    "command": "cargo test -p digimon-engine --config profile.dev.opt-level=0 --config profile.dev.debug=0 --test light_hybrid_qualification_union_f --test light_hybrid_qualification_union_g --test light_hybrid_qualification_union_h -- --test-threads=2"
+  },
+  "native_stack_bytes": 268435456,
+  "migration": [
+    "BT23-072 breeding source choice resolves printed physical source identity; original physical handle outcome assertions retained.",
+    "BT23-076 optional union result commits resolve exact named cards and zones; preserves route exclusions, cost reduction and no-generated-memory assertions.",
+    "Seven BT24 consumers use remaining_source_selectors shared bt26/support.rs owned physical hand/trash picker; no local shadows or gameplay changes.",
+    "BT24-089 optional card count excludes explicit PASS and selects named hand/trash physical row; original free-play outcomes retained."
+  ],
+  "limit": "Focused proof does not certify full cards aggregate or whole training eligibility.",
+  "sha256": {
+    "code/digimon-engine/tests/cards_behavioral/bt23/bt23_072.rs": "fd6fa6f74c87913e5ea1139641799aadde648c9fe9282fa9446c680e5be9a2c0",
+    "code/digimon-engine/tests/cards_behavioral/bt23/bt23_076.rs": "cf569942476655e628344d805e157eee70e1b2fc76e4377b0c83310446793217",
+    "code/digimon-engine/tests/cards_behavioral/bt24/bt24_007.rs": "30f91c3f5cf4e61407f8f82e1566343e470762e0d1dc324c6f03607e4b5c63d7",
+    "code/digimon-engine/tests/cards_behavioral/bt24/bt24_009.rs": "9757b37547eab15a328f3422ecfe4e93d3ff3f2e9602079d35043c71256f508e",
+    "code/digimon-engine/tests/cards_behavioral/bt24/bt24_013.rs": "5a09623d96162c374876a22a880a5d20839c9afb4e291b42b5b5d1767ec0a9cf",
+    "code/digimon-engine/tests/cards_behavioral/bt24/bt24_021.rs": "21957f7e0028f2a27c58fe01a30a6c3396d574ada1e129c2b18e771785ac2722",
+    "code/digimon-engine/tests/cards_behavioral/bt24/bt24_026.rs": "15fc933b598d32d79388b0dac0235368fa1ca4f67be0c960eceff329a26b7041",
+    "code/digimon-engine/tests/cards_behavioral/bt24/bt24_042.rs": "f5276e45057170072b3f987224fb9f6b89cfacc7192d891afd69f942c17ab4fc",
+    "code/digimon-engine/tests/cards_behavioral/bt24/bt24_045.rs": "e7a1fabe44180284bf449c53b542f22c70e35be879b4d585f0d52976e2b099da",
+    "code/digimon-engine/tests/cards_behavioral/bt24/bt24_089.rs": "bbd19e270a3b2a137030432eba0665f138aa72c4b5d8ab8133464b0699944c63",
+    "code/digimon-engine/tests/cards_behavioral/bt26/support.rs": "d9d9dd97b0f841a933977d0761bb61d5c921711b0e1be420762d1e3e360a4653",
+    "code/digimon-engine/tests/support/owned_card_choice.rs": "6ac86132c341c42619b1eac3925ca1752d64c462a07ed946d069231f2cc04753",
+    "code/digimon-engine/tests/support/late_owned_fixture.rs": "6e8d4ced354be4ba1c0bd68c55c1bb9cae3317f89dbc83ab82d1b18fe4145f54",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_f.rs": "c3904ab92ae1aaa5e4443d5d098c2761d507195e7ee9fa513a344a891151ff8d",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_g.rs": "504f88bda86e2deff9565ab492bd03c4d152fda1252fb932696b71a07e832f76",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_h.rs": "614d20f83c9378bbc63412180cefa97779bd21317360f30a7c387fa89f1d6b3e"
+  },
+  "intermediate_snapshot": "qualification-late-ten-current.log contains F50/2 before self exclusion coordinate and FREE identity correction; superseded by final proof."
+}

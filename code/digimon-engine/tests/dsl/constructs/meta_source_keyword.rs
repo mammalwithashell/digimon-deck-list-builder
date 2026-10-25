@@ -178,6 +178,8 @@ fn assert_choice(r: &DebugRunner, owner: u8, kind: SelectionKind, ids: &[u16]) {
     assert_eq!(s.selecting_player, owner);
     assert_eq!(s.kind, kind);
     assert!(s.is_optional);
+    let mut ids = ids.iter().map(|&id| crate::union_fixture_action(&r.game, id)).collect::<Vec<_>>();
+    if s.card_choice.is_some() { ids.push(PASS); }
     assert_eq!(s.valid_action_ids, ids);
     let mask = build_action_mask(&r.game, owner);
     for (a, bit) in mask.iter().enumerate() {
@@ -197,6 +199,7 @@ fn assert_choice(r: &DebugRunner, owner: u8, kind: SelectionKind, ids: &[u16]) {
 }
 
 fn choose(r: &mut DebugRunner, owner: u8, action: u16) {
+    let action = crate::union_fixture_action(&r.game, action);
     assert_eq!(build_action_mask(&r.game, owner)[action as usize], 1.0);
     r.execute_action(owner, action).unwrap();
 }

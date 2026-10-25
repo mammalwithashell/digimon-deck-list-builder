@@ -1,0 +1,105 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "BT17-020",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue"
+    ],
+    "dp": 1000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue",
+          "Yellow"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": 1000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Strabimon",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 Tamer card with inherited effects among them to the hand. Return the rest to the bottom of the deck."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] You may play 1 Tamer card with inherited effects from your hand with the play cost reduced by 2."
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Strabimon",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522023",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT17-020.png?260529",
+      "printing_id": "BT17-020"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, even if you only reveal one of the applicable cards, you can still add it to your hand.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2751",
+        "question": "If the 3 cards I reveal from my deck for this card's effect include only either a card with the [Hybrid] or [Ten Warriors] trait or a Tamer card with an inherited effect, can I just add that 1 card to my hand?"
+      },
+      {
+        "answer": "No. If you have cards that are targets of this effect, you must add as many cards to your hand as possible.",
+        "date": "Mar. 28, 2024",
+        "number": "Q2752",
+        "question": "If the 3 cards I reveal from my deck for this card's effect include both a card with the [Hybrid] or [Ten Warriors] trait and a Tamer card with an inherited effect, can I choose to only add one of them to my hand, and place the remaining cards at the bottom of my deck?"
+      },
+      {
+        "answer": "It means a Tamer card with \"Inherited Effect\" in its lower text.\nA Tamer card with a [Security] effect in its lower text isn't a \"Tamer card with inherited effects.\"",
+        "date": "Mar. 28, 2024",
+        "number": "Q2753",
+        "question": "What does this card's \"Tamer card with inherited effects\" mean, exactly?"
+      }
+    ],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 Tamer card with inherited effects among them to the hand. Return the rest to the bottom of the deck."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] You may play 1 Tamer card with inherited effects from your hand with the play cost reduced by 2."
+      }
+    ],
+    "type": "Beastkin"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "1102533396b8cf62e17c6757c4666f17a1bd30cee3f5c69f781e56ed0991500b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522023:BT17-020:BT17-020",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522023"
+}

@@ -1,0 +1,43 @@
+{
+  "scope": "Final release runtime only; no training or model-quality promotion",
+  "wheel_sha256": "5ddd98b9124c86d74d86cd1eb2c716d25b02330784eadff9887e65d775c53fa9",
+  "source_sha256": "92ec23d1c154591f50c0ced36ffbede106f9bb84d7ef01d810e5485b22994091",
+  "copies": 54,
+  "unique_ids": 20,
+  "registration_and_data": true,
+  "global_mechanics": true,
+  "admission": {
+    "status": "held_until_aggregate_qualification",
+    "reason": "final exact Light Hybrid contains cards that are not admissible: BT18-037 (failed_verdict), BT18-042 (failed_verdict), BT18-063 (failed_verdict), BT18-076 (failed_verdict)"
+  },
+  "episodes": [
+    {
+      "seed": 41,
+      "steps": 158,
+      "terminated": true,
+      "truncated": false,
+      "profile": "standard_lite_v2"
+    },
+    {
+      "seed": 42,
+      "steps": 283,
+      "terminated": true,
+      "truncated": false,
+      "profile": "standard_lite_v2"
+    },
+    {
+      "seed": 43,
+      "steps": 229,
+      "terminated": true,
+      "truncated": false,
+      "profile": "standard_lite_v2"
+    },
+    {
+      "seed": 44,
+      "steps": 157,
+      "terminated": true,
+      "truncated": false,
+      "profile": "standard_lite_v2"
+    }
+  ]
+}

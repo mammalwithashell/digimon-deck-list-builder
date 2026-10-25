@@ -1,0 +1,33 @@
+{
+  "status": "frozen_green",
+  "scope": "Canonical EX4-073 and EX7-011 physical-choice fixture migration",
+  "red": {
+    "EX4-073": {
+      "passed": 10,
+      "failed": 3,
+      "log": "logs/ex4_073-physical-red.log"
+    },
+    "EX7-011": {
+      "passed": 6,
+      "failed": 5,
+      "log": "logs/ex7_011-physical-red.log"
+    }
+  },
+  "green": {
+    "passed": 24,
+    "failed": 0,
+    "ignored": 0,
+    "seconds": 38.82,
+    "cargo_exit": 0,
+    "log": "logs/ex4-ex7-source-two-modules-green.log",
+    "target": "light_hybrid_ex4_ex7_source_fixtures"
+  },
+  "coverage": [
+    "Level6+ source filter preserves level5 exclusion",
+    "Fresh physical source actions between multipicks preserve selection identity",
+    "Per-trash lowest-cost deletion and three-source security-trash tail retain original assertions",
+    "Exact Three Musketeers Option hand/trash physical choices preserve placement and deletion outcomes",
+    "Existing optional declines preserved"
+  ],
+  "limits": "Fixture-only changes, no production edits, no added ignore, no training ledger promotion; final full inclusive verification pending."
+}

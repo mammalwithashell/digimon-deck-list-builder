@@ -89,20 +89,8 @@ fn bt26_096_main_bounces_self_and_plays_from_trash_reduced() {
     assert!(v.is_optional, "may");
     assert_eq!(non_pass(&r), 3, "CHRONO (trash), TS-T + TEXTED (hand)");
     // Pick the trash Chronomon (cost 8 → pays 6).
-    let a = *r
-        .pending_selection_view()
-        .unwrap()
-        .valid_action_ids
-        .iter()
-        .find(|&&a| {
-            a != PASS && {
-                // the trash candidate is the one that is NOT a hand-play bit
-                !(digimon_engine::action::space::PLAY_HAND_START
-                    ..digimon_engine::action::space::PLAY_HAND_END)
-                    .contains(&a)
-            }
-        })
-        .expect("trash candidate");
+    let trash_index=r.game.player(0).trash.iter().position(|card|card.card_id(&r.game.card_data)=="CHRONO").unwrap();
+    let a=physical_menu::zone_action(&r.game,0,trash_index,digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     r.execute_action(0, a).unwrap();
     let _ = r.auto_resolve();
     assert_eq!(field_ids(&r, 0), vec!["CHRONO".to_string()]);
@@ -149,3 +137,6 @@ fn bt26_096_security_plays_self() {
         "{dbg}"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

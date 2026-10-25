@@ -19,6 +19,9 @@
 //! (digivolution stacks, breeding, security/trash seeding) is already on
 //! `DebugRunner` / `DebugRunnerBuilder`.
 
+#[path = "../support/owned_card_choice.rs"]
+mod owned_choices;
+
 mod support;
 
 // ── Fixture self-tests (prove the shared helpers) ────────────────────────────

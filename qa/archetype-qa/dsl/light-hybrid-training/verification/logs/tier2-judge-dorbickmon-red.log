@@ -1,0 +1,15 @@
+
+running 1 test
+
+thread 'c_declare_then_pay::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo' (36200) panicked at code\digimon-engine\tests\judge_quiz\c_declare_then_pay.rs:124:5:
+precondition: WarGreymon must be a legal DigiXros material
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test c_declare_then_pay::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo ... FAILED
+
+failures:
+
+failures:
+    c_declare_then_pay::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 44 filtered out; finished in 3.80s
+

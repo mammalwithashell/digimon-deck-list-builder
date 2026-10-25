@@ -1,0 +1,51 @@
+{
+  "status": "frozen_green",
+  "scope": "Canonical EX7-021/043/051/073 physical card choice fixture migration",
+  "actual_red": {
+    "EX7-021": [
+      15,
+      2,
+      0
+    ],
+    "EX7-043": [
+      8,
+      4,
+      0
+    ],
+    "EX7-051": [
+      8,
+      4,
+      0
+    ],
+    "EX7-073_substring": [
+      16,
+      6,
+      0
+    ]
+  },
+  "red_log_pattern": "logs/<lowercase_id_with_underscore>-physical-red.log",
+  "green": {
+    "passed": 61,
+    "failed": 0,
+    "ignored": 0,
+    "seconds": 80.18,
+    "cargo_exit": 0,
+    "canonical_module_counts": {
+      "EX7-021": 17,
+      "EX7-043": 12,
+      "EX7-051": 12,
+      "EX7-073": 20
+    },
+    "log": "logs/ex7-late-four-modules-green.log",
+    "target": "light_hybrid_ex7_late_source_fixtures"
+  },
+  "scope_audit": "Compared old/new module-qualified test-name sets: no missing tests. Old EX7-073 substring additionally ran two printed_form_filters JSON/YAML tests outside the canonical module; both were green.",
+  "coverage": [
+    "Fresh physical opponent source picks preserve exact chosen sources and unsuspend gates",
+    "Three Musketeers return cost preserves pick order and mandatory remainder after engagement",
+    "Option kind/trait and hand/trash zones selected explicitly, token host exclusion retained",
+    "Partial source payment and decline preserve printed deletion/security count gate",
+    "Negative no-trait source test now checks actual physical legal identities instead of a legacy absent ID"
+  ],
+  "limits": "Only test fixtures changed, no production modifications, no new ignore, no ledger promotion. Final whole verification pending."
+}

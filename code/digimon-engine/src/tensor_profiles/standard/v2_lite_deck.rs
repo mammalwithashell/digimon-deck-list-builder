@@ -6,9 +6,9 @@ pub const PROFILE_ID: &str = "standard_lite_deck_v2";
 pub const GAME_MODE: &str = v2_lite::GAME_MODE;
 pub const VERSION: u32 = v2_lite::VERSION;
 pub const TENSOR_VERSION: u16 = v2_lite::TENSOR_VERSION;
-pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_deck_v2.2";
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_deck_v2.3";
 pub const LAYOUT_HASH: &str =
-    "sha256:964cc52d8c27c512c295663e62a45bbd7cb372f7b758ce1108a872d31aefbaa4";
+    "sha256:d7182574a93cc7472452c5f3d28343092613e1008ec44d3a6458d487aabfee8f";
 
 pub const DECKLIST_ROWS: usize = 55;
 pub const DECKLIST_ROW_SIZE: usize = 8;

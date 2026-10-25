@@ -7,7 +7,6 @@ use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
     CompiledTiming,
 };
-use digimon_engine::action::space::encode_source_select;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::ModifierType;
 use digimon_engine::selection::SelectionKind;
@@ -134,9 +133,7 @@ fn bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon() {
         "Digi-Burst must expose the source-trash cost as a source selection"
     );
 
-    let burst_pick =
-        encode_source_select(carrier.index as u16, 0).expect("carrier source pick action");
-    let other_pick = encode_source_select(other.index as u16, 0).expect("other source pick action");
+    let burst_pick = physical_menu::source_action(&runner.game, carrier, 0);
     let source_selection = runner
         .game
         .pending_selection
@@ -147,7 +144,7 @@ fn bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon() {
         "BT4-072 should allow trashing a source from under itself"
     );
     assert!(
-        !source_selection.valid_action_ids.contains(&other_pick),
+        !physical_menu::commits(&runner.game).iter().any(|row| row.carrier_slot == Some(other.index)),
         "BT4-072 Digi-Burst must not allow sources under another Digimon"
     );
     runner
@@ -209,8 +206,7 @@ fn bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn() {
         "BT4-072 Main Digi-Burst should activate on player 0's turn"
     );
     // Pick the only source under the carrier
-    let burst_pick =
-        encode_source_select(carrier.index as u16, 0).expect("carrier source pick action");
+    let burst_pick = physical_menu::source_action(&runner.game, carrier, 0);
     runner
         .execute_action(0, burst_pick)
         .expect("Digi-Burst source selection resolves");
@@ -242,3 +238,6 @@ fn bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn() {
         "+2000 DP must expire at the end of the opponent's next turn"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

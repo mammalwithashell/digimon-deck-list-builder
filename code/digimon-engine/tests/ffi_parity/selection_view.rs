@@ -29,7 +29,7 @@ fn pending_selection_view_mirrors_serializable_fields() {
         .pending_selection
         .as_ref()
         .expect("TEST-010 installs a pending selection");
-    let view = sel.view();
+    let view = sel.view(&r.game);
 
     assert_eq!(view.kind, SelectionKind::OppField);
     assert_eq!(view.selecting_player, 0);
@@ -48,7 +48,7 @@ fn pending_selection_view_kind_as_str_round_trips() {
     let mut r = runner_with_two_opponents();
     r.play(0, 0);
     let sel = r.game.pending_selection.as_ref().unwrap();
-    let view = sel.view();
+    let view = sel.view(&r.game);
     // Stable string form used by the PyO3 layer and by the Python-side
     // state filter for UI rendering. Variants use their `Debug` spelling.
     assert_eq!(view.kind_str(), "OppField");

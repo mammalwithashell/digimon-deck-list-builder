@@ -1,0 +1,34 @@
+
+running 29 tests
+test bt10::bt10_009::bt10_009_declares_digixros_x4_recipe ... ok
+test bt10::bt10_009::bt10_009_digixros_two_field_materials_reduce_cost_and_attach_sources ... ok
+test bt10::bt10_087::bt10_087_suspends_to_allow_under_tamer_digixros_materials_for_one_play ... ok
+test bt10::bt10_111::bt10_111_on_play_wildcard_can_replace_one_missing_digixros_requirement_this_turn ... ok
+test bt11::bt11_095::bt11_095_suspends_to_allow_under_tamer_cards_as_digixros_materials_for_one_play ... ok
+test bt18::bt18_019::bt18_019_has_digixros_alt_path_with_two_named_materials ... ok
+test bt11::bt11_018::bt11_018_digixros_has_two_named_material_slots_cost_delta_3 ... ok
+test bt12::bt12_011::bt12_011_digixros_with_save_text_material_costs_3 ... ok
+test bt18::bt18_065::bt18_065_digixros_completes_with_4_vemmon_from_hand ... ok
+test bt18::bt18_065::bt18_065_digixros_material_from_battle_area_offered ... ok
+test bt18::bt18_065::bt18_065_has_digixros_alt_path_with_4_vemmon_materials ... ok
+test bt18::bt18_065::bt18_065_digixros_trash_material_exposed_when_only_vemmon_on_field ... ok
+test bt18::bt18_065::bt18_065_digixros_reduces_cost_by_1_per_material ... ok
+test bt19::bt19_061::bt19_061_declares_sparrowmon_digixros_alias_without_generic_identity_alias ... ok
+test bt18::bt18_065::bt18_065_digixros_trash_material_hidden_when_non_vemmon_digimon_present ... ok
+test bt19::bt19_065::bt19_065_declares_digixros_five_distinct_card_number_materials_each_minus_one ... ok
+test bt19::bt19_012::bt19_012_declares_shoutmon_digixros_alias_and_alt_paths ... ok
+test bt19::bt19_065::bt19_065_digixros_rejects_duplicate_card_number ... ok
+test bt19::bt19_079::bt19_079_declares_under_tamer_digixros_material_routing_cost_modifier ... ok
+test bt19::bt19_070::bt19_070_has_digixros_alt_path_three_distinct_lv4_composite_materials ... ok
+test bt19::bt19_065::bt19_065_digixros_five_field_materials_reduce_cost_and_attach_sources ... ok
+test bt21::bt21_021::bt21_021_digixros_aliases_contains_shoutmon ... ok
+test ex12::alt_paths::ex12_digixros_play_banners_are_exposed_as_alt_paths ... ok
+test ex10::ex10_059::ex10_059_compiles_with_named_two_slot_digixros_path ... ok
+test ex10::ex10_056::ex10_056_compiles_with_digixros_path_and_observer_clause ... ok
+test ex10::ex10_059::ex10_059_digixros_with_both_materials_costs_10 ... ok
+test ex3::ex3_014::ex3_014_declares_digixros_five_distinct_dragon_materials_each_minus_two ... ok
+test ex3::ex3_014::ex3_014_digixros_five_field_materials_reduce_cost_and_attach_sources ... ok
+test p::p_094::p_094_has_digivolve_and_digixros_paths_with_digimon_only_materials ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 12726 filtered out; finished in 11.70s
+

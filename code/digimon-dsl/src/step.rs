@@ -2420,6 +2420,11 @@ impl SecurityReplacementDisposition {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SecurityPlaceStackedCardArgs {
+    /// Publish 1 only for a completed security movement, otherwise 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_success_as: Option<String>,
+    #[serde(default)]
+    pub to_owner: bool,
     pub carrier: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source: Option<BindingRef>,
@@ -2434,6 +2439,12 @@ pub struct SecurityPlaceStackedCardArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SecurityPlaceTopStackedCardArgs {
+    /// Publish 1 only when this placement was processed, otherwise 0.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_success_as: Option<String>,
+    /// Unspecified destination ownership rule (CR 3-1-3-8), opt-in.
+    #[serde(default)]
+    pub to_owner: bool,
     pub carrier: BindingRef,
     #[serde(default = "default_player_ref_you", alias = "target_player")]
     pub of: PlayerRef,
@@ -3106,6 +3117,9 @@ pub struct AddDpModifierArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct AddModifierArgs {
+    /// Restrict this modifier's replacement cause to an opponent effect.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub opponent_only: bool,
     pub target: ModifierTarget,
     pub modifier: String,
     #[serde(deserialize_with = "deserialize_modifier_value")]
@@ -3477,6 +3491,10 @@ pub struct SelectDnaPairArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectZoneArgs {
+    /// Security only: on optional decline run the following process steps,
+    /// skipping the accepted selection's `then` body. Forbidden for costs.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continue_on_decline: bool,
     pub of: PlayerRef,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3770,6 +3788,10 @@ pub struct SelectZoneCardsArgs {
     /// all-or-nothing cost such as BT26-102's "by placing 6 …").
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional_zero: bool,
+    /// Per-pick uniqueness across all selected zones. Color uses an injective
+    /// card-to-printed-color assignment, matching `select_count_capped`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub distinct_by: Option<crate::alt_path::DistinctBy>,
     /// "Up to N play cost's total worth": each pick's play cost must fit the
     /// remaining budget.
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -1,0 +1,5 @@
+
+running 4 tests
+test digixros_transaction_steps::digixros_wildcard_steps_lower_to_compiled_steps ... ok
+
+thread 'digixros_transaction_steps::turn_scoped_wildcard_step_makes_source_legal_for_later_digixros' (31184) has overflowed its stack

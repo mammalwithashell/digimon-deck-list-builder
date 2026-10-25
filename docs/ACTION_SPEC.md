@@ -1,5 +1,66 @@
 # Action Decoder Specification
 
+
+Owned physical union menus page the complete hand/trash/material candidate pool through the same card-choice aliases. Typed zone codes are 1 battle source, 2 breeding source, 3 security, 4 hand, 5 trash, and 6 battle top. Hand identities remain private to their owner; trash identities are public. Commits resolve the pinned card in its original zone/carrier, including after compaction.
+
+## Physical source and security paging migration (implementation in progress)
+
+The coordinated change `support-complete-digivolution-source-choices` reserves
+actions 30–57 for 28 physical card rows, 58/59 for previous/next page, and 62
+for an allowed decline. Action capacity remains 2192; activation requires
+action schema version 2 across every consumer. Rust now exports version 2;
+version 1 models are incompatible. Remaining selector, binding and runtime
+qualification is tracked in the change; the worktree is not yet certified
+for training admission.
+
+The pending prompt owns the full filtered candidate vector and physical pins.
+A row commits the pinned card after checking its current carrier and zone;
+positions and action IDs do not identify cards across pages. Navigation
+changes only page state and generation, without spending costs or once-per-turn
+uses, moving cards, invoking effect continuations, or consuming RNG. Masks
+remain the legality authority. Count declarations retain their separate typed
+contract.
+
+A security search presents all cards in its stack, including ineligible cards.
+Typed `inspect_card` rows have no legal commit bit; they remain visible to the
+inspection recipient and can be browsed with the same page navigation. A
+nonempty search with no eligible matches presents inspection and Done/decline,
+then runs its no-match/outer continuation. Inspection rows occupy presentation
+positions in `cardChoice.rows` without joining `valid_action_ids`.
+
+Asynchronous submissions must include the expected prompt ID and page generation
+as exact unsigned decimal strings. Reject mismatches before any mutation.
+Trusted serial engine callers may resolve the currently installed prompt.
+A security search grants inspection only to its selecting seat; other recipients
+must not receive hidden card IDs or registry indices. A security reorder or
+shuffle invalidates the old physical menu, including shuffles that happen to
+retain order. Mandatory invalidation must explicitly rebuild or finish the
+operation rather than strand an empty mask.
+
+A stale mandatory security menu exposes `refresh_page` on action 59 when a
+live eligible card remains. Refresh reevaluates the original predicate against
+the current stack, rebuilds its physical pins and increments page generation.
+It invokes no callback, payment, lifecycle hook, movement or RNG. Raw selectors
+retain a read-only `Send + Sync` predicate; DSL selectors retain typed predicate,
+bindings and provenance data. A positional filter such as index zero therefore
+selects the current top card after refresh. An optional stale security prompt
+retains its existing PASS behavior.
+
+An impossible mandatory physical menu exposes `finish_impossible` on action 62.
+This completes an unavailable operation, rather than paying or declining a
+still-available printed choice. The engine abandons its callback and paid DSL
+tails, releases only its armed typed finalizers, rejects current payment credit
+and resumes enclosing lifecycle continuations. Required prefixes count only
+sources still under their original carrier. Their masks also preserve named-role
+matching and distinctness feasibility; a partial prefix cannot earn a reward.
+Raw Partition menus additionally retain a read-only completion predicate over
+their original physical pool, so losing a required printed role offers Finish
+even when enough unrelated source cards remain.
+
+The tensor allocation, compatibility migration, and full producer inventory
+are specified in TENSOR_SPEC.md and the change's contract-inventory.md.
+
+
 The engine exposes `2192` discrete action IDs. Legal actions are provided by `get_action_mask(player_id)` and executed by `decode_action(action_id, player_id)`.
 
 ## Global Action Ranges
@@ -214,4 +275,4 @@ the coordinated observation schema/hash update and model compatibility gate.
 
 ### Model action semantic compatibility
 
-Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. This preparatory gate does not bump SCHEMA_VERSION (still 1), resize actions/tensors, or complete the capacity migration.
+Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. SCHEMA_VERSION is now 2 for owned physical card pages; old action semantics are incompatible even when ACTION_SPACE_SIZE remains 2192. Full selector and runtime qualification is still required before admitting the blocked cards.

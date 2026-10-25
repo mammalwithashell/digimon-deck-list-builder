@@ -1,0 +1,38 @@
+# Official observation: 8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85.
+# Card image BT7-038.webp and DCGO BT7_038.cs confirm the hand-origin reduction.
+card: BT7-038
+name: JetSilphymon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+form: Hybrid
+attribute: Variable
+traits: [Cyborg]
+alt_paths:
+  - kind: digivolve
+    from: {kind: digimon, level_eq: 4, color_is: yellow}
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    when_digivolving_this: true
+    condition:
+      all_of:
+        - cost_target_from_hand: true
+        - cost_target_permanent:
+            kind: digimon
+            source_count: {filter: {kind: tamer}, at_least: 1}
+    amount: 2
+    summary: "When a Digimon with a Tamer source digivolves into this card in hand, reduce the cost by 2"
+
+  - when: when_digivolving
+    condition:
+      self_source_count:
+        filter: {trait_has: Hybrid}
+        op: gte
+        value: 1
+    summary: "If a Hybrid card is in this Digimon's digivolution cards, Recovery +1 (Deck)"
+    process:
+      - recover: {of: you, count: 1}

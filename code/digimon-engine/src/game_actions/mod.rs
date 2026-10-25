@@ -110,6 +110,9 @@ impl DigiXrosResumeContinuation {
     pub(crate) fn pending_cost_payment(&self) -> Option<u64> {
         self.total_reduction.pending_payment
     }
+    pub(crate) fn pending_cost_reduction(&self) -> Option<i32> {
+        self.total_reduction.pending_reduction
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -536,15 +539,15 @@ impl Game {
     fn pending_digixros_material_candidates(
         &self,
         player_id: PlayerId,
-    ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
+    ) -> Vec<DigiXrosMaterialOrigin> {
         let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
             return Vec::new();
         };
         self.digixros_material_candidates_for(transaction, player_id)
     }
 
-    /// Candidate material origins (with their selection action ids) for a
-    /// DigiXros / cast-time-assembly `transaction`, in the mask's selection
+    /// Complete physical material origins for a
+    /// DigiXros / cast-time-assembly `transaction`, in the menu presentation
     /// order. Extracted from `pending_digixros_material_candidates` so the
     /// mask-time availability probe (`cast_time_assembly_play_reduction_for_
     /// hand_card`) can enumerate against a scratch transaction that is not
@@ -553,12 +556,7 @@ impl Game {
         &self,
         transaction: &crate::digixros::DigiXrosTransaction,
         player_id: PlayerId,
-    ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
-        use crate::action::space::{
-            encode_source_select, HAND_EFFECT_START, HAND_MAIN_LIMIT, MAX_FIELD_SLOTS,
-            TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
-        };
-
+    ) -> Vec<DigiXrosMaterialOrigin> {
         if transaction.controller != player_id {
             return Vec::new();
         }
@@ -566,7 +564,7 @@ impl Game {
         let player = self.player(player_id);
         let mut candidates = Vec::new();
 
-        for (index, card) in player.hand.iter().enumerate().take(HAND_MAIN_LIMIT) {
+        for (index, card) in player.hand.iter().enumerate() {
             if card.handle() == transaction.played_card {
                 continue;
             }
@@ -575,11 +573,9 @@ impl Game {
                 index,
                 card: card.handle(),
             };
-            if transaction
-                .validate_material_origin(origin, &self.card_data[card.data_index])
-                .is_ok()
+            if self.digixros_material_is_eligible(transaction, origin)
             {
-                candidates.push((HAND_EFFECT_START + index as u16, origin));
+                candidates.push(origin);
             }
         }
 
@@ -587,7 +583,6 @@ impl Game {
             .battle_area
             .iter()
             .enumerate()
-            .take(MAX_FIELD_SLOTS as usize)
         {
             let card = permanent.top_card();
             let origin = DigiXrosMaterialOrigin::BattleArea {
@@ -597,25 +592,21 @@ impl Game {
                 },
                 card: card.handle(),
             };
-            if transaction
-                .validate_material_origin(origin, &self.card_data[card.data_index])
-                .is_ok()
+            if self.digixros_material_is_eligible(transaction, origin)
             {
-                candidates.push((index as u16, origin));
+                candidates.push(origin);
             }
         }
 
-        for (index, card) in player.trash.iter().enumerate().take(TRASH_MAIN_LIMIT) {
+        for (index, card) in player.trash.iter().enumerate() {
             let origin = DigiXrosMaterialOrigin::Trash {
                 player: player_id,
                 index,
                 card: card.handle(),
             };
-            if transaction
-                .validate_material_origin(origin, &self.card_data[card.data_index])
-                .is_ok()
+            if self.digixros_material_is_eligible(transaction, origin)
             {
-                candidates.push((TRASH_EFFECT_START + index as u16, origin));
+                candidates.push(origin);
             }
         }
 
@@ -623,16 +614,11 @@ impl Game {
             .battle_area
             .iter()
             .enumerate()
-            .take(MAX_FIELD_SLOTS as usize)
         {
             if permanent.top_card().card_kind(&self.card_data) != CardKind::Tamer {
                 continue;
             }
-            for (source_index, card) in permanent.card_sources.iter().enumerate() {
-                let Some(action_id) = encode_source_select(field_index as u16, source_index as u16)
-                else {
-                    continue;
-                };
+            for (source_index, card) in permanent.card_sources.iter().take(permanent.card_sources.len().saturating_sub(1)).enumerate() {
                 let origin = DigiXrosMaterialOrigin::UnderTamer {
                     tamer: PermanentHandle {
                         player: player_id,
@@ -641,11 +627,9 @@ impl Game {
                     source_index,
                     card: card.handle(),
                 };
-                if transaction
-                    .validate_material_origin(origin, &self.card_data[card.data_index])
-                    .is_ok()
+                if self.digixros_material_is_eligible(transaction, origin)
                 {
-                    candidates.push((action_id, origin));
+                    candidates.push(origin);
                 }
             }
         }
@@ -823,7 +807,7 @@ impl Game {
         let base = transaction.final_cost() as i32;
         loop {
             let candidates = self.digixros_material_candidates_for(&transaction, player_id);
-            let Some((_, origin)) = candidates.first().copied() else {
+            let Some(origin) = candidates.first().copied() else {
                 break;
             };
             let Some(card_data) = self.card_data_for_handle(origin.card()) else {
@@ -955,7 +939,7 @@ impl Game {
                     resume.suppress_on_play,
                     resume.origin.enters_suspended(),
                     resume.origin.source_play_receipt(),
-                    matches!(resume.origin, PendingWouldPlayOrigin::SecurityTop { .. }),
+                    matches!(resume.origin, PendingWouldPlayOrigin::SecurityTop { .. } | PendingWouldPlayOrigin::SecurityRecorded { .. } | PendingWouldPlayOrigin::SecurityAt { .. }),
                 );
                 self.effect_source_player = previous_controller;
                 if played.is_none() {
@@ -1200,6 +1184,7 @@ impl Game {
         }
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(owner),
             kind: SelectionKind::OwnField,
             selecting_player: owner,
@@ -2035,6 +2020,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(owner),
             kind: SelectionKind::OwnField,
             selecting_player: owner,
@@ -3163,7 +3149,8 @@ impl Game {
                     return infos;
                 };
                 for (slot, effect) in effects.iter().enumerate() {
-                    if effect.timing == EffectTiming::BeforePayCost && effect.when_playing_this {
+                    if effect.timing == EffectTiming::BeforePayCost
+                        && (effect.when_playing_this || effect.when_digivolving_this) {
                         infos.push(BeforePayCostSourceInfo {
                             source_permanent: None,
                             source_card: target,
@@ -3236,7 +3223,7 @@ impl Game {
             if effect.timing != EffectTiming::BeforePayCost {
                 continue;
             }
-            if effect.when_playing_this && !allow_when_playing_this {
+            if (effect.when_playing_this || effect.when_digivolving_this) && !allow_when_playing_this {
                 continue;
             }
             infos.push(BeforePayCostSourceInfo {
@@ -3381,7 +3368,7 @@ impl Game {
             if effect.timing != EffectTiming::BeforePayCostObserve {
                 continue;
             }
-            if effect.when_playing_this && !allow_when_playing_this {
+            if (effect.when_playing_this || effect.when_digivolving_this) && !allow_when_playing_this {
                 continue;
             }
             infos.push(BeforePayCostSourceInfo {
@@ -3706,7 +3693,7 @@ impl Game {
         let donor = (target.player, id);
         let key = (target.player, id, player, position, face_up, observer);
         if let Some(state) = self.pending_security_moves.iter_mut().rfind(|s| {
-            !s.top_only
+            s.kind == crate::game::SecurityMoveKind::Permanent
                 && s.donor == donor
                 && s.player == player
                 && s.position == position
@@ -3723,7 +3710,7 @@ impl Game {
                 .handle();
             self.pending_security_moves
                 .push(crate::game::PendingSecurityMove {
-                    top_only: false,
+                    kind: crate::game::SecurityMoveKind::Permanent,
                     donor,
                     card,
                     player,
@@ -3750,7 +3737,7 @@ impl Game {
             || self.resolve_digivolve_host_identity(key.0, key.1).is_none()
         {
             self.pending_security_moves.retain(|s| {
-                !(!s.top_only
+                !(s.kind == crate::game::SecurityMoveKind::Permanent
                     && s.donor == (key.0, key.1)
                     && s.player == key.2
                     && s.position == key.3
@@ -3802,19 +3789,21 @@ impl Game {
         outcome: crate::replacement::ReplacementOutcome,
     ) -> bool {
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-        let key = match subject {
+        let index = match subject {
             ReplacementSubject::Permanent(h) => self
                 .player(h.player)
                 .battle_area
                 .get(h.index as usize)
                 .and_then(|p| p.battle_identity)
-                .map(|id| (h.player, id)),
+                .and_then(|id| self.pending_security_moves.iter().rposition(|s|
+                    s.kind == crate::game::SecurityMoveKind::Permanent && s.donor == (h.player, id)
+                )),
             ReplacementSubject::Card(card, _) => self
                 .pending_security_moves
                 .iter()
-                .rfind(|s| {
+                .rposition(|s| {
                     s.card == card
-                        || self
+                        || (s.kind == crate::game::SecurityMoveKind::Permanent && self
                             .resolve_digivolve_host_identity(s.donor.0, s.donor.1)
                             .and_then(|h| {
                                 self.player(h.player)
@@ -3822,35 +3811,28 @@ impl Game {
                                     .get(h.index as usize)
                                     .map(|p| p.top_card().handle())
                             })
-                            == Some(card)
-                })
-                .map(|s| s.donor),
+                            == Some(card))
+                }),
             _ => None,
         };
-        let Some(key) = key else { return false };
-        let Some(i) = self
-            .pending_security_moves
-            .iter()
-            .rposition(|s| s.donor == key)
-        else {
-            return false;
-        };
+        let Some(i) = index else { return false };
         let state = self.pending_security_moves.remove(i);
+        let key = state.donor;
         let Some(h) = self.resolve_digivolve_host_identity(key.0, key.1) else {
             return true;
         };
-        if state.top_only {
+        if state.kind != crate::game::SecurityMoveKind::Permanent {
             if outcome == ReplacementOutcome::None {
-                let still_exact_top = self
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-                    .is_some_and(|p| {
-                        p.card_sources.len() >= 2 && p.top_card().handle() == state.card
-                    });
-                if still_exact_top {
-                    // Re-enter the same WouldPlace window so a declined or
-                    // non-replacing optional effect cannot skip remaining candidates.
+                // Re-enter the same window after declining a replacement;
+                // physical membership is revalidated by the owning operation.
+                if state.kind == crate::game::SecurityMoveKind::SourceCard {
+                    self.place_source_on_security(
+                        state.player, h, state.card, state.position,
+                        state.face_up, state.observer,
+                    );
+                } else if self.player(h.player).battle_area.get(h.index as usize)
+                    .is_some_and(|p| p.card_sources.len() >= 2 && p.top_card().handle() == state.card)
+                {
                     self.place_top_stacked_on_security(
                         state.player,
                         h,
@@ -3860,7 +3842,7 @@ impl Game {
                     );
                 }
             } else {
-                self.finish_top_stacked_security_move(state, outcome);
+                self.finish_stacked_security_move(state, outcome);
             }
             return true;
         }
@@ -4172,27 +4154,35 @@ impl Game {
         face_up: bool,
         observer: PlayerId,
     ) -> bool {
+        self.start_stacked_security_move(player, target, None, position, face_up, observer)
+    }
+
+    pub(crate) fn place_source_on_security(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        card: crate::card_source::CardHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer: PlayerId,
+    ) -> bool {
+        self.start_stacked_security_move(player, target, Some(card), position, face_up, observer)
+    }
+
+    fn start_stacked_security_move(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        selected_card: Option<crate::card_source::CardHandle>,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer: PlayerId,
+    ) -> bool {
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-        if self
-            .modifiers
-            .player_has(observer, ModifierType::CannotAddSecurityByEffect)
-            || self
+        if !self.can_add_security_by_effect(observer)
+            || (selected_card.is_none() && self
                 .modifiers
-                .player_has(player, ModifierType::CannotAddSecurityByEffect)
-            || self
-                .player(observer)
-                .battle_area
-                .iter()
-                .enumerate()
-                .any(|(i, _)| {
-                    self.modifiers.has(
-                        PermanentHandle {
-                            player: observer,
-                            index: i as u8,
-                        },
-                        ModifierType::CannotAddSecurity,
-                    )
-                })
+                .player_has(player, ModifierType::CannotAddSecurityByEffect))
         {
             return false;
         }
@@ -4209,9 +4199,15 @@ impl Game {
         if permanent.card_sources.len() < 2 {
             return false;
         }
-        let card = permanent.top_card().handle();
+        let (kind, card) = if let Some(card) = selected_card {
+            if !permanent.card_sources.iter().take(permanent.card_sources.len() - 1)
+                .any(|source| source.handle() == card) { return false; }
+            (crate::game::SecurityMoveKind::SourceCard, card)
+        } else {
+            (crate::game::SecurityMoveKind::TopCard, permanent.top_card().handle())
+        };
         let state = crate::game::PendingSecurityMove {
-            top_only: true,
+            kind,
             donor: (target.player, id),
             card,
             player,
@@ -4234,7 +4230,7 @@ impl Game {
             return false;
         }
         if let Some(i) = self.pending_security_moves.iter().rposition(|s| {
-            s.top_only
+            s.kind == state.kind
                 && s.donor == state.donor
                 && s.card == card
                 && s.player == player
@@ -4244,10 +4240,10 @@ impl Game {
         }) {
             self.pending_security_moves.remove(i);
         }
-        self.finish_top_stacked_security_move(state, outcome)
+        self.finish_stacked_security_move(state, outcome)
     }
 
-    fn finish_top_stacked_security_move(
+    fn finish_stacked_security_move(
         &mut self,
         state: crate::game::PendingSecurityMove,
         outcome: crate::replacement::ReplacementOutcome,
@@ -4263,10 +4259,20 @@ impl Game {
             return false;
         };
         let p = &self.player(h.player).battle_area[h.index as usize];
-        // A nested operation cannot redirect this request onto a fresh top.
-        if p.card_sources.len() < 2 || p.top_card().handle() != state.card {
-            return false;
-        }
+        // Both operations re-find the exact physical card. Source extraction
+        // permits index compaction but cannot extract a newly exposed top.
+        let source_index = match state.kind {
+            crate::game::SecurityMoveKind::SourceCard => {
+                let Some(index) = p.card_sources.iter().take(p.card_sources.len().saturating_sub(1))
+                    .position(|source| source.handle() == state.card) else { return false; };
+                index
+            }
+            crate::game::SecurityMoveKind::TopCard => {
+                if p.card_sources.len() < 2 || p.top_card().handle() != state.card { return false; }
+                p.card_sources.len() - 1
+            }
+            crate::game::SecurityMoveKind::Permanent => return false,
+        };
         let destination = match outcome {
             ReplacementOutcome::None => Zone::Security,
             ReplacementOutcome::Redirected(z) => z,
@@ -4280,8 +4286,7 @@ impl Game {
         }
         let card = self.player_mut(h.player).battle_area[h.index as usize]
             .card_sources
-            .pop()
-            .unwrap();
+            .remove(source_index);
         let leaving = vec![card.clone()];
         let is_egg = card.card_kind(&self.card_data) == crate::enums::CardKind::DigiEgg;
         let owner = card.owner;
@@ -4323,6 +4328,14 @@ impl Game {
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
         self.apply_ace_overflow_for_sources(&leaving);
+        // Mark before observer effects: correlate the original physical card,
+        // never infer success from where a card happens to be after triggers.
+        if destination == Zone::Security {
+            if let Some(receipt) = self.security_placement_receipts.iter_mut()
+                .rfind(|(card, _)| *card == state.card.0) {
+                receipt.1 = true;
+            }
+        }
         if security {
             self.fire_on_place_security(state.player, state.observer, state.card);
         }
@@ -4786,6 +4799,7 @@ fn install_assembly_element(
                     is_optional_zero: can_decline,
                     distinct_by,
                     candidate_actions: pending.valid_action_ids.clone(),
+                        source_candidates: None,
                     accum: Vec::new(),
                     prompt: pending.prompt.clone(),
                     previous_phase: pending.previous_phase,

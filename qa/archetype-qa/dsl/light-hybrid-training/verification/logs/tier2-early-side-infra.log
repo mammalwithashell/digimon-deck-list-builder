@@ -1,0 +1,78 @@
+
+running 44 tests
+test determinism_guard::rng_entropy_sources_are_limited_to_documented_engine_sites ... ok
+test determinism_guard::verification_replay_digest_helper ... ignored, subprocess helper for verification_replay_digests_are_process_deterministic
+
+thread 'determinism_guard::verification_replay_digests_are_process_deterministic' (15696) panicked at code\digimon-engine\tests\infra\determinism_guard.rs:119:28:
+digest helper did not print stream marker; stdout=
+running 1 test
+test determinism_guard::verification_replay_digest_helper ... DIGIMON_DIGEST_STREAM_JSON=[17431170426300414491,2812757887327667756,11379619298048466762,1886139751194920879,5294374442020209652,7836386902598762784]
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 43 filtered out; finished in 1.82s
+
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test determinism_guard::verification_replay_digests_are_process_deterministic ... FAILED
+test headless_runner::deckout_exposes_terminal_outcome_reason ... ok
+test headless_runner::declared_winner_exposes_terminal_outcome_reason ... ok
+test headless_runner::default_policy_reaches_conclusion ... ok
+test headless_runner::headless_match_runs_with_embedded_dsl_omnimon_slice ... ok
+test headless_runner::mask_and_tensor_sizes_match_layout ... ok
+test headless_runner::mulligan_accept_advances ... ok
+test headless_runner::new_runner_starts_in_mulligan ... ok
+test headless_runner::runner_can_use_standard_compact_v1_observation_profile ... ok
+
+thread 'headless_runner::runner_can_use_standard_lite_deck_v2_observation_profile' (37884) panicked at code\digimon-engine\tests\infra\headless_runner.rs:162:5:
+assertion `left == right` failed
+  left: 9874
+ right: 8850
+test headless_runner::runner_can_use_standard_lite_deck_v2_observation_profile ... FAILED
+test headless_runner::runner_default_observation_profile_is_standard_lite_deck_v2 ... ok
+
+thread 'headless_runner::runner_test_setter_accepts_observation_profile_aliases' (51616) panicked at code\digimon-engine\tests\infra\headless_runner.rs:174:5:
+assertion `left == right` failed
+  left: 9434
+ right: 8410
+test headless_runner::runner_test_setter_accepts_observation_profile_aliases ... FAILED
+test headless_runner::st4_giga_green_deck_resets_in_headless_runner ... ok
+test headless_runner::step_is_noop_after_game_over ... ok
+test logger_recorder::game_default_logger_is_silent ... ok
+test logger_recorder::game_rejects_out_of_range_digivolve_and_logs_reason ... ok
+test logger_recorder::recorder_captures_initial_state_after_start ... ok
+test logger_recorder::recorder_record_and_finalize_action_captures_deltas ... ok
+test logger_recorder::recorder_to_json_has_expected_top_level_keys ... ok
+test logger_recorder::silent_logger_discards ... ok
+test logger_recorder::verbose_logger_buffers_and_prefixes_verbose ... ok
+test replay_corpus::bless_corpus_dir_rewrites_changed_replays_and_retires_unreplayable_files ... ok
+test replay_corpus::bless_workflow_regenerates_digest_stream_without_changing_actions ... ok
+test replay_corpus::bless_workflow_retires_unreplayable_actions_with_review_reason ... ok
+test replay_corpus::corpus_writer_materializes_pretty_replay_json_files ... ok
+test replay_corpus::generated_greedy_corpus_is_sized_replayable_and_seeded ... ok
+test replay_corpus::legacy_schema_rehash_stays_legacy_and_replays_cleanly ... ok
+test replay_corpus::regenerate_rerecords_one_golden_from_its_inline_decks_and_seed ... ok
+test replay_corpus::training_recording_converter_reports_reconstructible_and_skipped_artifacts ... ok
+test replay_corpus::unsupported_action_semantics_never_retire_or_rewrite_corpus_files ... ok
+test replay_corpus::unsupported_versions_never_retire_or_rewrite_corpus_files ... ok
+test replay_corpus::verify_corpus_dir_reports_first_replay_divergence_without_mutation ... ok
+test verification_digest::verification_digest_changes_for_zone_order_and_memory_changes ... ok
+test verification_digest::verification_digest_includes_pending_selection_kind ... ok
+test verification_digest::verification_digest_includes_pending_selection_prompt_and_resume ... ok
+test verification_digest::verification_digest_is_stable_for_identical_gameplay_state ... ok
+test verification_digest::verification_digest_micro_benchmark ... ignored, diagnostic micro-benchmark; run with --ignored --nocapture when changing digest fields
+test verification_digest::verification_digest_sorts_modifier_summary_by_handle_not_hashmap_order ... ok
+test verification_recording::cards_hash_is_sha256_over_exact_cards_json_bytes ... ok
+test verification_recording::current_replay_protocol_round_trips_and_unknown_versions_are_rejected ... ok
+test verification_recording::debug_runner_recorded_action_hook_emits_digests ... ok
+test verification_recording::headless_runner_emits_canonical_replay_recording ... ok
+
+failures:
+
+failures:
+    determinism_guard::verification_replay_digests_are_process_deterministic
+    headless_runner::runner_can_use_standard_lite_deck_v2_observation_profile
+    headless_runner::runner_test_setter_accepts_observation_profile_aliases
+
+test result: FAILED. 39 passed; 3 failed; 2 ignored; 0 measured; 0 filtered out; finished in 5.27s
+
+SUITE_EXIT 101

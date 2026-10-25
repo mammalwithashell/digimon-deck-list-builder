@@ -1,0 +1,88 @@
+
+running 4 tests
+test bt13::bt13_019::bt13_019_decline_leaves_board_unchanged ... ok
+test bt13::bt13_019::bt13_019_has_blocker_keyword ... ok
+
+thread 'bt13::bt13_019::bt13_019_plays_royal_knight_from_breeding_only' (35736) panicked at code\digimon-engine\tests\cards_behavioral\bt13\bt13_019.rs:228:5:
+assertion `left == right` failed: only the single breeding Royal Knight is legal
+  left: [30, 62]
+ right: [2168]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt13::bt13_019::bt13_019_plays_royal_knight_from_breeding_only ... FAILED
+
+thread 'bt13::bt13_019::bt13_019_plays_sistermon_or_royal_knight_from_breeding_sources' (53412) panicked at code\digimon-engine\tests\cards_behavioral\bt13\bt13_019.rs:155:5:
+trash [Sistermon] must be a legal pick; ids = [30, 31, 62]
+test bt13::bt13_019::bt13_019_plays_sistermon_or_royal_knight_from_breeding_sources ... FAILED
+
+failures:
+
+failures:
+    bt13::bt13_019::bt13_019_plays_royal_knight_from_breeding_only
+    bt13::bt13_019::bt13_019_plays_sistermon_or_royal_knight_from_breeding_sources
+
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 12751 filtered out; finished in 7.57s
+
+FILTER_EXIT bt13_019 101
+
+running 4 tests
+test bt13::bt13_040::bt13_040_has_blocker_keyword ... ok
+test bt13::bt13_040::bt13_040_when_leaving_can_decline_veemon_play_and_still_leaves ... ok
+
+thread 'bt13::bt13_040::bt13_040_when_leaving_draws_and_may_play_veemon_from_hand_or_source' (53784) panicked at code\digimon-engine\tests\cards_behavioral\bt13\bt13_040.rs:83:5:
+Veemon already in hand should be a legal pick
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt13::bt13_040::bt13_040_when_leaving_draws_and_may_play_veemon_from_hand_or_source ... FAILED
+test bt13::bt13_040::bt13_040_when_leaving_uses_native_union_zone_for_hand_or_sources ... ok
+
+failures:
+
+failures:
+    bt13::bt13_040::bt13_040_when_leaving_draws_and_may_play_veemon_from_hand_or_source
+
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 12751 filtered out; finished in 6.33s
+
+FILTER_EXIT bt13_040 101
+
+running 5 tests
+
+thread 'bt13::bt13_110::bt13_110_delay_plays_royal_knight_from_breeding_sources_with_rush' (5892) panicked at code\digimon-engine\tests\cards_behavioral\bt13\bt13_110.rs:252:10:
+choose Royal Knight source: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt13::bt13_110::bt13_110_delay_plays_royal_knight_from_breeding_sources_with_rush ... FAILED
+test bt13::bt13_110::bt13_110_has_printed_metadata ... ok
+test bt13::bt13_110::bt13_110_main_draws_one_and_places_self ... ok
+test bt13::bt13_110::bt13_110_main_may_place_hand_digimon_under_king_drasil ... ok
+test bt13::bt13_110::bt13_110_security_places_self ... ok
+
+failures:
+
+failures:
+    bt13::bt13_110::bt13_110_delay_plays_royal_knight_from_breeding_sources_with_rush
+
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 12750 filtered out; finished in 7.43s
+
+FILTER_EXIT bt13_110 101
+
+running 9 tests
+test bt13::bt13_112::bt13_112_both_branches_legal_prompts_with_two_options ... ok
+test bt13::bt13_112::bt13_112_breeding_sources_without_a_royal_knight_do_not_enable_activation ... ok
+test bt13::bt13_112::bt13_112_delete_branch_deletes_one_opponent_digimon ... ok
+test bt13::bt13_112::bt13_112_does_not_activate_with_only_an_opponent_tamer_and_no_breeding_sources ... ok
+test bt13::bt13_112::bt13_112_effect_is_optional_and_can_be_declined ... ok
+test bt13::bt13_112::bt13_112_loads_from_dsl ... ok
+test bt13::bt13_112::bt13_112_only_delete_branch_legal_skips_the_branch_prompt ... ok
+test bt13::bt13_112::bt13_112_only_play_branch_legal_skips_the_branch_prompt ... ok
+
+thread 'bt13::bt13_112::bt13_112_source_play_branch_plays_distinct_royal_knights_trashes_breeding_and_grants_rush' (47656) panicked at code\digimon-engine\tests\cards_behavioral\bt13\bt13_112.rs:183:10:
+choose Alphamon source: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt13::bt13_112::bt13_112_source_play_branch_plays_distinct_royal_knights_trashes_breeding_and_grants_rush ... FAILED
+
+failures:
+
+failures:
+    bt13::bt13_112::bt13_112_source_play_branch_plays_distinct_royal_knights_trashes_breeding_and_grants_rush
+
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 12746 filtered out; finished in 12.16s
+
+FILTER_EXIT bt13_112 101

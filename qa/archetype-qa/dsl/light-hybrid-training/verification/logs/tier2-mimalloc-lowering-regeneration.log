@@ -1,0 +1,5 @@
+verb: 176/183 tested (171 behavioural), 7 untested
+predicate: 189/221 tested (180 behavioural), 32 untested
+timing: 57/65 tested (55 behavioural), 8 untested
+keyword: 39/39 tested (39 behavioural), 0 untested
+cards: 1112/1183 lowering-covered

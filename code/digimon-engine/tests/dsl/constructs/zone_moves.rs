@@ -499,6 +499,7 @@ fn mask(r: &DebugRunner, ids: &[u16], optional: bool) {
         .expect("required public choice");
     assert_eq!(s.selecting_player, 0);
     assert_eq!(s.is_optional, optional);
+    let ids = ids.iter().map(|&a| crate::union_fixture_action(&r.game, a)).collect::<Vec<_>>();
     let m = build_action_mask(&r.game, 0);
     for (i, v) in m.iter().enumerate() {
         assert_eq!(
@@ -509,6 +510,7 @@ fn mask(r: &DebugRunner, ids: &[u16], optional: bool) {
     }
 }
 fn pick(r: &mut DebugRunner, a: u16) {
+    let a = crate::union_fixture_action(&r.game, a);
     let p = r.game.pending_selection.as_ref().unwrap().selecting_player;
     assert_eq!(build_action_mask(&r.game, p)[a as usize], 1.0);
     r.execute_action(p, a).unwrap();

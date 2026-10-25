@@ -3,7 +3,7 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledZone,
 };
-use digimon_engine::action::space::{encode_source_select, PASS, PLAY_HAND_START};
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::replacement::ReplacementCause;
 
@@ -81,10 +81,10 @@ fn bt13_040_when_leaving_draws_and_may_play_veemon_from_hand_or_source() {
         .expect("Magnamon should offer a play-from-hand/source choice after drawing");
     assert!(pending.is_optional, "the Veemon play is optional");
     assert!(
-        pending.valid_action_ids.contains(&(PLAY_HAND_START + 0)),
+        pending.valid_action_ids.contains(&physical_menu::card_action(&runner.game, "BT12-021", digimon_engine::owned_card_choice::CardChoiceZone::Hand)),
         "Veemon already in hand should be a legal pick"
     );
-    let source_action = encode_source_select(0, 0).expect("source action id");
+    let source_action = physical_menu::source_action(&runner.game, magnamon, 0);
     assert!(
         pending.valid_action_ids.contains(&source_action),
         "Veemon in Magnamon's sources should be a legal pick"
@@ -156,3 +156,6 @@ fn bt13_040_when_leaving_can_decline_veemon_play_and_still_leaves() {
         "the draw still resolves even when the optional play is declined"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

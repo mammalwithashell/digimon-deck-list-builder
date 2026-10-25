@@ -1,0 +1,98 @@
+
+running 41 tests
+test st19::st19_08::st19_08_grants_overclock_with_puppet_cost_filter ... ok
+test st19::st19_08::st19_08_inherited_reduces_opponent_security_digimon_dp_during_your_turn ... ok
+test st19::st19_08::st19_08_inherited_security_dp_aura_lowers_with_opponent_security_flag ... ok
+test st19::st19_08::st19_08_no_security_dp_debuff_when_carrier_absent_from_attacker_stack ... ok
+test st19::st19_08::st19_08_overclock_end_of_turn_masks_only_token_or_other_puppet_costs ... ok
+test st19::st19_08::st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone ... FAILED
+test st19::st19_08::st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate ... FAILED
+test st19::st19_08::st19_08_security_may_play_liberator_cost_4_or_less_from_hand_or_trash ... ok
+test st19::st19_08::st19_08_yaml_loads ... ok
+test st2::st2_cards::st2_03_and_st2_06_trash_bottom_sources_without_source_prompt ... ok
+test st2::st2_cards::st2_01_tsunomon_grants_battle_only_dp_against_no_source_opponent ... ok
+test st2::st2_cards::st2_06_targets_sourceless_opponent_digimon ... ok
+test st2::st2_cards::st2_07_grizzlymon_has_blocker_and_loses_two_memory_when_attacking ... ok
+test st2::st2_cards::st2_09_zudomon_trashes_two_bottom_sources_on_digivolve ... ok
+test st2::st2_cards::st2_08_weregarurumon_inherited_grants_security_attack_when_opponent_has_no_sources ... ok
+test st2::st2_cards::st2_11_metalgarurumon_unsuspends_once_per_turn_when_attacking ... ok
+test st2::st2_cards::st2_12_matt_gains_memory_at_turn_start_and_security_plays_self ... ok
+test st2::st2_cards::st2_14_security_restriction_survives_until_your_next_turn ... ok
+test st2::st2_cards::st2_14_sorrow_blue_restricts_only_no_source_opponent_digimon ... ok
+test st2::st2_cards::st2_15_kaiser_nail_plays_selected_digimon_source_for_free ... FAILED
+test st2::st2_cards::st2_all_unique_cards_compile_from_embedded_pack ... ok
+test st2::st2_cards::st2_inherited_and_triggered_shapes_use_expected_substrate ... ok
+test st2::st2_cards::st2_option_and_tamer_structural_shapes_match_printed_clauses ... ok
+test st2::st2_cards::st2_16_cocytus_breath_returns_opponent_digimon_to_hand ... ok
+test st2::st2_cards::st2_vanilla_cards_have_printed_metadata_and_no_effects ... ok
+test st2::st2_cards::st2_starter_deck_artifact_counts_validate_and_registry_is_complete ... ok
+test st5::st5_effects::st5_09_when_digivolving_grants_blocker_to_one_own_digimon ... ok
+test st5::st5_effects::st5_12_reboot_grant_can_be_declined_without_targets ... ok
+test st5::st5_effects::st5_12_when_digivolving_grants_reboot_to_up_to_two_own_digimon ... ok
+test st5::st5_effects::st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon ... FAILED
+test st9::st9_06::st9_06_card_metadata_matches_print ... ok
+test st9::st9_06::st9_06_compiles ... ok
+test st9::st9_06::st9_06_has_exactly_one_alt_path ... ok
+test st9::st9_06::st9_06_has_optional_when_digivolving_clause ... ok
+test st9::st9_06::st9_06_has_standard_digivolve_lv5_blue_cost4 ... ok
+test st9::st9_06::st9_06_when_digivolving_clause_selects_blue_then_green_sources ... ok
+test st5::st5_effects::st5_13_has_printed_security_attack_plus_one ... ok
+test st9::st9_06::st9_06_when_digivolving_declining_does_nothing ... ok
+test st9::st9_06::st9_06_when_digivolving_no_blue_candidate_still_offers_green_candidate ... FAILED
+test st9::st9_06::st9_06_when_digivolving_no_green_candidate_skips_green_pick ... FAILED
+test st9::st9_06::st9_06_when_digivolving_plays_blue_and_green_from_stack_free ... FAILED
+
+failures:
+
+---- st19::st19_08::st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone stdout ----
+
+thread 'st19::st19_08::st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone' (32272) panicked at code\digimon-engine\tests\cards_behavioral\st19\st19_08.rs:488:5:
+assertion `left == right` failed: exactly LIB_HAND (hand) and LIB_TRASH (trash) must be legal; NONLIB_HAND (no LIBERATOR trait) and LIB_COST5_TRASH (cost 5 > 4) must be excluded
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- st19::st19_08::st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate stdout ----
+
+thread 'st19::st19_08::st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate' (44816) panicked at code\digimon-engine\tests\cards_behavioral\st19\st19_08.rs:606:5:
+assertion `left == right` failed: only LIB_TRASH (trash) should be legal when there is no legal hand candidate
+  left: 2
+ right: 1
+
+---- st2::st2_cards::st2_15_kaiser_nail_plays_selected_digimon_source_for_free stdout ----
+
+thread 'st2::st2_cards::st2_15_kaiser_nail_plays_selected_digimon_source_for_free' (46096) panicked at code\digimon-engine\tests\cards_behavioral\st2\st2_cards.rs:539:9:
+assertion failed: pending.valid_action_ids.contains(&source_action)
+
+---- st5::st5_effects::st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon stdout ----
+
+thread 'st5::st5_effects::st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon' (22580) panicked at code\digimon-engine\tests\cards_behavioral\st5\st5_effects.rs:145:10:
+pick first source: InvalidAction
+
+---- st9::st9_06::st9_06_when_digivolving_no_blue_candidate_still_offers_green_candidate stdout ----
+
+thread 'st9::st9_06::st9_06_when_digivolving_no_blue_candidate_still_offers_green_candidate' (34024) panicked at code\digimon-engine\tests\cards_behavioral\st9\st9_06.rs:364:5:
+assertion failed: view.valid_action_ids.contains(&green)
+
+---- st9::st9_06::st9_06_when_digivolving_no_green_candidate_skips_green_pick stdout ----
+
+thread 'st9::st9_06::st9_06_when_digivolving_no_green_candidate_skips_green_pick' (4316) panicked at code\digimon-engine\tests\cards_behavioral\st9\st9_06.rs:384:36:
+choose blue source: InvalidAction
+
+---- st9::st9_06::st9_06_when_digivolving_plays_blue_and_green_from_stack_free stdout ----
+
+thread 'st9::st9_06::st9_06_when_digivolving_plays_blue_and_green_from_stack_free' (18632) panicked at code\digimon-engine\tests\cards_behavioral\st9\st9_06.rs:278:5:
+assertion failed: view.valid_action_ids.contains(&blue)
+
+
+failures:
+    st19::st19_08::st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone
+    st19::st19_08::st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate
+    st2::st2_cards::st2_15_kaiser_nail_plays_selected_digimon_source_for_free
+    st5::st5_effects::st5_13_digi_burst_two_trashes_sources_and_buffs_one_own_digimon
+    st9::st9_06::st9_06_when_digivolving_no_blue_candidate_still_offers_green_candidate
+    st9::st9_06::st9_06_when_digivolving_no_green_candidate_skips_green_pick
+    st9::st9_06::st9_06_when_digivolving_plays_blue_and_green_from_stack_free
+
+test result: FAILED. 34 passed; 7 failed; 0 ignored; 0 measured; 12714 filtered out; finished in 25.15s
+

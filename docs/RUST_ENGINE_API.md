@@ -3942,7 +3942,7 @@ Use `bind_permanent_property` when text chooses one permanent and later compares
           position: bottom
 ```
 
-`property: level` reads the selected permanent's current top-card level at process time and stores it as a literal binding. `level_eq_binding` compares a later predicate subject's level to that bound value. This is the canonical shape for "choose 1, affect all with the same level" text such as BT17-078.
+`property: level` reads the selected permanent's current top-card level at process time and stores it as a literal binding. `level_eq_binding` compares a later predicate subject's level to that bound value. This is the canonical shape for "choose 1, affect all with the same level" text such as BT17-078. A named physical-card binding is also supported: its printed level is captured into the literal before later movement. This supports selecting a digivolution card, capturing its level, paying a source movement cost and then comparing other Digimon against that saved value. Permanent bindings retain their existing current-level semantics.
 
 `level_lte_binding` / `level_gte_binding` are the inequality siblings — the subject's level must be `<=` / `>=` the literal bound to `binding`. Used by BT8-107 ("delete 1 opponent Digimon with a level less than or equal to the deleted Digimon's level").
 
@@ -4240,7 +4240,7 @@ but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
 | `place_self_at_security_and_cancel_current_replacement(StackPosition, face_up: bool)` → `bool` | (Track E) Replacement-aware sibling: runs `place_self_at_security`; if a parked replacement is active, cancels it on success so the original event does not also fire. Used by EX4-060-style "would leave" replacement reroutes. |
 | `place_self_option_at_security(StackPosition, face_up: bool)` → `bool` | (Track E) Option-card flavor: consumes `Game.pending_option` (the in-flight Option card mid-resolution) and routes it to the owner's security at `position` / `face_up`. Used by ST20-15-style "Then, place this card face up as the top security card." Suppresses dispose-trash by consuming `pending_option`. |
 | `security_place_stacked_card(carrier, source_card, target_player, position, face_up)` → `bool` | (Track E) Extract a digivolution source by stable `CardHandle` and place it in security. Resolves `source_card` to its current index in `carrier.card_sources` so battle-area shifts don't invalidate the reference. |
-| `security_place_top_stacked_card(carrier, target_player, position, face_up)` → `bool` | (Track E) Convenience: extracts `card_sources[len-2]` (the topmost digivolution source below the visible top) and routes to security. Used by Puppets G027 "move top stacked card to top security card." Returns `false` when the stack has fewer than 2 cards. |
+| `security_place_top_stacked_card(carrier, target_player, position, face_up)` → `bool` | (Track E) Moves the visible top card (`card_sources.last()`) to security, exposing the underlying Digimon or Tamer. Requires at least two cards: CR 4.3 4-7-2 says a single card is not "stacked cards." The immediate boolean is not proof of completed payment across pending replacements; cost-gated DSL rewards use `bind_success_as` on the selected-source or top-card step. |
 | `return_all_trash_to_deck_bottom(player)` → `Vec<CardHandle>` | (Track E) Drain `player`'s trash → each card to its **owner's** deck bottom. Returns moved handles in original trash order. Used by BT17-077 "return all cards in your trash to the bottom of the deck." |
 | `trash_top_n_digivolution_cards_of_each(target_player, n)` → `usize` | (Track E) Trim up to `n` digivolution sources (`card_sources[len-2]` topmost first) from every battle-area permanent of `target_player`. Routes through `trash_card_source` per source; fires per-source `OnDigivolutionCardTrashed`. Skips single-source permanents (no source below the visible top). Used by BT12-028 et al. |
 | `trash_bottom_face_down_source(target: PermanentHandle)` → `bool` | Trash the bottom-most face-down digivolution source of `target` (i.e. `card_sources[0]`) to its owner's trash, firing `OnDigivolutionCardTrashed`. Returns `false` with **no mutation** when `card_sources[0]` is not face-down. Does NOT honor `ImmuneFromStackTrashing` — this is a voluntary cost ("by trashing the bottom face-down card from under any of your Tamers, …"), not involuntary stack-peeling. Used by the BEATBREAK / DATA SQUAD cost-form trash family (ST23-01/03/04/08/11/12, ST24-01/06/10/11/12). |
@@ -4894,7 +4894,7 @@ pub fn select_count_capped_multi<F, C>(
     &mut self,
     of_player: PlayerId,
     zone: CountCappedZone,    // Hand, Trash, or a permanent's sources
-    max: u8,                  // upper bound; debug_assert!(max <= 10)
+    max: u8,                  // full u8 count bound; picks retain zone action geometry
     prompt: &str,
     is_optional_zero: bool,   // true → player may pick 0; PASS available from first step
     filter: F,
@@ -5060,7 +5060,7 @@ lives in `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`.
 | `place_self_at_security` | `position: top|bottom|random`, `face: up|down` | `EffectContext::place_self_at_security(position, face_up)` |
 | `place_self_option_at_security` | `position: top|bottom|random`, `face: up|down` | `EffectContext::place_self_option_at_security(position, face_up)` |
 | `place_permanent_on_security_observed` | `of`, `target`, `position`, `face`, `include_sources` | `Game::place_permanent_on_security_observed(...)` when `include_sources: true`; otherwise the normal `EffectContext::place_permanent_on_security(...)` path |
-| `security_place_stacked_card` | `carrier`, `source` or `source_index_from_top`, `of`, `position`, `face` | `EffectContext::security_place_stacked_card(...)` |
+| `security_place_stacked_card` | `carrier`, `source` or `source_index_from_top`, `of`, `position`, `face`; optional `to_owner`, `bind_success_as` completed 0/1 receipt | `EffectContext::security_place_stacked_card(...)` |
 | `security_place_top_stacked_card` | `carrier`, `of`, `position`, `face` | `EffectContext::security_place_top_stacked_card(...)` |
 | `return_all_trash_to_deck_bottom` | `of` | `EffectContext::return_all_trash_to_deck_bottom(player)` |
 | `trash_top_n_digivolution_cards_of_each` | `of`, `n` formula | `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)` |

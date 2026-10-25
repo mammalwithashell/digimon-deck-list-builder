@@ -423,55 +423,53 @@ impl StateProjection {
         {
             return None;
         }
-        let advertised: Vec<_> = pending
-            .valid_action_ids
-            .iter()
-            .copied()
-            .filter(|a| *a != PASS)
-            .collect();
-        let advertised_set: HashSet<_> = advertised.iter().copied().collect();
-        let snapshot_set: HashSet<_> = state.candidates.iter().map(|(a, _)| *a).collect();
-        if advertised.len() != advertised_set.len()
-            || state.candidates.len() != snapshot_set.len()
-            || advertised_set != snapshot_set
-        {
-            return None;
+        use digimon_engine::{card_choice_page::CardChoiceResult, owned_card_choice::{CardChoiceOperation, ResolvedCardChoice}};
+        // Validate captured physical cards before page views or predicate masks
+        // dereference registry indices. Corrupt/unmeasured metadata stays unknown.
+        for source in &state.candidates {
+            if source.permanent.player != state.of_player || source.field_index != source.permanent.index { return None; }
+            let player=game.players.get(source.permanent.player as usize)?;
+            let host=if source.permanent.index == digimon_engine::action::space::BREEDING_TARGET as u8 {
+                player.breeding_area.as_ref()?
+            } else { player.battle_area.get(source.permanent.index as usize)? };
+            if source.source_index+1 >= host.card_sources.len() { return None; }
+            let card=host.card_sources.get(source.source_index)?;
+            if card.handle()!=source.card || game.card_data.get(card.data_index)?.card_id.trim().is_empty() { return None; }
         }
-        let mask = build_action_mask(game, pending.selecting_player);
+        let choice = pending.card_choice.as_ref()?;
+        if pending.valid_action_ids != choice.valid_action_ids(game) { return None; }
+        let mut page = choice.clone();
         let mut identities = Vec::new();
         let mut physical = HashSet::new();
-        for action in advertised {
-            let legal = *mask.get(action as usize)?;
-            let (_, source) = state.candidates.iter().find(|(a, _)| *a == action)?;
-            if source.permanent.player != state.of_player
-                || source.permanent.index != source.field_index
-                || encode_source_select(source.field_index as u16, source.source_index as u16)
-                    != Some(action)
-                || !physical.insert(source.card)
-            {
-                return None;
-            }
-            let host = game
-                .players
-                .get(source.permanent.player as usize)?
-                .battle_area
-                .get(source.permanent.index as usize)?;
-            // A top card is not a digivolution source; physical identity must still match.
-            if source.source_index as usize + 1 >= host.card_sources.len() {
-                return None;
-            }
-            let card = host.card_sources.get(source.source_index as usize)?;
-            if card.handle() != source.card {
-                return None;
-            }
-            let data = game.card_data.get(card.data_index)?;
-            if data.card_id.trim().is_empty() {
-                return None;
-            }
-            if legal > 0.5 {
+        let mut snapshot = HashSet::new();
+        for source in &state.candidates {
+            if !snapshot.insert(source.card) { return None; }
+        }
+        loop {
+            let view = page.view(game, pending.selecting_player);
+            let mask = page.valid_action_ids(game);
+            for row in &view.rows {
+                if !matches!(row.operation, CardChoiceOperation::CommitCard) { continue; }
+                if !mask.contains(&row.action_id) { return None; }
+                let CardChoiceResult::Selected(ResolvedCardChoice::Source { host, index, card: handle }) =
+                    page.clone().resolve(game, row.action_id).ok()? else { return None; };
+                let source = state.candidates.iter().find(|s| s.card == handle)?;
+                if source.permanent != host || source.source_index != index
+                    || source.field_index != host.index || host.player != state.of_player
+                    || !physical.insert(handle) { return None; }
+                let player=game.players.get(host.player as usize)?;
+                let host=if host.index == digimon_engine::action::space::BREEDING_TARGET as u8 { player.breeding_area.as_ref()? } else { player.battle_area.get(host.index as usize)? };
+                if index + 1 >= host.card_sources.len() { return None; }
+                let card = host.card_sources.get(index)?;
+                if card.handle() != handle { return None; }
+                let data = game.card_data.get(card.data_index)?;
+                if data.card_id.trim().is_empty() { return None; }
                 identities.push(data.card_id.clone());
             }
+            let Some(next) = view.rows.iter().find(|r| matches!(r.operation, CardChoiceOperation::NextPage) && mask.contains(&r.action_id)) else { break; };
+            if !matches!(page.resolve(game, next.action_id).ok()?, CardChoiceResult::Navigated) { return None; }
         }
+        if physical != snapshot { return None; }
         identities.sort();
         Some(identities)
     }
@@ -1123,7 +1121,7 @@ mod legal_option_measurement_runtime_tests {
         use digimon_engine::selection::{PendingSelection, SelectionKind};
         let mut r = runner();
         r.place_in_breeding(0, "ST1-01");
-        r.game.pending_selection = Some(PendingSelection {
+        r.game.pending_selection = Some(PendingSelection { card_choice: None,
             kind: SelectionKind::Hand,
             selecting_player: 0,
             previous_phase: GamePhase::Main,
@@ -1166,7 +1164,7 @@ mod selection_decline_observation_runtime_tests {
         r.game.mulligan_pending.clear();
         r.game.game_over = false;
         r.game.current_phase = GamePhase::Main;
-        r.game.pending_selection = Some(PendingSelection {
+        r.game.pending_selection = Some(PendingSelection { card_choice: None,
             kind: SelectionKind::Hand,
             selecting_player: actor,
             previous_phase: GamePhase::Main,
@@ -1249,7 +1247,7 @@ mod selection_candidate_runtime_tests {
         r.game.mulligan_pending.clear();
         r.game.game_over = false;
         r.game.current_phase = GamePhase::Main;
-        r.game.pending_selection = Some(PendingSelection {
+        r.game.pending_selection = Some(PendingSelection { card_choice: None,
             kind: SelectionKind::Hand,
             selecting_player: actor,
             previous_phase: GamePhase::Main,
@@ -1346,7 +1344,8 @@ mod source_candidate_runtime_tests {
     use digimon_engine::resume::{ResumeFrame, SourceMultiState};
     use digimon_engine::selection::SelectionKind;
 
-    fn runner() -> DebugRunner {
+    fn runner() -> DebugRunner { runner_with_sources(2) }
+    fn runner_with_sources(count: usize) -> DebugRunner {
         let mut r = DebugRunner::builder()
             .dsl_card("BT4-072")
             .unwrap()
@@ -1359,7 +1358,10 @@ mod source_candidate_runtime_tests {
         r.game.game_over = false;
         r.game.current_phase = GamePhase::Main;
         r.set_first_player(0);
-        r.place_stack(0, &["BT9-109", "ORDINARY", "ORDINARY", "BT4-072"]);
+        let mut stack=vec!["BT9-109"];
+        stack.extend(std::iter::repeat_n("ORDINARY",count));
+        stack.push("BT4-072");
+        r.place_stack(0, &stack);
         r.game.tick_declarative_effects();
         let action = FIELD_EFFECT_START + FIELD_EFFECT_SLOT_FOR_MAIN;
         assert!(
@@ -1411,6 +1413,15 @@ mod source_candidate_runtime_tests {
             .is_none());
     }
     #[test]
+    fn source_candidates_runtime_measures_every_page_without_changing_the_prompt() {
+        let r=runner_with_sources(37);
+        let before=serde_json::to_string(&r.pending_selection_view().unwrap().card_choice).unwrap();
+        let view=r.pending_selection_view().unwrap();
+        assert_eq!(view.card_choice.as_ref().unwrap().page_count,"2");
+        assert_eq!(observe(&r.game,[true,false]).p0.selection_candidates,Some(vec!["ORDINARY".to_string();37]));
+        assert_eq!(serde_json::to_string(&r.pending_selection_view().unwrap().card_choice).unwrap(),before,"measurement must not navigate the live prompt");
+    }
+    #[test]
     fn source_candidates_runtime_clone_preserves_physical_snapshot() {
         let r = runner();
         let cloned = r.game.clone();
@@ -1435,13 +1446,15 @@ mod source_candidate_runtime_tests {
     #[test]
     fn source_candidates_runtime_pass_is_not_a_source() {
         let mut r = runner();
-        r.game.pending_selection.as_mut().unwrap().is_optional = true;
-        r.game
-            .pending_selection
-            .as_mut()
-            .unwrap()
-            .valid_action_ids
-            .push(PASS);
+        let candidates=state(&mut r.game).candidates.clone();
+        let pins=candidates.iter().map(|source| digimon_engine::card_choice_page::SourceChoicePin::capture(&mut r.game,source.permanent,source.card).unwrap()).collect();
+        let choice=digimon_engine::owned_card_choice::OwnedCardChoice::sources(&mut r.game,pins,true).unwrap();
+        let actions=choice.valid_action_ids(&r.game);
+        assert!(actions.contains(&PASS));
+        let pending=r.game.pending_selection.as_mut().unwrap();
+        pending.is_optional=true;
+        pending.valid_action_ids=actions;
+        pending.card_choice=Some(choice);
         assert_eq!(
             observe(&r.game, [true, false]).p0.selection_candidates,
             expected()

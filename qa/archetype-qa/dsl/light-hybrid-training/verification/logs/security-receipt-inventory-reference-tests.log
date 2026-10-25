@@ -1,0 +1,27 @@
+   Compiling digimon-dsl v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-dsl)
+error[E0433]: failed to resolve: use of undeclared type `CompiledStep`
+  --> code\digimon-dsl\tests\implementation_reference_coverage.rs:97:20
+   |
+97 |     let steps=vec![CompiledStep::SecurityPlayCaptured{receipt:7,player:1,card:23},CompiledStep::SecurityPlayFinalize{receipt:7,playe...
+   |                    ^^^^^^^^^^^^ use of undeclared type `CompiledStep`
+   |
+help: consider importing this enum
+   |
+ 4 + use digimon_dsl::compiled::CompiledStep;
+   |
+
+error[E0433]: failed to resolve: use of undeclared type `CompiledStep`
+  --> code\digimon-dsl\tests\implementation_reference_coverage.rs:97:83
+   |
+97 | ...ayCaptured{receipt:7,player:1,card:23},CompiledStep::SecurityPlayFinalize{receipt:7,player:1,card:23}];
+   |                                           ^^^^^^^^^^^^ use of undeclared type `CompiledStep`
+   |
+help: consider importing this enum
+   |
+ 4 + use digimon_dsl::compiled::CompiledStep;
+   |
+
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `digimon-dsl` (test "implementation_reference_coverage") due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+CARGO_EXIT 101

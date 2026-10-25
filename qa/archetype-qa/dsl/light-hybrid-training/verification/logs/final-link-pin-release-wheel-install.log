@@ -1,0 +1,10 @@
+Processing C:\Users\james\.codex\build-targets\light-hybrid-training-release-wheels\digimon_engine-0.1.0-cp311-abi3-win_amd64.whl
+Installing collected packages: digimon-engine
+  Attempting uninstall: digimon-engine
+    Found existing installation: digimon-engine 0.1.0
+    Uninstalling digimon-engine-0.1.0:
+      Successfully uninstalled digimon-engine-0.1.0
+Successfully installed digimon-engine-0.1.0
+
+[notice] A new release of pip is available: 26.1.2 -> 26.2.2
+[notice] To update, run: C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe -m pip install --upgrade pip

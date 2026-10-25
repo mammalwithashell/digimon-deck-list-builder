@@ -106,7 +106,7 @@ fn trash_pos(r: &DebugRunner, player: u8, id: &str) -> usize {
 }
 
 fn hand_action(r: &DebugRunner, id: &str) -> u16 {
-    PLAY_HAND_START + hand_pos(r, 0, id) as u16
+    physical_fixture::zone_action(&r.game,0,hand_pos(r,0,id),digimon_engine::owned_card_choice::CardChoiceZone::Hand)
 }
 
 /// Play KingEtemon from hand (memory 20) in Main phase.
@@ -175,8 +175,8 @@ fn ex13_035_on_play_excludes_cards_over_the_six_budget() {
     let mut r = play_king(&["ETE", "PLAIN", "CHUU"], &[]);
     let view = r.pending_selection_view().expect("first pick");
     assert!(view.valid_action_ids.contains(&hand_action(&r, "CHUU")));
-    assert!(!view.valid_action_ids.contains(&hand_action(&r, "ETE")), "play cost 7 > 6");
-    assert!(!view.valid_action_ids.contains(&hand_action(&r, "PLAIN")), "not a named card");
+    assert!(!physical_fixture::commits(&r.game).iter().any(|row|row.card_id.as_deref()==Some("ETE")), "play cost 7 > 6");
+    assert!(!physical_fixture::commits(&r.game).iter().any(|row|row.card_id.as_deref()==Some("PLAIN")), "not a named card");
 }
 
 #[test]
@@ -187,7 +187,7 @@ fn ex13_035_second_pick_uses_remaining_budget() {
     assert!(field_ids(&r, 0).contains(&"ETE-5".to_string()));
     if let Some(v) = r.pending_selection_view() {
         if matches!(v.kind, SelectionKind::UnionZone { .. }) {
-            assert!(!v.valid_action_ids.contains(&hand_action(&r, "CHUU")), "only 1 budget left");
+            assert!(!physical_fixture::commits(&r.game).iter().any(|row|row.card_id.as_deref()==Some("CHUU")), "only 1 budget left");
         }
     }
     let _ = r.auto_resolve();
@@ -197,7 +197,7 @@ fn ex13_035_second_pick_uses_remaining_budget() {
 #[test]
 fn ex13_035_plays_from_trash() {
     let mut r = play_king(&[], &["SUKA"]);
-    let a = TRASH_EFFECT_START + trash_pos(&r, 0, "SUKA") as u16;
+    let a = physical_fixture::zone_action(&r.game,0,trash_pos(&r,0,"SUKA"),digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     let view = r.pending_selection_view().expect("pick");
     assert!(view.valid_action_ids.contains(&a));
     r.execute_action(0, a).unwrap();
@@ -261,7 +261,7 @@ fn ex13_035_declining_the_return_keeps_the_six_maximum() {
     r.execute_branch(1).expect("decline the return");
     assert_eq!(r.trash_size(0), 10);
     let v = r.pending_selection_view().expect("first pick");
-    assert!(!v.valid_action_ids.contains(&hand_action(&r, "ETE")), "cost 7 > 6");
+    assert!(!physical_fixture::commits(&r.game).iter().any(|row|row.card_id.as_deref()==Some("ETE")), "cost 7 > 6");
 }
 
 // ─── [When Digivolving] ─────────────────────────────────────────────────────
@@ -378,3 +378,6 @@ fn ex13_035_aura_does_not_touch_own_digimon() {
     r.game.tick_declarative_effects();
     assert_eq!(r.effective_dp(suka), Some(4000));
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

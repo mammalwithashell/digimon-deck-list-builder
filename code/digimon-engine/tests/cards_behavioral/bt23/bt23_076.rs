@@ -63,7 +63,7 @@ fn suspend(r: &mut DebugRunner, player: u8, index: usize) {
 }
 fn choices(r: &DebugRunner, expected: &[u16]) {
     let v = r.pending_selection_view().expect("selection");
-    let mut got = v.valid_action_ids.clone();
+    let mut got:Vec<_> = v.valid_action_ids.iter().copied().filter(|&a|a!=PASS).collect();
     got.sort();
     let mut want = expected.to_vec();
     want.sort();
@@ -129,10 +129,11 @@ fn bt23_076_union_mask_includes_names_and_traits_excludes_illegal_routes_and_sel
     // Wrong-base can evolve to WRONG-EVO, so both legal other Digimon appear.
     choices(&r, &[ATTACK_START + 1, ATTACK_START + 2]);
     pick(&mut r, ATTACK_START + 1);
-    choices(&r, &[0, 1, TRASH_EFFECT_START]);
+    choices(&r, &[owned_fixture::action(&r.game,0,"HUCK","hand"), owned_fixture::action(&r.game,0,"CS","hand"), owned_fixture::action(&r.game,0,"RK","trash")]);
     let before = r.memory();
     let deck = r.deck_size(0);
-    pick(&mut r, 0);
+    let action=owned_fixture::action(&r.game,0,"HUCK","hand");
+    pick(&mut r, action);
     r.auto_resolve().unwrap();
     assert_eq!(top(&r, 1), "HUCK");
     assert_eq!(top(&r, 0), ID);
@@ -145,9 +146,10 @@ fn bt23_076_evolves_from_trash_pays_reduced_cost() {
     suspend(&mut r, 0, 0);
     choices(&r, &[ATTACK_START + 1]);
     pick(&mut r, ATTACK_START + 1);
-    choices(&r, &[TRASH_EFFECT_START]);
+    choices(&r, &[owned_fixture::action(&r.game,0,"CS","trash")]);
     let before = r.memory();
-    pick(&mut r, TRASH_EFFECT_START);
+    let action=owned_fixture::action(&r.game,0,"CS","trash");
+    pick(&mut r, action);
     r.auto_resolve().unwrap();
     assert_eq!(top(&r, 1), "CS");
     assert_eq!(r.memory(), before - 2);
@@ -220,7 +222,7 @@ fn bt23_076_self_is_excluded_even_when_a_legal_evolution_exists_for_it() {
     suspend(&mut r, 0, 0);
     choices(&r, &[ATTACK_START + 1]);
     pick(&mut r, ATTACK_START + 1);
-    choices(&r, &[1]);
+    choices(&r, &[owned_fixture::action(&r.game,0,"HUCK","hand")]);
 }
 #[test]
 fn bt23_076_reduction_does_not_generate_memory_from_zero_cost() {
@@ -237,7 +239,8 @@ fn bt23_076_reduction_does_not_generate_memory_from_zero_cost() {
     r.place_stack(0, &["BASE"]);
     suspend(&mut r, 0, 0);
     pick(&mut r, ATTACK_START + 1);
-    pick(&mut r, 0);
+    let action=owned_fixture::action(&r.game,0,"FREE","hand");
+    pick(&mut r, action);
     r.auto_resolve().unwrap();
     assert_eq!(top(&r, 1), "FREE");
     assert_eq!(r.memory(), 7);
@@ -269,3 +272,6 @@ fn bt23_076_printed_metadata() {
     assert_eq!(data.level, Some(3));
     assert!(data.evo_costs.is_empty());
 }
+
+#[path="../../support/late_owned_fixture.rs"]
+mod owned_fixture;

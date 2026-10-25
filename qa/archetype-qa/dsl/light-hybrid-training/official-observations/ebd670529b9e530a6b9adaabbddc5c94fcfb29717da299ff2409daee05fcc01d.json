@@ -1,0 +1,68 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "EX7-002",
+    "card_type": "Digi-Egg",
+    "colors": [
+      "Blue"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "digi_egg",
+        "level": 2,
+        "name": "Hiyarimon",
+        "play_cost": null,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] [Once Per Turn] If your opponent has no Digimon with digivolution cards, ＜Draw 1＞."
+          }
+        ]
+      }
+    ],
+    "form": "In-Training",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 2,
+    "name": "Hiyarimon",
+    "play_cost": null,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522024",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/EX7-002.png?260529",
+      "printing_id": "EX7-002"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] [Once Per Turn] If your opponent has no Digimon with digivolution cards, ＜Draw 1＞."
+      }
+    ],
+    "type": "Lesser"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "2f1de9948917bc3699793a4c7d13f2e437771dfbc712b3b974aa34be509abc0b",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522024:EX7-002:EX7-002",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522024"
+}

@@ -33,11 +33,11 @@ def test_digimon_env_uses_requested_standard_lite_v2_profile(monkeypatch):
     obs, info = env.reset(seed=7)
 
     assert env.tensor_profile == "standard_lite_v2"
-    # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
-    assert env.observation_space.shape == (8410,)
-    assert obs.shape == (8410,)
+    # Owned card pages widen pending rows to 128 features.
+    assert env.observation_space.shape == (9434,)
+    assert obs.shape == (9434,)
     assert info["tensor_profile"] == "standard_lite_v2"
-    assert info["tensor_feature_schema_version"] == "standard_lite_v2.3"
+    assert info["tensor_feature_schema_version"] == "standard_lite_v2.4"
     assert info["tensor_layout_hash"].startswith("sha256:")
 
 
@@ -46,10 +46,10 @@ def test_digimon_env_uses_requested_standard_lite_deck_v2_profile(monkeypatch):
     obs, info = env.reset(seed=7)
 
     assert env.tensor_profile == "standard_lite_deck_v2"
-    assert env.observation_space.shape == (8850,)
-    assert obs.shape == (8850,)
+    assert env.observation_space.shape == (9874,)
+    assert obs.shape == (9874,)
     assert info["tensor_profile"] == "standard_lite_deck_v2"
-    assert info["tensor_feature_schema_version"] == "standard_lite_deck_v2.2"
+    assert info["tensor_feature_schema_version"] == "standard_lite_deck_v2.3"
     assert info["tensor_layout_hash"].startswith("sha256:")
     assert info["action_mask"].shape == (env.action_space.n,)
 

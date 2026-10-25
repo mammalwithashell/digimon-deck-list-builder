@@ -158,6 +158,13 @@ impl Game {
         })
     }
 
+    /// CR 4-7-9: a face-down card underneath a card has no card information.
+    /// This is distinct from ordinary hidden security and opaque placeholders.
+    pub(crate) fn card_is_face_down_source(&self, handle: crate::card_source::CardHandle) -> bool {
+        self.card_source_for_handle(handle).is_some_and(|source| source.face_down)
+            && self.card_handle_is_under_top(handle)
+    }
+
     /// Resolve a `CardHandle` to its live `CardSource` instance.
     pub fn card_source_for_handle(
         &self,

@@ -1,0 +1,14 @@
+
+> digimon-tcg-simulator@0.1.0 test
+> vitest run src/components/game/SelectionPanel.test.tsx
+
+
+ RUN  v2.1.9 C:/Users/james/.codex/worktrees/light-hybrid-training/digimon-deck-list-builder-1/code/frontend
+
+ ✓ src/components/game/SelectionPanel.test.tsx (13 tests) 223ms
+
+ Test Files  1 passed (1)
+      Tests  13 passed (13)
+   Start at  21:55:51
+   Duration  18.59s (transform 374ms, setup 4.51s, collect 564ms, tests 223ms, environment 12.44s, prepare 464ms)
+

@@ -1,0 +1,11 @@
+
+running 5 tests
+test all_profiles_hide_count_metadata_from_nonchoosing_player ... ok
+test count_fields_survive_card_page_schema_growth_and_match_computed_hashes ... ok
+test full_action_features_distinguish_count_commit_and_navigation ... ok
+test ordinary_choice_keeps_new_numeric_fields_zero ... ok
+test pending_rows_expose_exact_counts_pages_and_physical_host_identity ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.93s
+
+SUITE_EXIT 0

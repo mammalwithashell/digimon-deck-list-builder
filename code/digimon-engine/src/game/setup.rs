@@ -207,6 +207,9 @@ impl Game {
             mulligan_used,
             revealed_cards: Vec::new(),
             pending_selection: None,
+            next_card_choice_id: 0,
+            security_shuffle_generations: [0; 2],
+            resolved_card_choice: None,
             pending_selection_resume: None,
             after_selection_resume_hooks: crate::resume::ResumeContinuationHooks::default(),
             effect_queue: EffectQueue::new(),
@@ -240,6 +243,8 @@ impl Game {
             source_play_receipts: Vec::new(),
             prepared_source_plays: Vec::new(),
             next_source_play_receipt: 0,
+            security_play_receipts: Vec::new(),
+            next_security_play_receipt: 0,
             field_source_receipts: Vec::new(),
             movement_observer: std::cell::RefCell::new(None),
             deletion_receipts: Vec::new(),
@@ -407,6 +412,11 @@ impl Game {
         self.mulligan_used = vec![false; player_count];
         self.revealed_cards = Vec::new();
         self.pending_selection = None;
+        self.resolved_card_choice = None;
+        // A parked selection owns both typed continuation channels. Discard
+        // them together so backward replay cannot resume prior-game costs.
+        self.pending_selection_resume = None;
+        self.after_selection_resume_hooks = crate::resume::ResumeContinuationHooks::default();
         self.effect_queue = EffectQueue::new();
         self.pending_granted_fires = Vec::new();
         self.granted_effect_bodies = crate::modifiers::GrantedEffectBodyRegistry::default();
@@ -436,6 +446,8 @@ impl Game {
         self.prepared_source_plays.clear();
         self.source_play_receipts.clear();
         self.next_source_play_receipt = 0;
+        self.security_play_receipts.clear();
+        self.next_security_play_receipt = 0;
         *self.movement_observer.borrow_mut() = None;
         self.deletion_receipts.clear();
         self.return_receipts.clear();

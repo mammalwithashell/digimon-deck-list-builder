@@ -1267,6 +1267,52 @@ prefer adding a worked example here over writing inline YAML in a test file.
 
 ---
 
+### 14.11 Completed play results and conditional follow-ups
+
+A selected card binding proves a choice, not a completed play. For printed
+"if you did" follow-ups, assert the actual play result rather than
+`binding_present` alone. The historical predicate name
+`effect_played_any_digimon` reads the current effect's played-permanent result
+log; it includes both Digimon and Tamer plays. It does not provide a card-kind
+filter. A previous effect's successful play must not make a fresh effect's
+predicate true.
+
+Cover immediate success, late play restrictions, accepted cancellation, and a
+successful play resumed after declining an optional replacement. A deferred
+security play must publish its exact correlated completion into the caller's
+lexical result log when the card actually enters. Finish the current effect
+before resolving the entrant's newly triggered On Play effect; a later On Play
+choice must not publish the caller's result twice. Test both actors and
+independently resumed clones. Cancellation must restore the selected
+physical security card's original position and face-up state.
+
+Reusable immediate/scoping examples are in
+[`effect_play_results.rs`](../code/digimon-engine/tests/dsl/constructs/effect_play_results.rs).
+The deferred security-play scenarios are in
+[`security_search_actual_outcomes.rs`](../code/digimon-engine/tests/security_search_actual_outcomes.rs).
+
+### 14.12 Owned physical-choice consumers
+
+For a source or security choice with `card_choice` metadata, select a legal
+`CommitCard` row by its physical zone, owner and position (and card ID when
+inspection is permitted), then submit that row's action through the public
+mask. A page action is an operation, not a source or security array offset.
+Do not derive a selected card with `decode_source_select`, a legacy security
+base, or hand/trash action bands when an owned choice is installed.
+
+Native source-selector callbacks already receive typed `SourceSelectionRef`
+values. Resumable VM consumers must take the corresponding resolved physical
+choice and revalidate its exact card, carrier, authored filter and operation
+gate before moving or linking it. Test indices beyond the old range, both
+actors, independent clones, and movement or same-number replacement of the
+original card while the choice is pending. A stale position must not retarget
+another physical copy.
+
+Keep legacy geometry decoding only on explicitly identified compatibility
+paths. Contract fixture migrations must preserve whole eligibility masks and
+observable play, movement and payment assertions; replacing an old numeric
+assertion with an unconstrained first-valid-action choice is insufficient.
+
 ## 15. Cross-references
 
 - `RUST_ENGINE_API.md` — `EffectContext`, `Effect`, `CardEffect`, modifier types, timing enums.

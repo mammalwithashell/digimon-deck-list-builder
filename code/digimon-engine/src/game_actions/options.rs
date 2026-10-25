@@ -716,6 +716,7 @@ impl Game {
             let label = candidate.label.clone();
             let amount = candidate.amount;
             self.pending_selection = Some(PendingSelection {
+                card_choice: None,
                 zone_owner: None,
                 kind: SelectionKind::EffectChoice,
                 selecting_player: player_id,
@@ -908,7 +909,7 @@ impl Game {
         };
         // Resume-aware (make-engine-cloneable Batch 2): defer onto the resume
         // channel when the parked select is data-driven (closure bypassed).
-        if self.pending_selection_resume.is_some() {
+        if self.pending_selection_resume.is_some() || pending.card_choice.is_some() {
             self.pending_selection = Some(pending);
             self.after_selection_resume_hooks.0.push(
                 crate::resume::AfterSelectionHook::InteractiveOptionUseReducer {
@@ -1031,6 +1032,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: player_id,

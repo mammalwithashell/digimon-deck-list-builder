@@ -14,9 +14,9 @@ pub const TENSOR_VERSION: u16 = 2;
 // BREEDING_SOURCE_SELECT) so the RL agent never picks a slot blind.
 // This grows each permanent slot by 3 floats (96 -> 99), shifting every
 // section after `permanent_slots` and bumping tensor_size 8320 -> 8410.
-pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.3";
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.4";
 pub const LAYOUT_HASH: &str =
-    "sha256:c2ff377e261fe572163179e32d97414d68e2fd8d89c5441dae586b4a2caa691b";
+    "sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a";
 
 pub const GLOBAL_FEATURES_SIZE: usize = 64;
 pub const PLAYER_SUMMARY_PLAYERS: usize = 2;
@@ -38,7 +38,7 @@ pub const KNOWN_ZONE_ROW_SIZE: usize = 8;
 pub const KNOWN_ZONE_SIZE: usize = KNOWN_ZONE_ROWS * KNOWN_ZONE_ROW_SIZE;
 pub const DECISION_CONTEXT_SIZE: usize = 64;
 pub const PENDING_CHOICE_ROWS: usize = 32;
-pub const PENDING_CHOICE_ROW_SIZE: usize = 96;
+pub const PENDING_CHOICE_ROW_SIZE: usize = 128;
 pub const PENDING_CHOICE_SIZE: usize = PENDING_CHOICE_ROWS * PENDING_CHOICE_ROW_SIZE;
 pub const RESERVED_SIZE: usize = 256;
 
@@ -83,6 +83,36 @@ pub const PENDING_COUNT_HOST_SLOT_OFFSET: usize = 84;
 pub const PENDING_COUNT_HOST_PRESENT_OFFSET: usize = 85;
 pub const PENDING_COUNT_LIMBS: usize = 4;
 pub const PENDING_COUNT_LIMB_DENOMINATOR: f32 = 65535.0;
+
+pub const PENDING_CARD_PRESENT_OFFSET: usize = 86;
+pub const PENDING_CARD_COMMIT_OFFSET: usize = 87;
+pub const PENDING_CARD_PREVIOUS_OFFSET: usize = 88;
+pub const PENDING_CARD_NEXT_OFFSET: usize = 89;
+pub const PENDING_CARD_ZONE_OFFSET: usize = 90;
+pub const PENDING_CARD_OWNER_OFFSET: usize = 91;
+pub const PENDING_CARD_CARRIER_SLOT_OFFSET: usize = 92;
+pub const PENDING_CARD_ID_OFFSET: usize = 93;
+pub const PENDING_CARD_PROMPT_ID_OFFSET: usize = 94;
+pub const PENDING_CARD_GENERATION_OFFSET: usize = 98;
+pub const PENDING_CARD_PAGE_INDEX_OFFSET: usize = 102;
+pub const PENDING_CARD_PAGE_COUNT_OFFSET: usize = 106;
+pub const PENDING_CARD_POSITION_OFFSET: usize = 110;
+pub const PENDING_CARD_CARRIER_ID_OFFSET: usize = 114;
+pub const PENDING_CARD_CARRIER_PRESENT_OFFSET: usize = 118;
+pub const PENDING_CARD_IDENTITY_VISIBLE_OFFSET: usize = 119;
+pub const PENDING_CARD_DECLINE_OFFSET: usize = 120;
+pub const PENDING_CARD_INSPECT_OFFSET: usize = 121;
+pub const PENDING_CARD_ROW_OFFSETS: &[(&str, usize)] = &[
+    ("present", PENDING_CARD_PRESENT_OFFSET), ("commit", PENDING_CARD_COMMIT_OFFSET),
+    ("previous_page", PENDING_CARD_PREVIOUS_OFFSET), ("next_page", PENDING_CARD_NEXT_OFFSET),
+    ("zone", PENDING_CARD_ZONE_OFFSET), ("relative_owner", PENDING_CARD_OWNER_OFFSET),
+    ("carrier_slot", PENDING_CARD_CARRIER_SLOT_OFFSET), ("card_id", PENDING_CARD_ID_OFFSET),
+    ("prompt_id_limbs", PENDING_CARD_PROMPT_ID_OFFSET), ("page_generation_limbs", PENDING_CARD_GENERATION_OFFSET),
+    ("page_index_limbs", PENDING_CARD_PAGE_INDEX_OFFSET), ("page_count_limbs", PENDING_CARD_PAGE_COUNT_OFFSET),
+    ("position_limbs", PENDING_CARD_POSITION_OFFSET), ("carrier_identity_limbs", PENDING_CARD_CARRIER_ID_OFFSET),
+    ("carrier_present", PENDING_CARD_CARRIER_PRESENT_OFFSET), ("identity_visible", PENDING_CARD_IDENTITY_VISIBLE_OFFSET),
+    ("decline", PENDING_CARD_DECLINE_OFFSET), ("inspect_only_row", PENDING_CARD_INSPECT_OFFSET),
+];
 
 pub const SHAPE_GLOBAL_FEATURES: &[usize] = &[GLOBAL_FEATURES_SIZE];
 pub const SHAPE_PLAYER_SUMMARY: &[usize] = &[PLAYER_SUMMARY_PLAYERS, PLAYER_SUMMARY_ROW_SIZE];
@@ -224,7 +254,7 @@ pub const SLOT_LAYOUT: TensorSlotLayout = TensorSlotLayout {
 pub const CARD_ID_SLOT_COUNT: usize = PERMANENT_ROW_COUNT * (1 + PERM_MAX_SOURCES)
     + OWN_HAND_ROWS
     + KNOWN_ZONE_ROWS
-    + PENDING_CHOICE_ROWS;
+    + 2 * PENDING_CHOICE_ROWS;
 pub const SCALAR_SLOT_COUNT: usize = TENSOR_SIZE - CARD_ID_SLOT_COUNT;
 
 pub const PROFILE: TensorProfile = TensorProfile {
@@ -296,6 +326,7 @@ pub fn positions_for_section(
                 mark_card(
                     section.start + row * PENDING_CHOICE_ROW_SIZE + PENDING_SOURCE_CARD_ID_OFFSET,
                 );
+                mark_card(section.start + row * PENDING_CHOICE_ROW_SIZE + PENDING_CARD_ID_OFFSET);
             }
         }
         "own_original_decklist" => {

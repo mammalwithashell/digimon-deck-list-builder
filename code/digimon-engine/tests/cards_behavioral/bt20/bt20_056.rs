@@ -416,6 +416,9 @@ fn zone_action(r: &DebugRunner, owner: u8, id: &str, trash: bool) -> u16 {
         .iter()
         .position(|c| c.card_id(&r.game.card_data) == id)
         .unwrap();
+    if r.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some() {
+        return owned_union_fixture::action(&r.game, owner, id, trash).expect("printed eligible card has a legal physical row");
+    }
     (if trash {
         space::TRASH_EFFECT_START
     } else {
@@ -627,11 +630,7 @@ fn bt20_056_attack_tail_union_masks_filter_trait_level_kind_and_evolution_requir
             assert!(actions.contains(&zone_action(&r, owner, id, trash)), "{id}");
         }
         for id in ["EVO7", "NO-TRAIT", "WRONG-COLOR", "WRONG-LEVEL", "TAMER"] {
-            assert_eq!(
-                build_action_mask(&r.game, owner)[zone_action(&r, owner, id, false) as usize],
-                0.0,
-                "{id}"
-            );
+            assert!(owned_union_fixture::action(&r.game, owner, id, false).is_none(), "{id} must have no legal physical row");
         }
         let action = zone_action(&r, owner, "EVO5", false);
         choose(&mut r, owner, action);
@@ -786,3 +785,6 @@ fn bt20_056_inherited_replacement_requires_exact_name_and_available_security() {
         assert_eq!(r.security_count(0), if security { 5 } else { 0 });
     }
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

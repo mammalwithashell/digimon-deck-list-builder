@@ -1,0 +1,74 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 6 items
+
+code\tests\tools\test_impact_scope.py ...FFF                             [100%]
+
+================================== FAILURES ===================================
+____ test_shared_helper_fans_out_to_actual_folder_and_standalone_consumers ____
+
+tmp_path = WindowsPath('C:/Users/james/AppData/Local/Temp/pytest-of-james/pytest-138/test_shared_helper_fans_out_to0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001B6A0FCFF00>
+
+    def test_shared_helper_fans_out_to_actual_folder_and_standalone_consumers(tmp_path, monkeypatch):
+        engine = helper_scope_repo(tmp_path, monkeypatch)
+        (engine / "tests/support/shared.rs").write_text("pub fn helper() {}", encoding="utf-8")
+        (engine / "tests/cards_behavioral/main.rs").write_text(
+            '#[path="../support/shared.rs"] mod helper;', encoding="utf-8")
+        (engine / "tests/effects/nested.rs").write_text(
+            '#[path="../support/shared.rs"] mod helper;', encoding="utf-8")
+        (engine / "tests/qualification.rs").write_text(
+            '#[path="support/shared.rs"] mod helper;', encoding="utf-8")
+        result = scope_for_changed_paths(["code/digimon-engine/tests/support/shared.rs"],
+            dsl_index=fixture_index(), lowering_map={})
+>       assert result.side_binaries == ["behavioral_alias", "effects", "qualification"]
+E       AssertionError: assert ['support'] == ['behavioral_...ualification']
+E         
+E         At index 0 diff: 'support' != 'behavioral_alias'
+E         Right contains 2 more items, first extra item: 'effects'
+E         Use -v to get more diff
+
+code\tests\tools\test_impact_scope.py:105: AssertionError
+_________ test_shared_helper_fanout_follows_transitive_helper_modules _________
+
+tmp_path = WindowsPath('C:/Users/james/AppData/Local/Temp/pytest-of-james/pytest-138/test_shared_helper_fanout_foll0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001B6C20BC380>
+
+    def test_shared_helper_fanout_follows_transitive_helper_modules(tmp_path, monkeypatch):
+        engine = helper_scope_repo(tmp_path, monkeypatch)
+        (engine / "tests/support/leaf.rs").write_text("pub fn helper() {}", encoding="utf-8")
+        (engine / "tests/support/outer.rs").write_text('mod leaf;', encoding="utf-8")
+        (engine / "tests/infra/main.rs").write_text(
+            '#[path="../support/outer.rs"] mod helper;', encoding="utf-8")
+        result = scope_for_changed_paths(["code/digimon-engine/tests/support/leaf.rs"],
+            dsl_index=fixture_index(), lowering_map={})
+>       assert result.side_binaries == ["infra"]
+E       AssertionError: assert ['support'] == ['infra']
+E         
+E         At index 0 diff: 'support' != 'infra'
+E         Use -v to get more diff
+
+code\tests\tools\test_impact_scope.py:117: AssertionError
+________ test_unresolved_shared_helper_requires_full_real_target_scope ________
+
+tmp_path = WindowsPath('C:/Users/james/AppData/Local/Temp/pytest-of-james/pytest-138/test_unresolved_shared_helper_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x000001B6C206D250>
+
+    def test_unresolved_shared_helper_requires_full_real_target_scope(tmp_path, monkeypatch):
+        helper_scope_repo(tmp_path, monkeypatch)
+        result = scope_for_changed_paths(["code/digimon-engine/tests/support/deleted.rs"],
+            dsl_index=fixture_index(), lowering_map={})
+>       assert result.full_suite_required
+E       AssertionError: assert False
+E        +  where False = ImpactScopeResult(full_suite_required=False, cards=[], verbs=[], side_binaries=['support'], reasons=[]).full_suite_required
+
+code\tests\tools\test_impact_scope.py:124: AssertionError
+=========================== short test summary info ===========================
+FAILED code/tests/tools/test_impact_scope.py::test_shared_helper_fans_out_to_actual_folder_and_standalone_consumers
+FAILED code/tests/tools/test_impact_scope.py::test_shared_helper_fanout_follows_transitive_helper_modules
+FAILED code/tests/tools/test_impact_scope.py::test_unresolved_shared_helper_requires_full_real_target_scope
+========================= 3 failed, 3 passed in 0.94s =========================

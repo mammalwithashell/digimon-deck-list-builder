@@ -1,0 +1,36 @@
+
+running 13 tests
+test ex11::ex11_022::ex11_022_dsl_fixture_backfills_printed_evo_cost_table ... ok
+test ex11::ex11_022::ex11_022_effect_initiated_cost_reduced_digivolve_onto_matching_base_succeeds ... ok
+test ex11::ex11_022::ex11_022_effect_initiated_digivolve_onto_nonmatching_base_is_rejected ... ok
+test ex11::ex11_022::ex11_022_has_printed_metadata_and_evolution_paths ... ok
+test ex11::ex11_022::ex11_022_inherited_leave_prevention_uses_token_or_other_puppet_and_is_once_per_turn ... ok
+
+thread 'ex11::ex11_022::ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end' (7648) panicked at code\digimon-engine\tests\cards_behavioral\ex11\ex11_022.rs:421:5:
+assertion `left == right` failed: only PUPPET-HAND is eligible
+  left: 2
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex11::ex11_022::ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end ... FAILED
+
+thread 'ex11::ex11_022::ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp' (45300) panicked at code\digimon-engine\tests\cards_behavioral\ex11\ex11_022.rs:368:5:
+assertion `left == right` failed: only PUPPET-HAND and PUPPET-TRASH should be eligible; got [30, 31, 62]
+  left: 3
+ right: 2
+test ex11::ex11_022::ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp ... FAILED
+test ex11::ex11_022::ex11_022_scape_goat_deletes_another_digimon_and_keeps_karakurumon ... ok
+test ex11::ex11_022::ex11_022_scape_goat_is_not_offered_for_own_effect_deletion ... ok
+test ex11::ex11_022::ex11_022_scape_goat_replacement_is_optional_and_not_own_effect ... ok
+test ex11::ex11_022::ex11_022_turn_end_cleanup_is_noop_if_played_puppet_already_left ... ok
+test ex11::ex11_022::ex11_022_turn_end_cleanup_survives_index_shift_and_deletes_only_played_puppet ... ok
+test ex11::ex11_022::ex11_022_when_digivolving_uses_same_optional_play_and_cleanup_body ... ok
+
+failures:
+
+failures:
+    ex11::ex11_022::ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end
+    ex11::ex11_022::ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp
+
+test result: FAILED. 11 passed; 2 failed; 0 ignored; 0 measured; 12742 filtered out; finished in 19.36s
+
+FILTER_EXIT 101

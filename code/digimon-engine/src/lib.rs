@@ -11,6 +11,8 @@ pub mod card_store;
 pub mod cards;
 pub mod combat;
 pub mod count_choice;
+pub mod card_choice_page;
+pub mod owned_card_choice;
 pub mod count_choice_wire;
 pub mod dcgo_recording;
 pub mod debug_runner;

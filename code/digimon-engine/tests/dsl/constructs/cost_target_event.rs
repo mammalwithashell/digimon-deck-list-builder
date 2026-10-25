@@ -79,6 +79,24 @@ fn mask(r: &DebugRunner, ids: &[u16], optional: bool) {
         );
     }
 }
+fn source_action(r: &DebugRunner, index: usize) -> u16 {
+    let selection = r.game.pending_selection.as_ref().expect("source selection");
+    let rows = selection.card_choice.as_ref().expect("physical source owner")
+        .view(&r.game, selection.selecting_player).rows;
+    let position = index.to_string();
+    rows.iter().find(|row| row.position.as_deref() == Some(position.as_str())
+        && matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard))
+        .expect("selectable physical source position").action_id
+}
+fn source_mask(r: &DebugRunner, indices: &[usize]) {
+    let mut ids: Vec<_> = indices.iter().map(|&index| source_action(r, index)).collect();
+    ids.push(PASS);
+    mask(r, &ids, true);
+}
+fn pick_source(r: &mut DebugRunner, index: usize) {
+    let action = source_action(r, index);
+    pick(r, action);
+}
 fn pick(r: &mut DebugRunner, a: u16) {
     let p = r.game.pending_selection.as_ref().unwrap().selecting_player;
     r.execute_action(p, a).unwrap();
@@ -380,13 +398,13 @@ fn source_assert(r: &DebugRunner, h: PermanentHandle, n: usize, trash: usize, ha
 fn source_cost_full_short_and_decline() {
     for picks in 0..=2 {
         let (mut r, h) = source_setup(SOURCE_COST);
-        mask(&r, &[2000, 2001, PASS], true);
+        source_mask(&r, &[0, 1]);
         if picks > 0 {
-            pick(&mut r, 2000);
-            mask(&r, &[2001, PASS], true);
+            pick_source(&mut r, 0);
+            source_mask(&r, &[1]);
         }
         if picks == 2 {
-            pick(&mut r, 2001);
+            pick_source(&mut r, 1);
             source_assert(&r, h, 2, 2, 1, 1);
         } else {
             pick(&mut r, PASS);
@@ -409,9 +427,9 @@ fn protect(r: &mut DebugRunner, h: PermanentHandle, index: usize) {
 #[test]
 fn source_cost_refused_pick_is_atomic() {
     let (mut r, h) = source_setup(SOURCE_COST);
-    pick(&mut r, 2000);
+    pick_source(&mut r, 0);
     protect(&mut r, h, 0);
-    pick(&mut r, 2001);
+    pick_source(&mut r, 1);
     source_assert(&r, h, 4, 0, 0, 0);
 }
 #[test]
@@ -433,10 +451,10 @@ fn binding_count_single_list_and_decline() {
         fire(&mut r, h);
         mask(&r, &[100, 101, PASS], true);
         pick(&mut r, if take { 100 } else { PASS });
-        mask(&r, &[2000, 2001, PASS], true);
-        pick(&mut r, 2000);
-        mask(&r, &[2001, PASS], true);
-        pick(&mut r, if two { 2001 } else { PASS });
+        source_mask(&r, &[0, 1]);
+        pick_source(&mut r, 0);
+        source_mask(&r, &[1]);
+        if two { pick_source(&mut r, 1); } else { pick(&mut r, PASS); }
         assert_eq!(r.memory(), i16::from(!take) + 2 * i16::from(two));
         assert_eq!(r.hand_size(0), usize::from(take));
         assert!(r.game.pending_selection.is_none());
@@ -847,8 +865,8 @@ fn deletion_results_include_tokens() {
 fn source_payment_two_cards_one_observer_event() {
     let y=format!("{}{}",SOURCE_COST,"\n  - when: on_digivolution_card_trashed\n    trigger_if: { event_host_permanent_is_source: true }\n    process: [{gain_memory: 2}]\n");
     let (mut r, h) = source_setup(&y);
-    pick(&mut r, 2000);
-    pick(&mut r, 2001);
+    pick_source(&mut r, 0);
+    pick_source(&mut r, 1);
     source_assert(&r, h, 2, 2, 1, 3);
 }
 const ADDED_OBSERVER: &str = r#"

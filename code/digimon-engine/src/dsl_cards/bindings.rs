@@ -65,6 +65,10 @@ fn trash_pin_key(name: &str) -> String {
     format!("\u{0}trash_pin:{name}")
 }
 
+pub(crate) fn is_private_link_pin_name(name:&str)->bool {
+    name.starts_with("\0link_source_carrier:") || name.starts_with("\0link_material_carrier:")
+}
+
 #[derive(Default, Clone)]
 pub struct Bindings {
     slots: HashMap<String, BindingValue>,
@@ -83,9 +87,10 @@ pub struct Bindings {
 // identity metadata explicitly, in sorted order and with continuation paths.
 impl std::fmt::Debug for Bindings {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let cleared: BTreeSet<_>=self.cleared_slots.iter().filter(|name|!is_private_link_pin_name(name)).collect();
         f.debug_struct("Bindings")
             .field("slots", &self.slots)
-            .field("cleared_slots", &self.cleared_slots)
+            .field("cleared_slots", &cleared)
             .field("result_log", &self.result_log)
             .field("played_identity_pins", &self.played_identity_pins)
             .finish()
@@ -133,6 +138,16 @@ impl Bindings {
         let played: std::collections::BTreeMap<_, _> = self.played_identity_pins.iter().collect();
         let selected: std::collections::BTreeMap<_, _> = self.selected_identity_pins.iter().collect();
         format!("{:?}", (slots, &self.cleared_slots, &self.result_log, played, selected))
+    }
+    /// V3 DNA declarations predate the private Link continuation namespace.
+    pub(crate) fn legacy_canonical_verification_debug(&self)->String {
+        let mut legacy=self.clone();
+        legacy.selected_identity_pins.retain(|name,_|!is_private_link_pin_name(name));
+        legacy.cleared_slots.retain(|name|!is_private_link_pin_name(name));
+        legacy.canonical_verification_debug()
+    }
+    pub(crate) fn private_link_clears_for_verification(&self)->Vec<String> {
+        self.cleared_slots.iter().filter(|name|is_private_link_pin_name(name)).cloned().collect()
     }
     pub fn new() -> Self {
         Self::default()
@@ -187,6 +202,13 @@ impl Bindings {
             self.selected_identity_pins.remove(k);
             if let Some(pin) = other.selected_identity_pins.get(k) {
                 self.selected_identity_pins.insert(k.clone(), *pin);
+            }
+        }
+        for (name, pin) in &other.selected_identity_pins {
+            if (name.starts_with("\0link_source_carrier:") || name.starts_with("\0link_material_carrier:"))
+                && !other.cleared_slots.contains(name) && !other.slots.contains_key(name) {
+                self.cleared_slots.remove(name);
+                self.selected_identity_pins.insert(name.clone(), *pin);
             }
         }
     }
@@ -385,6 +407,15 @@ impl Bindings {
 
     pub(crate) fn selected_identity_pin(&self, name: &str) -> Option<(PlayerId, u64)> {
         self.selected_identity_pins.get(name).copied()
+    }
+
+    /// Private link continuation metadata, never an authored binding value.
+    pub(crate) fn pin_private_link_identity(&mut self, name: &str, player: PlayerId, identity: u64) {
+        assert!(name.starts_with("\0link_source_carrier:") || name.starts_with("\0link_material_carrier:"));
+        self.cleared_slots.remove(name);
+        self.slots.remove(name);
+        self.played_identity_pins.remove(name);
+        self.selected_identity_pins.insert(name.to_owned(), (player, identity));
     }
 
     pub(crate) fn selected_identity_pins_for_verification(&self) -> Vec<(String, PlayerId, u64)> {
@@ -810,5 +841,38 @@ mod tests {
             .expect("clone preserved");
         assert_eq!(clone_token, token);
         assert_eq!(clone_fallback, fallback);
+    }
+}
+
+#[cfg(test)]
+mod private_link_identity_tests {
+    use super::*;
+    #[test]
+    fn private_link_pins_survive_clone_merge_and_resolve_compacted_carriers() {
+        let mut r=crate::debug_runner::DebugRunner::builder().add_card(crate::debug_runner::make_test_card("PIN-HOST","Pin Host")).start();
+        r.place_on_field(0,"PIN-HOST",None);let host=r.place_on_field(0,"PIN-HOST",None);
+        let identity=r.game.capture_digivolve_host_identity(host);
+        for key in ["\0link_source_carrier:7","\0link_material_carrier:8"] {
+            let mut original=Bindings::new();let archival=format!("{:?}",original);
+            original.pin_private_link_identity(key,0,identity);assert!(original.get(key).is_none());assert_eq!(format!("{:?}",original),archival);
+            let cloned=original.clone();let mut merged=Bindings::new();merged.merge_slots_from(&cloned);
+            assert_eq!(merged.selected_identity_pin(key),Some((0,identity)));
+            r.game.player_mut(0).battle_area.swap(0,1);
+            assert_eq!(merged.resolve_selected_identity(&r.game,key),Some(PermanentHandle{player:0,index:0}));
+            assert_eq!(original.selected_identity_pin(key),Some((0,identity)));
+            r.game.player_mut(0).battle_area.swap(0,1);
+        }
+    }
+    #[test]
+    fn private_link_pin_clear_and_explicit_rebind_override_prior_metadata() {
+        for key in ["\0link_source_carrier:7","\0link_material_carrier:8"] {
+            let mut prior=Bindings::new();prior.pin_private_link_identity(key,0,42);
+            let mut cleared=prior.clone();cleared.clear_for_merge(key);prior.merge_slots_from(&cleared);
+            assert!(prior.selected_identity_pin(key).is_none());assert!(prior.get(key).is_none());
+            prior.pin_private_link_identity(key,0,42);
+            let mut rebound=prior.clone();rebound.insert(key,BindingValue::Literal(9));prior.merge_slots_from(&rebound);
+            assert!(prior.selected_identity_pin(key).is_none());assert_eq!(prior.get(key),Some(BindingValue::Literal(9)));
+            assert!(cleared.selected_identity_pin(key).is_none());
+        }
     }
 }

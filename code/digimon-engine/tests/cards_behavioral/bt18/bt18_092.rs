@@ -1023,58 +1023,15 @@ fn bt18_092_ally_attack_no_trigger_with_only_one_vemmon_source() {
         .accept_optional_trigger()
         .expect("accept the outer optional-trigger prompt");
 
-    // Zenith pays the suspend cost (matches DCGO's literal suspend-first
-    // ordering). With only 1 live Vemmon candidate, `select_own_sources`
-    // (min: 2, max: 2) installs a SourceMulti prompt offering that single
-    // candidate (matching the EX10-034 precedent idiom:
-    // `install_source_multi_selection` only skips outright once candidates
-    // are truly exhausted, i.e. `candidates.is_empty()` -- with exactly 1
-    // live candidate it presents that 1 pick with NO PASS, since
-    // `picked.len() (0) < min (2)`). Picks are STAGED (not physically moved)
-    // until the tail commits, so driving that single pick does not touch the
-    // attacker's stack yet. It DOES exhaust the candidate pool; the NEXT
-    // recursive install call then sees `candidates.is_empty() &&
-    // picked.len() (1) < min (2)`, so it returns WITHOUT installing a
-    // further selection and WITHOUT invoking the `then:`-equivalent tail --
-    // the staged pick is discarded, the attacker's stack stays untouched,
-    // and the De-Digivolve step never runs. Net observable outcome matches
-    // DCGO exactly (no return-to-deck-bottom, no De-Digivolve) despite the
-    // suspend cost being paid where DCGO would never have offered the
-    // trigger at all; see the documented idiom-deviation note in
-    // BT18-092.yaml.
+    // The already accepted activation pays its suspend cost. The mandatory
+    // exact-two selector cannot complete with one candidate, so it exposes
+    // no partial payment and never runs the De-Digivolve benefit.
     assert!(
         runner.game.players[0].battle_area[zenith.index as usize].is_suspended,
         "Zenith pays the suspend cost even though the effect ultimately fizzles"
     );
-    let source_pending = runner
-        .pending_selection_view()
-        .expect("SourceMulti must offer the single live Vemmon candidate");
-    assert_eq!(
-        source_pending.kind,
-        SelectionKind::SourceMulti {
-            min: 2,
-            max: 2,
-            picked: 0
-        }
-    );
-    assert_eq!(
-        source_pending.valid_action_ids.len(),
-        1,
-        "exactly 1 live Vemmon candidate must be offered"
-    );
-    assert!(
-        !source_pending
-            .valid_action_ids
-            .contains(&digimon_engine::action::space::PASS),
-        "PASS is not legal before the minimum (2) is met"
-    );
-    runner
-        .execute_action(
-            source_pending.selecting_player,
-            source_pending.valid_action_ids[0],
-        )
-        .expect("pick the single Vemmon source");
-
+    // Exact mandatory two-card selection is impossible with one live source.
+    // The owned selector exposes no partial payment and does not run its tail.
     assert!(
         runner.pending_selection().is_none(),
         "with the candidate pool exhausted below the minimum, no further \

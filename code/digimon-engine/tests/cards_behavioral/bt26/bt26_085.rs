@@ -80,6 +80,14 @@ fn assert_choice_mask(r: &DebugRunner, expected: &[u16], optional: bool) {
     assert!(build_action_mask(&r.game, 1).iter().all(|v| *v == 0.0));
 }
 
+fn destroy_actions(r:&DebugRunner)->[u16;2] {
+    use digimon_engine::owned_card_choice::CardChoiceZone;
+    assert_eq!(physical_menu::commits(&r.game).len(),2,"exactly the named Destroy Mode in hand and trash are legal");
+    let hand=r.game.player(0).hand.iter().position(|card|card.card_id(&r.game.card_data)==DESTROY_MODE).unwrap();
+    let trash=r.game.player(0).trash.iter().position(|card|card.card_id(&r.game.card_data)==DESTROY_MODE).unwrap();
+    [physical_menu::zone_action(&r.game,0,hand,CardChoiceZone::Hand),physical_menu::zone_action(&r.game,0,trash,CardChoiceZone::Trash)]
+}
+
 fn accept_replacement(r: &mut DebugRunner) {
     let ids: Vec<_> = r
         .pending_selection_view()
@@ -202,14 +210,11 @@ fn bt26_085_would_leave_chooses_production_destroy_mode_from_hand_or_trash_free(
             .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
         accept_replacement(&mut r);
         // Both printed zones remain visible, and non-Destroy Mode cards are excluded.
-        assert_choice_mask(&r, &[PLAY_HAND_START, TRASH_EFFECT_START], false);
+        let choices=destroy_actions(&r);
+        assert_choice_mask(&r, &choices, false);
         r.execute_action(
             0,
-            if choose_trash {
-                TRASH_EFFECT_START
-            } else {
-                PLAY_HAND_START
-            },
+            choices[usize::from(choose_trash)],
         )
         .unwrap();
         assert_eq!(
@@ -313,13 +318,14 @@ fn bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave() {
     r.game
         .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
     accept_replacement(&mut r);
-    assert_choice_mask(&r, &[PLAY_HAND_START, TRASH_EFFECT_START], false);
+    let choices=destroy_actions(&r);
+    assert_choice_mask(&r, &choices, false);
     // The selected payment is legal at offer time, but cannot commit after this gate.
     r.game.modifiers.add(
         h,
         ModifierEntry::simple(ModifierType::CannotDigivolve, 0, Expiry::Permanent, 0),
     );
-    r.execute_action(0, TRASH_EFFECT_START).unwrap();
+    r.execute_action(0, choices[1]).unwrap();
     assert!(field_ids(&r, 0).is_empty());
     assert_eq!(hand_ids(&r, 0), vec![DESTROY_MODE]);
     assert!(trash_ids(&r, 0).contains(&DESTROY_MODE.to_string()));
@@ -327,3 +333,6 @@ fn bt26_085_rejected_digivolution_does_not_cancel_the_pending_leave() {
     assert_eq!(r.memory(), memory);
     assert!(r.game.pending_selection.is_none());
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

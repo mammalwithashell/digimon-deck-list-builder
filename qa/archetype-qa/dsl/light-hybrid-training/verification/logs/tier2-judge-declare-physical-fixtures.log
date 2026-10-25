@@ -1,0 +1,11 @@
+
+running 6 tests
+test c_declare_then_pay::q5_assembly_declaration_legal_when_cost_can_be_made_payable ... ok
+test c_declare_then_pay::q27_dorbickmon_pays_zero_memory_when_returned_to_hand ... ok
+test c_declare_then_pay::q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo ... ok
+test c_declare_then_pay::q26_limbo_replacement_accept_and_decline_are_both_executable_after_clone ... ok
+test c_declare_then_pay::q30_partition_interruptive_suspends_both_with_cost_reduction ... ok
+test c_declare_then_pay::q30_partition_second_play_hook_clones_faithfully_mid_chain ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 39 filtered out; finished in 19.75s
+

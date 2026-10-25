@@ -531,7 +531,7 @@ fn st2_15_kaiser_nail_plays_selected_digimon_source_for_free() {
     assert!(runner.game.activate_hand_main(0, 0));
     choose_first_pending(&mut runner);
 
-    let source_action = encode_source_select(host.index as u16, 0).expect("source action");
+    let source_action = physical_fixture::source_action(&runner.game,host,0);
     {
         let pending = runner
             .pending_selection()
@@ -693,3 +693,6 @@ fn st2_starter_deck_artifact_counts_validate_and_registry_is_complete() {
         );
     }
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

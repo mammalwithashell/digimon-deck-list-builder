@@ -27,12 +27,31 @@
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCardKind, CompiledPredicate, CompiledStep,
 };
-use digimon_engine::action::space::{encode_attack, encode_source_select};
+use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::CardKind;
+
+/// Inspect the owned menu by physical carrier/position, never by old aliases.
+fn source_coordinates(runner: &DebugRunner) -> Vec<(u8, usize)> {
+    use digimon_engine::{action::build_action_mask, owned_card_choice::{CardChoiceOperation, CardChoiceZone}};
+    let pending = runner.game.pending_selection.as_ref().expect("physical source prompt");
+    let owner = pending.card_choice.as_ref().expect("source prompt owns its page");
+    owner.view(&runner.game, pending.selecting_player).rows.into_iter().filter_map(|row| {
+        if !matches!(row.operation, CardChoiceOperation::CommitCard) { return None; }
+        assert!(matches!(row.zone, Some(CardChoiceZone::BattleSource | CardChoiceZone::BreedingSource)));
+        assert_eq!(build_action_mask(&runner.game, pending.selecting_player)[row.action_id as usize], 1.0);
+        assert_eq!(build_action_mask(&runner.game, 1-pending.selecting_player)[row.action_id as usize], 0.0);
+        let slot = row.carrier_slot.expect("physical carrier slot");
+        let index: usize = row.position.as_deref().expect("physical source position").parse().unwrap();
+        let card = &runner.game.player(row.owner.unwrap()).battle_area[slot as usize].card_sources[index];
+        assert_eq!(row.identity_visible, !card.face_down);
+        assert_eq!(row.card_id.as_deref(), (!card.face_down).then(|| card.card_id(&runner.game.card_data)));
+        Some((slot, index))
+    }).collect()
+}
 
 #[test]
 fn select_own_sources_is_face_down_filter_offers_only_face_down_sources() {
@@ -89,15 +108,15 @@ fn select_own_sources_is_face_down_filter_offers_only_face_down_sources() {
     // `select_own_sources` only offers digivolution-stack sources (indices
     // `0..len-1`); the top card (index 2) is the permanent itself and is
     // never a candidate.
-    let fd_action = encode_source_select(carrier.index as u16, 0).expect("face-down source action");
-    let fu_action = encode_source_select(carrier.index as u16, 1).expect("face-up source action");
+    let fd_action = (carrier.index as u8, 0usize);
+    let fu_action = (carrier.index as u8, 1usize);
 
     assert!(
-        pending.valid_action_ids.contains(&fd_action),
+        source_coordinates(&runner).contains(&fd_action),
         "the face-down source must be a candidate under `is_face_down: true`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&fu_action),
+        !source_coordinates(&runner).contains(&fu_action),
         "a face-up source must NOT be a candidate under `is_face_down: true`"
     );
 }
@@ -150,15 +169,15 @@ fn select_own_sources_is_face_down_false_filter_offers_only_face_up_sources() {
     // `select_own_sources` only offers digivolution-stack sources (indices
     // `0..len-1`); the top card (index 2) is the permanent itself and is
     // never a candidate regardless of filter.
-    let fd_action = encode_source_select(carrier.index as u16, 0).expect("face-down source action");
-    let fu_action = encode_source_select(carrier.index as u16, 1).expect("face-up source action");
+    let fd_action = (carrier.index as u8, 0usize);
+    let fu_action = (carrier.index as u8, 1usize);
 
     assert!(
-        !pending.valid_action_ids.contains(&fd_action),
+        !source_coordinates(&runner).contains(&fd_action),
         "a face-down source must NOT be a candidate under `is_face_down: false`"
     );
     assert!(
-        pending.valid_action_ids.contains(&fu_action),
+        source_coordinates(&runner).contains(&fu_action),
         "the face-up source must be a candidate under `is_face_down: false`"
     );
 }
@@ -219,15 +238,15 @@ fn select_own_sources_is_face_down_inside_all_of_combinator() {
         .as_ref()
         .expect("source selection should be pending");
 
-    let fd_action = encode_source_select(carrier.index as u16, 0).expect("face-down source action");
-    let fu_action = encode_source_select(carrier.index as u16, 1).expect("face-up source action");
+    let fd_action = (carrier.index as u8, 0usize);
+    let fu_action = (carrier.index as u8, 1usize);
 
     assert!(
-        pending.valid_action_ids.contains(&fd_action),
+        source_coordinates(&runner).contains(&fd_action),
         "the face-down source must be a candidate under nested `all_of: [{{ is_face_down: true }}]`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&fu_action),
+        !source_coordinates(&runner).contains(&fu_action),
         "a face-up source must NOT be a candidate under nested `all_of: [{{ is_face_down: true }}]`"
     );
 }
@@ -287,15 +306,15 @@ fn select_own_sources_is_face_down_inside_any_of_combinator() {
         .as_ref()
         .expect("source selection should be pending");
 
-    let fd_action = encode_source_select(carrier.index as u16, 0).expect("face-down source action");
-    let fu_action = encode_source_select(carrier.index as u16, 1).expect("face-up source action");
+    let fd_action = (carrier.index as u8, 0usize);
+    let fu_action = (carrier.index as u8, 1usize);
 
     assert!(
-        pending.valid_action_ids.contains(&fd_action),
+        source_coordinates(&runner).contains(&fd_action),
         "the face-down source must be a candidate under nested `any_of` of both polarities"
     );
     assert!(
-        pending.valid_action_ids.contains(&fu_action),
+        source_coordinates(&runner).contains(&fu_action),
         "the face-up source must be a candidate under nested `any_of` of both polarities"
     );
 }
@@ -349,20 +368,20 @@ fn select_own_sources_is_bottom_source_filter_offers_only_index_zero() {
     // `0..len-1`); the top card (index 3) is the permanent itself and is
     // never a candidate.
     let bottom_action =
-        encode_source_select(carrier.index as u16, 0).expect("bottom source action");
-    let mid_action = encode_source_select(carrier.index as u16, 1).expect("mid source action");
-    let upper_action = encode_source_select(carrier.index as u16, 2).expect("upper source action");
+        (carrier.index as u8, 0usize);
+    let mid_action = (carrier.index as u8, 1usize);
+    let upper_action = (carrier.index as u8, 2usize);
 
     assert!(
-        pending.valid_action_ids.contains(&bottom_action),
+        source_coordinates(&runner).contains(&bottom_action),
         "the index-0 source must be a candidate under `is_bottom_source: true`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&mid_action),
+        !source_coordinates(&runner).contains(&mid_action),
         "a non-bottom source must NOT be a candidate under `is_bottom_source: true`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&upper_action),
+        !source_coordinates(&runner).contains(&upper_action),
         "a non-bottom source must NOT be a candidate under `is_bottom_source: true`"
     );
 }
@@ -413,20 +432,20 @@ fn select_own_sources_is_bottom_source_false_filter_offers_only_non_bottom() {
     // `0..len-1`); the top card (index 3) is never a candidate regardless of
     // filter.
     let bottom_action =
-        encode_source_select(carrier.index as u16, 0).expect("bottom source action");
-    let mid_action = encode_source_select(carrier.index as u16, 1).expect("mid source action");
-    let upper_action = encode_source_select(carrier.index as u16, 2).expect("upper source action");
+        (carrier.index as u8, 0usize);
+    let mid_action = (carrier.index as u8, 1usize);
+    let upper_action = (carrier.index as u8, 2usize);
 
     assert!(
-        !pending.valid_action_ids.contains(&bottom_action),
+        !source_coordinates(&runner).contains(&bottom_action),
         "the index-0 source must NOT be a candidate under `is_bottom_source: false`"
     );
     assert!(
-        pending.valid_action_ids.contains(&mid_action),
+        source_coordinates(&runner).contains(&mid_action),
         "a non-bottom source must be a candidate under `is_bottom_source: false`"
     );
     assert!(
-        pending.valid_action_ids.contains(&upper_action),
+        source_coordinates(&runner).contains(&upper_action),
         "a non-bottom source must be a candidate under `is_bottom_source: false`"
     );
 }
@@ -498,20 +517,20 @@ fn select_own_sources_face_down_and_bottom_all_of_offers_only_that_source() {
         .expect("source selection should be pending");
 
     let bottom_action =
-        encode_source_select(carrier.index as u16, 0).expect("bottom source action");
-    let mid_action = encode_source_select(carrier.index as u16, 1).expect("mid source action");
-    let upper_action = encode_source_select(carrier.index as u16, 2).expect("upper source action");
+        (carrier.index as u8, 0usize);
+    let mid_action = (carrier.index as u8, 1usize);
+    let upper_action = (carrier.index as u8, 2usize);
 
     assert!(
-        pending.valid_action_ids.contains(&bottom_action),
+        source_coordinates(&runner).contains(&bottom_action),
         "the face-down bottom source must be the only candidate under `all_of`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&mid_action),
+        !source_coordinates(&runner).contains(&mid_action),
         "a face-down NON-bottom source must NOT be a candidate under `all_of`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&upper_action),
+        !source_coordinates(&runner).contains(&upper_action),
         "a face-up non-bottom source must NOT be a candidate under `all_of`"
     );
 }
@@ -582,16 +601,16 @@ fn select_own_sources_host_kind_is_tamer_offers_only_tamer_hosted_source() {
     // `select_own_sources` only offers digivolution-stack sources (index 0 of
     // each two-card carrier); the top card is the permanent itself.
     let tamer_source_action =
-        encode_source_select(tamer_carrier.index as u16, 0).expect("tamer-hosted source action");
+        (tamer_carrier.index as u8, 0usize);
     let digi_source_action =
-        encode_source_select(digi_carrier.index as u16, 0).expect("digimon-hosted source action");
+        (digi_carrier.index as u8, 0usize);
 
     assert!(
-        pending.valid_action_ids.contains(&tamer_source_action),
+        source_coordinates(&runner).contains(&tamer_source_action),
         "the Tamer-hosted source must be a candidate under `host_kind_is: tamer`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&digi_source_action),
+        !source_coordinates(&runner).contains(&digi_source_action),
         "a Digimon-hosted source must NOT be a candidate under `host_kind_is: tamer`"
     );
 }
@@ -644,16 +663,16 @@ fn select_own_sources_host_kind_is_digimon_offers_only_digimon_hosted_source() {
         .expect("source selection should be pending");
 
     let tamer_source_action =
-        encode_source_select(tamer_carrier.index as u16, 0).expect("tamer-hosted source action");
+        (tamer_carrier.index as u8, 0usize);
     let digi_source_action =
-        encode_source_select(digi_carrier.index as u16, 0).expect("digimon-hosted source action");
+        (digi_carrier.index as u8, 0usize);
 
     assert!(
-        pending.valid_action_ids.contains(&digi_source_action),
+        source_coordinates(&runner).contains(&digi_source_action),
         "the Digimon-hosted source must be a candidate under `host_kind_is: digimon`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&tamer_source_action),
+        !source_coordinates(&runner).contains(&tamer_source_action),
         "a Tamer-hosted source must NOT be a candidate under `host_kind_is: digimon`"
     );
 }
@@ -710,16 +729,16 @@ fn select_own_sources_host_kind_is_inside_all_of_combinator() {
         .expect("source selection should be pending");
 
     let tamer_source_action =
-        encode_source_select(tamer_carrier.index as u16, 0).expect("tamer-hosted source action");
+        (tamer_carrier.index as u8, 0usize);
     let digi_source_action =
-        encode_source_select(digi_carrier.index as u16, 0).expect("digimon-hosted source action");
+        (digi_carrier.index as u8, 0usize);
 
     assert!(
-        pending.valid_action_ids.contains(&tamer_source_action),
+        source_coordinates(&runner).contains(&tamer_source_action),
         "the Tamer-hosted source must be a candidate under nested `all_of: [{{ host_kind_is: tamer }}]`"
     );
     assert!(
-        !pending.valid_action_ids.contains(&digi_source_action),
+        !source_coordinates(&runner).contains(&digi_source_action),
         "a Digimon-hosted source must NOT be a candidate under nested `all_of: [{{ host_kind_is: tamer }}]`"
     );
 }

@@ -1,0 +1,97 @@
+{
+  "scope": "Recovery of invalidated owned physical card pages and failed-current-payment lifecycle",
+  "action_schema_version": 2,
+  "operations": {
+    "refresh_page": 59,
+    "finish_impossible": 62
+  },
+  "observation_flags": {
+    "refresh_page": 89,
+    "finish_impossible": 120
+  },
+  "semantics": [
+    "Mandatory stale security re-evaluates the retained live predicate, rebuilds physical candidates and advances generation without callback, payment, movement or RNG.",
+    "Raw security eligibility is a readonly Send+Sync static predicate; DSL eligibility retains typed predicate, bindings and provenance.",
+    "Optional stale security retains existing PASS behavior.",
+    "Impossible mandatory menus and infeasible required physical prefixes expose Finish without invoking callbacks, success tails or cost payment.",
+    "Only typed finalizers already armed for the abandoned continuation release their own receipts; matching security receipts use LIFO ownership.",
+    "Owned raw and DSL payments share the typed continuation channel; failure invalidates only current payment credit while prior paid reductions and enclosing lifecycle survive.",
+    "Source feasibility preserves physical prefixes, minimum counts, distinctness, named roles, same-level groups and raw Partition slot predicates.",
+    "Raw Partition completion uses original physical candidate pins and live exact role matching; no one-shot callback is shared."
+  ],
+  "red_evidence": [
+    {
+      "log": "verification/logs/owned-choice-recovery-runtime-red.log",
+      "passed": 0,
+      "failed": 2
+    },
+    {
+      "log": "verification/logs/raw-capped-moved-prefix-red.log",
+      "passed": 0,
+      "failed": 1
+    },
+    {
+      "log": "verification/logs/raw-payment-public-pipeline-red.log",
+      "passed": 0,
+      "failed": 1
+    },
+    {
+      "log": "verification/logs/raw-partition-impossible-roles-red.log",
+      "passed": 0,
+      "failed": 1
+    }
+  ],
+  "green_evidence": [
+    {
+      "log": "verification/logs/owned-recovery-and-light-hybrid-green.log",
+      "exit_code": 0,
+      "suites": {
+        "light_hybrid_training": 206,
+        "named_source_group_selection": 6,
+        "owned_card_selection": 9,
+        "owned_choice_recovery": 9,
+        "source_prefix_stability": 5
+      },
+      "passed": 235,
+      "failed": 0,
+      "boundary": "Before the final raw-Partition slot-liveness follow-up; all card and other recovery fixes included."
+    },
+    {
+      "log": "verification/logs/owned-choice-recovery-slot-green.log",
+      "exit_code": 0,
+      "suites": {
+        "named_source_group_selection": 6,
+        "owned_card_selection": 9,
+        "owned_choice_recovery": 10,
+        "source_prefix_stability": 5
+      },
+      "passed": 30,
+      "failed": 0,
+      "boundary": "Includes final raw-Partition liveness RED fix and previous required-prefix controls."
+    },
+    {
+      "log": "verification/logs/owned-recovery-receipt-finalizers.log",
+      "exit_code": 0,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "log": "verification/logs/recovery-frontend.log",
+      "exit_code": 0,
+      "passed": 27,
+      "failed": 0
+    },
+    {
+      "log": "verification/logs/recovery-frontend-types.log",
+      "exit_code": 0,
+      "check": "TypeScript noEmit"
+    }
+  ],
+  "cargo_target_dir": "C:/Users/james/.codex/build-targets/light-hybrid-prefix",
+  "rust_min_stack": 33554432,
+  "remaining": [
+    "Typed keyword Partition slot liveness is being audited by the selector worker; this checkpoint does not certify an unmeasured path.",
+    "Final release bindings, aggregate verification and regenerated training admission remain parent-task work.",
+    "No training blockers or admission records were cleared by this subtask; no DCGO oracle or model promotion claim."
+  ]
+}

@@ -1,0 +1,29 @@
+BT17-020: file differs from generator output
+--check failed for 1/1 cards. Run `python code/tools/split_cards_json.py` and commit the diff.
+BT18-081: file differs from generator output
+--check failed for 1/1 cards. Run `python code/tools/split_cards_json.py` and commit the diff.
+EX7-002: file differs from generator output
+--check failed for 1/1 cards. Run `python code/tools/split_cards_json.py` and commit the diff.
+P-153: file differs from generator output
+--check failed for 1/1 cards. Run `python code/tools/split_cards_json.py` and commit the diff.
+P-249: file differs from generator output
+--check failed for 1/1 cards. Run `python code/tools/split_cards_json.py` and commit the diff.
+wrote 1 card JSON files to C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-engine\cards
+wrote 1 card JSON files to C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-engine\cards
+wrote 1 card JSON files to C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-engine\cards
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+--check OK (1 card JSON files match on disk)
+Exact-deck split metadata: 15/20 match central card data

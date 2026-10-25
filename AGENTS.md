@@ -64,7 +64,7 @@ The legacy Python engine was removed. There is no Python engine fallback.
 - Compact profile `standard_compact_v1` is engine-only compatibility; the training adapter rejects it.
 - Env override: `DIGIMON_TENSOR_PROFILE`.
 
-`DigimonEnv` defaults to `standard_lite_v2` (8410 floats). The Rust engine default and `digimon_engine.TENSOR_SIZE` use `standard_lite_deck_v2` (8850 floats). The 1375-float `standard_compact_v1` remains available only through explicit engine compatibility APIs. Training, inference, export, model metadata, and feature extractors must resolve the selected profile from exported layout metadata rather than treating `TENSOR_SIZE` as the training observation size.
+`DigimonEnv` defaults to `standard_lite_v2` (9434 floats). The Rust engine default and `digimon_engine.TENSOR_SIZE` use `standard_lite_deck_v2` (9874 floats). The 1375-float `standard_compact_v1` remains available only through explicit engine compatibility APIs. Training, inference, export, model metadata, and feature extractors must resolve the selected profile from exported layout metadata rather than treating `TENSOR_SIZE` as the training observation size.
 
 ---
 
@@ -203,8 +203,8 @@ Goal: play Digimon matches inside the headless engine to generate win/loss and p
 - Uses `ActionMasker` so illegal actions are never sampled.
 - Training entrypoint: `code/digimon_gym/agents/pilot_training.py`.
 - Observation shape comes from the selected observation layout, not from `digimon_engine.TENSOR_SIZE`.
-- The default pilot observation layout is `standard_lite_v2`, currently `8410` floats.
-- `digimon_engine.TENSOR_SIZE` reports the engine default `standard_lite_deck_v2` (8850 floats), not the training default.
+- The default pilot observation layout is `standard_lite_v2`, currently `9434` floats.
+- `digimon_engine.TENSOR_SIZE` reports the engine default `standard_lite_deck_v2` (9874 floats), not the training default.
 - Action space comes from `digimon_engine.ACTION_SPACE_SIZE` and is currently `2192`.
 
 ### MaskableRecurrentPPO (Custom LSTM)
@@ -276,7 +276,7 @@ API:
 Observation/action spaces:
 
 - Observation: `Box(shape=(selected_layout.tensor_size,), low=-10.0, high=20001.0, dtype=float32)`.
-- Default selected layout: `standard_lite_v2`, currently `8410`.
+- Default selected layout: `standard_lite_v2`, currently `9434`.
 - `standard_compact_v1` is rejected by `DigimonEnv`; explicit engine compatibility APIs retain its 1375-float layout.
 - Action: `Discrete(ACTION_SPACE_SIZE)`.
 - Current `ACTION_SPACE_SIZE`: `2192`.
@@ -322,7 +322,7 @@ The maskable distribution sets illegal-action logits to negative infinity. Illeg
 
 The action mask is the legality oracle. Observation metadata may explain phases, pending choices, source provenance, effect categories, or target profiles, but it must never drive game legality or rules resolution. If observation metadata is incomplete, encode unknown/zero metadata and keep the mask correct.
 
-`standard_lite_v2` adds rich pending-choice features for currently installed selections. These rows are aligned to prompt presentation order (`pending_selection.valid_action_ids`), not raw action-ID ranges, because action IDs are phase-aware and reused. Keep that row-order contract stable when adding selection kinds.
+`standard_lite_v2` adds rich pending-choice features for currently installed selections. These rows are aligned to prompt presentation order, not raw action-ID ranges, because action IDs are phase-aware and reused. Owned physical card pages use `cardChoice.rows`, including nonselectable inspection rows; other prompts use `pending_selection.valid_action_ids`. The mask remains the sole legality authority. Pending rows are 128 floats under action schema version 2; resolve all offsets from exported layout metadata.
 
 ## 3.4 Wrapper Chain
 
@@ -724,4 +724,4 @@ contracts solely because tensor/action shapes match.
 
 ### Model action semantic compatibility
 
-Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. This preparatory gate does not bump SCHEMA_VERSION (still 1), resize actions/tensors, or complete the capacity migration.
+Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. SCHEMA_VERSION is now 2 for owned physical card pages; old action semantics are incompatible even when ACTION_SPACE_SIZE remains 2192. Full selector and runtime qualification is still required before admitting the blocked cards.

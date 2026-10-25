@@ -1582,6 +1582,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::AllianceTiming;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(attacker.player),
             kind: SelectionKind::OwnField,
             selecting_player: attacker.player,
@@ -1879,6 +1880,7 @@ impl Game {
         self.current_phase = GamePhase::CounterTiming;
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             // SelectionKind::Hand is a defensible umbrella — the primary
             // resource is the defender's hand, and the mask renderer is
@@ -2100,6 +2102,7 @@ impl Game {
         let source_card = self.player(defender).hand[result_hand_index].handle();
         self.current_phase = GamePhase::SelectMaterial;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player: defender,
@@ -2126,6 +2129,7 @@ impl Game {
                 }
                 game.current_phase = GamePhase::SelectHand;
                 game.pending_selection = Some(PendingSelection {
+                    card_choice: None,
                     zone_owner: None,
                     kind: SelectionKind::Hand,
                     selecting_player: defender,
@@ -2186,6 +2190,7 @@ impl Game {
 
         self.current_phase = GamePhase::SelectHand;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Hand,
             selecting_player: defender,
@@ -2479,6 +2484,7 @@ impl Game {
         self.current_phase = GamePhase::BlockTiming;
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(defender_player),
             // The selecting player is picking from their *own* field; kind
             // reflects that. Block is the *window*, signalled by the phase.
@@ -2736,6 +2742,7 @@ impl Game {
         self.current_phase = GamePhase::SelectTarget;
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(opp_id),
             kind: SelectionKind::OppField,
             selecting_player: attacker_player,
@@ -2845,6 +2852,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Target,
             selecting_player: attacker.player,

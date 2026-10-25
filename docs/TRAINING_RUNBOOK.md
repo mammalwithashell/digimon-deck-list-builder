@@ -12,10 +12,32 @@ Tables, and the local/W&B dashboard, see [Card evaluation](CARD_EVALUATION.md).
 > can query cloud runs from your local Claude sessions. Use it for long
 > (>~8h) jobs, off-machine training, or phone-checkable runs.
 
+## Owned source/security choices: current contract
+
+`support-complete-digivolution-source-choices` uses action semantic schema **2**
+with **2192** actions. Pending card pages carry 128-float rows; active profile
+sizes are `standard_lite_v2` **9434**, `standard_lite_deck_v2` **9874**, and
+`standard_full_v2` **44506**. Resolve sizes, positions, schemas and hashes from
+`digimon_engine.get_observation_layout()`; the older migration numbers below
+record earlier allocations.
+
+Rebuild the optimized PyO3 wheel before training. Old checkpoints and exports
+must fail the seven-field model contract, including `action_schema_version`,
+even when an action-head size happens to match. Do not relabel old metadata to
+accept old weights. Newly initialized current-contract models and their exports
+can be validated independently of policy quality; a compatibility smoke test is
+not model promotion or oracle certification.
+
+Paged choices include legal commit rows, navigation and permission-filtered
+inspection rows. Navigation never pays a cost or advances effect processing.
+Refresh rechecks live eligibility; impossible mandatory completion contributes
+no payment or reduction credit. The action mask remains the legality oracle.
+See [ACTION_SPEC.md](ACTION_SPEC.md) and [TENSOR_SPEC.md](TENSOR_SPEC.md).
+
 > ## ⚠️ Engine default profile flipped — 2026-05-25 (`flip-engine-default-to-lite-deck-v2`)
 >
 > The engine's canonical default observation profile is now
-> **`standard_lite_deck_v2`** (`8850` floats; v2_lite prefix + 55-row own
+> **`standard_lite_deck_v2`** (currently `9874` floats, `8850` at the original flip; v2_lite prefix + 55-row own
 > original decklist + 256 reserved). `tensor::TENSOR_SIZE`,
 > `tensor_profiles::default_profile()`, and the PyO3
 > `digimon_engine.TENSOR_PROFILE_ID` all report this value. Previously the

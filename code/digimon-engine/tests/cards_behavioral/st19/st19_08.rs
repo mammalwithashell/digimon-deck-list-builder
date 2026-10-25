@@ -486,14 +486,14 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
         "printed 'You may' must surface PASS at the union-zone selection"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a|a!=digimon_engine::action::space::PASS).count(),
         2,
         "exactly LIB_HAND (hand) and LIB_TRASH (trash) must be legal; \
          NONLIB_HAND (no LIBERATOR trait) and LIB_COST5_TRASH (cost 5 > 4) must be excluded"
     );
 
     // ── Choose any valid action and complete the pipeline ───────────────────
-    let selected_action = view.valid_action_ids[0];
+    let selected_action = physical_fixture::card_action(&runner.game,"LIB_HAND",digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
         .execute_action(view.selecting_player, selected_action)
         .expect("executing a valid union-zone action must succeed");
@@ -604,7 +604,7 @@ fn st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate
         "printed 'You may' must surface PASS"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a|a!=digimon_engine::action::space::PASS).count(),
         1,
         "only LIB_TRASH (trash) should be legal when there is no legal hand candidate"
     );
@@ -613,7 +613,7 @@ fn st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate
 
     // ── Select the single (trash-origin) action ─────────────────────────────
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, physical_fixture::card_action(&runner.game,"LIB_TRASH",digimon_engine::owned_card_choice::CardChoiceZone::Trash))
         .expect("executing the single trash-origin action must succeed");
     runner
         .auto_resolve()
@@ -646,3 +646,6 @@ fn st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate
         "play_union_bound_free must not charge the played card's play cost"
     );
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

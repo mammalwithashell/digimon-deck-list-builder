@@ -1,0 +1,91 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "BT18-088",
+    "card_type": "Tamer",
+    "colors": [
+      "Red",
+      "Yellow"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Red",
+          "Yellow"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "tamer",
+        "level": null,
+        "name": "Takuya Kanbara & Koji Minamoto",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Security] Play this card without paying the cost.\n[Start of Your Turn] If you have 2 or less memory, set it to 3.\n[Start of Your Main Phase] You may place up to 1 [Hybrid] trait card with different names from your trash under this Tamer. For each of your other Tamers, add 2 to the maximum number this effect may place.\n(Rule) Name: Also treated as [Takuya Kanbara]/[Koji Minamoto]."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[End of Your Turn] [Once Per Turn] This Digimon with the [Hybrid] or [Ten Warriors] trait may attack a player."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "Takuya Kanbara & Koji Minamoto",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522025",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT18-088.png?260529",
+      "printing_id": "BT18-088"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "You may choose 1 card with a combination of having the [Hybrid] trait and a different name from your trash and place it under this Tamer.\nFor each of your other Tamers, you add 2 to the maximum number of cards this effect may place under this Tamer.\nFor example, if you have 1 Tamer other than this Tamer, you can choose up to 3 cards with the [Hybrid] trait and different names from your trash and place them under this Tamer.",
+        "date": "Jun. 21, 2024",
+        "number": "Q3045",
+        "question": "What does this card's [Start of Your Main Phase] effect do, exactly?"
+      },
+      {
+        "answer": "No, it can't attack. A new attack declaration can't be made during an attack.\nIn such cases, even if you activate this card's [End of Your Turn] inherited effect when you already have an attacking digimon, a new attack can't be performed using a Digimon with this card in its digivolution cards.",
+        "date": "Jun. 21, 2024",
+        "number": "Q3046",
+        "question": "My Digimon is attacking using an effect at the end of my turn.\nCan I use this card's [End of Your Turn] inherited effect to attack a player using a Digimon with this card in its digivolution cards?"
+      }
+    ],
+    "rarity": "R",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Security] Play this card without paying the cost.\n[Start of Your Turn] If you have 2 or less memory, set it to 3.\n[Start of Your Main Phase] You may place up to 1 [Hybrid] trait card with different names from your trash under this Tamer. For each of your other Tamers, add 2 to the maximum number this effect may place.\n(Rule) Name: Also treated as [Takuya Kanbara]/[Koji Minamoto]."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[End of Your Turn] [Once Per Turn] This Digimon with the [Hybrid] or [Ten Warriors] trait may attack a player."
+      }
+    ],
+    "type": ""
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "8639bd1c2beb0c57dfa05a8c533f45bd31f0039cfd7f4c70a53b8e708fd8769d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522025:BT18-088:BT18-088",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522025"
+}

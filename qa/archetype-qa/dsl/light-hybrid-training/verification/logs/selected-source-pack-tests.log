@@ -1,0 +1,12 @@
+   Compiling digimon-dsl v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-dsl)
+    Finished `test` profile [optimized + debuginfo] target(s) in 5m 32s
+     Running unittests src\lib.rs (D:/cargo-target/light-hybrid-training\debug\deps\digimon_dsl-2cfc7807a9f46618.exe)
+
+running 4 tests
+test pack::tests::empty_pack_round_trips ... ok
+test pack::tests::missing_required_raw_rust_fns_reports_manifest_gaps ... ok
+test pack::tests::pack_metadata_collects_required_raw_rust_fns ... ok
+test pack::tests::pack_with_one_card_round_trips ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 65 filtered out; finished in 0.00s
+

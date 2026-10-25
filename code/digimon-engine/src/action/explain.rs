@@ -459,6 +459,40 @@ fn explain_end_of_turn(game: &Game, player_id: PlayerId, action_id: u16) -> Acti
 }
 
 fn explain_selection(game: &Game, player_id: PlayerId, action_id: u16) -> ActionExplanation {
+    if let Some((pending, owner)) = game.pending_selection.as_ref()
+        .and_then(|pending| pending.card_choice.as_ref().map(|owner| (pending, owner))) {
+        use crate::owned_card_choice::{CardChoiceOperation as Op, CardChoiceZone as Zone};
+        if pending.selecting_player != player_id {
+            return base(game, player_id, action_id, ActionKind::Unknown, "Waiting for selecting player".into());
+        }
+        let page = owner.view(game, player_id);
+        let Some(row) = page.rows.iter().find(|row| row.action_id == action_id) else {
+            return base(game, player_id, action_id, ActionKind::Unknown, "Not a presented card-page action".into());
+        };
+        let label = match row.operation {
+            Op::CommitCard => "Choose card", Op::InspectCard => "Inspect card",
+            Op::PreviousPage => "Previous page", Op::NextPage => "Next page",
+            Op::Decline if page.inspection_only => "Done inspecting", Op::Decline => "Decline",
+            Op::RefreshPage => "Refresh choices", Op::FinishImpossible => "Finish unavailable choice",
+        };
+        let mut result = base(game, player_id, action_id, ActionKind::Selection, label.into());
+        let index = row.position.as_deref().and_then(|s| s.parse::<u16>().ok());
+        match row.zone {
+            Some(Zone::Security) => { result.target_zone = Some(ActionZone::Security); result.target_index = index; }
+            Some(Zone::Hand) => { result.target_zone = Some(ActionZone::Hand); result.target_index = index; }
+            Some(Zone::Trash) => { result.target_zone = Some(ActionZone::Trash); result.target_index = index; }
+            Some(Zone::BattleTop) => { result.target_zone = Some(ActionZone::Battle); result.target_index = row.carrier_slot.map(u16::from); }
+            Some(Zone::BattleSource) | Some(Zone::BreedingSource) => {
+                result.kind = ActionKind::SourceSelect;
+                result.source_zone = Some(ActionZone::Source); result.source_index = index;
+                result.target_zone = Some(if matches!(row.zone, Some(Zone::BreedingSource)) { ActionZone::Breeding } else { ActionZone::Battle });
+                result.target_index = row.carrier_slot.map(u16::from);
+            }
+            None => {}
+        }
+        if row.identity_visible { result.card_id = row.card_id.clone(); }
+        return result;
+    }
     if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id) {
         let (field, source) = decode_source_select(action_id);
         let mut e = base(

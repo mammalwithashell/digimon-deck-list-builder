@@ -1,0 +1,829 @@
+warning: unused imports: `Expiry`, `ModifierType`, and `Zone`
+   --> code\digimon-engine\src\cards\keyword_effects.rs:126:34
+    |
+126 | use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
+    |                                  ^^^^^^           ^^^^^^^^^^^^  ^^^^
+    |
+    = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `effect_attack_target_action_ids_with_options` and `effect_attack_target_action_ids`
+  --> code\digimon-engine\src\effect_context\mod.rs:37:5
+   |
+37 |     effect_attack_target_action_ids, effect_attack_target_action_ids_with_options,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `SECURITY_TARGET`, `decode_attack`, and `encode_attack`
+  --> code\digimon-engine\src\effect_context\mod.rs:39:28
+   |
+39 | use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
+   |                            ^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+
+warning: unused imports: `AttackError`, `AttackInitiator`, `AttackOpen`, `AttackResult`, and `TargetConstraint`
+  --> code\digimon-engine\src\effect_context\mod.rs:42:21
+   |
+42 | use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
+   |                     ^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^
+
+warning: unused imports: `DigiXrosMaterialValidationError`, `DigiXrosMaterialZone`, `DigiXrosTransaction`, and `DigiXrosZoneAllowance`
+  --> code\digimon-engine\src\effect_context\mod.rs:44:29
+   |
+44 |     DigiXrosMaterialOrigin, DigiXrosMaterialValidationError, DigiXrosMaterialZone,
+   |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^
+45 |     DigiXrosTransaction, DigiXrosZoneAllowance,
+   |     ^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::dsl_cards::bindings::Bindings`
+  --> code\digimon-engine\src\effect_context\mod.rs:47:5
+   |
+47 | use crate::dsl_cards::bindings::Bindings;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::dsl_cards::step::StepRuntime`
+  --> code\digimon-engine\src\effect_context\mod.rs:48:5
+   |
+48 | use crate::dsl_cards::step::StepRuntime;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `TimingFilter` and `enumerate_refireable_effects`
+  --> code\digimon-engine\src\effect_context\mod.rs:49:21
+   |
+49 | use crate::effect::{enumerate_refireable_effects, ReFireableEffect, TimingFilter};
+   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^                    ^^^^^^^^^^^^
+
+warning: unused imports: `DelayTrigger`, `EffectTiming`, `Expiry`, `GamePhase`, `Keyword`, `ModifierType`, `PlaySource`, and `StackPosition`
+  --> code\digimon-engine\src\effect_context\mod.rs:51:15
+   |
+51 |     CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, GamePhase, Keyword,
+   |               ^^^^^^^^^^^^                    ^^^^^^^^^^^^  ^^^^^^  ^^^^^^^^^  ^^^^^^^
+52 |     ModifierType, PlaySource, PlayerId, StackPosition,
+   |     ^^^^^^^^^^^^  ^^^^^^^^^^            ^^^^^^^^^^^^^
+
+warning: unused import: `crate::game::PendingWouldPlayOrigin`
+  --> code\digimon-engine\src\effect_context\mod.rs:55:5
+   |
+55 | use crate::game::PendingWouldPlayOrigin;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `EffectControllerFilter`, `EffectImmunityFilter`, `ModifierEntry`, and `PlayerModifierEntry`
+  --> code\digimon-engine\src\effect_context\mod.rs:58:5
+   |
+58 |     EffectControllerFilter, EffectImmunityFilter, ModifierEntry, PlayerModifierEntry,
+   |     ^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ReplacementSubject`
+  --> code\digimon-engine\src\effect_context\mod.rs:62:44
+   |
+62 | use crate::replacement::{ReplacementCause, ReplacementSubject};
+   |                                            ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::scheduled_effects::ScheduledEffect`
+  --> code\digimon-engine\src\effect_context\mod.rs:64:5
+   |
+64 | use crate::scheduled_effects::ScheduledEffect;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `AttackTarget`, `DeclineCallback`, `PendingSelection`, and `SelectionKind`
+  --> code\digimon-engine\src\effect_context\mod.rs:65:24
+   |
+65 | use crate::selection::{AttackTarget, DeclineCallback, PendingSelection, SelectionKind};
+   |                        ^^^^^^^^^^^^  ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: unused import: `build_registry`
+  --> code\digimon-engine\src\game\mod.rs:10:20
+   |
+10 | use crate::cards::{build_registry, CardEffectRegistry};
+   |                    ^^^^^^^^^^^^^^
+
+warning: unused import: `OriginalDeckCardCount`
+  --> code\digimon-engine\src\game\mod.rs:16:21
+   |
+16 | use crate::player::{OriginalDeckCardCount, Player};
+   |                     ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:2892:13
+     |
+2892 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:2893:13
+     |
+2893 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:3075:13
+     |
+3075 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:3076:13
+     |
+3076 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::enums::EffectTiming`
+    --> code\digimon-engine\src\game\mod.rs:3225:13
+     |
+3225 |         use crate::enums::EffectTiming;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crate::selection::TriggerSource`
+    --> code\digimon-engine\src\game\mod.rs:3226:13
+     |
+3226 |         use crate::selection::TriggerSource;
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `PendingWouldDigivolveResume` and `PendingWouldPlayResume`
+  --> code\digimon-engine\src\game_actions\mod.rs:20:5
+   |
+20 |     PendingWouldDigivolveResume, PendingWouldLinkResume, PendingWouldPlayOrigin,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+21 |     PendingWouldPlayResume,
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `OptionPlayResult` and `QueuedEffect`
+  --> code\digimon-engine\src\game_actions\mod.rs:25:5
+   |
+25 |     OptionPlayResult, OptionResolutionPhase, OptionSubtype, OptionUseSource, PendingOption,
+   |     ^^^^^^^^^^^^^^^^
+26 |     PendingSelection, QueuedEffect, SelectionKind, TriggerSource,
+   |                       ^^^^^^^^^^^^
+
+warning: unused import: `ReplacementOutcome`
+    --> code\digimon-engine\src\game_actions\mod.rs:4176:34
+     |
+4176 |         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+     |                                  ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `PathBuf`
+  --> code\digimon-engine\src\selfplay\driver.rs:28:23
+   |
+28 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+
+warning: unused import: `rand::seq::SliceRandom`
+  --> code\digimon-engine\src\game_actions\mod.rs:28:5
+   |
+28 | use rand::seq::SliceRandom;
+   |     ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> code\digimon-engine\src\determinize\invariants.rs:91:9
+   |
+91 |     let mut add_all = |cards: &[crate::card_source::CardSource], ms: &mut CardMultiset| {
+   |         ----^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+warning: variable does not need to be mutable
+   --> code\digimon-engine\src\dsl_cards\step\zone_cards.rs:611:18
+    |
+611 |         let Some(mut c) = ctx.game.take_card_by_handle(card) else {
+    |                  ----^
+    |                  |
+    |                  help: remove this `mut`
+
+warning: unused variable: `source_card`
+   --> code\digimon-engine\src\effect_context\action\security.rs:511:13
+    |
+511 |         let source_card = {
+    |             ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_source_card`
+    |
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused variable: `top_card`
+   --> code\digimon-engine\src\effect_context\action\security.rs:553:13
+    |
+553 |         let top_card = {
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_top_card`
+
+warning: variable does not need to be mutable
+   --> code\digimon-engine\src\game\snapshot.rs:166:13
+    |
+166 |         let mut push = |cs: &CardSource, ids: &mut Vec<String>| {
+    |             ----^^^^
+    |             |
+    |             help: remove this `mut`
+
+warning: type `game_actions::TakenCardSource` is more private than the item `game_actions::sources::<impl game::Game>::take_card_source_ref`
+   --> code\digimon-engine\src\game_actions\sources.rs:161:5
+    |
+161 | /     pub(crate) fn take_card_source_ref(
+162 | |         &mut self,
+163 | |         source: crate::enums::CardSourceRef,
+164 | |     ) -> Option<TakenCardSource> {
+    | |________________________________^ method `game_actions::sources::<impl game::Game>::take_card_source_ref` is reachable at visibility `pub(crate)`
+    |
+note: but type `game_actions::TakenCardSource` is only usable at visibility `pub(self)`
+   --> code\digimon-engine\src\game_actions\mod.rs:85:1
+    |
+ 85 | struct TakenCardSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+    = note: `#[warn(private_interfaces)]` on by default
+
+warning: type `game_actions::TakenCardSource` is more private than the item `game_actions::sources::<impl game::Game>::restore_card_source_ref`
+   --> code\digimon-engine\src\game_actions\sources.rs:261:5
+    |
+261 | /     pub(crate) fn restore_card_source_ref(
+262 | |         &mut self,
+263 | |         source: crate::enums::CardSourceRef,
+264 | |         taken: TakenCardSource,
+265 | |     ) -> bool {
+    | |_____________^ method `game_actions::sources::<impl game::Game>::restore_card_source_ref` is reachable at visibility `pub(crate)`
+    |
+note: but type `game_actions::TakenCardSource` is only usable at visibility `pub(self)`
+   --> code\digimon-engine\src\game_actions\mod.rs:85:1
+    |
+ 85 | struct TakenCardSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `AfterSelectionHook::DigivolveReducerChain::state`
+   --> code\digimon-engine\src\resume.rs:66:9
+    |
+ 66 |         state: crate::game_actions::digivolve::DigivolveReducerState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::DigivolveReducerChain::state` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:211:1
+    |
+211 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::DigiXrosResumeContinuation` is more private than the item `AfterSelectionHook::DigiXrosLeaveContinuation::cont`
+  --> code\digimon-engine\src\resume.rs:87:9
+   |
+87 |         cont: crate::game_actions::DigiXrosResumeContinuation,
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::DigiXrosLeaveContinuation::cont` is reachable at visibility `pub`
+   |
+note: but type `game_actions::DigiXrosResumeContinuation` is only usable at visibility `pub(crate)`
+  --> code\digimon-engine\src\game_actions\mod.rs:97:1
+   |
+97 | pub(crate) struct DigiXrosResumeContinuation {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::CostTargetContext` is more private than the item `AfterSelectionHook::PlayCostContinuation::target`
+   --> code\digimon-engine\src\resume.rs:95:9
+    |
+ 95 |         target: crate::game_actions::CostTargetContext,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::target` is reachable at visibility `pub`
+    |
+note: but type `game_actions::CostTargetContext` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:322:1
+    |
+322 | pub(crate) struct CostTargetContext {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game::PendingWouldPlayOrigin` is more private than the item `AfterSelectionHook::PlayCostContinuation::origin`
+   --> code\digimon-engine\src\resume.rs:98:9
+    |
+ 98 |         origin: crate::game::PendingWouldPlayOrigin,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::origin` is reachable at visibility `pub`
+    |
+note: but type `game::PendingWouldPlayOrigin` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game\mod.rs:283:1
+    |
+283 | pub(crate) enum PendingWouldPlayOrigin {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `PlayCostAdjustments` is more private than the item `AfterSelectionHook::PlayCostContinuation::accumulated_reduction`
+   --> code\digimon-engine\src\resume.rs:100:9
+    |
+100 |         accumulated_reduction: crate::game_actions::PlayCostAdjustments,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::accumulated_reduction` is reachable at visibility `pub`
+    |
+note: but type `PlayCostAdjustments` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\play_cost_assignment.rs:4:1
+    |
+  4 | pub(crate) struct PlayCostAdjustments {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::CostReductionKey` is more private than the item `AfterSelectionHook::PlayCostContinuation::processed`
+   --> code\digimon-engine\src\resume.rs:101:9
+    |
+101 |         processed: Vec<crate::game_actions::CostReductionKey>,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::PlayCostContinuation::processed` is reachable at visibility `pub`
+    |
+note: but type `game_actions::CostReductionKey` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:198:1
+    |
+198 | pub(crate) struct CostReductionKey {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionSource` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::source`
+   --> code\digimon-engine\src\resume.rs:109:9
+    |
+109 |         source: crate::game_actions::OptionSource,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::source` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionSource` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:60:1
+    |
+ 60 | pub(crate) enum OptionSource {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionPlayMode` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::mode`
+   --> code\digimon-engine\src\resume.rs:110:9
+    |
+110 |         mode: crate::game_actions::OptionPlayMode,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::mode` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionPlayMode` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:161:1
+    |
+161 | pub(crate) enum OptionPlayMode {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionCostPolicy` is more private than the item `AfterSelectionHook::InteractiveOptionUseReducer::cost_policy`
+   --> code\digimon-engine\src\resume.rs:111:9
+    |
+111 |         cost_policy: crate::game_actions::OptionCostPolicy,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `AfterSelectionHook::InteractiveOptionUseReducer::cost_policy` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionCostPolicy` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:123:1
+    |
+123 | pub(crate) enum OptionCostPolicy {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `LinkPickState` is more private than the item `ResumeFrame::LinkPickStep::0`
+   --> code\digimon-engine\src\resume.rs:537:18
+    |
+537 |     LinkPickStep(crate::dsl_cards::step::link_cards::LinkPickState),
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::LinkPickStep::0` is reachable at visibility `pub`
+    |
+note: but type `LinkPickState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\step\link_cards.rs:239:1
+    |
+239 | pub(crate) struct LinkPickState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `ZoneCardPickState` is more private than the item `ResumeFrame::ZoneCardPickStep::0`
+   --> code\digimon-engine\src\resume.rs:541:22
+    |
+541 |     ZoneCardPickStep(crate::dsl_cards::step::zone_cards::ZoneCardPickState),
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::ZoneCardPickStep::0` is reachable at visibility `pub`
+    |
+note: but type `ZoneCardPickState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\step\zone_cards.rs:65:1
+    |
+ 65 | pub(crate) struct ZoneCardPickState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveCostChoiceState` is more private than the item `ResumeFrame::DigivolveCostChoice::0`
+   --> code\digimon-engine\src\resume.rs:547:25
+    |
+547 |     DigivolveCostChoice(crate::game_actions::digivolve::DigivolveCostChoiceState),
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveCostChoice::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveCostChoiceState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:61:1
+    |
+ 61 | pub(crate) struct DigivolveCostChoiceState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `EffectDigivolveCostChoiceState` is more private than the item `ResumeFrame::EffectDigivolveCostChoice::0`
+   --> code\digimon-engine\src\resume.rs:549:31
+    |
+549 |     EffectDigivolveCostChoice(crate::game_actions::digivolve::EffectDigivolveCostChoiceState),
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::EffectDigivolveCostChoice::0` is reachable at visibility `pub`
+    |
+note: but type `EffectDigivolveCostChoiceState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:73:1
+    |
+ 73 | pub(crate) struct EffectDigivolveCostChoiceState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `EffectDnaHandDeclaration` is more private than the item `ResumeFrame::EffectDnaHandRoute::0`
+   --> code\digimon-engine\src\resume.rs:551:24
+    |
+551 |     EffectDnaHandRoute(crate::game_actions::effect_dna::EffectDnaHandDeclaration),
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::EffectDnaHandRoute::0` is reachable at visibility `pub`
+    |
+note: but type `EffectDnaHandDeclaration` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\effect_dna.rs:84:1
+    |
+ 84 | pub(crate) struct EffectDnaHandDeclaration {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `ResumeFrame::DigivolveReducerPrompt::0`
+   --> code\digimon-engine\src\resume.rs:557:28
+    |
+557 |     DigivolveReducerPrompt(crate::game_actions::digivolve::DigivolveReducerState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveReducerPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:211:1
+    |
+211 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DigivolveReducerState` is more private than the item `ResumeFrame::DigivolveReducerSuspend::0`
+   --> code\digimon-engine\src\resume.rs:561:29
+    |
+561 |     DigivolveReducerSuspend(crate::game_actions::digivolve::DigivolveReducerState),
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigivolveReducerSuspend::0` is reachable at visibility `pub`
+    |
+note: but type `DigivolveReducerState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\digivolve.rs:211:1
+    |
+211 | pub(crate) struct DigivolveReducerState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `OptionModeSelectState` is more private than the item `ResumeFrame::OptionModeSelect::0`
+   --> code\digimon-engine\src\resume.rs:580:22
+    |
+580 |     OptionModeSelect(crate::game_actions::options::OptionModeSelectState),
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::OptionModeSelect::0` is reachable at visibility `pub`
+    |
+note: but type `OptionModeSelectState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\options.rs:29:1
+    |
+ 29 | pub(crate) struct OptionModeSelectState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayCancelContinuation` is more private than the item `ResumeFrame::DelayCancelAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:613:9
+     |
+ 613 |         continuation: crate::dsl_cards::lower_replacement::DelayCancelContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayCancelAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayCancelContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1408:1
+     |
+1408 | pub(crate) struct DelayCancelContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayCostContinuation` is more private than the item `ResumeFrame::DelayHandDigivolveAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:621:9
+     |
+ 621 |         continuation: crate::dsl_cards::lower_replacement::DelayCostContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayHandDigivolveAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayCostContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1414:1
+     |
+1414 | pub(crate) struct DelayCostContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayDnaCostContinuation` is more private than the item `ResumeFrame::DelayDnaAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:629:9
+     |
+ 629 |         continuation: crate::dsl_cards::lower_replacement::DelayDnaCostContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayDnaAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayDnaCostContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1994:1
+     |
+1994 | pub(crate) struct DelayDnaCostContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayHandDigivolveSelectionState` is more private than the item `ResumeFrame::DelayHandDigivolveSelection::0`
+    --> code\digimon-engine\src\resume.rs:635:9
+     |
+ 635 |         crate::dsl_cards::lower_replacement::DelayHandDigivolveSelectionState,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayHandDigivolveSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayHandDigivolveSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1425:1
+     |
+1425 | pub(crate) struct DelayHandDigivolveSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayDnaCardSelectionState` is more private than the item `ResumeFrame::DelayDnaCardSelection::0`
+    --> code\digimon-engine\src\resume.rs:639:27
+     |
+ 639 |     DelayDnaCardSelection(crate::dsl_cards::lower_replacement::DelayDnaCardSelectionState),
+     |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayDnaCardSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayDnaCardSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:2020:1
+     |
+2020 | pub(crate) struct DelayDnaCardSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayFieldDnaContinuation` is more private than the item `ResumeFrame::DelayFieldDnaAfterPayment::continuation`
+    --> code\digimon-engine\src\resume.rs:643:9
+     |
+ 643 |         continuation: crate::dsl_cards::lower_replacement::DelayFieldDnaContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayFieldDnaAfterPayment::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayFieldDnaContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1625:1
+     |
+1625 | pub(crate) struct DelayFieldDnaContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayFieldDnaSelectionState` is more private than the item `ResumeFrame::DelayFieldDnaSelection::0`
+    --> code\digimon-engine\src\resume.rs:647:28
+     |
+ 647 |     DelayFieldDnaSelection(crate::dsl_cards::lower_replacement::DelayFieldDnaSelectionState),
+     |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayFieldDnaSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayFieldDnaSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1646:1
+     |
+1646 | pub(crate) struct DelayFieldDnaSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromHandContinuation` is more private than the item `ResumeFrame::DelayPlayFromHandAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:653:9
+     |
+ 653 |         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromHandContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromHandAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromHandContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1285:1
+     |
+1285 | pub(crate) struct DelayPlayFromHandContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromHandSelectionState` is more private than the item `ResumeFrame::DelayPlayFromHandSelection::0`
+    --> code\digimon-engine\src\resume.rs:660:9
+     |
+ 660 |         crate::dsl_cards::lower_replacement::DelayPlayFromHandSelectionState,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromHandSelection::0` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromHandSelectionState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1303:1
+     |
+1303 | pub(crate) struct DelayPlayFromHandSelectionState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayPlayFromUnionContinuation` is more private than the item `ResumeFrame::DelayPlayFromUnionAfterSelection::continuation`
+    --> code\digimon-engine\src\resume.rs:669:9
+     |
+ 669 |         continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayPlayFromUnionAfterSelection::continuation` is reachable at visibility `pub`
+     |
+note: but type `DelayPlayFromUnionContinuation` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1393:1
+     |
+1393 | pub(crate) struct DelayPlayFromUnionContinuation {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `DelayBodyContinuation` is more private than the item `ResumeFrame::DelayBodyAfterCost::continuation`
+   --> code\digimon-engine\src\resume.rs:677:9
+    |
+677 |         continuation: crate::dsl_cards::lower_delay::DelayBodyContinuation,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DelayBodyAfterCost::continuation` is reachable at visibility `pub`
+    |
+note: but type `DelayBodyContinuation` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\dsl_cards\lower_delay.rs:226:1
+    |
+226 | pub(crate) struct DelayBodyContinuation {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `AppFuseHostSelectionState` is more private than the item `ResumeFrame::AppFuseHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:683:26
+    |
+683 |     AppFuseHostSelection(crate::effect_context::AppFuseHostSelectionState),
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::AppFuseHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `AppFuseHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\effect_context\action\app_fuse.rs:34:1
+    |
+ 34 | pub(crate) struct AppFuseHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `AppFuseResultSelectionState` is more private than the item `ResumeFrame::AppFuseResultSelection::0`
+   --> code\digimon-engine\src\resume.rs:686:28
+    |
+686 |     AppFuseResultSelection(crate::effect_context::AppFuseResultSelectionState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::AppFuseResultSelection::0` is reachable at visibility `pub`
+    |
+note: but type `AppFuseResultSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\effect_context\action\app_fuse.rs:48:1
+    |
+ 48 | pub(crate) struct AppFuseResultSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `ArtsDigivolveSelectionState` is more private than the item `ResumeFrame::ArtsDigivolveSelection::0`
+   --> code\digimon-engine\src\resume.rs:690:28
+    |
+690 |     ArtsDigivolveSelection(crate::game_actions::ArtsDigivolveSelectionState),
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::ArtsDigivolveSelection::0` is reachable at visibility `pub`
+    |
+note: but type `ArtsDigivolveSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:236:1
+    |
+236 | pub(crate) struct ArtsDigivolveSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `LinkOptionHostSelectionState` is more private than the item `ResumeFrame::LinkOptionHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:693:29
+    |
+693 |     LinkOptionHostSelection(crate::game_actions::LinkOptionHostSelectionState),
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::LinkOptionHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `LinkOptionHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:243:1
+    |
+243 | pub(crate) struct LinkOptionHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::OptionHandLinkHostSelectionState` is more private than the item `ResumeFrame::OptionHandLinkHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:698:33
+    |
+698 |     OptionHandLinkHostSelection(crate::game_actions::OptionHandLinkHostSelectionState),
+    |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::OptionHandLinkHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::OptionHandLinkHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:258:1
+    |
+258 | pub(crate) struct OptionHandLinkHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::DigimonLinkHostSelectionState` is more private than the item `ResumeFrame::DigimonLinkHostSelection::0`
+   --> code\digimon-engine\src\resume.rs:701:30
+    |
+701 |     DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
+    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::DigimonLinkHostSelection::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::DigimonLinkHostSelectionState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:269:1
+    |
+269 | pub(crate) struct DigimonLinkHostSelectionState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `LinkCardTrashChoiceState` is more private than the item `ResumeFrame::LinkCardTrashChoice::0`
+    --> code\digimon-engine\src\resume.rs:706:25
+     |
+ 706 |     LinkCardTrashChoice(crate::game_actions::LinkCardTrashChoiceState),
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::LinkCardTrashChoice::0` is reachable at visibility `pub`
+     |
+note: but type `LinkCardTrashChoiceState` is only usable at visibility `pub(crate)`
+    --> code\digimon-engine\src\game_actions\link.rs:1146:1
+     |
+1146 | pub(crate) struct LinkCardTrashChoiceState {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::PlayFromHandCostReductionPromptState` is more private than the item `ResumeFrame::PlayFromHandCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:710:37
+    |
+710 |     PlayFromHandCostReductionPrompt(crate::game_actions::PlayFromHandCostReductionPromptState),
+    |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::PlayFromHandCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::PlayFromHandCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:283:1
+    |
+283 | pub(crate) struct PlayFromHandCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::InteractiveDigivolveCostReductionPromptState` is more private than the item `ResumeFrame::InteractiveDigivolveCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:714:9
+    |
+714 |         crate::game_actions::InteractiveDigivolveCostReductionPromptState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::InteractiveDigivolveCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::InteractiveDigivolveCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:300:1
+    |
+300 | pub(crate) struct InteractiveDigivolveCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: type `game_actions::InteractiveOptionUseCostReductionPromptState` is more private than the item `ResumeFrame::InteractiveOptionUseCostReductionPrompt::0`
+   --> code\digimon-engine\src\resume.rs:719:9
+    |
+719 |         crate::game_actions::InteractiveOptionUseCostReductionPromptState,
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `ResumeFrame::InteractiveOptionUseCostReductionPrompt::0` is reachable at visibility `pub`
+    |
+note: but type `game_actions::InteractiveOptionUseCostReductionPromptState` is only usable at visibility `pub(crate)`
+   --> code\digimon-engine\src\game_actions\mod.rs:311:1
+    |
+311 | pub(crate) struct InteractiveOptionUseCostReductionPromptState {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `guard_carrier_can_be_deleted_for_cost` is never used
+   --> code\digimon-engine\src\cards\keyword_effects.rs:152:4
+    |
+152 | fn guard_carrier_can_be_deleted_for_cost(
+    |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `perm_matches_req` is never used
+    --> code\digimon-engine\src\dna_digivolve.rs:1655:4
+     |
+1655 | fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -> bool {
+     |    ^^^^^^^^^^^^^^^^
+
+warning: fields `subject` and `subject_card` are never read
+    --> code\digimon-engine\src\dsl_cards\lower_replacement.rs:1310:5
+     |
+1303 | pub(crate) struct DelayPlayFromHandSelectionState {
+     |                   ------------------------------- fields in this struct
+...
+1310 |     subject: ReplacementSubject,
+     |     ^^^^^^^
+1311 |     subject_card: Option<(PlayerId, CardHandle)>,
+     |     ^^^^^^^^^^^^
+     |
+     = note: `DelayPlayFromHandSelectionState` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: function `source_kind_for_card_kind` is never used
+  --> code\digimon-engine\src\effect_context\mod.rs:92:4
+   |
+92 | fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `donor_card` is never read
+   --> code\digimon-engine\src\game\mod.rs:340:16
+    |
+335 | pub(crate) struct PendingFieldTopSourceMove {
+    |                   ------------------------- field in this struct
+...
+340 |     pub(crate) donor_card: crate::card_source::CardHandle,
+    |                ^^^^^^^^^^
+    |
+    = note: `PendingFieldTopSourceMove` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: field `0` is never read
+  --> code\digimon-engine\src\game\verification_cost_receipts.rs:11:10
+   |
+11 |     Live(usize),
+   |     ---- ^^^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `ReceiptRef` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+11 -     Live(usize),
+11 +     Live(()),
+   |
+
+warning: field `0` is never read
+  --> code\digimon-engine\src\game\verification_cost_receipts.rs:12:13
+   |
+12 |     Missing(u64),
+   |     ------- ^^^
+   |     |
+   |     field in this variant
+   |
+   = note: `ReceiptRef` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+12 -     Missing(u64),
+12 +     Missing(()),
+   |
+
+warning: method `try_prompt_interactive_digivolve_cost_reducer` is never used
+   --> code\digimon-engine\src\game_actions\cost.rs:728:19
+    |
+ 24 | impl Game {
+    | --------- method in this implementation
+...
+728 |     pub(super) fn try_prompt_interactive_digivolve_cost_reducer(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `insert_source_into_permanent` is never used
+   --> code\digimon-engine\src\game_actions\helpers.rs:290:19
+    |
+ 11 | impl Game {
+    | --------- method in this implementation
+...
+290 |     pub(crate) fn insert_source_into_permanent(
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `subject_controller_id` is never used
+   --> code\digimon-engine\src\replacement.rs:231:15
+    |
+231 | pub(crate) fn subject_controller_id(
+    |               ^^^^^^^^^^^^^^^^^^^^^
+
+warning: field `chooser` is never read
+    --> code\digimon-engine\src\resume.rs:1022:16
+     |
+1021 | pub struct TriggerOrderSelectionState {
+     |            -------------------------- field in this struct
+1022 |     pub(crate) chooser: PlayerId,
+     |                ^^^^^^^
+     |
+     = note: `TriggerOrderSelectionState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+
+warning: `digimon-engine` (lib) generated 83 warnings (run `cargo fix --lib -p digimon-engine` to apply 31 suggestions)
+   Compiling digimon-engine v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-engine)
+    Finished `test` profile [optimized + debuginfo] target(s) in 15.29s
+     Running tests\light_hybrid_security_capacity.rs (D:/cargo-target/light-hybrid-training\debug\deps\light_hybrid_security_capacity-9011da31e88b5e0e.exe)
+
+running 2 tests
+
+thread 'lobomon_security_index_10_is_selectable' (35984) panicked at code\digimon-engine\tests\light_hybrid_security_capacity.rs:26:47:
+every legal eligible security card must have an explicit masked choice, including index 10
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test lobomon_security_index_9_is_selectable ... ok
+test lobomon_security_index_10_is_selectable ... FAILED
+
+failures:
+
+failures:
+    lobomon_security_index_10_is_selectable
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.69s
+
+error: test failed, to rerun pass `-p digimon-engine --test light_hybrid_security_capacity`

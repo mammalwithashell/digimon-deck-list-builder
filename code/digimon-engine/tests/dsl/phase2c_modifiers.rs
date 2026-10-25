@@ -106,6 +106,7 @@ fn add_modifier_cannot_attack_blocks_attack_flag() {
     let src_card = runner.game.players[0].battle_area[0].top_card().handle();
 
     let step = CompiledStep::AddModifier {
+        opponent_only: false,
         target: CompiledModifierTarget::Binding(CompiledBindingRef::Named("tgt".into())),
         modifier: "CannotAttack".into(),
         value: CompiledModifierValue::Literal(0),
@@ -146,6 +147,7 @@ fn add_modifier_unknown_modifier_string_is_noop() {
     let src_card = runner.game.players[0].battle_area[0].top_card().handle();
 
     let step = CompiledStep::AddModifier {
+        opponent_only: false,
         target: CompiledModifierTarget::Binding(CompiledBindingRef::Named("tgt".into())),
         modifier: "NotAModifier".into(),
         value: CompiledModifierValue::Literal(0),
@@ -194,6 +196,7 @@ fn add_modifier_filter_target_applies_to_match() {
     let src_card = runner.game.players[0].battle_area[0].top_card().handle();
 
     let step = CompiledStep::AddModifier {
+        opponent_only: false,
         target: CompiledModifierTarget::Filter(CompiledPredicate::default()),
         modifier: "CannotAttack".into(),
         value: CompiledModifierValue::Literal(0),

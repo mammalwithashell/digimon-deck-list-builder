@@ -1,0 +1,57 @@
+
+running 22 tests
+test ex7::ex7_073::ex7_073_clause1_is_optional_and_face_up ... ok
+test ex7::ex7_073::ex7_073_clause2_and_clause3_are_not_optional_at_clause_level ... ok
+test ex7::ex7_073::ex7_073_compiles_with_printed_stats_and_lv5_purple_path ... ok
+test ex7::ex7_073::ex7_073_has_three_triggered_clauses ... ok
+test ex7::ex7_073::ex7_073_has_tm_no_xa_alt_path_cost1 ... ok
+test ex7::ex7_073::ex7_073_used_options_main_completes_before_pending_sibling_clause ... ok
+
+thread 'ex7::ex7_073::ex7_073_wa_trash_two_sources_deletes_opp_digimon_and_trashes_security' (8540) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_073.rs:938:38:
+pick TM-A: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex7::ex7_073::ex7_073_wa_trash_two_sources_deletes_opp_digimon_and_trashes_security ... FAILED
+
+thread 'ex7::ex7_073::ex7_073_wa_trash_two_sources_with_no_opp_digimon_still_trashes_security' (30212) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_073.rs:968:38:
+pick TM-A: InvalidAction
+test ex7::ex7_073::ex7_073_wa_trash_two_sources_with_no_opp_digimon_still_trashes_security ... FAILED
+test ex7::ex7_073::ex7_073_wd_decline_free_play_keeps_option_in_hand ... ok
+test ex7::ex7_073::ex7_073_wd_decline_trash_prompt_entirely_does_nothing ... ok
+
+thread 'ex7::ex7_073::ex7_073_wd_delete_targets_highest_level_opponent_only' (17644) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_073.rs:879:38:
+pick TM-A: InvalidAction
+test ex7::ex7_073::ex7_073_wd_delete_targets_highest_level_opponent_only ... FAILED
+test ex7::ex7_073::ex7_073_wd_free_use_resolves_the_options_main_effect ... ok
+test ex7::ex7_073::ex7_073_wd_free_use_sends_option_to_trash_not_battle_area ... ok
+test ex7::ex7_073::ex7_073_wd_may_free_play_tm_text_option_from_hand ... ok
+test ex7::ex7_073::ex7_073_wd_no_fire_without_tm_text_option_in_hand ... ok
+test ex7::ex7_073::ex7_073_wd_no_tm_sources_silently_skips_trash_clause ... ok
+test ex7::ex7_073::ex7_073_wd_only_tm_trait_sources_are_selectable ... ok
+
+thread 'ex7::ex7_073::ex7_073_wd_partial_pick_of_one_source_does_not_trigger_delete_or_security' (19084) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_073.rs:747:38:
+pick only TM-A: InvalidAction
+test ex7::ex7_073::ex7_073_wd_partial_pick_of_one_source_does_not_trigger_delete_or_security ... FAILED
+
+thread 'ex7::ex7_073::ex7_073_wd_trash_two_sources_deletes_opp_digimon_and_trashes_security' (51184) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_073.rs:701:38:
+pick TM-A: InvalidAction
+test ex7::ex7_073::ex7_073_wd_trash_two_sources_deletes_opp_digimon_and_trashes_security ... FAILED
+
+thread 'ex7::ex7_073::ex7_073_wd_trash_two_sources_with_no_opp_digimon_still_trashes_security' (55056) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_073.rs:840:38:
+pick TM-A: InvalidAction
+test ex7::ex7_073::ex7_073_wd_trash_two_sources_with_no_opp_digimon_still_trashes_security ... FAILED
+test printed_form_filters::batch9::ex7_073_json ... ok
+test printed_form_filters::batch9::ex7_073_yaml ... ok
+
+failures:
+
+failures:
+    ex7::ex7_073::ex7_073_wa_trash_two_sources_deletes_opp_digimon_and_trashes_security
+    ex7::ex7_073::ex7_073_wa_trash_two_sources_with_no_opp_digimon_still_trashes_security
+    ex7::ex7_073::ex7_073_wd_delete_targets_highest_level_opponent_only
+    ex7::ex7_073::ex7_073_wd_partial_pick_of_one_source_does_not_trigger_delete_or_security
+    ex7::ex7_073::ex7_073_wd_trash_two_sources_deletes_opp_digimon_and_trashes_security
+    ex7::ex7_073::ex7_073_wd_trash_two_sources_with_no_opp_digimon_still_trashes_security
+
+test result: FAILED. 16 passed; 6 failed; 0 ignored; 0 measured; 12733 filtered out; finished in 40.44s
+
+FILTER_EXIT 101

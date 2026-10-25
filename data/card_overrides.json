@@ -6897,7 +6897,8 @@
       2,
       6,
       5
-    ]
+    ],
+    "effect_description_eng": "[When Digivolving] [End of Opponent's Turn] [Once Per Turn] By placing 1 Digimon card from this Digimon's digivolution cards as the bottom security card, delete all of your opponent's Digimon with the same level as the placed card.\n[All Turns] [Once Per Turn] When Digimon attack, by adding your top security card to the hand, this Digimon unsuspends."
   },
   "BT18-043": {
     "evo_costs": [
@@ -18476,7 +18477,9 @@
       2,
       6,
       5
-    ]
+    ],
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand."
   },
   "BT19-014": {
     "card_colors": [
@@ -18666,5 +18669,52 @@
   "_note_EX12-032": "Printed card image and DCGO EX12_032.cs require Blue/Yellow Lv.4 + Purple/Red Lv.4, cost 0. The ingested DNA line incorrectly said Lv.5 on both sides. Override the source text so parsed dna_costs are regenerated consistently.",
   "EX12-032": {
     "xros_req": "[Digivolve] Lv.4 w/[Garurumon] in name or w/[NSo]/[VB] trait: Cost 3 \r\n[DNA Digivolve] Blue/Yellow Lv.4 + Purple/Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended."
-  }
+  },
+  "P-249": {
+    "attribute_eng": [
+      "Variable"
+    ],
+    "card_colors": [
+      2
+    ],
+    "card_effect_class_name": "P_249",
+    "card_id": "P-249",
+    "card_kind": 0,
+    "card_name_eng": "Strabimon",
+    "card_name_jpn": "",
+    "dp": 1000,
+    "effect_description_eng": "[Start of Your Main Phase] By placing 1 [Hybrid] trait card from your hand or trash as this Digimon's bottom digivolution card or under any of your Tamers with inherited effects, that Digimon or Tamer may digivolve into a [Hybrid] trait card in the hand with the cost reduced by 2.",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "form_eng": [
+      "Hybrid"
+    ],
+    "inherited_effect_description_eng": "[On Deletion] You may play 1 Tamer card with inherited effects from your hand without paying the cost.",
+    "level": 3,
+    "play_cost": 3,
+    "rarity": 0,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Beastkin"
+    ],
+    "xros_req": ""
+  },
+  "_note_P-249": "Official English P-249 Strabimon printed metadata, reviewed against the local DCGO card image. Producer-derived source and official observations are retained in qa/archetype-qa/dsl/light-hybrid-training/p-249-source-candidate/. Registry index and norm_id are allocated by build_registry.py, never overridden here.",
+  "BT18-094": {
+    "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost."
+  },
+  "_note_BT18-094_light_hybrid_sections": "Printed security section verified against local card image and saved official observation in qa/archetype-qa/dsl/light-hybrid-training/official-observations/. Separates security text from main/inherited; does not change printed behavior.",
+  "_note_BT18-097_light_hybrid_sections": "Printed security section verified against local card image and saved official observation in qa/archetype-qa/dsl/light-hybrid-training/official-observations/. Separates security text from main/inherited; does not change printed behavior.",
+  "_note_BT18-042_light_hybrid_effect": "Official observation 29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574 and local printed card image say as the bottom security card, not as your bottom. Unspecified destination follows card ownership under CR3-1-3-8. Correct stale API wording; shared timing OPT remains one printed clause."
 }

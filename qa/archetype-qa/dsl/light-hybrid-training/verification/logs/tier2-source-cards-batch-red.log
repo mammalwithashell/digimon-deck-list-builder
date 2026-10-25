@@ -1,0 +1,233 @@
+
+running 22 tests
+test bt18::bt18_092::bt18_092_ally_attack_does_not_fire_on_opponents_turn ... ok
+test bt18::bt18_092::bt18_092_accepting_ally_attack_suspends_zenith_and_offers_source_selection ... ok
+test bt18::bt18_092::bt18_092_ally_attack_no_target_selection_without_opponent_digimon ... ok
+test bt18::bt18_092::bt18_092_ally_attack_no_trigger_with_only_one_vemmon_source ... FAILED
+test bt18::bt18_092::bt18_092_ally_attack_offers_outer_optional_prompt_with_two_vemmon_sources ... ok
+test bt18::bt18_092::bt18_092_declining_ally_attack_trigger_changes_nothing ... ok
+test bt18::bt18_092::bt18_092_declining_trash_cost_changes_nothing ... ok
+test bt18::bt18_092::bt18_092_full_resolution_de_digivolves_opponent_by_one ... ok
+test bt18::bt18_092::bt18_092_has_on_security_clause_with_play_from_security ... ok
+test bt18::bt18_092::bt18_092_has_three_triggered_clauses ... ok
+test bt18::bt18_092::bt18_092_on_ally_attack_clause_is_optional_and_your_turn_scoped ... ok
+test bt18::bt18_092::bt18_092_on_ally_attack_condition_gates_on_source_unsuspended ... ok
+test bt18::bt18_092::bt18_092_on_ally_attack_process_contains_source_multi_and_de_digivolve ... ok
+test bt18::bt18_092::bt18_092_on_ally_attack_process_leads_with_gated_suspend_activation_cost ... ok
+test bt18::bt18_092::bt18_092_return_observers_wait_for_the_whole_effect_and_pool_once ... ok
+test bt18::bt18_092::bt18_092_second_ally_attack_does_not_reoffer_when_zenith_already_suspended ... ok
+test bt18::bt18_092::bt18_092_security_clause_structural_shape ... ok
+test bt18::bt18_092::bt18_092_start_of_main_clause_is_optional_start_of_your_main_phase ... ok
+test bt18::bt18_092::bt18_092_start_of_main_no_selection_without_vemmon_in_hand ... ok
+test bt18::bt18_092::bt18_092_start_of_main_offers_selection_with_vemmon_in_hand ... ok
+test bt18::bt18_092::bt18_092_trashing_vemmon_fires_trash_event ... ignored, pending: engine-trash-event-from-hand — trash_from_hand_by_index does not emit GameEvent::Trash (pre-existing gap, see bt24_008.rs)
+test bt18::bt18_092::bt18_092_trashing_vemmon_draws_one_and_gains_one_memory ... ok
+
+failures:
+
+---- bt18::bt18_092::bt18_092_ally_attack_no_trigger_with_only_one_vemmon_source stdout ----
+
+thread 'bt18::bt18_092::bt18_092_ally_attack_no_trigger_with_only_one_vemmon_source' (19064) panicked at code\digimon-engine\tests\cards_behavioral\bt18\bt18_092.rs:1051:10:
+SourceMulti must offer the single live Vemmon candidate
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt18::bt18_092::bt18_092_ally_attack_no_trigger_with_only_one_vemmon_source
+
+test result: FAILED. 20 passed; 1 failed; 1 ignored; 0 measured; 12733 filtered out; finished in 17.70s
+
+
+running 3 tests
+test bt19::bt19_008::bt19_008_inherited_grants_rush_to_xros_heart_carrier ... ok
+test bt19::bt19_008::bt19_008_on_deletion_plays_revealed_xros_heart_tamer_and_bottoms_remainder ... ok
+test bt19::bt19_008::bt19_008_on_play_may_digivolve_from_omnishoutmon_under_tamer ... FAILED
+
+failures:
+
+---- bt19::bt19_008::bt19_008_on_play_may_digivolve_from_omnishoutmon_under_tamer stdout ----
+
+thread 'bt19::bt19_008::bt19_008_on_play_may_digivolve_from_omnishoutmon_under_tamer' (42104) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_008.rs:100:5:
+assertion failed: pending.valid_action_ids.contains(&action)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt19::bt19_008::bt19_008_on_play_may_digivolve_from_omnishoutmon_under_tamer
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 12752 filtered out; finished in 5.82s
+
+
+running 1 test
+test bt19::bt19_014::bt19_014_on_play_debuffs_by_source_colors_and_offers_shootingstarmon ... FAILED
+
+failures:
+
+---- bt19::bt19_014::bt19_014_on_play_debuffs_by_source_colors_and_offers_shootingstarmon stdout ----
+
+thread 'bt19::bt19_014::bt19_014_on_play_debuffs_by_source_colors_and_offers_shootingstarmon' (42900) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_014.rs:90:5:
+assertion failed: pending.valid_action_ids.contains(&action)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt19::bt19_014::bt19_014_on_play_debuffs_by_source_colors_and_offers_shootingstarmon
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12754 filtered out; finished in 4.41s
+
+
+running 3 tests
+test bt19::bt19_033::bt19_033_on_play_may_digivolve_from_jaegerdorulumon_under_tamer ... FAILED
+test bt19::bt19_033::bt19_033_inherited_grants_piercing_to_xros_heart_carrier_on_your_turn ... ok
+test bt19::bt19_033::bt19_033_save_is_auto_installed_from_printed_keyword ... ok
+
+failures:
+
+---- bt19::bt19_033::bt19_033_on_play_may_digivolve_from_jaegerdorulumon_under_tamer stdout ----
+
+thread 'bt19::bt19_033::bt19_033_on_play_may_digivolve_from_jaegerdorulumon_under_tamer' (45380) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_033.rs:77:5:
+assertion failed: pending.valid_action_ids.contains(&action)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt19::bt19_033::bt19_033_on_play_may_digivolve_from_jaegerdorulumon_under_tamer
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 12752 filtered out; finished in 5.73s
+
+
+running 3 tests
+test bt19::bt19_047::bt19_047_on_play_may_digivolve_from_atlurballistamon_under_tamer ... FAILED
+test bt19::bt19_047::bt19_047_inherited_grants_blocker_to_xros_heart_carrier_on_opponents_turn ... ok
+test bt19::bt19_047::bt19_047_save_is_auto_installed_from_printed_keyword ... ok
+
+failures:
+
+---- bt19::bt19_047::bt19_047_on_play_may_digivolve_from_atlurballistamon_under_tamer stdout ----
+
+thread 'bt19::bt19_047::bt19_047_on_play_may_digivolve_from_atlurballistamon_under_tamer' (25904) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_047.rs:77:5:
+assertion failed: pending.valid_action_ids.contains(&action)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt19::bt19_047::bt19_047_on_play_may_digivolve_from_atlurballistamon_under_tamer
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 12752 filtered out; finished in 8.06s
+
+
+running 3 tests
+test bt19::bt19_057::bt19_057_when_attacking_decline_leaves_under_tamer_card_in_place ... ok
+test bt19::bt19_057::bt19_057_inherited_grants_collision_to_xros_heart_carrier ... ok
+test bt19::bt19_057::bt19_057_when_attacking_may_digivolve_from_under_tamer ... FAILED
+
+failures:
+
+---- bt19::bt19_057::bt19_057_when_attacking_may_digivolve_from_under_tamer stdout ----
+
+thread 'bt19::bt19_057::bt19_057_when_attacking_may_digivolve_from_under_tamer' (17972) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_057.rs:86:5:
+assertion failed: pending.valid_action_ids.contains(&raptor_action)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt19::bt19_057::bt19_057_when_attacking_may_digivolve_from_under_tamer
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 12752 filtered out; finished in 7.94s
+
+
+running 2 tests
+test bt19::bt19_090::bt19_090_attack_mode_unsuspends_shoutmon_ex6_and_shootingstarmon_then_attacks_player ... ok
+test bt19::bt19_090::bt19_090_main_mode_plays_low_dp_xros_heart_from_under_tamer_without_paying_cost ... FAILED
+
+failures:
+
+---- bt19::bt19_090::bt19_090_main_mode_plays_low_dp_xros_heart_from_under_tamer_without_paying_cost stdout ----
+
+thread 'bt19::bt19_090::bt19_090_main_mode_plays_low_dp_xros_heart_from_under_tamer_without_paying_cost' (48136) panicked at code\digimon-engine\tests\cards_behavioral\bt19\bt19_090.rs:101:10:
+low-DP Xros Heart card under a Tamer should be selectable
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt19::bt19_090::bt19_090_main_mode_plays_low_dp_xros_heart_from_under_tamer_without_paying_cost
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 12753 filtered out; finished in 6.00s
+
+
+running 25 tests
+test bt21::bt21_023::bt21_023_grants_security_attack_plus_1 ... ok
+test bt21::bt21_023::bt21_023_app_fusion_cost_0_named_dogatchmon_timemon ... ok
+test bt21::bt21_023::bt21_023_has_link_condition_appmon_cost_3 ... ok
+test bt21::bt21_023::bt21_023_has_app_fusion_altpath ... ok
+test bt21::bt21_023::bt21_023_has_linked_when_linked_ess_clause ... ok
+test bt21::bt21_023::bt21_023_has_linked_dp_aura ... ok
+test bt21::bt21_023::bt21_023_has_sup_digivolve_alt_path_cost_4 ... ok
+test bt21::bt21_023::bt21_023_has_on_play_when_digivolving_link_clause ... ok
+test bt21::bt21_023::bt21_023_has_when_card_linked_once_per_turn ... ok
+test bt21::bt21_023::bt21_023_linked_dp_aura_increases_host_effective_dp ... ok
+test bt21::bt21_023::bt21_023_linked_ess_dp_ceiling_with_aura_bonus ... ok
+test bt21::bt21_023::bt21_023_linked_ess_deletes_opp_within_dp_ceiling ... ok
+test bt21::bt21_023::bt21_023_linked_ess_no_prompt_when_no_eligible_opp ... ok
+test bt21::bt21_023::bt21_023_on_play_decline_links_nothing ... ok
+test bt21::bt21_023::bt21_023_on_play_links_lv4_appmon_from_hand ... ok
+test bt21::bt21_023::bt21_023_on_play_links_lv4_from_digivolution_sources ... FAILED
+test bt21::bt21_023::bt21_023_on_play_lv5_not_selectable ... ok
+test bt21::bt21_023::bt21_023_on_play_no_prompt_when_no_eligible_card_in_hand ... ok
+test bt21::bt21_023::bt21_023_printed_circles_red_and_yellow_lv4_cost_4 ... ok
+test bt21::bt21_023::bt21_023_when_linked_no_delete_if_no_eligible_opp ... ok
+test bt21::bt21_023::bt21_023_when_linked_opt_clears_after_end_turn ... ok
+test bt21::bt21_023::bt21_023_when_linked_opt_lockout_same_turn ... ok
+test bt21::bt21_023::bt21_023_when_linked_your_turn_deletes_small_opp ... ok
+test bt21::bt21_023::bt21_023_when_linked_your_turn_deletion_fires_deletion_event ... ok
+test bt21::bt21_023::bt21_023_yaml_printed_metadata ... ok
+
+failures:
+
+---- bt21::bt21_023::bt21_023_on_play_links_lv4_from_digivolution_sources stdout ----
+
+thread 'bt21::bt21_023::bt21_023_on_play_links_lv4_from_digivolution_sources' (18300) panicked at code\digimon-engine\src\action\space.rs:183:18:
+attempt to subtract with overflow
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt21::bt21_023::bt21_023_on_play_links_lv4_from_digivolution_sources
+
+test result: FAILED. 24 passed; 1 failed; 0 ignored; 0 measured; 12730 filtered out; finished in 29.16s
+
+
+running 8 tests
+test bt16::bt16_077::bt16_077_compiles_with_dna_path_and_dual_partition ... ok
+test bt16::bt16_077::bt16_077_dna_digivolve_plays_a_free_trait_digimon_from_trash ... ok
+test bt16::bt16_077::bt16_077_grants_raid_and_partition_on_field ... ok
+test bt16::bt16_077::bt16_077_inherited_partition_never_plays_a_source_no_slot_admits ... ok
+test bt16::bt16_077::bt16_077_non_dna_digivolve_still_offers_rush_attack_but_not_trash_play ... ok
+test bt16::bt16_077::bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set ... FAILED
+test bt16::bt16_077::bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest ... FAILED
+test bt16::bt16_077::bt16_077_rush_pick_attacks_the_player_immediately ... ok
+
+failures:
+
+---- bt16::bt16_077::bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set stdout ----
+
+thread 'bt16::bt16_077::bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set' (23892) panicked at code\digimon-engine\tests\cards_behavioral\bt16\bt16_077.rs:415:5:
+assertion `left == right` failed: every specified card can start a complete slot assignment
+  left: [30, 31, 32, 33]
+ right: [2000, 2001, 2002, 2003]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt16::bt16_077::bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest stdout ----
+
+thread 'bt16::bt16_077::bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest' (50468) panicked at code\digimon-engine\tests\cards_behavioral\bt16\bt16_077.rs:354:5:
+assertion `left == right` failed: §16-3: only the purple Lv.4 and the red Lv.4 are 'specified cards'; the green Lv.3 source is never offered
+  left: [30, 31]
+ right: [2000, 2002]
+
+
+failures:
+    bt16::bt16_077::bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set
+    bt16::bt16_077::bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest
+
+test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 12747 filtered out; finished in 10.16s
+

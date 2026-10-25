@@ -1,4 +1,7 @@
 mod activation_cost;
+#[path = "../support/owned_card_choice.rs"]
+mod owned_choices;
+
 mod ally_played_owner_scope;
 mod before_pay_cost_scan_hygiene;
 mod behavioral_end_to_end;

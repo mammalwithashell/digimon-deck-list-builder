@@ -32,7 +32,7 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::{CompiledDistinctBy, CompiledPredicate, CompiledStep};
 use digimon_dsl::step::ZoneCardZone;
 
 use crate::action::space::{
@@ -46,7 +46,7 @@ use crate::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject
 use crate::dsl_cards::step::selections::run_outer_conts;
 use crate::dsl_cards::step::selections::run_tail_preserving_trigger_context;
 use crate::dsl_cards::step::StepRuntime;
-use crate::effect_context::{EffectContext, EffectReadContext};
+use crate::effect_context::{DistinctByMode, EffectContext, EffectReadContext};
 use crate::enums::{CardSourceRef, GamePhase, PlayerId, StackPosition};
 use crate::permanent::PermanentHandle;
 
@@ -76,6 +76,7 @@ pub(crate) struct ZoneCardPickState {
     pub min: u8,
     pub max: u8,
     pub optional_zero: bool,
+    pub distinct_by: Option<DistinctByMode>,
     /// Remaining "play cost's total worth" budget, if any.
     pub budget: Option<i32>,
     pub prompt: String,
@@ -207,6 +208,7 @@ pub(crate) fn try_install(
             min,
             max,
             optional_zero,
+            distinct_by,
             play_cost_budget,
             exclude,
             bind_as,
@@ -232,11 +234,39 @@ pub(crate) fn try_install(
                     Some(&bindings),
                 )
             });
+            let distinct_by = distinct_by.map(|mode| match mode {
+                CompiledDistinctBy::CardNumber => DistinctByMode::CardNumber,
+                CompiledDistinctBy::Level => DistinctByMode::Level,
+                CompiledDistinctBy::Name => DistinctByMode::Name,
+                CompiledDistinctBy::Color => DistinctByMode::Color,
+            });
             let mut candidates =
                 collect_zone_candidates(ctx, player, zones, filter, exclude, &bindings);
-            // Fewer candidates than a required count: the count can't be met,
-            // so nothing is offered (an unpayable "by placing 6 …" cost).
-            if candidates.len() < *min as usize {
+            // Distinctness is a matroid constraint: greedily admitting every
+            // candidate computes its rank, including multicolor matching.
+            // Do not offer an impossible required floor merely because enough
+            // physical copies exist.
+            let available = if let Some(mode) = distinct_by.filter(|_| *min > 0) {
+                let mut unique: Vec<_> = candidates
+                    .iter()
+                    .copied()
+                    .filter(|card| encode_zone_card(ctx.game, *card).is_some())
+                    .collect();
+                unique.sort_unstable_by_key(|card| card.0);
+                unique.dedup();
+                let mut admitted = Vec::new();
+                for card in unique {
+                    if let Some(data) = ctx.game.card_data_for_handle(card) {
+                        if mode.admits(&admitted, data) {
+                            admitted.push(data);
+                        }
+                    }
+                }
+                admitted.len()
+            } else {
+                candidates.len()
+            };
+            if available < *min as usize {
                 candidates.clear();
             }
             let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
@@ -251,6 +281,7 @@ pub(crate) fn try_install(
                 min: *min,
                 max: *max,
                 optional_zero: *optional_zero,
+                distinct_by,
                 budget,
                 prompt: prompt.clone(),
                 terminal: ZoneCardTerminal::Bind {
@@ -324,6 +355,7 @@ pub(crate) fn try_install(
                 },
                 candidates: cards,
                 optional_zero: false,
+                distinct_by: None,
                 budget: None,
                 prompt: prompt.clone(),
                 terminal: ZoneCardTerminal::ReturnToDeck {
@@ -365,14 +397,72 @@ fn stack_return_blocked(ctx: &EffectContext<'_>, target: PermanentHandle) -> boo
 
 /// Live candidates: still locatable, encodable, not yet picked, within budget.
 fn live_options(game: &crate::game::Game, state: &ZoneCardPickState) -> Vec<(u16, CardHandle)> {
-    state
+    let picked_data: Vec<_> = state
+        .picked
+        .iter()
+        .filter_map(|card| game.card_data_for_handle(*card))
+        .collect();
+    let mut options: Vec<_> = state
         .candidates
         .iter()
         .copied()
         .filter(|c| !state.picked.contains(c))
+        .filter(|c| {
+            state.distinct_by.is_none_or(|mode| {
+                game.card_data_for_handle(*c)
+                    .is_some_and(|data| mode.admits(&picked_data, data))
+            })
+        })
         .filter(|c| state.budget.is_none_or(|b| play_cost_of(game, *c) <= b))
         .filter_map(|c| encode_zone_card(game, c).map(|id| (id, c)))
-        .collect()
+        .collect();
+    let (Some(mode), Some(budget)) = (state.distinct_by, state.budget) else {
+        return options;
+    };
+    let needed = usize::from(state.min).saturating_sub(state.picked.len());
+    if needed <= 1 {
+        return options;
+    }
+
+    // Restrict completion proofs to the same live, encodable, unpicked pool
+    // used by the action mask. Fixed prefix + candidate contracts the
+    // distinctness matroid; greedy augmentation by cost is its minimum-cost
+    // completion to the required floor. No subset enumeration is needed.
+    let mut by_cost: Vec<_> = options
+        .iter()
+        .filter_map(|(_, card)| {
+            game.card_data_for_handle(*card)
+                .map(|data| (*card, data, i32::from(data.play_cost)))
+        })
+        .collect();
+    by_cost.sort_unstable_by_key(|(card, _, cost)| (*cost, card.0));
+    // A repeated zone in an authored zone list is not a second physical card.
+    by_cost.dedup_by_key(|(card, _, _)| *card);
+    options.retain(|(_, candidate)| {
+        let Some(data) = game.card_data_for_handle(*candidate) else {
+            return false;
+        };
+        let mut prefix = picked_data.clone();
+        prefix.push(data);
+        let mut remaining = budget - i32::from(data.play_cost);
+        let mut added = 1;
+        for (card, data, cost) in &by_cost {
+            if card == candidate || !mode.admits(&prefix, data) {
+                continue;
+            }
+            if *cost > remaining {
+                return false;
+            }
+            remaining -= *cost;
+            prefix.push(*data);
+            added += 1;
+            if added >= needed {
+                return true;
+            }
+        }
+        false
+    });
+    options
 }
 
 /// Park the next decision, or run the terminal when the pick is complete.
@@ -418,12 +508,13 @@ fn step_or_finish(game: &mut crate::game::Game, state: ZoneCardPickState) {
                 min: state.min,
                 max: state.max,
                 picked,
-                distinct: false,
+                distinct: state.distinct_by.is_some(),
             },
         )
     };
     game.current_phase = phase;
     game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: state.zone_owner,
         kind,
         selecting_player: state.selecting_player,

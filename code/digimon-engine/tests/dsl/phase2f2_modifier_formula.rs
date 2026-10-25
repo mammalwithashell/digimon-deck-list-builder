@@ -127,6 +127,7 @@ fn add_modifier_filter_target_formula_evaluated_per_match() {
     // stores the supplied numeric `value` (boolean semantics from the engine
     // perspective, but `ModifierEntry.value` is i32 and observable).
     let step = CompiledStep::AddModifier {
+        opponent_only: false,
         target: CompiledModifierTarget::Filter(CompiledPredicate {
             kind: Some(CompiledCardKind::Digimon),
             ..CompiledPredicate::default()

@@ -1,7 +1,7 @@
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{
     EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, PLAY_HAND_START,
-    SOURCE_SELECT_START, TRASH_EFFECT_START,
+    TRASH_EFFECT_START,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -72,9 +72,8 @@ fn resolve_until_hand_or_trash_pick(
 
         match view.kind {
             SelectionKind::UnionZone { .. } | SelectionKind::Hand | SelectionKind::Trash => {
-                let hand_action = PLAY_HAND_START + hand_index(runner, player, hand_card) as u16;
-                let trash_action =
-                    TRASH_EFFECT_START + trash_index(runner, player, trash_card) as u16;
+                let hand_action = physical_choice::card_action(&runner.game, hand_card, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+                let trash_action = physical_choice::card_action(&runner.game, trash_card, digimon_engine::owned_card_choice::CardChoiceZone::Trash);
                 assert!(
                     view.valid_action_ids.contains(&hand_action),
                     "{hand_card} in hand should be legal for P-224; view={view:?}"
@@ -200,12 +199,11 @@ fn p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_
     let source_prompt = runner
         .pending_selection_view()
         .expect("P-224 should ask which under-Tamer card to play");
-    let lv5_action = source_prompt
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|action| *action >= SOURCE_SELECT_START)
-        .expect("eligible level 5+ Xros Heart source should be selectable");
+    let rows = physical_choice::commits(&runner.game);
+    assert_eq!(rows.len(), 1, "eligible level5+ Xros Heart source only");
+    let lv5_action = rows[0].action_id;
+    assert!(matches!(rows[0].zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::BattleSource)));
+    assert!(source_prompt.valid_action_ids.contains(&lv5_action));
     runner
         .execute_action(0, lv5_action)
         .expect("select level 5+ Xros Heart under a Tamer");
@@ -237,3 +235,6 @@ fn p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_
         "the played card should leave the Tamer stack"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

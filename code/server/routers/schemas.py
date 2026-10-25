@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
 
 from server.routers.seed_utils import parse_optional_seed
 
@@ -63,8 +63,15 @@ class CreateGameRequest(BaseModel):
         return parse_optional_seed(value)
 
 
+class CardChoiceTokenRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    prompt_id: StrictStr
+    page_generation: StrictStr
+
+
 class GameActionRequest(BaseModel):
     action: int
+    expected_card_choice: CardChoiceTokenRequest | None = None
     # See CreateGameRequest.paced — caps the post-action agent autoplay at
     # one action so the client can pace the bot's response.
     paced: bool = False

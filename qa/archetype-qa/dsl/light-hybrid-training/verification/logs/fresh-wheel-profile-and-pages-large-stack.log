@@ -1,0 +1,41 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 31 items
+
+code\tests\rl\test_owned_card_choice_bindings.py F.                      [  6%]
+code\tests\rl\test_tensor_profiles.py .............................      [100%]
+
+================================== FAILURES ===================================
+________ test_native_security_inspection_checked_tokens_and_navigation ________
+
+    def test_native_security_inspection_checked_tokens_and_navigation():
+>       game = staged_inspection()
+               ^^^^^^^^^^^^^^^^^^^
+
+code\tests\rl\test_owned_card_choice_bindings.py:33: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+    def staged_inspection():
+        import digimon_engine as engine
+        game = engine.RustDebugGame(["ST1-03"] * 50, ["ST1-03"] * 50, seed=7,
+                                   observation_profile="standard_lite_v2")
+        game.skip_mulligan()
+        for zone in ("hand", "security", "battle_area"):
+            game.clear_zone(1, zone)
+        game.place_on_field(1, ["BT6-022"])
+        game.inject_card(1, "BT18-037", "hand")
+        for _ in range(40):
+            game.inject_card(1, "ST1-03", "security_top")
+        game.set_memory(10)
+        game.set_phase("Main")
+>       assert game.get_action_mask()[400] == 1
+E       assert np.float32(0.0) == 1
+
+code\tests\rl\test_owned_card_choice_bindings.py:21: AssertionError
+=========================== short test summary info ===========================
+FAILED code/tests/rl/test_owned_card_choice_bindings.py::test_native_security_inspection_checked_tokens_and_navigation
+======================== 1 failed, 30 passed in 35.16s ========================

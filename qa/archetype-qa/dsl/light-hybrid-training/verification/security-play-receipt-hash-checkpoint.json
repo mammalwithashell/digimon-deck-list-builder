@@ -1,0 +1,75 @@
+{
+  "status": "frozen_green",
+  "scope": "Independent security-play result receipt fingerprint and lifecycle audit; gameplay implementation owned by remaining_source_selectors.",
+  "engine_files": [
+    "code/digimon-engine/src/game/mod.rs (origin Debug only)",
+    "code/digimon-engine/src/game/verification.rs",
+    "code/digimon-engine/src/game/verification_cost_receipts.rs",
+    "code/digimon-engine/src/game/verification_security_play.rs"
+  ],
+  "actual_runtime_red": {
+    "passed": 0,
+    "failed": 4,
+    "log": "logs/security-play-receipt-hash-red.log"
+  },
+  "focused_green": {
+    "passed": 6,
+    "failed": 0,
+    "seconds": 1.7,
+    "log": "logs/security-play-receipt-hash-green.log"
+  },
+  "coverage": [
+    "Outstanding table/completion status affect V4 only; consumed receipt plus unused nonce leaves settled digest unchanged",
+    "Active IDs normalize to matching live-table ordinals; consistent ID alpha-renaming is identical; mismatches differ",
+    "SecurityAt and SecurityRecorded preserve SecurityTop archival Debug; V4 hashes raw position and correlated recorded origin",
+    "New runtime capture/finalize steps excluded from legacy tail counts and cost-reference array positions",
+    "V4 hashes runtime references in RunTail, nested outer continuations and global DSL tails",
+    "Clone-stable committed receipt state; exact player/card matching references"
+  ],
+  "legacy_policy": "V2/V3 fields and existing source/cost receipt semantics preserved; new source-private security extension emitted V4 only. Runtime variants appended at end by implementation worker.",
+  "lifecycle_audit": {
+    "findings_fixed_by_worker": [
+      "new store/counter reset and terminal cleanup (actual reset RED then GREEN)",
+      "exact selected-middle deferred cancellation restoration and raw top/middle origin fidelity",
+      "immediate rejection face-up bit restoration verified in current live file"
+    ],
+    "reviewed": [
+      "ID+player+physical-card finalize and abandoned-tail cleanup",
+      "receipt captured before OnPlay; exactly-once result publication after queued OnPlay",
+      "source preparation guards exclude SecurityRecorded namespace"
+    ],
+    "worker_gameplay_proof": "7/7 plus reset/cleanup2/2 reported GREEN; separate worker checkpoint logs authoritative"
+  },
+  "full_library": {
+    "passed": 500,
+    "failed": 0,
+    "ignored": 0,
+    "seconds": 670.09,
+    "exit": 0,
+    "log": "logs/security-play-receipt-all-lib-units.log",
+    "source_boundary": "Hash/receipt snapshot compiled before later source-Link consumer bridge; no claim later Link code included."
+  },
+  "inventory_tool": {
+    "actual_compile_red": "logs/security-receipt-inventory-red.log",
+    "compile_green": "logs/security-receipt-inventory-green.log (exit0)",
+    "explicit_fields": "Both new runtime variants walk receipt/player/card literal fields, no wildcard arm or binding suppression",
+    "reference_tests": {
+      "passed": 4,
+      "failed": 0,
+      "log": "logs/security-receipt-inventory-reference-tests-green.log"
+    },
+    "initial_test_compile_limit": "Initial added test lacked local CompiledStep import; compile-only failure preserved in reference-tests.log; corrected before test execution."
+  },
+  "limits": [
+    "Complete current-source optimized qualification and final wheel rebuild still required",
+    "Source-link bridge production fix in progress separately; earlier snapshots do not qualify later changes",
+    "No admission ledger promotion performed"
+  ],
+  "latest_link_projection_followup": {
+    "checkpoint": "link-private-pin-hash-checkpoint.json",
+    "combined_current_source_passed": 13,
+    "failed": 0,
+    "log": "logs/link-and-security-pin-regression-green.log",
+    "note": "Includes EffectDNA runtime-step normalization and six receipt hash regressions; prior whole500 test proof retains its earlier snapshot boundary."
+  }
+}

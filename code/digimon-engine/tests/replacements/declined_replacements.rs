@@ -42,7 +42,7 @@
 //! The deletion decline path additionally bypassed the remaining window
 //! stages entirely (`commit_permanent_deletion_no_replace`).
 
-use digimon_engine::action::space::{encode_source_select, PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::SelectionKind;
@@ -309,7 +309,7 @@ fn used_decode_still_offers_evade_and_decline_trashes_carrier() {
         .expect("accept Decode");
 
     // Pick the [TB] source (permanent 0, source index 0) — Decode plays it.
-    let pick = encode_source_select(carrier.index as u16, 0).expect("encode source pick");
+    let pick = physical_menu::source_action(&r.game, carrier, 0);
     {
         let sel = r
             .game
@@ -361,3 +361,6 @@ fn used_decode_still_offers_evade_and_decline_trashes_carrier() {
     );
     assert_eq!(r.game.replacement_depth, 0);
 }
+
+#[path = "../support/owned_card_choice.rs"]
+mod physical_menu;

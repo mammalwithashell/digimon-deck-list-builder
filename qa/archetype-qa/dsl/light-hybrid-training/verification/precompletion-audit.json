@@ -1,0 +1,174 @@
+{
+  "completion_proven": true,
+  "goal": "help this exact local Light Hybrid list past the training gate",
+  "source_sha256": "92ec23d1c154591f50c0ced36ffbede106f9bb84d7ef01d810e5485b22994091",
+  "requirements": [
+    {
+      "id": "exact_input",
+      "state": "demonstrated",
+      "claim": "54 copies /4 eggs+50 main/20IDs; live source and frozen bytes match",
+      "evidence": "verification/final-exact-deck-release-runtime-smoke.json"
+    },
+    {
+      "id": "printed_card_review",
+      "state": "demonstrated_with_snapshot_limits",
+      "claim": "Independent four-card printed/rules review; data discrepancies corrected separately",
+      "evidence": "final-card-contract-review.json"
+    },
+    {
+      "id": "production_card_data",
+      "state": "demonstrated",
+      "claim": "20/20 split parity and11integrity/offline-registry tests",
+      "evidence": "verification/logs/exact-deck-split-data-final-green.log"
+    },
+    {
+      "id": "complete_source_and_security_reachability",
+      "state": "demonstrated",
+      "claim": "Nine active deep boundary witnesses,0ignores; dedicated final suite also planned",
+      "evidence": "verification/logs/light-hybrid-capacity-active-green.log"
+    },
+    {
+      "id": "card_bodies_and_paid_receipts",
+      "state": "demonstrated_with_snapshot_limits",
+      "claim": "206 exact-card cases plus shared controls, with complete frozen93 aggregate now passed; original focused evidence retains its snapshot boundary.",
+      "evidence": "verification/logs/owned-recovery-and-light-hybrid-green.log"
+    },
+    {
+      "id": "latest_native_engine",
+      "state": "demonstrated",
+      "claim": "Complete frozen-source507unit tests0failure",
+      "evidence": "verification/logs/optimized-final-current-engine-unit-tests.log"
+    },
+    {
+      "id": "latest_python_models_runtime",
+      "state": "demonstrated",
+      "claim": "123normal-stack native/env/real fresh recurrent ONNX contract checks0failure",
+      "evidence": "verification/logs/final-link-pin-release-wheel-normal-stack-check.log"
+    },
+    {
+      "id": "privacy_frontend_and_desktop",
+      "state": "demonstrated_with_snapshot_limits",
+      "claim": "27Reactchecks/types,privacyandcheckedsubmissions,desktoplibcompiled;noGUIpackagelaunchclaim",
+      "evidence": "consumer-migration-checkpoint.json"
+    },
+    {
+      "id": "replay_versioning",
+      "state": "demonstrated",
+      "claim": "13 current receipt/Link version tests plus qualified10-recording/635-action corpus after bounded supported refresh; final93 replay verification also passed.",
+      "evidence": "qa/replay-goldens/retired/2026-10-25-owned-choice-p249/retirement-audit.json"
+    },
+    {
+      "id": "compatible_model_export",
+      "state": "demonstrated",
+      "claim": "Fresh untrained actor/critic exports validate contract; no old weights relabeled or quality promotion",
+      "evidence": "verification/logs/final-link-pin-release-wheel-normal-stack-check.log"
+    },
+    {
+      "id": "exact_deck_simulator_runtime",
+      "state": "demonstrated",
+      "claim": "Four final-release seeded legal-action games terminate normally",
+      "evidence": "verification/final-exact-deck-release-runtime-smoke.json"
+    },
+    {
+      "id": "full_required_verification",
+      "state": "demonstrated",
+      "claim": "Frozen final93 run session3003 terminal exit0, all93 summaries ok; both full-card passes12729passed/0failed/35existingignored. Final post-promotion Tier0 session84850 terminal exit0, all13 summaries ok.",
+      "evidence": "verification/optimized-qualification-config.json"
+    },
+    {
+      "id": "card_gate_promotion",
+      "state": "demonstrated",
+      "claim": "Exactly BT18-037/042/063/076 rows promoted after aggregate qualification; public final-wheel validator accepts20/20IDs54/54copies. Final post-promotion artifact freshness passed.",
+      "evidence": "verification/final-exact-deck-admission.json"
+    }
+  ],
+  "remaining": [],
+  "active_verification": {
+    "session": 3003,
+    "status": "terminal_passed",
+    "exit_code": 0,
+    "suites": 93,
+    "passed_suites": 93,
+    "failed_suites": 0,
+    "summary_rows_verified": true,
+    "log": "logs/frozen-final-tier2-clean-run.log",
+    "full_card_passes": [
+      {
+        "passed": 12729,
+        "failed": 0,
+        "ignored": 35,
+        "filtered_out": 0,
+        "seconds": 2324.93
+      },
+      {
+        "passed": 12729,
+        "failed": 0,
+        "ignored": 35,
+        "filtered_out": 0,
+        "seconds": 2040.1
+      }
+    ],
+    "replay_recordings": 10,
+    "replay_actions": 635,
+    "replay_passed": true,
+    "invariant_fuzz_passed": true,
+    "completion_proven": true,
+    "overall_completion_limit": "Required Tier2 aggregate and final post-promotion Tier0 freshness both passed; simulator training eligibility is proven for the exact frozen local deck."
+  },
+  "prior_77_verification": {
+    "session": 35818,
+    "status": "terminal_failed",
+    "exit_code": 1,
+    "log": "verification/logs/optimized-final-tier2-full-run.log"
+  },
+  "card_gate_snapshot": {
+    "status": "accepted",
+    "admitted_unique_ids": 20,
+    "total_unique_ids": 20,
+    "admitted_copies": 54,
+    "total_copies": 54,
+    "blocked_ids": [],
+    "promotion_performed": true,
+    "promoted_ids": [
+      "BT18-037",
+      "BT18-042",
+      "BT18-063",
+      "BT18-076"
+    ],
+    "global_admissible_ids": 1066,
+    "global_total_ids": 4477,
+    "public_validate_admissible_deck": "accepted",
+    "mechanics_ready": true,
+    "registered_and_production_data": true,
+    "evidence": "final-exact-deck-admission.json",
+    "source_sha256": "92ec23d1c154591f50c0ced36ffbede106f9bb84d7ef01d810e5485b22994091",
+    "wheel_sha256": "5ddd98b9124c86d74d86cd1eb2c716d25b02330784eadff9887e65d775c53fa9",
+    "scope": "Simulator training admission only; no live DCGO certification or trained-model quality claim."
+  },
+  "replay_corpus_qualification": {
+    "status": "passed_bounded_supported_refresh",
+    "recordings": 10,
+    "actions": 635,
+    "failed": 0,
+    "log": "logs/replay-three-bounded-whole-corpus-verify.log",
+    "retirement_audit": "qa/replay-goldens/retired/2026-10-25-owned-choice-p249/retirement-audit.json",
+    "scope": "Only three diagnosed generated recordings refreshed via supported replay tooling; byte-identical originals and SHA256 provenance retained, seven other recordings unchanged. Includes P-249 static token data-index diagnosis; no production changes.",
+    "aggregate_limit": "Final93 replay_goldens_verify suite also passed; invariant fuzz passed."
+  },
+  "final_tier0_freshness": {
+    "status": "terminal_passed",
+    "session": 84850,
+    "exit_code": 0,
+    "suites": 13,
+    "passed_suites": 13,
+    "failed_suites": 0,
+    "summary_rows_verified": true,
+    "log": "logs/promoted-final-tier0-full-run.log",
+    "scope": "Final post-promotion impact/lowering/admission and all Tier0 artifact freshness checks passed."
+  },
+  "out_of_scope": [
+    "No live DCGO certification is claimed.",
+    "Fresh untrained model exports prove compatibility, not trained-policy quality or model promotion.",
+    "No PR is requested or created by this qualification."
+  ]
+}

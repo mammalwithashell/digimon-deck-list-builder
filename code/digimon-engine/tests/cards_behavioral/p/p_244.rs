@@ -192,12 +192,12 @@ fn p_244_main_plays_vemmon_from_hand_free_then_places_self() {
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
     assert!(r.pending_is_optional(), "'you may play'");
     assert_eq!(
-        view.valid_action_ids.len(),
+        physical_choice::commits(&r.game).len(),
         1,
         "only [Vemmon] (not [Vemmon]-text cards)"
     );
-    r.execute_action(view.selecting_player, view.valid_action_ids[0])
-        .expect("pick Vemmon");
+    let action = physical_choice::card_action(&r.game, "VEM", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    r.execute_action(view.selecting_player, action).expect("pick Vemmon");
     r.auto_resolve().expect("resolve");
     assert!(on_field(&r, 0, "VEM"));
     assert_eq!(r.memory(), mem - 3, "only the Option's own cost is paid");
@@ -231,12 +231,12 @@ fn p_244_main_plays_zenith_or_xeno_alias_from_trash() {
     );
     let view = r.pending_selection_view().expect("union pick");
     assert_eq!(
-        view.valid_action_ids.len(),
+        physical_choice::commits(&r.game).len(),
         2,
         "[Zenith] and Xeno (also treated as [Zenith]) are both eligible"
     );
-    r.execute_action(view.selecting_player, view.valid_action_ids[1])
-        .expect("pick");
+    let action = physical_choice::card_action(&r.game, XENO, digimon_engine::owned_card_choice::CardChoiceZone::Trash);
+    r.execute_action(view.selecting_player, action).expect("pick Xeno as Zenith");
     r.auto_resolve().expect("resolve");
     assert!(
         on_field(&r, 0, XENO) || on_field(&r, 0, "ZENITH"),
@@ -338,8 +338,9 @@ fn p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3() {
     let mem_before = r.memory();
     let view = r.pending_selection_view().expect("evolution card pick");
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
-    assert_eq!(view.valid_action_ids.len(), 1, "EVO in hand");
-    r.execute_action(view.selecting_player, view.valid_action_ids[0])
+    assert_eq!(physical_choice::commits(&r.game).len(), 1, "EVO in hand");
+    let action = physical_choice::card_action(&r.game, "EVO", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    r.execute_action(view.selecting_player, action)
         .expect("pick EVO");
     r.auto_resolve().expect("resolve digivolve");
     assert!(on_field(&r, 0, "EVO"), "digivolved into EVO");
@@ -429,8 +430,8 @@ fn p_244_security_runs_main_then_places_self() {
     r.attack_player(a, 1, false);
     let view = r.pending_selection_view().expect("security union pick");
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
-    r.execute_action(view.selecting_player, view.valid_action_ids[0])
-        .expect("pick Vemmon");
+    let action = physical_choice::card_action(&r.game, "VEM", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    r.execute_action(view.selecting_player, action).expect("pick Vemmon");
     r.auto_resolve().expect("resolve");
     assert!(on_field(&r, 1, "VEM"), "Vemmon played free");
     assert!(
@@ -575,3 +576,6 @@ fn p_244_delay_not_offered_when_placed_card_is_not_vemmon() {
     r.auto_resolve().expect("settle");
     assert!(still_delayed(&r), "P-244 stays parked as a Delayed Option");
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

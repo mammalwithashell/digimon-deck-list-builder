@@ -1,0 +1,32 @@
+{
+  "status": "frozen_green",
+  "scope": "Canonical BT25-097, EX10-003, EX10-028 fixture migration to owned physical card/source rows.",
+  "actual_red": {
+    "BT25-097": {
+      "passed": 17,
+      "failed": 1,
+      "log": "logs/bt25-097-physical-red.log"
+    },
+    "EX10-003": {
+      "passed": 1,
+      "failed": 1,
+      "log": "logs/ex10-003-physical-red.log"
+    },
+    "EX10-028": {
+      "passed": 26,
+      "failed": 2,
+      "log": "logs/ex10-028-physical-red.log"
+    }
+  },
+  "green": {
+    "passed": 48,
+    "failed": 0,
+    "ignored": 0,
+    "seconds": 64.31,
+    "cargo_exit": 0,
+    "log": "logs/late-source-three-modules-green.log",
+    "target": "light_hybrid_late_source_fixtures"
+  },
+  "contract": "Fixture-only physical menu migration; exact trait/level/zone eligibility, optional PASS, source carrier restriction and original gameplay/cost assertions retained. No production changes.",
+  "limits": "Scoped wrapper evidence; final full inclusive ladder remains pending. No ledger promotion."
+}

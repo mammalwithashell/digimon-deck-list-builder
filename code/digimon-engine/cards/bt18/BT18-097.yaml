@@ -1,0 +1,69 @@
+# Printed authority: observation 8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71
+# and BT18-097.webp. Generated runtime security text has incorrect zones.
+card: BT18-097
+name: Dark to Light, Thunder to Gunfire
+kind: option
+color: [yellow, purple, black]
+cost: 3
+traits: [Ten Warriors]
+effects:
+  - when: main
+    process:
+      - select_own_permanent:
+          optional: true
+          continue_on_decline: true
+          filter: {kind: tamer}
+          bind_as: placement_host
+          prompt: You may place up to 5 differently named Hybrid cards under 1 of your Tamers
+      - if:
+          condition: {binding_present: placement_host}
+          then:
+            - select_zone_cards:
+                zones: [hand, trash]
+                filter: {trait_has: Hybrid}
+                min: 0
+                max: 5
+                distinct_by: name
+                bind_as: spirits
+                prompt: Choose up to 5 Hybrid cards with different names from your hand or trash in placement order
+            - place_cards_as_bottom_sources: {cards: spirits, target: placement_host}
+      - if:
+          condition:
+            count_gte:
+              filter: {of: you, zone: [hand, trash], name_is: MagnaGarurumon}
+              n: 1
+          then:
+            - select_own_permanent:
+                optional: true
+                filter:
+                  kind: tamer
+                  source_count: {filter: {}, at_least: 5}
+                bind_as: evolution_host
+                prompt: You may digivolve 1 of your Tamers with 5 or more cards under it into MagnaGarurumon
+                then:
+                  - select_union_zone:
+                      of: you
+                      zones: [hand, trash]
+                      optional: true
+                      filter: {name_is: MagnaGarurumon}
+                      bind_as: magna
+                      prompt: You may digivolve into MagnaGarurumon from your hand or trash for free
+                  - effect_initiated_digivolve:
+                      target: evolution_host
+                      source: magna
+                      cost: free
+                      ignore_requirements: true
+  - when: on_security
+    process:
+      - select_zone_cards:
+          zones: [hand, trash]
+          min: 0
+          max: 1
+          filter:
+            kind: tamer
+            has_inherited: {}
+            can_play_from_effect_without_cost: true
+          bind_as: tamer
+          prompt: You may play 1 Tamer with inherited effects from your hand or trash for free
+      - play_cards_free: {cards: tamer}
+      - add_this_option_to_hand: {}

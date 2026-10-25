@@ -180,7 +180,7 @@ fn pick_trash(runner: &mut DebugRunner, id: &str) {
         .position(|t| t == id)
         .unwrap_or_else(|| panic!("{id} not in trash: {:?}", trash_ids(runner, 0)));
     let view = runner.pending_selection_view().expect("trash prompt pending");
-    let a = TRASH_EFFECT_START + idx as u16;
+    let a = if view.card_choice.is_some() { super::support::physical_zone_action(runner,0,id,true).expect("physical trash card") } else { TRASH_EFFECT_START + idx as u16 };
     assert!(view.valid_action_ids.contains(&a), "{id} not offered: {view:?}");
     runner.execute_action(view.selecting_player, a).expect("pick trash");
 }

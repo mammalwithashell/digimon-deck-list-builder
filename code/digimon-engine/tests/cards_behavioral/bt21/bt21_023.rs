@@ -406,13 +406,10 @@ fn bt21_023_on_play_lv5_not_selectable() {
         r.game.pending_selection.is_some(),
         "[On Play] link prompt surfaces with a Lv4 candidate"
     );
-    // There should be exactly 1 valid action (only APPMON-LV4 is eligible, not APPMON-LV5).
+    // There is exactly one eligible hand candidate; APPMON-LV5 is excluded.
     let sel = r.game.pending_selection.as_ref().unwrap();
-    assert_eq!(
-        sel.valid_action_ids.len(),
-        1,
-        "Only 1 eligible card (Lv4) should appear as a link candidate"
-    );
+    assert_eq!(sel.valid_action_ids.len(),1,"Only APPMON-LV4 is an eligible link candidate");
+
 }
 
 // ─── Section 3 — On Play self-link (from digivolution sources) ───────────────
@@ -888,4 +885,203 @@ fn bt21_023_when_linked_your_turn_deletion_fires_deletion_event() {
         has_deletion,
         "A GameEvent::Trash must fire when the when_card_linked_to_this effect deletes an opponent Digimon"
     );
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;
+
+#[test]
+fn bt21_023_deep_owned_source_link_is_physical_and_cloneable() {
+    for actor in [0,1] { for depth in [11usize,12,39,300] {
+        let mut r=base().deck(0,&["DECK-PAD";12]).deck(1,&["DECK-PAD";12]).memory(10).start();
+        advance_to_main(&mut r);r.game.turn_player_idx=actor as usize;
+        let host=r.place_on_field(actor,CARD_ID,None);
+        for _ in 0..depth { r.push_source(host,"DECK-PAD"); }
+        r.push_source(host,"APPMON-LV4");
+        let physical=r.game.player(actor).battle_area[host.index as usize].card_sources[depth].handle();
+        r.fire_on_play(actor,host.index as usize);
+        let action=physical_menu::source_action(&r.game,host,depth);
+        let before_memory=r.memory();let mut clone=r.game.clone();
+        for game in [&mut r.game,&mut clone] {
+            game.resolve_selection(actor,action).unwrap();assert!(game.pending_selection.is_none());
+            let stack=&game.player(actor).battle_area[host.index as usize];
+            assert_eq!(stack.linked_cards.len(),1);assert_eq!(stack.linked_cards[0].handle(),physical);
+            assert_eq!(stack.card_sources.len(),depth+1);assert_eq!(game.memory,before_memory);
+        }
+    }}
+}
+
+#[test]
+fn bt21_023_source_link_does_not_substitute_a_replacement_or_moved_card() {
+    for actor in [0,1] {
+        let mut r=base().deck(0,&["DECK-PAD";12]).deck(1,&["DECK-PAD";12]).memory(10).start();
+        advance_to_main(&mut r);r.game.turn_player_idx=actor as usize;
+        let host=r.place_on_field(actor,CARD_ID,None);r.push_source(host,"APPMON-LV4");
+        r.fire_on_play(actor,host.index as usize);
+        let old_action=physical_menu::source_action(&r.game,host,0);
+        let other=r.place_on_field(actor,"APPMON-LV4",None);
+        let moved=r.game.player_mut(actor).battle_area[host.index as usize].card_sources.remove(0);
+        let original=moved.handle();r.game.player_mut(actor).battle_area[other.index as usize].card_sources.insert(0,moved);
+        r.push_source(host,"APPMON-LV4");
+        let replacement=r.game.player(actor).battle_area[host.index as usize].card_sources[0].handle();
+        assert_ne!(original,replacement);
+        let mask=digimon_engine::action::build_action_mask(&r.game,actor);
+        assert_eq!(mask[old_action as usize],0.0,"moved source and same-number replacement cannot inherit a stale action");
+        assert_eq!(mask[digimon_engine::action::space::PASS as usize],1.0);
+        r.game.resolve_selection(actor,digimon_engine::action::space::PASS).unwrap();
+        assert!(r.game.pending_selection.is_none());assert!(r.game.player(actor).battle_area[host.index as usize].linked_cards.is_empty());
+        assert_eq!(r.game.player(actor).battle_area[host.index as usize].card_sources[0].handle(),replacement);
+        assert_eq!(r.game.player(actor).battle_area[other.index as usize].card_sources[0].handle(),original);
+        assert_eq!(r.memory(),10);
+    }
+}
+
+#[test]
+fn bt21_023_pending_self_source_link_follows_carrier_compaction_in_clones() {
+    for actor in [0,1] {
+        let mut r=base().deck(0,&["DECK-PAD";12]).deck(1,&["DECK-PAD";12]).memory(10).start();
+        advance_to_main(&mut r);r.game.turn_player_idx=actor as usize;
+        r.place_on_field(actor,"APPMON-LV5",None);
+        let original_host=r.place_on_field(actor,CARD_ID,None);assert_eq!(original_host.index,1);
+        for _ in 0..39 { r.push_source(original_host,"DECK-PAD"); }
+        let original_source=r.push_source(original_host,"APPMON-LV4");
+        let original_top=r.game.player(actor).battle_area[1].top_card().handle();
+        r.fire_on_play(actor,1);physical_menu::source_action(&r.game,original_host,39);
+        let mut clone=r.game.clone();
+        for game in [&mut r.game,&mut clone] {
+            let filler=game.player_mut(actor).battle_area.remove(0);
+            game.player_mut(actor).battle_area.push(filler);
+            let replacement_top=game.player(actor).battle_area[1].top_card().handle();
+            let live=digimon_engine::permanent::PermanentHandle{player:actor,index:0};
+            let action=physical_menu::source_action(game,live,39);
+            game.resolve_selection(actor,action).unwrap();assert!(game.pending_selection.is_none());
+            let carrier=&game.player(actor).battle_area[0];
+            assert_eq!(carrier.top_card().handle(),original_top);assert_eq!(carrier.linked_cards.len(),1);
+            assert_eq!(carrier.linked_cards[0].handle(),original_source);
+            assert_eq!(game.player(actor).battle_area[1].top_card().handle(),replacement_top);
+            assert!(game.player(actor).battle_area[1].linked_cards.is_empty());assert_eq!(game.memory,10);
+        }
+    }
+}
+
+#[test]
+fn generic_other_source_link_keeps_the_original_destination_after_compaction_and_source_card_moves() {
+    const YAML:&str=r#"
+card: LINK-DESTINATION
+name: Link Destination
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 8000
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [own_digimon_sources]
+          filter: { name_is: APPMON-LV4 }
+          to: self
+          count: { up_to: 1 }
+          cost: free
+      - suspend: { target: source }
+"#;
+    for actor in [0,1] { for destination_state in [0,1,2] {
+        let mut r=base().from_dsl_yaml(YAML).unwrap().deck(0,&["DECK-PAD";12]).deck(1,&["DECK-PAD";12]).memory(10).start();
+        advance_to_main(&mut r);r.game.turn_player_idx=actor as usize;
+        r.place_on_field(actor,"APPMON-LV5",None);
+        let destination=r.place_on_field(actor,"LINK-DESTINATION",None);r.push_source(destination,"DECK-PAD");
+        let donor=r.place_on_field(actor,"APPMON-LV5",None);
+        for _ in 0..39 { r.push_source(donor,"DECK-PAD"); }
+        let original_source=r.push_source(donor,"APPMON-LV4");
+        r.fire_on_play(actor,destination.index as usize);physical_menu::source_action(&r.game,donor,39);
+        let mut clone=r.game.clone();
+        for game in [&mut r.game,&mut clone] {
+            let filler=game.player_mut(actor).battle_area.remove(0);game.player_mut(actor).battle_area.push(filler);
+            if destination_state > 0 {
+                let card=game.player_mut(actor).battle_area[0].card_sources.pop().unwrap();
+                let insert=game.player(actor).battle_area[1].card_sources.len()-1;
+                game.player_mut(actor).battle_area[1].card_sources.insert(insert,card);
+            }
+            if destination_state == 2 {
+                game.player_mut(actor).battle_area.remove(0);
+                assert!(physical_menu::commits(game).is_empty(),"the departed original destination cannot be replaced by its moved effect card's new carrier");
+                assert_eq!(digimon_engine::action::build_action_mask(game,actor)[digimon_engine::action::space::PASS as usize],1.0);
+                game.resolve_selection(actor,digimon_engine::action::space::PASS).unwrap();assert!(game.pending_selection.is_none());
+                assert!(game.player(actor).battle_area.iter().all(|p|p.linked_cards.is_empty()));
+                assert!(game.player(actor).battle_area.iter().all(|p|!p.is_suspended),"the continued source tail cannot target the new carrier of a moved effect card");
+                assert_eq!(game.player(actor).battle_area[0].card_sources[39].handle(),original_source);assert_eq!(game.memory,10);
+                continue;
+            }
+            let donor=digimon_engine::permanent::PermanentHandle{player:actor,index:1};
+            let action=physical_menu::source_action(game,donor,39);game.resolve_selection(actor,action).unwrap();
+            assert!(game.pending_selection.is_none());
+            assert_eq!(game.player(actor).battle_area[0].linked_cards.len(),1,"This Digimon remains the original carrier, including after its physical effect card moves");
+            assert_eq!(game.player(actor).battle_area[0].linked_cards[0].handle(),original_source);
+            assert!(game.player(actor).battle_area[1].linked_cards.is_empty(),"the donor occupying the old destination slot cannot receive the link");
+            assert!(game.player(actor).battle_area[0].is_suspended,"the continued source tail follows the original physical carrier");
+            assert!(!game.player(actor).battle_area[1].is_suspended);
+            assert!(game.player(actor).battle_area[2].linked_cards.is_empty());assert_eq!(game.memory,10);
+        }
+    }}
+}
+
+#[test]
+fn generic_source_link_keeps_the_picked_source_carrier_through_host_selection() {
+    const YAML:&str=r#"
+card: LINK-HOST-PICKER
+name: Link Host Picker
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 8000
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [own_digimon_sources]
+          filter: { name_is: APPMON-LV4 }
+          to: own_digimon
+          host_filter: { name_is: LINK-TARGET }
+          count: { up_to: 1 }
+          cost: { reduce: 0 }
+          bind_as: linked
+      - if:
+          condition: { binding_present: linked }
+          then: [{ gain_memory: 5 }]
+"#;
+    for actor in [0,1] { for lost_source in [false,true] {
+        let mut r=DebugRunner::builder().from_dsl_yaml(YAML).unwrap().add_card(appmon_lv4("APPMON-LV4")).add_card(appmon_lv5("APPMON-LV5")).add_card(make_test_card("DECK-PAD","Filler")).link_requirement("APPMON-LV4",2).add_card(make_digimon("LINK-TARGET",5,8000,8,&["Appmon"]))
+            .deck(0,&["DECK-PAD";12]).deck(1,&["DECK-PAD";12]).memory(5).start();
+        advance_to_main(&mut r);r.game.turn_player_idx=actor as usize;
+        r.place_on_field(actor,"APPMON-LV5",None);
+        let donor=r.place_on_field(actor,"APPMON-LV5",None);
+        for _ in 0..39 { r.push_source(donor,"DECK-PAD"); }
+        let original_source=r.push_source(donor,"APPMON-LV4");
+        let target=r.place_on_field(actor,"LINK-TARGET",None);
+        let effect=r.place_on_field(actor,"LINK-HOST-PICKER",None);r.fire_on_play(actor,effect.index as usize);
+        let action=physical_menu::source_action(&r.game,donor,39);r.game.resolve_selection(actor,action).unwrap();
+        assert!(r.game.pending_selection.is_some(),"source selection pauses at the public host picker");
+        let mut clone=r.game.clone();
+        for game in [&mut r.game,&mut clone] {
+            game.player_mut(actor).battle_area.swap(0,1);
+            if lost_source {
+                let card=game.player_mut(actor).battle_area[0].card_sources.remove(39);
+                game.player_mut(actor).battle_area[1].card_sources.insert(0,card);
+                let data=game.card_data.iter().position(|c|c.card_id=="APPMON-LV4").unwrap();let index=game.next_card_index();
+                game.player_mut(actor).battle_area[0].card_sources.insert(39,CardSource::new(data,actor,index));
+            }
+            let host_action=digimon_engine::action::space::encode_attack(0,target.index as u16);
+            assert_eq!(digimon_engine::action::build_action_mask(game,actor)[host_action as usize],1.0);
+            game.resolve_selection(actor,host_action).unwrap();assert!(game.pending_selection.is_none());
+            let linked=&game.player(actor).battle_area[target.index as usize].linked_cards;
+            if lost_source {
+                assert!(linked.is_empty());assert_eq!(game.memory,5,"lost physical source grants no paid link or success tail");
+                assert_eq!(game.player(actor).battle_area[1].card_sources[0].handle(),original_source);
+            } else {
+                assert_eq!(linked.len(),1);assert_eq!(linked[0].handle(),original_source);
+                assert_eq!(game.memory,8,"one link costs two and earns the actual-link success tail once");
+            }
+        }
+    }}
 }

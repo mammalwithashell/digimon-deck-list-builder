@@ -1,0 +1,96 @@
+# Official observation 3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413
+# and BT18-063.webp: native black/yellow Lv3 and black/yellow Tamer circles.
+# DCGO: BT18/Black/BT18_063.cs. The inherited play does not prevent leaving.
+card: BT18-063
+name: Beetlemon
+kind: digimon
+level: 4
+color: [black, yellow]
+cost: 5
+dp: 5000
+form: Hybrid
+attribute: Variable
+traits: [Cyborg]
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - kind: digimon
+        - level_eq: 3
+        - any_of: [{ color_is: black }, { color_is: yellow }]
+    cost: 3
+  - kind: digivolve
+    from:
+      kind: tamer
+      any_of: [{ color_is: black }, { color_is: yellow }]
+    cost: 3
+  - kind: digivolve
+    from: { name_is: "J.P. Shibayama" }
+    cost: 2
+  - kind: digivolve
+    from: { name_is: MetalKabuterimon }
+    cost: 0
+effects:
+  - when: when_digivolving
+    process:
+      - add_modifier:
+          target: source
+          modifier: CannotBeDestroyedByEffect
+          value: 1
+          opponent_only: true
+          expiry: end_of_opponents_turn
+  - when: when_attacking
+    process:
+      - select_own_permanent:
+          bind_as: host
+          optional: true
+          filter:
+            all_of:
+              - any_of: [{ kind: digimon }, { kind: tamer }]
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  cost: { reduce: 1 }
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - trait_has: Hybrid
+                      - any_of: [{ color_is: black }, { color_is: yellow }]
+          prompt: Choose 1 of your Digimon or Tamers to digivolve
+      - select_hand:
+          of: you
+          bind_as: hybrid
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Hybrid
+              - any_of: [{ color_is: black }, { color_is: yellow }]
+              - can_digivolve_onto_with_cost: { target: host, cost: { reduce: 1 } }
+          prompt: Choose a black or yellow Hybrid to digivolve with cost reduced by 1
+      - effect_initiated_digivolve:
+          target: host
+          source: hybrid
+          cost: { reduce: 1 }
+          ignore_requirements: false
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of: [{ replacement_cause: own_effect }]
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          optional: true
+          bind_as: tamer
+          filter:
+            all_of:
+              - kind: tamer
+              - has_inherited: {}
+              - can_play_from_effect_without_cost: true
+          prompt: Play 1 Tamer with inherited effects from this Digimon's digivolution cards
+      - play_from_materials:
+          target: replacement_subject
+          source_index: tamer
+          cost_delta: free

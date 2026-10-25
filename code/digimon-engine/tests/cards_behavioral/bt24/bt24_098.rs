@@ -597,7 +597,9 @@ fn pick_hand(r: &mut DebugRunner, p: u8, card_id: &str) {
         .iter()
         .position(|c| c.card_id(&r.game.card_data) == card_id)
         .unwrap_or_else(|| panic!("{card_id} not in hand"));
-    let action = space::PLAY_HAND_START + idx as u16;
+    let action=if r.game.pending_selection.as_ref().is_some_and(|pending|pending.card_choice.is_some()) {
+        physical_menu::zone_action(&r.game,p,idx,digimon_engine::owned_card_choice::CardChoiceZone::Hand)
+    } else {space::PLAY_HAND_START + idx as u16};
     let v = r.pending_selection_view().expect("hand selection pending");
     assert!(
         v.valid_action_ids.contains(&action),
@@ -613,7 +615,9 @@ fn pick_trash(r: &mut DebugRunner, p: u8, card_id: &str) {
         .iter()
         .position(|c| c.card_id(&r.game.card_data) == card_id)
         .unwrap_or_else(|| panic!("{card_id} not in trash"));
-    let action = space::TRASH_EFFECT_START + idx as u16;
+    let action=if r.game.pending_selection.as_ref().is_some_and(|pending|pending.card_choice.is_some()) {
+        physical_menu::zone_action(&r.game,p,idx,digimon_engine::owned_card_choice::CardChoiceZone::Trash)
+    } else {space::TRASH_EFFECT_START + idx as u16};
     let v = r.pending_selection_view().expect("trash selection pending");
     assert!(
         v.valid_action_ids.contains(&action),
@@ -632,7 +636,11 @@ fn trash_pickable(r: &DebugRunner, p: u8, card_id: &str) -> bool {
     else {
         return false;
     };
-    non_pass(r).contains(&(space::TRASH_EFFECT_START + idx as u16))
+    if r.game.pending_selection.as_ref().is_some_and(|pending|pending.card_choice.is_some()) {
+        physical_menu::commits(&r.game).iter().any(|row|row.owner==Some(p)
+            &&matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash))
+            &&row.position.as_deref()==Some(idx.to_string().as_str()))
+    } else {non_pass(r).contains(&(space::TRASH_EFFECT_START + idx as u16))}
 }
 
 /// Pick a permanent on one side of the field (OwnField / OppField prompt).
@@ -669,3 +677,6 @@ effects:
           prompt: "Trash 1 card in your hand"
       - trash_from_hand_by_index: { of: you, hand_index: gone }
 "#;
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

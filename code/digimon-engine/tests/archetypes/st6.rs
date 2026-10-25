@@ -512,13 +512,13 @@ fn cresgarurumon_digiburst_plays_lv3_purple_from_trash() {
     runner
         .execute_action(
             0,
-            encode_source_select(cres.index as u16, 0).expect("first source pick"),
+            crate::owned_choices::source_action(&runner.game, cres, 0),
         )
         .expect("pick first Digi-Burst source");
     runner
         .execute_action(
             0,
-            encode_source_select(cres.index as u16, 1).expect("second source pick"),
+            crate::owned_choices::source_action(&runner.game, cres, 1),
         )
         .expect("pick second Digi-Burst source");
 

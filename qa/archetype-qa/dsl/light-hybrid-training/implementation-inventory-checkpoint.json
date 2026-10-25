@@ -1,0 +1,53 @@
+{
+  "scope": "implementation_inventory CLI typed reference visitor and tool-specific tests only",
+  "red": {
+    "log": "verification/logs/implementation-inventory-check.log",
+    "exit_code": 101,
+    "compiler_errors": 27,
+    "failure": "Non-exhaustive typed patterns and added fields/variants missing from occurrence walkers."
+  },
+  "changes": [
+    "Explicit traversal for six additional authored steps and twenty-three compiled runtime step variants.",
+    "Recursive visitors for all newly required predicate, trigger, aura/protection, cost, deck-rule and DNA-result-scope fields.",
+    "TopOf and top_of retain existing-instance binding roles; source/event exact-name predicates retain exact-name matching roles.",
+    "New runtime finalizer rebinds remain binding references, output slots remain binding definitions, and scalar receipt triples visit every component.",
+    "Deck evidence identifiers are metadata, not card references or source-authority approval.",
+    "No rest patterns or wildcard fallback arms were introduced; the existing guard passes.",
+    "Tool-only CompiledTriggeredClause fixture gained trigger_if:None; three new traversal coverage tests were added."
+  ],
+  "green": {
+    "check": {
+      "log": "verification/logs/implementation-inventory-final-check.log",
+      "exit_code": 0,
+      "command": "cargo check -p digimon-dsl --bin implementation_inventory --config profile.dev.opt-level=0 --config profile.dev.debug=0"
+    },
+    "tests": {
+      "log": "verification/logs/implementation-inventory-tool-tests-final-green.log",
+      "exit_code": 0,
+      "suites": {
+        "implementation_current_equals_witness": 11,
+        "implementation_equals_witness": 5,
+        "implementation_inventory": 6,
+        "implementation_inventory_cli": 4,
+        "implementation_reference_coverage": 3,
+        "implementation_reference_roles": 4,
+        "implementation_references": 11
+      },
+      "passed": 44,
+      "failed": 0
+    }
+  },
+  "environment": {
+    "cargo_target_dir": "C:/Users/james/.codex/build-targets/light-hybrid-prefix",
+    "rust_min_stack": 268435456,
+    "profile_overrides": [
+      "profile.dev.opt-level=0",
+      "profile.dev.debug=0"
+    ]
+  },
+  "qualification_boundary": [
+    "This is build/tool traversal evidence, not runtime card behavior, DCGO confirmation or training admission.",
+    "The parent separately repaired the canonical refusal diagnostic em-dash in predicate.rs; the strict exact-message witness assertion was preserved.",
+    "A default-stack trial overflowed; the documented larger stack setting was used for final successful verification."
+  ]
+}

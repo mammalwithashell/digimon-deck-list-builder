@@ -106,9 +106,10 @@ steps:
     do: { attack: { attacker: field.0, target: security } }
     expect: { prompt: main_phase }
   # THE CLAUSE: yes -- add the top security card (Shota Kuroi) to the hand.
-  # SIM-ONLY: our one-candidate declinable Security pick (gate + pick).
+  # SIM-ONLY: accept the fixed top-card operation without exposing its hidden
+  # identity. The unchanged hand assertion below verifies which card moved.
   - actor: 0
-    do: { select: { cards: [BT26-092], sim_only: true } }
+    do: { select: { yes: true, sim_only: true } }
   # DCGO-ONLY: BT24_031.cs asks SetBoolSelection ("Add to hand") -- a
   # generic_bool, no OptionalSkill gate, no card widget.
   - actor: 0

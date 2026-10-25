@@ -93,7 +93,8 @@ export function SelectionPanel({
   };
   const isCardZone =
     !PANEL_PHASES.has(currentPhase) && isCardZoneSelection(pendingSelection, zoneCtx);
-  if (!PANEL_PHASES.has(currentPhase) && !isSourceSelect && !isCardZone) return null;
+  const cardChoice = pendingSelection.cardChoice;
+  if (!PANEL_PHASES.has(currentPhase) && !isSourceSelect && !isCardZone && !cardChoice) return null;
   const sourceArea =
     pendingSelection.zoneOwner != null && pendingSelection.zoneOwner !== localPlayer
       ? opponentBattleArea
@@ -106,7 +107,15 @@ export function SelectionPanel({
     : 'Select a card');
   let cards: CardEntry[] = [];
 
-  if (currentPhase === GamePhase.SelectHand) {
+  if (cardChoice) {
+    cards = cardChoice.rows.filter((row) => row.operation === 'commit_card' || row.operation === 'inspect_card').map((row) => ({
+      cardId: row.identity_visible ? row.card_id ?? '' : '',
+      actionId: row.action_id,
+      isValid: validActionIds.has(row.action_id) && actionMask[row.action_id] === 1,
+      faceDown: !row.identity_visible,
+      label: `${row.zone === 'battle_top' ? 'Battle card' : row.zone === 'security' ? 'Security' : row.zone === 'hand' ? 'Hand' : row.zone === 'trash' ? 'Trash' : row.zone === 'breeding_source' ? 'Breeding source' : 'Digivolution card'} ${row.position == null ? '' : (BigInt(row.position) + 1n).toString()}`,
+    }));
+  } else if (currentPhase === GamePhase.SelectHand) {
     cards = handIds.map((cardId, i) => ({
       cardId,
       actionId: SELECTION.HAND_START + i,
@@ -188,7 +197,7 @@ export function SelectionPanel({
     if (!cardId.startsWith('effect-')) onInspectCard?.(cardId);
   };
 
-  if (cards.length === 0 && !canDecline) return null;
+  if (cards.length === 0 && !canDecline && !cardChoice?.rows.some((row) => row.operation === 'refresh_page' || row.operation === 'previous_page' || row.operation === 'next_page')) return null;
 
   return (
     <div
@@ -217,7 +226,7 @@ export function SelectionPanel({
                 onClick={() => onAction(SELECTION.DECLINE)}
                 className="px-4 py-2 bg-[var(--ib-panel-2)] hover:opacity-90 text-[var(--ib-bone)] text-sm font-medium rounded-lg border border-[var(--ib-line)] transition-colors"
               >
-                Decline
+                {cardChoice?.inspection_only || cardChoice?.rows.some((row) => row.operation === 'finish_impossible') ? 'Done' : 'Decline'}
               </button>
             )}
           </div>
@@ -225,7 +234,19 @@ export function SelectionPanel({
 
         {/* Content area */}
         <div className="overflow-y-auto p-5">
-          {isEffectChoice ? (
+          {cardChoice && (
+            <div className="flex items-center justify-center gap-4 mb-4" aria-label="Card choice pages">
+              {cardChoice.rows.filter((row) => row.operation === 'previous_page' || row.operation === 'next_page' || row.operation === 'refresh_page').map((row) => (
+                <button key={row.action_id} type="button"
+                  disabled={!validActionIds.has(row.action_id) || actionMask[row.action_id] !== 1}
+                  onClick={() => onAction(row.action_id)}>
+                  {row.operation === 'refresh_page' ? 'Refresh choices' : row.operation === 'previous_page' ? 'Previous page' : 'Next page'}
+                </button>
+              ))}
+              <span>Page {(BigInt(cardChoice.page_index) + 1n).toString()} of {cardChoice.page_count}</span>
+            </div>
+          )}
+          {isEffectChoice && !cardChoice ? (
             /* Effect choice: show cards with labels */
             <div className="flex flex-wrap gap-4 justify-center">
               {cards.map((entry) => (

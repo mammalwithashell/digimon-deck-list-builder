@@ -29,15 +29,19 @@ pub(crate) fn build_tensor_standard_full_v2_with_mask(
 }
 
 fn write_action_id_features(tensor: &mut [f32], game: &Game, player_id: PlayerId, mask: &[f32]) {
+    let page_actions: Option<Vec<u16>> = game.pending_selection.as_ref()
+        .and_then(|pending| pending.card_choice.as_ref())
+        .map(|owner| owner.view(game, player_id).rows.into_iter().map(|row| row.action_id).collect());
     for action_id in 0..ACTION_SPACE_SIZE {
         let action_id_u16 = action_id as u16;
-        let explanation = explain_action(game, player_id, action_id_u16);
         let base = v2_full::OFF_ACTION_ID_FEATURES + action_id * v2_full::ACTION_ID_ROW_SIZE;
 
         tensor[base] = mask[action_id];
         tensor[base + 1] = action_id as f32 / ACTION_SPACE_SIZE as f32;
-        tensor[base + 2] = action_kind_bucket(explanation.kind);
         tensor[base + 3] = phase_bucket(game.current_phase);
+        if page_actions.as_ref().is_some_and(|actions| !actions.contains(&action_id_u16)) { continue; }
+        let explanation = explain_action(game, player_id, action_id_u16);
+        tensor[base + 2] = action_kind_bucket(explanation.kind);
         tensor[base + 4] = explanation.source_zone.map(zone_bucket).unwrap_or(0.0);
         tensor[base + 5] = index_bucket(explanation.source_index);
         tensor[base + 6] = explanation.target_zone.map(zone_bucket).unwrap_or(0.0);

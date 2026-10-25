@@ -7,7 +7,6 @@
 //! transaction build: when it holds, a trash card is exposed as a legal
 //! DigiXros material action; when it does not, it is not.
 
-use digimon_engine::action::space::TRASH_EFFECT_START;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -97,7 +96,7 @@ fn trash_material_exposed_when_only_vemmon_on_field() {
         .pending_selection()
         .expect("DigiXros material selection installs");
     assert!(
-        prompt.valid_action_ids.contains(&TRASH_EFFECT_START),
+        prompt.card_choice.as_ref().unwrap().view(&runner.game, 0).rows.iter().any(|row| row.card_id.as_deref() == Some("VEMMON-TRASH")),
         "with only [Vemmon] on the field, the [Vemmon] in trash is a legal DigiXros material"
     );
 }
@@ -128,7 +127,7 @@ fn trash_material_hidden_when_non_vemmon_digimon_present() {
         .pending_selection()
         .expect("DigiXros material selection installs");
     assert!(
-        !prompt.valid_action_ids.contains(&TRASH_EFFECT_START),
+        !prompt.card_choice.as_ref().unwrap().view(&runner.game, 0).rows.iter().any(|row| row.card_id.as_deref() == Some("VEMMON-TRASH")),
         "a non-[Vemmon] Digimon breaks the condition — the trash material is not exposed"
     );
 }

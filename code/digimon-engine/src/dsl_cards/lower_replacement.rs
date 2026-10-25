@@ -1176,7 +1176,7 @@ fn matching_own_source_count(
             let source = crate::selection::SourceSelectionRef {
                 permanent: handle,
                 field_index: field_index as u8,
-                source_index: source_index as u8,
+                source_index,
                 card,
             };
             if eval_predicate_with_bindings(
@@ -1892,6 +1892,7 @@ fn install_delay_field_dna_stage(
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::EffectChoice,
         selecting_player: state.continuation.player,
@@ -2198,6 +2199,7 @@ fn install_delay_hand_digivolve_selection(
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::EffectChoice,
         selecting_player: player,
@@ -2451,6 +2453,7 @@ fn install_delay_play_from_hand_selection(
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::EffectChoice,
         selecting_player: player,
@@ -2957,6 +2960,7 @@ fn install_delay_dna_card_selection(
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::EffectChoice,
         selecting_player: player,

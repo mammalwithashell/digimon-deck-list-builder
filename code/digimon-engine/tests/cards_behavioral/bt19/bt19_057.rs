@@ -1,4 +1,4 @@
-use digimon_engine::action::space::{encode_source_select, PASS};
+use digimon_engine::action::space::{PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::combat::AttackResult;
@@ -82,7 +82,7 @@ fn bt19_057_when_attacking_may_digivolve_from_under_tamer() {
         .pending_selection()
         .expect("When Attacking should offer RaptorSparrowmon under a Tamer");
     assert!(pending.is_optional, "printed 'may digivolve' is declinable");
-    let raptor_action = encode_source_select(tamer.index as u16, 0).unwrap();
+    let raptor_action = physical_menu::source_action(&runner.game,tamer,0);
     assert!(pending.valid_action_ids.contains(&raptor_action));
 
     runner
@@ -136,3 +136,6 @@ fn bt19_057_inherited_grants_collision_to_xros_heart_carrier() {
         "Sparrowmon inherited text should grant Collision to an Xros Heart carrier"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

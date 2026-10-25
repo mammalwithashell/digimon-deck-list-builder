@@ -3,6 +3,10 @@ use sha2::{Digest, Sha256};
 mod cost_receipt_hash;
 #[path = "verification_selected_pins.rs"]
 mod selected_pin_hash;
+#[path = "verification_security_play.rs"]
+mod security_play_hash;
+#[path = "verification_link_pins.rs"]
+mod link_pin_projection_tests;
 
 use crate::card_source::CardSource;
 use crate::game::Game;
@@ -27,8 +31,9 @@ impl Game {
         token(&mut h, match version {
             VerificationDigestVersion::LegacyV2 => "digimon-engine.verification-digest.v2",
             VerificationDigestVersion::V3 => "digimon-engine.verification-digest.v3",
+            VerificationDigestVersion::V4 => "digimon-engine.verification-digest.v4",
         });
-        if version == VerificationDigestVersion::V3 {
+        if version != VerificationDigestVersion::LegacyV2 {
             // Explicit credit amount, paid status and owner after a parked payment. Receipt
             // references alone do not distinguish them. Preserve hook order,
             // including position relative to other continuation kinds.
@@ -41,9 +46,9 @@ impl Game {
             debug_field(&mut h, "digivolve_reducer_hook_credits", &credits);
         }
 
-        if version == VerificationDigestVersion::V3 {
-            selected_pin_hash::write(&mut h, self);
-            let dna = crate::game_actions::effect_dna::verification_rows(self);
+        if version != VerificationDigestVersion::LegacyV2 {
+            selected_pin_hash::write(&mut h, self, version==VerificationDigestVersion::V4);
+            let dna = crate::game_actions::effect_dna::verification_rows(self, version==VerificationDigestVersion::V4);
             if !dna.is_empty() { debug_field(&mut h, "effect_dna_declarations", &dna); }
             let carriers = crate::replacement::verification_plural_carriers(self);
             if !carriers.is_empty() {
@@ -197,10 +202,10 @@ impl Game {
             debug_field(&mut h, "face_up_security", &face_up);
             // `{Security}` [X Per Turn] counts (§15-14-1-2: the count is game
             // state), sorted like a permanent's `effect_activations`. Only
-            // non-zero counts are hashed and only in V3, so a state with no
+            // non-zero counts are hashed in V3 and later, so a state with no
             // counted `{Security}` activation (and every archival LegacyV2
             // recording) keeps its digest.
-            if version == crate::recorder::VerificationDigestVersion::V3 {
+            if version != crate::recorder::VerificationDigestVersion::LegacyV2 {
                 let mut counts: Vec<((u16, u8), u8)> = player
                     .security_effect_activations
                     .iter()
@@ -294,7 +299,17 @@ impl Game {
             None => token(&mut h, "pending_selection=none"),
         }
 
-        write_resume_stack(&mut h, self.pending_selection_resume.as_ref(), self);
+        if version == VerificationDigestVersion::V4 {
+            cost_receipt_hash::write_pending_play_credits(&mut h, self);
+            security_play_hash::write(&mut h, self);
+            debug_field(&mut h, "card_choice.next_id", &self.next_card_choice_id);
+            debug_field(&mut h, "card_choice.security_shuffle_generations", &self.security_shuffle_generations);
+            debug_field(&mut h, "card_choice.resolved", &self.resolved_card_choice);
+            if let Some(owner) = self.pending_selection.as_ref().and_then(|s| s.card_choice.as_ref()) {
+                debug_field(&mut h, "pending_selection.card_choice", owner);
+            }
+        }
+        write_resume_stack(&mut h, self.pending_selection_resume.as_ref(), self, version);
         let windows: Vec<_> = self
             .parked_replacement
             .iter()
@@ -304,7 +319,9 @@ impl Game {
             debug_field(&mut h, "parked_replacement_windows", &windows);
             for (index, window) in windows.iter().enumerate() {
                 if let Some(owned) = window.verification_play_declaration(self.pending_would_play_resume.as_ref()) {
-                    debug_field(&mut h, "parked_replacement_window.play_declaration", &(index, owned));
+                    if version==VerificationDigestVersion::V4 || self.pending_would_play_resume.as_ref().is_none_or(|current|format!("{owned:?}")!=format!("{current:?}")) {
+                        debug_field(&mut h, "parked_replacement_window.play_declaration", &(index, owned));
+                    }
                 }
             }
         }
@@ -598,6 +615,7 @@ fn write_resume_stack(
     hasher: &mut Sha256,
     stack: Option<&crate::resume::ResumeStack>,
     game: &Game,
+    version: crate::recorder::VerificationDigestVersion,
 ) {
     let Some(stack) = stack else {
         token(hasher, "pending_selection_resume=none");
@@ -631,7 +649,9 @@ fn write_resume_stack(
             if let Some(window) = state.window.as_ref() {
                 debug_field(hasher, "replacement.window", window);
                 if let Some(owned) = window.verification_play_declaration(game.pending_would_play_resume.as_ref()) {
-                    debug_field(hasher, "replacement.window.play_declaration", owned);
+                    if version==crate::recorder::VerificationDigestVersion::V4 || game.pending_would_play_resume.as_ref().is_none_or(|current|format!("{owned:?}")!=format!("{current:?}")) {
+                        debug_field(hasher, "replacement.window.play_declaration", owned);
+                    }
                 }
                 debug_field(
                     hasher,
@@ -647,7 +667,7 @@ fn write_resume_stack(
             }
         }
         if let crate::resume::ResumeFrame::ReplacementBody { inner, .. } = frame {
-            write_resume_stack(hasher, Some(inner), game);
+            write_resume_stack(hasher, Some(inner), game, version);
         }
         let dump = format!("{frame:?}");
         let variant = dump
@@ -680,7 +700,9 @@ fn write_resume_stack(
                 debug_field(hasher, "resume.count_choice", page);
             }
             debug_field(hasher, "resume.bind_as", bind_as);
-            field(hasher, "resume.inner_tail", inner_tail.len());
+            let length=if version==crate::recorder::VerificationDigestVersion::V4 {inner_tail.len()}
+                else {inner_tail.iter().filter(|step|!security_play_hash::is_runtime_step(step)).count()};
+            field(hasher, "resume.inner_tail", length);
             field(hasher, "resume.outer_conts", outer_conts.len());
         }
     }
@@ -1305,6 +1327,65 @@ effects:
         let mut changed = r.game.clone();
         changed.effect_digivolve_scopes[0].declaration.outer_conts[0].tail = std::sync::Arc::from(vec![CompiledStep::GainMemory(42)]);
         assert_ne!(r.game.verification_digest(), changed.verification_digest());
+    }
+
+    #[test]
+    fn pending_play_credit_changes_current_digest_but_not_archival_protocols() {
+        use crate::recorder::VerificationDigestVersion;
+        let mut r = fixture();
+        park(&mut r);
+        let mut branch = r.game.clone();
+        let mut changed = false;
+        for hook in &mut branch.after_selection_resume_hooks.0 {
+            if let AfterSelectionHook::PlayCostContinuation { accumulated_reduction, .. } = hook {
+                accumulated_reduction.pending_reduction = Some(7);
+                changed = true;
+            }
+        }
+        assert!(changed, "fixture must park a real play-cost continuation");
+        for version in [VerificationDigestVersion::LegacyV2, VerificationDigestVersion::V3] {
+            assert_eq!(r.game.verification_digest_with_version(version),
+                branch.verification_digest_with_version(version), "archival bytes exclude the new credit field");
+        }
+        assert_ne!(r.game.verification_digest(), branch.verification_digest(),
+            "different pending credit can change cost rollback and must be hashed");
+        assert_eq!(branch.verification_digest(), branch.clone().verification_digest());
+    }
+
+    #[test]
+    fn pending_play_order_credit_is_hashed_through_nested_resume_wrappers() {
+        use crate::recorder::VerificationDigestVersion;
+        for nested in [false, true] {
+            let mut r = fixture();
+            r.game.decode_action(PLAY_HAND_START, 0);
+            assert!(r.game.pending_selection.is_some());
+            if nested {
+                let inner = r.game.pending_selection_resume.take().unwrap();
+                r.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                    frames: vec![ResumeFrame::ReplacementBody { inner: Box::new(inner), outer_conts: Vec::new() }],
+                });
+            }
+            let mut branch = r.game.clone();
+            fn change(stack: &mut crate::resume::ResumeStack) -> bool {
+                for frame in &mut stack.frames {
+                    match frame {
+                        ResumeFrame::PlayFromHandCostReductionPrompt(state) => {
+                            state.accumulated_reduction.pending_reduction = Some(5);
+                            return true;
+                        }
+                        ResumeFrame::ReplacementBody { inner, .. } => { if change(inner) { return true; } }
+                        _ => {}
+                    }
+                }
+                false
+            }
+            assert!(change(branch.pending_selection_resume.as_mut().unwrap()), "real play-order frame required");
+            for version in [VerificationDigestVersion::LegacyV2, VerificationDigestVersion::V3] {
+                assert_eq!(r.game.verification_digest_with_version(version), branch.verification_digest_with_version(version));
+            }
+            assert_ne!(r.game.verification_digest(), branch.verification_digest());
+            assert_eq!(branch.verification_digest(), branch.clone().verification_digest());
+        }
     }
 
 }

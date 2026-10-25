@@ -1,0 +1,81 @@
+{
+  "status": "focused_fixture_migration_verified_aggregate_pending",
+  "production_changes": false,
+  "scope": [
+    "code/digimon-engine/tests/dsl/constructs/meta_source_keyword.rs",
+    "code/digimon-engine/tests/dsl/constructs/identity_state.rs",
+    "code/digimon-engine/tests/dsl/predicate_face_down_stack_position.rs"
+  ],
+  "aggregate_before": {
+    "log": "verification/logs/final-tier2-mimalloc-full-run.log",
+    "passed": 1535,
+    "failed": 57,
+    "ignored": 1,
+    "total": 1593
+  },
+  "assigned_failures_before": {
+    "constructs::meta_source_keyword::": [
+      "constructs::meta_source_keyword::explicit_face_down_top_source_keeps_position_but_cannot_fire_its_inherited_witness",
+      "constructs::meta_source_keyword::mixed_source_visibility_preserves_the_higher_cards_identity_in_battle_and_breeding",
+      "constructs::meta_source_keyword::top_source_declining_material_or_host_leaves_both_origins_and_stacks_untouched",
+      "constructs::meta_source_keyword::top_source_without_a_matching_host_does_not_consume_the_selected_material",
+      "constructs::meta_source_keyword::top_source_from_hand_or_trash_preserves_exact_stack_and_physical_identity"
+    ],
+    "constructs::identity_state::": [
+      "constructs::identity_state::source_count_face_down_row_d_matches_current_dcgo_behavior"
+    ],
+    "predicate_face_down_stack_position::": [
+      "predicate_face_down_stack_position::select_own_sources_face_down_and_bottom_all_of_offers_only_that_source",
+      "predicate_face_down_stack_position::select_own_sources_is_bottom_source_false_filter_offers_only_non_bottom",
+      "predicate_face_down_stack_position::select_own_sources_is_bottom_source_filter_offers_only_index_zero",
+      "predicate_face_down_stack_position::select_own_sources_host_kind_is_tamer_offers_only_tamer_hosted_source",
+      "predicate_face_down_stack_position::select_own_sources_host_kind_is_inside_all_of_combinator",
+      "predicate_face_down_stack_position::select_own_sources_is_face_down_false_filter_offers_only_face_up_sources",
+      "predicate_face_down_stack_position::select_own_sources_is_face_down_inside_any_of_combinator",
+      "predicate_face_down_stack_position::select_own_sources_host_kind_is_digimon_offers_only_digimon_hosted_source",
+      "predicate_face_down_stack_position::select_own_sources_is_face_down_inside_all_of_combinator",
+      "predicate_face_down_stack_position::select_own_sources_is_face_down_filter_offers_only_face_down_sources"
+    ]
+  },
+  "changes": [
+    "Meta source-keyword mixed-zone fixtures translate semantic original-zone coordinates to current supplied owned-row actions via existing test-only helper, retain exact masks, actor, physical identity, clone and atomic checks.",
+    "Source predicate fixtures compare actual typed physical carrier/position candidates, assert each presented commit is currently legal, other seat cannot choose it, and face-down printed identities stay hidden. Old per-source encoded action-band assumptions removed.",
+    "Replaced historical DCGO-row-D expectation with CR4-7-9/4-7-10: a face-down source has no referenceable name even if its owner may inspect it. Each carrier now has only1 referenceable Vemmon, so at-least2 filter offers no target; mandatory continuation still gains memory. Test renamed source_count_face_down_row_d_obeys_cr_4_7_9_characteristic_opacity."
+  ],
+  "checks": [
+    {
+      "log": "verification/logs/qualification-meta-source-keyword.log",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "verification/logs/qualification-identity-state.log",
+      "passed": 60,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "verification/logs/qualification-source-predicate-pages.log",
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "focused_total": {
+    "passed": 81,
+    "failed": 0,
+    "ignored": 0
+  },
+  "test_sha256": {
+    "code/digimon-engine/tests/dsl/constructs/meta_source_keyword.rs": "a98c391973f38257e134566b33584185781b13f61561b7fbe92b6a9651cad848",
+    "code/digimon-engine/tests/dsl/constructs/identity_state.rs": "26a7d78b3de2e4dd6a96f7cf46f6054ac2d74b3120d79ae4f6f0794b10dc2e71",
+    "code/digimon-engine/tests/dsl/predicate_face_down_stack_position.rs": "039ab4c0e3574b6742cbd068ee8252206af4e759e78a214d24cf8147871f22c5"
+  },
+  "limits": [
+    "Focused81passes do not replace the full DSL1593 denominator or certify the whole training gate.",
+    "Parent must rerun complete ladder after all fixture owners finish.",
+    "Regenerate lowering coverage because old row-D function name remains in generated qa/impact/lowering_coverage.json; no manual generated-artifact changes here.",
+    "No production source, YAML, model, wheel or admission ledger edits by this qualification-fixture subtask."
+  ]
+}

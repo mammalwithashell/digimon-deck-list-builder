@@ -15,7 +15,7 @@ pub(crate) struct EffectDnaHandRoute {
 
 /// DNA's new resolver state is hashed explicitly; normal replay projections do
 /// not acquire new rows when no DNA declaration is parked.
-pub(crate) fn verification_rows(game: &Game) -> Vec<(String, String)> {
+pub(crate) fn verification_rows(game: &Game, include_link_pins: bool) -> Vec<(String, String)> {
     fn normalize(value: &mut serde_json::Value) {
         match value {
             serde_json::Value::Object(map) => {
@@ -24,11 +24,15 @@ pub(crate) fn verification_rows(game: &Game) -> Vec<(String, String)> {
                 }
                 for value in map.values_mut() { normalize(value); }
             }
-            serde_json::Value::Array(values) => for value in values { normalize(value); },
+            serde_json::Value::Array(values) => {
+                // Runtime receipt operations are hashed as correlated V4 refs.
+                values.retain(|value|value.get("SecurityPlayCaptured").is_none() && value.get("SecurityPlayFinalize").is_none());
+                for value in values { normalize(value); }
+            },
             _ => {}
         }
     }
-    fn push(path: String, state: &EffectDnaHandDeclaration, rows: &mut Vec<(String, String)>) {
+    fn push(path: String, state: &EffectDnaHandDeclaration, rows: &mut Vec<(String, String)>, include_link_pins: bool) {
         let mut declaration = state.clone();
         declaration.outer_conts.clear();
         rows.push((path.clone(), format!("{declaration:?}")));
@@ -37,18 +41,18 @@ pub(crate) fn verification_rows(game: &Game) -> Vec<(String, String)> {
             normalize(&mut steps);
             rows.push((format!("{path}/tail/{index}"), format!("{:?}", (
                 steps.to_string(), tail.source_card, tail.source_permanent, tail.player,
-                &tail.trigger_context, &tail.runtime, tail.bindings.canonical_verification_debug(),
+                &tail.trigger_context, &tail.runtime, if include_link_pins {tail.bindings.canonical_verification_debug()} else {tail.bindings.legacy_canonical_verification_debug()},
             ))));
         }
     }
-    fn frames(path: &str, stack: &ResumeStack, rows: &mut Vec<(String, String)>) {
+    fn frames(path: &str, stack: &ResumeStack, rows: &mut Vec<(String, String)>, include_link_pins: bool) {
         for (index, frame) in stack.frames.iter().enumerate() {
             let path = format!("{path}/{index}");
             match frame {
-                ResumeFrame::EffectDnaHandRoute(s) => push(path, s, rows),
+                ResumeFrame::EffectDnaHandRoute(s) => push(path, s, rows, include_link_pins),
                 ResumeFrame::DigivolveReducerPrompt(s) | ResumeFrame::DigivolveReducerSuspend(s) => {
                     if let Some(dna) = &s.dna_effect {
-                        push(path.clone(), dna, rows);
+                        push(path.clone(), dna, rows, include_link_pins);
                         let mut chain = s.clone(); chain.dna_effect = None;
                         rows.push((format!("{path}/chain"), format!("{chain:?}")));
                     }
@@ -57,24 +61,24 @@ pub(crate) fn verification_rows(game: &Game) -> Vec<(String, String)> {
                 | ResumeFrame::DelayCancelAfterSelection { inner, .. } | ResumeFrame::DelayHandDigivolveAfterSelection { inner, .. }
                 | ResumeFrame::DelayDnaAfterSelection { inner, .. } | ResumeFrame::DelayFieldDnaAfterPayment { inner, .. }
                 | ResumeFrame::DelayPlayFromHandAfterSelection { inner, .. } | ResumeFrame::DelayPlayFromUnionAfterSelection { inner, .. }
-                | ResumeFrame::DelayBodyAfterCost { inner, .. } => frames(&path, inner, rows),
+                | ResumeFrame::DelayBodyAfterCost { inner, .. } => frames(&path, inner, rows, include_link_pins),
                 _ => {}
             }
         }
     }
     let mut rows = Vec::new();
-    if let Some(stack) = &game.pending_selection_resume { frames("pending", stack, &mut rows); }
+    if let Some(stack) = &game.pending_selection_resume { frames("pending", stack, &mut rows, include_link_pins); }
     for (index, hook) in game.after_selection_resume_hooks.0.iter().enumerate() {
         if let crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } = hook {
             if let Some(dna) = &state.dna_effect {
-                push(format!("hook/{index}"), dna, &mut rows);
+                push(format!("hook/{index}"), dna, &mut rows, include_link_pins);
                 let mut chain = state.clone(); chain.dna_effect = None;
                 rows.push((format!("hook/{index}/chain"), format!("{chain:?}")));
             }
         }
     }
     for (index, scope) in game.effect_dna_would_scopes.iter().enumerate() {
-        push(format!("would/{index}"), &scope.declaration, &mut rows);
+        push(format!("would/{index}"), &scope.declaration, &mut rows, include_link_pins);
         rows.push((format!("would/{index}/cost"), scope.effective_cost.to_string()));
     }
     rows
@@ -431,7 +435,7 @@ impl Game {
         }).collect();
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
-        self.pending_selection = Some(PendingSelection { zone_owner: Some(state.player),
+        self.pending_selection = Some(PendingSelection { card_choice: None, zone_owner: Some(state.player),
             kind: crate::selection::SelectionKind::EffectChoice, selecting_player: state.player,
             previous_phase, valid_action_ids: entries.iter().map(|e| e.action_id).collect(),
             is_optional: false, prompt: "Choose a DNA requirement and material order".into(),

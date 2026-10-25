@@ -357,7 +357,7 @@ fn bt12_031_when_digivolving_with_no_opp_digimon_does_not_error() {
 // authored as a `select_own_sources` (min 0, max 1) name-filtered to
 // "Imperialdramon: Dragon Mode", branching on `binding_count_eq`.
 
-use digimon_engine::action::space::{encode_source_select, PASS};
+use digimon_engine::action::space::PASS;
 
 /// A card named "Imperialdramon: Dragon Mode" — pushed as a digivolution
 /// source under BT12-031 so the `name_contains` filter can pick it.
@@ -414,7 +414,7 @@ fn bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_b
     );
 
     // Accept: pick the Dragon Mode source (source_index 0, below BT12-031).
-    let pick = encode_source_select(fm.index as u16, 0).expect("Dragon Mode source action");
+    let pick = physical_menu::source_action(&runner.game, fm, 0);
     runner
         .execute_action(0, pick)
         .expect("pick the Dragon Mode source");
@@ -673,3 +673,6 @@ fn bt12_031_does_not_gain_keywords_with_fewer_than_2_colors() {
         "mono-color BT12-031 must NOT gain <Blocker> (self_color_count_gte gate fails)"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

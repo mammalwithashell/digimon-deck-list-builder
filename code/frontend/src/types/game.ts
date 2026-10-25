@@ -1,4 +1,5 @@
 import type { CountChoice } from '@/types/countChoice';
+import type { CardChoice } from '@/types/cardChoice';
 export enum GamePhase {
   Start = 0,
   Draw = 1,
@@ -133,6 +134,7 @@ export interface KeywordPrompt {
 }
 
 export interface PendingSelection {
+  cardChoice?: CardChoice | null;
   phase: GamePhase;
   validIndices: number[];
   isOptional: boolean;

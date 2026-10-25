@@ -1059,7 +1059,7 @@ pub enum CostGuard {
     /// (BT25-083 "1 Option card from any of your Digimon's digivolution
     /// cards"): the `select_union_zone` pick that `trash_union_bound` pays
     /// offers a card whose trash isn't blocked -- asked through the pick's own
-    /// candidate builder (`union_zone_candidate_actions`), so the guard reads a
+    /// candidate builder (`union_zone_candidates_physical`), so the guard reads a
     /// card exactly as the pick does (a DUAL digivolution card is an Option
     /// card there, §4-6-6-2, official Q&A Q6395).
     UnionZoneTrash {
@@ -1374,7 +1374,7 @@ impl CostGuard {
                                 let source = crate::selection::SourceSelectionRef {
                                     permanent: host,
                                     field_index: host.index,
-                                    source_index: *index as u8,
+                                    source_index: *index,
                                     card: card.handle(),
                                 };
                                 (!trash_cost
@@ -1436,7 +1436,7 @@ impl CostGuard {
                         None,
                     )
                 };
-                let offered = crate::effect_context::selections::union_zone_candidate_actions(
+                let offered = crate::effect_context::selections::union_zone_candidates_physical(
                     game,
                     rctx.player,
                     *zones,
@@ -1446,13 +1446,7 @@ impl CostGuard {
                 );
                 // A digivolution card whose trash is prohibited can't pay
                 // "by trashing" (§15-7-4); a hand card can always be trashed.
-                crate::dsl_cards::step::selections::union_zone_candidates(
-                    game,
-                    rctx.player,
-                    &offered,
-                )
-                .into_iter()
-                .any(|(_, card, origin)| match origin {
+                offered.into_iter().any(|(card, origin)| match origin {
                     crate::selection::UnionZoneOrigin::Material { carrier, .. } => {
                         !game.source_card_trash_blocked(carrier, card, rctx.player)
                     }

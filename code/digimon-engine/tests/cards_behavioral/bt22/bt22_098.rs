@@ -436,12 +436,12 @@ fn bt22_098_main_hand_target_is_masked_and_played_without_extra_cost() {
         "PASS must be legal because the target play is optional"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a| a != digimon_engine::action::space::PASS).count(),
         1,
         "only exact Shoemon/Arisa should be legal union targets; ShoeShoemon must not match [Shoemon]"
     );
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, owned_union_fixture::action(&runner.game, 0, "SHOE", false).expect("printed eligible physical hand row"))
         .expect("choose Shoemon");
     runner.auto_resolve().expect("resolve Main");
 
@@ -851,18 +851,29 @@ fn bt22_098_main_can_choose_shoemon_or_arisa_from_hand_or_trash_in_one_masked_ch
     // Exactly 2 valid targets: ARISA_HAND (hand-origin) and SHOE_TRASH (trash-origin).
     // BAD_HAND and BAD_TRASH have wrong names and must be excluded.
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a| a != digimon_engine::action::space::PASS).count(),
         2,
         "only [Shoemon] (trash) and [Arisa Kinosaki] (hand) should be eligible; \
          non-matching cards must be filtered out"
     );
 
+    let arisa_action = owned_union_fixture::action(&runner.game, 0, "ARISA_HAND", false).expect("eligible Arisa hand row");
+    let shoe_action = owned_union_fixture::action(&runner.game, 0, "SHOE_TRASH", true).expect("eligible Shoemon trash row");
+    assert!(view.valid_action_ids.contains(&arisa_action));
+    assert!(view.valid_action_ids.contains(&shoe_action));
+    assert!(owned_union_fixture::action(&runner.game, 0, "BAD_HAND", false).is_none());
+    assert!(owned_union_fixture::action(&runner.game, 0, "BAD_TRASH", true).is_none());
+    assert_eq!(digimon_engine::action::build_action_mask(&runner.game, 0)[digimon_engine::action::space::PASS as usize], 1.0);
+    let mut clone = runner.game.clone();
+    clone.resolve_selection(0, arisa_action).expect("clone selects the other physical origin");
+    assert!(clone.player(0).battle_area.iter().any(|p|p.top_card().card_id(&clone.card_data)=="ARISA_HAND"));
+    assert_eq!(clone.memory, memory_before, "clone free play retains memory");
     // Choose the first valid action (whichever it is) and verify origin-preserving play.
     let trash_before = runner.game.players[0].trash.len();
     let hand_before = runner.game.players[0].hand.len();
 
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, shoe_action)
         .expect("select one valid union target");
     runner.auto_resolve().expect("resolve Main");
 
@@ -999,12 +1010,12 @@ fn bt22_098_security_activates_main_union_play_then_places_self() {
         "the security 'you may play' choice keeps PASS legal"
     );
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a| a != digimon_engine::action::space::PASS).count(),
         1,
         "only the Arisa Kinosaki card in player 1's hand is an eligible target"
     );
     runner
-        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, owned_union_fixture::action(&runner.game, 1, "ARISA_HAND", false).expect("printed eligible physical hand row"))
         .expect("choose Arisa Kinosaki from hand during the security effect");
     runner
         .auto_resolve()
@@ -1045,3 +1056,6 @@ fn bt22_098_security_activates_main_union_play_then_places_self() {
         }
     ));
 }
+
+#[path="../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

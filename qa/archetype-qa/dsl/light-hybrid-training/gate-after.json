@@ -1,0 +1,168 @@
+{
+  "generated_at": "2026-10-25T00:09:22.139160+00:00",
+  "base_revision": "ec360e352",
+  "scope": "Exact local LightHybrid 54 copies / 20 unique IDs; current mechanics/card training gate",
+  "source_artifact": "data/card_admissibility.json",
+  "source_artifact_sha256": "1128f4efc64fe9881a0e797a76ce49d11d7489fa3297f144dfcb579e53dc5e9a",
+  "total_ids": 20,
+  "total_copies": 54,
+  "admissible_ids": 16,
+  "admissible_copies": 46,
+  "admissible_egg_copies": 4,
+  "admissible_main_copies": 42,
+  "mechanics_ready": true,
+  "cards": [
+    {
+      "card_id": "EX7-002",
+      "count": 4,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT6-022",
+      "count": 2,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT17-020",
+      "count": 1,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "P-249",
+      "count": 4,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT16-082",
+      "count": 4,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT17-023",
+      "count": 4,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-037",
+      "count": 1,
+      "admissible": false,
+      "reasons": [
+        "failed_verdict"
+      ],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-067",
+      "count": 2,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-063",
+      "count": 1,
+      "admissible": false,
+      "reasons": [
+        "failed_verdict"
+      ],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-077",
+      "count": 3,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-076",
+      "count": 3,
+      "admissible": false,
+      "reasons": [
+        "failed_verdict"
+      ],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "AD1-015",
+      "count": 4,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT7-038",
+      "count": 1,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-081",
+      "count": 2,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-042",
+      "count": 3,
+      "admissible": false,
+      "reasons": [
+        "failed_verdict"
+      ],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "P-153",
+      "count": 2,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-088",
+      "count": 3,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "AD1-023",
+      "count": 4,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-094",
+      "count": 3,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    },
+    {
+      "card_id": "BT18-097",
+      "count": 3,
+      "admissible": true,
+      "reasons": [],
+      "untested_constructs": []
+    }
+  ],
+  "limits": [
+    "Admission is not live DCGO parity or model training evidence.",
+    "No wheel installed or training launched; exact deck remains inadmissible."
+  ]
+}

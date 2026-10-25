@@ -1,9 +1,10 @@
 import { useCallback, useRef } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import * as gameApi from '@/api/gameApi';
+import { cardChoiceToken } from '@/types/cardChoice';
 
 export function useGameActions() {
-  const { gameId, setGameState, setActionMask, appendEvents } = useGameStore();
+  const { gameId, pendingSelection, setGameState, setActionMask, appendEvents } = useGameStore();
   const isPending = useRef(false);
 
   const sendAction = useCallback(
@@ -13,7 +14,9 @@ export function useGameActions() {
 
       try {
         // Send the human action
-        const actionResult = await gameApi.sendAction(gameId, actionId);
+        const actionResult = await gameApi.sendAction(gameId, actionId, {
+          expectedCardChoice: cardChoiceToken(pendingSelection?.cardChoice),
+        });
         setGameState(actionResult.state);
         setActionMask(actionResult.action_mask);
         if (actionResult.events) appendEvents(actionResult.events);
@@ -29,7 +32,7 @@ export function useGameActions() {
         isPending.current = false;
       }
     },
-    [gameId, setGameState, setActionMask, appendEvents],
+    [gameId, pendingSelection, setGameState, setActionMask, appendEvents],
   );
 
   return { sendAction, isPending };

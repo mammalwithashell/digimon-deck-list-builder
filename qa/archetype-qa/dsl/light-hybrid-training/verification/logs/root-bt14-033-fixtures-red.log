@@ -1,0 +1,51 @@
+
+running 24 tests
+test bt14::bt14_033::bt14_033_accepting_digivolve_emits_no_memory_change_event ... ok
+test bt14::bt14_033::bt14_033_accepting_digivolve_pays_no_memory_cost ... ok
+test bt14::bt14_033::bt14_033_accepting_digivolve_removes_exactly_the_picked_card_from_security_preserving_others ... FAILED
+test bt14::bt14_033::bt14_033_accepting_digivolves_patamon_into_the_picked_security_card ... ok
+test bt14::bt14_033::bt14_033_accepting_hand_to_bottom_security_moves_the_card_to_the_bottom ... ok
+test bt14::bt14_033::bt14_033_after_digivolving_offers_optional_hand_to_bottom_security ... ok
+test bt14::bt14_033::bt14_033_declining_does_not_offer_hand_to_bottom_security_followup ... ok
+test bt14::bt14_033::bt14_033_declining_hand_to_bottom_security_leaves_hand_and_security_unchanged ... ok
+test bt14::bt14_033::bt14_033_declining_leaves_patamon_undigivolved_but_still_shuffles ... ok
+test bt14::bt14_033::bt14_033_hand_to_bottom_security_filters_out_non_vaccine_hand_cards ... ok
+test bt14::bt14_033::bt14_033_hand_to_bottom_security_noop_when_no_eligible_hand_card ... ok
+test bt14::bt14_033::bt14_033_has_no_special_alt_paths ... ok
+test bt14::bt14_033::bt14_033_has_two_triggered_clauses ... ok
+test bt14::bt14_033::bt14_033_inherited_clause_is_your_turn_once_per_turn ... ok
+test bt14::bt14_033::bt14_033_inherited_does_not_fire_for_opponent_security_addition ... ok
+test bt14::bt14_033::bt14_033_inherited_dormant_while_patamon_is_top_card ... ok
+test bt14::bt14_033::bt14_033_inherited_gains_memory_when_card_added_to_own_security ... ok
+test bt14::bt14_033::bt14_033_inherited_opt_blocks_second_memory_gain_same_turn ... ok
+test bt14::bt14_033::bt14_033_no_selection_when_security_empty ... ok
+test bt14::bt14_033::bt14_033_search_clause_has_start_of_main_timing_own_scope ... ok
+test bt14::bt14_033::bt14_033_security_nonempty_but_no_eligible_card_is_pure_shuffle_no_op ... ok
+test bt14::bt14_033::bt14_033_security_selection_filters_out_non_matching_colors_and_traits ... FAILED
+test bt14::bt14_033::bt14_033_start_of_main_installs_security_selection_when_eligible_card_present ... ok
+test bt14::bt14_033::bt14_033_yaml_compiles_and_is_in_pack ... ok
+
+failures:
+
+---- bt14::bt14_033::bt14_033_accepting_digivolve_removes_exactly_the_picked_card_from_security_preserving_others stdout ----
+
+thread 'bt14::bt14_033::bt14_033_accepting_digivolve_removes_exactly_the_picked_card_from_security_preserving_others' (48328) panicked at code\digimon-engine\tests\cards_behavioral\bt14\bt14_033.rs:457:5:
+assertion `left == right` failed: only YEL-VAC is eligible
+  left: 2
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt14::bt14_033::bt14_033_security_selection_filters_out_non_matching_colors_and_traits stdout ----
+
+thread 'bt14::bt14_033::bt14_033_security_selection_filters_out_non_matching_colors_and_traits' (32536) panicked at code\digimon-engine\tests\cards_behavioral\bt14\bt14_033.rs:370:5:
+assertion `left == right` failed: only the yellow [Vaccine] security card should be a legal pick (RED-VAC excluded)
+  left: 2
+ right: 1
+
+
+failures:
+    bt14::bt14_033::bt14_033_accepting_digivolve_removes_exactly_the_picked_card_from_security_preserving_others
+    bt14::bt14_033::bt14_033_security_selection_filters_out_non_matching_colors_and_traits
+
+test result: FAILED. 22 passed; 2 failed; 0 ignored; 0 measured; 12731 filtered out; finished in 30.57s
+

@@ -1,0 +1,353 @@
+impact index is stale: qa\impact\dsl_impact_index.json
+Run `python code/tools/impact_index.py --out qa/impact/dsl_impact_index.json`.
+lowering impact map is current: qa\impact\lowering_verb_map.json
+qa\rules\keyword_semantics_matrix.json is current
+rules coverage check: ok (361 Rust tests found, 0 warnings)
+Comprehensive Rules 4.3 conformance coverage: 1119 obligations (denominator)
+
+| Ch | Chapter | rules | proven | not-testable | gap (blocking) | gap | % proven of testable |
+|---|---|---|---|---|---|---|---|
+| 1 | Game Overview | 55 | 0 | 11 | 0 | 44 | 0.0% |
+| 2 | Card Information | 115 | 0 | 30 | 0 | 85 | 0.0% |
+| 3 | Game Areas | 66 | 10 | 14 | 0 | 42 | 19.2% |
+| 4 | Basic Terminology | 139 | 22 | 34 | 0 | 83 | 21.0% |
+| 5 | Game Preparation | 14 | 0 | 2 | 0 | 12 | 0.0% |
+| 6 | Game Procedures | 45 | 1 | 10 | 0 | 34 | 2.9% |
+| 7 | Playing a Card | 49 | 0 | 6 | 0 | 43 | 0.0% |
+| 8 | Digivolution | 55 | 0 | 8 | 0 | 47 | 0.0% |
+| 9 | Using Cards | 13 | 2 | 1 | 0 | 10 | 16.7% |
+| 10 | Link | 10 | 0 | 2 | 0 | 8 | 0.0% |
+| 11 | Attacking | 40 | 7 | 8 | 0 | 25 | 21.9% |
+| 12 | Blocking | 9 | 4 | 1 | 0 | 4 | 50.0% |
+| 13 | Security Checks | 18 | 7 | 3 | 0 | 8 | 46.7% |
+| 14 | Battles | 10 | 7 | 0 | 0 | 3 | 70.0% |
+| 15 | Effect Rules | 244 | 47 | 66 | 0 | 131 | 26.4% |
+| 16 | Keyword Effects | 206 | 162 | 44 | 0 | 0 | 100.0% |
+| 17 | Rule Checks | 16 | 11 | 3 | 0 | 2 | 84.6% |
+| 18 | Other Information | 15 | 9 | 3 | 0 | 3 | 75.0% |
+| Total | | 1119 | 289 | 246 | 0 | 584 | 33.1% |
+
+Mechanics set: proven 248 / not-testable 152 / gap-blocking 0 / gap 315 of 715 obligations
+Rust conformance tests found: 361
+code\digimon-engine\tests\rules_faq\generated_conformance.rs is current
+authoring guide is current: qa\exam-authoring-guide.json
+ok: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\data\oracle_readiness.json is up to date
+mechanics readiness check: ok. 715 obligations in the mechanics set: 248 proven / 152 not-testable / 0 gap(blocking) / 315 gap(non-blocking) => ready: true
+  ready = no mechanics obligation is flagged outcome-changing (`blocks_training`); 315 open mechanics gaps are unflagged and listed in `qa/rules/cr_obligations.json`
+error: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\qa\impact\lowering_coverage.json is stale; run `PYTHONPATH=code python -m tools.lowering_coverage`
+error: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\data\card_admissibility.json is stale (recorded source hashes differ from the current inputs); run `PYTHONPATH=code python -m digimon_gym.agents.card_admissibility`
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 174 items
+
+code\tests\tools\test_impact_index.py ....                               [  2%]
+code\tests\tools\test_impact_lowering_map.py ..                          [  3%]
+code\tests\tools\test_impact_scope.py ...                                [  5%]
+code\tests\tools\test_keyword_semantics_matrix.py ...                    [  6%]
+code\tests\tools\test_rules_coverage_report.py ..............            [ 14%]
+code\tests\tools\test_rules_build_obligations.py ..............          [ 22%]
+code\tests\tools\test_rules_parse.py .............                       [ 30%]
+code\tests\tools\test_rules_renumber_map.py ......                       [ 33%]
+code\tests\tools\test_faq_conformance_generator.py ..                    [ 35%]
+code\tests\tools\test_clause_coverage_authoring_guide.py ....            [ 37%]
+code\tests\tools\test_clause_coverage_readiness.py ..................... [ 49%]
+.......................................                                  [ 71%]
+code\tests\tools\test_verification_tier_manifest.py ..                   [ 72%]
+code\tests\tools\test_nextest_config.py ..                               [ 74%]
+code\tests\tools\test_verify_script.py ..                                [ 75%]
+code\tests\tools\test_embedded_card_paths_case.py .                      [ 75%]
+code\tests\tools\test_card_loop_interactions_probes.py ................. [ 85%]
+.................                                                        [ 95%]
+code\tests\tools\test_clause_coverage_keyword_brief.py ........          [100%]
+
+============================ 174 passed in 29.60s =============================
+==> tier 0: impact_index_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/impact_index.py --cards-dir code/digimon-engine/cards --out qa/impact/dsl_impact_index.json --check
+    failed in 12.1s
+==> tier 0: impact_lowering_map_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/impact_lowering_map.py --map qa/impact/lowering_verb_map.json --check
+    ok in 0.4s
+==> tier 0: keyword_semantics_matrix_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/keyword_semantics_matrix.py --source docs/digimon-rules/keyword-semantics.md --engine-enum code/digimon-engine/src/enums.rs --out qa/rules/keyword_semantics_matrix.json --check
+    ok in 0.3s
+==> tier 0: rules_coverage_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/rules/coverage_report.py --check
+    ok in 0.8s
+==> tier 0: rules_obligations_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m tools.rules.build_obligations --check
+    ok in 0.7s
+==> tier 0: rules_coverage_report
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/rules/coverage_report.py
+    ok in 0.3s
+==> tier 0: faq_conformance_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/faq_conformance_generator.py --cases qa/rules/faq_conformance_cases.json --out code/digimon-engine/tests/rules_faq/generated_conformance.rs --check
+    ok in 0.3s
+==> tier 0: authoring_guide_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/clause_coverage/authoring_guide.py --check
+    ok in 0.3s
+==> tier 0: oracle_readiness_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/clause_coverage/readiness.py --check
+    ok in 26.3s
+==> tier 0: mechanics_readiness_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m tools.rules.mechanics_readiness --check
+    ok in 0.5s
+==> tier 0: lowering_coverage_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m tools.lowering_coverage --check
+    failed in 36.1s
+==> tier 0: card_admissibility_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m digimon_gym.agents.card_admissibility --check
+    failed in 18.7s
+==> tier 0: verification_tool_tests
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m pytest code/tests/tools/test_impact_index.py code/tests/tools/test_impact_lowering_map.py code/tests/tools/test_impact_scope.py code/tests/tools/test_keyword_semantics_matrix.py code/tests/tools/test_rules_coverage_report.py code/tests/tools/test_rules_build_obligations.py code/tests/tools/test_rules_parse.py code/tests/tools/test_rules_renumber_map.py code/tests/tools/test_faq_conformance_generator.py code/tests/tools/test_clause_coverage_authoring_guide.py code/tests/tools/test_clause_coverage_readiness.py code/tests/tools/test_verification_tier_manifest.py code/tests/tools/test_nextest_config.py code/tests/tools/test_verify_script.py code/tests/tools/test_embedded_card_paths_case.py code/tests/tools/test_card_loop_interactions_probes.py code/tests/tools/test_clause_coverage_keyword_brief.py -q
+    ok in 30.9s
+{
+  "requested_tier": 0,
+  "mode": "run",
+  "metadata": {},
+  "results": [
+    {
+      "tier": 0,
+      "name": "impact_index_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/impact_index.py",
+        "--cards-dir",
+        "code/digimon-engine/cards",
+        "--out",
+        "qa/impact/dsl_impact_index.json",
+        "--check"
+      ],
+      "env": {},
+      "status": "failed",
+      "seconds": 12.08512599999085,
+      "returncode": 1
+    },
+    {
+      "tier": 0,
+      "name": "impact_lowering_map_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/impact_lowering_map.py",
+        "--map",
+        "qa/impact/lowering_verb_map.json",
+        "--check"
+      ],
+      "env": {},
+      "status": "ok",
+      "seconds": 0.35405680001713336,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "keyword_semantics_matrix_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/keyword_semantics_matrix.py",
+        "--source",
+        "docs/digimon-rules/keyword-semantics.md",
+        "--engine-enum",
+        "code/digimon-engine/src/enums.rs",
+        "--out",
+        "qa/rules/keyword_semantics_matrix.json",
+        "--check"
+      ],
+      "env": {},
+      "status": "ok",
+      "seconds": 0.3076178999617696,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "rules_coverage_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/rules/coverage_report.py",
+        "--check"
+      ],
+      "env": {},
+      "status": "ok",
+      "seconds": 0.7892061999300495,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "rules_obligations_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "tools.rules.build_obligations",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      },
+      "status": "ok",
+      "seconds": 0.6569767000619322,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "rules_coverage_report",
+      "kind": "python",
+      "required": false,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/rules/coverage_report.py"
+      ],
+      "env": {},
+      "status": "ok",
+      "seconds": 0.25637810002081096,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "faq_conformance_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/faq_conformance_generator.py",
+        "--cases",
+        "qa/rules/faq_conformance_cases.json",
+        "--out",
+        "code/digimon-engine/tests/rules_faq/generated_conformance.rs",
+        "--check"
+      ],
+      "env": {},
+      "status": "ok",
+      "seconds": 0.2672239999519661,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "authoring_guide_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/clause_coverage/authoring_guide.py",
+        "--check"
+      ],
+      "env": {},
+      "status": "ok",
+      "seconds": 0.2610466000624001,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "oracle_readiness_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/clause_coverage/readiness.py",
+        "--check"
+      ],
+      "env": {},
+      "status": "ok",
+      "seconds": 26.29467970004771,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "mechanics_readiness_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "tools.rules.mechanics_readiness",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      },
+      "status": "ok",
+      "seconds": 0.502386000007391,
+      "returncode": 0
+    },
+    {
+      "tier": 0,
+      "name": "lowering_coverage_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "tools.lowering_coverage",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      },
+      "status": "failed",
+      "seconds": 36.12255959992763,
+      "returncode": 1
+    },
+    {
+      "tier": 0,
+      "name": "card_admissibility_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "digimon_gym.agents.card_admissibility",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      },
+      "status": "failed",
+      "seconds": 18.669434999930672,
+      "returncode": 1
+    },
+    {
+      "tier": 0,
+      "name": "verification_tool_tests",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "code/tests/tools/test_impact_index.py",
+        "code/tests/tools/test_impact_lowering_map.py",
+        "code/tests/tools/test_impact_scope.py",
+        "code/tests/tools/test_keyword_semantics_matrix.py",
+        "code/tests/tools/test_rules_coverage_report.py",
+        "code/tests/tools/test_rules_build_obligations.py",
+        "code/tests/tools/test_rules_parse.py",
+        "code/tests/tools/test_rules_renumber_map.py",
+        "code/tests/tools/test_faq_conformance_generator.py",
+        "code/tests/tools/test_clause_coverage_authoring_guide.py",
+        "code/tests/tools/test_clause_coverage_readiness.py",
+        "code/tests/tools/test_verification_tier_manifest.py",
+        "code/tests/tools/test_nextest_config.py",
+        "code/tests/tools/test_verify_script.py",
+        "code/tests/tools/test_embedded_card_paths_case.py",
+        "code/tests/tools/test_card_loop_interactions_probes.py",
+        "code/tests/tools/test_clause_coverage_keyword_brief.py",
+        "-q"
+      ],
+      "env": {},
+      "status": "ok",
+      "seconds": 30.87243570003193,
+      "returncode": 0
+    }
+  ]
+}

@@ -344,7 +344,7 @@ fn ex11_057_on_play_zero_ice_snow_no_prompt() {
 /// splittable across stacks. Exactly the 2 chosen cards are trashed.
 #[test]
 fn ex11_057_on_play_two_ice_snow_exact_two_cross_permanent_pick() {
-    use digimon_engine::action::space::{encode_source_select, PASS};
+    use digimon_engine::action::space::PASS;
 
     let mut runner = base_runner();
     runner.place_on_field(0, "ICE-A", Some(0));
@@ -381,9 +381,9 @@ fn ex11_057_on_play_two_ice_snow_exact_two_cross_permanent_pick() {
     );
 
     // Split the pick across BOTH stacks: one source from each.
-    let pick_a = encode_source_select(opp_a.index as u16, 0).expect("stack A source action");
-    let pick_b = encode_source_select(opp_b.index as u16, 0).expect("stack B source action");
+    let pick_a = physical_choice::source_action(&runner.game, opp_a, 0);
     runner.execute_action(0, pick_a).expect("pick from stack A");
+    let pick_b = physical_choice::source_action(&runner.game, opp_b, 0);
     runner.execute_action(0, pick_b).expect("pick from stack B");
     runner.game.drain_effect_queue();
 
@@ -753,3 +753,6 @@ fn ex11_057_security_clause_fires_without_panic() {
     runner.game.drain_effect_queue();
     let _ = runner.auto_resolve();
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

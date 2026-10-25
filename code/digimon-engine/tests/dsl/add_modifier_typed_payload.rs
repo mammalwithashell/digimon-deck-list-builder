@@ -29,6 +29,7 @@ use digimon_engine::permanent::PermanentHandle;
 
 fn step(modifier: &str, payload: CompiledModifierPayload, expiry: &str) -> CompiledStep {
     CompiledStep::AddModifier {
+        opponent_only: false,
         target: CompiledModifierTarget::Binding(CompiledBindingRef::Named("tgt".into())),
         modifier: modifier.into(),
         value: CompiledModifierValue::Literal(0),

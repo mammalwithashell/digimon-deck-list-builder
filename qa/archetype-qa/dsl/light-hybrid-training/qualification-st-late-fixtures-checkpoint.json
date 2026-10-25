@@ -1,0 +1,38 @@
+{
+  "scope": "Four whole canonical starter card modules; test-only fixture migrations",
+  "modules": [
+    "st19_08",
+    "st2_cards",
+    "st5_effects",
+    "st9_06"
+  ],
+  "actual_red": {
+    "log": "verification/logs/qualification-st-late-red.log",
+    "passed": 34,
+    "failed": 7,
+    "ignored": 0
+  },
+  "final_green": {
+    "log": "verification/logs/qualification-st-late-current.log",
+    "passed": 41,
+    "failed": 0,
+    "ignored": 0
+  },
+  "native_stack_bytes": 268435456,
+  "production_edits": false,
+  "migration": [
+    "ST19-08 optional Union menu counts commits separately from PASS and resolves exact physical hand/trash identity.",
+    "ST2 Kaiser Nail and ST5 Digi-Burst use actual source owner/carrier/position rows; free play and two-source payment/benefit assertions retained.",
+    "ST9 exact blue/green source eligibility and sequential physical compaction use current rows; wrong color/level/other carrier assert no legal physical row. Whole masks and original play outcomes preserved."
+  ],
+  "limit": "Focused controls do not certify new full cards aggregate or whole training gate; no new ignores.",
+  "command": "cargo test -p digimon-engine --config profile.dev.opt-level=0 --config profile.dev.debug=0 --test light_hybrid_qualification_st_late -- --test-threads=2",
+  "sha256": {
+    "code/digimon-engine/tests/cards_behavioral/st19/st19_08.rs": "8b1da604d4c3934ceb7b59b06791b9c691a74d498db198e21a29815e71b28744",
+    "code/digimon-engine/tests/cards_behavioral/st2/st2_cards.rs": "c9a800fca379832b18cff7bb8282403547f7eaddafeba9cf4934d6c000926969",
+    "code/digimon-engine/tests/cards_behavioral/st5/st5_effects.rs": "785b4853f69c62044d5b35c3317542bb20292d245da2609b494ca5c010827daa",
+    "code/digimon-engine/tests/cards_behavioral/st9/st9_06.rs": "42ca5157d2afdd0a8a2d20e62a69db209e8b56ae2e9eb64abd8749491fc6a5a5",
+    "code/digimon-engine/tests/support/owned_card_choice.rs": "6ac86132c341c42619b1eac3925ca1752d64c462a07ed946d069231f2cc04753",
+    "code/digimon-engine/tests/light_hybrid_qualification_st_late.rs": "1b378f307d7642921d5356e24b5f8054c38a42107109ecf0caeb81561898ed85"
+  }
+}

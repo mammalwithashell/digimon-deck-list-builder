@@ -15,6 +15,7 @@ pub mod tensor_v1;
 pub mod tensor_v2_full;
 pub mod tensor_v2_lite;
 pub mod tensor_v2_lite_deck;
+mod card_choice;
 
 use crate::card_registry::CardRegistry;
 use crate::enums::PlayerId;

@@ -1,0 +1,1916 @@
+{
+  "requested_tier": 2,
+  "mode": "dry_run",
+  "metadata": {
+    "impact_scope": {
+      "cards": [],
+      "cards_behavioral_filter": "",
+      "full_suite_required": true,
+      "reasons": [
+        "code/digimon-dsl/src/bin/implementation_inventory/reference_predicates.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/bin/implementation_inventory/reference_steps.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/bin/implementation_inventory/references.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/clause.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/compile.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/compiled.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/pack.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/predicate.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/step.rs is an unmapped engine/core file",
+        "code/digimon-dsl/src/validator.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/action/explain.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/action/mask.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/action/space.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/cards/keyword_effects.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/combat/mod.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/count_choice.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/debug_runner.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/digixros.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dna_digivolve.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/binding_ref.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/bindings.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/lower_aura.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/lower_replacement.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/lower_triggered.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/mod.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/predicate.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/step/named_materials.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/step/source_prefix_payment.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect_context/action/app_fuse.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect_context/action/combat.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect_context/action/modifiers.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect_context/action/play.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect_context/action/security.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect_context/action/trash.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect_context/selections.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/effect_queue.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/floating_modifier.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/handles.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/lifecycle.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/mod.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/queries.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/setup.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/succession.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/triggers.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/verification.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/verification_cost_receipts.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/verification_selected_pins.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/cost.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/digivolve.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/effect_dna.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/link.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/misc.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/mod.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/options.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/play_cost_assignment.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_actions/zones.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game_phases.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/lib.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/observation/mod.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/observation/tensor.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/observation/tensor_v2_full.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/observation/tensor_v2_lite.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/recorder.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/replacement.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/replacement_departure_batch.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/replay_corpus.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/resume.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/runners/replay.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/runners/selection_resolve.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/selection.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/serialization.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/tensor_profiles/standard/v2_full.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/tensor_profiles/standard/v2_lite.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/tensor_profiles/standard/v2_lite_deck.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/card_choice_page.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/step/security_placement_results.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/dsl_cards/step/security_play_results.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/verification_link_pins.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/game/verification_security_play.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/observation/card_choice.rs is an unmapped engine/core file",
+        "code/digimon-engine/src/owned_card_choice.rs is an unmapped engine/core file"
+      ],
+      "side_binaries": [
+        "bound_card_property",
+        "card_choice_page",
+        "card_choice_source_pin",
+        "card_choice_tensor",
+        "cards_behavioral",
+        "controller_security_add_eligibility",
+        "count_choice_tensor_contract",
+        "digixros_conditional_trash_zone",
+        "digixros_owned_sources",
+        "dsl",
+        "effect_attack_pending_guard",
+        "effects",
+        "ffi_parity",
+        "hand_target_digivolve_reduction",
+        "infra",
+        "judge_quiz",
+        "light_hybrid_ex4_ex7_source_fixtures",
+        "light_hybrid_ex7_late_source_fixtures",
+        "light_hybrid_ex_source_fixtures",
+        "light_hybrid_inherited_order",
+        "light_hybrid_late_root_fixtures",
+        "light_hybrid_late_source_fixtures",
+        "light_hybrid_predicates",
+        "light_hybrid_promo_source_fixtures",
+        "light_hybrid_qualification_bt15",
+        "light_hybrid_qualification_ex13_source_cards_a",
+        "light_hybrid_qualification_ex13_source_cards_b",
+        "light_hybrid_qualification_late_source_cards_a",
+        "light_hybrid_qualification_late_source_cards_b",
+        "light_hybrid_qualification_security_search",
+        "light_hybrid_qualification_security_source",
+        "light_hybrid_qualification_source_cards_a",
+        "light_hybrid_qualification_source_cards_b",
+        "light_hybrid_qualification_st_late",
+        "light_hybrid_qualification_union_a",
+        "light_hybrid_qualification_union_b",
+        "light_hybrid_qualification_union_c",
+        "light_hybrid_qualification_union_d",
+        "light_hybrid_qualification_union_e",
+        "light_hybrid_qualification_union_f",
+        "light_hybrid_qualification_union_g",
+        "light_hybrid_qualification_union_h",
+        "light_hybrid_qualification_union_i",
+        "light_hybrid_qualification_union_j",
+        "light_hybrid_security_capacity",
+        "light_hybrid_source_capacity",
+        "light_hybrid_training",
+        "mask_and_tensor",
+        "material_save_keyword",
+        "may_add_top_security_owned",
+        "mixed_zone_distinct",
+        "named_source_group_selection",
+        "non_dsl_owned_sources",
+        "owned_card_selection",
+        "owned_choice_recovery",
+        "partition_owned_sources",
+        "phase_flow",
+        "remaining_meta_cards",
+        "replacements",
+        "replay_runner",
+        "rules_conformance",
+        "rules_faq",
+        "scoped_protection_security_tail",
+        "security_search_actual_outcomes",
+        "security_top_placement_receipt",
+        "selected_source_security_receipt",
+        "selection_identity_regressions",
+        "source_face_down_characteristics",
+        "source_prefix_stability",
+        "union_card_choice"
+      ],
+      "verbs": [
+        "activation_cost",
+        "add_bottom_security_to_hand",
+        "add_dp_modifier",
+        "add_modifier",
+        "add_player_modifier",
+        "add_this_option_to_hand",
+        "add_to_hand_from_deck",
+        "add_to_hand_from_reveal",
+        "add_to_hand_from_security",
+        "add_to_hand_from_trash",
+        "add_top_security_to_hand",
+        "bind_permanent_property",
+        "bounce_self",
+        "choose_from_reveal",
+        "de_digivolve",
+        "delete_all_permanents",
+        "delete_bound_permanents",
+        "delete_for_cost_reduction",
+        "delete_one_per_opponent_color",
+        "delete_permanent",
+        "delete_permanents",
+        "digi_burst",
+        "flip_security_face_up",
+        "grant_effect_immunity",
+        "grant_keyword",
+        "grant_keyword_continuous",
+        "grant_narrow_opponent_effect_protection",
+        "grant_stack_protection_from_opponent_effects",
+        "grant_stack_trash_immunity_from_opponent_effects",
+        "link_cards",
+        "link_to_own_digimon",
+        "mark_security_face_up",
+        "may_add_top_security_to_hand",
+        "move_matching_sources_under_tamer",
+        "move_self_option_under_permanent",
+        "move_trash_card_to_deck_top",
+        "order_remainder",
+        "pay_source_prefix",
+        "place_cards_as_bottom_sources",
+        "place_on_security",
+        "place_remainder_on_deck",
+        "place_selected_card_under_tamer",
+        "place_selected_sources_under_tamer",
+        "place_self_as_delay_option",
+        "place_self_under_permanent",
+        "play_cards_free",
+        "play_selected_sources_free",
+        "play_to_breeding_from_hand",
+        "raw_rust",
+        "recover",
+        "refund_opt",
+        "relink_self_to_own_digimon",
+        "return_all_sources_to_deck",
+        "return_all_trash_to_deck_bottom",
+        "return_selected_sources_to_deck",
+        "return_selected_sources_to_hand",
+        "return_to_deck",
+        "return_to_deck_from_reveal",
+        "return_to_hand",
+        "return_top_stacked_to_deck",
+        "return_trash_list_to_deck_bottom",
+        "return_union_bound_to_deck",
+        "reveal_search",
+        "reveal_top_deck",
+        "search_own_security_stack",
+        "security_place_stacked_card",
+        "security_place_top_card",
+        "security_place_top_stacked_card",
+        "select_any_permanent",
+        "select_count_capped_multi",
+        "select_dna_pair",
+        "select_effect_choice",
+        "select_hand",
+        "select_material",
+        "select_materials",
+        "select_opponent_dp_budget",
+        "select_opponent_permanent",
+        "select_opponent_play_cost_budget",
+        "select_opponent_sources",
+        "select_ordered_permutation",
+        "select_own_breeding_permanent",
+        "select_own_permanent",
+        "select_own_sources",
+        "select_reveal",
+        "select_reveal_buckets",
+        "select_security",
+        "select_trash",
+        "select_under_tamer_sources",
+        "select_union_zone",
+        "select_zone_cards",
+        "suspend",
+        "trash_all_sources",
+        "trash_bottom_face_down_source_under_tamer",
+        "trash_bottom_face_down_sources_under_tamers",
+        "trash_breeding_permanent",
+        "trash_from_hand_by_index",
+        "trash_from_reveal",
+        "trash_link_card_of_own_digimon",
+        "trash_opponent_hand_to_count",
+        "trash_option_from_own_stacks",
+        "trash_selected_materials",
+        "trash_selected_sources",
+        "trash_selected_sources_as_cost",
+        "trash_top_n_digivolution_cards_of_each",
+        "trash_top_stacked_sources",
+        "trash_union_bound",
+        "unsuspend",
+        "use_option_from_hand",
+        "use_option_from_trash"
+      ]
+    }
+  },
+  "suites": [
+    {
+      "tier": 0,
+      "name": "impact_index_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/impact_index.py",
+        "--cards-dir",
+        "code/digimon-engine/cards",
+        "--out",
+        "qa/impact/dsl_impact_index.json",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "impact_lowering_map_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/impact_lowering_map.py",
+        "--map",
+        "qa/impact/lowering_verb_map.json",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "keyword_semantics_matrix_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/keyword_semantics_matrix.py",
+        "--source",
+        "docs/digimon-rules/keyword-semantics.md",
+        "--engine-enum",
+        "code/digimon-engine/src/enums.rs",
+        "--out",
+        "qa/rules/keyword_semantics_matrix.json",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "rules_coverage_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/rules/coverage_report.py",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "rules_obligations_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "tools.rules.build_obligations",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      }
+    },
+    {
+      "tier": 0,
+      "name": "rules_coverage_report",
+      "kind": "python",
+      "required": false,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/rules/coverage_report.py"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "faq_conformance_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/faq_conformance_generator.py",
+        "--cases",
+        "qa/rules/faq_conformance_cases.json",
+        "--out",
+        "code/digimon-engine/tests/rules_faq/generated_conformance.rs",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "authoring_guide_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/clause_coverage/authoring_guide.py",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "oracle_readiness_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/clause_coverage/readiness.py",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "mechanics_readiness_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "tools.rules.mechanics_readiness",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      }
+    },
+    {
+      "tier": 0,
+      "name": "lowering_coverage_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "tools.lowering_coverage",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      }
+    },
+    {
+      "tier": 0,
+      "name": "card_admissibility_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "digimon_gym.agents.card_admissibility",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      }
+    },
+    {
+      "tier": 0,
+      "name": "verification_tool_tests",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "-m",
+        "pytest",
+        "code/tests/tools/test_impact_index.py",
+        "code/tests/tools/test_impact_lowering_map.py",
+        "code/tests/tools/test_impact_scope.py",
+        "code/tests/tools/test_keyword_semantics_matrix.py",
+        "code/tests/tools/test_rules_coverage_report.py",
+        "code/tests/tools/test_rules_build_obligations.py",
+        "code/tests/tools/test_rules_parse.py",
+        "code/tests/tools/test_rules_renumber_map.py",
+        "code/tests/tools/test_faq_conformance_generator.py",
+        "code/tests/tools/test_clause_coverage_authoring_guide.py",
+        "code/tests/tools/test_clause_coverage_readiness.py",
+        "code/tests/tools/test_verification_tier_manifest.py",
+        "code/tests/tools/test_nextest_config.py",
+        "code/tests/tools/test_verify_script.py",
+        "code/tests/tools/test_embedded_card_paths_case.py",
+        "code/tests/tools/test_card_loop_interactions_probes.py",
+        "code/tests/tools/test_clause_coverage_keyword_brief.py",
+        "-q"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 1,
+      "name": "dsl",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "dsl"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "judge_quiz",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "judge_quiz"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "rules_conformance",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "rules_conformance"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "rules_faq",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "rules_faq"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "keyword_semantics_matrix",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "keyword_semantics_matrix"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "determinism_guard",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "infra",
+        "determinism_guard"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "impact_scope",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+        "code/tools/impact_scope.py",
+        "--json"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 2,
+      "name": "cards_behavioral_full_required",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "cards_behavioral"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_bound_card_property",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "bound_card_property"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_card_choice_page",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "card_choice_page"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_card_choice_source_pin",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "card_choice_source_pin"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_card_choice_tensor",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "card_choice_tensor"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_cards_behavioral",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "cards_behavioral"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_controller_security_add_eligibility",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "controller_security_add_eligibility"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_count_choice_tensor_contract",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "count_choice_tensor_contract"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_digixros_conditional_trash_zone",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "digixros_conditional_trash_zone"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_digixros_owned_sources",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "digixros_owned_sources"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_dsl",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "dsl"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_effect_attack_pending_guard",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "effect_attack_pending_guard"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_effects",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "effects"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_ffi_parity",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "ffi_parity"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_hand_target_digivolve_reduction",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "hand_target_digivolve_reduction"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_infra",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "infra"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_judge_quiz",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "judge_quiz"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_ex4_ex7_source_fixtures",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_ex4_ex7_source_fixtures"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_ex7_late_source_fixtures",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_ex7_late_source_fixtures"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_ex_source_fixtures",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_ex_source_fixtures"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_inherited_order",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_inherited_order"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_late_root_fixtures",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_late_root_fixtures"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_late_source_fixtures",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_late_source_fixtures"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_predicates",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_predicates"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_promo_source_fixtures",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_promo_source_fixtures"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_bt15",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_bt15"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_ex13_source_cards_a",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_ex13_source_cards_a"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_ex13_source_cards_b",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_ex13_source_cards_b"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_late_source_cards_a",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_late_source_cards_a"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_late_source_cards_b",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_late_source_cards_b"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_security_search",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_security_search"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_security_source",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_security_source"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_source_cards_a",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_source_cards_a"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_source_cards_b",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_source_cards_b"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_st_late",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_st_late"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_a",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_a"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_b",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_b"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_c",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_c"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_d",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_d"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_e",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_e"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_f",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_f"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_g",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_g"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_h",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_h"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_i",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_i"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_qualification_union_j",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_qualification_union_j"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_security_capacity",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_security_capacity"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_source_capacity",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_source_capacity"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_light_hybrid_training",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "light_hybrid_training"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_mask_and_tensor",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "mask_and_tensor"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_material_save_keyword",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "material_save_keyword"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_may_add_top_security_owned",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "may_add_top_security_owned"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_mixed_zone_distinct",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "mixed_zone_distinct"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_named_source_group_selection",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "named_source_group_selection"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_non_dsl_owned_sources",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "non_dsl_owned_sources"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_owned_card_selection",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "owned_card_selection"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_owned_choice_recovery",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "owned_choice_recovery"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_partition_owned_sources",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "partition_owned_sources"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_phase_flow",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "phase_flow"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_remaining_meta_cards",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "remaining_meta_cards"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_replacements",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "replacements"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_replay_runner",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "replay_runner"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_rules_conformance",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "rules_conformance"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_rules_faq",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "rules_faq"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_scoped_protection_security_tail",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "scoped_protection_security_tail"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_security_search_actual_outcomes",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "security_search_actual_outcomes"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_security_top_placement_receipt",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "security_top_placement_receipt"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_selected_source_security_receipt",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "selected_source_security_receipt"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_selection_identity_regressions",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "selection_identity_regressions"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_source_face_down_characteristics",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "source_face_down_characteristics"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_source_prefix_stability",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "source_prefix_stability"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_union_card_choice",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "union_card_choice"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "replay_goldens_verify",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "run",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--bin",
+        "replay_corpus",
+        "--",
+        "verify",
+        "--goldens",
+        "qa/replay-goldens",
+        "--cards",
+        "data/cards.json"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "invariant_fuzz",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "invariant_fuzz"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    }
+  ]
+}

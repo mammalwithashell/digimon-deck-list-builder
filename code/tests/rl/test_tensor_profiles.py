@@ -20,12 +20,12 @@ def test_default_observation_profile_shape():
     profile = get_tensor_profile()
 
     # After `flip-engine-default-to-lite-deck-v2`, the engine default is
-    # `standard_lite_deck_v2` (8850 floats; lite_v2 prefix + 55-row own
+    # `standard_lite_deck_v2` (9874 floats; lite_v2 prefix + 55-row own
     # original decklist + 256 reserved). The action space is unchanged.
     assert profile.id == DEFAULT_OBSERVATION_PROFILE
     assert profile.id == "standard_lite_deck_v2"
     assert profile.game_mode == "standard"
-    assert profile.tensor_size == 8850
+    assert profile.tensor_size == 9874
 
 
 def test_compact_tensor_profile_is_retired():
@@ -45,12 +45,12 @@ def test_get_standard_lite_v2_tensor_profile_from_rust():
     profile = get_tensor_profile("standard_lite_v2")
 
     assert profile.id == "standard_lite_v2"
-    # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
-    assert profile.tensor_size == 8410
+    # Owned card pages add 32 rows of 32 features and one card-ID slot per row.
+    assert profile.tensor_size == 9434
     assert profile.tensor_version == 2
-    assert profile.feature_schema_version == "standard_lite_v2.3"
-    assert profile.card_id_slot_count == 572
-    assert profile.scalar_slot_count == 7838
+    assert profile.feature_schema_version == "standard_lite_v2.4"
+    assert profile.card_id_slot_count == 604
+    assert profile.scalar_slot_count == 8830
     assert profile.layout_hash.startswith("sha256:")
     assert profile.sections[0].name == "global_features"
     assert profile.sections[0].offset == 0
@@ -63,17 +63,13 @@ def test_get_standard_full_v2_tensor_profile_from_rust():
 
     profile = get_tensor_profile("standard_full_v2")
 
-    # Task S1.3: action space 2168 -> 2192 grows action_id_features by 24
-    # rows (24 * 16 = 384 floats); tensor_size 43008 -> 43392, schema v2.2.
-    # Task S1.4: PERM_MAX_SOURCES 11 -> 12 grows permanent_slots by 90
-    # floats; tensor_size 43392 -> 43482, schema v2.3, action_id_features
-    # offset 8064 -> 8154.
+    # Owned card pages widen pending rows to 128 and shift action features.
     assert profile.id == "standard_full_v2"
-    assert profile.tensor_size == 43482
+    assert profile.tensor_size == 44506
     assert profile.tensor_version == 2
-    assert profile.feature_schema_version == "standard_full_v2.4"
-    assert profile.card_id_slot_count == 572
-    assert profile.scalar_slot_count == 42910
+    assert profile.feature_schema_version == "standard_full_v2.5"
+    assert profile.card_id_slot_count == 604
+    assert profile.scalar_slot_count == 43902
 
     action_section = next(
         (
@@ -84,7 +80,7 @@ def test_get_standard_full_v2_tensor_profile_from_rust():
         None,
     )
     assert action_section is not None
-    assert action_section.offset == 8154
+    assert action_section.offset == 9178
     assert action_section.shape == (2192, 16)
     assert "standard_full_v2" in list_tensor_profiles()
 
@@ -99,13 +95,13 @@ def test_get_standard_lite_deck_v2_tensor_profile_from_rust():
     profile = get_tensor_profile("standard_lite_deck_v2")
 
     assert profile.id == "standard_lite_deck_v2"
-    assert profile.tensor_size == 8850
+    assert profile.tensor_size == 9874
     assert profile.tensor_version == 2
-    assert profile.feature_schema_version == "standard_lite_deck_v2.2"
-    assert profile.card_id_slot_count == 627
-    assert profile.scalar_slot_count == 8223
-    assert len(profile.card_id_positions) == 627
-    assert len(profile.scalar_positions) == 8223
+    assert profile.feature_schema_version == "standard_lite_deck_v2.3"
+    assert profile.card_id_slot_count == 659
+    assert profile.scalar_slot_count == 9215
+    assert len(profile.card_id_positions) == 659
+    assert len(profile.scalar_positions) == 9215
     assert "standard_lite_deck_v2" in list_tensor_profiles()
 
     deck_section = next(
@@ -113,7 +109,7 @@ def test_get_standard_lite_deck_v2_tensor_profile_from_rust():
         for section in profile.sections
         if section.name == "own_original_decklist"
     )
-    assert deck_section.offset == 8154
+    assert deck_section.offset == 9178
     assert deck_section.shape == (55, 8)
     assert deck_section.offset + 1 in profile.card_id_positions
 
@@ -167,8 +163,8 @@ def test_digimon_env_defaults_to_standard_lite_v2_with_unset_backend(monkeypatch
     obs, info = env.reset(seed=7)
 
     assert env.tensor_profile == "standard_lite_v2"
-    assert env.observation_space.shape == (8410,)
-    assert obs.shape == (8410,)
+    assert env.observation_space.shape == (9434,)
+    assert obs.shape == (9434,)
     assert info["tensor_profile"] == "standard_lite_v2"
 
 
@@ -183,8 +179,8 @@ def test_digimon_env_defaults_to_standard_lite_v2_under_rust_backend(monkeypatch
     obs, info = env.reset(seed=7)
 
     assert env.tensor_profile == "standard_lite_v2"
-    assert env.observation_space.shape == (8410,)
-    assert obs.shape == (8410,)
+    assert env.observation_space.shape == (9434,)
+    assert obs.shape == (9434,)
     assert info["tensor_profile"] == "standard_lite_v2"
 
 
@@ -226,8 +222,8 @@ def test_digimon_env_accepts_standard_full_v2_under_rust_backend(monkeypatch):
     obs, info = env.reset(seed=7)
 
     assert env.tensor_profile == "standard_full_v2"
-    assert env.observation_space.shape == (43482,)
-    assert obs.shape == (43482,)
+    assert env.observation_space.shape == (44506,)
+    assert obs.shape == (44506,)
     assert info["tensor_profile"] == "standard_full_v2"
 
 
@@ -246,8 +242,8 @@ def test_digimon_env_accepts_standard_lite_deck_v2_under_rust_backend(monkeypatc
     obs, info = env.reset(seed=7)
 
     assert env.tensor_profile == "standard_lite_deck_v2"
-    assert env.observation_space.shape == (8850,)
-    assert obs.shape == (8850,)
+    assert env.observation_space.shape == (9874,)
+    assert obs.shape == (9874,)
     assert info["tensor_profile"] == "standard_lite_deck_v2"
     assert info["action_mask"].shape == (env.action_space.n,)
 
@@ -267,8 +263,8 @@ def test_feature_extractor_accepts_observation_layout():
     extractor = CardEmbeddingExtractor(space, observation_layout=profile)
     out = extractor(torch.zeros((2, profile.tensor_size), dtype=torch.float32))
 
-    assert extractor.card_id_indices.numel() == 572
-    assert extractor.scalar_indices.numel() == 7838
+    assert extractor.card_id_indices.numel() == 604
+    assert extractor.scalar_indices.numel() == 8830
     assert tuple(out.shape) == (2, 512)
 
 
@@ -279,7 +275,7 @@ def test_feature_extractor_accepts_standard_full_v2():
     from digimon_gym.tensor_profiles import get_tensor_profile
 
     profile = get_tensor_profile("standard_full_v2")
-    assert profile.tensor_size == 43482
+    assert profile.tensor_size == 44506
     space = spaces.Box(
         low=-10.0,
         high=20001.0,
@@ -290,8 +286,8 @@ def test_feature_extractor_accepts_standard_full_v2():
     with torch.no_grad():
         out = extractor(torch.zeros((2, profile.tensor_size), dtype=torch.float32))
 
-    assert extractor.card_id_indices.numel() == 572
-    assert extractor.scalar_indices.numel() == 42910
+    assert extractor.card_id_indices.numel() == 604
+    assert extractor.scalar_indices.numel() == 43902
     assert tuple(out.shape) == (2, 512)
 
 
@@ -312,8 +308,8 @@ def test_feature_extractor_accepts_standard_lite_deck_v2():
     with torch.no_grad():
         out = extractor(torch.zeros((2, profile.tensor_size), dtype=torch.float32))
 
-    assert extractor.card_id_indices.numel() == 627
-    assert extractor.scalar_indices.numel() == 8223
+    assert extractor.card_id_indices.numel() == 659
+    assert extractor.scalar_indices.numel() == 9215
     assert tuple(out.shape) == (2, 512)
 
 

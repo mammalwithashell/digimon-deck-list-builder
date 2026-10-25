@@ -448,11 +448,12 @@ fn bt25_097_security_plays_level_four_yellow_or_purple_ts_from_hand_free() {
     check_palace(&mut r);
     let v = r.pending_selection_view().expect("security play prompt");
     assert!(v.is_optional, "'you may play'");
-    assert!(v.valid_action_ids.contains(&hand_action(&r, 0, "Y-TS")));
-    assert!(!v.valid_action_ids.contains(&hand_action(&r, 0, "Y-TS5")), "level 5");
-    assert!(!v.valid_action_ids.contains(&hand_action(&r, 0, "R-TS")), "red");
-    assert!(!v.valid_action_ids.contains(&hand_action(&r, 0, "Y-PLAIN")), "not [TS]");
-    let a = hand_action(&r, 0, "Y-TS");
+    let rows = physical_choice::commits(&r.game);
+    assert_eq!(rows.len(), 1, "level 5, red, and non-[TS] cards are excluded");
+    assert_eq!(rows[0].card_id.as_deref(), Some("Y-TS"));
+    assert!(matches!(rows[0].zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand)));
+    assert!(v.valid_action_ids.contains(&PASS), "explicit optional decline");
+    let a = physical_choice::card_action(&r.game, "Y-TS", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     r.execute_action(0, a).unwrap();
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"Y-TS".to_string()));
@@ -465,7 +466,9 @@ fn bt25_097_security_can_play_from_trash() {
     push_trash(&mut r, 0, "P-TS");
     check_palace(&mut r);
     let v = r.pending_selection_view().expect("security play prompt");
-    let a = *v.valid_action_ids.iter().find(|&&a| a != PASS).expect("trash pick");
+    assert!(v.is_optional);
+    assert!(v.valid_action_ids.contains(&PASS));
+    let a = physical_choice::card_action(&r.game, "P-TS", digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     r.execute_action(0, a).unwrap();
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"P-TS".to_string()));
@@ -482,3 +485,6 @@ fn bt25_097_security_play_is_optional() {
     assert!(field_ids(&r, 0).is_empty());
     assert!(ids(&r, 0, "hand").contains(&"Y-TS".to_string()));
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

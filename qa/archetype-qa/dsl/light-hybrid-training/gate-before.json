@@ -1,0 +1,304 @@
+{
+  "revision": "ec360e352",
+  "mechanics_ready": true,
+  "admissible_unique_ids": 1,
+  "total_unique_ids": 20,
+  "admissible_copies": 4,
+  "total_copies": 54,
+  "cards": [
+    {
+      "card_id": "EX7-002",
+      "count": 4,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT6-022",
+      "count": 2,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT17-020",
+      "count": 1,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "P-249",
+      "count": 4,
+      "admission": {
+        "admissible": false,
+        "reason": "unregistered",
+        "reasons": [
+          "unregistered"
+        ]
+      }
+    },
+    {
+      "card_id": "BT16-082",
+      "count": 4,
+      "admission": {
+        "admissible": true,
+        "dsl": true,
+        "has_card_test": true,
+        "needs_card_test": false,
+        "reason": null,
+        "reasons": [],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT17-023",
+      "count": 4,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-037",
+      "count": 1,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-067",
+      "count": 2,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-063",
+      "count": 1,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-077",
+      "count": 3,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-076",
+      "count": 3,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "AD1-015",
+      "count": 4,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT7-038",
+      "count": 1,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-081",
+      "count": 2,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-042",
+      "count": 3,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "P-153",
+      "count": 2,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-088",
+      "count": 3,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "AD1-023",
+      "count": 4,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-094",
+      "count": 3,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    },
+    {
+      "card_id": "BT18-097",
+      "count": 3,
+      "admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": false,
+        "needs_card_test": false,
+        "reason": "untested_lowering",
+        "reasons": [
+          "untested_lowering"
+        ],
+        "untested_constructs": []
+      }
+    }
+  ]
+}

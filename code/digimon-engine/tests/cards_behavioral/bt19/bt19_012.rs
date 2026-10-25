@@ -149,8 +149,8 @@ fn bt19_012_on_deletion_places_xros_or_blue_flare_from_hand_or_trash_under_tamer
             view.kind,
             SelectionKind::UnionZone { .. } | SelectionKind::Hand | SelectionKind::Trash
         ) {
-            let hand_action = PLAY_HAND_START;
-            let trash_action = TRASH_EFFECT_START + trash_index(&runner, 0, "LV4-XROS") as u16;
+            let hand_action = owned_union_fixture::action(&runner.game, 0, "BLUE-FLARE", false).expect("eligible hand card");
+            let trash_action = owned_union_fixture::action(&runner.game, 0, "LV4-XROS", true).expect("eligible trash card");
             assert!(view.valid_action_ids.contains(&hand_action));
             assert!(view.valid_action_ids.contains(&trash_action));
             runner
@@ -204,3 +204,6 @@ fn choose_permanent(runner: &mut DebugRunner, handle: PermanentHandle, label: &s
         .execute_action(view.selecting_player, action)
         .expect(label);
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

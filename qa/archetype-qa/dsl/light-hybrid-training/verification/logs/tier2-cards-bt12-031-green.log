@@ -1,0 +1,22 @@
+
+running 16 tests
+test bt12::bt12_031::bt12_031_all_turns_dp_bonus_equals_color_count_times_1000_base_card_only ... ok
+test bt12::bt12_031::bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_bottom ... ok
+test bt12::bt12_031::bt12_031_clause_0_is_when_digivolving ... ok
+test bt12::bt12_031::bt12_031_compiles_to_three_clauses ... ok
+test bt12::bt12_031::bt12_031_declining_alt_cost_falls_through_to_return_one_to_hand ... ok
+test bt12::bt12_031::bt12_031_does_not_gain_keywords_with_fewer_than_2_colors ... ok
+test bt12::bt12_031::bt12_031_dp_bonus_does_not_increase_for_duplicate_color_source ... ok
+test bt12::bt12_031::bt12_031_gains_blocker_when_2_or_more_colors_in_digi_cards ... ok
+test bt12::bt12_031::bt12_031_gains_security_attack_plus_1_when_2_or_more_colors_in_digi_cards ... ok
+test bt12::bt12_031::bt12_031_has_two_declarative_auras ... ok
+test bt12::bt12_031::bt12_031_when_digivolving_does_not_suspend_opp_digimon_with_digi_cards ... ok
+test bt12::bt12_031::bt12_031_when_digivolving_installs_return_selection_after_suspend ... ok
+test bt12::bt12_031::bt12_031_when_digivolving_only_suspends_opponents_with_no_digi_cards ... ok
+test bt12::bt12_031::bt12_031_when_digivolving_returned_digimon_moves_to_opponents_hand ... ok
+test bt12::bt12_031::bt12_031_when_digivolving_suspends_all_opp_digimon_with_no_digi_cards ... ok
+test bt12::bt12_031::bt12_031_when_digivolving_with_no_opp_digimon_does_not_error ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 12739 filtered out; finished in 19.51s
+
+FILTER_EXIT 0

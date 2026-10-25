@@ -1,0 +1,768 @@
+    Checking digimon-dsl v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-dsl)
+error[E0027]: pattern does not mention fields `can_play_from_effect_without_cost`, `can_play_to_breeding_from_hand`, `can_unsuspend`, `owner_can_add_security`, `source_name_is`, `event_battle_surviving_deleter`, `event_card_name_is`, `event_card_kind`
+   --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:11:13
+    |
+ 11 |           let digimon_dsl::predicate::PredicateSpec {
+    |  _____________^
+ 12 | |             kind,
+ 13 | |             level_eq,
+ 14 | |             level_eq_binding,
+...   |
+225 | |             extra,
+226 | |         } = self;
+    | |_________^ missing fields `can_play_from_effect_without_cost`, `can_play_to_breeding_from_hand`, `can_unsuspend`, `owner_can_add_security`, `source_name_is`, `event_battle_surviving_deleter`, `event_card_name_is`, `event_card_kind`
+    |
+help: include the missing fields in the pattern
+    |
+225 -             extra,
+226 -         } = self;
+225 +             extra, can_play_from_effect_without_cost, can_play_to_breeding_from_hand, can_unsuspend, owner_can_add_security, source_name_is, event_battle_surviving_deleter, event_card_name_is, event_card_kind } = self;
+    |
+help: if you don't care about these missing fields, you can explicitly ignore them
+    |
+225 -             extra,
+226 -         } = self;
+225 +             extra, can_play_from_effect_without_cost: _, can_play_to_breeding_from_hand: _, can_unsuspend: _, owner_can_add_security: _, source_name_is: _, event_battle_surviving_deleter: _, event_card_name_is: _, event_card_kind: _ } = self;
+    |
+help: or always ignore missing fields here
+    |
+225 -             extra,
+226 -         } = self;
+225 +             extra, .. } = self;
+    |
+
+error[E0027]: pattern does not mention fields `can_play_from_effect_without_cost`, `can_play_to_breeding_from_hand`, `can_unsuspend`, `owner_can_add_security`, `controller_can_add_security`, `source_name_is`, `event_card_name_is`, `event_card_kind`, `event_battle_surviving_deleter`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_predicates.rs:1658:13
+     |
+1658 |           let digimon_dsl::compiled::CompiledPredicate {
+     |  _____________^
+1659 | |             kind,
+1660 | |             level_eq,
+1661 | |             level_eq_binding,
+...    |
+1867 | |             cost_target_from_hand,
+1868 | |         } = self;
+     | |_________^ missing fields `can_play_from_effect_without_cost`, `can_play_to_breeding_from_hand`, `can_unsuspend`, `owner_can_add_security`, `controller_can_add_security`, `source_name_is`, `event_card_name_is`, `event_card_kind`, `event_battle_surviving_deleter`
+     |
+help: include the missing fields in the pattern
+     |
+1867 -             cost_target_from_hand,
+1868 -         } = self;
+1867 +             cost_target_from_hand, can_play_from_effect_without_cost, can_play_to_breeding_from_hand, can_unsuspend, owner_can_add_security, controller_can_add_security, source_name_is, event_card_name_is, event_card_kind, event_battle_surviving_deleter } = self;
+     |
+help: if you don't care about these missing fields, you can explicitly ignore them
+     |
+1867 -             cost_target_from_hand,
+1868 -         } = self;
+1867 +             cost_target_from_hand, can_play_from_effect_without_cost: _, can_play_to_breeding_from_hand: _, can_unsuspend: _, owner_can_add_security: _, controller_can_add_security: _, source_name_is: _, event_card_name_is: _, event_card_kind: _, event_battle_surviving_deleter: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+1867 -             cost_target_from_hand,
+1868 -         } = self;
+1867 +             cost_target_from_hand, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `top_of`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:1882:13
+     |
+1882 |           let digimon_dsl::step::StructuredBindingRef {
+     |  _____________^
+1883 | |             binding,
+1884 | |             permanent,
+1885 | |             source_permanent,
+...    |
+1890 | |             own_breeding,
+1891 | |         } = self;
+     | |_________^ missing field `top_of`
+     |
+help: include the missing field in the pattern
+     |
+1890 -             own_breeding,
+1891 -         } = self;
+1890 +             own_breeding, top_of } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+1890 -             own_breeding,
+1891 -         } = self;
+1890 +             own_breeding, top_of: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+1890 -             own_breeding,
+1891 -         } = self;
+1890 +             own_breeding, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `target_attribution`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:2390:13
+     |
+2390 |           let digimon_dsl::step::RefireEffectArgs {
+     |  _____________^
+2391 | |             source,
+2392 | |             timing,
+2393 | |             optional,
+2394 | |         } = self;
+     | |_________^ missing field `target_attribution`
+     |
+help: include the missing field in the pattern
+     |
+2393 -             optional,
+2394 -         } = self;
+2393 +             optional, target_attribution } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+2393 -             optional,
+2394 -         } = self;
+2393 +             optional, target_attribution: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+2393 -             optional,
+2394 -         } = self;
+2393 +             optional, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `suspended`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:3717:13
+     |
+3717 |           let digimon_dsl::step::PlayFromMaterialsArgs {
+     |  _____________^
+3718 | |             target,
+3719 | |             source_index,
+3720 | |             cost_delta,
+3721 | |             suppress_on_play,
+3722 | |             bind_as,
+3723 | |         } = self;
+     | |_________^ missing field `suspended`
+     |
+help: include the missing field in the pattern
+     |
+3722 -             bind_as,
+3723 -         } = self;
+3722 +             bind_as, suspended } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+3722 -             bind_as,
+3723 -         } = self;
+3722 +             bind_as, suspended: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+3722 -             bind_as,
+3723 -         } = self;
+3722 +             bind_as, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `dynamic`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:4127:13
+     |
+4127 |           let digimon_dsl::step::GrantTriggeredEffectArgs {
+     |  _____________^
+4128 | |             target,
+4129 | |             timing,
+4130 | |             expiry,
+4131 | |             body,
+4132 | |             trigger_if,
+4133 | |         } = self;
+     | |_________^ missing field `dynamic`
+     |
+help: include the missing field in the pattern
+     |
+4132 -             trigger_if,
+4133 -         } = self;
+4132 +             trigger_if, dynamic } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+4132 -             trigger_if,
+4133 -         } = self;
+4132 +             trigger_if, dynamic: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+4132 -             trigger_if,
+4133 -         } = self;
+4132 +             trigger_if, .. } = self;
+     |
+
+error[E0027]: pattern does not mention fields `named_groups`, `require_max`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:4494:13
+     |
+4494 |           let digimon_dsl::step::SelectMaterialsArgs {
+     |  _____________^
+4495 | |             of_permanent,
+4496 | |             max,
+4497 | |             filter,
+...    |
+4504 | |             prompt_key,
+4505 | |         } = self;
+     | |_________^ missing fields `named_groups`, `require_max`
+     |
+help: include the missing fields in the pattern
+     |
+4504 -             prompt_key,
+4505 -         } = self;
+4504 +             prompt_key, named_groups, require_max } = self;
+     |
+help: if you don't care about these missing fields, you can explicitly ignore them
+     |
+4504 -             prompt_key,
+4505 -         } = self;
+4504 +             prompt_key, named_groups: _, require_max: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+4504 -             prompt_key,
+4505 -         } = self;
+4504 +             prompt_key, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `suspended`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5550:1
+     |
+5550 | digimon_dsl::compiled::CompiledStep::PlayFromMaterials{target,source_index,cost_delta,suppress_on_play,bind_as} => { c.node(path,"...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing field `suspended`
+     |
+help: include the missing field in the pattern
+     |
+5550 | digimon_dsl::compiled::CompiledStep::PlayFromMaterials{target,source_index,cost_delta,suppress_on_play,bind_as, suspended } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromMaterials"));target.walk(c, &format!("{}.target", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");source_index.walk(c, &format!("{}.source_index", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");suppress_on_play.walk(c, &format!("{}.suppress_on_play", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");},
+     |                                                                                                               +++++++++++
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+5550 | digimon_dsl::compiled::CompiledStep::PlayFromMaterials{target,source_index,cost_delta,suppress_on_play,bind_as, suspended: _ } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromMaterials"));target.walk(c, &format!("{}.target", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");source_index.walk(c, &format!("{}.source_index", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");suppress_on_play.walk(c, &format!("{}.suppress_on_play", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");},
+     |                                                                                                               ++++++++++++++
+help: or always ignore missing fields here
+     |
+5550 | digimon_dsl::compiled::CompiledStep::PlayFromMaterials{target,source_index,cost_delta,suppress_on_play,bind_as, .. } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlayFromMaterials"));target.walk(c, &format!("{}.target", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");source_index.walk(c, &format!("{}.source_index", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");cost_delta.walk(c, &format!("{}.cost_delta", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");suppress_on_play.walk(c, &format!("{}.suppress_on_play", &format!("{}@PlayFromMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@PlayFromMaterials",path)), "EXISTING_INSTANCE_BINDING");},
+     |                                                                                                               ++++
+
+error[E0027]: pattern does not mention field `to_owner`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5565:1
+     |
+5565 | digimon_dsl::compiled::CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement{of,target} => { c.node(path,"digimon_dsl::co...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing field `to_owner`
+     |
+help: include the missing field in the pattern
+     |
+5565 | digimon_dsl::compiled::CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement{of,target, to_owner } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentBottomSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "EXISTING_INSTANCE_BINDING");},
+     |                                                                                                ++++++++++
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+5565 | digimon_dsl::compiled::CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement{of,target, to_owner: _ } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentBottomSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "EXISTING_INSTANCE_BINDING");},
+     |                                                                                                +++++++++++++
+help: or always ignore missing fields here
+     |
+5565 | digimon_dsl::compiled::CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement{of,target, .. } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlacePermanentBottomSecurityAndCancelReplacement"));of.walk(c, &format!("{}.of", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "UNCLASSIFIED_STRING");target.walk(c, &format!("{}.target", &format!("{}@PlacePermanentBottomSecurityAndCancelReplacement",path)), "EXISTING_INSTANCE_BINDING");},
+     |                                                                                                ++++
+
+error[E0027]: pattern does not mention fields `dynamic`, `trigger_if`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5595:1
+     |
+5595 | digimon_dsl::compiled::CompiledStep::GrantTriggeredEffect{target,timing,expiry,body} => { c.node(path,"digimon_dsl::compiled::Comp...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing fields `dynamic`, `trigger_if`
+     |
+help: include the missing fields in the pattern
+     |
+5595 | digimon_dsl::compiled::CompiledStep::GrantTriggeredEffect{target,timing,expiry,body, dynamic, trigger_if } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantTriggeredEffect"));target.walk(c, &format!("{}.target", &format!("{}@GrantTriggeredEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_TIMING_NAME");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_EXPIRY_NAME");body.walk(c, &format!("{}.body", &format!("{}@GrantTriggeredEffect",path)), "UNCLASSIFIED_STRING");},
+     |                                                                                    +++++++++++++++++++++
+help: if you don't care about these missing fields, you can explicitly ignore them
+     |
+5595 | digimon_dsl::compiled::CompiledStep::GrantTriggeredEffect{target,timing,expiry,body, dynamic: _, trigger_if: _ } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantTriggeredEffect"));target.walk(c, &format!("{}.target", &format!("{}@GrantTriggeredEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_TIMING_NAME");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_EXPIRY_NAME");body.walk(c, &format!("{}.body", &format!("{}@GrantTriggeredEffect",path)), "UNCLASSIFIED_STRING");},
+     |                                                                                    +++++++++++++++++++++++++++
+help: or always ignore missing fields here
+     |
+5595 | digimon_dsl::compiled::CompiledStep::GrantTriggeredEffect{target,timing,expiry,body, .. } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("GrantTriggeredEffect"));target.walk(c, &format!("{}.target", &format!("{}@GrantTriggeredEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_TIMING_NAME");expiry.walk(c, &format!("{}.expiry", &format!("{}@GrantTriggeredEffect",path)), "ENGINE_EXPIRY_NAME");body.walk(c, &format!("{}.body", &format!("{}@GrantTriggeredEffect",path)), "UNCLASSIFIED_STRING");},
+     |                                                                                    ++++
+
+error[E0027]: pattern does not mention fields `named_groups`, `require_max`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5603:1
+     |
+5603 | digimon_dsl::compiled::CompiledStep::SelectMaterials{of_permanent,max,filter,uniqueness,bind_as,prompt,prompt_key,optional_zero,min,same_by} =>...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing fields `named_groups`, `require_max`
+     |
+help: include the missing fields in the pattern
+     |
+5603 | digimon_dsl::compiled::CompiledStep::SelectMaterials{of_permanent,max,filter,uniqueness,bind_as,prompt,prompt_key,optional_zero,min,same_by, named_groups, require_max } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectMaterials"));of_permanent.walk(c, &format!("{}.of_permanent", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");max.walk(c, &format!("{}.max", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");uniqueness.walk(c, &format!("{}.uniqueness", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");same_by.walk(c, &format!("{}.same_by", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");},
+     |                                                                                                                                            +++++++++++++++++++++++++++
+help: if you don't care about these missing fields, you can explicitly ignore them
+     |
+5603 | digimon_dsl::compiled::CompiledStep::SelectMaterials{of_permanent,max,filter,uniqueness,bind_as,prompt,prompt_key,optional_zero,min,same_by, named_groups: _, require_max: _ } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectMaterials"));of_permanent.walk(c, &format!("{}.of_permanent", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");max.walk(c, &format!("{}.max", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");uniqueness.walk(c, &format!("{}.uniqueness", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");same_by.walk(c, &format!("{}.same_by", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");},
+     |                                                                                                                                            +++++++++++++++++++++++++++++++++
+help: or always ignore missing fields here
+     |
+5603 | digimon_dsl::compiled::CompiledStep::SelectMaterials{of_permanent,max,filter,uniqueness,bind_as,prompt,prompt_key,optional_zero,min,same_by, .. } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SelectMaterials"));of_permanent.walk(c, &format!("{}.of_permanent", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");max.walk(c, &format!("{}.max", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");uniqueness.walk(c, &format!("{}.uniqueness", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@SelectMaterials",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@SelectMaterials",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional_zero.walk(c, &format!("{}.optional_zero", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");min.walk(c, &format!("{}.min", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");same_by.walk(c, &format!("{}.same_by", &format!("{}@SelectMaterials",path)), "UNCLASSIFIED_STRING");},
+     |                                                                                                                                            ++++
+
+error[E0027]: pattern does not mention field `target_attribution`
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:5647:1
+     |
+5647 | digimon_dsl::compiled::CompiledStep::RefireEffect{source,timing,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","...
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ missing field `target_attribution`
+     |
+help: include the missing field in the pattern
+     |
+5647 | digimon_dsl::compiled::CompiledStep::RefireEffect{source,timing,optional, target_attribution } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RefireEffect"));source.walk(c, &format!("{}.source", &format!("{}@RefireEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@RefireEffect",path)), "ENGINE_TIMING_NAME");optional.walk(c, &format!("{}.optional", &format!("{}@RefireEffect",path)), "UNCLASSIFIED_STRING");},
+     |                                                                         ++++++++++++++++++++
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+5647 | digimon_dsl::compiled::CompiledStep::RefireEffect{source,timing,optional, target_attribution: _ } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RefireEffect"));source.walk(c, &format!("{}.source", &format!("{}@RefireEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@RefireEffect",path)), "ENGINE_TIMING_NAME");optional.walk(c, &format!("{}.optional", &format!("{}@RefireEffect",path)), "UNCLASSIFIED_STRING");},
+     |                                                                         +++++++++++++++++++++++
+help: or always ignore missing fields here
+     |
+5647 | digimon_dsl::compiled::CompiledStep::RefireEffect{source,timing,optional, .. } => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("RefireEffect"));source.walk(c, &format!("{}.source", &format!("{}@RefireEffect",path)), "EXISTING_INSTANCE_BINDING");timing.walk(c, &format!("{}.timing", &format!("{}@RefireEffect",path)), "ENGINE_TIMING_NAME");optional.walk(c, &format!("{}.optional", &format!("{}@RefireEffect",path)), "UNCLASSIFIED_STRING");},
+     |                                                                         ++++
+
+error[E0027]: pattern does not mention field `deck_rule`
+   --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:139:13
+    |
+139 |           let digimon_dsl::spec::CardSpec {
+    |  _____________^
+140 | |             card,
+141 | |             name,
+142 | |             kind,
+...   |
+158 | |             spec_version,
+159 | |         } = self;
+    | |_________^ missing field `deck_rule`
+    |
+help: include the missing field in the pattern
+    |
+158 -             spec_version,
+159 -         } = self;
+158 +             spec_version, deck_rule } = self;
+    |
+help: if you don't care about this missing field, you can explicitly ignore it
+    |
+158 -             spec_version,
+159 -         } = self;
+158 +             spec_version, deck_rule: _ } = self;
+    |
+help: or always ignore missing fields here
+    |
+158 -             spec_version,
+159 -         } = self;
+158 +             spec_version, .. } = self;
+    |
+
+error[E0027]: pattern does not mention field `trigger_if`
+   --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:900:13
+    |
+900 |           let digimon_dsl::clause::TriggeredClause {
+    |  _____________^
+901 | |             when,
+902 | |             scope,
+903 | |             summary,
+...   |
+912 | |             process,
+913 | |         } = self;
+    | |_________^ missing field `trigger_if`
+    |
+help: include the missing field in the pattern
+    |
+912 -             process,
+913 -         } = self;
+912 +             process, trigger_if } = self;
+    |
+help: if you don't care about this missing field, you can explicitly ignore it
+    |
+912 -             process,
+913 -         } = self;
+912 +             process, trigger_if: _ } = self;
+    |
+help: or always ignore missing fields here
+    |
+912 -             process,
+913 -         } = self;
+912 +             process, .. } = self;
+    |
+
+error[E0027]: pattern does not mention field `source_card_trash_protection`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1704:13
+     |
+1704 |           let digimon_dsl::clause::AuraBody {
+     |  _____________^
+1705 | |             target,
+1706 | |             target_player,
+1707 | |             dp_modifier,
+...    |
+1720 | |             dna_material_identity,
+1721 | |         } = self;
+     | |_________^ missing field `source_card_trash_protection`
+     |
+help: include the missing field in the pattern
+     |
+1720 -             dna_material_identity,
+1721 -         } = self;
+1720 +             dna_material_identity, source_card_trash_protection } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+1720 -             dna_material_identity,
+1721 -         } = self;
+1720 +             dna_material_identity, source_card_trash_protection: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+1720 -             dna_material_identity,
+1721 -         } = self;
+1720 +             dna_material_identity, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `result_scope`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1784:13
+     |
+1784 |           let digimon_dsl::clause::DnaMaterialIdentitySpec {
+     |  _____________^
+1785 | |             for_result,
+1786 | |             level,
+1787 | |             name,
+1788 | |         } = self;
+     | |_________^ missing field `result_scope`
+     |
+help: include the missing field in the pattern
+     |
+1787 -             name,
+1788 -         } = self;
+1787 +             name, result_scope } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+1787 -             name,
+1788 -         } = self;
+1787 +             name, result_scope: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+1787 -             name,
+1788 -         } = self;
+1787 +             name, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `set_cost`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1835:13
+     |
+1835 |           let digimon_dsl::clause::CostReductionBody {
+     |  _____________^
+1836 | |             reduction_timing,
+1837 | |             when_playing_this,
+1838 | |             when_digivolving_this,
+...    |
+1846 | |             unlocks,
+1847 | |         } = self;
+     | |_________^ missing field `set_cost`
+     |
+help: include the missing field in the pattern
+     |
+1846 -             unlocks,
+1847 -         } = self;
+1846 +             unlocks, set_cost } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+1846 -             unlocks,
+1847 -         } = self;
+1846 +             unlocks, set_cost: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+1846 -             unlocks,
+1847 -         } = self;
+1846 +             unlocks, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `prevent_all_matching`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:1885:13
+     |
+1885 |           let digimon_dsl::clause::ReplacementBody {
+     |  _____________^
+1886 | |             trigger,
+1887 | |             timing,
+1888 | |             optional,
+...    |
+1894 | |             process,
+1895 | |         } = self;
+     | |_________^ missing field `prevent_all_matching`
+     |
+help: include the missing field in the pattern
+     |
+1894 -             process,
+1895 -         } = self;
+1894 +             process, prevent_all_matching } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+1894 -             process,
+1895 -         } = self;
+1894 +             process, prevent_all_matching: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+1894 -             process,
+1895 -         } = self;
+1894 +             process, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `deck_rule`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:2239:13
+     |
+2239 |           let digimon_dsl::compiled::CompiledCard {
+     |  _____________^
+2240 | |             card,
+2241 | |             name,
+2242 | |             kind,
+...    |
+2257 | |             effects,
+2258 | |         } = self;
+     | |_________^ missing field `deck_rule`
+     |
+help: include the missing field in the pattern
+     |
+2257 -             effects,
+2258 -         } = self;
+2257 +             effects, deck_rule } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+2257 -             effects,
+2258 -         } = self;
+2257 +             effects, deck_rule: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+2257 -             effects,
+2258 -         } = self;
+2257 +             effects, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `trigger_if`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:3672:13
+     |
+3672 |           let digimon_dsl::compiled::CompiledTriggeredClause {
+     |  _____________^
+3673 | |             when,
+3674 | |             scope,
+3675 | |             active_when,
+...    |
+3684 | |             summary_key,
+3685 | |         } = self;
+     | |_________^ missing field `trigger_if`
+     |
+help: include the missing field in the pattern
+     |
+3684 -             summary_key,
+3685 -         } = self;
+3684 +             summary_key, trigger_if } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+3684 -             summary_key,
+3685 -         } = self;
+3684 +             summary_key, trigger_if: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+3684 -             summary_key,
+3685 -         } = self;
+3684 +             summary_key, .. } = self;
+     |
+
+error[E0027]: pattern does not mention field `source_card_trash_protection`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:3734:13
+     |
+3734 | /             digimon_dsl::compiled::CompiledDeclarativeClause::Aura {
+3735 | |                 scope,
+3736 | |                 active_when,
+3737 | |                 target,
+...    |
+3756 | |                 summary_key,
+3757 | |             } => {
+     | |_____________^ missing field `source_card_trash_protection`
+     |
+help: include the missing field in the pattern
+     |
+3756 -                 summary_key,
+3757 -             } => {
+3756 +                 summary_key, source_card_trash_protection } => {
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+3756 -                 summary_key,
+3757 -             } => {
+3756 +                 summary_key, source_card_trash_protection: _ } => {
+     |
+help: or always ignore missing fields here
+     |
+3756 -                 summary_key,
+3757 -             } => {
+3756 +                 summary_key, .. } => {
+     |
+
+error[E0027]: pattern does not mention field `set_cost`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:3878:13
+     |
+3878 | /             digimon_dsl::compiled::CompiledDeclarativeClause::CostReduction {
+3879 | |                 scope,
+3880 | |                 active_when,
+3881 | |                 reduction_timing,
+...    |
+3893 | |                 summary_key,
+3894 | |             } => {
+     | |_____________^ missing field `set_cost`
+     |
+help: include the missing field in the pattern
+     |
+3893 -                 summary_key,
+3894 -             } => {
+3893 +                 summary_key, set_cost } => {
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+3893 -                 summary_key,
+3894 -             } => {
+3893 +                 summary_key, set_cost: _ } => {
+     |
+help: or always ignore missing fields here
+     |
+3893 -                 summary_key,
+3894 -             } => {
+3893 +                 summary_key, .. } => {
+     |
+
+error[E0027]: pattern does not mention field `result_scope`
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:5059:13
+     |
+5059 |           let digimon_dsl::compiled::CompiledDnaMaterialIdentity {
+     |  _____________^
+5060 | |             for_result,
+5061 | |             level,
+5062 | |             name,
+5063 | |         } = self;
+     | |_________^ missing field `result_scope`
+     |
+help: include the missing field in the pattern
+     |
+5062 -             name,
+5063 -         } = self;
+5062 +             name, result_scope } = self;
+     |
+help: if you don't care about this missing field, you can explicitly ignore it
+     |
+5062 -             name,
+5063 -         } = self;
+5062 +             name, result_scope: _ } = self;
+     |
+help: or always ignore missing fields here
+     |
+5062 -             name,
+5063 -         } = self;
+5062 +             name, .. } = self;
+     |
+
+error[E0004]: non-exhaustive patterns: `&StepSpec::PaySourcePrefix(_)`, `&StepSpec::ReturnAllToHand(_)`, `&StepSpec::ReturnAllToDeck(_)` and 3 more not covered
+    --> code\digimon-dsl\src\bin\implementation_inventory\reference_steps.rs:11:15
+     |
+  11 |         match self {
+     |               ^^^^ patterns `&StepSpec::PaySourcePrefix(_)`, `&StepSpec::ReturnAllToHand(_)`, `&StepSpec::ReturnAllToDeck(_)` and 3 more not covered
+     |
+note: `StepSpec` defined here
+    --> code\digimon-dsl\src\step.rs:66:1
+     |
+  66 | pub enum StepSpec {
+     | ^^^^^^^^^^^^^^^^^
+...
+ 152 |     PaySourcePrefix(PaySourcePrefixArgs),
+     |     --------------- not covered
+...
+ 180 |     ReturnAllToHand(DeleteAllPermanentsArgs),
+     |     --------------- not covered
+ 181 |     ReturnAllToDeck(ReturnAllToDeckArgs),
+     |     --------------- not covered
+...
+ 186 |     SuspendAndCancelAllMatchingLeaves(SuspendAllPreventionArgs),
+     |     --------------------------------- not covered
+...
+ 215 |     TrashSelectedSourcesAsCost(TrashSelectedSourcesCostArgs),
+     |     -------------------------- not covered
+     = note: the matched value is of type `&StepSpec`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern as shown, or multiple match arms
+     |
+1660 ~             },
+1661 +             _ => todo!()
+     |
+
+error[E0004]: non-exhaustive patterns: `&Timing::OnTopCardTrashed` and `&Timing::StartOfOpponentsMainPhase` not covered
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:991:15
+     |
+ 991 |         match self {
+     |               ^^^^ patterns `&Timing::OnTopCardTrashed` and `&Timing::StartOfOpponentsMainPhase` not covered
+     |
+note: `Timing` defined here
+    --> code\digimon-dsl\src\clause.rs:139:1
+     |
+ 139 | pub enum Timing {
+     | ^^^^^^^^^^^^^^^
+...
+ 223 |     OnTopCardTrashed,
+     |     ---------------- not covered
+...
+ 283 |     StartOfOpponentsMainPhase,
+     |     ------------------------- not covered
+     = note: the matched value is of type `&Timing`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern, a match arm with multiple or-patterns as shown, or multiple match arms
+     |
+1369 ~             ),
+1370 ~             &Timing::OnTopCardTrashed | &Timing::StartOfOpponentsMainPhase => todo!(),
+     |
+
+error[E0004]: non-exhaustive patterns: `&CompiledTiming::OnTopCardTrashed` and `&CompiledTiming::StartOfOpponentsMainPhase` not covered
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:4569:15
+     |
+4569 |         match self {
+     |               ^^^^ patterns `&CompiledTiming::OnTopCardTrashed` and `&CompiledTiming::StartOfOpponentsMainPhase` not covered
+     |
+note: `CompiledTiming` defined here
+    --> code\digimon-dsl\src\compiled.rs:1441:1
+     |
+1441 | pub enum CompiledTiming {
+     | ^^^^^^^^^^^^^^^^^^^^^^^
+...
+1483 |     OnTopCardTrashed,
+     |     ---------------- not covered
+...
+1509 |     StartOfOpponentsMainPhase,
+     |     ------------------------- not covered
+     = note: the matched value is of type `&CompiledTiming`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern, a match arm with multiple or-patterns as shown, or multiple match arms
+     |
+4948 ~             ),
+4949 ~             &CompiledTiming::OnTopCardTrashed | &CompiledTiming::StartOfOpponentsMainPhase => todo!(),
+     |
+
+error[E0004]: non-exhaustive patterns: `&CompiledBindingRef::TopOf(_)` not covered
+    --> code\digimon-dsl\src\bin\implementation_inventory\references.rs:5403:15
+     |
+5403 |         match self {
+     |               ^^^^ pattern `&CompiledBindingRef::TopOf(_)` not covered
+     |
+note: `CompiledBindingRef` defined here
+    --> code\digimon-dsl\src\compiled.rs:3319:1
+     |
+3319 | pub enum CompiledBindingRef {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+3330 |     TopOf(String),
+     |     ----- not covered
+     = note: the matched value is of type `&CompiledBindingRef`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
+     |
+5513 ~             ),
+5514 ~             &CompiledBindingRef::TopOf(_) => todo!(),
+     |
+
+Some errors have detailed explanations: E0004, E0027.
+For more information about an error, try `rustc --explain E0004`.
+error: could not compile `digimon-dsl` (bin "implementation_inventory") due to 27 previous errors

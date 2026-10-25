@@ -1,0 +1,36 @@
+{
+  "status": "three_whole_canonical_modules_green_full_ladder_pending",
+  "modules": {
+    "BT1-087": 16,
+    "BT20-083": 8,
+    "BT21-074": 13
+  },
+  "red": [
+    {
+      "passed": 11,
+      "failed": 5,
+      "log": "logs/cards-bt1-087-physical-red.log"
+    },
+    {
+      "passed": 7,
+      "failed": 1,
+      "log": "logs/cards-bt20-083-physical-red.log"
+    },
+    {
+      "passed": 12,
+      "failed": 1,
+      "log": "logs/tier2-cards-bt21-074-red.log",
+      "owner": "source_prefix_stability"
+    }
+  ],
+  "green": {
+    "passed": 37,
+    "failed": 0,
+    "ignored": 0,
+    "seconds": 43.25,
+    "log": "logs/cards-security-source-three-modules-green.log"
+  },
+  "scope": "Test-only migration from legacy security/breeding-source/trash IDs to exact physical rows, zones, owners, visible card identities and public masks. Original recovery/hand/security count, suspension/free-play/source removal, trash attachment and exact-handle assertions retained.",
+  "production_changes": false,
+  "gate_promotion": false
+}

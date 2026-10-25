@@ -1,0 +1,6 @@
+BT18-037: file differs from generator output
+--check failed for 1/1 cards. Run `python code/tools/split_cards_json.py` and commit the diff.
+BT18-063: file differs from generator output
+--check failed for 1/1 cards. Run `python code/tools/split_cards_json.py` and commit the diff.
+BT18-076: file differs from generator output
+--check failed for 1/1 cards. Run `python code/tools/split_cards_json.py` and commit the diff.

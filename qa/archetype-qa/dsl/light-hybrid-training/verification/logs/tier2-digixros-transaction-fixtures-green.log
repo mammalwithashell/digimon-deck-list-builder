@@ -1,0 +1,9 @@
+
+running 4 tests
+test digixros_transaction_steps::digixros_wildcard_steps_lower_to_compiled_steps ... ok
+test digixros_transaction_steps::optional_cost_reduction_body_can_mutate_pending_digixros_transaction ... ok
+test digixros_transaction_steps::turn_scoped_wildcard_step_makes_source_legal_for_later_digixros ... ok
+test digixros_transaction_steps::digixros_material_prompt_clones_faithfully ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 1589 filtered out; finished in 6.27s
+

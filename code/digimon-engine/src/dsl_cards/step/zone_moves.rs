@@ -39,21 +39,17 @@ fn resolved_cards(resolved: ResolvedBinding) -> Vec<crate::card_source::CardHand
 }
 
 fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_player: PlayerId) {
-    use crate::action::space::{MAX_SECURITY, SEL_MY_SECURITY_START, SEL_OPP_SECURITY_START};
-
     let security_len = ctx.game.player(target_player).security.len();
     if security_len == 0 {
         return;
     }
 
-    let base = if target_player == ctx.player {
-        SEL_MY_SECURITY_START
-    } else {
-        SEL_OPP_SECURITY_START
-    };
-    let top_index = security_len
-        .saturating_sub(1)
-        .min(MAX_SECURITY.saturating_sub(1));
+    let top_index = security_len - 1;
+    let top_card = ctx.game.player(target_player).security[top_index].handle();
+    let Some(owner) = crate::owned_card_choice::OwnedCardChoice::security(
+        ctx.game, target_player, vec![top_index], true,
+    ) else { return; };
+    let valid_action_ids = owner.valid_action_ids(ctx.game);
     let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
     let controller = ctx.player;
     let override_pin = ctx.override_selecting_player();
@@ -67,11 +63,12 @@ fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_play
 
     ctx.game.current_phase = GamePhase::SelectSecurity;
     ctx.game.pending_selection = Some(PendingSelection {
-        zone_owner: None,
+        card_choice: Some(owner),
+        zone_owner: Some(target_player),
         kind: SelectionKind::Security,
         selecting_player,
         previous_phase,
-        valid_action_ids: vec![base + top_index as u16],
+        valid_action_ids,
         is_optional: true,
         prompt: "Add top security to hand".to_string(),
         effect_choices: None,
@@ -79,6 +76,10 @@ fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_play
         source_permanent,
         source_kind,
         callback: Box::new(move |game, _action_id| {
+            // The actor may add only the physical top presented by this page.
+            if game.player(target_player).security.last().map(|card| card.handle()) != Some(top_card) {
+                return;
+            }
             let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
                 game,
                 source_card,
@@ -737,6 +738,8 @@ pub fn try_run(
             true
         }
         CompiledStep::SecurityPlaceStackedCard {
+            bind_success_as: _,
+            to_owner,
             carrier,
             source,
             source_index_from_top,
@@ -751,14 +754,15 @@ pub fn try_run(
             else {
                 return true;
             };
-            let source_card = source
-                .as_ref()
-                .and_then(|source| match resolve_binding_ref(source, ctx, bindings) {
-                    Some(ResolvedBinding::Card(card)) => Some(card),
-                    _ => None,
-                })
-                .or_else(|| source_index_from_top.and_then(|i| source_from_top(ctx, carrier, i)));
+            let source_card = selected_security_source(ctx, bindings, carrier, source, *source_index_from_top);
             if let Some(source_card) = source_card {
+                let target_player = if *to_owner {
+                    let Some(owner) = ctx.game.player(carrier.player).battle_area
+                        .get(carrier.index as usize)
+                        .and_then(|p| p.card_sources.iter().find(|c| c.handle() == source_card))
+                        .map(|c| c.owner) else { return true; };
+                    owner
+                } else { target_player };
                 let _ = ctx.security_place_stacked_card(
                     carrier,
                     source_card,
@@ -770,6 +774,8 @@ pub fn try_run(
             true
         }
         CompiledStep::SecurityPlaceTopStackedCard {
+            bind_success_as: _,
+            to_owner,
             carrier,
             of,
             position,
@@ -779,6 +785,11 @@ pub fn try_run(
             if let Some(ResolvedBinding::Permanent(carrier)) =
                 resolve_binding_ref(carrier, ctx, bindings)
             {
+                let target_player = if *to_owner {
+                    ctx.game.player(carrier.player).battle_area
+                        .get(carrier.index as usize).map(|p| p.top_card().owner)
+                        .unwrap_or(target_player)
+                } else { target_player };
                 let position = super::map_stack_position(*position);
                 let _ =
                     ctx.security_place_top_stacked_card(carrier, target_player, position, *face_up);
@@ -786,6 +797,8 @@ pub fn try_run(
             true
         }
         CompiledStep::SecurityPlaceTopCard {
+            bind_success_as: _,
+            to_owner,
             carrier,
             of,
             position,
@@ -795,6 +808,11 @@ pub fn try_run(
             if let Some(ResolvedBinding::Permanent(carrier)) =
                 resolve_binding_ref(carrier, ctx, bindings)
             {
+                let target_player = if *to_owner {
+                    ctx.game.player(carrier.player).battle_area
+                        .get(carrier.index as usize).map(|p| p.top_card().owner)
+                        .unwrap_or(target_player)
+                } else { target_player };
                 let position = super::map_stack_position(*position);
                 let _ = ctx.security_place_top_card(carrier, target_player, position, *face_up);
             }
@@ -940,6 +958,19 @@ pub fn try_run(
     }
 }
 
+pub(super) fn selected_security_source(
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+    carrier: PermanentHandle,
+    source: &Option<digimon_dsl::compiled::CompiledBindingRef>,
+    source_index_from_top: Option<u8>,
+) -> Option<crate::card_source::CardHandle> {
+    source.as_ref().and_then(|source| match resolve_binding_ref(source, ctx, bindings) {
+        Some(ResolvedBinding::Card(card)) => Some(card),
+        _ => None,
+    }).or_else(|| source_index_from_top.and_then(|i| source_from_top(ctx, carrier, i)))
+}
+
 fn source_from_top(
     ctx: &EffectContext<'_>,
     carrier: PermanentHandle,
@@ -1069,7 +1100,7 @@ fn install_search_own_security_stack(
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let filter_for_precheck = filter.clone();
-    let has_match = ctx.game.player(player).security.iter().any(|card| {
+    let eligible: Vec<_> = ctx.game.player(player).security.iter().enumerate().filter_map(|(index, card)| {
         security_matches(
             &filter_for_precheck,
             ctx.game,
@@ -1078,43 +1109,32 @@ fn install_search_own_security_stack(
             player,
             card.handle(),
             bindings,
-        )
-    });
+        ).then_some(index)
+    }).collect();
+    let has_match = !eligible.is_empty();
 
-    if !has_match {
+    if ctx.game.player(player).security.is_empty() {
         if let Some(no_match) = on_no_match {
             run_steps_with_runtime(&no_match, ctx, bindings, runtime);
         }
         return;
     }
 
-    let filter_for_select = filter.clone();
-    let filter_bindings = bindings.clone();
-    let tail = Arc::new(on_select);
-    let runtime = runtime.clone();
-    let callback_bindings = bindings.clone();
-    ctx.search_own_security_stack(
-        prompt,
-        optional,
-        move |game, card| {
-            security_matches(
-                &filter_for_select,
-                game,
-                source_card,
-                source_permanent,
-                player,
-                card.handle(),
-                &filter_bindings,
-            )
-        },
-        move |cb_ctx, idx| {
-            let mut b = callback_bindings.clone();
-            if let Some(name) = &bind_as {
-                if let Some(card) = cb_ctx.game.player(player).security.get(idx) {
-                    b.insert_card(name, card.handle());
-                }
-            }
-            run_steps_with_runtime(&tail, cb_ctx, &mut b, &runtime);
-        },
+    super::selections::install_select_security(
+        ctx, digimon_dsl::compiled::CompiledPlayerRef::You, CompiledPredicate::default(), bind_as,
+        prompt.to_string(), optional || !has_match, true,
+        if has_match { Vec::new() } else { on_no_match.unwrap_or_default() },
+        on_select, bindings.clone(), runtime.clone(),
     );
+    if let Some(mut pending) = ctx.game.pending_selection.take() {
+        if let Some(owner) = pending.card_choice.as_mut() {
+            owner.set_security_dsl_filter(filter.clone(), bindings.clone(), crate::resume::ResumeProvenance {
+                source_card, source_permanent, source_kind: ctx.source_kind, controller: player,
+                override_pin: ctx.override_selecting_player(),
+            });
+            owner.grant_security_inspection(player, &eligible);
+            pending.valid_action_ids = owner.valid_action_ids(ctx.game);
+        }
+        ctx.game.pending_selection = Some(pending);
+    }
 }

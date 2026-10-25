@@ -681,6 +681,9 @@ fn non_pass(r: &DebugRunner) -> Vec<u16> {
 }
 
 fn hand_pickable(r: &DebugRunner, p: u8, card_id: &str) -> bool {
+    if r.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some() {
+        return owned_union_fixture::action(&r.game,p,card_id,false).is_some();
+    }
     let Some(idx) = r.game.players[p as usize]
         .hand
         .iter()
@@ -693,7 +696,9 @@ fn hand_pickable(r: &DebugRunner, p: u8, card_id: &str) -> bool {
 
 fn pick_hand(r: &mut DebugRunner, p: u8, card_id: &str) {
     let idx = hand_index(r, p, card_id);
-    let action = space::PLAY_HAND_START + idx as u16;
+    let action = if r.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some() {
+        owned_union_fixture::action(&r.game,p,card_id,false).expect("eligible hand physical row")
+    } else { space::PLAY_HAND_START + idx as u16 };
     let v = r.pending_selection_view().expect("hand selection pending");
     assert!(
         v.valid_action_ids.contains(&action),
@@ -709,7 +714,7 @@ fn pick_trash(r: &mut DebugRunner, p: u8, card_id: &str) {
         .iter()
         .position(|c| c.card_id(&r.game.card_data) == card_id)
         .unwrap_or_else(|| panic!("{card_id} not in trash"));
-    let action = space::TRASH_EFFECT_START + idx as u16;
+    let action = owned_union_fixture::action(&r.game,p,card_id,true).expect("eligible trash physical row");
     let v = r.pending_selection_view().expect("trash selection pending");
     assert!(
         v.valid_action_ids.contains(&action),
@@ -729,3 +734,6 @@ fn pick_own_field(r: &mut DebugRunner, selector: u8, h: PermanentHandle) {
     );
     r.execute_action(selector, action).unwrap();
 }
+
+#[path="../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

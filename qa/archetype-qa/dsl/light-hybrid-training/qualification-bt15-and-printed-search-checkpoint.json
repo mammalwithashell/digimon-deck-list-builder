@@ -1,0 +1,72 @@
+{
+  "status": "focused_four_card_modules_verified_final_wheel_ladder_required",
+  "scope": [
+    "BT13-012",
+    "BT14-033",
+    "BT15-092",
+    "BT15-102"
+  ],
+  "rust_min_stack": 268435456,
+  "target_dir": "C:/Users/james/.codex/build-targets/light-hybrid-replay",
+  "profile": "dev opt0 debug0 with debug assertions enabled",
+  "actual_proof": [
+    {
+      "log": "verification/logs/qualification-bt15-card-red.log",
+      "passed": 20,
+      "failed": 4,
+      "ignored": 0,
+      "scope": "BT15 canonical modules reproduce candidate-count and obsolete material-ID failures with required stack."
+    },
+    {
+      "log": "verification/logs/qualification-bt15-card-green.log",
+      "passed": 23,
+      "failed": 1,
+      "ignored": 0,
+      "scope": "Three Apocalymon fixture issues fixed; stronger BT15-092 printed-search identity assertion exposes genuine hidden-search information bug(None vsY-LV4). Preserved intermediate failure."
+    },
+    {
+      "log": "verification/logs/printed-search-three-card-red.log",
+      "passed": 0,
+      "failed": 3,
+      "ignored": 0,
+      "scope": "Three new canonical regressions fail because nonempty printed searches with no matches are not inspectable. Each test also covers both actors, matching index39, full40-card identity view, ineligible masks, peer privacy, navigation nonmutation/noRNG, and exact one shuffle after decline."
+    },
+    {
+      "log": "verification/logs/printed-search-three-card-modules-green.log",
+      "passed": 68,
+      "failed": 0,
+      "ignored": 0,
+      "scope": "All four complete canonical card modules, including original free-play/recovery/evolution/mill/payment/distinct-name outcomes and new full inspection coverage."
+    }
+  ],
+  "production_yaml_changes": {
+    "authorized_by_parent_after_actual_bug": true,
+    "cards": [
+      "BT13-012",
+      "BT14-033",
+      "BT15-092"
+    ],
+    "change": "Replace ordinary select_security(ofyou) with existing search_own_security_stack and explicit empty on_select, retaining original bound-card success branches and common unconditional shuffle continuations. No Rust engine changes.",
+    "printed_evidence": "Independently inspected exact local DCGO card images for all3 IDs; all3 explicitly say Search your security stack."
+  },
+  "fixture_changes": [
+    "Apocalymon chooses actual current owned mixed-zone rows by Dark Master printed ID, validates BattleTop/Trash origin and selecting/other-seat masks. Distinct-name mask, original material ownership/movement, additive reduction and exact memory/cost assertions retained.",
+    "BT15-092 original security-play test checks one legal CommitCard, exact chosen physical instance, optional decline and inspected-ineligible mask0. Full printed identity assertion retained, not weakened after it exposed the bug."
+  ],
+  "source_sha256": {
+    "code/digimon-engine/cards/bt13/BT13-012.yaml": "b9f788cfbb50d47185228be70bdd7d4bbd62cac16b7ab7314e61fde3224b4f7b",
+    "code/digimon-engine/cards/bt14/BT14-033.yaml": "12183ef3bf539d63c263fe35a63be86238611e2eab2ae5b716ec006a5b9256a1",
+    "code/digimon-engine/cards/bt15/BT15-092.yaml": "b50481a6674dbaca7b669e7edb42f31bf7f346e78e6704a1bb05b2fe474a0fdd",
+    "code/digimon-engine/tests/cards_behavioral/bt13/bt13_012.rs": "a2f800ea351086c942c2728f1e1053b4d00418f96196ae0990b92cd0486506a5",
+    "code/digimon-engine/tests/cards_behavioral/bt14/bt14_033.rs": "2bb667e6c98e8bf6904ec332e915e810351205bc6f7a62876f82597b4f392085",
+    "code/digimon-engine/tests/cards_behavioral/bt15/bt15_092.rs": "1c2dd39599bf251caaeca3a10b671e690db46f3dfc6e9b66b7872b3d871565e4",
+    "code/digimon-engine/tests/cards_behavioral/bt15/bt15_102.rs": "c3a8d590da77911f1e4e0029f074198c28f4639abb3276a89cd3cf5f5e2a84a8",
+    "code/digimon-engine/tests/support/printed_security_search.rs": "f38012a91e7f97ae1526f5762a9045750ee0adbf555dc162a22f51f5612327b3",
+    "code/digimon-engine/tests/light_hybrid_qualification_security_search.rs": "369125292ca56a65fe3fe58b40df220f755deb0e7b2fa200a950b96ec9a3952d"
+  },
+  "qualification_limits": [
+    "These focused68 passes do not replace the full-card12755+updated canonical tests denominator or whole35-suite verification ladder.",
+    "Production compiled DSL pack changes require final matching wheel rebuild and artifact regeneration; parent owns those.",
+    "No admission ledger flags, model quality claims or live DCGO oracle certification by this subtask."
+  ]
+}

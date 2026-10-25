@@ -218,6 +218,7 @@ impl Game {
             let previous_phase = self.current_phase;
             self.current_phase = GamePhase::EffectChoice;
             self.pending_selection = Some(PendingSelection {
+                card_choice: None,
                 zone_owner: None,
                 kind: SelectionKind::EffectChoice,
                 selecting_player: player_id,
@@ -654,7 +655,7 @@ impl Game {
         let Some(mut pending) = self.pending_selection.take() else {
             return;
         };
-        if self.pending_selection_resume.is_some() {
+        if self.pending_selection_resume.is_some() || pending.card_choice.is_some() {
             self.pending_selection = Some(pending);
             self.after_selection_resume_hooks.0.push(
                 crate::resume::AfterSelectionHook::DigivolveReducerChain {
@@ -779,6 +780,7 @@ impl Game {
             let label = candidate.label.clone();
             let amount = candidate.amount;
             self.pending_selection = Some(PendingSelection {
+                card_choice: None,
                 zone_owner: None,
                 kind: SelectionKind::EffectChoice,
                 selecting_player: acting_player,
@@ -1032,7 +1034,7 @@ impl Game {
         // Resume-aware (make-engine-cloneable Batch 2): defer the continuation
         // onto the resume channel when the parked select is data-driven (its
         // closure is bypassed by `run_resume`).
-        if self.pending_selection_resume.is_some() {
+        if self.pending_selection_resume.is_some() || pending.card_choice.is_some() {
             self.pending_selection = Some(pending);
             self.after_selection_resume_hooks.0.push(
                 crate::resume::AfterSelectionHook::InteractiveDigivolveReducer {
@@ -1303,22 +1305,10 @@ impl Game {
                 ));
 
         let mut candidates = Vec::new();
-        // `when_playing_this` reducers are scoped to "when THIS card would be
-        // PLAYED" (or, for Options, used) — a DIGIVOLVE cost must not host the
-        // target hand card's own play-cost reducers. DCGO gates these with
-        // `CanTriggerWhenPermanentWouldPlay`, which a digivolve never fires
-        // (e.g. BT18-073 "When this card would be played, by deleting 1 of
-        // your [Composite] Digimon, reduce the play cost by 4" must not be
-        // offered when digivolving BT18-073 over a Lv.5 [Composite] base).
-        // Dropping the target here removes ONLY the target-hosted
-        // `when_playing_this` block from `before_pay_cost_source_infos`;
-        // field/breeding-hosted reducers still collect, and the full
-        // `cost_target` still threads into candidate inspection below so
-        // target-aware predicates keep firing. Caught by
-        // `tests/alt_path_reachability.rs` (BT18-073).
-        let source_scan_target = cost_target.filter(|t| !t.is_digivolve);
-        for info in
-            self.before_pay_cost_source_infos(acting_player, source_scan_target.map(|t| t.card))
+        // The incoming card may host a play reducer OR an evolution reducer.
+        // Inspection below gates each flag to its own cost kind and physical
+        // hand card, so play-only reducers cannot leak into digivolution.
+        for info in self.before_pay_cost_source_infos(acting_player, cost_target.map(|t| t.card))
         {
             let key = CostReductionKey {
                 source_card: info.source_card,
@@ -1384,6 +1374,18 @@ impl Game {
         let effect = effects.get(key.effect_slot as usize)?;
         if effect.timing != EffectTiming::BeforePayCost {
             return None;
+        }
+        if effect.when_playing_this || effect.when_digivolving_this {
+            let target = cost_target?;
+            if key.source_permanent.is_some() || key.source_card != target.card {
+                return None;
+            }
+            if effect.when_playing_this && target.is_digivolve {
+                return None;
+            }
+            if effect.when_digivolving_this && (!target.is_digivolve || !target.from_hand) {
+                return None;
+            }
         }
         if key.is_under != effect.inherited {
             return None;
@@ -1555,15 +1557,15 @@ impl Game {
             // semantics; the Track H gap closure does not need it.)
             return;
         }
-        // Same play-only scoping as the reducer scan: a target-hosted
-        // `when_playing_this` observer ("when this card would be played, ...")
+        // Observers retain play-only target hosting. The separate
+        // `when_digivolving_this` flag belongs to BeforePayCost reducers,
+        // not this observer timing. A target-hosted `when_playing_this` observer ("when this card would be played, ...")
         // must not fire for a DIGIVOLVE cost. Field-hosted observers (e.g.
         // BT12-022's "when this Digimon would DNA digivolve into ..." — gated
         // by `source_is_cost_target_permanent`, not `when_playing_this`) are
         // unaffected; the full `cost_target` still threads into condition/body
         // contexts below. No current observer sets `when_playing_this`, so
-        // this is future-proofing kept in lockstep with
-        // `collect_before_pay_cost_reducers`.
+        // this preserves their existing play-only behavior.
         let observer_scan_target = cost_target.filter(|t| !t.is_digivolve);
         let infos = self
             .before_pay_cost_observer_infos(acting_player, observer_scan_target.map(|t| t.card));

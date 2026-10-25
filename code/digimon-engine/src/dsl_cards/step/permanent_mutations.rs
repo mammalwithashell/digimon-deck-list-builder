@@ -3,7 +3,8 @@
 //! Verbs: DeletePermanent, ReturnToHand, ReturnToDeck, Suspend, Unsuspend,
 //! DeDigivolve. All are binding-consuming: the `target` field resolves to
 //! `ResolvedBinding::Permanent`; any other variant is silently skipped (same
-//! convention as the 2b zone-move handlers).
+//! convention as the 2b zone-move handlers). BindPermanentProperty also
+//! accepts a bound physical card and captures its printed metadata.
 
 use digimon_dsl::compiled::{CompiledPermanentProperty, CompiledStep};
 
@@ -301,10 +302,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             property,
             bind_as,
         } => {
-            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(from, ctx, bindings) {
-                if let Some(value) = permanent_property(ctx, h, *property) {
-                    bindings.insert_literal(bind_as, value);
-                }
+            let value = match resolve_binding_ref(from, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => permanent_property(ctx, h, *property),
+                Some(ResolvedBinding::Card(card)) => match property {
+                    CompiledPermanentProperty::Level => ctx.game.card_data_for_handle(card)
+                        .and_then(|data| data.level).map(i64::from),
+                },
+                _ => None,
+            };
+            if let Some(value) = value {
+                bindings.insert_literal(bind_as, value);
             }
             true
         }

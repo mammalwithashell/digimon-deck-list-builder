@@ -68,11 +68,11 @@ fn tensor(r: &DebugRunner, registry: &CardRegistry, profile: &str, observer: u8)
 }
 
 #[test]
-fn schemas_change_without_changing_shapes_and_match_computed_hashes() {
+fn count_fields_survive_card_page_schema_growth_and_match_computed_hashes() {
     for (p, schema, size) in [
-        (v2_lite::PROFILE, "standard_lite_v2.3", 8410),
-        (v2_lite_deck::PROFILE, "standard_lite_deck_v2.2", 8850),
-        (v2_full::PROFILE, "standard_full_v2.4", 43482),
+        (v2_lite::PROFILE, "standard_lite_v2.4", 9434),
+        (v2_lite_deck::PROFILE, "standard_lite_deck_v2.3", 9874),
+        (v2_full::PROFILE, "standard_full_v2.5", 44506),
     ] {
         assert_eq!(p.feature_schema_version, schema);
         assert_eq!(p.tensor_size, size);
@@ -123,7 +123,7 @@ fn all_profiles_hide_count_metadata_from_nonchoosing_player() {
     ] {
         let t = tensor(&r, &registry, profile, 1);
         for row in 0..32 {
-            let start = v2_lite::OFF_PENDING_CHOICE_FEATURES + row * 96;
+            let start = v2_lite::OFF_PENDING_CHOICE_FEATURES + row * v2_lite::PENDING_CHOICE_ROW_SIZE;
             assert!(t[start + 60..start + 86].iter().all(|v| *v == 0.0));
         }
     }
@@ -152,7 +152,7 @@ fn ordinary_choice_keeps_new_numeric_fields_zero() {
     ctx.select_effect_choice("Ordinary", vec!["A".into(), "B".into()], |_, _| {});
     let t = tensor(&r, &registry, "standard_lite_v2", 0);
     for row in 0..32 {
-        let start = v2_lite::OFF_PENDING_CHOICE_FEATURES + row * 96;
+        let start = v2_lite::OFF_PENDING_CHOICE_FEATURES + row * v2_lite::PENDING_CHOICE_ROW_SIZE;
         assert!(t[start + 60..start + 86].iter().all(|v| *v == 0.0));
     }
 }

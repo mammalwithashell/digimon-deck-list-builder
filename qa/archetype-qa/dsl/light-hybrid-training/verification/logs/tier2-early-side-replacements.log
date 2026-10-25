@@ -1,0 +1,148 @@
+
+running 126 tests
+test attack_cancel::cancel_pending_attack_outside_combat_is_noop ... ok
+test attack_cancel::dsl_end_attack_step_cancels_pending_attack ... ok
+
+thread 'attack_cancel::ex10_003_pay_cost_can_end_pending_attack' (23064) panicked at code\digimon-engine\tests\replacements\attack_cancel.rs:113:10:
+called `Result::unwrap()` on an `Err` value: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test attack_cancel::ex10_003_pay_cost_can_end_pending_attack ... FAILED
+test behavioral_end_to_end::ts_olympos_cherubimon_barrier_battle_end_to_end ... ok
+test context_predicates::dsl_active_when_can_gate_bt22_036_style_subject_controller ... ok
+test context_predicates::dsl_active_when_can_gate_ex7_027_style_opponent_source_controller ... ok
+test context_predicates::dsl_active_when_can_gate_ex9_032_style_opponent_effect_cause ... ok
+test context_predicates::queued_opponent_effect_populates_replacement_source_controller ... ok
+test context_predicates::replacement_boolean_predicates_fail_when_context_controller_is_missing ... ok
+test context_predicates::replacement_condition_can_gate_on_opponent_effect_cause ... ok
+test context_predicates::revealed_card_subject_controller_is_not_fallback_player_zero ... ok
+test cross_permanent::dsl_compound_predicate_sibling_does_not_broaden_default_self_scope ... ok
+test cross_permanent::dsl_source_permanent_can_protect_a_different_subject ... ok
+test declined_replacements::accepted_decode_with_declined_material_pick_still_offers_evade ... ok
+test declined_replacements::declined_decode_still_offers_evade_then_evade_saves ... ok
+test declined_replacements::declining_decode_then_evade_deletes_exactly_once ... ok
+
+thread 'declined_replacements::used_decode_still_offers_evade_and_decline_trashes_carrier' (38840) panicked at code\digimon-engine\tests\replacements\declined_replacements.rs:319:9:
+the stacked [TB] source is offered; got [30, 62]
+test declined_replacements::used_decode_still_offers_evade_and_decline_trashes_carrier ... FAILED
+test deletion_replacements::barrier_trashes_top_of_deck_and_skips_deletion ... ok
+test deletion_replacements::deletion_cancelled_suppresses_on_any_deletion ... ok
+test deletion_replacements::deletion_cause_battle_is_inferred_in_resolve_battle ... ok
+test deletion_replacements::deletion_cause_battle_is_reported_when_attacker_loses_security_battle ... ok
+test deletion_replacements::deletion_cause_opponent_effect_is_inferred_when_opponent_deletes ... ok
+test deletion_replacements::deletion_cause_own_effect_is_inferred_when_controller_deletes_own ... ok
+test deletion_replacements::deletion_redirected_to_hand_does_not_fire_on_deletion ... ok
+test deletion_replacements::evade_redirects_to_bottom_of_deck ... ok
+test deletion_replacements::substitute_redirects_deletion_to_other_permanent ... ok
+test deletion_replacements::substituted_subject_receives_own_replacement_pass ... ok
+test dispatcher_core::custom_handled_replacement_applies ... ok
+test dispatcher_core::depth_guard_caps_recursion ... ok
+test dispatcher_core::mandatory_cancel_replacement_applies ... ok
+test dispatcher_core::optional_replacement_accept_path_applies_outcome ... ok
+test dispatcher_core::optional_replacement_decline_path_leaves_outcome_none ... ok
+test dispatcher_core::optional_replacement_emits_pending_selection ... ok
+test dispatcher_core::redirect_replacement_applies ... ok
+test dispatcher_core::substitute_replacement_applies ... ok
+test dispatcher_core::try_replace_returns_none_when_no_candidates ... ok
+test dispatcher_core::turn_player_prevention_keeps_opponent_immediate_effect_available ... ok
+test dispatcher_guard::commit_continuation_broadening_blocks_different_timing_v1_known_limitation ... ok
+test dispatcher_guard::once_per_event_guard_scenarios ... ok
+test enum_and_context::new_keywords_exist ... ok
+test enum_and_context::replacement_cause_variants_exist ... ok
+test enum_and_context::replacement_outcome_defaults_none ... ok
+test enum_and_context::replacement_selection_kind_exists ... ok
+test enum_and_context::replacement_subject_variants_exist ... ok
+test enum_and_context::would_timings_exist ... ok
+test granted_keywords::aura_granted_barrier_prompts_after_explicit_tick ... ok
+test granted_keywords::aura_granted_barrier_prompts_on_battle_deletion_without_prior_tick ... ok
+test granted_keywords::dsl_declarative_barrier_clause_prompts_on_battle_deletion ... ok
+test granted_keywords::mass_granted_evade_prompts_on_a_non_source_recipient ... ok
+test granted_keywords::mass_granted_fortitude_fires_on_a_non_source_recipient ... ok
+test granted_keywords::mass_granted_fortitude_fires_on_its_own_grantor ... ok
+test granted_keywords::printed_barrier_control_prompts_on_battle_deletion ... ok
+test granted_keywords::printed_barrier_control_prompts_on_losing_security_battle ... ok
+test granted_keywords::runtime_granted_barrier_prompts_on_battle_deletion ... ok
+test granted_keywords::runtime_granted_barrier_prompts_on_losing_security_battle ... ok
+test granted_keywords::runtime_granted_evade_prompts_on_effect_deletion ... ok
+test native_keywords::printed_barrier_keyword_auto_installs_replacement ... ok
+test native_keywords::printed_barrier_keyword_decline_allows_deletion ... ok
+test native_keywords::printed_barrier_keyword_ignores_non_battle_deletion ... ok
+test native_keywords::printed_barrier_keyword_without_security_does_not_install ... ok
+test native_keywords::printed_decode_keyword_installs_no_generic_replacement ... ok
+test native_keywords::printed_decode_keyword_return_to_hand_commits_without_window ... ok
+test native_keywords::printed_evade_keyword_suspends_and_cancels_deletion ... ok
+test native_keywords::printed_keyword_effects_only_apply_to_permanents_on_field ... ok
+test nested_select_decoy::decoy_substitutes_self_for_ally_deletion ... ok
+test nested_select_decoy::synthetic_substitute_does_not_offer_for_its_own_carrier ... ok
+test nested_select_fragment::fragment_2_picks_two_cards_and_cancels ... ok
+test nested_select_fragment::fragment_n_too_few_cards_does_not_offer ... ok
+test nested_select_regression::barrier_synchronous_process_unchanged ... ok
+test nested_select_regression::evade_synchronous_process_unchanged ... ok
+test nested_select_save::save_outer_decline_proceeds_with_deletion ... ok
+test nested_select_save::save_picks_tamer_and_cancels_deletion ... ok
+test nested_select_save::save_with_no_tamers_does_not_offer ... ok
+
+thread 'nested_select_substrate::cancel_leave_outside_parked_scope_panics_in_dev' (20340) panicked at code\digimon-engine\src\effect_context\action\replacement.rs:38:9:
+cancel_leave called outside a replacement-process callback; the outcome would be silently dropped
+test nested_select_substrate::cancel_leave_outside_parked_scope_panics_in_dev ... ok
+test nested_select_substrate::cancel_leave_writes_cancelled_outcome_to_parked_slot ... ok
+test nested_select_substrate::default_none_when_callback_skips_outcome ... ok
+test nested_select_substrate::handle_replacement_writes_custom_handled_to_parked_slot ... ok
+test nested_select_substrate::last_write_wins_on_multiple_outcome_setters ... ok
+test nested_select_substrate::post_callback_hook_drains_parked_and_commits_outcome ... ok
+test nested_select_substrate::post_process_hook_installs_parked_replacement_when_select_called ... ok
+test nested_select_substrate::redirect_replacement_writes_redirected_outcome_to_parked_slot ... ok
+test nested_select_substrate::second_park_stacks_above_an_outstanding_park_and_drains_lifo ... ok
+test nested_select_substrate::substitute_replacement_writes_substituted_outcome_to_parked_slot ... ok
+test nested_select_substrate::synchronous_outcome_preserved_when_process_also_parks ... ok
+test partition::bt16_025_partition_decline_allows_deletion ... ok
+test partition::bt16_025_partition_failed_source_play_does_not_cancel_or_strand_cards ... ok
+test partition::bt16_025_partition_masks_picks_that_cannot_complete_requirements ... ok
+test partition::bt16_025_partition_places_all_sources_before_draining_on_play_effects ... ok
+test partition::bt16_025_partition_requires_one_each_matching_source ... ok
+test passive_modifier_migration::cannot_be_de_digivolved_cancels_de_digi ... ok
+test passive_modifier_migration::cannot_be_destroyed_by_battle_cancels_battle_deletion ... ok
+test passive_modifier_migration::cannot_be_destroyed_by_battle_does_not_cancel_effect_deletion ... ok
+test passive_modifier_migration::cannot_be_destroyed_by_effect_cancels_opponent_deletion ... ok
+test passive_modifier_migration::cannot_be_returned_to_deck_allows_own_return ... ok
+test passive_modifier_migration::cannot_be_returned_to_deck_cancels_opponent_return ... ok
+test passive_modifier_migration::player_scoped_passive_also_auto_installs_as_replacement ... ok
+test passive_modifier_migration::replacement_condition_gates_passive ... ok
+test route_replacements::optional_permanent_would_digivolve_accept_cancels_and_keeps_stack ... ok
+test route_replacements::optional_permanent_would_digivolve_decline_resumes_original_digivolve ... ok
+test route_replacements::optional_permanent_would_play_accept_cancels_and_keeps_card_in_hand ... ok
+test route_replacements::optional_permanent_would_play_decline_resumes_original_play ... ok
+test route_replacements::optional_permanent_would_play_from_security_accept_restores_security_origin ... ok
+test route_replacements::optional_permanent_would_play_from_security_decline_resumes_play ... ok
+test route_replacements::optional_permanent_would_play_from_trash_accept_restores_trash_origin ... ok
+test route_replacements::optional_permanent_would_play_from_trash_decline_resumes_play ... ok
+test route_replacements::optional_would_lose_security_accept_restores_revealed_card ... ok
+test route_replacements::optional_would_lose_security_decline_trashes_revealed_card ... ok
+test route_replacements::permanent_would_digivolve_cancel_keeps_stack_and_memory_unchanged ... ok
+test route_replacements::permanent_would_play_cancel_keeps_card_in_hand_without_paying_memory ... ok
+test route_replacements::would_be_de_digivolved_cancel_prevents_pops ... ok
+test route_replacements::would_be_de_digivolved_custom_handled_returns_zero ... ok
+test route_replacements::would_be_de_digivolved_substitute_targets_other_permanent ... ok
+test route_replacements::would_be_returned_to_deck_cancel_keeps_permanent_on_field ... ok
+test route_replacements::would_be_returned_to_hand_cancel_keeps_permanent_on_field ... ok
+test route_replacements::would_be_returned_to_hand_redirect_to_trash_deletes_instead ... ok
+test route_replacements::would_be_trashed_from_hand_cancel_keeps_card_in_hand ... ok
+test route_replacements::would_draw_cancel_prevents_card_movement ... ok
+test route_replacements::would_draw_still_respects_flood_gate_cannot_draw_by_effect ... ok
+test route_replacements::would_lose_security_cancel_restores_revealed_card ... ok
+test route_replacements::would_place_in_security_redirect_to_trash ... ok
+test source_scoped_immunity::effect_context_grants_zone_return_immunity_to_opponent_effects ... ok
+test source_scoped_immunity::opponent_effect_cannot_return_protected_digimon_to_hand ... ok
+test source_scoped_immunity::opponent_effect_cannot_return_to_deck_or_de_digivolve_protected_digimon ... ok
+test source_scoped_immunity::opponent_security_effect_cannot_return_or_de_digivolve_protected_digimon ... ok
+test source_scoped_immunity::own_effect_can_return_protected_digimon_to_hand ... ok
+test source_scoped_immunity::security_resolution_without_effect_source_does_not_trigger_opponent_only_immunity ... ok
+
+failures:
+
+failures:
+    attack_cancel::ex10_003_pay_cost_can_end_pending_attack
+    declined_replacements::used_decode_still_offers_evade_and_decline_trashes_carrier
+
+test result: FAILED. 124 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.28s
+
+SUITE_EXIT 101

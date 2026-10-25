@@ -1,5 +1,108 @@
 # Rust Engine Gaps
 
+## Face-down source characteristic filters [G-ENGINE-FACE-DOWN-SOURCE-INFORMATION] — fix authored, verification pending (2026-10-24)
+
+CR 4-7-9 removes card information from face-down cards underneath cards;
+owner inspection under 4-7-10 does not restore those characteristics for rules
+filters. Card-subject predicate evaluation previously read printed metadata,
+allowing a face-down underlying Digimon to pay a Digimon-card-only cost and
+face-down Hybrid sources to satisfy evolution requirements. Both Source and
+Card subjects are affected because source-count aggregates use Card subjects.
+
+Actual RED: `tests/source_face_down_characteristics.rs` fails because the
+face-down source matches `kind: digimon`. A reusable under-top/face-down query
+and central printed-characteristic predicate guard are authored; native GREEN,
+broader predicate controls and BT18-042's card-specific witnesses remain pending.
+This entry does not certify other raw characteristic readers or card admission.
+
+## Nested immediate attack offers [G-ENGINE-NESTED-EFFECT-ATTACK-PROMPT] — resolved, focused controls verified (2026-10-24)
+
+BT18-088 Q3046 and CR 4.3 11-2-4 allow an effect to activate during an attack,
+but prohibit another declaration until that attack ends, including its
+EndOfAttackDrain timing (11-6-2). Execution already rejected nesting; immediate
+effect target enumeration incorrectly offered an illegal target. Legal-now
+attack wrappers now return no choices while pending_attack exists.
+
+End-of-turn keyword activation remains separate: Engage/Execute/Vortex can
+activate while an earlier attack is pending and defer their offer. Their
+activation predicate queries intrinsic potential targets; actual offers still
+use the guarded legal-now path. The first generic guard exposed two existing
+Engage deferral failures, which this separation repairs. No new action IDs or
+observation schema changes were introduced.
+
+TDD: production Q3046 and an independent construct failed before the guard;
+the final focused suite passes 33 tests (both seats, four immediate-attack
+modes, Declared/EndOfAttackDrain, plus existing immediate/Blitz/end-turn mask
+and deferred-keyword controls). BT18-088 passes ten card tests with explicit
+activation versus optional-processing choices. CR 15-14-1-4 counts an accepted
+activation even when processing cannot execute; CR 16-16-3 identifies attack
+permission as optional processing. Independent source review approved the
+separation. This is simulator evidence, not new live DCGO confirmation.
+
+## Complete security-card choices [G-ACTION-COMPLETE-SECURITY-SELECTION] — BLOCKED; coordinated contract plan (2026-10-24)
+
+BT18-037 Lobomon may search its security stack for an eligible card, but
+`select_security` enumerates only indices 0..9 (`MAX_SECURITY`), while recovery
+and the underlying security vector permit larger stacks. The production-card
+diagnostic `tests/light_hybrid_security_capacity.rs` passed its index-9 control
+and failed at index 10 before that deep witness was explicitly ignored.
+Nine shallow behavioral tests do not qualify Lobomon; its ledger remains BLOCKED.
+Top-card-only security movement and full-stack count predicates are unaffected.
+
+The action/tensor migration plan at
+`openspec/changes/support-complete-digivolution-source-choices/` also covers
+owned security paging, physical identity, allowed visibility, clone/generation
+validation and coordinated consumer/model compatibility. No action constants
+or observation contracts were changed in this card implementation.
+
+## Complete digivolution-source choices [G-ACTION-COMPLETE-SOURCE-SELECTION] — BLOCKED; coordinated contract plan (2026-10-24)
+
+Source piles are uncapped, but material and own-source action encodings expose
+only twelve source positions. A legal Tamer at index 12 is unreachable in
+BT18-063 and BT18-076 inherited effects; their shallow behavioral suites do not
+qualify them for training. BT18-042's selected-source security cost has the same
+selection gap. Its completed selected-source placement receipt primitive is now
+verified: ten selected-source and twelve top-placement controls pass, including
+pending replacements, cloning and field/source compaction. A separate regression
+captures a selected card's printed level before movement. These prerequisites
+do not qualify BT18-042 until paging and its own full behavioral tests pass.
+Never cap legal source piles or automatically select the hidden target.
+
+`tests/light_hybrid_source_capacity.rs` produced two passing index-11 controls
+and two failing index-12 cases before those deep witnesses were explicitly
+ignored under this gap. `tests/cards_behavioral/bt18/bt18_042.rs` retains its
+ignored geometry witness. All three card-ledger rows remain BLOCKED.
+
+The repository action/tensor change rule requires a separate coordinated change:
+`openspec/changes/support-complete-digivolution-source-choices/` is validated and
+is applying owned paging, physical identity, generation checks, receipt completion,
+Rust/PyO3/RL/frontend/replay/model compatibility and card requalification. No
+active action or tensor contract was changed in this card implementation.
+
+## Target-hand-card digivolution cost reducers [G-ENGINE-HAND-HOSTED-DIGIVOLVE-REDUCERS] — focused repair verified (Light Hybrid, 2026-10-24)
+
+The explicit `when_digivolving_this` reducer flag hosts a mandatory reduction
+on the incoming physical card only while it is in hand and its digivolution
+cost is being computed. It is distinct from play-only `when_playing_this`;
+conflicting flags are rejected. Field/breeding observers cannot use either
+target-host flag. Existing reduction prohibitions and real payment remain in
+force; this is not a cheaper alternative recipe.
+
+The nested `cost_target_permanent` predicate evaluates the actual evolution
+base(s), including breeding, with the normal predicate/binding validation.
+It is false without an applicable cost context. JetSilphymon can therefore
+check the base Digimon's Tamer sources rather than a neighboring permanent.
+
+TDD: missing-syntax failures observed before implementation; 15 focused
+construct tests pass, with independent spec/quality approval. Coverage includes
+both seats, breeding, hand/trash effect provenance, another physical copy,
+wrong cost-kind isolation, prohibitions, effect-selection affordability, query
+purity and the zero floor. Public `lower_with_formula` signature and action /
+observation contracts are unchanged. Introduced in pack format 0.28.0.
+
+BT7-038 production YAML now passes nine behavioral tests and independent review.
+This is simulator evidence, with no new live DCGO confirmation.
+
 ## Source-cost atomic payment and deletion-result receipts — construct regressions (2026-10-22)
 
 `trash_selected_sources_as_cost` now preflights every selected physical source
@@ -6348,16 +6451,20 @@ Retracted by the controller in task 9 review: §15-7-3 is a DSL-authoring/vocabu
   printed IDs. RB1-004, RB1-006 and RB1-007's Rule card-number aliases are not
   modeled (CR 4.3 §2-3-4-5). Alias metadata and all equality consumers need a
   coordinated implementation.
-- **G-SOURCE-COUNT-FACE-DOWN-2026-10-22 — deferred, DCGO conflict.**
+- **G-SOURCE-COUNT-FACE-DOWN-2026-10-22 — reopened; rule-based fix authored, verification pending (2026-10-24).**
   `source_count` reads printed identity even when a source is face down.
   CR 4.3 §4-7-9 says that information cannot be referenced. BT25_085.cs
   `PermanentWithTrashableCard` uses `DigivolutionOrLinkCards.Any(CanTrashCardSource)`;
   `CanTrashCardSource` reads `IsOption`, which is `CardKinds.Contains(Option)`
   and `CardKinds` reads `_cEntity_Base.cardKind` (CardSource.cs:3537,3606).
-  The selection also sets `canLookReverseCard: true`. Under the approved
-  fix-or-file decision, retain the existing behavior and pin research row D.
-  This is not a claim of CR conformance. Resolve the conflict before changing
-  production payment gates. DCGO source was read from the populated base repo.
+  The selection also sets `canLookReverseCard: true`. The earlier fix-or-file
+  decision deferred this conflict and pinned research row D; that historical
+  evidence remains relevant. The current user-supplied source priority makes
+  printed text and rules authoritative over DCGO, so the Light Hybrid change
+  now follows CR 4-7-9. Actual RED confirms a face-down source passes a printed
+  Digimon filter. See G-ENGINE-FACE-DOWN-SOURCE-INFORMATION above for the shared
+  guard and pending verification. DCGO disagreement is preserved, not treated
+  as oracle confirmation or grounds for admitting the affected cards.
 
 ### Q3185: CannotSuspend and attacks without suspending — resolved 2026-10-22
 
