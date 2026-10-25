@@ -1,0 +1,894 @@
+[
+  {
+    "game": 102,
+    "seed": 120522255,
+    "deck1": [
+      "EX7-002",
+      "EX7-002",
+      "EX7-002",
+      "EX7-002",
+      "BT6-022",
+      "BT6-022",
+      "BT17-020",
+      "P-249",
+      "P-249",
+      "P-249",
+      "P-249",
+      "BT16-082",
+      "BT16-082",
+      "BT16-082",
+      "BT16-082",
+      "BT17-023",
+      "BT17-023",
+      "BT17-023",
+      "BT17-023",
+      "BT18-037",
+      "BT18-067",
+      "BT18-067",
+      "BT18-063",
+      "BT18-077",
+      "BT18-077",
+      "BT18-077",
+      "BT18-076",
+      "BT18-076",
+      "BT18-076",
+      "AD1-015",
+      "AD1-015",
+      "AD1-015",
+      "AD1-015",
+      "BT7-038",
+      "BT18-081",
+      "BT18-081",
+      "BT18-042",
+      "BT18-042",
+      "BT18-042",
+      "P-153",
+      "P-153",
+      "BT18-088",
+      "BT18-088",
+      "BT18-088",
+      "AD1-023",
+      "AD1-023",
+      "AD1-023",
+      "AD1-023",
+      "BT18-094",
+      "BT18-094",
+      "BT18-094",
+      "BT18-097",
+      "BT18-097",
+      "BT18-097"
+    ],
+    "deck2": [
+      "EX12-001",
+      "EX12-001",
+      "EX12-001",
+      "EX12-001",
+      "EX12-005",
+      "EX12-005",
+      "EX12-007",
+      "EX12-007",
+      "EX12-007",
+      "EX12-021",
+      "EX12-021",
+      "EX12-021",
+      "EX12-040",
+      "EX12-040",
+      "EX12-040",
+      "EX12-013",
+      "EX12-013",
+      "EX12-013",
+      "EX12-010",
+      "EX12-010",
+      "EX12-024",
+      "EX12-024",
+      "EX12-024",
+      "EX12-024",
+      "EX12-042",
+      "EX12-042",
+      "EX12-042",
+      "EX12-016",
+      "EX12-032",
+      "EX12-032",
+      "EX12-032",
+      "EX12-032",
+      "EX12-044",
+      "EX12-044",
+      "EX12-044",
+      "EX12-035",
+      "EX12-035",
+      "EX12-035",
+      "EX12-035",
+      "P-240",
+      "EX12-037",
+      "EX12-037",
+      "EX12-037",
+      "EX12-018",
+      "EX12-018",
+      "EX12-018",
+      "EX12-018",
+      "EX12-066",
+      "EX12-069",
+      "EX12-069",
+      "EX12-069",
+      "EX12-073",
+      "EX12-073",
+      "EX12-073"
+    ],
+    "prefix": [
+      {
+        "player": 1,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 1,
+        "action": 60
+      },
+      {
+        "player": 1,
+        "action": 444
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 414
+      },
+      {
+        "player": 0,
+        "action": 60
+      },
+      {
+        "player": 0,
+        "action": 474
+      },
+      {
+        "player": 0,
+        "action": 62
+      },
+      {
+        "player": 1,
+        "action": 61
+      },
+      {
+        "player": 1,
+        "action": 114
+      },
+      {
+        "player": 0,
+        "action": 1
+      },
+      {
+        "player": 1,
+        "action": 5
+      },
+      {
+        "player": 1,
+        "action": 0
+      },
+      {
+        "player": 1,
+        "action": 431
+      },
+      {
+        "player": 1,
+        "action": 101
+      },
+      {
+        "player": 1,
+        "action": 0
+      },
+      {
+        "player": 1,
+        "action": 114
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 100
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 59
+      },
+      {
+        "player": 1,
+        "action": 1150
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 0
+      },
+      {
+        "player": 1,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 1
+      },
+      {
+        "player": 0,
+        "action": 61
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 1150
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 1
+      },
+      {
+        "player": 0,
+        "action": 400
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 416
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 1
+      },
+      {
+        "player": 0,
+        "action": 429
+      },
+      {
+        "player": 0,
+        "action": 129
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 100
+      }
+    ]
+  },
+  {
+    "game": 401,
+    "seed": 120522853,
+    "deck1": [
+      "EX7-002",
+      "EX7-002",
+      "EX7-002",
+      "EX7-002",
+      "BT6-022",
+      "BT6-022",
+      "BT17-020",
+      "P-249",
+      "P-249",
+      "P-249",
+      "P-249",
+      "BT16-082",
+      "BT16-082",
+      "BT16-082",
+      "BT16-082",
+      "BT17-023",
+      "BT17-023",
+      "BT17-023",
+      "BT17-023",
+      "BT18-037",
+      "BT18-067",
+      "BT18-067",
+      "BT18-063",
+      "BT18-077",
+      "BT18-077",
+      "BT18-077",
+      "BT18-076",
+      "BT18-076",
+      "BT18-076",
+      "AD1-015",
+      "AD1-015",
+      "AD1-015",
+      "AD1-015",
+      "BT7-038",
+      "BT18-081",
+      "BT18-081",
+      "BT18-042",
+      "BT18-042",
+      "BT18-042",
+      "P-153",
+      "P-153",
+      "BT18-088",
+      "BT18-088",
+      "BT18-088",
+      "AD1-023",
+      "AD1-023",
+      "AD1-023",
+      "AD1-023",
+      "BT18-094",
+      "BT18-094",
+      "BT18-094",
+      "BT18-097",
+      "BT18-097",
+      "BT18-097"
+    ],
+    "deck2": [
+      "BT21-001",
+      "BT21-001",
+      "BT21-001",
+      "BT21-001",
+      "BT24-008",
+      "BT24-008",
+      "BT24-008",
+      "BT21-007",
+      "BT21-008",
+      "BT21-008",
+      "BT21-008",
+      "BT21-008",
+      "BT23-005",
+      "EX11-008",
+      "EX11-008",
+      "P-189",
+      "P-189",
+      "BT24-011",
+      "BT24-011",
+      "BT21-017",
+      "BT21-017",
+      "BT21-017",
+      "BT21-017",
+      "BT24-012",
+      "BT21-024",
+      "BT21-024",
+      "BT24-016",
+      "BT24-016",
+      "BT24-016",
+      "BT24-016",
+      "BT21-025",
+      "EX11-012",
+      "EX11-012",
+      "EX11-012",
+      "EX11-012",
+      "BT24-017",
+      "BT24-018",
+      "BT24-018",
+      "BT24-018",
+      "EX11-054",
+      "BT21-081",
+      "BT21-081",
+      "BT24-082",
+      "BT24-082",
+      "BT24-082",
+      "BT21-093",
+      "BT8-097",
+      "BT8-097",
+      "P-035",
+      "LM-027",
+      "LM-057",
+      "LM-059",
+      "LM-055",
+      "LM-061"
+    ],
+    "prefix": [
+      {
+        "player": 1,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 1,
+        "action": 60
+      },
+      {
+        "player": 1,
+        "action": 429
+      },
+      {
+        "player": 1,
+        "action": 3
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 60
+      },
+      {
+        "player": 0,
+        "action": 444
+      },
+      {
+        "player": 0,
+        "action": 4
+      },
+      {
+        "player": 1,
+        "action": 61
+      },
+      {
+        "player": 1,
+        "action": 129
+      },
+      {
+        "player": 1,
+        "action": 101
+      },
+      {
+        "player": 1,
+        "action": 1
+      },
+      {
+        "player": 1,
+        "action": 1002
+      },
+      {
+        "player": 1,
+        "action": 5
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 61
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 0,
+        "action": 1
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 62
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 101
+      },
+      {
+        "player": 0,
+        "action": 1
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 1,
+        "action": 60
+      },
+      {
+        "player": 1,
+        "action": 114
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 1,
+        "action": 62
+      },
+      {
+        "player": 0,
+        "action": 60
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 102
+      },
+      {
+        "player": 0,
+        "action": 459
+      },
+      {
+        "player": 0,
+        "action": 430
+      },
+      {
+        "player": 0,
+        "action": 114
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 0,
+        "action": 1
+      },
+      {
+        "player": 0,
+        "action": 433
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 59
+      },
+      {
+        "player": 1,
+        "action": 62
+      },
+      {
+        "player": 0,
+        "action": 62
+      },
+      {
+        "player": 0,
+        "action": 2
+      },
+      {
+        "player": 0,
+        "action": 102
+      },
+      {
+        "player": 0,
+        "action": 3
+      },
+      {
+        "player": 0,
+        "action": 114
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 0,
+        "action": 1
+      },
+      {
+        "player": 0,
+        "action": 2
+      },
+      {
+        "player": 0,
+        "action": 435
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 59
+      },
+      {
+        "player": 0,
+        "action": 159
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 3
+      },
+      {
+        "player": 0,
+        "action": 32
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 0,
+        "action": 2
+      },
+      {
+        "player": 1,
+        "action": 1002
+      },
+      {
+        "player": 1,
+        "action": 62
+      },
+      {
+        "player": 0,
+        "action": 62
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 3
+      },
+      {
+        "player": 0,
+        "action": 102
+      },
+      {
+        "player": 0,
+        "action": 3
+      },
+      {
+        "player": 0,
+        "action": 62
+      },
+      {
+        "player": 0,
+        "action": 466
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 59
+      },
+      {
+        "player": 0,
+        "action": 159
+      },
+      {
+        "player": 0,
+        "action": 3
+      },
+      {
+        "player": 0,
+        "action": 100
+      },
+      {
+        "player": 0,
+        "action": 2
+      },
+      {
+        "player": 0,
+        "action": 2
+      },
+      {
+        "player": 0,
+        "action": 3
+      },
+      {
+        "player": 1,
+        "action": 59
+      },
+      {
+        "player": 1,
+        "action": 0
+      },
+      {
+        "player": 1,
+        "action": 1152
+      },
+      {
+        "player": 1,
+        "action": 31
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 579
+      },
+      {
+        "player": 1,
+        "action": 38
+      },
+      {
+        "player": 1,
+        "action": 101
+      },
+      {
+        "player": 1,
+        "action": 1153
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 1,
+        "action": 30
+      },
+      {
+        "player": 1,
+        "action": 59
+      },
+      {
+        "player": 1,
+        "action": 594
+      },
+      {
+        "player": 0,
+        "action": 62
+      },
+      {
+        "player": 0,
+        "action": 2
+      },
+      {
+        "player": 0,
+        "action": 3
+      },
+      {
+        "player": 0,
+        "action": 0
+      },
+      {
+        "player": 0,
+        "action": 114
+      },
+      {
+        "player": 0,
+        "action": 30
+      },
+      {
+        "player": 0,
+        "action": 101
+      }
+    ]
+  }
+]

@@ -10,6 +10,7 @@ checkpoint round-trips through SB3.
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 
 import numpy as np
@@ -114,6 +115,66 @@ def test_loader_stitches_multiple_dirs(tmp_path):
     # Row 6 is gen1's row 0 — its slice must land on gen1 data, not gen0's.
     s, e = ds.offsets[6], ds.offsets[7]
     assert list(ds.actions[s:e]) == [1, 3, 5]
+    expected = np.concatenate([np.load(p / 'shard-000/obs.npy') for p in (a, b)])
+    assert isinstance(ds.obs, np.memmap)
+    assert ds.obs.tobytes() == expected.tobytes()
+    assert ds.obs[[9, 0, 6, 2]].tobytes() == expected[[9, 0, 6, 2]].tobytes()
+    assert ds.obs.flags.writeable  # private backing file; same ndarray contract
+
+
+def _exclude_games(directory, ids):
+    (directory / "training_exclusions.json").write_text(json.dumps({
+        "schema": "selfplay-training-exclusions-v1",
+        "manifest_sha256": hashlib.sha256((directory / "manifest.json").read_bytes()).hexdigest(),
+        "games": [{"game_id": gid, "reason": "verified repeated-state loop"} for gid in ids],
+    }))
+
+
+def test_game_exclusions_preserve_sparse_rows_and_other_chunks(tmp_path):
+    a = _write_shard_dir(tmp_path / "a", rows=6, seed=0)
+    b = _write_shard_dir(tmp_path / "b", rows=4, seed=1)
+    original = load_shards([a, b])
+    _exclude_games(a, [1])
+    filtered = load_shards([a, b])
+    keep = [0, 1, 4, 5, 6, 7, 8, 9]
+    np.testing.assert_array_equal(filtered.obs, original.obs[keep])
+    np.testing.assert_array_equal(filtered.game_ids, original.game_ids[keep])
+    np.testing.assert_array_equal(filtered.z, original.z[keep])
+    for new, old in enumerate(keep):
+        start, end = filtered.offsets[new:new+2]
+        old_start, old_end = original.offsets[old:old+2]
+        np.testing.assert_array_equal(filtered.actions[start:end], original.actions[old_start:old_end])
+        np.testing.assert_array_equal(filtered.visits[start:end], original.visits[old_start:old_end])
+    assert filtered.exclusions[0]["excluded_rows"] == 2
+    assert filtered.exclusions[0]["games"][0]["game_id"] == 1
+
+
+@pytest.mark.parametrize("invalid", ["hash", "unknown_game"])
+def test_game_exclusions_fail_closed(tmp_path, invalid):
+    a = _write_shard_dir(tmp_path / "a", rows=6, seed=0)
+    _exclude_games(a, [999] if invalid == "unknown_game" else [1])
+    if invalid == "hash":
+        p = a / "manifest.json"
+        p.write_text(p.read_text() + "\n")
+    with pytest.raises(ValueError, match="exclusion"):
+        load_shards([a])
+
+
+def test_train_excludes_quarantined_game_from_both_losses(tmp_path):
+    a = _write_shard_dir(tmp_path / "a", rows=6, seed=0)
+    _exclude_games(a, [1])
+    # Only the quarantined game is truncated; neither its policy nor value
+    # targets may reach training. Remaining four rows fit normally.
+    np.save(a / "shard-000/terminated.npy", np.array([1, 1, 0, 0, 1, 1], np.uint8))
+    model = MaskablePPO("MlpPolicy", _TinyEnv(), n_steps=8, batch_size=8, verbose=0)
+    model.digimon_contract = _contract()
+    model.save(str(tmp_path / "seed.zip"))
+    summary = train(init_from=tmp_path / "seed.zip", shard_dirs=[a], out=tmp_path / "fit.zip",
+                    epochs=1, batch_size=4, device="cpu")
+    assert summary["rows"] == 4
+    assert summary["truncated_rows"] == 0
+    assert summary["excluded_rows"] == 2
+    assert summary["excluded_games"] == 1
 
 
 def test_train_moves_policy_and_value_toward_targets(tmp_path):

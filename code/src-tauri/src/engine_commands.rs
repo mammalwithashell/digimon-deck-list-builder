@@ -762,7 +762,9 @@ fn pending_selection_dto(game: &Game) -> Option<PendingSelectionDto> {
                 .iter()
                 .enumerate()
                 .map(|(i, entry)| {
-                    let card = entry.source_card.map(|h| game.card(h));
+                    // A deleted token can still have a pending trigger after
+                    // its physical card has left the game. Preserve the choice.
+                    let card = entry.source_card.and_then(|h| game.card_data_for_handle(h));
                     EffectChoiceDto {
                         count_choice: entry
                             .count_choice

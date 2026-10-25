@@ -93,16 +93,31 @@ fn bt26_012_main_plays_tb_tamer() {
 }
 
 #[test]
-fn bt26_012_declining_refunds_once_per_turn() {
+fn bt26_012_declining_after_activation_spends_once_per_turn() {
     let mut r = setup();
     push_hand(&mut r, 0, "TBMON");
     let m = r.place_on_field(0, CARD_ID, Some(0));
+    let other = r.place_on_field(0, CARD_ID, Some(0));
     let a = main_action(m.index);
+    let memory = r.memory();
+    assert!(mask_has(&r, a));
     r.game.decode_action(a, 0);
     pass(&mut r, 0);
     assert!(r.game.pending_selection.is_none());
     assert_eq!(hand_ids(&r, 0), vec!["TBMON"]);
-    assert!(mask_has(&r, a), "declined → OPT not spent (DCGO RemoveUse)");
+    assert_eq!(
+        r.memory(),
+        memory,
+        "declining plays nothing and pays no memory"
+    );
+    assert!(
+        !mask_has(&r, a),
+        "CR 4.3 15-14-1-4: activation spends the use even when processing is declined"
+    );
+    assert!(
+        mask_has(&r, main_action(other.index)),
+        "each copy has its own use"
+    );
 }
 
 #[test]

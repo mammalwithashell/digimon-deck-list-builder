@@ -158,11 +158,12 @@ class CardEvalCollector:
         cards, routes = {}, {}
         for game in self.games:
             context = game["context"]
-            group = (context.get("agent_archetype", ""), context.get("opponent_archetype", ""))
+            scope = {name: context.get(name, "") for name in ("panel", "anchor", "evaluation_mode")}
+            group = (context.get("agent_archetype", ""), context.get("opponent_archetype", ""), *scope.values())
             for row in game["cards"]:
                 key = (*group, row["player"], row["card_id"])
                 target = cards.setdefault(key, dict(agent_archetype=group[0], opponent_archetype=group[1],
-                    player=row["player"], card_id=row["card_id"], card_name=row["card_name"], games=0,
+                    **scope, player=row["player"], card_id=row["card_id"], card_name=row["card_name"], games=0,
                     wins=0, losses=0, draws=0, incomplete=0, games_seen_in_hand=0,
                     games_entered=0, completed_games_entered=0, wins_when_entered=0,
                     first_entry_turn_sum=0, **dict.fromkeys(CARD_COUNTERS, 0)))
@@ -183,6 +184,7 @@ class CardEvalCollector:
             for row in game["routes"]:
                 key = (*group, row["player"], row["card_id"], row["route"])
                 target = routes.setdefault(key, dict(agent_archetype=group[0], opponent_archetype=group[1],
+                    **scope,
                     **{k: row[k] for k in ("player", "card_id", "route")}, opportunities=0, choices=0))
                 target["opportunities"] += row["opportunities"]
                 target["choices"] += row["choices"]
@@ -203,11 +205,16 @@ def save_report(report: dict, directory: Path) -> Path:
     return path
 
 
-def publish_report(report: dict, path: Path, run=None):
+def publish_report(report: dict, path: Path, run=None, *, step=None, wait=False,
+                   skip_artifact=False, on_artifact_logged=None):
     """Version each checkpoint artifact, and log queryable card/route tables.
 
-    No explicit W&B step: TensorBoard sync owns W&B's internal step counter.
-    checkpoint_step is carried in every table row and artifact metadata.
+    PPO leaves the W&B step implicit because TensorBoard sync owns that clock.
+    A standalone monitor can supply its own step and wait for artifact upload.
+    Returns True on publication; failure retains the local report for retry.
+    A caller retrying after the artifact was already logged passes
+    ``skip_artifact`` (``on_artifact_logged`` reports that point) so a retry
+    never creates a second artifact version for the same report.
     """
     try:
         import wandb
@@ -228,19 +235,34 @@ def publish_report(report: dict, path: Path, run=None):
             for offset in range(0, len(rows), 10000):
                 part = rows[offset:offset + 10000]
                 name = key if len(rows) <= 10000 else f"{key}_{offset // 10000}"
-                columns = ["checkpoint_step", "eval_window", *rows[0].keys()]
+                provenance = report.get("provenance", {})
+                identity = dict(checkpoint_step=report["checkpoint_step"], eval_window=report["eval_window"],
+                    window_id=report["window_id"], candidate_sha256=provenance.get("candidate_sha256", ""),
+                    evaluation_status=provenance.get("status", "legacy"),
+                    training_games_collected=provenance.get("training_games_collected"))
+                columns = [*identity, *rows[0].keys()]
                 table = wandb.Table(columns=columns, data=[
-                    [report["checkpoint_step"], report["eval_window"], *r.values()] for r in part])
+                    [*identity.values(), *r.values()] for r in part])
                 artifact.add(table, name)
                 payload[f"card_eval/{name}"] = table
-        run.log_artifact(artifact, aliases=["latest", f"step-{report['checkpoint_step']}-{report['window_id']}"])
-        run.log(payload)
+                if provenance.get("panel"):
+                    payload[f"card_eval/{provenance['panel']}/{name}"] = table
+        if not skip_artifact:
+            logged = run.log_artifact(artifact, aliases=["latest", f"step-{report['checkpoint_step']}-{report['window_id']}"])
+            if wait:
+                logged.wait()
+            if on_artifact_logged is not None:
+                on_artifact_logged()
+        run.log(payload, **({"step": step} if step is not None else {}))
+        return True
     except Exception:
         log.warning("W&B card evaluation upload failed; local report retained at %s", path, exc_info=True)
+        return False
 
 
 def report_header(report):
-    return {k: report[k] for k in ("schema_version", "checkpoint_step", "eval_window", "window_id")}
+    return {**{k: report[k] for k in ("schema_version", "checkpoint_step", "eval_window", "window_id")},
+            "provenance": report.get("provenance", {})}
 
 
 def load_local_reports(directory):

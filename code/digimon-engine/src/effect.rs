@@ -320,6 +320,8 @@ pub struct Effect {
     /// hand, or Save-like deletion value. This is deliberately advisory; it
     /// never affects rules execution.
     pub resource_flow: bool,
+    /// Teacher-only static metadata; not part of observation/action contracts.
+    pub development_hand: crate::policies::development::HandBenefit,
     /// Marks this effect as a blast-digivolve declaration — the card can be
     /// stacked onto a battle-area Digimon during the defender's
     /// `CounterTiming` window at zero memory cost. Consumed by
@@ -964,6 +966,7 @@ impl EffectBuilder {
                 paid_prevention_all: false,
                 paid_prevention_filter: None,
                 resource_flow: false,
+                development_hand: Default::default(),
                 blast_digivolve: false,
                 max_per_turn: 0,
                 shared_opt_group: None,
@@ -1128,6 +1131,11 @@ impl EffectBuilder {
     /// Mark the effect as card/resource-flow positive for policy heuristics.
     pub fn resource_flow(mut self) -> Self {
         self.inner.resource_flow = true;
+        self
+    }
+
+    pub fn development_hand(mut self, hint: crate::policies::development::HandBenefit) -> Self {
+        self.inner.development_hand = hint;
         self
     }
 

@@ -13,15 +13,25 @@ pub fn build_tensor_standard_lite_v2(
     player_id: PlayerId,
     registry: &CardRegistry,
 ) -> Vec<f32> {
+    let mask = crate::action::build_action_mask(game, player_id);
+    build_tensor_standard_lite_v2_with_mask(game, player_id, registry, &mask)
+}
+
+pub(crate) fn build_tensor_standard_lite_v2_with_mask(
+    game: &Game,
+    player_id: PlayerId,
+    registry: &CardRegistry,
+    mask: &[f32],
+) -> Vec<f32> {
     let mut tensor = vec![0.0f32; layout::TENSOR_SIZE];
     let opponent_id = game.next_clockwise(player_id);
 
     write_global_features(&mut tensor, game, player_id);
     write_player_summary(&mut tensor, game, player_id, 0, player_id);
     write_player_summary(&mut tensor, game, player_id, 1, opponent_id);
-    write_permanent_table(&mut tensor, game, registry, player_id, 0, player_id);
-    write_permanent_table(&mut tensor, game, registry, player_id, 1, opponent_id);
-    write_own_hand(&mut tensor, game, registry, player_id);
+    write_permanent_table(&mut tensor, game, registry, player_id, 0, player_id, mask);
+    write_permanent_table(&mut tensor, game, registry, player_id, 1, opponent_id, &[]);
+    write_own_hand(&mut tensor, game, registry, player_id, mask);
     write_known_zone_cards(&mut tensor, game, registry, player_id, opponent_id);
     write_decision_context(&mut tensor, game, player_id);
     write_pending_choice_features(&mut tensor, game, registry, player_id);
@@ -77,11 +87,9 @@ fn write_permanent_table(
     observer: PlayerId,
     player_row: usize,
     player_id: PlayerId,
+    action_mask: &[f32],
 ) {
     let player = game.player(player_id);
-    let action_mask =
-        (player_id == observer).then(|| crate::action::build_action_mask(game, observer));
-    let action_mask = action_mask.as_deref().unwrap_or(&[]);
 
     for (slot, permanent) in player.battle_area.iter().take(14).enumerate() {
         let handle = PermanentHandle {
@@ -93,7 +101,7 @@ fn write_permanent_table(
             permanent_base(player_row, slot),
             game,
             registry,
-            &action_mask,
+            action_mask,
             observer,
             player_id,
             slot,
@@ -109,7 +117,7 @@ fn write_permanent_table(
             permanent_base(player_row, 14),
             game,
             registry,
-            &action_mask,
+            action_mask,
             observer,
             player_id,
             14,
@@ -150,9 +158,8 @@ fn write_permanent_row(
         permanent.card_sources.len() as f32 / layout::PERM_MAX_SOURCES as f32;
     t[base + layout::PERM_LINKED_COUNT_OFFSET] = permanent.linked_cards.len() as f32 / 5.0;
 
-    if let Some(handle) = handle.filter(|_| !permanent.card_sources.iter().any(|s| s.face_down)) {
-        t[base + layout::PERM_OPT_TOTAL_OFFSET] = game.opt_total(handle) as f32;
-        t[base + layout::PERM_OPT_USED_OFFSET] = game.opt_used(handle) as f32;
+    if let Some(handle) = handle {
+        write_stack_effect_features(t, base, game, handle, permanent);
     }
 
     if !is_breeding {
@@ -172,18 +179,68 @@ fn write_permanent_row(
             t[source_base + layout::PERM_SOURCE_CARD_ID_OFFSET] =
                 registry.get_index(source.card_id(&game.card_data)) as f32;
         }
-        if let Some(handle) = handle.filter(|_| !source.face_down) {
-            t[source_base + layout::PERM_SOURCE_OPT_STATE_OFFSET] =
-                game.source_opt_state(handle, source_idx);
-            t[source_base + layout::PERM_SOURCE_DP_CONTRIBUTION_OFFSET] =
-                game.source_dp_contribution(handle, source_idx) as f32 / DP_NORM;
-        }
     }
 }
 
-fn write_own_hand(t: &mut [f32], game: &Game, registry: &CardRegistry, player_id: PlayerId) {
+/// One effect construction per source, plus one Succession lookup per stack.
+/// No result survives this immutable observation build. OPT intentionally uses
+/// its historical inherited/top filter; DP also accounts for adopted sources.
+fn write_stack_effect_features(
+    t: &mut [f32],
+    base: usize,
+    game: &Game,
+    handle: PermanentHandle,
+    permanent: &Permanent,
+) {
+    let disclose_totals = !permanent.card_sources.iter().any(|s| s.face_down);
+    let adopted = game.succession_source_indices(handle);
+    let mut total = 0u32;
+    let mut used = 0u32;
+    for (index, source) in permanent.card_sources.iter().enumerate() {
+        let visible_row = index < layout::PERM_MAX_SOURCES && !source.face_down;
+        if !disclose_totals && !visible_row {
+            continue;
+        }
+        let Some(effects) = game.registry_effects(source.card_id(&game.card_data), source.handle())
+        else {
+            continue;
+        };
+        let (source_total, source_used) = Game::source_opt_counts(
+            permanent,
+            source.handle(),
+            index + 1 < permanent.card_sources.len(),
+            &effects,
+        );
+        total += source_total;
+        used += source_used;
+        if visible_row {
+            let row =
+                base + layout::PERM_SOURCE_START_OFFSET + index * layout::PERM_SOURCE_ENTRY_SIZE;
+            t[row + layout::PERM_SOURCE_OPT_STATE_OFFSET] = if source_total == 0 {
+                0.0
+            } else {
+                (source_total - source_used) as f32 / source_total as f32
+            };
+            t[row + layout::PERM_SOURCE_DP_CONTRIBUTION_OFFSET] =
+                game.source_dp_from_effects(handle, index, adopted.contains(&index), &effects)
+                    as f32
+                    / DP_NORM;
+        }
+    }
+    if disclose_totals {
+        t[base + layout::PERM_OPT_TOTAL_OFFSET] = total as f32;
+        t[base + layout::PERM_OPT_USED_OFFSET] = used as f32;
+    }
+}
+
+fn write_own_hand(
+    t: &mut [f32],
+    game: &Game,
+    registry: &CardRegistry,
+    player_id: PlayerId,
+    mask: &[f32],
+) {
     let player = game.player(player_id);
-    let mask = crate::action::build_action_mask(game, player_id);
     for (idx, card_source) in player.hand.iter().take(layout::OWN_HAND_ROWS).enumerate() {
         let base = layout::OFF_OWN_HAND + idx * layout::OWN_HAND_ROW_SIZE;
         let card = &game.card_data[card_source.data_index];
@@ -199,7 +256,7 @@ fn write_own_hand(t: &mut [f32], game: &Game, registry: &CardRegistry, player_id
             .get(crate::action::space::HAND_EFFECT_START as usize + idx)
             .copied()
             .unwrap_or(0.0);
-        t[base + 21] = hand_has_digivolve_action(&mask, idx);
+        t[base + 21] = hand_has_digivolve_action(mask, idx);
         t[base + 22] = mask
             .get(crate::action::space::DNA_DIGIVOLVE_START as usize + idx)
             .copied()

@@ -8592,6 +8592,7 @@
         "any_of",
         "any_permanent",
         "binding_present",
+        "count_gte",
         "dp_lte",
         "kind",
         "level_eq",
@@ -12782,7 +12783,6 @@
         "add_dp_modifier",
         "if",
         "play_or_use_from_hand",
-        "refund_opt",
         "select_hand",
         "select_opponent_permanent"
       ]
@@ -31684,6 +31684,7 @@
       "BT24-008",
       "BT24-009",
       "BT24-013",
+      "BT24-016",
       "BT24-017",
       "BT24-026",
       "BT24-030",
@@ -44583,7 +44584,6 @@
       "BT25-089",
       "BT25-103",
       "BT26-007",
-      "BT26-012",
       "BT26-015",
       "BT26-016",
       "BT26-021",

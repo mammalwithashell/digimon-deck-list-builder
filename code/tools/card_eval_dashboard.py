@@ -46,6 +46,9 @@ def main():
     cards, routes = [], []
     for report in reports:
         identity = {k: report[k] for k in ("checkpoint_step", "eval_window", "window_id")}
+        provenance = report.get("provenance", {})
+        identity.update(candidate_sha256=provenance.get("candidate_sha256", ""),
+                        evaluation_status=provenance.get("status", "legacy"))
         cards.extend(dict(**identity, **r) for r in report["cards"])
         routes.extend(dict(**identity, **r) for r in report["routes"])
     if not cards:
@@ -53,6 +56,27 @@ def main():
         return
     frame = pd.DataFrame(cards)
     route_frame = pd.DataFrame(routes)
+    for col, label in (("panel", "Evaluation panel"), ("anchor", "Anchor policy"),
+                       ("evaluation_mode", "Evaluation mode"), ("candidate_sha256", "Checkpoint hash"),
+                       ("evaluation_status", "Evaluation status")):
+        if col not in frame:
+            continue
+        frame[col] = frame[col].fillna("")
+        options = sorted(frame[col].unique())
+        chosen = st.sidebar.multiselect(label, options, default=options)
+        frame = frame[frame[col].isin(chosen)]
+        if not route_frame.empty and col in route_frame:
+            route_frame[col] = route_frame[col].fillna("")
+            route_frame = route_frame[route_frame[col].isin(chosen)]
+    windows = list(dict.fromkeys(frame.window_id))
+    # Periodic frozen-policy evaluations repeat the same seeded games. Never
+    # pool those repetitions as independent evidence by default.
+    grouping = [c for c in ("checkpoint_step", "panel", "anchor", "evaluation_mode") if c in frame]
+    latest_per_step = list(dict.fromkeys(frame.drop_duplicates(grouping, keep="last").window_id))
+    selected_windows = st.sidebar.multiselect("Evaluation windows", windows, default=latest_per_step)
+    frame = frame[frame.window_id.isin(selected_windows)]
+    if not route_frame.empty:
+        route_frame = route_frame[route_frame.window_id.isin(selected_windows)]
     player = st.sidebar.selectbox("Player", [1, 2])
     frame = frame[frame.player == player]
     if not route_frame.empty:

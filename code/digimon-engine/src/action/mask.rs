@@ -109,6 +109,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
                 let card = &me.hand[i];
+                // Digi-Eggs cannot be played. Even a malformed imported state
+                // must not advertise a hand-play action execution will reject.
+                if card.card_kind(&game.card_data) == CardKind::DigiEgg {
+                    continue;
+                }
                 let is_option_use = card.card_kind(&game.card_data) == CardKind::Option
                     || card.card_kind(&game.card_data) == CardKind::Dual;
                 if is_option_use {

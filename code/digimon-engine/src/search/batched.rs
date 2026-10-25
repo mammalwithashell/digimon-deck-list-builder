@@ -81,14 +81,16 @@ impl Tree {
                 }
                 if path.len() as u32 >= self.config.max_decisions {
                     let node = &self.arena[cur];
+                    let mask = measure("mask", || build_action_mask(&node.game, node.mover));
                     let request = EvalRequest {
-                        mask: measure("mask", || build_action_mask(&node.game, node.mover)),
-                        obs: build_observation_tensor(
+                        obs: build_observation_tensor_with_mask(
                             &node.game,
                             node.mover,
                             mcts.registry,
                             self.config.observation_profile,
+                            &mask,
                         ),
+                        mask,
                     };
                     self.pending = Some(Pending::Depth {
                         mover: node.mover,

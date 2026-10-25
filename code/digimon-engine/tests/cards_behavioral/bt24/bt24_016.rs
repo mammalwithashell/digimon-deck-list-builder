@@ -306,6 +306,95 @@ fn clause1_runner() -> DebugRunner {
     runner
 }
 
+/// Cloud games 875/1408 repeatedly declared this effect with no payable
+/// Dimetromon cost. CR 4.3 15-7-4: an impossible optional cost cannot be chosen.
+#[test]
+fn bt24_016_hand_main_not_offered_without_dimetromon_in_own_trash() {
+    let mut runner = clause1_runner();
+    runner.game.enter_main_phase();
+    let cost = runner.game.players[0].trash.pop().unwrap();
+    runner.game.players[1].trash.push(cost);
+    let mask = digimon_engine::action::build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[30], 0.0,
+        "opponent's Dimetromon cannot pay our hand-main cost"
+    );
+    assert!(!runner.game.activate_hand_main(0, 0));
+    assert!(runner.pending_selection_view().is_none());
+
+    // A copy in our hand also does not make the trash-only cost payable.
+    let cost = runner.game.players[1].trash.pop().unwrap();
+    runner.game.players[0].hand.push(cost);
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, 0)[30],
+        0.0
+    );
+    assert!(!runner.game.activate_hand_main(0, 0));
+    assert!(runner.pending_selection_view().is_none());
+}
+
+#[test]
+fn bt24_016_hand_main_becomes_available_when_dimetromon_enters_trash() {
+    let mut runner = clause1_runner();
+    runner.game.enter_main_phase();
+    let cost = runner.game.players[0].trash.pop().unwrap();
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, 0)[30],
+        0.0
+    );
+    runner.game.players[0].trash.push(cost);
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, 0)[30],
+        1.0
+    );
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert!(runner.pending_selection_view().is_some());
+}
+
+#[test]
+fn bt24_016_hand_main_preserves_both_target_and_cost_choices() {
+    let mut runner = clause1_runner();
+    runner.game.enter_main_phase();
+    runner.place_on_field(0, "ELIZAMON", Some(2));
+    push_to_trash(&mut runner, "DIMETROMON");
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, 0)[30],
+        1.0
+    );
+    runner.game.decode_action(30, 0);
+    let targets = runner.pending_selection_view().unwrap();
+    assert_eq!(targets.valid_action_ids.len(), 2);
+    runner
+        .execute_action(targets.selecting_player, targets.valid_action_ids[1])
+        .unwrap();
+    let costs = runner.pending_selection_view().unwrap();
+    assert_eq!(costs.valid_action_ids.len(), 2);
+    runner
+        .execute_action(costs.selecting_player, costs.valid_action_ids[1])
+        .unwrap();
+    let _ = runner.auto_resolve();
+    let player = runner.game.player(0);
+    assert_eq!(
+        player.battle_area[1]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "ELIZAMON"
+    );
+    assert_eq!(
+        player.battle_area[2]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT24-016"
+    );
+    assert_eq!(player.battle_area[2].card_sources.len(), 3);
+    assert_eq!(
+        player.trash.len(),
+        1,
+        "only the chosen cost card leaves the trash"
+    );
+    assert_eq!(runner.memory(), 7, "the printed digivolution cost is paid");
+}
+
 /// Positive: with Owen Dreadnought + an Elizamon on the field and a Dimetromon
 /// in trash, activating BT24-016's [Hand][Main] effect digivolves Lamiamon onto
 /// the Elizamon and places the Dimetromon as the Elizamon's bottom source.

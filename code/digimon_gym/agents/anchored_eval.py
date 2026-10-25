@@ -69,7 +69,7 @@ def _seat_balanced_seed(base_seed: int, i: int) -> int:
 
 
 def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
-             tensor_profile: str) -> Optional[int]:
+             tensor_profile: str, collector=None) -> Optional[int]:
     """Play one game: agent (player 1) = ``model.predict``; player 2 driven by
     ``opponent_fn`` via ``OpponentWrapper``. Returns winner_id (1, 2, or None)."""
     failure_dir = os.environ.get("DIGIMON_EVAL_FAILURE_DIR")
@@ -79,6 +79,9 @@ def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
         inner,
         opponent_fn=opponent_fn,
     )
+    if collector is not None:
+        inner.card_eval_collector = collector
+    first_game = len(collector.games) if collector is not None else 0
     try:
         obs, _info = env.reset(seed=seed)  # reset opponent recurrent state
         state = None
@@ -101,7 +104,15 @@ def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
         if outcome.get("reason") in {"step_limit", "crash"}:
             raise RuntimeError(f"Anchored evaluation ended with {outcome['reason']} (seed {seed})")
         return _unwrap_to_digimon_env(env).winner_id
-    except Exception as exc:
+    except BaseException as exc:
+        # PyO3 PanicException is a BaseException. Preserve its replay evidence
+        # and mark the game incomplete, then re-raise; never score it as a draw.
+        if collector is not None:
+            # Env may already have finalized an engine safety termination.
+            collector.finish_game(None, "evaluation_end")
+            if len(collector.games) > first_game:
+                collector.games[-1]["evaluation_error"] = str(exc)
+                collector.games[-1]["terminal_reason"] = "evaluation_end"
         if failure_dir:
             folder = Path(failure_dir)
             folder.mkdir(parents=True, exist_ok=True)
@@ -112,20 +123,61 @@ def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
             (folder / f"{stem}.recording.json").write_text(
                 json.dumps(inner.get_recording(), indent=2), encoding="utf-8")
         raise
+    finally:
+        if collector is not None:
+            inner.card_eval_collector = None
+            collector.finish_game(None, "evaluation_end")
+        close = getattr(env, "close", None)
+        if close is not None:
+            close()
+
+
+def balanced_deck_pairs(deck_pool, games_per_archetype: int, seed: int):
+    """Fixed cohort: exact candidate quotas and paired opening-order games.
+
+    Each deck pair plays twice with opposite first player. Opponent archetypes
+    and list variants rotate independently of candidate strength or outcomes.
+    """
+    if games_per_archetype <= 0 or games_per_archetype % 2:
+        raise ValueError("games_per_archetype must be positive and even")
+    names = sorted(deck_pool.archetypes)
+    if not names:
+        raise ValueError("Empty evaluation pool")
+    rng = np.random.default_rng(seed)
+    opponents = list(rng.permutation(names))
+    for ai, name in enumerate(names):
+        firsts = sorted(deck_pool.archetypes[name], key=lambda d: d.deck_id)
+        for pair in range(games_per_archetype // 2):
+            other = opponents[(pair + ai) % len(names)]
+            seconds = sorted(deck_pool.archetypes[other], key=lambda d: d.deck_id)
+            first = firsts[pair % len(firsts)]
+            second = seconds[(pair // len(names) + ai) % len(seconds)]
+            yield first, second
+            yield first, second
 
 
 def play_matchup(agent_model, opponent_fn, deck_pool, n: int, base_seed: int,
-                 tensor_profile: str) -> MatchRecord:
+                 tensor_profile: str, collector=None, anchor_name="", games_per_archetype=None) -> MatchRecord:
     """Play ``n`` seat-balanced games of ``agent_model`` vs ``opponent_fn``.
     Decks are sampled from ``deck_pool`` (both seats) with a seeded RNG; the
     first player alternates each game. Returns an agent-perspective record."""
     rng = np.random.default_rng(base_seed)
     rec = MatchRecord()
-    for i in range(n):
-        d1 = deck_pool.sample_uniform_archetype(rng).card_ids
-        d2 = deck_pool.sample_uniform_archetype(rng).card_ids
+    pairs = (balanced_deck_pairs(deck_pool, games_per_archetype, base_seed)
+             if games_per_archetype is not None else
+             ((deck_pool.sample_uniform_archetype(rng), deck_pool.sample_uniform_archetype(rng)) for _ in range(n)))
+    for i, (first, second) in enumerate(pairs):
+        d1, d2 = first.card_ids, second.card_ids
+        extra = {}
+        if collector is not None:
+            collector.context = dict(anchor=anchor_name,
+                panel=collector.provenance.get("panel", ""),
+                evaluation_mode="policy_only",
+                agent_archetype=first.archetype_name, opponent_archetype=second.archetype_name,
+                agent_deck_id=first.deck_id, opponent_deck_id=second.deck_id)
+            extra["collector"] = collector
         winner = play_one(agent_model, opponent_fn, d1, d2,
-                          _seat_balanced_seed(base_seed, i), tensor_profile)
+                          _seat_balanced_seed(base_seed, i), tensor_profile, **extra)
         if winner == 1:
             rec.wins += 1
         elif winner == 2:
@@ -144,17 +196,24 @@ def evaluate_against_anchors(
     base_seed: int = 777,
     tensor_profile: str = "standard_lite_deck_v2",
     include_greedy: bool = True,
+    collector=None,
+    games_per_archetype=None,
 ) -> Dict[str, MatchRecord]:
     """Score ``candidate_model`` against greedy plus every layout-compatible
     champion in ``registry``, seat-balanced. Returns ``{anchor_name: record}``.
     Champion opponents are loaded via ``make_agent_opponent_fn``."""
     results: Dict[str, MatchRecord] = {}
+    def collect_for(name):
+        extra = {"collector": collector, "anchor_name": name} if collector is not None else {}
+        if games_per_archetype is not None:
+            extra["games_per_archetype"] = games_per_archetype
+        return extra
     if include_greedy:
         results["greedy"] = play_matchup(
-            candidate_model, greedy_policy, deck_pool, n, base_seed, tensor_profile)
+            candidate_model, greedy_policy, deck_pool, n, base_seed, tensor_profile, **collect_for("greedy"))
 
     for champ in registry.compatible(candidate_layout_hash):
         opponent_fn = make_agent_opponent_fn(champ.weights_path, algorithm=champ.algorithm)
         results[champ.name] = play_matchup(
-            candidate_model, opponent_fn, deck_pool, n, base_seed, tensor_profile)
+            candidate_model, opponent_fn, deck_pool, n, base_seed, tensor_profile, **collect_for(champ.name))
     return results

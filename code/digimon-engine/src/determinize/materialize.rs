@@ -76,10 +76,19 @@ pub fn materialize(game: &Game, viewer: PlayerId, seed: u64) -> Game {
     let mut rng = StdRng::seed_from_u64(seed);
     // Viewer: own hand is KNOWN (kept verbatim); re-deal deck ∪ face-down
     // security.
-    redeal_hidden(&mut world, viewer, false, &mut rng);
+    let inspected_security = game.pending_selection.as_ref().and_then(|s| s.card_choice.as_ref())
+        .and_then(|choice| choice.inspected_security_owner(viewer));
+    redeal_hidden(&mut world, viewer, false, inspected_security == Some(viewer), &mut rng);
     // Opponent: hand is hidden too — re-deal hand ∪ deck ∪ face-down
     // security.
-    redeal_hidden(&mut world, 1 - viewer, true, &mut rng);
+    redeal_hidden(&mut world, 1 - viewer, true, inspected_security == Some(1 - viewer), &mut rng);
+
+    if let Some(mut selection) = world.pending_selection.take() {
+        if let Some(choice) = &mut selection.card_choice {
+            choice.rebind_sampled_security(game, &world);
+        }
+        world.pending_selection = Some(selection);
+    }
 
     // Fresh RNG stream for the world's own future randomness (shuffles
     // triggered by effects, etc.), derived from the world seed only.
@@ -91,7 +100,7 @@ pub fn materialize(game: &Game, viewer: PlayerId, seed: u64) -> Game {
 /// hand (if `resample_hand`) → face-down security slots → deck (remaining,
 /// in shuffled order). Face-up security cards stay pinned at their slots.
 /// The digitama deck is re-shuffled in place (order-only uncertainty).
-fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool, rng: &mut StdRng) {
+fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool, security_inspected: bool, rng: &mut StdRng) {
     let p = &mut world.players[pid as usize];
     let face_up = p.face_up_security.clone();
 
@@ -106,7 +115,7 @@ fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool, rng: &mut
     let old_security = std::mem::take(&mut p.security);
     let mut slots: Vec<Option<CardSource>> = Vec::with_capacity(old_security.len());
     for c in old_security {
-        if face_up.contains(&c.card_index) {
+        if security_inspected || face_up.contains(&c.card_index) {
             slots.push(Some(c));
         } else {
             pool.push(c);

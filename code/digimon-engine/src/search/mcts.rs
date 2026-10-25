@@ -40,7 +40,7 @@ use crate::card_registry::CardRegistry;
 use crate::enums::PlayerId;
 use crate::game::Game;
 use crate::observation::{
-    build_observation_tensor, default_observation_profile, ObservationProfileId,
+    build_observation_tensor_with_mask, default_observation_profile, ObservationProfileId,
 };
 
 use super::dirichlet::sample_dirichlet;
@@ -246,11 +246,12 @@ impl<'a> Mcts<'a> {
                     // refuse to descend further).
                     let node = &arena[cur];
                     let mask = measure("mask", || build_action_mask(&node.game, node.mover));
-                    let obs = build_observation_tensor(
+                    let obs = build_observation_tensor_with_mask(
                         &node.game,
                         node.mover,
                         self.registry,
                         config.observation_profile,
+                        &mask,
                     );
                     let eval = evaluator.evaluate_batch(&[EvalRequest { obs, mask }]);
                     break (eval[0].value, node.mover);
@@ -412,7 +413,13 @@ impl<'a> Mcts<'a> {
             unreachable!("terminal nodes do not need inference");
         };
         EvalRequest {
-            obs: build_observation_tensor(game, *mover, self.registry, config.observation_profile),
+            obs: build_observation_tensor_with_mask(
+                game,
+                *mover,
+                self.registry,
+                config.observation_profile,
+                mask,
+            ),
             mask: mask.clone(),
         }
     }

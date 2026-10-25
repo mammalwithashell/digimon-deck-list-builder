@@ -40,9 +40,11 @@ CLI:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -66,21 +68,49 @@ class ShardDataset:
     terminated: np.ndarray
     game_ids: np.ndarray
     manifests: list[dict] = field(default_factory=list)
+    exclusions: list[dict] = field(default_factory=list)
+    # Own the temporary backing file for as long as the dataset is alive.
+    _observation_storage: object | None = field(default=None, repr=False)
 
     def __len__(self) -> int:
         return self.obs.shape[0]
 
 
 def load_shards(dirs: list[Path]) -> ShardDataset:
-    """Load + concatenate shard dirs, validating cross-dir consistency."""
-    obs_parts, off_parts, act_parts, vis_parts, z_parts, end_parts, game_parts = [], [], [], [], [], [], []
+    """Load validated shards, honoring manifest-bound per-game quarantine files.
+
+    Optional training_exclusions.json removes whole games before either loss.
+    Original committed shard files remain untouched for replay and auditing.
+    """
+    off_parts, act_parts, vis_parts, z_parts, end_parts, game_parts = [], [], [], [], [], []
+    observation_storage = tempfile.TemporaryFile(prefix="digimon-replay-")
+    observation_rows = 0
     manifests: list[dict] = []
+    exclusions: list[dict] = []
     obs_dim = action_dim = None
     profile = None
     game_base = 0
     for d in dirs:
         manifest_path = d / "manifest.json"
         manifest = json.loads(manifest_path.read_text())
+        quarantine_path = d / "training_exclusions.json"
+        quarantine = None
+        excluded_ids = set()
+        seen_ids = set()
+        excluded_rows = 0
+        if quarantine_path.exists():
+            quarantine = json.loads(quarantine_path.read_text())
+            entries = quarantine.get("games")
+            if (quarantine.get("schema") != "selfplay-training-exclusions-v1"
+                    or quarantine.get("manifest_sha256") != hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+                    or not isinstance(entries, list) or not entries):
+                raise ValueError(f"{quarantine_path}: invalid exclusion schema or manifest hash")
+            for entry in entries:
+                if (not isinstance(entry, dict) or type(entry.get("game_id")) is not int
+                        or entry["game_id"] < 0 or not isinstance(entry.get("reason"), str)
+                        or not entry["reason"].strip() or entry["game_id"] in excluded_ids):
+                    raise ValueError(f"{quarantine_path}: invalid or duplicate game exclusion")
+                excluded_ids.add(entry["game_id"])
         if manifest.get("schema") != SCHEMA:
             raise ValueError(f"{manifest_path}: schema {manifest.get('schema')!r}, expected {SCHEMA!r}")
         contract = validate_contract(manifest.get("model_contract"), manifest["observation_profile"])
@@ -122,25 +152,50 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                 raise ValueError(f"{s}: invalid sparse policy offsets")
             if obs.shape[1] != manifest["obs_dim"] or not np.isfinite(obs).all() or not np.isfinite(vis).all() or np.any(vis < 0) or np.any(act < 0) or np.any(act >= manifest["action_dim"]):
                 raise ValueError(f"{s}: invalid observations or policy targets")
+            # Preserve rebasing across chunks even when their highest game ID
+            # is excluded. Filtering is local to this manifest, before rebasing.
+            max_game = max(max_game, int(games.max(initial=-1)))
+            if excluded_ids:
+                seen_ids.update(int(g) for g in np.unique(games))
+                keep = ~np.isin(games, list(excluded_ids))
+                excluded_rows += int((~keep).sum())
+                lengths = np.diff(off)
+                edges = np.repeat(keep, lengths)
+                obs, z, terminated, games = obs[keep], z[keep], terminated[keep], games[keep]
+                act, vis = act[edges], vis[edges]
+                off = np.concatenate(([0], np.cumsum(lengths[keep], dtype=np.int64)))
             # Rebase this shard's offsets onto the pooled nnz axis. The
             # first shard keeps its leading 0; later shards drop theirs
             # (it duplicates the previous shard's final offset).
             base = sum(a.shape[0] for a in act_parts)
             off_parts.append((off if not off_parts else off[1:]).astype(np.int64) + base)
-            obs_parts.append(obs.astype(np.float32, copy=False))
+            # Stream each validated shard once. Retaining every dense array and
+            # then concatenating it doubles peak RAM for multi-generation replay.
+            # The mapping preserves row order/float bits and supports the same
+            # shuffled minibatch indexing; the OS can evict unused disk pages.
+            observation_storage.write(obs.astype(np.float32, copy=False).tobytes(order="C"))
+            observation_rows += len(obs)
             act_parts.append(act)
             vis_parts.append(vis.astype(np.float32, copy=False))
             z_parts.append(z.astype(np.float32, copy=False))
             end_parts.append(terminated.astype(bool))
             game_parts.append(games.astype(np.int64) + game_base)
-            max_game = max(max_game, int(games.max(initial=-1)))
+        if excluded_ids - seen_ids:
+            raise ValueError(f"{quarantine_path}: exclusion refers to absent game IDs {sorted(excluded_ids - seen_ids)}")
+        if quarantine is not None:
+            exclusions.append({"directory": str(d), "manifest_sha256": quarantine["manifest_sha256"],
+                               "games": quarantine["games"], "excluded_rows": excluded_rows})
         game_base += max_game + 1
     if obs_dim is None:
         raise ValueError("no shard directories given")
 
     offsets = np.concatenate(off_parts)
+    observation_storage.flush()
+    observations = (np.memmap(observation_storage, dtype=np.float32, mode="r+",
+                             shape=(observation_rows, obs_dim)) if observation_rows else
+                    np.empty((0, obs_dim), dtype=np.float32))
     return ShardDataset(
-        obs=np.concatenate(obs_parts),
+        obs=observations,
         offsets=offsets,
         actions=np.concatenate(act_parts).astype(np.int32),
         visits=np.concatenate(vis_parts),
@@ -150,6 +205,8 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
         terminated=np.concatenate(end_parts),
         game_ids=np.concatenate(game_parts),
         manifests=manifests,
+        exclusions=exclusions,
+        _observation_storage=observation_storage,
     )
 
 
@@ -212,7 +269,8 @@ def train(
     print(
         f"azero_trainer: {len(ds)} rows from {len(shard_dirs)} dir(s), "
         f"obs_dim {ds.obs.shape[1]}, profile {ds.observation_profile}, "
-        f"{truncated} truncated-game rows (z=0)",
+        f"{truncated} truncated-game rows (z=0), "
+        f"{sum(q['excluded_rows'] for q in ds.exclusions)} quarantined rows excluded from both losses",
         flush=True,
     )
 
@@ -302,6 +360,9 @@ def train(
     return {
         "rows": len(ds),
         "truncated_rows": truncated,
+        "excluded_rows": sum(q["excluded_rows"] for q in ds.exclusions),
+        "excluded_games": sum(len(q["games"]) for q in ds.exclusions),
+        "training_exclusions": ds.exclusions,
         "epochs": history,
         "out": str(out),
         "model_contract": validate_checkpoint(model, ds.observation_profile),

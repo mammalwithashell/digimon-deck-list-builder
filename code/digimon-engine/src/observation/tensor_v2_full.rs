@@ -1,25 +1,34 @@
 use crate::action::explain::{explain_action, ActionKind, ActionZone};
-use crate::action::{build_action_mask, ACTION_SPACE_SIZE};
+use crate::action::ACTION_SPACE_SIZE;
 use crate::card_registry::CardRegistry;
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
 use crate::tensor_profiles::standard::{v2_full, v2_lite};
-use crate::tensor_v2_lite::build_tensor_standard_lite_v2;
+use crate::tensor_v2_lite::build_tensor_standard_lite_v2_with_mask;
 
 pub fn build_tensor_standard_full_v2(
     game: &Game,
     player_id: PlayerId,
     registry: &CardRegistry,
 ) -> Vec<f32> {
-    let lite = build_tensor_standard_lite_v2(game, player_id, registry);
+    let mask = crate::action::build_action_mask(game, player_id);
+    build_tensor_standard_full_v2_with_mask(game, player_id, registry, &mask)
+}
+
+pub(crate) fn build_tensor_standard_full_v2_with_mask(
+    game: &Game,
+    player_id: PlayerId,
+    registry: &CardRegistry,
+    mask: &[f32],
+) -> Vec<f32> {
+    let lite = build_tensor_standard_lite_v2_with_mask(game, player_id, registry, mask);
     let mut tensor = vec![0.0f32; v2_full::TENSOR_SIZE];
     tensor[..v2_lite::OFF_RESERVED].copy_from_slice(&lite[..v2_lite::OFF_RESERVED]);
-    write_action_id_features(&mut tensor, game, player_id);
+    write_action_id_features(&mut tensor, game, player_id, mask);
     tensor
 }
 
-fn write_action_id_features(tensor: &mut [f32], game: &Game, player_id: PlayerId) {
-    let mask = build_action_mask(game, player_id);
+fn write_action_id_features(tensor: &mut [f32], game: &Game, player_id: PlayerId, mask: &[f32]) {
     let page_actions: Option<Vec<u16>> = game.pending_selection.as_ref()
         .and_then(|pending| pending.card_choice.as_ref())
         .map(|owner| owner.view(game, player_id).rows.into_iter().map(|row| row.action_id).collect());

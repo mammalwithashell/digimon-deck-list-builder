@@ -1,0 +1,5324 @@
+{
+  "provenance": {
+    "date": "2026-10-25",
+    "live_engine_commit": "e1e7fff2c689e8505a8146d9012502be11dce8c1",
+    "local_engine_commit": "5c8ab7222",
+    "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:a98d312fd98a32db0f4c594c004b8aa245321486643c1221c492dcc55dd6f413",
+    "raw_audit_sha256": "035d098820dbdaa2f834303f1c50690eecf7beed25388c6595c9859dc0a33f92",
+    "raw_tactics_sha256": "1983f03289c81de11b00a86af044da7b1d7484c3592fd136abbf0b5a0ce0b851",
+    "onnx_sha256": {
+      "0": "3b30107e84704a8d90b83fcb10b2553227df2044ec101c8f15c46bd9793cea24",
+      "1": "9467be0ebe8bb28e0dbc6425dc195da7de7d7d522cf55b6aa4d2753ed3b2339f",
+      "2": "9f7b08aef52fd438d1fbcb414ab9ec81729de04396e0f5567759cf02aee5a5ac"
+    },
+    "raw_sample_refs": "runs/evolution-research-20261025/imitation.json; remote /opt/digimon-search/evolution-imitation-20261025-1/result.json"
+  },
+  "imitation": {
+    "schema": "evolution-imitation-v1",
+    "sample_seed": 20261025,
+    "scope": "completed non-forced training positions; Main/Breeding routes; in-sample imitation diagnostic, not a strength evaluation",
+    "cohorts": "opportunity reservoir and separately oversampled teacher-argmax rows; overlaps allowed",
+    "layout_hash": "sha256:c2ff377e261fe572163179e32d97414d68e2fd8d89c5441dae586b4a2caa691b",
+    "generations": {
+      "1": {
+        "totals": {
+          "games": 1000,
+          "rows": 76042
+        },
+        "all_rows": {
+          "raising": {
+            "opportunities": 14467,
+            "positive_mass": 13037,
+            "mass_sum": 1811.7031251473818,
+            "argmax": 1979
+          },
+          "battle": {
+            "opportunities": 12793,
+            "positive_mass": 11006,
+            "mass_sum": 912.9468759796582,
+            "argmax": 534
+          },
+          "promotion": {
+            "opportunities": 2811,
+            "positive_mass": 2811,
+            "mass_sum": 1104.290624966845,
+            "argmax": 911
+          },
+          "dna": {
+            "opportunities": 335,
+            "positive_mass": 229,
+            "mass_sum": 12.23124997713603,
+            "argmax": 11
+          }
+        },
+        "cohort_population": {
+          "raising/opportunity": 14467,
+          "battle/opportunity": 12793,
+          "raising/teacher_argmax": 1979,
+          "promotion/opportunity": 2811,
+          "dna/opportunity": 335,
+          "promotion/teacher_argmax": 911,
+          "battle/teacher_argmax": 534,
+          "dna/teacher_argmax": 11
+        },
+        "samples": {
+          "raising/opportunity": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 2,
+                "route_mass_sum": 35.0893661249429,
+                "exact_teacher_argmax": 212,
+                "cross_entropy_sum": 1039.7235480546951,
+                "mean_route_mass": 0.0685339182127791,
+                "mean_cross_entropy": 2.0307100547943264
+              },
+              "1": {
+                "route_argmax": 2,
+                "route_mass_sum": 47.54839529842138,
+                "exact_teacher_argmax": 202,
+                "cross_entropy_sum": 1021.3493441343307,
+                "mean_route_mass": 0.09286795956722926,
+                "mean_cross_entropy": 1.9948229377623647
+              },
+              "2": {
+                "route_argmax": 2,
+                "route_mass_sum": 52.88554801605642,
+                "exact_teacher_argmax": 203,
+                "cross_entropy_sum": 1015.9252140522003,
+                "mean_route_mass": 0.10329208596886019,
+                "mean_cross_entropy": 1.9842289336957037
+              }
+            },
+            "teacher_mass": 0.11611328127128218,
+            "teacher_argmax": 64
+          },
+          "battle/opportunity": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 0,
+                "route_mass_sum": 24.75915393885225,
+                "exact_teacher_argmax": 252,
+                "cross_entropy_sum": 1029.8250803947449,
+                "mean_route_mass": 0.0483577225368208,
+                "mean_cross_entropy": 2.011377110145986
+              },
+              "1": {
+                "route_argmax": 0,
+                "route_mass_sum": 30.350327362073585,
+                "exact_teacher_argmax": 259,
+                "cross_entropy_sum": 1015.9400862753391,
+                "mean_route_mass": 0.05927798312904997,
+                "mean_cross_entropy": 1.9842579810065217
+              },
+              "2": {
+                "route_argmax": 0,
+                "route_mass_sum": 38.13899671379477,
+                "exact_teacher_argmax": 258,
+                "cross_entropy_sum": 1010.1243179738522,
+                "mean_route_mass": 0.0744902279566304,
+                "mean_cross_entropy": 1.97289905854268
+              }
+            },
+            "teacher_mass": 0.06914672863558735,
+            "teacher_argmax": 21
+          },
+          "raising/teacher_argmax": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 6,
+                "route_mass_sum": 45.26322721131146,
+                "exact_teacher_argmax": 6,
+                "cross_entropy_sum": 1217.3213121891022,
+                "mean_route_mass": 0.0884047406470927,
+                "mean_cross_entropy": 2.37758068786934
+              },
+              "1": {
+                "route_argmax": 7,
+                "route_mass_sum": 68.40099947527051,
+                "exact_teacher_argmax": 7,
+                "cross_entropy_sum": 1124.3864537477493,
+                "mean_route_mass": 0.13359570210013771,
+                "mean_cross_entropy": 2.196067292476073
+              },
+              "2": {
+                "route_argmax": 6,
+                "route_mass_sum": 78.97869781032205,
+                "exact_teacher_argmax": 6,
+                "cross_entropy_sum": 1095.8854711055756,
+                "mean_route_mass": 0.15425526916078525,
+                "mean_cross_entropy": 2.1404013107530773
+              }
+            },
+            "teacher_mass": 0.4489990233851131,
+            "teacher_argmax": 512
+          },
+          "promotion/opportunity": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 232,
+                "route_mass_sum": 240.8859794214368,
+                "exact_teacher_argmax": 351,
+                "cross_entropy_sum": 341.8795135766268,
+                "mean_route_mass": 0.4704804285574937,
+                "mean_cross_entropy": 0.6677334249543492
+              },
+              "1": {
+                "route_argmax": 152,
+                "route_mass_sum": 213.0795855820179,
+                "exact_teacher_argmax": 371,
+                "cross_entropy_sum": 335.50291107594967,
+                "mean_route_mass": 0.4161710655898787,
+                "mean_cross_entropy": 0.6552791231952142
+              },
+              "2": {
+                "route_argmax": 118,
+                "route_mass_sum": 208.58168019354343,
+                "exact_teacher_argmax": 375,
+                "cross_entropy_sum": 334.5750993490219,
+                "mean_route_mass": 0.4073860941280145,
+                "mean_cross_entropy": 0.6534669909160584
+              }
+            },
+            "teacher_mass": 0.4159179685266281,
+            "teacher_argmax": 179
+          },
+          "dna/opportunity": {
+            "n": 335,
+            "models": {
+              "0": {
+                "route_argmax": 0,
+                "route_mass_sum": 12.20551024377346,
+                "exact_teacher_argmax": 182,
+                "cross_entropy_sum": 660.2419870495796,
+                "mean_route_mass": 0.0364343589366372,
+                "mean_cross_entropy": 1.9708716031330735
+              },
+              "1": {
+                "route_argmax": 0,
+                "route_mass_sum": 10.889482906553894,
+                "exact_teacher_argmax": 178,
+                "cross_entropy_sum": 651.1150683164597,
+                "mean_route_mass": 0.03250591912404147,
+                "mean_cross_entropy": 1.9436270696013722
+              },
+              "2": {
+                "route_argmax": 3,
+                "route_mass_sum": 13.018935417989269,
+                "exact_teacher_argmax": 178,
+                "cross_entropy_sum": 647.8597985506058,
+                "mean_route_mass": 0.03886249378504259,
+                "mean_cross_entropy": 1.9339098464197186
+              }
+            },
+            "teacher_mass": 0.03651119396160009,
+            "teacher_argmax": 11
+          },
+          "promotion/teacher_argmax": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 350,
+                "route_mass_sum": 284.9397540539503,
+                "exact_teacher_argmax": 350,
+                "cross_entropy_sum": 349.35370525717735,
+                "mean_route_mass": 0.5565229571366217,
+                "mean_cross_entropy": 0.6823314555804245
+              },
+              "1": {
+                "route_argmax": 260,
+                "route_mass_sum": 250.14854195713997,
+                "exact_teacher_argmax": 260,
+                "cross_entropy_sum": 367.43227994441986,
+                "mean_route_mass": 0.488571371010039,
+                "mean_cross_entropy": 0.717641171766445
+              },
+              "2": {
+                "route_argmax": 214,
+                "route_mass_sum": 240.5630111247301,
+                "exact_teacher_argmax": 214,
+                "cross_entropy_sum": 372.2278899550438,
+                "mean_route_mass": 0.4698496311029885,
+                "mean_cross_entropy": 0.7270075975684449
+              }
+            },
+            "teacher_mass": 0.6807983401231468,
+            "teacher_argmax": 512
+          },
+          "battle/teacher_argmax": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 0,
+                "route_mass_sum": 39.280271797440946,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 1350.592026233673,
+                "mean_route_mass": 0.07671928085437685,
+                "mean_cross_entropy": 2.6378750512376428
+              },
+              "1": {
+                "route_argmax": 1,
+                "route_mass_sum": 50.104995634406805,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 1293.8374494314194,
+                "mean_route_mass": 0.09786131959845079,
+                "mean_cross_entropy": 2.527026268420741
+              },
+              "2": {
+                "route_argmax": 1,
+                "route_mass_sum": 64.12249506544322,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 1238.642998099327,
+                "mean_route_mass": 0.12523924817469378,
+                "mean_cross_entropy": 2.419224605662748
+              }
+            },
+            "teacher_mass": 0.4455505360965617,
+            "teacher_argmax": 512
+          },
+          "dna/teacher_argmax": {
+            "n": 11,
+            "models": {
+              "0": {
+                "route_argmax": 0,
+                "route_mass_sum": 0.7944795740768313,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 28.97054362297058,
+                "mean_route_mass": 0.07222541582516649,
+                "mean_cross_entropy": 2.6336857839064165
+              },
+              "1": {
+                "route_argmax": 0,
+                "route_mass_sum": 0.8292928710579872,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 28.71838879585266,
+                "mean_route_mass": 0.07539026100527156,
+                "mean_cross_entropy": 2.6107626178047876
+              },
+              "2": {
+                "route_argmax": 1,
+                "route_mass_sum": 1.0537650352343917,
+                "exact_teacher_argmax": 1,
+                "cross_entropy_sum": 27.9709712266922,
+                "mean_route_mass": 0.0957968213849447,
+                "mean_cross_entropy": 2.5428155660629272
+              }
+            },
+            "teacher_mass": 0.3664772700179707,
+            "teacher_argmax": 11
+          }
+        }
+      },
+      "2": {
+        "totals": {
+          "games": 1000,
+          "rows": 82020
+        },
+        "all_rows": {
+          "raising": {
+            "opportunities": 15204,
+            "positive_mass": 13891,
+            "mass_sum": 1782.0968758584931,
+            "argmax": 1581
+          },
+          "promotion": {
+            "opportunities": 2391,
+            "positive_mass": 2391,
+            "mass_sum": 988.3468752261251,
+            "argmax": 849
+          },
+          "battle": {
+            "opportunities": 13503,
+            "positive_mass": 11855,
+            "mass_sum": 1350.9406257856172,
+            "argmax": 1026
+          },
+          "dna": {
+            "opportunities": 445,
+            "positive_mass": 297,
+            "mass_sum": 22.206250016810372,
+            "argmax": 27
+          }
+        },
+        "cohort_population": {
+          "raising/opportunity": 15204,
+          "raising/teacher_argmax": 1581,
+          "promotion/opportunity": 2391,
+          "battle/opportunity": 13503,
+          "battle/teacher_argmax": 1026,
+          "promotion/teacher_argmax": 849,
+          "dna/opportunity": 445,
+          "dna/teacher_argmax": 27
+        },
+        "samples": {
+          "raising/opportunity": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 6,
+                "route_mass_sum": 36.73145913146436,
+                "exact_teacher_argmax": 221,
+                "cross_entropy_sum": 1047.3543154597282,
+                "mean_route_mass": 0.07174113111614133,
+                "mean_cross_entropy": 2.0456138973822817
+              },
+              "1": {
+                "route_argmax": 7,
+                "route_mass_sum": 48.9055435648188,
+                "exact_teacher_argmax": 223,
+                "cross_entropy_sum": 1028.414645433426,
+                "mean_route_mass": 0.09551863977503672,
+                "mean_cross_entropy": 2.00862235436216
+              },
+              "2": {
+                "route_argmax": 7,
+                "route_mass_sum": 54.23289475683123,
+                "exact_teacher_argmax": 220,
+                "cross_entropy_sum": 1021.0336523652077,
+                "mean_route_mass": 0.105923622571936,
+                "mean_cross_entropy": 1.9942063522757962
+              }
+            },
+            "teacher_mass": 0.11378173881848852,
+            "teacher_argmax": 49
+          },
+          "raising/teacher_argmax": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 15,
+                "route_mass_sum": 51.48162958212197,
+                "exact_teacher_argmax": 14,
+                "cross_entropy_sum": 1181.581819176674,
+                "mean_route_mass": 0.10055005777758197,
+                "mean_cross_entropy": 2.307776990579441
+              },
+              "1": {
+                "route_argmax": 15,
+                "route_mass_sum": 72.83886019140482,
+                "exact_teacher_argmax": 14,
+                "cross_entropy_sum": 1097.1196057796478,
+                "mean_route_mass": 0.14226339881133754,
+                "mean_cross_entropy": 2.1428117300383747
+              },
+              "2": {
+                "route_argmax": 15,
+                "route_mass_sum": 82.6348922085017,
+                "exact_teacher_argmax": 14,
+                "cross_entropy_sum": 1069.7277278900146,
+                "mean_route_mass": 0.16139627384472988,
+                "mean_cross_entropy": 2.089311968535185
+              }
+            },
+            "teacher_mass": 0.4316040023986716,
+            "teacher_argmax": 512
+          },
+          "promotion/opportunity": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 252,
+                "route_mass_sum": 246.47905822098255,
+                "exact_teacher_argmax": 326,
+                "cross_entropy_sum": 352.84388817846775,
+                "mean_route_mass": 0.48140441058785655,
+                "mean_cross_entropy": 0.6891482190985698
+              },
+              "1": {
+                "route_argmax": 175,
+                "route_mass_sum": 215.46876249462366,
+                "exact_teacher_argmax": 345,
+                "cross_entropy_sum": 342.3594287931919,
+                "mean_route_mass": 0.42083742674731184,
+                "mean_cross_entropy": 0.668670759361703
+              },
+              "2": {
+                "route_argmax": 140,
+                "route_mass_sum": 212.9202028363943,
+                "exact_teacher_argmax": 350,
+                "cross_entropy_sum": 338.867876380682,
+                "mean_route_mass": 0.41585977116483264,
+                "mean_cross_entropy": 0.6618513210560195
+              }
+            },
+            "teacher_mass": 0.4190185543629923,
+            "teacher_argmax": 182
+          },
+          "battle/opportunity": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 0,
+                "route_mass_sum": 22.528474824503064,
+                "exact_teacher_argmax": 226,
+                "cross_entropy_sum": 1072.0662204623222,
+                "mean_route_mass": 0.04400092739160755,
+                "mean_cross_entropy": 2.093879336840473
+              },
+              "1": {
+                "route_argmax": 0,
+                "route_mass_sum": 27.59639779338613,
+                "exact_teacher_argmax": 234,
+                "cross_entropy_sum": 1053.8766425848007,
+                "mean_route_mass": 0.05389921444020729,
+                "mean_cross_entropy": 2.058352817548439
+              },
+              "2": {
+                "route_argmax": 1,
+                "route_mass_sum": 35.360773492837325,
+                "exact_teacher_argmax": 234,
+                "cross_entropy_sum": 1039.4547127485275,
+                "mean_route_mass": 0.0690640107281979,
+                "mean_cross_entropy": 2.030184985836968
+              }
+            },
+            "teacher_mass": 0.09916992142780146,
+            "teacher_argmax": 38
+          },
+          "battle/teacher_argmax": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 0,
+                "route_mass_sum": 39.423690107651055,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 1367.5350493192673,
+                "mean_route_mass": 0.07699939474150597,
+                "mean_cross_entropy": 2.670966893201694
+              },
+              "1": {
+                "route_argmax": 0,
+                "route_mass_sum": 49.96024526003748,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 1312.4496363401413,
+                "mean_route_mass": 0.0975786040235107,
+                "mean_cross_entropy": 2.5633781959768385
+              },
+              "2": {
+                "route_argmax": 1,
+                "route_mass_sum": 65.2591500505805,
+                "exact_teacher_argmax": 1,
+                "cross_entropy_sum": 1249.8194208145142,
+                "mean_route_mass": 0.12745927744254004,
+                "mean_cross_entropy": 2.441053556278348
+              }
+            },
+            "teacher_mass": 0.45458984293509275,
+            "teacher_argmax": 512
+          },
+          "promotion/teacher_argmax": {
+            "n": 512,
+            "models": {
+              "0": {
+                "route_argmax": 336,
+                "route_mass_sum": 281.89298747479916,
+                "exact_teacher_argmax": 336,
+                "cross_entropy_sum": 360.28456619381905,
+                "mean_route_mass": 0.5505722411617171,
+                "mean_cross_entropy": 0.7036807933473028
+              },
+              "1": {
+                "route_argmax": 261,
+                "route_mass_sum": 248.04788498580456,
+                "exact_teacher_argmax": 261,
+                "cross_entropy_sum": 375.2743609249592,
+                "mean_route_mass": 0.4844685253628995,
+                "mean_cross_entropy": 0.7329577361815609
+              },
+              "2": {
+                "route_argmax": 235,
+                "route_mass_sum": 242.12529411911964,
+                "exact_teacher_argmax": 235,
+                "cross_entropy_sum": 374.9414564371109,
+                "mean_route_mass": 0.47290096507640556,
+                "mean_cross_entropy": 0.7323075321037322
+              }
+            },
+            "teacher_mass": 0.6768005375051871,
+            "teacher_argmax": 512
+          },
+          "dna/opportunity": {
+            "n": 445,
+            "models": {
+              "0": {
+                "route_argmax": 0,
+                "route_mass_sum": 14.732811845839024,
+                "exact_teacher_argmax": 208,
+                "cross_entropy_sum": 1029.6489199995995,
+                "mean_route_mass": 0.03310744235020005,
+                "mean_cross_entropy": 2.3138177977519088
+              },
+              "1": {
+                "route_argmax": 0,
+                "route_mass_sum": 13.616717472672462,
+                "exact_teacher_argmax": 220,
+                "cross_entropy_sum": 1013.9559267759323,
+                "mean_route_mass": 0.03059936510712913,
+                "mean_cross_entropy": 2.2785526444402975
+              },
+              "2": {
+                "route_argmax": 0,
+                "route_mass_sum": 16.468634789809585,
+                "exact_teacher_argmax": 223,
+                "cross_entropy_sum": 998.8588040471077,
+                "mean_route_mass": 0.03700816806698783,
+                "mean_cross_entropy": 2.2446265259485565
+              }
+            },
+            "teacher_mass": 0.04990168543103454,
+            "teacher_argmax": 27
+          },
+          "dna/teacher_argmax": {
+            "n": 27,
+            "models": {
+              "0": {
+                "route_argmax": 0,
+                "route_mass_sum": 1.699082805775106,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 80.05761921405792,
+                "mean_route_mass": 0.06292899280648541,
+                "mean_cross_entropy": 2.965097007928071
+              },
+              "1": {
+                "route_argmax": 0,
+                "route_mass_sum": 1.6698315655812621,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 79.6572642326355,
+                "mean_route_mass": 0.061845613540046744,
+                "mean_cross_entropy": 2.9502690456531666
+              },
+              "2": {
+                "route_argmax": 0,
+                "route_mass_sum": 2.1238851603120565,
+                "exact_teacher_argmax": 0,
+                "cross_entropy_sum": 76.83866941928864,
+                "mean_route_mass": 0.07866241334489098,
+                "mean_cross_entropy": 2.8458766451588384
+              }
+            },
+            "teacher_mass": 0.3144675918199398,
+            "teacher_argmax": 27
+          }
+        }
+      }
+    },
+    "model_hashes": {
+      "0": "f92782e86354e85400db81bd092924c984ee691d2d8c3b3d61e1a007babbed19",
+      "1": "8d1480f2d00048d567c5bc438759259dfbccad869f38d51dfd43ceb2f34becae",
+      "2": "7d60ee9c8520a21598c9e2bd0e32cd05cf6a65c1bb082ca7af57a434ee7daba0"
+    }
+  },
+  "tactics": {
+    "guidance": "0/1/2 = frozen campaign generations; 3 = uniform policy, zero value",
+    "rows": [
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.17596997320652008,
+        "direct_proven_win": false,
+        "direct_value": -0.006501572206616402,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8234146237373352,
+        "seconds": 0.0155459,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.17596997320652008,
+        "direct_proven_win": false,
+        "direct_value": -0.006501572206616402,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8234146237373352,
+        "seconds": 0.0139131,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.17596997320652008,
+        "direct_proven_win": false,
+        "direct_value": -0.006501572206616402,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8234146237373352,
+        "seconds": 0.0138864,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.17596997320652008,
+        "direct_proven_win": false,
+        "direct_value": -0.006501572206616402,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            400,
+            1232
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9058536291122437,
+        "seconds": 0.0141157,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.17596997320652008,
+        "direct_proven_win": false,
+        "direct_value": -0.006501572206616402,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            400,
+            1232
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9058536291122437,
+        "seconds": 0.0138331,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.17596997320652008,
+        "direct_proven_win": false,
+        "direct_value": -0.006501572206616402,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            400,
+            1232
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9058536291122437,
+        "seconds": 0.0137053,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2219311147928238,
+        "direct_proven_win": false,
+        "direct_value": -0.04924039542675018,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.82475346326828,
+        "seconds": 0.0129025,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2219311147928238,
+        "direct_proven_win": false,
+        "direct_value": -0.04924039542675018,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.82475346326828,
+        "seconds": 0.012412,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2219311147928238,
+        "direct_proven_win": false,
+        "direct_value": -0.04924039542675018,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.82475346326828,
+        "seconds": 0.0129346,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2219311147928238,
+        "direct_proven_win": false,
+        "direct_value": -0.04924039542675018,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            400,
+            1236
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9124383926391602,
+        "seconds": 0.0149113,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2219311147928238,
+        "direct_proven_win": false,
+        "direct_value": -0.04924039542675018,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            400,
+            1236
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9124383926391602,
+        "seconds": 0.0143396,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2219311147928238,
+        "direct_proven_win": false,
+        "direct_value": -0.04924039542675018,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            400,
+            1236
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9124383926391602,
+        "seconds": 0.0149513,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.25069499015808105,
+        "direct_proven_win": false,
+        "direct_value": 0.05380863696336746,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8312808275222778,
+        "seconds": 0.011136,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.25069499015808105,
+        "direct_proven_win": false,
+        "direct_value": 0.05380863696336746,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8312808275222778,
+        "seconds": 0.0108888,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.25069499015808105,
+        "direct_proven_win": false,
+        "direct_value": 0.05380863696336746,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            400,
+            296
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8312808275222778,
+        "seconds": 0.0113874,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.25069499015808105,
+        "direct_proven_win": false,
+        "direct_value": 0.05380863696336746,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            400,
+            1236
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9111790657043457,
+        "seconds": 0.0154249,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.25069499015808105,
+        "direct_proven_win": false,
+        "direct_value": 0.05380863696336746,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            400,
+            1236
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9111790657043457,
+        "seconds": 0.0161585,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.25069499015808105,
+        "direct_proven_win": false,
+        "direct_value": 0.05380863696336746,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            32
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            400,
+            1236
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.9111790657043457,
+        "seconds": 0.0166201,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            400,
+            288
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.7875000238418579,
+        "seconds": 0.018435,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            400,
+            288
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.7875000238418579,
+        "seconds": 0.017833,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            400,
+            288
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.7875000238418579,
+        "seconds": 0.0161109,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            24
+          ],
+          [
+            400,
+            1232
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8843749761581421,
+        "seconds": 0.0180684,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            24
+          ],
+          [
+            400,
+            1232
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8843749761581421,
+        "seconds": 0.0179209,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 400,
+        "fixture": "battle_evolve_into_rush_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 400,
+            "nodes": 1,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            24
+          ],
+          [
+            400,
+            1232
+          ]
+        ],
+        "search_action": 400,
+        "search_proven_win": true,
+        "search_value": 0.8843749761581421,
+        "seconds": 0.0181143,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          400
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2585197985172272,
+        "direct_proven_win": false,
+        "direct_value": 0.6529697179794312,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            63,
+            296
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8203610181808472,
+        "seconds": 0.0198252,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2585197985172272,
+        "direct_proven_win": false,
+        "direct_value": 0.6529697179794312,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            63,
+            296
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8203610181808472,
+        "seconds": 0.0206638,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2585197985172272,
+        "direct_proven_win": false,
+        "direct_value": 0.6529697179794312,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            63,
+            296
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8203610181808472,
+        "seconds": 0.0199701,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2585197985172272,
+        "direct_proven_win": false,
+        "direct_value": 0.6529697179794312,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            20
+          ],
+          [
+            63,
+            1236
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9065119624137878,
+        "seconds": 0.0251712,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2585197985172272,
+        "direct_proven_win": false,
+        "direct_value": 0.6529697179794312,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            20
+          ],
+          [
+            63,
+            1236
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9065119624137878,
+        "seconds": 0.0264467,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.2585197985172272,
+        "direct_proven_win": false,
+        "direct_value": 0.6529697179794312,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            20
+          ],
+          [
+            63,
+            1236
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9065119624137878,
+        "seconds": 0.024189,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.280436247587204,
+        "direct_proven_win": false,
+        "direct_value": 0.42542457580566406,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            63,
+            296
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8366667032241821,
+        "seconds": 0.0153574,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.280436247587204,
+        "direct_proven_win": false,
+        "direct_value": 0.42542457580566406,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            63,
+            296
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8366667032241821,
+        "seconds": 0.016015,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.280436247587204,
+        "direct_proven_win": false,
+        "direct_value": 0.42542457580566406,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            63,
+            296
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8366667032241821,
+        "seconds": 0.0154358,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.280436247587204,
+        "direct_proven_win": false,
+        "direct_value": 0.42542457580566406,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            20
+          ],
+          [
+            63,
+            1236
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9101777076721191,
+        "seconds": 0.0231994,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.280436247587204,
+        "direct_proven_win": false,
+        "direct_value": 0.42542457580566406,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            20
+          ],
+          [
+            63,
+            1236
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9101777076721191,
+        "seconds": 0.0230245,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.280436247587204,
+        "direct_proven_win": false,
+        "direct_value": 0.42542457580566406,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            20
+          ],
+          [
+            63,
+            1236
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9101777076721191,
+        "seconds": 0.0229503,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3169978857040405,
+        "direct_proven_win": false,
+        "direct_value": 0.29205313324928284,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            63,
+            300
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8578280210494995,
+        "seconds": 0.0159259,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3169978857040405,
+        "direct_proven_win": false,
+        "direct_value": 0.29205313324928284,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            63,
+            300
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8578280210494995,
+        "seconds": 0.0151643,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3169978857040405,
+        "direct_proven_win": false,
+        "direct_value": 0.29205313324928284,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            12
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            63,
+            300
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.8578280210494995,
+        "seconds": 0.0152556,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3169978857040405,
+        "direct_proven_win": false,
+        "direct_value": 0.29205313324928284,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            63,
+            1240
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9276363253593445,
+        "seconds": 0.0204211,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3169978857040405,
+        "direct_proven_win": false,
+        "direct_value": 0.29205313324928284,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            63,
+            1240
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9276363253593445,
+        "seconds": 0.0208463,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3169978857040405,
+        "direct_proven_win": false,
+        "direct_value": 0.29205313324928284,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            63,
+            1240
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.9276363253593445,
+        "seconds": 0.0207981,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            63,
+            288
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.737500011920929,
+        "seconds": 0.0201593,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            63,
+            288
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.737500011920929,
+        "seconds": 0.0201735,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            16
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            63,
+            288
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.737500011920929,
+        "seconds": 0.0196985,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            24
+          ],
+          [
+            63,
+            1232
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.878125011920929,
+        "seconds": 0.0302943,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            24
+          ],
+          [
+            63,
+            1232
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.878125011920929,
+        "seconds": 0.0299004,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": false,
+        "direct_value": 0.0,
+        "expected": 63,
+        "fixture": "dna_fresh_materials_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 62,
+            "nodes": 1,
+            "value": -1
+          },
+          {
+            "action": 63,
+            "nodes": 3,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            24
+          ],
+          [
+            62,
+            24
+          ],
+          [
+            63,
+            1232
+          ]
+        ],
+        "search_action": 63,
+        "search_proven_win": true,
+        "search_value": 0.878125011920929,
+        "seconds": 0.0302844,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          63
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6809700131416321,
+        "direct_proven_win": true,
+        "direct_value": -0.08053506910800934,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            312
+          ],
+          [
+            62,
+            8
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9082819223403931,
+        "seconds": 0.0075276,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6809700131416321,
+        "direct_proven_win": true,
+        "direct_value": -0.08053506910800934,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            312
+          ],
+          [
+            62,
+            8
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9082819223403931,
+        "seconds": 0.0069328,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6809700131416321,
+        "direct_proven_win": true,
+        "direct_value": -0.08053506910800934,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            312
+          ],
+          [
+            62,
+            8
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9082819223403931,
+        "seconds": 0.0072546,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6809700131416321,
+        "direct_proven_win": true,
+        "direct_value": -0.08053506910800934,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1264
+          ],
+          [
+            62,
+            16
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9583204984664917,
+        "seconds": 0.0072865,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6809700131416321,
+        "direct_proven_win": true,
+        "direct_value": -0.08053506910800934,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1264
+          ],
+          [
+            62,
+            16
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9583204984664917,
+        "seconds": 0.0072145,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6809700131416321,
+        "direct_proven_win": true,
+        "direct_value": -0.08053506910800934,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1264
+          ],
+          [
+            62,
+            16
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9583204984664917,
+        "seconds": 0.0078232,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6102735996246338,
+        "direct_proven_win": true,
+        "direct_value": 0.02248353324830532,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            308
+          ],
+          [
+            62,
+            12
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9120264053344727,
+        "seconds": 0.0062146,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6102735996246338,
+        "direct_proven_win": true,
+        "direct_value": 0.02248353324830532,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            308
+          ],
+          [
+            62,
+            12
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9120264053344727,
+        "seconds": 0.008305,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6102735996246338,
+        "direct_proven_win": true,
+        "direct_value": 0.02248353324830532,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            308
+          ],
+          [
+            62,
+            12
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9120264053344727,
+        "seconds": 0.0065577,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6102735996246338,
+        "direct_proven_win": true,
+        "direct_value": 0.02248353324830532,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1260
+          ],
+          [
+            62,
+            20
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9592565298080444,
+        "seconds": 0.0087634,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6102735996246338,
+        "direct_proven_win": true,
+        "direct_value": 0.02248353324830532,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1260
+          ],
+          [
+            62,
+            20
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9592565298080444,
+        "seconds": 0.0077748,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.6102735996246338,
+        "direct_proven_win": true,
+        "direct_value": 0.02248353324830532,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1260
+          ],
+          [
+            62,
+            20
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9592565298080444,
+        "seconds": 0.0077917,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5860816836357117,
+        "direct_proven_win": true,
+        "direct_value": 0.05002583935856819,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            308
+          ],
+          [
+            62,
+            12
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9111326932907104,
+        "seconds": 0.0065413,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5860816836357117,
+        "direct_proven_win": true,
+        "direct_value": 0.05002583935856819,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            308
+          ],
+          [
+            62,
+            12
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9111326932907104,
+        "seconds": 0.0065805,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5860816836357117,
+        "direct_proven_win": true,
+        "direct_value": 0.05002583935856819,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            308
+          ],
+          [
+            62,
+            12
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9111326932907104,
+        "seconds": 0.0068402,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5860816836357117,
+        "direct_proven_win": true,
+        "direct_value": 0.05002583935856819,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1256
+          ],
+          [
+            62,
+            24
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9527832269668579,
+        "seconds": 0.0084026,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5860816836357117,
+        "direct_proven_win": true,
+        "direct_value": 0.05002583935856819,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1256
+          ],
+          [
+            62,
+            24
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9527832269668579,
+        "seconds": 0.0079702,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5860816836357117,
+        "direct_proven_win": true,
+        "direct_value": 0.05002583935856819,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1256
+          ],
+          [
+            62,
+            24
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9527832269668579,
+        "seconds": 0.0078426,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            300
+          ],
+          [
+            62,
+            20
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.8374999761581421,
+        "seconds": 0.0071666,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            300
+          ],
+          [
+            62,
+            20
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.8374999761581421,
+        "seconds": 0.0086057,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            300
+          ],
+          [
+            62,
+            20
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.8374999761581421,
+        "seconds": 0.0076045,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1248
+          ],
+          [
+            62,
+            32
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9156249761581421,
+        "seconds": 0.0073263,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1248
+          ],
+          [
+            62,
+            32
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9156249761581421,
+        "seconds": 0.0071256,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 61,
+        "direct_expected_probability": 0.5,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 61,
+        "fixture": "promote_for_lethal",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 61,
+            "nodes": 1,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 2,
+            "value": -1
+          }
+        ],
+        "root_visits": [
+          [
+            61,
+            1248
+          ],
+          [
+            62,
+            32
+          ]
+        ],
+        "search_action": 61,
+        "search_proven_win": true,
+        "search_value": 0.9156249761581421,
+        "seconds": 0.0084725,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          61
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.22475004196166992,
+        "direct_proven_win": true,
+        "direct_value": 0.03892659768462181,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            292
+          ],
+          [
+            62,
+            4
+          ],
+          [
+            414,
+            24
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.7511192560195923,
+        "seconds": 0.0336318,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.22475004196166992,
+        "direct_proven_win": true,
+        "direct_value": 0.03892659768462181,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            292
+          ],
+          [
+            62,
+            4
+          ],
+          [
+            414,
+            24
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.7511192560195923,
+        "seconds": 0.0322542,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.22475004196166992,
+        "direct_proven_win": true,
+        "direct_value": 0.03892659768462181,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            292
+          ],
+          [
+            62,
+            4
+          ],
+          [
+            414,
+            24
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.7511192560195923,
+        "seconds": 0.0332618,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.22475004196166992,
+        "direct_proven_win": true,
+        "direct_value": 0.03892659768462181,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1236
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            414,
+            32
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.9070817232131958,
+        "seconds": 0.0537321,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.22475004196166992,
+        "direct_proven_win": true,
+        "direct_value": 0.03892659768462181,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1236
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            414,
+            32
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.9070817232131958,
+        "seconds": 0.0494284,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.22475004196166992,
+        "direct_proven_win": true,
+        "direct_value": 0.03892659768462181,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 0,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1236
+          ],
+          [
+            62,
+            12
+          ],
+          [
+            414,
+            32
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.9070817232131958,
+        "seconds": 0.0483477,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.33636370301246643,
+        "direct_proven_win": true,
+        "direct_value": 0.04674817994236946,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            284
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            414,
+            28
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.7742651700973511,
+        "seconds": 0.0332376,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.33636370301246643,
+        "direct_proven_win": true,
+        "direct_value": 0.04674817994236946,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            284
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            414,
+            28
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.7742651700973511,
+        "seconds": 0.0339748,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.33636370301246643,
+        "direct_proven_win": true,
+        "direct_value": 0.04674817994236946,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            284
+          ],
+          [
+            62,
+            8
+          ],
+          [
+            414,
+            28
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.7742651700973511,
+        "seconds": 0.0341326,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.33636370301246643,
+        "direct_proven_win": true,
+        "direct_value": 0.04674817994236946,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1216
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            414,
+            48
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.909625232219696,
+        "seconds": 0.0528802,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.33636370301246643,
+        "direct_proven_win": true,
+        "direct_value": 0.04674817994236946,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1216
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            414,
+            48
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.909625232219696,
+        "seconds": 0.0511966,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.33636370301246643,
+        "direct_proven_win": true,
+        "direct_value": 0.04674817994236946,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 1,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1216
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            414,
+            48
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.909625232219696,
+        "seconds": 0.0513355,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3807879686355591,
+        "direct_proven_win": true,
+        "direct_value": 0.3159114420413971,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            280
+          ],
+          [
+            62,
+            4
+          ],
+          [
+            414,
+            36
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.8115965127944946,
+        "seconds": 0.0322232,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3807879686355591,
+        "direct_proven_win": true,
+        "direct_value": 0.3159114420413971,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            280
+          ],
+          [
+            62,
+            4
+          ],
+          [
+            414,
+            36
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.8115965127944946,
+        "seconds": 0.0324106,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3807879686355591,
+        "direct_proven_win": true,
+        "direct_value": 0.3159114420413971,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            280
+          ],
+          [
+            62,
+            4
+          ],
+          [
+            414,
+            36
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.8115965127944946,
+        "seconds": 0.0338968,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3807879686355591,
+        "direct_proven_win": true,
+        "direct_value": 0.3159114420413971,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1184
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            414,
+            80
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.911645770072937,
+        "seconds": 0.0646263,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3807879686355591,
+        "direct_proven_win": true,
+        "direct_value": 0.3159114420413971,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1184
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            414,
+            80
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.911645770072937,
+        "seconds": 0.0614333,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3807879686355591,
+        "direct_proven_win": true,
+        "direct_value": 0.3159114420413971,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 2,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1184
+          ],
+          [
+            62,
+            16
+          ],
+          [
+            414,
+            80
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.911645770072937,
+        "seconds": 0.0582701,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            200
+          ],
+          [
+            62,
+            60
+          ],
+          [
+            414,
+            60
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.4000000059604645,
+        "seconds": 0.0426026,
+        "seed": 77101,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            200
+          ],
+          [
+            62,
+            60
+          ],
+          [
+            414,
+            60
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.4000000059604645,
+        "seconds": 0.0421467,
+        "seed": 77102,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            200
+          ],
+          [
+            62,
+            60
+          ],
+          [
+            414,
+            60
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.4000000059604645,
+        "seconds": 0.0415431,
+        "seed": 77103,
+        "simulations": 320,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1160
+          ],
+          [
+            62,
+            60
+          ],
+          [
+            414,
+            60
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.800000011920929,
+        "seconds": 0.0671307,
+        "seed": 77101,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1160
+          ],
+          [
+            62,
+            60
+          ],
+          [
+            414,
+            60
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.800000011920929,
+        "seconds": 0.0740078,
+        "seed": 77102,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      },
+      {
+        "batch": 4,
+        "direct_action": 0,
+        "direct_expected_probability": 0.3333333432674408,
+        "direct_proven_win": true,
+        "direct_value": 0.0,
+        "expected": 414,
+        "fixture": "raising_evolution_then_next_turn_promotion",
+        "guidance": 3,
+        "proof": [
+          {
+            "action": 0,
+            "nodes": 9,
+            "value": 1
+          },
+          {
+            "action": 62,
+            "nodes": 21,
+            "value": -1
+          },
+          {
+            "action": 414,
+            "nodes": 15,
+            "value": 1
+          }
+        ],
+        "root_visits": [
+          [
+            0,
+            1160
+          ],
+          [
+            62,
+            60
+          ],
+          [
+            414,
+            60
+          ]
+        ],
+        "search_action": 0,
+        "search_proven_win": true,
+        "search_value": 0.800000011920929,
+        "seconds": 0.0752486,
+        "seed": 77103,
+        "simulations": 1280,
+        "winning_actions": [
+          0,
+          414
+        ],
+        "worlds": 4
+      }
+    ],
+    "scope": "abstract engine fixtures; synthetic unknown embeddings; no card certification; finite-horizon perfect-information proof; PIMC search with hidden arrangement sampling"
+  }
+}

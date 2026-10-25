@@ -1,0 +1,12 @@
+*
+!Cargo.toml
+!Cargo.lock
+!requirements-training.txt
+!code/
+!data/
+code/frontend/
+**/node_modules/
+**/target/
+**/__pycache__/
+**/*.pyc
+**/.env*

@@ -80,25 +80,24 @@ impl Game {
             return target;
         };
 
+        let host = self.player(target.player).battle_area[target.index as usize]
+            .top_card().handle();
         for origin in origins {
-            let shifts_target_left = matches!(
-                origin,
-                DigiXrosMaterialOrigin::BattleArea { permanent, .. }
-                    if permanent.player == target.player && permanent.index < target.index
-            );
+            // Leave replacements can relocate selected materials. Consumption
+            // already resolves their physical card identity; relocate the host
+            // by identity too, rather than comparing obsolete field indices.
+            // The entering host itself is never one of its own materials.
+            if origin.card() == host {
+                continue;
+            }
             let Some(card) = self.take_digixros_material_origin(origin) else {
                 continue;
             };
-            if shifts_target_left {
-                target.index = target.index.saturating_sub(1);
-            }
-            if let Some(permanent) = self
-                .player_mut(target.player)
+            target.index = self.player(target.player)
                 .battle_area
-                .get_mut(target.index as usize)
-            {
-                permanent.push_under(card);
-            }
+                .iter().position(|p| p.top_card().handle() == host)
+                .expect("consuming another DigiXros material preserves the host") as u8;
+            self.player_mut(target.player).battle_area[target.index as usize].push_under(card);
         }
 
         target
@@ -510,6 +509,35 @@ impl Game {
             );
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod digixros_relocated_material_tests {
+    use super::*;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+
+    #[test]
+    fn commit_tracks_host_after_material_original_slot_has_moved() {
+        let mut r=DebugRunner::builder().add_card(make_test_card("MATERIAL","Material"))
+            .add_card(make_test_card("OTHER","Other"))
+            .add_card(make_test_card("HOST","Host")).build();
+        r.place_stack(0,&["MATERIAL"]);r.place_stack(0,&["OTHER"]);r.place_stack(0,&["HOST"]);
+        let material=r.game.players[0].battle_area[0].top_card().handle();
+        let host=r.game.players[0].battle_area[2].top_card().handle();
+        let mut transaction=DigiXrosTransaction::new(host,0,0,vec![]);
+        transaction.pre_attach_extra_material(DigiXrosMaterialOrigin::BattleArea{
+            permanent:PermanentHandle{player:0,index:2},card:material},0);
+        r.game.pending_digixros_transaction=Some(transaction);
+        let mut cloned=r.game.clone();
+        for game in [&mut r.game,&mut cloned] {
+            let entered=game.commit_digixros_material_sources(PermanentHandle{player:0,index:2});
+            assert_eq!(entered.index,1);
+            assert_eq!(game.players[0].battle_area.len(),2);
+            let stack=&game.players[0].battle_area[entered.index as usize].card_sources;
+            assert_eq!(stack.len(),2);assert_eq!(stack[0].handle(),material);assert_eq!(stack[1].handle(),host);
+            assert_eq!(game.players[0].battle_area[0].top_card().card_id(&game.card_data),"OTHER");
+        }
     }
 }
 

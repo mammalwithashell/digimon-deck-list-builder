@@ -817,6 +817,7 @@ impl CardDatabase {
 #[pyclass(module = "digimon_engine", name = "RustHeadlessGame")]
 pub struct RustHeadlessGame {
     inner: HeadlessRunner,
+    development_teachers: [::digimon_engine::policies::DevelopmentPolicy; 2],
 }
 
 #[pymethods]
@@ -856,7 +857,7 @@ impl RustHeadlessGame {
             profile,
         )
         .map_err(PyValueError::new_err)?;
-        Ok(Self { inner: runner })
+        Ok(Self { inner: runner, development_teachers: Default::default() })
     }
 
     /// Execute a single action for the current decision player. No-op after
@@ -947,6 +948,44 @@ impl RustHeadlessGame {
     fn greedy_action(&self) -> u16 {
         let mask = self.inner.get_action_mask();
         choose_greedy_action(&self.inner.game, &mask)
+    }
+
+    /// Explicit bootstrap teacher, with independent state for each deciding seat.
+    /// The returned JSON records the chosen action and its feature provenance.
+    fn teacher_decision(&mut self, teacher: &str) -> PyResult<String> {
+        let mask = self.inner.get_action_mask();
+        let player = self.inner.current_decision_player();
+        match teacher {
+            "greedy" => Ok(serde_json::json!({"version": "greedy", "player": player,
+                "action": choose_greedy_action(&self.inner.game, &mask)}).to_string()),
+            "development_v1" => {
+                let decision = self.development_teachers[player as usize].decide(&self.inner.game, &mask)
+                    .map_err(PyValueError::new_err)?;
+                serde_json::to_string(&decision).map_err(|e| PyValueError::new_err(e.to_string()))
+            }
+            _ => Err(PyValueError::new_err(format!("unknown bootstrap teacher: {teacher}"))),
+        }
+    }
+
+    /// Internal evaluation telemetry only. Avoid building renderer descriptions
+    /// and effective-stat tooltips for every bootstrap decision. Like to_ui_json,
+    /// this includes both hands and MUST NOT be used as a player policy input.
+    fn get_card_eval_state(&self, py: Python) -> PyResult<PyObject> {
+        let game = &self.inner.game;
+        let player = |pid| {
+            let p = game.player(pid);
+            serde_json::json!({
+                "handIds": p.hand.iter().map(|c| c.card_id(&game.card_data)).collect::<Vec<_>>(),
+                "battleArea": p.battle_area.iter().map(|perm| serde_json::json!({
+                    "topCardId": perm.top_card().card_id(&game.card_data)
+                })).collect::<Vec<_>>(),
+                "breedingArea": p.breeding_area.as_ref().map(|perm| serde_json::json!({
+                    "topCardId": perm.top_card().card_id(&game.card_data)
+                }))
+            })
+        };
+        json_to_pyobject(py, &serde_json::json!({"player1": player(0), "player2": player(1),
+            "pendingSelection": game.pending_selection.as_ref().map(|_| true)}))
     }
 
     /// Run to conclusion. `policy_fn`, if provided, is

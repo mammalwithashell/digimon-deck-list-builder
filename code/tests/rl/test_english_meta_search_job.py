@@ -31,3 +31,13 @@ def test_pipeline_preserves_existing_run_without_starting_work(monkeypatch, tmp_
     with pytest.raises(FileExistsError, match="fresh directory"):
         job.pipeline(tmp_path, Path("cli"), 400, 4, 42)
     assert (tmp_path / "fresh_seed.zip").read_bytes() == b"previous checkpoint"
+
+
+def test_bootstrap_cli_forwards_cpu_device(monkeypatch, tmp_path):
+    import sys
+    calls = []
+    monkeypatch.setattr(job, "bootstrap", lambda *args: calls.append(args))
+    monkeypatch.setattr(sys, "argv", ["english_meta_search_job", "bootstrap",
+        "--run-dir", str(tmp_path), "--bootstrap-device", "cpu"])
+    assert job.main() == 0
+    assert calls == [(tmp_path, 400, 20261023, "cpu")]

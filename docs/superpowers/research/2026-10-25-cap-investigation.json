@@ -1,0 +1,1459 @@
+{
+  "schema": "cloud-cap-investigation-v1",
+  "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:a98d312fd98a32db0f4c594c004b8aa245321486643c1221c492dcc55dd6f413",
+  "model_sha256": "3b30107e84704a8d90b83fcb10b2553227df2044ec101c8f15c46bd9793cea24",
+  "source_decks_sha256": "5860cf948cd49d9ab4e1ac23b271dfffbccbac69d78288ed4123af1ef410b06a",
+  "games": [
+    {
+      "game": 340,
+      "seed": 5522269491488737205,
+      "deck1": {
+        "name": "Chronomon:sha256:28288911b84d2189223fac3d2d58033ae5a8a27892f67fc1d88d1ebc7e1bfa45:slot0",
+        "cards": [
+          "BT26-011",
+          "BT26-011",
+          "BT26-011",
+          "BT26-011",
+          "BT26-085",
+          "BT26-085",
+          "BT26-085",
+          "EX1-066",
+          "BT26-092",
+          "BT26-092",
+          "BT26-092",
+          "BT26-092",
+          "BT26-021",
+          "BT26-016",
+          "BT26-016",
+          "BT26-016",
+          "BT26-016",
+          "P-194",
+          "P-194",
+          "P-194",
+          "P-194",
+          "BT25-008",
+          "BT25-008",
+          "BT25-008",
+          "BT25-008",
+          "BT26-078",
+          "BT26-078",
+          "BT26-078",
+          "BT26-087",
+          "BT26-087",
+          "BT26-087",
+          "BT26-073",
+          "BT26-073",
+          "BT26-001",
+          "BT26-001",
+          "BT26-001",
+          "BT26-001",
+          "BT26-060",
+          "BT26-060",
+          "BT26-060",
+          "P-198",
+          "P-198",
+          "BT26-015",
+          "BT26-015",
+          "BT26-015",
+          "BT26-015",
+          "BT24-088",
+          "BT24-088",
+          "BT26-009",
+          "BT26-009",
+          "BT26-009",
+          "BT26-009",
+          "BT26-029",
+          "BT26-096"
+        ]
+      },
+      "deck2": {
+        "name": "Toho Braves:sha256:e20c6f6087b0d12d5b1019dd7a4693e1fcb6bcfad2a6275000f0cb922eb86c30:slot1",
+        "cards": [
+          "BT26-104",
+          "BT26-104",
+          "BT26-104",
+          "EX12-063",
+          "EX12-063",
+          "BT16-077",
+          "BT26-014",
+          "EX12-036",
+          "EX12-036",
+          "EX12-004",
+          "EX12-004",
+          "EX12-004",
+          "EX12-004",
+          "BT26-008",
+          "EX12-020",
+          "BT26-013",
+          "EX12-031",
+          "EX1-066",
+          "BT26-012",
+          "BT26-012",
+          "EX12-026",
+          "EX12-026",
+          "EX12-046",
+          "EX12-046",
+          "EX12-046",
+          "EX12-046",
+          "EX12-065",
+          "EX12-065",
+          "EX12-065",
+          "EX12-065",
+          "EX12-062",
+          "EX12-062",
+          "EX12-062",
+          "EX12-062",
+          "EX12-074",
+          "EX12-074",
+          "EX12-074",
+          "EX12-047",
+          "EX12-047",
+          "EX12-009",
+          "EX12-009",
+          "EX12-009",
+          "EX12-009",
+          "EX12-070",
+          "EX12-070",
+          "EX12-070",
+          "EX12-070",
+          "EX12-061",
+          "EX12-061",
+          "EX12-061",
+          "EX12-061",
+          "EX12-076",
+          "EX12-076",
+          "EX12-076"
+        ]
+      },
+      "replay_sha256": "2f5be56a87191f72806ae8f575aef6d3003bb8575d712210f0253e27f5837db3",
+      "source_generation": 1,
+      "original_observations_match": true,
+      "saved_positions": 1199,
+      "total_decisions": 1200,
+      "unique_ui_states": 95,
+      "repeating_states": [
+        {
+          "hash": "a0c42e5a1081b906450656f79f79bd774dd0ad7d8edf95057c35941c30cbc738",
+          "count": 554,
+          "first_decision": 93
+        },
+        {
+          "hash": "46c3a8f7626b2a9f70c9cf2152ef843212684a59503fafda3d2a638271558d42",
+          "count": 553,
+          "first_decision": 94
+        }
+      ],
+      "prefix_actions": [
+        {
+          "player": 1,
+          "action": 1
+        },
+        {
+          "player": 0,
+          "action": 0
+        },
+        {
+          "player": 1,
+          "action": 60
+        },
+        {
+          "player": 1,
+          "action": 0
+        },
+        {
+          "player": 0,
+          "action": 60
+        },
+        {
+          "player": 0,
+          "action": 5
+        },
+        {
+          "player": 0,
+          "action": 0
+        },
+        {
+          "player": 1,
+          "action": 4
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 0
+        },
+        {
+          "player": 1,
+          "action": 101
+        },
+        {
+          "player": 1,
+          "action": 100
+        },
+        {
+          "player": 1,
+          "action": 446
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 101
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 0
+        },
+        {
+          "player": 0,
+          "action": 100
+        },
+        {
+          "player": 1,
+          "action": 4
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 100
+        },
+        {
+          "player": 1,
+          "action": 100
+        },
+        {
+          "player": 0,
+          "action": 4
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 4
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 100
+        },
+        {
+          "player": 0,
+          "action": 417
+        },
+        {
+          "player": 0,
+          "action": 100
+        },
+        {
+          "player": 0,
+          "action": 101
+        },
+        {
+          "player": 0,
+          "action": 102
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 59
+        },
+        {
+          "player": 0,
+          "action": 100
+        },
+        {
+          "player": 0,
+          "action": 3
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 114
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 144
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 129
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 100
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 31
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 0
+        },
+        {
+          "player": 1,
+          "action": 489
+        },
+        {
+          "player": 1,
+          "action": 129
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 102
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 114
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 101
+        },
+        {
+          "player": 1,
+          "action": 1150
+        },
+        {
+          "player": 1,
+          "action": 1
+        },
+        {
+          "player": 1,
+          "action": 101
+        },
+        {
+          "player": 1,
+          "action": 101
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 474
+        },
+        {
+          "player": 0,
+          "action": 3
+        },
+        {
+          "player": 0,
+          "action": 114
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 144
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 3
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 129
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 100
+        },
+        {
+          "player": 1,
+          "action": 114
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 2
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 5
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 1002
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 1002
+        }
+      ],
+      "loop_state": {
+        "phase": 3,
+        "turn": 13,
+        "selecting_player": 2,
+        "pending_selection": null,
+        "legal": [
+          0,
+          1,
+          4,
+          62,
+          417,
+          429,
+          460,
+          1002
+        ]
+      }
+    },
+    {
+      "game": 850,
+      "seed": 9305982431877686771,
+      "deck1": {
+        "name": "Chronomon:sha256:669dde3b66c2fd2413d68a2852e98451aea3cb965b1f05c8dcfa7d5e1dbd3b7c:slot1",
+        "cards": [
+          "BT26-078",
+          "BT26-078",
+          "BT9-103",
+          "BT26-060",
+          "BT26-060",
+          "BT26-060",
+          "BT11-052",
+          "BT11-052",
+          "BT26-092",
+          "BT26-092",
+          "BT26-092",
+          "BT26-085",
+          "BT26-085",
+          "BT26-085",
+          "BT24-035",
+          "BT24-035",
+          "BT26-011",
+          "BT26-011",
+          "BT26-011",
+          "BT26-011",
+          "BT26-015",
+          "BT26-015",
+          "BT26-015",
+          "BT26-015",
+          "BT26-101",
+          "BT25-008",
+          "BT25-008",
+          "BT25-008",
+          "BT25-008",
+          "BT8-095",
+          "LM-027",
+          "BT26-001",
+          "BT26-001",
+          "BT26-001",
+          "BT26-001",
+          "BT24-088",
+          "BT24-088",
+          "BT24-024",
+          "BT26-087",
+          "BT26-087",
+          "BT26-087",
+          "BT26-096",
+          "BT24-037",
+          "BT24-037",
+          "BT26-009",
+          "BT26-009",
+          "BT26-009",
+          "BT26-009",
+          "BT26-016",
+          "BT26-016",
+          "BT26-016",
+          "BT26-016",
+          "BT24-043",
+          "BT24-043"
+        ]
+      },
+      "deck2": {
+        "name": "Toho Braves:sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd:slot0",
+        "cards": [
+          "BT26-013",
+          "EX12-062",
+          "EX12-062",
+          "EX12-062",
+          "EX12-062",
+          "EX12-070",
+          "EX12-070",
+          "EX12-070",
+          "EX12-070",
+          "BT25-028",
+          "BT25-028",
+          "EX12-074",
+          "EX12-074",
+          "BT26-012",
+          "EX12-004",
+          "EX12-004",
+          "EX12-004",
+          "EX12-004",
+          "BT26-104",
+          "BT26-104",
+          "BT26-104",
+          "EX12-009",
+          "EX12-009",
+          "EX12-009",
+          "EX12-026",
+          "EX12-026",
+          "EX12-026",
+          "EX12-076",
+          "EX12-076",
+          "EX12-076",
+          "EX12-020",
+          "EX12-020",
+          "EX12-047",
+          "EX12-047",
+          "EX12-065",
+          "EX12-065",
+          "EX12-065",
+          "EX12-065",
+          "BT8-084",
+          "EX12-061",
+          "EX12-061",
+          "EX12-061",
+          "BT26-008",
+          "BT26-008",
+          "EX12-036",
+          "EX12-036",
+          "EX12-031",
+          "EX12-031",
+          "EX12-063",
+          "EX12-063",
+          "EX12-046",
+          "EX12-046",
+          "EX12-046",
+          "EX12-046"
+        ]
+      },
+      "replay_sha256": "a7ce0a0e10ebaa73f2ea829788fb6584baa7a0d8a2a7320dd16679b89ce40abc",
+      "source_generation": 1,
+      "original_observations_match": true,
+      "saved_positions": 177,
+      "total_decisions": 1200,
+      "unique_ui_states": 185,
+      "repeating_states": [
+        {
+          "hash": "1622c701ae36b8d591a6bfc28f4466f10753ff9bc66698e1f87de47cee69024b",
+          "count": 1012,
+          "first_decision": 188
+        },
+        {
+          "hash": "45162c1620590040b48d5c349e3890adadfe4cf5f3b0afcef86704b103c587e7",
+          "count": 2,
+          "first_decision": 0
+        }
+      ],
+      "prefix_actions": [
+        {
+          "player": 1,
+          "action": 0
+        },
+        {
+          "player": 0,
+          "action": 0
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 0
+        },
+        {
+          "player": 0,
+          "action": 60
+        },
+        {
+          "player": 0,
+          "action": 3
+        },
+        {
+          "player": 0,
+          "action": 2
+        },
+        {
+          "player": 0,
+          "action": 4
+        },
+        {
+          "player": 0,
+          "action": 4
+        },
+        {
+          "player": 0,
+          "action": 2
+        },
+        {
+          "player": 1,
+          "action": 60
+        },
+        {
+          "player": 1,
+          "action": 0
+        },
+        {
+          "player": 1,
+          "action": 1
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 4
+        },
+        {
+          "player": 0,
+          "action": 100
+        },
+        {
+          "player": 0,
+          "action": 1150
+        },
+        {
+          "player": 0,
+          "action": 100
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 5
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 4
+        },
+        {
+          "player": 0,
+          "action": 4
+        },
+        {
+          "player": 1,
+          "action": 5
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 1
+        },
+        {
+          "player": 1,
+          "action": 129
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 4
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 174
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 159
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 144
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 0
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 102
+        },
+        {
+          "player": 0,
+          "action": 103
+        },
+        {
+          "player": 1,
+          "action": 144
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 129
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 3
+        },
+        {
+          "player": 1,
+          "action": 101
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 103
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 102
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 0
+        },
+        {
+          "player": 0,
+          "action": 3
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 5
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 59
+        },
+        {
+          "player": 0,
+          "action": 1154
+        },
+        {
+          "player": 0,
+          "action": 1151
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 434
+        },
+        {
+          "player": 0,
+          "action": 102
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 144
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 5
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 104
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 2
+        },
+        {
+          "player": 0,
+          "action": 103
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 449
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 1150
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 1154
+        },
+        {
+          "player": 0,
+          "action": 1155
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 444
+        },
+        {
+          "player": 1,
+          "action": 159
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 5
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 104
+        },
+        {
+          "player": 1,
+          "action": 104
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 4
+        },
+        {
+          "player": 0,
+          "action": 104
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 159
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 174
+        },
+        {
+          "player": 0,
+          "action": 103
+        },
+        {
+          "player": 0,
+          "action": 104
+        },
+        {
+          "player": 1,
+          "action": 0
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 174
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 159
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 1150
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 1
+        },
+        {
+          "player": 0,
+          "action": 103
+        },
+        {
+          "player": 0,
+          "action": 3
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 174
+        },
+        {
+          "player": 0,
+          "action": 102
+        },
+        {
+          "player": 0,
+          "action": 103
+        },
+        {
+          "player": 1,
+          "action": 159
+        },
+        {
+          "player": 0,
+          "action": 100
+        },
+        {
+          "player": 0,
+          "action": 102
+        },
+        {
+          "player": 1,
+          "action": 5
+        },
+        {
+          "player": 1,
+          "action": 1152
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 463
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 129
+        },
+        {
+          "player": 0,
+          "action": 104
+        },
+        {
+          "player": 1,
+          "action": 59
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 0,
+          "action": 1150
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 0,
+          "action": 62
+        },
+        {
+          "player": 1,
+          "action": 30
+        },
+        {
+          "player": 1,
+          "action": 2
+        },
+        {
+          "player": 1,
+          "action": 102
+        },
+        {
+          "player": 1,
+          "action": 101
+        },
+        {
+          "player": 1,
+          "action": 102
+        },
+        {
+          "player": 0,
+          "action": 62
+        }
+      ],
+      "loop_state": {
+        "phase": 13,
+        "turn": 22,
+        "selecting_player": 1,
+        "pending_selection": null,
+        "legal": [
+          62
+        ]
+      }
+    }
+  ],
+  "original_data_modified": false,
+  "live_engine_modified": false
+}

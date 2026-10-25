@@ -1,5 +1,6 @@
 """Search jobs must evaluate the trained profile and the intended deck pool."""
 from pathlib import Path
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -70,3 +71,16 @@ def test_generation_resume_cannot_race_an_existing_trainer(tmp_path):
     with controller_lock(tmp_path / "generation-0.lock"):
         with pytest.raises(RuntimeError, match="Another"):
             job.run_one_generation(SimpleNamespace(run_dir=str(tmp_path), resume_selfplay=True), 0, None)
+
+
+def test_unattended_generation_stops_before_fitting_truncated_games(monkeypatch, tmp_path):
+    folder = tmp_path / 'collected'
+    folder.mkdir()
+    (folder / 'manifest.json').write_text(json.dumps(dict(truncated_games=1)))
+    monkeypatch.setattr(job, 'run_selfplay_stage', lambda **kwargs: [folder])
+    args = job.build_parser().parse_args(['--run-dir', str(tmp_path / 'run'),
+        '--seed-model', 'seed.zip', '--decks', 'decks.json', '--fail-on-truncation'])
+    with pytest.raises(RuntimeError, match='refusing to fit'):
+        job.run_one_generation(args, 1, dict(model_zip='parent.zip', model_onnx='parent.onnx'))
+    assert (folder / 'manifest.json').exists()
+    assert not (tmp_path / 'run/gen1/model.zip').exists()

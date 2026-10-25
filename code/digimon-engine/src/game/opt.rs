@@ -48,36 +48,43 @@ impl Game {
             return 0.0;
         };
         let is_under = source_index + 1 < stack_size;
-        let card_id = source.card_id(&self.card_data).to_string();
-        let Some(impl_) = self.effect_registry.get(&card_id) else {
+        let Some(effects) =
+            self.registry_effects(source.card_id(&self.card_data), source.handle())
+        else {
             return 0.0;
         };
-        let effects = impl_.effects(source.handle());
 
-        let mut total = 0u32;
-        let mut available = 0u32;
-        for (slot, effect) in effects.iter().enumerate() {
-            if effect.max_per_turn == 0 {
-                continue;
-            }
-            if is_under != effect.inherited {
-                continue;
-            }
-            total += 1;
-            // The per-turn counter key: a shared-OPT group (multi-timing or
-            // refund-bearing clauses) counts on `0x80 | clause`, not the slot
-            // (`Game::opt_slot_key`).
-            let key = effect.shared_opt_group.unwrap_or(slot as u8);
-            let used = permanent.activation_count(source.handle(), key);
-            if used < effect.max_per_turn {
-                available += 1;
-            }
-        }
+        let (total, used) = Self::source_opt_counts(permanent, source.handle(), is_under, &effects);
+        let available = total - used;
 
         if total == 0 {
             0.0
         } else {
             available as f32 / total as f32
         }
+    }
+
+    /// Inspect an already constructed source effect list. The observation path
+    /// shares it across aggregate and per-source features for one immutable state.
+    pub(crate) fn source_opt_counts(
+        permanent: &Permanent,
+        source: crate::card_source::CardHandle,
+        is_under: bool,
+        effects: &[Effect],
+    ) -> (u32, u32) {
+        let mut total = 0;
+        let mut used = 0;
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.max_per_turn == 0 || is_under != effect.inherited {
+                continue;
+            }
+            total += 1;
+            // Shared OPT clauses use their group key rather than the effect slot.
+            let key = effect.shared_opt_group.unwrap_or(slot as u8);
+            if permanent.activation_count(source, key) >= effect.max_per_turn {
+                used += 1;
+            }
+        }
+        (total, used)
     }
 }

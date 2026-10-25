@@ -2361,6 +2361,15 @@ fn install_delay_play_from_hand_after_paid(
     // BEFORE the reward play so the play cannot collide with the leaver's slot.
     finish_owned_leave(ctx, continuation.subject, continuation.subject_card);
 
+    // The leave can open its own replacement/trigger selection. Preserve that
+    // prompt and its resume stack before offering the Delay reward. Installing
+    // the hand prompt now would discard the inner choice and inherit its
+    // transient phase, eventually stranding the game in an empty EffectChoice.
+    if ctx.game.pending_selection.is_some() {
+        arm_pending_delay_play_from_hand_continuation(ctx.game, continuation.clone());
+        return;
+    }
+
     let candidates = matching_hand_candidates(
         ctx,
         continuation.player,

@@ -181,6 +181,35 @@ pub struct CardChoiceView {
 }
 
 impl OwnedCardChoice {
+    /// Temporary private inspection is part of the viewer's information set.
+    pub(crate) fn inspected_security_owner(&self, observer: PlayerId) -> Option<PlayerId> {
+        (self.inspection_player == Some(observer)).then(|| self.security_order.as_ref().map(|s| s.0)).flatten()
+    }
+
+    /// A sampled world substitutes unknown cards at the SAME visible positions.
+    /// Rebind security pins to those sampled instances; treating the hypothetical
+    /// substitution as a real shuffle wrongly invalidates the root menu.
+    pub(crate) fn rebind_sampled_security(&mut self, source: &Game, world: &Game) {
+        let Some((owner, generation, order)) = &self.security_order else { return; };
+        if !self.security_is_current(source) { return; }
+        let owner = *owner;
+        let generation = *generation;
+        let sampled: Vec<_> = world.player(owner).security.iter().map(|c| c.handle()).collect();
+        assert_eq!(order.len(), sampled.len(), "determinization preserves security counts");
+        let remap = |pin: &CardChoicePin| match *pin {
+            CardChoicePin::Security { owner: p, card } if p == owner => {
+                order.iter().position(|h| *h == card).map_or(*pin,
+                    |slot| CardChoicePin::Security { owner, card: sampled[slot] })
+            }
+            _ => *pin,
+        };
+        self.page.map_candidates(remap);
+        if let Some(selectable) = &mut self.selectable_pins {
+            *selectable = selectable.iter().map(remap).collect();
+        }
+        self.security_order = Some((owner, generation, sampled));
+    }
+
     pub fn material(game: &mut Game, host: PermanentHandle, indices: &[usize], optional: bool) -> Option<Self> {
         let cards: Vec<_> = crate::effect_context::selections::material_zone_slice(game, host)?
             .iter().enumerate().filter(|(index, _)| indices.contains(index))

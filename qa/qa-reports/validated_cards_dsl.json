@@ -835,19 +835,19 @@
     },
     "BT24-016": {
       "card_name": "Lamiamon",
-      "validated_date": "2026-05-22",
+      "validated_date": "2026-10-24",
       "report": "unblock-medusamon-tier3-cards",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-016.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_016.rs",
-      "test_count": 24,
+      "test_count": 27,
       "patterns": [
         "G2",
         "C-ALT-DIGI"
       ],
-      "notes": "IMPLEMENTED 2026-05-22 (unblock-medusamon-tier3-cards, D1-REVISED): clause 1 [Hand][Main] activated digivolve re-modelled from a kind: activated_digivolve alt-path to a when: main_from_hand triggered clause (select Elizamon -> select Dimetromon from trash -> place_as_bottom_source -> effect_initiated_digivolve cost 3 ignore_requirements). Uses only existing machinery, zero engine code. G-ACTIVATED-DIGIVOLVE-EXECUTION closed for this archetype. 24/24 tests pass, 0 ignored."
+      "notes": "IMPLEMENTED 2026-05-22 (unblock-medusamon-tier3-cards, D1-REVISED): clause 1 [Hand][Main] activated digivolve re-modelled from a kind: activated_digivolve alt-path to a when: main_from_hand triggered clause (select Elizamon -> select Dimetromon from trash -> place_as_bottom_source -> effect_initiated_digivolve cost 3 ignore_requirements). Uses only existing machinery, zero engine code. G-ACTIVATED-DIGIVOLVE-EXECUTION closed for this archetype. 24/24 tests pass, 0 ignored. Revalidated 2026-10-24: hand-main eligibility now requires a Dimetromon Digimon in the controller's trash, preventing the repeated no-op activation found in cloud games 875 and 1408. Missing/wrong-zone cost, newly available cost, and multiple target/cost choices are covered. 27/27 focused native tests pass; this is not new live DCGO validation."
     },
     "BT21-015": {
       "card_name": "Cyclonemon",
@@ -11701,7 +11701,7 @@
       "archetype": "Toho Braves",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-012.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_012.rs",
-      "notes": "TDD vs DCGO BT26_012.cs; [Main][OPT] optional select_hand [TB] -> play_or_use_from_hand reduce 2; refund_opt on decline (DCGO RemoveUse); inherited [WA][OPT] -2000 for the turn. DCGO's CanPlayOrUse candidate pre-filter is enforced by the play/use verb at resolution (shared BT26-032/BT25-041 idiom)."
+      "notes": "[Main][OPT] optional select_hand [TB] -> play_or_use_from_hand reduce 2; corrected 2026-10-25 to spend the use on activation even if processing is declined (CR 4.3 15-14-1-1/4). The local DCGO source's RemoveUse refund conflicts with that rule; no installed-DCGO replay certification claimed. Regression: capped cloud game 340 plus per-card decline/copy isolation. Inherited [WA][OPT] -2000 for the turn. DCGO's CanPlayOrUse candidate pre-filter is enforced by the play/use verb at resolution (shared BT26-032/BT25-041 idiom)."
     },
     "BT26-013": {
       "card_name": "Musyamon",

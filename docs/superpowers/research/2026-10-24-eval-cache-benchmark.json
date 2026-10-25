@@ -1,0 +1,381 @@
+{
+  "diagnostic_only": true,
+  "simulations": 320,
+  "worlds": 4,
+  "batch_size": 4,
+  "decision_cap": 40,
+  "cases": [
+    {
+      "seed": 24261024,
+      "repeat": 0,
+      "capacity": 0,
+      "directory": "/diagnostic/eval-cache/seed-24261024-repeat-0-cache-0",
+      "rows": 37,
+      "process_wall_seconds": 27.556746014000964,
+      "cpu_seconds": 26.497103,
+      "native_seconds": 26.443943325,
+      "game_decks": [
+        [
+          19,
+          2
+        ]
+      ]
+    },
+    {
+      "seed": 24261024,
+      "repeat": 0,
+      "capacity": 1024,
+      "directory": "/diagnostic/eval-cache/seed-24261024-repeat-0-cache-1024",
+      "rows": 37,
+      "process_wall_seconds": 29.089399798001978,
+      "cpu_seconds": 28.306906,
+      "native_seconds": 27.902632022,
+      "game_decks": [
+        [
+          19,
+          2
+        ]
+      ]
+    },
+    {
+      "seed": 24261024,
+      "repeat": 0,
+      "capacity": 8192,
+      "directory": "/diagnostic/eval-cache/seed-24261024-repeat-0-cache-8192",
+      "rows": 37,
+      "process_wall_seconds": 30.214923159997852,
+      "cpu_seconds": 29.209472999999992,
+      "native_seconds": 28.961294099,
+      "game_decks": [
+        [
+          19,
+          2
+        ]
+      ]
+    },
+    {
+      "seed": 24261024,
+      "repeat": 1,
+      "capacity": 8192,
+      "directory": "/diagnostic/eval-cache/seed-24261024-repeat-1-cache-8192",
+      "rows": 37,
+      "process_wall_seconds": 30.215821771002084,
+      "cpu_seconds": 29.425878999999988,
+      "native_seconds": 29.127614993,
+      "game_decks": [
+        [
+          19,
+          2
+        ]
+      ]
+    },
+    {
+      "seed": 24261024,
+      "repeat": 1,
+      "capacity": 1024,
+      "directory": "/diagnostic/eval-cache/seed-24261024-repeat-1-cache-1024",
+      "rows": 37,
+      "process_wall_seconds": 30.19869249000112,
+      "cpu_seconds": 29.25858400000001,
+      "native_seconds": 29.001564869,
+      "game_decks": [
+        [
+          19,
+          2
+        ]
+      ]
+    },
+    {
+      "seed": 24261024,
+      "repeat": 1,
+      "capacity": 0,
+      "directory": "/diagnostic/eval-cache/seed-24261024-repeat-1-cache-0",
+      "rows": 37,
+      "process_wall_seconds": 28.046364810998057,
+      "cpu_seconds": 27.542495999999982,
+      "native_seconds": 27.040523258,
+      "game_decks": [
+        [
+          19,
+          2
+        ]
+      ]
+    },
+    {
+      "seed": 24261025,
+      "repeat": 0,
+      "capacity": 0,
+      "directory": "/diagnostic/eval-cache/seed-24261025-repeat-0-cache-0",
+      "rows": 36,
+      "process_wall_seconds": 35.02123057100107,
+      "cpu_seconds": 34.389262000000016,
+      "native_seconds": 33.932739543,
+      "game_decks": [
+        [
+          0,
+          21
+        ]
+      ]
+    },
+    {
+      "seed": 24261025,
+      "repeat": 0,
+      "capacity": 1024,
+      "directory": "/diagnostic/eval-cache/seed-24261025-repeat-0-cache-1024",
+      "rows": 36,
+      "process_wall_seconds": 37.00656602000163,
+      "cpu_seconds": 36.23889299999998,
+      "native_seconds": 35.880775444,
+      "game_decks": [
+        [
+          0,
+          21
+        ]
+      ]
+    },
+    {
+      "seed": 24261025,
+      "repeat": 0,
+      "capacity": 8192,
+      "directory": "/diagnostic/eval-cache/seed-24261025-repeat-0-cache-8192",
+      "rows": 36,
+      "process_wall_seconds": 37.695583043001534,
+      "cpu_seconds": 36.83019800000003,
+      "native_seconds": 36.47018055,
+      "game_decks": [
+        [
+          0,
+          21
+        ]
+      ]
+    },
+    {
+      "seed": 24261025,
+      "repeat": 1,
+      "capacity": 8192,
+      "directory": "/diagnostic/eval-cache/seed-24261025-repeat-1-cache-8192",
+      "rows": 36,
+      "process_wall_seconds": 37.84116963300039,
+      "cpu_seconds": 36.94646499999999,
+      "native_seconds": 36.592211989,
+      "game_decks": [
+        [
+          0,
+          21
+        ]
+      ]
+    },
+    {
+      "seed": 24261025,
+      "repeat": 1,
+      "capacity": 1024,
+      "directory": "/diagnostic/eval-cache/seed-24261025-repeat-1-cache-1024",
+      "rows": 36,
+      "process_wall_seconds": 38.31676591299765,
+      "cpu_seconds": 36.125537,
+      "native_seconds": 37.182885411,
+      "game_decks": [
+        [
+          0,
+          21
+        ]
+      ]
+    },
+    {
+      "seed": 24261025,
+      "repeat": 1,
+      "capacity": 0,
+      "directory": "/diagnostic/eval-cache/seed-24261025-repeat-1-cache-0",
+      "rows": 36,
+      "process_wall_seconds": 35.88525108199974,
+      "cpu_seconds": 32.95590599999996,
+      "native_seconds": 34.763218582,
+      "game_decks": [
+        [
+          0,
+          21
+        ]
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "seed": 24261024,
+      "repeat": 0,
+      "capacity": 1024,
+      "arrays_equal": {
+        "game_id.npy": true,
+        "mover.npy": true,
+        "obs.npy": true,
+        "policy_actions.npy": true,
+        "policy_offsets.npy": true,
+        "policy_visits.npy": true,
+        "terminated.npy": true,
+        "z.npy": true
+      },
+      "exact_parity": true,
+      "cpu_speedup": 0.936064965913265,
+      "wall_speedup": 0.947722182772941
+    },
+    {
+      "seed": 24261024,
+      "repeat": 0,
+      "capacity": 8192,
+      "arrays_equal": {
+        "game_id.npy": true,
+        "mover.npy": true,
+        "obs.npy": true,
+        "policy_actions.npy": true,
+        "policy_offsets.npy": true,
+        "policy_visits.npy": true,
+        "terminated.npy": true,
+        "z.npy": true
+      },
+      "exact_parity": true,
+      "cpu_speedup": 0.9071407416354279,
+      "wall_speedup": 0.9130787883512801
+    },
+    {
+      "seed": 24261024,
+      "repeat": 1,
+      "capacity": 1024,
+      "arrays_equal": {
+        "game_id.npy": true,
+        "mover.npy": true,
+        "obs.npy": true,
+        "policy_actions.npy": true,
+        "policy_offsets.npy": true,
+        "policy_visits.npy": true,
+        "terminated.npy": true,
+        "z.npy": true
+      },
+      "exact_parity": true,
+      "cpu_speedup": 0.9413475375294981,
+      "wall_speedup": 0.932381524243329
+    },
+    {
+      "seed": 24261024,
+      "repeat": 1,
+      "capacity": 8192,
+      "arrays_equal": {
+        "game_id.npy": true,
+        "mover.npy": true,
+        "obs.npy": true,
+        "policy_actions.npy": true,
+        "policy_offsets.npy": true,
+        "policy_visits.npy": true,
+        "terminated.npy": true,
+        "z.npy": true
+      },
+      "exact_parity": true,
+      "cpu_speedup": 0.9359956927709787,
+      "wall_speedup": 0.9283466313496119
+    },
+    {
+      "seed": 24261025,
+      "repeat": 0,
+      "capacity": 1024,
+      "arrays_equal": {
+        "game_id.npy": true,
+        "mover.npy": true,
+        "obs.npy": true,
+        "policy_actions.npy": true,
+        "policy_offsets.npy": true,
+        "policy_visits.npy": true,
+        "terminated.npy": true,
+        "z.npy": true
+      },
+      "exact_parity": true,
+      "cpu_speedup": 0.9489600579134697,
+      "wall_speedup": 0.9457080880528809
+    },
+    {
+      "seed": 24261025,
+      "repeat": 0,
+      "capacity": 8192,
+      "arrays_equal": {
+        "game_id.npy": true,
+        "mover.npy": true,
+        "obs.npy": true,
+        "policy_actions.npy": true,
+        "policy_offsets.npy": true,
+        "policy_visits.npy": true,
+        "terminated.npy": true,
+        "z.npy": true
+      },
+      "exact_parity": true,
+      "cpu_speedup": 0.9337246028381381,
+      "wall_speedup": 0.9304242268962388
+    },
+    {
+      "seed": 24261025,
+      "repeat": 1,
+      "capacity": 1024,
+      "arrays_equal": {
+        "game_id.npy": true,
+        "mover.npy": true,
+        "obs.npy": true,
+        "policy_actions.npy": true,
+        "policy_offsets.npy": true,
+        "policy_visits.npy": true,
+        "terminated.npy": true,
+        "z.npy": true
+      },
+      "exact_parity": true,
+      "cpu_speedup": 0.912260653730904,
+      "wall_speedup": 0.9349252538565989
+    },
+    {
+      "seed": 24261025,
+      "repeat": 1,
+      "capacity": 8192,
+      "arrays_equal": {
+        "game_id.npy": true,
+        "mover.npy": true,
+        "obs.npy": true,
+        "policy_actions.npy": true,
+        "policy_offsets.npy": true,
+        "policy_visits.npy": true,
+        "terminated.npy": true,
+        "z.npy": true
+      },
+      "exact_parity": true,
+      "cpu_speedup": 0.891990776384154,
+      "wall_speedup": 0.9500168667707267
+    }
+  ],
+  "model_sha256": "13e5e59ad7d4a3c7d71d94d1c5f5a22ce7f38fef6a4cbe8d1b4ad077b5f016e1",
+  "status": "complete",
+  "summary": [
+    {
+      "capacity": 0,
+      "runs": 4,
+      "positions": 146,
+      "cpu_seconds": 121.38476699999995,
+      "native_seconds": 122.180424708,
+      "cpu_throughput_ratio": 1.0,
+      "wall_throughput_ratio": 1.0
+    },
+    {
+      "capacity": 1024,
+      "runs": 4,
+      "positions": 146,
+      "cpu_seconds": 129.92991999999998,
+      "native_seconds": 129.967857746,
+      "cpu_throughput_ratio": 0.9342326001586083,
+      "wall_throughput_ratio": 0.9400818542903184
+    },
+    {
+      "capacity": 8192,
+      "runs": 4,
+      "positions": 146,
+      "cpu_seconds": 132.412015,
+      "native_seconds": 131.151301631,
+      "cpu_throughput_ratio": 0.9167201858532246,
+      "wall_throughput_ratio": 0.9315990248557353
+    }
+  ],
+  "image_digest": "sha256:f4565f5c38510b0d9cdf12433ffc141a99e911d2d98c425d94ddd39b069780f4",
+  "decision": "Leave cache disabled; exact parity passed, throughput declined at both capacities.",
+  "limits": "Two seeded matchups, two reversed-order repetitions, 40-decision prefixes on one diagnostic CPU while production remained active. Not a full-game throughput study or playing-strength evaluation."
+}

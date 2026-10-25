@@ -1259,3 +1259,72 @@ independent samples. Use the existing card dashboard's Local reports source.
 --resume` regenerates reports from verified completed results. The earlier build's
 score is contextual, never pooled into the new panel. See the
 [confirmation protocol](superpowers/research/2026-10-23-search-budget-confirmation.md).
+
+### Quarantining verified bad self-play games
+
+Keep committed shard arrays and `chunk_commit.json` intact. To exclude a verified
+bad game from both policy and value fitting, place `training_exclusions.json`
+beside that chunk's `manifest.json`:
+
+```json
+{
+  "schema": "selfplay-training-exclusions-v1",
+  "manifest_sha256": "<SHA-256 of manifest.json bytes>",
+  "games": [{"game_id": 875, "reason": "Verified repeated-state loop"}]
+}
+```
+
+IDs refer to that chunk's original `game_id.npy`, before loader rebasing. The
+loader verifies the manifest hash, nonempty reasons, unique IDs, and that every
+excluded ID exists; invalid exclusions stop fitting. Other games in the same
+chunk remain eligible. The trainer reports `excluded_rows`, `excluded_games`,
+and `training_exclusions` in its summary. These are explicit exclusions, separate
+from the default handling of truncations: unquarantined truncated rows still
+contribute policy loss, while their value loss is masked.
+
+The generation driver imports the trainer after collection. Any operational
+Python overlay applied to an already-running container must record its original
+and replacement hashes and be reinstalled on an explicit resume into a fresh
+container. A local source edit alone does not change a running cloud job.
+
+
+## Matched development-teacher seed comparison
+
+`tools.cloud_search.run_seed_comparison` is an opt-in, isolated fresh-seed path.
+It collects greedy-only, `development_v1`-only and 50/50 player-game mixtures
+using the same frozen 13-archetype snapshots, seeds and list schedule. Each arm
+has 416 full games, 64 appearances per archetype, with independent opening-seat
+and teacher balance. Two-list archetypes expose both teachers to both lists.
+`development_v1` scores legal native candidates; unknown conditional benefits
+and optional cost reducers remain explicitly unknown, not guaranteed gains.
+Its versioned weights and limitations are recorded in
+`openspec/changes/add-mixed-development-bootstrap/`.
+
+Each player-game contributes 64 sampled rows with replacement; game IDs remain
+intact for the terminal-value held-out split. All three corpora must finish
+without caps or crashes before any fitting begins. Four imitation epochs and
+eight critic epochs use matching initialization and update budgets. These
+one-hot demonstrations never enter the later search replay pool.
+
+Each seed is evaluated for 5,200 policy-only games against the same greedy and
+frozen greedy-bootstrap anchors, then gets one 1,100-game search update at
+320 simulations / four worlds / batch four. A second 5,200-game evaluation
+uses the same decks and seeds. Meta held-out and pet same-list panels remain
+separate. Paired opening-seat bootstrap intervals use a predeclared five-point
+aggregate noninferiority gate; there is no automatic promotion.
+
+The controller requires `DIGIMON_DEPLOYED_IMAGE` to be an immutable digest.
+Run `python -m tools.cloud_search.run_seed_comparison --root /experiment` only
+in a fresh directory with `inputs/{decks,train_snapshot,heldout_snapshot,
+pet_evaluation_snapshot}.json`. `deploy_seed_comparison.py` provisions separate
+48-hour, no-restart systemd services on the existing CPU host after the image
+passes the recorded game-268 search regression. It does not modify or resume
+the failed baseline. W&B has one run per arm, including bootstrap counts,
+checkpoint artifacts and per-card evaluation reports.
+
+Preserve any `failure.json`, partial shards and recording. Investigate and use
+a new directory/image for a changed teacher; do not skip a failed game, resume
+into an altered corpus, or fit from partial outputs. DNA denominators are exact
+lists containing printed DNA targets, not archetype names. Per-action net hand
+changes are available; gross draw/search/retrieval counts remain unmeasured
+where native events do not distinguish them.

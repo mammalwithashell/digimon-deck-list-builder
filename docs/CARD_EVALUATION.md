@@ -109,3 +109,47 @@ filter and inspect the tables when those windows differ in evaluation setup.
 For model comparisons, keep the evaluation opponents, deck pool and sampling
 configuration consistent. Periodic evaluation uses its configured opponent
 pool; telemetry alone does not make that pool fixed across checkpoints.
+
+## Search/self-play training
+
+Search runs can use the same collector through `tools.anchored_eval_cli`:
+
+```powershell
+python -m tools.anchored_eval_cli --candidate model.zip --champions anchors.json --deck-pool-snapshot validation.json --n 24 --device cpu --card-eval-dir eval_cards --checkpoint-step 1 --eval-panel meta_validation
+```
+
+This evaluates the **policy without search** against fixed anchors. It does not
+measure hypothetical search-tree visits or training-game card usage. Both seats
+are recorded; player 1 is the candidate. Reports and W&B table rows separate
+panel, anchor policy and evaluation mode. The report also records checkpoint,
+anchor and deck-snapshot hashes, engine event version and completion/error state.
+
+`code/tools/cloud_search/card_eval_worker.py` runs these evaluations independently
+of a cloud-search experiment. It reads the seed, generation checkpoints, frozen
+anchors and panels from the experiment directory and writes a separate output
+directory. Defaults are **startup, every two hours, each new stable checkpoint,
+and a final window**, with **24 games per anchor per panel**. The current two
+anchors and two panels mean 96 games per window. Use `--interval-seconds`,
+`--games`, and repeated `--panel LABEL=SNAPSHOT_FILENAME` to adjust sampling;
+`--timeout` bounds each panel. This small sample is diagnostic, not a promotion
+test. Inspect the per-card denominators before interpreting a change.
+
+Weights stay frozen during a search generation's game collection. Periodic
+windows in that phase intentionally carry the same model hash, fixed seeds and
+deck snapshots. They are repeated measurements, not new learning or independent
+evidence. The checkpoint chart axis is **0 for the seed, generation index + 1
+for fitted models**, not PPO timesteps. Training games collected and trigger
+are separate provenance fields. Model changes become visible after fitting;
+the worker does not alter fitting cadence or create mid-epoch checkpoints.
+
+The dashboard defaults to the most recent window per checkpoint and scope;
+select earlier windows explicitly. Panel/anchor/mode/hash/status filters retain
+their identity, and failed reports preserve completed games plus incomplete
+attempts. PPO reports remain supported, with PPO's existing `--eval-freq` cadence.
+
+In the cloud, the evaluator has no credentials or network, reads training data
+through a read-only mount, and is limited to one CPU / 2 GiB. One window runs at
+a time. Failures and timeouts are recorded outside training; restart and retry
+state are persistent. The separate W&B monitor uploads atomic reports as Tables
+and `card-evaluation` artifacts, retaining failed uploads for retry. Training
+search quality is unchanged, although concurrent evaluation consumes some CPU.
