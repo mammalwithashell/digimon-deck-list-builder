@@ -1,0 +1,1249 @@
+{
+  "linux-benchmark": {
+    "status": "passed",
+    "simulations": 320,
+    "worlds": 4,
+    "batch_size": 4,
+    "decision_cap": 40,
+    "cpu_quota": 1,
+    "cases": [
+      {
+        "kind": "baseline",
+        "seed": 24261024,
+        "repeat": 0,
+        "rows": 35,
+        "native_seconds": 13.617767947,
+        "wall_seconds": 14.448084594994725,
+        "array_hashes": {
+          "shard-000/game_id.npy": "305cee1718e39ea081304f32beadac6fed188cea93135921da9594b3bd38a768",
+          "shard-000/mover.npy": "966cddd99944e4a8a6ae6fcb97337b0907b2a40f206632d660eee932009bf796",
+          "shard-000/obs.npy": "d2933ae6606e91f69cf0740fbc5d483896e16ac83fcc2bfd9a5e2bb5bfc2c307",
+          "shard-000/policy_actions.npy": "309abba15cf498e739548b7d0b2b302be416c9c5b04c76e1b2be8be9654572ae",
+          "shard-000/policy_offsets.npy": "2258e39fcb9fb6e538ad17168464e7366632bed00bc3cb8c34f587423d011aae",
+          "shard-000/policy_visits.npy": "f1bd669aa35aaeabb396448bbbe6b9f16b29679821ce89b76af0fecd9c2f385e",
+          "shard-000/terminated.npy": "c805ad35a96812709e31a22934e34e4fc49fb1c5555c2e8c404df1a710a7df31",
+          "shard-000/z.npy": "dc51a485a6440f76962e605d06333ff53e79b945fd8d119af7157b61a48648da"
+        },
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 35,
+              "inclusive_seconds": 0.0036416110000000008,
+              "self_seconds": 0.00035301500000000003
+            },
+            "clone": {
+              "calls": 11375,
+              "inclusive_seconds": 0.7806178500000011,
+              "self_seconds": 0.7806178500000011
+            },
+            "determinized_search_batched": {
+              "calls": 35,
+              "inclusive_seconds": 13.563552449,
+              "self_seconds": 0.009509812000000034
+            },
+            "finish_node": {
+              "calls": 11340,
+              "inclusive_seconds": 0.005024643000000024,
+              "self_seconds": 0.005024643000000024
+            },
+            "inference_total": {
+              "calls": 2835,
+              "inclusive_seconds": 1.1202565789999983,
+              "self_seconds": 0.05606996799999995
+            },
+            "mask": {
+              "calls": 12709,
+              "inclusive_seconds": 0.8565430969999972,
+              "self_seconds": 0.8565430969999972
+            },
+            "node_request": {
+              "calls": 11340,
+              "inclusive_seconds": 8.763772841999979,
+              "self_seconds": 8.763772841999979
+            },
+            "onnx_run": {
+              "calls": 2835,
+              "inclusive_seconds": 1.0641866110000011,
+              "self_seconds": 1.0641866110000011
+            },
+            "prepare_node": {
+              "calls": 11340,
+              "inclusive_seconds": 1.0402276349999935,
+              "self_seconds": 0.015115968999999962
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.000513257,
+              "self_seconds": 0.000513257
+            },
+            "sample_world": {
+              "calls": 140,
+              "inclusive_seconds": 0.008120368999999997,
+              "self_seconds": 0.008120368999999997
+            },
+            "search_batch": {
+              "calls": 35,
+              "inclusive_seconds": 13.541463594,
+              "self_seconds": 0.7107676480000025
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.001434111,
+              "self_seconds": 0.001434111
+            },
+            "step": {
+              "calls": 12429,
+              "inclusive_seconds": 1.2934706250000023,
+              "self_seconds": 1.2934706250000023
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "kind": "candidate",
+        "seed": 24261024,
+        "repeat": 0,
+        "rows": 35,
+        "native_seconds": 7.112997987,
+        "wall_seconds": 7.887581527997099,
+        "array_hashes": {
+          "shard-000/game_id.npy": "305cee1718e39ea081304f32beadac6fed188cea93135921da9594b3bd38a768",
+          "shard-000/mover.npy": "966cddd99944e4a8a6ae6fcb97337b0907b2a40f206632d660eee932009bf796",
+          "shard-000/obs.npy": "d2933ae6606e91f69cf0740fbc5d483896e16ac83fcc2bfd9a5e2bb5bfc2c307",
+          "shard-000/policy_actions.npy": "309abba15cf498e739548b7d0b2b302be416c9c5b04c76e1b2be8be9654572ae",
+          "shard-000/policy_offsets.npy": "2258e39fcb9fb6e538ad17168464e7366632bed00bc3cb8c34f587423d011aae",
+          "shard-000/policy_visits.npy": "f1bd669aa35aaeabb396448bbbe6b9f16b29679821ce89b76af0fecd9c2f385e",
+          "shard-000/terminated.npy": "c805ad35a96812709e31a22934e34e4fc49fb1c5555c2e8c404df1a710a7df31",
+          "shard-000/z.npy": "dc51a485a6440f76962e605d06333ff53e79b945fd8d119af7157b61a48648da"
+        },
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 35,
+              "inclusive_seconds": 0.003443382999999999,
+              "self_seconds": 0.000357361
+            },
+            "clone": {
+              "calls": 11375,
+              "inclusive_seconds": 0.7025755200000002,
+              "self_seconds": 0.7025755200000002
+            },
+            "determinized_search_batched": {
+              "calls": 35,
+              "inclusive_seconds": 7.0772724490000005,
+              "self_seconds": 0.00960301799999988
+            },
+            "finish_node": {
+              "calls": 11340,
+              "inclusive_seconds": 0.004316441000000051,
+              "self_seconds": 0.004316441000000051
+            },
+            "inference_total": {
+              "calls": 2835,
+              "inclusive_seconds": 1.0213092999999993,
+              "self_seconds": 0.054393432000000144
+            },
+            "mask": {
+              "calls": 12709,
+              "inclusive_seconds": 0.8427904420000015,
+              "self_seconds": 0.8427904420000015
+            },
+            "node_request": {
+              "calls": 11340,
+              "inclusive_seconds": 2.5489280330000055,
+              "self_seconds": 2.5489280330000055
+            },
+            "onnx_run": {
+              "calls": 2835,
+              "inclusive_seconds": 0.9669158679999992,
+              "self_seconds": 0.9669158679999992
+            },
+            "prepare_node": {
+              "calls": 11340,
+              "inclusive_seconds": 1.0196977439999944,
+              "self_seconds": 0.01439198500000001
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.00036996,
+              "self_seconds": 0.00036996
+            },
+            "sample_world": {
+              "calls": 140,
+              "inclusive_seconds": 0.008020732,
+              "self_seconds": 0.008020732
+            },
+            "search_batch": {
+              "calls": 35,
+              "inclusive_seconds": 7.055365375000001,
+              "self_seconds": 0.698297189999999
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.001488082,
+              "self_seconds": 0.001488082
+            },
+            "step": {
+              "calls": 12429,
+              "inclusive_seconds": 1.2266824269999983,
+              "self_seconds": 1.2266824269999983
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "kind": "candidate",
+        "seed": 24261024,
+        "repeat": 1,
+        "rows": 35,
+        "native_seconds": 7.177264408,
+        "wall_seconds": 7.986545968000428,
+        "array_hashes": {
+          "shard-000/game_id.npy": "305cee1718e39ea081304f32beadac6fed188cea93135921da9594b3bd38a768",
+          "shard-000/mover.npy": "966cddd99944e4a8a6ae6fcb97337b0907b2a40f206632d660eee932009bf796",
+          "shard-000/obs.npy": "d2933ae6606e91f69cf0740fbc5d483896e16ac83fcc2bfd9a5e2bb5bfc2c307",
+          "shard-000/policy_actions.npy": "309abba15cf498e739548b7d0b2b302be416c9c5b04c76e1b2be8be9654572ae",
+          "shard-000/policy_offsets.npy": "2258e39fcb9fb6e538ad17168464e7366632bed00bc3cb8c34f587423d011aae",
+          "shard-000/policy_visits.npy": "f1bd669aa35aaeabb396448bbbe6b9f16b29679821ce89b76af0fecd9c2f385e",
+          "shard-000/terminated.npy": "c805ad35a96812709e31a22934e34e4fc49fb1c5555c2e8c404df1a710a7df31",
+          "shard-000/z.npy": "dc51a485a6440f76962e605d06333ff53e79b945fd8d119af7157b61a48648da"
+        },
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 35,
+              "inclusive_seconds": 0.003481819999999999,
+              "self_seconds": 0.0003715220000000001
+            },
+            "clone": {
+              "calls": 11375,
+              "inclusive_seconds": 0.7082787850000012,
+              "self_seconds": 0.7082787850000012
+            },
+            "determinized_search_batched": {
+              "calls": 35,
+              "inclusive_seconds": 7.14286538,
+              "self_seconds": 0.009663662000000043
+            },
+            "finish_node": {
+              "calls": 11340,
+              "inclusive_seconds": 0.004460018000000071,
+              "self_seconds": 0.004460018000000071
+            },
+            "inference_total": {
+              "calls": 2835,
+              "inclusive_seconds": 1.0397023630000024,
+              "self_seconds": 0.05477676300000003
+            },
+            "mask": {
+              "calls": 12709,
+              "inclusive_seconds": 0.8563061150000014,
+              "self_seconds": 0.8563061150000014
+            },
+            "node_request": {
+              "calls": 11340,
+              "inclusive_seconds": 2.558571630999997,
+              "self_seconds": 2.558571630999997
+            },
+            "onnx_run": {
+              "calls": 2835,
+              "inclusive_seconds": 0.9849255999999992,
+              "self_seconds": 0.9849255999999992
+            },
+            "prepare_node": {
+              "calls": 11340,
+              "inclusive_seconds": 1.0344504829999968,
+              "self_seconds": 0.01419933400000006
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.000389129,
+              "self_seconds": 0.000389129
+            },
+            "sample_world": {
+              "calls": 140,
+              "inclusive_seconds": 0.00786382,
+              "self_seconds": 0.00786382
+            },
+            "search_batch": {
+              "calls": 35,
+              "inclusive_seconds": 7.120989399000003,
+              "self_seconds": 0.7034329030000008
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.001415402,
+              "self_seconds": 0.001415402
+            },
+            "step": {
+              "calls": 12429,
+              "inclusive_seconds": 1.240015227000005,
+              "self_seconds": 1.240015227000005
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "kind": "baseline",
+        "seed": 24261024,
+        "repeat": 1,
+        "rows": 35,
+        "native_seconds": 13.626085664,
+        "wall_seconds": 14.448279209995235,
+        "array_hashes": {
+          "shard-000/game_id.npy": "305cee1718e39ea081304f32beadac6fed188cea93135921da9594b3bd38a768",
+          "shard-000/mover.npy": "966cddd99944e4a8a6ae6fcb97337b0907b2a40f206632d660eee932009bf796",
+          "shard-000/obs.npy": "d2933ae6606e91f69cf0740fbc5d483896e16ac83fcc2bfd9a5e2bb5bfc2c307",
+          "shard-000/policy_actions.npy": "309abba15cf498e739548b7d0b2b302be416c9c5b04c76e1b2be8be9654572ae",
+          "shard-000/policy_offsets.npy": "2258e39fcb9fb6e538ad17168464e7366632bed00bc3cb8c34f587423d011aae",
+          "shard-000/policy_visits.npy": "f1bd669aa35aaeabb396448bbbe6b9f16b29679821ce89b76af0fecd9c2f385e",
+          "shard-000/terminated.npy": "c805ad35a96812709e31a22934e34e4fc49fb1c5555c2e8c404df1a710a7df31",
+          "shard-000/z.npy": "dc51a485a6440f76962e605d06333ff53e79b945fd8d119af7157b61a48648da"
+        },
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 35,
+              "inclusive_seconds": 0.003603588000000001,
+              "self_seconds": 0.00036713199999999994
+            },
+            "clone": {
+              "calls": 11375,
+              "inclusive_seconds": 0.7834809610000001,
+              "self_seconds": 0.7834809610000001
+            },
+            "determinized_search_batched": {
+              "calls": 35,
+              "inclusive_seconds": 13.573265126,
+              "self_seconds": 0.009495801999999833
+            },
+            "finish_node": {
+              "calls": 11340,
+              "inclusive_seconds": 0.004740517000000042,
+              "self_seconds": 0.004740517000000042
+            },
+            "inference_total": {
+              "calls": 2835,
+              "inclusive_seconds": 1.1304136279999994,
+              "self_seconds": 0.05631433900000003
+            },
+            "mask": {
+              "calls": 12709,
+              "inclusive_seconds": 0.8551248740000007,
+              "self_seconds": 0.8551248740000007
+            },
+            "node_request": {
+              "calls": 11340,
+              "inclusive_seconds": 8.74601849599997,
+              "self_seconds": 8.74601849599997
+            },
+            "onnx_run": {
+              "calls": 2835,
+              "inclusive_seconds": 1.0740992889999996,
+              "self_seconds": 1.0740992889999996
+            },
+            "prepare_node": {
+              "calls": 11340,
+              "inclusive_seconds": 1.0405832669999957,
+              "self_seconds": 0.01514335299999998
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.00046248,
+              "self_seconds": 0.00046248
+            },
+            "sample_world": {
+              "calls": 140,
+              "inclusive_seconds": 0.007980706000000002,
+              "self_seconds": 0.007980706000000002
+            },
+            "search_batch": {
+              "calls": 35,
+              "inclusive_seconds": 13.551338221,
+              "self_seconds": 0.7114546229999993
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.001375212,
+              "self_seconds": 0.001375212
+            },
+            "step": {
+              "calls": 12429,
+              "inclusive_seconds": 1.309045033999997,
+              "self_seconds": 1.309045033999997
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "kind": "baseline",
+        "seed": 24261025,
+        "repeat": 0,
+        "rows": 36,
+        "native_seconds": 15.339368064,
+        "wall_seconds": 16.153144146999693,
+        "array_hashes": {
+          "shard-000/game_id.npy": "f65fc82c057024d2b9353f84bfcd32e29672a977531d7026c398ae06caa3d92a",
+          "shard-000/mover.npy": "eeb835394d8146d548e83c0bd6d8d441db897b33082cc0b9079ebe4d7880f691",
+          "shard-000/obs.npy": "66c105a228121cd88be51363c6ba3e85fb7c3df1914c7971a188ed7ab883c90e",
+          "shard-000/policy_actions.npy": "c4e0d35883396e2e021f395be11226d483333b014eb19ab0dab426240b9010dd",
+          "shard-000/policy_offsets.npy": "a19797896a26e11bd301c9e681ef20be613b209b3c16cdeb8a2e9effc11d37b6",
+          "shard-000/policy_visits.npy": "f240d586f9ad7aaa7836510623a350e8bea604d42f4c2a94d7434ece4d0e711d",
+          "shard-000/terminated.npy": "85572f6096130580978aea5afd399870ad9cb5e19035547b5a6dfdf0018e8c77",
+          "shard-000/z.npy": "df8d1a71e2a85b1a1c3bb98a11cb9213f25e9d0d3a375478e8e5cbe8334d7faa"
+        },
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 36,
+              "inclusive_seconds": 0.003766607,
+              "self_seconds": 0.000365292
+            },
+            "clone": {
+              "calls": 11700,
+              "inclusive_seconds": 0.8258722280000003,
+              "self_seconds": 0.8258722280000003
+            },
+            "determinized_search_batched": {
+              "calls": 36,
+              "inclusive_seconds": 15.280971089000005,
+              "self_seconds": 0.009851637000000024
+            },
+            "finish_node": {
+              "calls": 11664,
+              "inclusive_seconds": 0.005068126000000052,
+              "self_seconds": 0.005068126000000052
+            },
+            "inference_total": {
+              "calls": 2916,
+              "inclusive_seconds": 1.187738894000001,
+              "self_seconds": 0.06139959199999995
+            },
+            "mask": {
+              "calls": 13039,
+              "inclusive_seconds": 0.977548394999994,
+              "self_seconds": 0.977548394999994
+            },
+            "node_request": {
+              "calls": 11664,
+              "inclusive_seconds": 9.838240492000006,
+              "self_seconds": 9.838240492000006
+            },
+            "onnx_run": {
+              "calls": 2916,
+              "inclusive_seconds": 1.1263393020000017,
+              "self_seconds": 1.1263393020000017
+            },
+            "prepare_node": {
+              "calls": 11664,
+              "inclusive_seconds": 1.121114985999994,
+              "self_seconds": 0.01566125099999996
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.000447828,
+              "self_seconds": 0.000447828
+            },
+            "sample_world": {
+              "calls": 144,
+              "inclusive_seconds": 0.008362212999999999,
+              "self_seconds": 0.008362212999999999
+            },
+            "search_batch": {
+              "calls": 36,
+              "inclusive_seconds": 15.256777815,
+              "self_seconds": 0.7572240800000039
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.001473581,
+              "self_seconds": 0.001473581
+            },
+            "step": {
+              "calls": 12751,
+              "inclusive_seconds": 1.655038481000007,
+              "self_seconds": 1.655038481000007
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "kind": "candidate",
+        "seed": 24261025,
+        "repeat": 0,
+        "rows": 36,
+        "native_seconds": 7.92579864,
+        "wall_seconds": 8.738065105004353,
+        "array_hashes": {
+          "shard-000/game_id.npy": "f65fc82c057024d2b9353f84bfcd32e29672a977531d7026c398ae06caa3d92a",
+          "shard-000/mover.npy": "eeb835394d8146d548e83c0bd6d8d441db897b33082cc0b9079ebe4d7880f691",
+          "shard-000/obs.npy": "66c105a228121cd88be51363c6ba3e85fb7c3df1914c7971a188ed7ab883c90e",
+          "shard-000/policy_actions.npy": "c4e0d35883396e2e021f395be11226d483333b014eb19ab0dab426240b9010dd",
+          "shard-000/policy_offsets.npy": "a19797896a26e11bd301c9e681ef20be613b209b3c16cdeb8a2e9effc11d37b6",
+          "shard-000/policy_visits.npy": "f240d586f9ad7aaa7836510623a350e8bea604d42f4c2a94d7434ece4d0e711d",
+          "shard-000/terminated.npy": "85572f6096130580978aea5afd399870ad9cb5e19035547b5a6dfdf0018e8c77",
+          "shard-000/z.npy": "df8d1a71e2a85b1a1c3bb98a11cb9213f25e9d0d3a375478e8e5cbe8334d7faa"
+        },
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 36,
+              "inclusive_seconds": 0.003533163,
+              "self_seconds": 0.0003745709999999999
+            },
+            "clone": {
+              "calls": 11700,
+              "inclusive_seconds": 0.7607491570000007,
+              "self_seconds": 0.7607491570000007
+            },
+            "determinized_search_batched": {
+              "calls": 36,
+              "inclusive_seconds": 7.889249723,
+              "self_seconds": 0.009816091999999887
+            },
+            "finish_node": {
+              "calls": 11664,
+              "inclusive_seconds": 0.004623446000000095,
+              "self_seconds": 0.004623446000000095
+            },
+            "inference_total": {
+              "calls": 2916,
+              "inclusive_seconds": 1.069886443999997,
+              "self_seconds": 0.058959244999999945
+            },
+            "mask": {
+              "calls": 13039,
+              "inclusive_seconds": 0.978325152000006,
+              "self_seconds": 0.978325152000006
+            },
+            "node_request": {
+              "calls": 11664,
+              "inclusive_seconds": 2.7414509460000067,
+              "self_seconds": 2.7414509460000067
+            },
+            "onnx_run": {
+              "calls": 2916,
+              "inclusive_seconds": 1.0109271990000035,
+              "self_seconds": 1.0109271990000035
+            },
+            "prepare_node": {
+              "calls": 11664,
+              "inclusive_seconds": 1.1173504749999972,
+              "self_seconds": 0.014533225000000071
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.000415358,
+              "self_seconds": 0.000415358
+            },
+            "sample_world": {
+              "calls": 144,
+              "inclusive_seconds": 0.008267542,
+              "self_seconds": 0.008267542
+            },
+            "search_batch": {
+              "calls": 36,
+              "inclusive_seconds": 7.865457853,
+              "self_seconds": 0.7405942669999999
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.001439439,
+              "self_seconds": 0.001439439
+            },
+            "step": {
+              "calls": 12751,
+              "inclusive_seconds": 1.5606288810000046,
+              "self_seconds": 1.5606288810000046
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "kind": "candidate",
+        "seed": 24261025,
+        "repeat": 1,
+        "rows": 36,
+        "native_seconds": 7.73583929,
+        "wall_seconds": 8.536528086006001,
+        "array_hashes": {
+          "shard-000/game_id.npy": "f65fc82c057024d2b9353f84bfcd32e29672a977531d7026c398ae06caa3d92a",
+          "shard-000/mover.npy": "eeb835394d8146d548e83c0bd6d8d441db897b33082cc0b9079ebe4d7880f691",
+          "shard-000/obs.npy": "66c105a228121cd88be51363c6ba3e85fb7c3df1914c7971a188ed7ab883c90e",
+          "shard-000/policy_actions.npy": "c4e0d35883396e2e021f395be11226d483333b014eb19ab0dab426240b9010dd",
+          "shard-000/policy_offsets.npy": "a19797896a26e11bd301c9e681ef20be613b209b3c16cdeb8a2e9effc11d37b6",
+          "shard-000/policy_visits.npy": "f240d586f9ad7aaa7836510623a350e8bea604d42f4c2a94d7434ece4d0e711d",
+          "shard-000/terminated.npy": "85572f6096130580978aea5afd399870ad9cb5e19035547b5a6dfdf0018e8c77",
+          "shard-000/z.npy": "df8d1a71e2a85b1a1c3bb98a11cb9213f25e9d0d3a375478e8e5cbe8334d7faa"
+        },
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 36,
+              "inclusive_seconds": 0.0033911009999999997,
+              "self_seconds": 0.0003671270000000001
+            },
+            "clone": {
+              "calls": 11700,
+              "inclusive_seconds": 0.740933130999998,
+              "self_seconds": 0.740933130999998
+            },
+            "determinized_search_batched": {
+              "calls": 36,
+              "inclusive_seconds": 7.698259998999998,
+              "self_seconds": 0.009700148000000077
+            },
+            "finish_node": {
+              "calls": 11664,
+              "inclusive_seconds": 0.004433657000000087,
+              "self_seconds": 0.004433657000000087
+            },
+            "inference_total": {
+              "calls": 2916,
+              "inclusive_seconds": 1.037179595000002,
+              "self_seconds": 0.05774922299999989
+            },
+            "mask": {
+              "calls": 13039,
+              "inclusive_seconds": 0.9616223169999946,
+              "self_seconds": 0.9616223169999946
+            },
+            "node_request": {
+              "calls": 11664,
+              "inclusive_seconds": 2.665707014999995,
+              "self_seconds": 2.665707014999995
+            },
+            "onnx_run": {
+              "calls": 2916,
+              "inclusive_seconds": 0.9794303720000016,
+              "self_seconds": 0.9794303720000016
+            },
+            "prepare_node": {
+              "calls": 11664,
+              "inclusive_seconds": 1.0974687860000003,
+              "self_seconds": 0.014384875000000134
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.000401848,
+              "self_seconds": 0.000401848
+            },
+            "sample_world": {
+              "calls": 144,
+              "inclusive_seconds": 0.00811057,
+              "self_seconds": 0.00811057
+            },
+            "search_batch": {
+              "calls": 36,
+              "inclusive_seconds": 7.674819055999999,
+              "self_seconds": 0.7341243889999985
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.001640003,
+              "self_seconds": 0.001640003
+            },
+            "step": {
+              "calls": 12751,
+              "inclusive_seconds": 1.521697175000003,
+              "self_seconds": 1.521697175000003
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      },
+      {
+        "kind": "baseline",
+        "seed": 24261025,
+        "repeat": 1,
+        "rows": 36,
+        "native_seconds": 15.158632635,
+        "wall_seconds": 15.954047660998185,
+        "array_hashes": {
+          "shard-000/game_id.npy": "f65fc82c057024d2b9353f84bfcd32e29672a977531d7026c398ae06caa3d92a",
+          "shard-000/mover.npy": "eeb835394d8146d548e83c0bd6d8d441db897b33082cc0b9079ebe4d7880f691",
+          "shard-000/obs.npy": "66c105a228121cd88be51363c6ba3e85fb7c3df1914c7971a188ed7ab883c90e",
+          "shard-000/policy_actions.npy": "c4e0d35883396e2e021f395be11226d483333b014eb19ab0dab426240b9010dd",
+          "shard-000/policy_offsets.npy": "a19797896a26e11bd301c9e681ef20be613b209b3c16cdeb8a2e9effc11d37b6",
+          "shard-000/policy_visits.npy": "f240d586f9ad7aaa7836510623a350e8bea604d42f4c2a94d7434ece4d0e711d",
+          "shard-000/terminated.npy": "85572f6096130580978aea5afd399870ad9cb5e19035547b5a6dfdf0018e8c77",
+          "shard-000/z.npy": "df8d1a71e2a85b1a1c3bb98a11cb9213f25e9d0d3a375478e8e5cbe8334d7faa"
+        },
+        "profiling": {
+          "enabled": true,
+          "regions": {
+            "canonicalize": {
+              "calls": 36,
+              "inclusive_seconds": 0.003623039,
+              "self_seconds": 0.00038912499999999993
+            },
+            "clone": {
+              "calls": 11700,
+              "inclusive_seconds": 0.8159786760000004,
+              "self_seconds": 0.8159786760000004
+            },
+            "determinized_search_batched": {
+              "calls": 36,
+              "inclusive_seconds": 15.100855084,
+              "self_seconds": 0.009676988999999804
+            },
+            "finish_node": {
+              "calls": 11664,
+              "inclusive_seconds": 0.004875927000000095,
+              "self_seconds": 0.004875927000000095
+            },
+            "inference_total": {
+              "calls": 2916,
+              "inclusive_seconds": 1.156002315999996,
+              "self_seconds": 0.06097087499999998
+            },
+            "mask": {
+              "calls": 13039,
+              "inclusive_seconds": 0.9657997940000032,
+              "self_seconds": 0.9657997940000032
+            },
+            "node_request": {
+              "calls": 11664,
+              "inclusive_seconds": 9.764945661000036,
+              "self_seconds": 9.764945661000036
+            },
+            "onnx_run": {
+              "calls": 2916,
+              "inclusive_seconds": 1.095031441000001,
+              "self_seconds": 1.095031441000001
+            },
+            "prepare_node": {
+              "calls": 11664,
+              "inclusive_seconds": 1.1072014100000018,
+              "self_seconds": 0.015330315999999896
+            },
+            "registry": {
+              "calls": 1,
+              "inclusive_seconds": 0.000358462,
+              "self_seconds": 0.000358462
+            },
+            "sample_world": {
+              "calls": 144,
+              "inclusive_seconds": 0.008123561999999999,
+              "self_seconds": 0.008123561999999999
+            },
+            "search_batch": {
+              "calls": 36,
+              "inclusive_seconds": 15.077264446999996,
+              "self_seconds": 0.7424895170000039
+            },
+            "shard_io": {
+              "calls": 1,
+              "inclusive_seconds": 0.002378009,
+              "self_seconds": 0.002378009
+            },
+            "step": {
+              "calls": 12751,
+              "inclusive_seconds": 1.6172432009999984,
+              "self_seconds": 1.6172432009999984
+            }
+          },
+          "semantics": "thread-local wall clock; self excludes nested spans; inclusive totals overlap"
+        }
+      }
+    ],
+    "comparisons": [
+      {
+        "seed": 24261024,
+        "repeat": 0,
+        "exact_array_parity": true,
+        "speedup": 1.9144906229255765
+      },
+      {
+        "seed": 24261024,
+        "repeat": 1,
+        "exact_array_parity": true,
+        "speedup": 1.8985068529469173
+      },
+      {
+        "seed": 24261025,
+        "repeat": 0,
+        "exact_array_parity": true,
+        "speedup": 1.9353719114923162
+      },
+      {
+        "seed": 24261025,
+        "repeat": 1,
+        "exact_array_parity": true,
+        "speedup": 1.9595330340684984
+      }
+    ],
+    "baseline_image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:f4565f5c38510b0d9cdf12433ffc141a99e911d2d98c425d94ddd39b069780f4",
+    "candidate_image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:a98d312fd98a32db0f4c594c004b8aa245321486643c1221c492dcc55dd6f413",
+    "model_sha256": "3b30107e84704a8d90b83fcb10b2553227df2044ec101c8f15c46bd9793cea24",
+    "exact_array_parity": true,
+    "aggregate_speedup": 1.9278193932090684
+  },
+  "fixed-evaluation-summary": [
+    {
+      "panel": "pet_same_list",
+      "anchors": {
+        "greedy": {
+          "games": 300,
+          "wins": 171,
+          "incomplete": 0,
+          "digivolves_raising": 16,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 2,
+          "attacks": 1287,
+          "plays": 1848
+        },
+        "frozen-bootstrap": {
+          "games": 300,
+          "wins": 230,
+          "incomplete": 0,
+          "digivolves_raising": 32,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 4,
+          "attacks": 1566,
+          "plays": 1966
+        }
+      },
+      "archetypes": {
+        "ShineGreymon Data Squad": {
+          "games": 128,
+          "wins": 72,
+          "digivolves_raising": 12,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 1,
+          "attacks": 542,
+          "plays": 888
+        },
+        "Virus Busters": {
+          "games": 158,
+          "wins": 124,
+          "digivolves_raising": 6,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 799,
+          "plays": 946
+        },
+        "SW": {
+          "games": 166,
+          "wins": 109,
+          "digivolves_raising": 15,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 3,
+          "attacks": 787,
+          "plays": 1005
+        },
+        "Medusamon": {
+          "games": 148,
+          "wins": 96,
+          "digivolves_raising": 15,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 2,
+          "attacks": 725,
+          "plays": 975
+        }
+      },
+      "routes": {
+        "play": {
+          "opportunities": 35186,
+          "choices": 4676
+        },
+        "digivolve_raising": {
+          "opportunities": 7991,
+          "choices": 48
+        },
+        "digivolve_battle": {
+          "opportunities": 8410,
+          "choices": 0
+        },
+        "attack": {
+          "opportunities": 9217,
+          "choices": 2773
+        },
+        "dna_digivolve": {
+          "opportunities": 269,
+          "choices": 0
+        },
+        "promote": {
+          "opportunities": 57,
+          "choices": 6
+        }
+      }
+    },
+    {
+      "panel": "meta_validation",
+      "anchors": {
+        "greedy": {
+          "games": 300,
+          "wins": 165,
+          "incomplete": 0,
+          "digivolves_raising": 19,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 2,
+          "attacks": 1233,
+          "plays": 2300
+        },
+        "frozen-bootstrap": {
+          "games": 300,
+          "wins": 222,
+          "incomplete": 0,
+          "digivolves_raising": 14,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 3,
+          "attacks": 1417,
+          "plays": 2412
+        }
+      },
+      "archetypes": {
+        "Toho Braves": {
+          "games": 82,
+          "wins": 59,
+          "digivolves_raising": 7,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 1,
+          "attacks": 420,
+          "plays": 532
+        },
+        "Examon": {
+          "games": 54,
+          "wins": 35,
+          "digivolves_raising": 3,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 236,
+          "plays": 333
+        },
+        "TS Mervamon": {
+          "games": 96,
+          "wins": 62,
+          "digivolves_raising": 5,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 1,
+          "attacks": 433,
+          "plays": 872
+        },
+        "Chronomon": {
+          "games": 74,
+          "wins": 42,
+          "digivolves_raising": 7,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 3,
+          "attacks": 345,
+          "plays": 567
+        },
+        "TS Jupitermon": {
+          "games": 88,
+          "wins": 60,
+          "digivolves_raising": 0,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 304,
+          "plays": 867
+        },
+        "Chronicle": {
+          "games": 64,
+          "wins": 47,
+          "digivolves_raising": 4,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 328,
+          "plays": 415
+        },
+        "Glowing Dawn": {
+          "games": 74,
+          "wins": 38,
+          "digivolves_raising": 6,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 305,
+          "plays": 605
+        },
+        "Three Musketeers": {
+          "games": 68,
+          "wins": 44,
+          "digivolves_raising": 1,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 279,
+          "plays": 521
+        }
+      },
+      "routes": {
+        "play": {
+          "opportunities": 37874,
+          "choices": 5645
+        },
+        "digivolve_raising": {
+          "opportunities": 8513,
+          "choices": 33
+        },
+        "digivolve_battle": {
+          "opportunities": 10381,
+          "choices": 0
+        },
+        "attack": {
+          "opportunities": 13498,
+          "choices": 2638
+        },
+        "dna_digivolve": {
+          "opportunities": 144,
+          "choices": 0
+        },
+        "promote": {
+          "opportunities": 48,
+          "choices": 5
+        }
+      }
+    }
+  ],
+  "mmap-fit-parity": {
+    "status": "passed",
+    "all_weights_identical": true,
+    "tensors": 27,
+    "elapsed_seconds": 217.3578064441681,
+    "peak_rss_kib": 2838228,
+    "rows": 248060,
+    "excluded_rows": 1821,
+    "epochs": [
+      {
+        "epoch": 0,
+        "policy_loss": 1.1444612063083452,
+        "value_loss": 0.6374008868158478
+      },
+      {
+        "epoch": 1,
+        "policy_loss": 1.0994971733732322,
+        "value_loss": 0.49803144237429825
+      }
+    ]
+  },
+  "search-targets": {
+    "counts": {
+      "rows": 248060,
+      "excluded_rows": 1821
+    },
+    "routes": {
+      "raising": {
+        "decision_opportunities": 60299,
+        "positive_target_decisions": 55170,
+        "target_probability_sum": 4523.962499999968,
+        "argmax_decisions": 2020
+      },
+      "battle": {
+        "decision_opportunities": 50418,
+        "positive_target_decisions": 45828,
+        "target_probability_sum": 2826.5843749999635,
+        "argmax_decisions": 779
+      },
+      "dna": {
+        "decision_opportunities": 1480,
+        "positive_target_decisions": 1019,
+        "target_probability_sum": 41.96250000000014,
+        "argmax_decisions": 36
+      },
+      "promotion": {
+        "decision_opportunities": 3438,
+        "positive_target_decisions": 3438,
+        "target_probability_sum": 1550.0968749999981,
+        "argmax_decisions": 1479
+      }
+    },
+    "scope": "non-quarantined rows; normal Main/Breeding actions only; effect evolutions excluded"
+  },
+  "card-comparison": [
+    {
+      "window": "window-000004",
+      "panel": "meta_validation",
+      "checkpoint": "a2aab0847c945894b9893bff648546555f6be664345a4b48a06b1ab1f0e6cb44",
+      "anchors": {
+        "greedy": {
+          "games": 24,
+          "wins": 8,
+          "incomplete": 0,
+          "plays": 231,
+          "digivolves_raising": 0,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 51
+        },
+        "frozen-bootstrap": {
+          "games": 24,
+          "wins": 11,
+          "incomplete": 0,
+          "plays": 269,
+          "digivolves_raising": 0,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 72
+        }
+      }
+    },
+    {
+      "window": "window-000004",
+      "panel": "pet_same_list",
+      "checkpoint": "a2aab0847c945894b9893bff648546555f6be664345a4b48a06b1ab1f0e6cb44",
+      "anchors": {
+        "greedy": {
+          "games": 24,
+          "wins": 7,
+          "incomplete": 0,
+          "plays": 188,
+          "digivolves_raising": 0,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 42
+        },
+        "frozen-bootstrap": {
+          "games": 24,
+          "wins": 11,
+          "incomplete": 0,
+          "plays": 200,
+          "digivolves_raising": 0,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 86
+        }
+      }
+    },
+    {
+      "window": "window-000006",
+      "panel": "pet_same_list",
+      "checkpoint": "f92782e86354e85400db81bd092924c984ee691d2d8c3b3d61e1a007babbed19",
+      "anchors": {
+        "greedy": {
+          "games": 24,
+          "wins": 13,
+          "incomplete": 0,
+          "plays": 140,
+          "digivolves_raising": 0,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 101
+        },
+        "frozen-bootstrap": {
+          "games": 24,
+          "wins": 16,
+          "incomplete": 0,
+          "plays": 152,
+          "digivolves_raising": 4,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 123
+        }
+      }
+    },
+    {
+      "window": "window-000006",
+      "panel": "meta_validation",
+      "checkpoint": "f92782e86354e85400db81bd092924c984ee691d2d8c3b3d61e1a007babbed19",
+      "anchors": {
+        "greedy": {
+          "games": 24,
+          "wins": 15,
+          "incomplete": 0,
+          "plays": 194,
+          "digivolves_raising": 0,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 99
+        },
+        "frozen-bootstrap": {
+          "games": 24,
+          "wins": 19,
+          "incomplete": 0,
+          "plays": 185,
+          "digivolves_raising": 0,
+          "digivolves_battle": 0,
+          "dna_digivolves": 0,
+          "promotions": 0,
+          "attacks": 116
+        }
+      }
+    }
+  ],
+  "health": {
+    "games": 64,
+    "truncated_games": 0,
+    "rows": 4888,
+    "decisions": 5311,
+    "elapsed_seconds": 451.3403377709983,
+    "status": "passed",
+    "games_per_hour": 510.4795222555549,
+    "positions_per_second": 10.82996486451889
+  },
+  "continuation_plan": {
+    "generation_index": 1,
+    "games": 3300,
+    "workers": 8,
+    "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:a98d312fd98a32db0f4c594c004b8aa245321486643c1221c492dcc55dd6f413",
+    "validation_report": "validation/generation0-recovery.json",
+    "files": {
+      "inputs/anchors.json": "22b29484c9105fb12f475f979c17178ea190b726b11f73a2a1cb6b0cdfc48e4d",
+      "inputs/check_summary.json": "21f64a90fa820d53c8ecd4a8895ecb76e0dd822623299f8d6cc152b7af6f0ec6",
+      "inputs/decks.json": "5860cf948cd49d9ab4e1ac23b271dfffbccbac69d78288ed4123af1ef410b06a",
+      "inputs/heldout_snapshot.json": "fac9f1f69492b845996feb0b8224c11896bb042ab94c014e8b3482f794908a13",
+      "inputs/pet-deck-admission.json": "92475978590bd6b56efaa6d1e26d85ed933a2cc4f3e91d66a766766d6278fce2",
+      "inputs/pet_evaluation_snapshot.json": "5507390fbe869ca30f3a3455155a4975fe91c05fe6de82474afcee943d34f398",
+      "inputs/pool_report.json": "deb284057119ca340f7104bc3c570484e0404fabeb35bf0e37e2eff0576fe7f0",
+      "inputs/seed.onnx": "13e5e59ad7d4a3c7d71d94d1c5f5a22ce7f38fef6a4cbe8d1b4ad077b5f016e1",
+      "inputs/seed.onnx.meta.json": "c58d29a8e30534f573a001561a99a655599db233eb66d26daf19fcd1d2eeb509",
+      "inputs/seed.zip": "a2aab0847c945894b9893bff648546555f6be664345a4b48a06b1ab1f0e6cb44",
+      "inputs/train_snapshot.json": "b655da5d169b8b69eca79cd19ea4c0bce9726758bcca0a90f27c39e46a869430",
+      "generation/gen0/model.zip": "f92782e86354e85400db81bd092924c984ee691d2d8c3b3d61e1a007babbed19",
+      "generation/gen0/model.onnx": "3b30107e84704a8d90b83fcb10b2553227df2044ec101c8f15c46bd9793cea24",
+      "generation/state.json": "efd38e1cf063c08c44b406953ff0fed85f329b323ca31f09baa4a972807b2762",
+      "validation/generation0-recovery.json": "48a55ed4e101e853002d63acec263e982b5a3c9b98c7b15a7a3936d9d6c90e5e",
+      "generation/gen0/shards/proc00000872/training_exclusions.json": "d84bff5afa34be1fe89eb7e6fe53758c2760d01d2feb281c29b3e1c8eb63a11f",
+      "generation/gen0/shards/proc00001408/training_exclusions.json": "d5478a8c30744d883983b94225223af367a86b9ff3f38f4426239bf6e2f0cdfe"
+    },
+    "runtime_files": {
+      "/app/code/digimon_gym/agents/azero_trainer.py": "1a7f38b1b0145d4ff83d026eeded12b875ad51db4aecf8bff5c26753cfa4c265",
+      "/app/code/tools/run_selfplay_generation.py": "c97f325ff0cac457a1c92dab2f2abefe2341dcd7ba746f5c5b11bfea71aa3427",
+      "/deployment/continue_experiment.py": "a0325e3d6a994f29f6b5f0d37b3c9c71e480359a5e82613bc132dfff2276d5d7"
+    },
+    "source_commit": "5c711eec0",
+    "search": {
+      "simulations": 320,
+      "worlds": 4,
+      "evaluation_batch_size": 4,
+      "cache_entries": 0
+    },
+    "automatic_promotion": false,
+    "fail_on_truncation": true
+  }
+}
