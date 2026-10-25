@@ -78,6 +78,11 @@ def collect(root, now):
         "pipeline/complete": int(phase == "complete"), "pipeline/generation_index": gen,
         "pipeline/elapsed_hours": max(0, now - started.get("time_unix", now)) / 3600}
     metrics["pipeline/image"] = state.get("image", plan.get("image", "unknown"))
+    if plan.get("bootstrap_corpus"):
+        progress = read_json(Path(plan["bootstrap_corpus"]) / "progress.json") or {}
+        for key in ("completed", "requested", "capped", "elapsed_seconds"):
+            if key in progress:
+                metrics[f"bootstrap/{key}"] = progress[key]
     queues = [("health160", root / "check-160/scheduler_progress.json"),
               ("health320", root / "check-320/scheduler_progress.json"),
               ("selfplay", gen_dir / "scheduler_progress.json")]
@@ -170,6 +175,7 @@ def wandb_config(root):
         "distinct_training_lists": pool.get("distinct_training_lists"), "image": plan.get("image"),
         "image_source_commit": plan.get("image_source_commit"), "controller_commit": plan.get("controller_commit"),
         "input_hashes": plan.get("inputs"), "ci_run": plan.get("ci_run"),
+        "bootstrap_arm": plan.get("bootstrap_arm"), "seed_comparison": plan.get("comparison"),
         "evaluation_scope": "meta budget-validation panel and same-list pet panel; no independent promotion",
         "throughput_scope": "saved training positions; diagnostics logged separately",
         "automatic_promotion": False}

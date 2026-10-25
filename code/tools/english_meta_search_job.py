@@ -186,7 +186,7 @@ def collect_bootstrap(run_dir: Path, games: int, seed: int):
     return directory
 
 
-def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda"):
+def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda", teacher_label: str = "greedy"):
     import gymnasium as gym
     import torch
     from sb3_contrib import MaskablePPO
@@ -213,7 +213,9 @@ def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda"):
     directory=run_dir / "bootstrap_shards"
     if not (directory / "manifest.json").exists():
         directory=collect_bootstrap(run_dir,games,seed)
-    imitation=run_dir / "greedy_imitation.zip"
+    if teacher_label not in ("greedy", "development", "mixed"):
+        raise ValueError("unknown bootstrap teacher label")
+    imitation=run_dir / f"{teacher_label}_imitation.zip"
     if not imitation.exists():
         summary=train(init,[directory],imitation,epochs=4,batch_size=256,lr=2e-4,value_coef=0.,device=device,seed=seed)
         write_json(run_dir / "imitation_summary.json",summary)
@@ -223,7 +225,7 @@ def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda"):
     export_mlp(str(calibrated),str(run_dir / "seed.onnx"),get_tensor_profile(PROFILE))
     write_json(run_dir / "anchors.json",{"version":1,"champions":[{"name":"frozen-bootstrap",
         "weights_path":str(calibrated.resolve()),"algorithm":"mlp","observation_profile":PROFILE,
-        "tensor_layout_hash":contract["tensor_layout_hash"],"source":"fresh greedy imitation + terminal value fit"}]})
+        "tensor_layout_hash":contract["tensor_layout_hash"],"source":f"fresh {teacher_label} imitation + terminal value fit"}]})
 
 
 def check(run_dir: Path, cli_bin: Path, procs: int, seed: int):

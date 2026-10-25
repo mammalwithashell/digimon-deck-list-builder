@@ -110,6 +110,7 @@ def main():
             return result
 
         cases = [(f'seed-check-{gid}', 30561025, gid, 1) for gid in (340, 521, 858)]
+        cases.append(('security-game268', 40361025, 268, 1))
         cases += [(f'health-{i}', 40361025, i, 4) for i in range(0, 24, 4)]
         light = [deck for deck in decks if deck['name'].startswith('Light Hybrid:')]
         if light:

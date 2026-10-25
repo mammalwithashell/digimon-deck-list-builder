@@ -24,6 +24,7 @@ use crate::permanent::PermanentHandle;
 pub(crate) struct MainEffectMatch {
     /// The matched effect's printed name; empty when the effect carries none.
     pub name: String,
+    pub development_hand: crate::policies::development::HandBenefit,
 }
 
 impl MainEffectMatch {
@@ -60,6 +61,7 @@ pub(crate) fn hand_main_match(
         }
         return Some(MainEffectMatch {
             name: effect.name.clone(),
+            development_hand: effect.development_hand,
         });
     }
     None
@@ -164,6 +166,7 @@ pub(crate) fn field_main_match(
             }
             return Some(MainEffectMatch {
                 name: effect.name.clone(),
+                development_hand: effect.development_hand,
             });
         }
     }
@@ -192,7 +195,7 @@ pub(crate) fn breeding_training_match(game: &Game, player_id: PlayerId) -> Optio
                 .map(|e| e.name.clone())
         })
         .unwrap_or_default();
-    Some(MainEffectMatch { name })
+    Some(MainEffectMatch { name, development_hand: Default::default() })
 }
 
 /// Trash `[Main]` (bits 1150-1194): the first effect on the trash card at
@@ -218,6 +221,7 @@ pub(crate) fn trash_main_match(
         }
         return Some(MainEffectMatch {
             name: effect.name.clone(),
+            development_hand: effect.development_hand,
         });
     }
     None

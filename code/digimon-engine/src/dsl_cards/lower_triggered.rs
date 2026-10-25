@@ -272,6 +272,7 @@ pub fn lower_for_kind_with_clause_index(
         if steps_provide_resource_flow(&process) {
             builder = builder.resource_flow();
         }
+        builder = builder.development_hand(crate::policies::development::HandBenefit::from_steps(&clause.process));
         // G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT: an Option [Main] body
         // that authors its own `place_self_as_delay_option` owns the
         // placement — `dispose_option` trashes the card if the body ended

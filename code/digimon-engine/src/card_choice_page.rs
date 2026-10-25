@@ -181,6 +181,15 @@ impl<T: Clone + Eq + Hash> CardChoicePage<T> {
     }
     pub fn allows_decline(&self) -> bool { self.allow_decline }
 
+    /// Rebind hypothetical-world physical pins without changing presentation.
+    /// This is not gameplay refresh: page, prompt and generation stay identical.
+    pub(crate) fn map_candidates(&mut self, map: impl Fn(&T) -> T) {
+        let candidates: Vec<_> = self.candidates.iter().map(map).collect();
+        let unique: HashSet<_> = candidates.iter().collect();
+        assert_eq!(unique.len(), candidates.len(), "world pin remapping must remain one-to-one");
+        self.candidates = candidates;
+    }
+
     /// Rebuild presentation after live eligibility/order changed. No game work.
     pub fn refresh(&mut self, candidates: Vec<T>) -> Result<(), CardChoiceError> {
         let generation = self.token.page_generation.checked_add(1)

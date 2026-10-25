@@ -38,6 +38,17 @@ def main():
             deck = candidate
             break
     assert deck, "No admitted legal smoke deck"
+    game = digimon_engine.RustHeadlessGame(deck, deck, seed=20261025, observation_profile="standard_lite_v2")
+    for _ in range(8):
+        state = game.get_card_eval_state()
+        full = game.to_ui_json()
+        for player in ("player1", "player2"):
+            assert state[player]["handIds"] == full[player]["handIds"]
+        decision = json.loads(game.teacher_decision("development_v1"))
+        assert decision["player"] + 1 == game.current_player_id
+        assert game.get_action_mask()[decision["action"]] > .5
+        assert json.loads(game.teacher_decision("greedy"))["action"] == game.greedy_action()
+        game.step(decision["action"])
     with tempfile.TemporaryDirectory() as temp:
         directory = Path(temp)
         pool = directory / "decks.json"
