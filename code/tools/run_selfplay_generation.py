@@ -328,12 +328,22 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
     )
     t_selfplay = time.time() - t0
 
+    from tools.cloud_search.replay_window import appearance_counts, bounded_window
+    from tools.selfplay_scheduler import atomic_json
+    # Optional provenance on older/test fixtures without game-deck metadata.
+    if all('game_decks' in json.loads((p / 'manifest.json').read_text()) for p in proc_dirs):
+        atomic_json(gen_dir / 'archetype_coverage.json', appearance_counts(proc_dirs))
+
     if getattr(args, "fail_on_truncation", False):
         truncated = sum(json.loads((p / "manifest.json").read_text())["truncated_games"] for p in proc_dirs)
         if truncated:
             raise RuntimeError(f"Collected {truncated} truncated games; preserving shards and refusing to fit until investigated")
 
     window_dirs = collect_window_shard_dirs(Path(args.run_dir), gen, args.window)
+    if getattr(args, 'replay_games_per_generation', None):
+        window_dirs, replay = bounded_window(Path(args.run_dir), gen, args.window,
+                                             args.replay_games_per_generation, args.seed)
+        atomic_json(gen_dir / 'replay_selection.json', replay)
     print(f"training: warm-start {warm_start_zip}, window = {len(window_dirs)} shard dir(s)", flush=True)
 
     sys.path.insert(0, str(REPO_ROOT / "code"))
@@ -455,6 +465,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--shard-rows", type=int, default=4096)
 
     p.add_argument("--window", type=int, default=3, help="sliding-window generations of shards for training")
+    p.add_argument("--replay-games-per-generation", type=int,
+                   help="cap each source generation at this many games using whole chunks")
     p.add_argument("--epochs", type=int, default=2)
     p.add_argument("--batch-size", type=int, default=512)
     p.add_argument("--lr", type=float, default=1e-4)

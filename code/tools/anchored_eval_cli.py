@@ -91,6 +91,8 @@ def main() -> None:
     ap.add_argument("--candidate", required=True, help="checkpoint .zip or run dir")
     ap.add_argument("--champions", default="models/champions/registry.json")
     ap.add_argument("--n", type=int, default=40, help="seat-balanced games per anchor")
+    ap.add_argument("--games-per-archetype", type=int,
+                    help="exact positive even candidate games per archetype per anchor, overrides --n")
     ap.add_argument("--seed", type=int, default=777)
     ap.add_argument("--profile", default=None)
     ap.add_argument("--device", default="auto", help="auto|cpu|cuda")
@@ -129,6 +131,10 @@ def main() -> None:
         pool = load_generalist_deck_pool(allowed_archetypes=set(archetypes))
 
     print(f"candidate : {cand_zip}")
+    if args.games_per_archetype is not None:
+        if args.games_per_archetype <= 0 or args.games_per_archetype % 2:
+            ap.error("--games-per-archetype must be positive and even")
+        args.n = args.games_per_archetype * len(pool.archetypes)
     print(f"layout    : {lhash[:22]}…  profile={args.profile}  device={args.device}")
     print(f"anchors   : {'greedy + ' if not args.no_greedy else ''}"
           f"{ChampionRegistry.load(args.champions).names()}")
@@ -149,6 +155,8 @@ def main() -> None:
             candidate_sha256=hashlib.sha256(Path(cand_zip).read_bytes()).hexdigest(),
             card_eval_event_version=digimon_engine.CARD_EVAL_EVENT_VERSION,
             base_seed=args.seed, requested_games_per_anchor=args.n,
+            games_per_archetype=args.games_per_archetype,
+            cohort_scheme="archetype-paired-v1" if args.games_per_archetype else "random-v1",
             snapshot_sha256=hashlib.sha256(Path(args.deck_pool_snapshot).read_bytes()).hexdigest() if args.deck_pool_snapshot else None,
             anchors_sha256=hashlib.sha256(Path(args.champions).read_bytes()).hexdigest(),
             anchor_model_hashes={champ.name: hashlib.sha256(Path(champ.weights_path).read_bytes()).hexdigest()
@@ -159,6 +167,7 @@ def main() -> None:
             candidate, lhash, registry, pool,
             n=args.n, base_seed=args.seed, tensor_profile=args.profile,
             include_greedy=not args.no_greedy,
+            **({"games_per_archetype": args.games_per_archetype} if args.games_per_archetype is not None else {}),
             **({"collector": collector} if collector is not None else {}),
         )
         if collector is not None:

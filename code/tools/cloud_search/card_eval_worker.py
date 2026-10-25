@@ -59,7 +59,7 @@ def checkpoints(root, now, stable_seconds=60, cache=None):
     return ready
 
 
-def due_checkpoint(ready, state, now, interval, terminal=False):
+def due_checkpoint(ready, state, now, interval, terminal=False, checkpoint_only=False):
     if not ready:
         return None
     attempted = state.get("attempted", [])
@@ -67,6 +67,8 @@ def due_checkpoint(ready, state, now, interval, terminal=False):
     for checkpoint in ready:
         if checkpoint["sha256"] not in attempted:
             return checkpoint, "new_checkpoint"
+    if checkpoint_only:
+        return None
     latest = ready[-1]
     if terminal and not state.get("final_attempted"):
         return latest, "final"
@@ -124,6 +126,8 @@ def evaluate_window(root, out, checkpoint, window, reason, args):
                 "--card-eval-dir", str(folder / "reports"), "--checkpoint-step", str(checkpoint["step"]),
                 "--eval-window", str(window), "--eval-panel", panel,
                 "--eval-context", str(folder / "context.json")]
+            if getattr(args, "games_per_archetype", None):
+                command += ["--games-per-archetype", str(args.games_per_archetype)]
             with (folder / f"{panel}.log").open("w", encoding="utf-8") as log:
                 subprocess.run(command, stdout=log, stderr=subprocess.STDOUT,
                                timeout=args.timeout, check=True)
@@ -148,9 +152,14 @@ def main():
     parser.add_argument("--timeout", type=int, default=1800, help="maximum seconds per panel")
     parser.add_argument("--panel", action="append", help="LABEL=SNAPSHOT_FILENAME under experiment inputs")
     parser.add_argument("--once", action="store_true")
+    parser.add_argument("--checkpoint-only", action="store_true",
+                        help="baseline once, then new checkpoint hashes only")
+    parser.add_argument("--games-per-archetype", type=int)
     args = parser.parse_args()
     if args.games <= 0 or args.games % 2 or args.interval_seconds < 60 or args.timeout <= 0:
         parser.error("Use positive even --games, interval >= 60 seconds and positive timeout")
+    if args.games_per_archetype is not None and (args.games_per_archetype <= 0 or args.games_per_archetype % 2):
+        parser.error("games-per-archetype must be positive and even")
     args.panels = [p.split("=", 1) for p in (args.panel or [
         "meta_validation=heldout_snapshot.json", "pet_same_list=pet_evaluation_snapshot.json"])]
     for panel in args.panels:
@@ -170,7 +179,8 @@ def main():
             pipeline = pipeline_state.get("stage")
             advance_generation(state, pipeline_state.get('generation_index', 0))
             terminal = pipeline in ("complete", "failed")
-            due = due_checkpoint(checkpoints(args.root, now, cache=hash_cache), state, now, args.interval_seconds, terminal)
+            due = due_checkpoint(checkpoints(args.root, now, cache=hash_cache), state, now, args.interval_seconds,
+                                 terminal, checkpoint_only=args.checkpoint_only)
             if due:
                 checkpoint, reason = due
                 window = state.get("next_window", 0)

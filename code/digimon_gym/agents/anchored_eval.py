@@ -130,16 +130,41 @@ def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
             close()
 
 
+def balanced_deck_pairs(deck_pool, games_per_archetype: int, seed: int):
+    """Fixed cohort: exact candidate quotas and paired opening-order games.
+
+    Each deck pair plays twice with opposite first player. Opponent archetypes
+    and list variants rotate independently of candidate strength or outcomes.
+    """
+    if games_per_archetype <= 0 or games_per_archetype % 2:
+        raise ValueError("games_per_archetype must be positive and even")
+    names = sorted(deck_pool.archetypes)
+    if not names:
+        raise ValueError("Empty evaluation pool")
+    rng = np.random.default_rng(seed)
+    opponents = list(rng.permutation(names))
+    for ai, name in enumerate(names):
+        firsts = sorted(deck_pool.archetypes[name], key=lambda d: d.deck_id)
+        for pair in range(games_per_archetype // 2):
+            other = opponents[(pair + ai) % len(names)]
+            seconds = sorted(deck_pool.archetypes[other], key=lambda d: d.deck_id)
+            first = firsts[pair % len(firsts)]
+            second = seconds[(pair // len(names) + ai) % len(seconds)]
+            yield first, second
+            yield first, second
+
+
 def play_matchup(agent_model, opponent_fn, deck_pool, n: int, base_seed: int,
-                 tensor_profile: str, collector=None, anchor_name="") -> MatchRecord:
+                 tensor_profile: str, collector=None, anchor_name="", games_per_archetype=None) -> MatchRecord:
     """Play ``n`` seat-balanced games of ``agent_model`` vs ``opponent_fn``.
     Decks are sampled from ``deck_pool`` (both seats) with a seeded RNG; the
     first player alternates each game. Returns an agent-perspective record."""
     rng = np.random.default_rng(base_seed)
     rec = MatchRecord()
-    for i in range(n):
-        first = deck_pool.sample_uniform_archetype(rng)
-        second = deck_pool.sample_uniform_archetype(rng)
+    pairs = (balanced_deck_pairs(deck_pool, games_per_archetype, base_seed)
+             if games_per_archetype is not None else
+             ((deck_pool.sample_uniform_archetype(rng), deck_pool.sample_uniform_archetype(rng)) for _ in range(n)))
+    for i, (first, second) in enumerate(pairs):
         d1, d2 = first.card_ids, second.card_ids
         extra = {}
         if collector is not None:
@@ -170,13 +195,17 @@ def evaluate_against_anchors(
     tensor_profile: str = "standard_lite_deck_v2",
     include_greedy: bool = True,
     collector=None,
+    games_per_archetype=None,
 ) -> Dict[str, MatchRecord]:
     """Score ``candidate_model`` against greedy plus every layout-compatible
     champion in ``registry``, seat-balanced. Returns ``{anchor_name: record}``.
     Champion opponents are loaded via ``make_agent_opponent_fn``."""
     results: Dict[str, MatchRecord] = {}
     def collect_for(name):
-        return {"collector": collector, "anchor_name": name} if collector is not None else {}
+        extra = {"collector": collector, "anchor_name": name} if collector is not None else {}
+        if games_per_archetype is not None:
+            extra["games_per_archetype"] = games_per_archetype
+        return extra
     if include_greedy:
         results["greedy"] = play_matchup(
             candidate_model, greedy_policy, deck_pool, n, base_seed, tensor_profile, **collect_for("greedy"))

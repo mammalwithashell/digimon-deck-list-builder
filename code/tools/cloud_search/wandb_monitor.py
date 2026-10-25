@@ -118,6 +118,12 @@ def collect(root, now):
     if selected:
         metrics["pipeline/selected_workers"] = selected["workers"]
     generation = read_json(gen_dir / "summary.json")
+    coverage = read_json(gen_dir / 'archetype_coverage.json') or {}
+    for name, count in coverage.get('appearances', {}).items():
+        metrics[f'selfplay/archetype_appearances/{name}'] = count
+    replay = read_json(gen_dir / 'replay_selection.json') or {}
+    for source in replay.get('generations', []):
+        metrics[f'replay/generation_{source["generation"]}_games_before_quarantine'] = source['games_before_quarantine']
     if generation:
         for key, value in generation["timings_sec"].items():
             metrics[f"timings/{key}_seconds"] = value
@@ -226,7 +232,7 @@ def main():
         if args.online:
             import wandb
             run = wandb.init(entity=args.entity, project=args.project, id=args.run_id, resume="allow",
-                name="English meta + pet decks | 3300 games/generation | 320/4", job_type="search-monitor",
+                name=args.run_id, job_type="search-monitor",
                 dir=str(args.state_dir), config=wandb_config(args.root),
                 settings=wandb.Settings(disable_code=True, disable_git=True, x_disable_stats=True))
             run.define_metric("train/optimizer_epoch")
