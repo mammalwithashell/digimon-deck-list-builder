@@ -24,7 +24,7 @@
 
 ## 4. Qualification and comparison
 
-- [ ] 4.1 Generate separate greedy-only, development-only and mixed qualification corpora on the same frozen schedule; report completion, opportunity-normalized behavior, coverage and collection throughput.
+- [x] 4.1 Generate separate greedy-only, development-only and mixed qualification corpora on the same frozen schedule; report completion, opportunity-normalized behavior, coverage and collection throughput.
 - [ ] 4.2 Fit all three fresh seeds with matched initialization and update budgets; verify checkpoint contracts and ONNX parity before evaluation.
 - [ ] 4.3 Compare seed policies on the fixed 5,200-game cohort against common greedy/frozen-greedy-bootstrap anchors; retain paired seat-level results and separate meta-held-out/pet-same-list panels.
 - [ ] 4.4 Run one matched 1,100-game 320/4/batch-four search update per seed in separate output directories, then repeat the common-anchor evaluation and tactical suite.

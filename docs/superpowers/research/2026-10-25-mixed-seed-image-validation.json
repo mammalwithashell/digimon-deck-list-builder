@@ -1,0 +1,129 @@
+{
+  "status": "passed",
+  "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:05d93754f049591d7cd0d5b6d27ca59f3d1ff7d185e264de0532662c00aa0364",
+  "source_commit": "eec3bbee428a80b2f31971737cbc74cc762a4091",
+  "checkpoint_sha256": "24b542620ca4795f55111a6ceb90f242ebfcc9abf088d95fbe53fdd215039111",
+  "validator_sha256": "ad7d2f5d3615da2a74ae79721f6832e4f0d5f19c803df84d8fdec5df6c670b66",
+  "started_unix": 1792960694.8620372,
+  "search": {
+    "simulations": 320,
+    "worlds": 4,
+    "batch": 4,
+    "decision_cap": 1200
+  },
+  "contract": {
+    "observation_profile": "standard_lite_v2",
+    "tensor_version": 2,
+    "feature_schema_version": "standard_lite_v2.4",
+    "tensor_size": 9434,
+    "tensor_layout_hash": "sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a",
+    "action_space_size": 2192,
+    "action_schema_version": 2
+  },
+  "validated_deck_slots": 26,
+  "card_eval_event_version": 1,
+  "replays": [
+    {
+      "game": 521,
+      "prefix_decisions": 19,
+      "status": "passed"
+    },
+    {
+      "game": 858,
+      "prefix_decisions": 45,
+      "status": "passed"
+    }
+  ],
+  "native": [
+    {
+      "label": "seed-check-340",
+      "games": 1,
+      "rows": 69,
+      "truncated_games": 0,
+      "seed": 30561025,
+      "game_start": 340
+    },
+    {
+      "label": "seed-check-521",
+      "games": 1,
+      "rows": 52,
+      "truncated_games": 0,
+      "seed": 30561025,
+      "game_start": 521
+    },
+    {
+      "label": "seed-check-858",
+      "games": 1,
+      "rows": 53,
+      "truncated_games": 0,
+      "seed": 30561025,
+      "game_start": 858
+    },
+    {
+      "label": "security-game268",
+      "games": 1,
+      "rows": 123,
+      "truncated_games": 0,
+      "seed": 40361025,
+      "game_start": 268
+    },
+    {
+      "label": "health-0",
+      "games": 4,
+      "rows": 295,
+      "truncated_games": 0,
+      "seed": 40361025,
+      "game_start": 0
+    },
+    {
+      "label": "health-4",
+      "games": 4,
+      "rows": 343,
+      "truncated_games": 0,
+      "seed": 40361025,
+      "game_start": 4
+    },
+    {
+      "label": "health-8",
+      "games": 4,
+      "rows": 405,
+      "truncated_games": 0,
+      "seed": 40361025,
+      "game_start": 8
+    },
+    {
+      "label": "health-12",
+      "games": 4,
+      "rows": 261,
+      "truncated_games": 0,
+      "seed": 40361025,
+      "game_start": 12
+    },
+    {
+      "label": "health-16",
+      "games": 4,
+      "rows": 233,
+      "truncated_games": 0,
+      "seed": 40361025,
+      "game_start": 16
+    },
+    {
+      "label": "health-20",
+      "games": 4,
+      "rows": 308,
+      "truncated_games": 0,
+      "seed": 40361025,
+      "game_start": 20
+    },
+    {
+      "label": "light-hybrid",
+      "games": 4,
+      "rows": 250,
+      "truncated_games": 0,
+      "seed": 50361025,
+      "game_start": 0
+    }
+  ],
+  "full_games": 32,
+  "finished_unix": 1792960808.8344631
+}

@@ -1,0 +1,1702 @@
+{
+  "captured_unix": 1792961014.8878152,
+  "state": {
+    "stage": "fitting_seed",
+    "arm": "development",
+    "time_unix": 1792960996.7764585
+  },
+  "deployment": {
+    "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:05d93754f049591d7cd0d5b6d27ca59f3d1ff7d185e264de0532662c00aa0364",
+    "source_commit": "eec3bbee428a80b2f31971737cbc74cc762a4091",
+    "ci_run": "40230719839",
+    "validation": "/opt/digimon-search/mixed-seed-image-validation-v4-20261025/validation.json",
+    "baseline": "/opt/digimon-search/fresh-schema2-generations-20261025",
+    "automatic_promotion": false
+  },
+  "arms": {
+    "greedy": {
+      "qualified": true,
+      "games": 416,
+      "elapsed_seconds": 45.8869730860024,
+      "raw_rows": 37847,
+      "fitting_rows": 53248,
+      "coverage": [
+        {
+          "archetype": "Chronicle",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "SW",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "SW",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "SW",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "SW",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        }
+      ],
+      "routes": {
+        "digivolve_raising": {
+          "choices": 191,
+          "opportunities": 6868
+        },
+        "play": {
+          "choices": 8765,
+          "opportunities": 54484
+        },
+        "digivolve_battle": {
+          "choices": 330,
+          "opportunities": 21645
+        },
+        "attack": {
+          "choices": 3194,
+          "opportunities": 24033
+        },
+        "promote": {
+          "choices": 100,
+          "opportunities": 219
+        },
+        "dna_digivolve": {
+          "choices": 0,
+          "opportunities": 933
+        }
+      },
+      "dna_capable_lists": {
+        "sha256:1999cd9092aeb395a441f5d3742447c67d438f5d2e3cb85d1d603d1030983d9e": {
+          "BT20-060": 3
+        },
+        "sha256:9b88c4d4eb0cbc9cdc3e008aaf8e4fa56a9e7c432af1462660d5d3ca55ef1667": {
+          "BT20-060": 3
+        },
+        "sha256:669dde3b66c2fd2413d68a2852e98451aea3cb965b1f05c8dcfa7d5e1dbd3b7c": {
+          "BT24-037": 2
+        },
+        "sha256:5b5768b35b03b03e3f2eaa71559894048a64124fe220e0b697128205bd1327e7": {
+          "EX13-045": 3,
+          "BT23-047": 3
+        },
+        "sha256:ecf3707ed727b5c387405df128d58dacc5d023c4918e4dae1d4403641feb3182": {
+          "BT23-047": 3,
+          "EX13-045": 3
+        },
+        "sha256:6b15071bcc6afb27f3fd189aff60f7fc5988c78aa16d03733bccb076e0e1e53b": {
+          "BT24-037": 2
+        },
+        "sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd": {
+          "BT8-084": 1
+        },
+        "sha256:e20c6f6087b0d12d5b1019dd7a4693e1fcb6bcfad2a6275000f0cb922eb86c30": {
+          "BT16-077": 1
+        },
+        "sha256:5f47ea0fddfcd3b14ae2bedef0a557c9ff6b8c2ee9f72fe57bd892a5a99569c3": {
+          "EX12-032": 4,
+          "EX12-044": 3,
+          "EX12-035": 4,
+          "EX12-037": 3
+        }
+      },
+      "manifest_sha256": "826e690cbb8f8e8507beafbe7c3c05b5adb80c95617723eb49bda99866e9126c",
+      "wandb": {
+        "url": "https://forge.coreweave.com/wandb/james-peters97-mammal/digimon-rl/runs/english-meta-seed-greedy-20261025",
+        "id": "english-meta-seed-greedy-20261025",
+        "entity": "james-peters97-mammal",
+        "project": "digimon-rl"
+      }
+    },
+    "development": {
+      "qualified": true,
+      "games": 416,
+      "elapsed_seconds": 33.05634862399893,
+      "raw_rows": 34827,
+      "fitting_rows": 53248,
+      "coverage": [
+        {
+          "archetype": "Chronicle",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "SW",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "SW",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "SW",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "SW",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 16
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 16
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 16
+        }
+      ],
+      "routes": {
+        "digivolve_raising": {
+          "choices": 2738,
+          "opportunities": 6259
+        },
+        "play": {
+          "choices": 2075,
+          "opportunities": 60965
+        },
+        "promote": {
+          "choices": 1453,
+          "opportunities": 1624
+        },
+        "attack": {
+          "choices": 3286,
+          "opportunities": 9739
+        },
+        "digivolve_battle": {
+          "choices": 1641,
+          "opportunities": 12182
+        },
+        "dna_digivolve": {
+          "choices": 40,
+          "opportunities": 115
+        }
+      },
+      "dna_capable_lists": {
+        "sha256:1999cd9092aeb395a441f5d3742447c67d438f5d2e3cb85d1d603d1030983d9e": {
+          "BT20-060": 3
+        },
+        "sha256:9b88c4d4eb0cbc9cdc3e008aaf8e4fa56a9e7c432af1462660d5d3ca55ef1667": {
+          "BT20-060": 3
+        },
+        "sha256:669dde3b66c2fd2413d68a2852e98451aea3cb965b1f05c8dcfa7d5e1dbd3b7c": {
+          "BT24-037": 2
+        },
+        "sha256:5b5768b35b03b03e3f2eaa71559894048a64124fe220e0b697128205bd1327e7": {
+          "EX13-045": 3,
+          "BT23-047": 3
+        },
+        "sha256:ecf3707ed727b5c387405df128d58dacc5d023c4918e4dae1d4403641feb3182": {
+          "BT23-047": 3,
+          "EX13-045": 3
+        },
+        "sha256:6b15071bcc6afb27f3fd189aff60f7fc5988c78aa16d03733bccb076e0e1e53b": {
+          "BT24-037": 2
+        },
+        "sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd": {
+          "BT8-084": 1
+        },
+        "sha256:e20c6f6087b0d12d5b1019dd7a4693e1fcb6bcfad2a6275000f0cb922eb86c30": {
+          "BT16-077": 1
+        },
+        "sha256:5f47ea0fddfcd3b14ae2bedef0a557c9ff6b8c2ee9f72fe57bd892a5a99569c3": {
+          "EX12-032": 4,
+          "EX12-044": 3,
+          "EX12-035": 4,
+          "EX12-037": 3
+        }
+      },
+      "manifest_sha256": "389124e71a634270c5660c3cce5a87f9411cf8855ba2f62c7e9740ae84ce2421",
+      "wandb": {
+        "url": "https://forge.coreweave.com/wandb/james-peters97-mammal/digimon-rl/runs/english-meta-seed-development-20261025",
+        "id": "english-meta-seed-development-20261025",
+        "entity": "james-peters97-mammal",
+        "project": "digimon-rl"
+      }
+    },
+    "mixed": {
+      "qualified": true,
+      "games": 416,
+      "elapsed_seconds": 36.022711611003615,
+      "raw_rows": 34843,
+      "fitting_rows": 53248,
+      "coverage": [
+        {
+          "archetype": "Chronicle",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronicle",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Chronomon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Examon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Glowing Dawn",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Light Hybrid",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Medusamon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "SW",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "SW",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "SW",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "SW",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "SW",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "SW",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "SW",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "SW",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "ShineGreymon Data Squad",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Jupitermon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "TS Mervamon",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Three Musketeers",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Toho Braves",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "development_v1",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "development_v1",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "greedy",
+          "seat": 0,
+          "opened": true,
+          "appearances": 8
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": false,
+          "appearances": 8
+        },
+        {
+          "archetype": "Virus Busters",
+          "teacher": "greedy",
+          "seat": 1,
+          "opened": true,
+          "appearances": 8
+        }
+      ],
+      "routes": {
+        "digivolve_raising": {
+          "choices": 1537,
+          "opportunities": 6465
+        },
+        "play": {
+          "choices": 4781,
+          "opportunities": 57399
+        },
+        "digivolve_battle": {
+          "choices": 1042,
+          "opportunities": 15393
+        },
+        "attack": {
+          "choices": 3053,
+          "opportunities": 14436
+        },
+        "promote": {
+          "choices": 838,
+          "opportunities": 959
+        },
+        "dna_digivolve": {
+          "choices": 44,
+          "opportunities": 441
+        }
+      },
+      "dna_capable_lists": {
+        "sha256:1999cd9092aeb395a441f5d3742447c67d438f5d2e3cb85d1d603d1030983d9e": {
+          "BT20-060": 3
+        },
+        "sha256:9b88c4d4eb0cbc9cdc3e008aaf8e4fa56a9e7c432af1462660d5d3ca55ef1667": {
+          "BT20-060": 3
+        },
+        "sha256:669dde3b66c2fd2413d68a2852e98451aea3cb965b1f05c8dcfa7d5e1dbd3b7c": {
+          "BT24-037": 2
+        },
+        "sha256:5b5768b35b03b03e3f2eaa71559894048a64124fe220e0b697128205bd1327e7": {
+          "EX13-045": 3,
+          "BT23-047": 3
+        },
+        "sha256:ecf3707ed727b5c387405df128d58dacc5d023c4918e4dae1d4403641feb3182": {
+          "BT23-047": 3,
+          "EX13-045": 3
+        },
+        "sha256:6b15071bcc6afb27f3fd189aff60f7fc5988c78aa16d03733bccb076e0e1e53b": {
+          "BT24-037": 2
+        },
+        "sha256:9ef220fe17a09618fbaa8ca13be2e4151c5952113c8551fb5283641bceb52abd": {
+          "BT8-084": 1
+        },
+        "sha256:e20c6f6087b0d12d5b1019dd7a4693e1fcb6bcfad2a6275000f0cb922eb86c30": {
+          "BT16-077": 1
+        },
+        "sha256:5f47ea0fddfcd3b14ae2bedef0a557c9ff6b8c2ee9f72fe57bd892a5a99569c3": {
+          "EX12-032": 4,
+          "EX12-044": 3,
+          "EX12-035": 4,
+          "EX12-037": 3
+        }
+      },
+      "manifest_sha256": "8dba5ac3b75df8fdf306f70b4132f01c5f660993abbdb318b0041b33a4b71389",
+      "wandb": {
+        "url": "https://forge.coreweave.com/wandb/james-peters97-mammal/digimon-rl/runs/english-meta-seed-mixed-20261025",
+        "id": "english-meta-seed-mixed-20261025",
+        "entity": "james-peters97-mammal",
+        "project": "digimon-rl"
+      }
+    }
+  }
+}

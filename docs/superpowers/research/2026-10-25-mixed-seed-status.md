@@ -93,3 +93,32 @@ development had six deferred-payment and two repeated-target failures. The
 corrected native teacher completes the two additional captured target games
 (102 and 401). Existing PIMC/IS-MCTS determinism, hidden-permutation invariance,
 root legality and forced-win tests all pass (five tests).
+
+
+## Launched after successful qualification
+
+CI run **40230719839** published `training-search-v2026.10.25.4` from runtime
+source `eec3bbee428a80b2f31971737cbc74cc762a4091`:
+`ghcr.io/mammalwithashell/digimon-search-cpu@sha256:05d93754f049591d7cd0d5b6d27ca59f3d1ff7d185e264de0532662c00aa0364`.
+The complete 32-game Linux search preflight passed, including original game 268,
+with zero caps; see `2026-10-25-mixed-seed-image-validation.json`.
+
+The three-arm comparison launched at **2026-10-25 20:40:11 UTC** under
+`/opt/digimon-search/mixed-seed-comparison-20261025`.
+Service: `digimon-seed-comparison.service`; monitors:
+`digimon-seed-monitor-{greedy,development,mixed}.service`.
+All three online W&B monitors were verified uploading. Run IDs in `digimon-rl`:
+`english-meta-seed-{greedy,development,mixed}-20261025`.
+
+All 1,248 bootstrap games qualified (416 per arm), with zero caps or failures;
+all three fitting corpora have 53,248 rows. Separate seed fitting has begun.
+The mixed demonstration corpus has 1,042 battle-evolution choices versus 330
+for greedy-only; raising evolution is 1,537 versus 191, and DNA choices are 44
+versus zero. These are teacher behaviors, not trained-model strength results.
+The evidence snapshot includes exact-list DNA cohorts and route opportunities
+in `2026-10-25-mixed-seed-qualification.json`.
+
+The unattended controller fits all three seeds, evaluates each for 5,200 games
+against common anchors, runs one matched 1,100-game 320/4/batch-four search
+update per arm, then repeats the fixed evaluation. No automatic promotion or
+restart. The failed prior baseline remains preserved and stopped.
