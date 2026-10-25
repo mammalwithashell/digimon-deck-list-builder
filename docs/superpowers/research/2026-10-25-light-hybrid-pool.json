@@ -1,5 +1,5 @@
 {
-  "status": "fresh_restart_authorized_building",
+  "status": "launched_initial_checkpoint_evaluation",
   "main_revision": "054a06b12",
   "archetypes": 13,
   "distinct_lists": 21,
@@ -139,5 +139,200 @@
   },
   "admission_runtime": "Isolated final main wheel in C:/Users/james/.codex/build-targets/light-hybrid-training-venv; combined-image runtime verification still required",
   "seed_bootstrap_games": 400,
-  "image_ci_run": 40216231750
+  "image_ci_run": 40216231750,
+  "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:687fc2213cc1bca2fcb98d3ee04a210462834792a4455535c5b14db6be0ed891",
+  "seed_initialization": {
+    "initialization": "fresh",
+    "inherited_weights": false,
+    "contract": {
+      "observation_profile": "standard_lite_v2",
+      "tensor_version": 2,
+      "feature_schema_version": "standard_lite_v2.4",
+      "tensor_size": 9434,
+      "tensor_layout_hash": "sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a",
+      "action_space_size": 2192,
+      "action_schema_version": 2
+    },
+    "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:687fc2213cc1bca2fcb98d3ee04a210462834792a4455535c5b14db6be0ed891",
+    "initializer_sha256": "85974fe31462c026b181e5db274756222040b8ade7a9f1c6feb7019179227a5e",
+    "initialization_seed": 50261025,
+    "bootstrap_games": 400,
+    "bootstrap_truncated_games": 0,
+    "bootstrap_rows": 37087,
+    "seed_sha256": "24b542620ca4795f55111a6ceb90f242ebfcc9abf088d95fbe53fdd215039111"
+  },
+  "cloud_preflight": {
+    "status": "passed",
+    "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:687fc2213cc1bca2fcb98d3ee04a210462834792a4455535c5b14db6be0ed891",
+    "source_commit": "8f945e484c1e4263f8da8c3dba816e25fe697c98",
+    "checkpoint_sha256": "24b542620ca4795f55111a6ceb90f242ebfcc9abf088d95fbe53fdd215039111",
+    "validator_sha256": "f5e61f6439695329994e842d04ce2f3b5a6cd034254578adef5162e1716552a2",
+    "started_unix": 1792949886.978958,
+    "search": {
+      "simulations": 320,
+      "worlds": 4,
+      "batch": 4,
+      "decision_cap": 1200
+    },
+    "contract": {
+      "observation_profile": "standard_lite_v2",
+      "tensor_version": 2,
+      "feature_schema_version": "standard_lite_v2.4",
+      "tensor_size": 9434,
+      "tensor_layout_hash": "sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a",
+      "action_space_size": 2192,
+      "action_schema_version": 2
+    },
+    "validated_deck_slots": 26,
+    "card_eval_event_version": 1,
+    "replays": [
+      {
+        "game": 521,
+        "prefix_decisions": 19,
+        "status": "passed"
+      },
+      {
+        "game": 858,
+        "prefix_decisions": 45,
+        "status": "passed"
+      }
+    ],
+    "native": [
+      {
+        "label": "seed-check-340",
+        "games": 1,
+        "rows": 69,
+        "truncated_games": 0,
+        "seed": 30561025,
+        "game_start": 340
+      },
+      {
+        "label": "seed-check-521",
+        "games": 1,
+        "rows": 52,
+        "truncated_games": 0,
+        "seed": 30561025,
+        "game_start": 521
+      },
+      {
+        "label": "seed-check-858",
+        "games": 1,
+        "rows": 53,
+        "truncated_games": 0,
+        "seed": 30561025,
+        "game_start": 858
+      },
+      {
+        "label": "health-0",
+        "games": 4,
+        "rows": 295,
+        "truncated_games": 0,
+        "seed": 40361025,
+        "game_start": 0
+      },
+      {
+        "label": "health-4",
+        "games": 4,
+        "rows": 343,
+        "truncated_games": 0,
+        "seed": 40361025,
+        "game_start": 4
+      },
+      {
+        "label": "health-8",
+        "games": 4,
+        "rows": 405,
+        "truncated_games": 0,
+        "seed": 40361025,
+        "game_start": 8
+      },
+      {
+        "label": "health-12",
+        "games": 4,
+        "rows": 261,
+        "truncated_games": 0,
+        "seed": 40361025,
+        "game_start": 12
+      },
+      {
+        "label": "health-16",
+        "games": 4,
+        "rows": 233,
+        "truncated_games": 0,
+        "seed": 40361025,
+        "game_start": 16
+      },
+      {
+        "label": "health-20",
+        "games": 4,
+        "rows": 308,
+        "truncated_games": 0,
+        "seed": 40361025,
+        "game_start": 20
+      },
+      {
+        "label": "light-hybrid",
+        "games": 4,
+        "rows": 250,
+        "truncated_games": 0,
+        "seed": 50361025,
+        "game_start": 0
+      }
+    ],
+    "full_games": 31,
+    "finished_unix": 1792949996.1082547
+  },
+  "batch_parity": [
+    {
+      "seed": 61261025,
+      "all_arrays_equal": true
+    },
+    {
+      "seed": 62261025,
+      "all_arrays_equal": true
+    }
+  ],
+  "run_id": "english-meta-pets-light-fresh-2x1100-20261025",
+  "launch_verification": {
+    "wandb_run.json": {
+      "url": "https://forge.coreweave.com/wandb/james-peters97-mammal/digimon-rl/runs/english-meta-pets-light-fresh-2x1100-20261025",
+      "id": "english-meta-pets-light-fresh-2x1100-20261025",
+      "entity": "james-peters97-mammal",
+      "project": "digimon-rl"
+    },
+    "publisher.json": {
+      "next_seq": 2,
+      "uploaded": 1,
+      "upload_offset": 994
+    },
+    "latest_metrics.json": {
+      "monitor/unix_time": 1792950106.2173314,
+      "pipeline/stage": "checkpoint_evaluation",
+      "pipeline/stage_code": -1,
+      "pipeline/failed": 0,
+      "pipeline/complete": 0,
+      "pipeline/generation_index": 0,
+      "pipeline/elapsed_hours": 0.010076086984740364,
+      "pipeline/image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:687fc2213cc1bca2fcb98d3ee04a210462834792a4455535c5b14db6be0ed891",
+      "pipeline/target_games": 1100,
+      "card_eval/worker_status": "running",
+      "card_eval/worker_failed": 0
+    },
+    "services": {
+      "digimon-search.service": "active",
+      "digimon-search-monitor.service": "active",
+      "digimon-search-journal.service": "active"
+    },
+    "stage": {
+      "stage": "checkpoint_evaluation",
+      "generation_index": 0,
+      "time_unix": 1792950070.3748212,
+      "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:687fc2213cc1bca2fcb98d3ee04a210462834792a4455535c5b14db6be0ed891",
+      "automatic_restart": false,
+      "automatic_promotion": false
+    }
+  },
+  "started": {
+    "time_unix": 1792950069.9434183
+  }
 }

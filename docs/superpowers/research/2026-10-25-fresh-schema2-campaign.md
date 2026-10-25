@@ -42,4 +42,36 @@ The run ID is `english-meta-pets-light-fresh-2x1100-20261025`. Systemd retains
 the 48-hour workload limit and disabled automatic training restart. Monitoring
 publishes scalar progress, checkpoint artifacts, and per-card evaluation
 reports to `digimon-rl`. Image digest and actual launch evidence are recorded
-after validation; this preparation document alone does not assert a live run.
+after validation.
+
+## Launch evidence
+
+CI run `40216231750` passed. The deployed image is
+`ghcr.io/mammalwithashell/digimon-search-cpu@sha256:687fc2213cc1bca2fcb98d3ee04a210462834792a4455535c5b14db6be0ed891`.
+The host verified its OCI source revision against the build commit.
+
+All 400 bootstrap games completed without truncation, yielding 37,087 decision
+rows. Fresh seed SHA-256:
+`24b542620ca4795f55111a6ceb90f242ebfcc9abf088d95fbe53fdd215039111`.
+ONNX/PyTorch maximum differences were 1.43e-6 for logits and 9.54e-7 for value.
+This validates export parity, not playing strength. The bootstrap critic's
+last held-out outcome MSE was 0.8392, measured on its own demonstration split.
+
+Linux preflight passed 31 complete native-search games with no crashes or caps,
+including four Light Hybrid mirrors, plus the two recorded Python prefix
+regressions. All 26 training sampling slots passed current admission and legal
+deck checks. Batch one versus batch four produced identical saved arrays on
+both 40-decision Light Hybrid diagnostic prefixes; these intentionally capped
+diagnostics are excluded from replay and are not counted as complete games.
+
+The fresh campaign launched at Unix time `1792950069.9434183` (see the live
+`started.json` for the authoritative timestamp). Training, monitor, and log
+mirror services were active at verification, with initial checkpoint evaluation
+running. The W&B publisher had uploaded two progress records. Self-play begins
+after the initial 5,200-game evaluation passes.
+
+W&B: https://forge.coreweave.com/wandb/james-peters97-mammal/digimon-rl/runs/english-meta-pets-light-fresh-2x1100-20261025
+
+Detailed initialization, image, preflight, and contract evidence is recorded in
+`2026-10-25-light-hybrid-pool.json`. The launch does not assert completion of
+either training generation or evaluation.
