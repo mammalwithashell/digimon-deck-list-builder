@@ -1,0 +1,138 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "AD1-015",
+    "card_type": "Digimon",
+    "colors": [
+      "Yellow"
+    ],
+    "dp": 8000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "cost": 3,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 8000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "Beowolfmon",
+        "play_cost": 8,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [Koji Minamoto] w/2 or more [Hybrid] trait cards under: Cost 3"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Jamming＞\n[When Digivolving] [When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn.\n[End of Attack] [On Deletion] You may play 1 yellow, black or purple Tamer card with inherited effects from your hand or trash without paying the cost. Then, by placing 1 [Hybrid] or [Ten Warriors] trait card from your hand under this Digimon or your Tamers, ＜Draw 2＞."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn."
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 5,
+    "name": "Beowolfmon",
+    "play_cost": 8,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522035",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/AD1-015.png?260529",
+      "printing_id": "AD1-015"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "Yes, you can.",
+        "date": "Mar. 13, 2026",
+        "number": "Q6083",
+        "question": "Can I process the part of the effect after \"then\" in this card's [End of Attack] [On Deletion] effect even if I don't play a Tamer?"
+      },
+      {
+        "answer": "No, it digivolves from the Tamer as-is. It isn't treated as a Digimon that digivolves, therefore \"when a Digimon would digivolve\" effects and \"when a Digimon digivolves\" effects don't trigger.\nIn addition, this digivolution requirement can be used to digivolve a Tamer even if a \"Digimon can't digivolve\" effect activates.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6909",
+        "question": "Does a digivolution requirement that digivolves from a Tamer mean that the Tamer that will become a digivolution card is treated as a Digimon when it digivolves?"
+      },
+      {
+        "answer": "Yes, you perform a digivolution bonus draw.\nA digivolution bonus draw is performed for any kind of digivolution.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6910",
+        "question": "Is a digivolution bonus draw performed even when a Tamer digivolves?"
+      },
+      {
+        "answer": "No, it can't.\nEven if a card digivolves from a card that was placed on the field in the same turn, it can't attack during that turn. It can only attack in the turns after it's played.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6911",
+        "question": "If this card digivolves from a Tamer that was played this turn, can it attack in the same turn?"
+      },
+      {
+        "answer": "Yes, it becomes a digivolution card.\nIf that Digimon would leave the field, the Tamer card will be trashed like a normal digivolution card.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6912",
+        "question": "Does a Tamer card placed under a Digimon become a digivolution card?"
+      },
+      {
+        "answer": "No, it doesn't.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6913",
+        "question": "Does a Digimon gain the Security effect in the lower text on a Tamer card in digivolution cards?"
+      },
+      {
+        "answer": "Yes, it does.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6914",
+        "question": "Does a Digimon gain the Inherited effect in the lower text on a Tamer card in digivolution cards?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] [Koji Minamoto] w/2 or more [Hybrid] trait cards under: Cost 3"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [Koji Minamoto] w/2 or more [Hybrid] trait cards under: Cost 3"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Jamming＞\n[When Digivolving] [When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn.\n[End of Attack] [On Deletion] You may play 1 yellow, black or purple Tamer card with inherited effects from your hand or trash without paying the cost. Then, by placing 1 [Hybrid] or [Ten Warriors] trait card from your hand under this Digimon or your Tamers, ＜Draw 2＞."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn."
+      }
+    ],
+    "type": "Warrior"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "636e6bd1463677a297e9457cc3f7520cfe69842f84f3b1d04684f0c060ca1e04",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522035:AD1-015:AD1-015",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522035"
+}

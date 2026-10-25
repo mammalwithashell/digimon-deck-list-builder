@@ -1475,6 +1475,7 @@ fn install_optional_selection(
     );
 
     game.pending_selection = Some(PendingSelection {
+        card_choice: None,
         zone_owner: None,
         kind: SelectionKind::Replacement,
         selecting_player: subject_controller,

@@ -43,6 +43,34 @@ def _swap_pid(pid: Any) -> Any:
     return 2 if pid == 1 else 1
 
 
+def _filter_card_choice(state: dict, full_state: dict, player_id: int | None) -> None:
+    """Search inspection belongs to the selecting seat, not every recipient.
+
+    Typed choice rows retain the engine's zero-based owner convention. Their
+    exact decimal prompt/page tokens pass through without numeric conversion.
+    """
+    pending = full_state.get("pendingSelection")
+    if not pending or not pending.get("cardChoice"):
+        return
+    out = dict(pending)
+    choice = dict(pending["cardChoice"])
+    rows = []
+    for original in choice.get("rows", []):
+        row = dict(original)
+        hidden_security = row.get("zone") == "security" and player_id != pending.get("selectingPlayer")
+        hidden_hand = row.get("zone") == "hand" and (
+            player_id is None or row.get("owner") != player_id - 1
+        )
+        if hidden_security or hidden_hand:
+            row.update(card_id=None, card_registry_index=None, identity_visible=False)
+        if player_id == 2 and row.get("owner") in (0, 1):
+            row["owner"] = 1 - row["owner"]
+        rows.append(row)
+    choice["rows"] = rows
+    out["cardChoice"] = choice
+    state["pendingSelection"] = out
+
+
 def filter_state_for_player(full_state: Dict[str, Any], player_id: int) -> Dict[str, Any]:
     """Return a copy of the game state filtered + perspective-normalized for a player.
 
@@ -68,6 +96,8 @@ def filter_state_for_player(full_state: Dict[str, Any], player_id: int) -> Dict[
     their own board flipped to the top.
     """
     state = copy.copy(full_state)
+
+    _filter_card_choice(state, full_state, player_id)
 
     my_key = "player1" if player_id == 1 else "player2"
     opp_key = "player2" if player_id == 1 else "player1"
@@ -99,7 +129,7 @@ def filter_state_for_player(full_state: Dict[str, Any], player_id: int) -> Dict[
         state["revealedCards"] = [
             {**rc, "owner": _swap_pid(rc.get("owner"))} for rc in full_state["revealedCards"]
         ]
-    pending = full_state.get("pendingSelection")
+    pending = state.get("pendingSelection")
     if pending:
         pending = dict(pending)
         if pending.get("selectingPlayer") is not None:
@@ -190,6 +220,7 @@ def filter_state_for_spectator(
         return copy.copy(full_state)
 
     state = copy.copy(full_state)
+    _filter_card_choice(state, full_state, None)
     state["player1"] = _redact_player(full_state["player1"])
     state["player2"] = _redact_player(full_state["player2"])
     return state

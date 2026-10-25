@@ -1,6 +1,6 @@
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{
-    decode_attack, encode_attack, PASS, SECURITY_TARGET, SOURCE_SELECT_START,
+    decode_attack, encode_attack, PASS, SECURITY_TARGET,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
@@ -93,12 +93,8 @@ fn bt19_090_main_mode_plays_low_dp_xros_heart_from_under_tamer_without_paying_co
     let prompt = runner
         .pending_selection_view()
         .expect("BT19-090 should ask which under-Tamer card to play");
-    let source_action = prompt
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|action| *action >= SOURCE_SELECT_START)
-        .expect("low-DP Xros Heart card under a Tamer should be selectable");
+    assert!(prompt.is_optional,"printed play mode remains declinable");
+    let source_action = physical_menu::source_action(&runner.game,stash,0);
     runner
         .execute_action(0, source_action)
         .expect("select under-Tamer Xros Heart card");
@@ -197,4 +193,37 @@ fn bt19_090_attack_mode_unsuspends_shoutmon_ex6_and_shootingstarmon_then_attacks
         1.0,
         "an unsuspended named Digimon should be able to attack the player"
     );
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;
+
+#[test]
+fn bt19_090_main_and_security_may_decline_source_play_for_both_actors_and_clones() {
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::{PendingSecurity,TriggerSource};
+    for actor in [0,1] { for security in [false,true] {
+        let mut r=DebugRunner::builder().dsl_card(CARD_ID).unwrap().add_card(tamer("TAMER"))
+            .add_card(xros_digimon("LOW-DP-XROS","Low DP Xros",4,4000,6)).hand(actor,&[CARD_ID]).memory(10).start();
+        r.game.enter_main_phase();r.game.turn_player_idx=actor as usize;
+        let host=r.place_on_field(actor,"TAMER",None);let physical=r.push_source(host,"LOW-DP-XROS");
+        if security {
+            let card=r.game.player_mut(actor).hand.remove(0);let handle=card.handle();
+            r.game.pending_security=Some(PendingSecurity{defender:actor,card,played:false});
+            r.game.enqueue_triggered(EffectTiming::SecuritySkill,TriggerSource::SecurityRevealed{defender:actor,card:handle});r.game.drain_effect_queue();
+        } else {
+            r.game.play_option_from_hand(actor,0);choose_effect_mode(&mut r,actor,"play");
+        }
+        let pending=r.game.pending_selection.as_ref().expect("may-play choice is public");assert!(pending.is_optional);
+        let mask=build_action_mask(&r.game,actor);assert_eq!(mask[PASS as usize],1.0);
+        let action=physical_menu::source_action(&r.game,host,0);assert_eq!(mask[action as usize],1.0);
+        let before=r.memory();let mut clone=r.game.clone();
+        for game in [&mut r.game,&mut clone] {
+            game.resolve_selection(actor,PASS).unwrap();assert!(game.pending_selection.is_none());
+            assert_eq!(game.memory,before,"declining adds no payment");assert_eq!(game.player(actor).battle_area.len(),1);
+            assert_eq!(game.player(actor).battle_area[host.index as usize].card_sources[0].handle(),physical);
+            assert_eq!(game.player(actor).battle_area[host.index as usize].card_sources.len(),2);
+        }
+        assert_eq!(before,if security{10}else{7},"main pays only the option use cost; Security pays none");
+    }}
 }

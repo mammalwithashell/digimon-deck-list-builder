@@ -1,0 +1,282 @@
+{
+  "scope": "Only three affected generated replays; no blanket blessing. Originals are byte-identical.",
+  "diagnostics": [
+    "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/archival-replay-diagnostic.log",
+    "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/archival-replay-token-index-diagnostic.log",
+    "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/archival-replay-supported-refresh-diagnostic.log"
+  ],
+  "records": [
+    {
+      "source": "refresh_v2_generated_greedy_004_digilab_091f6feab9dd_vs_digilab_0f8f67c14f13_seed_40521424.replay.json",
+      "byte_identical_archive": "qa/replay-goldens/retired/2026-10-25-owned-choice-p249/refresh_v2_generated_greedy_004_digilab_091f6feab9dd_vs_digilab_0f8f67c14f13_seed_40521424.replay.json.original",
+      "sha256": "be3e077e34ec7b5eea3dcdba9caf44053e14e2316c29cd77e37728ddae525b1c",
+      "original_engine_schema_version": 2,
+      "original_action_schema_version": 1,
+      "original_actions": 65,
+      "seed": 40521424,
+      "reason": "Unrelated P-249 metadata publication increases static card_data length by1 and shifts appended Petrification token data_index hashed by historical V3. Exact recorded65-step stream verifies with only unrelated P-249 omitted; supported in-memory bless changes only digests63/64/65, actions identical.",
+      "regenerated_sha256": "bbafd09009a6500152436a78bfaa643f7507bb77d8f57f7bfbabbf3fa02b196d",
+      "regenerated_engine_schema_version": 3,
+      "regenerated_action_schema_version": 2,
+      "action_differences": []
+    },
+    {
+      "source": "refresh_v2_generated_greedy_008_digilab_1509ed7da6be_vs_digilab_155d30601167_seed_40521432.replay.json",
+      "byte_identical_archive": "qa/replay-goldens/retired/2026-10-25-owned-choice-p249/refresh_v2_generated_greedy_008_digilab_1509ed7da6be_vs_digilab_155d30601167_seed_40521432.replay.json.original",
+      "sha256": "46b722eb2dcaa120fd888e9601bf2b5496138af2d3c6f035e4c28847fde24d39",
+      "original_engine_schema_version": 2,
+      "original_action_schema_version": 1,
+      "original_actions": 64,
+      "seed": 40521432,
+      "reason": "BT24-089 Security now installs an owned physical card page under action semantic2. Legacy raw-band schema1 record pauses before consuming that prompt; prompt digest changes at20. Retire incompatible protocol recording, regenerate using legal current mask with identical decks/seed/action budget.",
+      "regenerated_sha256": "9d0d02008a7931af59c4bfef8831e11f71468c94787215d4d4885c712753ab4b",
+      "regenerated_engine_schema_version": 3,
+      "regenerated_action_schema_version": 2,
+      "action_differences": []
+    },
+    {
+      "source": "refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json",
+      "byte_identical_archive": "qa/replay-goldens/retired/2026-10-25-owned-choice-p249/refresh_v2_generated_greedy_009_digilab_155d30601167_vs_digilab_1682f0098d48_seed_40521435.replay.json.original",
+      "sha256": "e443227b929346d258b2e714aab5b7edf12aa1642f71c05fe459d792a53b4603",
+      "original_engine_schema_version": 1,
+      "original_action_schema_version": 1,
+      "original_actions": 67,
+      "seed": 40521435,
+      "reason": "BT24-089 Security now installs an owned physical card page under action semantic2. Legacy raw-band schema1 record pauses before consuming that prompt; prompt digest changes at20. Retire incompatible protocol recording, regenerate using legal current mask with identical decks/seed/action budget.",
+      "regenerated_sha256": "45f15edc50996d31af517f18013773b817a3991843a45aac379ed2f36a8b5d8c",
+      "regenerated_engine_schema_version": 3,
+      "regenerated_action_schema_version": 2,
+      "action_differences": [
+        {
+          "zero_based_step": 45,
+          "old": {
+            "seat": 0,
+            "action_id": 59
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 62
+          }
+        },
+        {
+          "zero_based_step": 47,
+          "old": {
+            "seat": 1,
+            "action_id": 0
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 30
+          }
+        },
+        {
+          "zero_based_step": 48,
+          "old": {
+            "seat": 0,
+            "action_id": 30
+          },
+          "new": {
+            "seat": 1,
+            "action_id": 0
+          }
+        },
+        {
+          "zero_based_step": 50,
+          "old": {
+            "seat": 0,
+            "action_id": 59
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 62
+          }
+        },
+        {
+          "zero_based_step": 51,
+          "old": {
+            "seat": 0,
+            "action_id": 101
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 62
+          }
+        },
+        {
+          "zero_based_step": 52,
+          "old": {
+            "seat": 0,
+            "action_id": 62
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 481
+          }
+        },
+        {
+          "zero_based_step": 54,
+          "old": {
+            "seat": 0,
+            "action_id": 480
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 6
+          }
+        },
+        {
+          "zero_based_step": 55,
+          "old": {
+            "seat": 0,
+            "action_id": 6
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 62
+          }
+        },
+        {
+          "zero_based_step": 57,
+          "old": {
+            "seat": 0,
+            "action_id": 62
+          },
+          "new": {
+            "seat": 1,
+            "action_id": 62
+          }
+        },
+        {
+          "zero_based_step": 58,
+          "old": {
+            "seat": 1,
+            "action_id": 62
+          },
+          "new": {
+            "seat": 1,
+            "action_id": 6
+          }
+        },
+        {
+          "zero_based_step": 59,
+          "old": {
+            "seat": 1,
+            "action_id": 6
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 62
+          }
+        },
+        {
+          "zero_based_step": 60,
+          "old": {
+            "seat": 0,
+            "action_id": 62
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 60
+          }
+        },
+        {
+          "zero_based_step": 61,
+          "old": {
+            "seat": 0,
+            "action_id": 60
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 30
+          }
+        },
+        {
+          "zero_based_step": 62,
+          "old": {
+            "seat": 0,
+            "action_id": 465
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 62
+          }
+        },
+        {
+          "zero_based_step": 63,
+          "old": {
+            "seat": 1,
+            "action_id": 0
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 466
+          }
+        },
+        {
+          "zero_based_step": 65,
+          "old": {
+            "seat": 0,
+            "action_id": 30
+          },
+          "new": {
+            "seat": 1,
+            "action_id": 0
+          }
+        },
+        {
+          "zero_based_step": 66,
+          "old": {
+            "seat": 0,
+            "action_id": 59
+          },
+          "new": {
+            "seat": 0,
+            "action_id": 30
+          }
+        }
+      ]
+    }
+  ],
+  "untouched_active_before": {
+    "refresh_v2_generated_greedy_000_digilab_00b5ea09afd9_vs_digilab_0286bd08d2eb_seed_40521416.replay.json": "fed3fc070c435e184b0a6edad5659cb27725b5458a8b1131d5ddf01aed9d74d5",
+    "refresh_v2_generated_greedy_001_digilab_0286bd08d2eb_vs_digilab_03052bcf3884_seed_40521419.replay.json": "91e48ffd2c51a95b9875af226cc5e5bc6e3233b4445764e4d5e014bcbf3980ac",
+    "refresh_v2_generated_greedy_002_digilab_03052bcf3884_vs_digilab_087db0caf1c2_seed_40521420.replay.json": "1626501a12d949231f4ce6a2c6ae099540edefdc7a5f61be44a60fc71248d821",
+    "refresh_v2_generated_greedy_003_digilab_087db0caf1c2_vs_digilab_091f6feab9dd_seed_40521423.replay.json": "ae6728a01ee7d38e17e818a7ef0ddcdd0078e35a6e2f6a69a299171ef6c4bcba",
+    "refresh_v2_generated_greedy_005_digilab_0f8f67c14f13_vs_digilab_10c793e6c4b4_seed_40521427.replay.json": "a4ad8243b65a107c264273fb678793a4e5c2415e7406b4189108b896f66a90a1",
+    "refresh_v2_generated_greedy_006_digilab_10c793e6c4b4_vs_digilab_14f6262f4fc0_seed_40521428.replay.json": "24e4847d8e67a90fe99960b74769319a83d2bb6cfd1267778a01b2a4d66a4b7c",
+    "refresh_v2_generated_greedy_007_digilab_14f6262f4fc0_vs_digilab_1509ed7da6be_seed_40521431.replay.json": "4536769da18ce91a18ca79a23ec05c55d072bdbe9d31c5caeca75adcab8fc9cd"
+  },
+  "temporary_diagnostic_test": {
+    "path": "code\\digimon-engine\\tests\\archival_replay_diagnostic.rs",
+    "sha256": "593966a28236b8b54ea1e942c1b83ae43afe8956786a8e80e3dd9a5338d30244",
+    "removed_after_logs_captured": true
+  },
+  "supported_commands": [
+    "replay_corpus regenerate --goldens qa/replay-goldens --cards data/cards.json --id greedy_004_",
+    "replay_corpus regenerate --goldens qa/replay-goldens --cards data/cards.json --id greedy_008_",
+    "replay_corpus regenerate --goldens qa/replay-goldens --cards data/cards.json --id greedy_009_",
+    "replay_corpus verify --goldens qa/replay-goldens --cards data/cards.json"
+  ],
+  "scope_preservation": "Other seven active files SHA256 unchanged. No gameplay source, test or active-schema edits; temporary diagnostic removed to retain frozen93 scope.",
+  "whole_corpus_verification": {
+    "status": "passed",
+    "recordings": 10,
+    "actions": 635,
+    "failed": 0,
+    "log": "qa/archetype-qa/dsl/light-hybrid-training/verification/logs/replay-three-bounded-whole-corpus-verify.log",
+    "log_sha256": "edfe6e0304c1fbdcedb64f0da095065e7ce7eebb57f54f50c69d4120f4c871fd"
+  },
+  "counterfactual_proof": {
+    "004_all_recorded_steps": 65,
+    "divergence_without_unrelated_p249": null,
+    "step63_recorded": 10370574210080817530,
+    "step63_current": 15615316268288308832,
+    "step63_without_p249": 10370574210080817530,
+    "004_in_memory_legacy_refresh_only_changed_digest_steps": [
+      63,
+      64,
+      65
+    ],
+    "008_009_in_memory_bless": "Retired with explicit action_schema_version1 cannot answer owned card page; version2 required; step20."
+  }
+}

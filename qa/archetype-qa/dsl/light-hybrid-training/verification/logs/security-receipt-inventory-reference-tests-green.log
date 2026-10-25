@@ -1,0 +1,39 @@
+   Compiling digimon-dsl v0.1.0 (C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-dsl)
+warning: struct `Pass` is never constructed
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:20:12
+   |
+20 | pub struct Pass {
+   |            ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated items `new` and `finish` are never used
+  --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:31:8
+   |
+30 | impl Collector {
+   | -------------- associated items in this implementation
+31 |     fn new() -> Self {
+   |        ^^^
+...
+58 |     fn finish(self) -> Pass {
+   |        ^^^^^^
+
+warning: function `visit` is never used
+   --> code\digimon-dsl\tests\..\src\bin\implementation_inventory\references.rs:124:8
+    |
+124 | pub fn visit(
+    |        ^^^^^
+
+warning: `digimon-dsl` (test "implementation_reference_coverage") generated 3 warnings
+    Finished `test` profile [unoptimized] target(s) in 21.60s
+     Running tests\implementation_reference_coverage.rs (C:/Users/james/.codex/build-targets/light-hybrid-digixros-tdd\debug\deps\implementation_reference_coverage-7d764e2a109fb0b6.exe)
+
+running 4 tests
+test runtime_security_play_receipts_walk_all_correlated_literal_fields ... ok
+test top_card_references_and_runtime_finalizers_preserve_binding_roles ... ok
+test authored_new_steps_and_deck_evidence_are_traversed_without_blessing_references ... ok
+test new_predicate_fields_visit_nested_bindings_and_name_matches_in_both_forms ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+CARGO_EXIT 0

@@ -1,0 +1,58 @@
+
+running 23 tests
+test p::p_189::p_189_compiles_to_three_clauses ... ok
+test p::p_189::p_189_has_progress_declarative_grant_keyword_clause ... ok
+test p::p_189::p_189_inherited_clause_is_opt_on_opponent_security_removed ... ok
+test p::p_189::p_189_inherited_does_not_fire_on_opponents_turn ... ok
+test p::p_189::p_189_inherited_gains_1_memory_on_opp_security_removed ... ok
+test p::p_189::p_189_inherited_opt_blocks_second_activation_same_turn ... ok
+test p::p_189::p_189_inherited_opt_clears_after_end_turn ... ok
+test p::p_189::p_189_no_pending_selection_at_steady_state ... ok
+test p::p_189::p_189_on_play_no_effects_no_pending_selection ... ok
+test p::p_189::p_189_progress_does_not_exclude_own_effects ... ok
+test p::p_189::p_189_progress_dormant_when_not_attacking ... ok
+test p::p_189::p_189_progress_excludes_opponent_effects_while_attacking ... ok
+test p::p_189::p_189_progress_keyword_active_on_field ... ok
+test p::p_189::p_189_security_clause_can_be_declined ... ok
+test p::p_189::p_189_security_clause_is_face_up_optional_not_opt ... ok
+
+thread 'p::p_189::p_189_security_clause_offers_hand_and_trash_candidates' (30612) panicked at code\digimon-engine\tests\cards_behavioral\p\p_189.rs:428:5:
+assertion `left == right` failed: exactly the hand LIBERATOR card and the trash LIBERATOR card are legal
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test p::p_189::p_189_security_clause_offers_hand_and_trash_candidates ... FAILED
+test p::p_189::p_189_security_clause_optional_allows_decline ... ok
+
+thread 'p::p_189::p_189_security_clause_plays_liberator_free_from_trash' (39120) panicked at code\digimon-engine\tests\cards_behavioral\p\p_189.rs:674:5:
+assertion `left == right` failed: the LIBERATOR cost-3 card in trash is the sole eligible candidate
+  left: 2
+ right: 1
+test p::p_189::p_189_security_clause_plays_liberator_free_from_trash ... FAILED
+test p::p_189::p_189_security_filter_excludes_high_cost_liberator_cards ... ok
+test p::p_189::p_189_security_filter_excludes_non_liberator_cards ... ok
+
+thread 'p::p_189::p_189_security_filter_includes_cost_4_liberator_card' (8528) panicked at code\digimon-engine\tests\cards_behavioral\p\p_189.rs:468:5:
+assertion `left == right` failed: the cost-4 LIBERATOR card passes play_cost_lte: 4 and is the sole candidate
+  left: 2
+ right: 1
+test p::p_189::p_189_security_filter_includes_cost_4_liberator_card ... FAILED
+
+thread 'p::p_189::p_189_security_filter_offers_only_eligible_card_among_mixed_hand' (34672) panicked at code\digimon-engine\tests\cards_behavioral\p\p_189.rs:610:5:
+assertion `left == right` failed: only the LIBERATOR cost-3 card passes both filters; the cost-5 LIBERATOR and the non-LIBERATOR card are excluded
+  left: 2
+ right: 1
+test p::p_189::p_189_security_filter_offers_only_eligible_card_among_mixed_hand ... FAILED
+test p::p_189::p_189_security_free_play_charges_no_memory ... ok
+
+failures:
+
+failures:
+    p::p_189::p_189_security_clause_offers_hand_and_trash_candidates
+    p::p_189::p_189_security_clause_plays_liberator_free_from_trash
+    p::p_189::p_189_security_filter_includes_cost_4_liberator_card
+    p::p_189::p_189_security_filter_offers_only_eligible_card_among_mixed_hand
+
+test result: FAILED. 19 passed; 4 failed; 0 ignored; 0 measured; 12732 filtered out; finished in 30.47s
+
+FILTER_EXIT 101

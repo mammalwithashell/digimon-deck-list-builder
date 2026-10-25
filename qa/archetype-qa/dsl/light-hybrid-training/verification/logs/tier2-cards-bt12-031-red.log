@@ -1,0 +1,15 @@
+
+running 1 test
+
+thread 'bt12::bt12_031::bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_bottom' (42700) panicked at code\digimon-engine\tests\cards_behavioral\bt12\bt12_031.rs:420:10:
+pick the Dragon Mode source: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt12::bt12_031::bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_bottom ... FAILED
+
+failures:
+
+failures:
+    bt12::bt12_031::bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_bottom
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12754 filtered out; finished in 3.52s
+

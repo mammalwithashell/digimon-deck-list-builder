@@ -71,12 +71,12 @@ fn optional_union_cost_trashes_hand_card_before_gain() {
         }
     );
     assert!(
-        prompt.valid_action_ids.contains(&PLAY_HAND_START),
+        crate::union_fixture_candidates(&runner.game).contains(&PLAY_HAND_START),
         "Mineral hand card must be a payable union cost candidate"
     );
 
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, crate::union_fixture_action(&runner.game, PLAY_HAND_START))
         .expect("pay cost from hand");
     runner.auto_resolve().expect("resolve cost benefit");
 
@@ -111,16 +111,16 @@ fn optional_union_cost_trashes_own_digimon_source_before_gain() {
         encode_source_select(host.index as u16, 0).expect("encode Mineral source");
     let bad_source_action = encode_source_select(host.index as u16, 1).expect("encode bad source");
     assert!(
-        prompt.valid_action_ids.contains(&mineral_source_action),
+        crate::union_fixture_candidates(&runner.game).contains(&mineral_source_action),
         "Mineral source under an own Digimon must be a payable union cost candidate"
     );
     assert!(
-        !prompt.valid_action_ids.contains(&bad_source_action),
+        !crate::union_fixture_candidates(&runner.game).contains(&bad_source_action),
         "non-Mineral/Rock source must be filtered out"
     );
 
     runner
-        .execute_action(0, mineral_source_action)
+        .execute_action(0, crate::union_fixture_action(&runner.game, mineral_source_action))
         .expect("pay cost from own Digimon source");
     runner.auto_resolve().expect("resolve cost benefit");
 

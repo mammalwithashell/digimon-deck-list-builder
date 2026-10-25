@@ -5,7 +5,7 @@
 //!   Taiki allows cards under Tamers to be used as DigiXros materials for that
 //!   play transaction.
 
-use digimon_engine::action::space::{PASS, SOURCE_SELECT_START};
+use digimon_engine::action::space::{PASS};
 use digimon_engine::debug_runner::{make_test_card_with_level, DebugRunner};
 use digimon_engine::enums::CardColor;
 
@@ -35,7 +35,7 @@ fn bt10_087_suspends_to_allow_under_tamer_digixros_materials_for_one_play() {
     let mut runner = runner_with_taiki_and_x4();
     let taiki = runner.place_on_field(0, "BT10-087", Some(0));
     runner.push_source(taiki, "BT10-008");
-    runner.place_on_field(0, "BT10-049", Some(0));
+    let ballistamon = runner.place_on_field(0, "BT10-049", Some(0));
 
     let _ = runner.play(0, 0);
 
@@ -74,23 +74,13 @@ fn bt10_087_suspends_to_allow_under_tamer_digixros_materials_for_one_play() {
         "the card under Taiki must be selectable as a DigiXros material after the modifier"
     );
 
-    let under_tamer_action = material_prompt
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|action| *action >= SOURCE_SELECT_START)
-        .expect("under-Tamer source action");
+    let under_tamer_action = physical_menu::source_action(&runner.game, taiki, 0);
+    assert!(material_prompt.valid_action_ids.contains(&under_tamer_action), "the original under-Tamer Shoutmon remains a legal material");
     runner
         .execute_action(0, under_tamer_action)
         .expect("select Shoutmon from under Taiki as DigiXros material");
-    if runner
-        .pending_selection()
-        .is_some_and(|sel| sel.valid_action_ids.contains(&1))
-    {
-        runner
-            .execute_action(0, 1)
-            .expect("select Ballistamon from battle area as a second material");
-    }
+    let ballistamon_action = physical_menu::battle_top_action(&runner.game, ballistamon);
+    runner.execute_action(0, ballistamon_action).expect("select the remaining battle-area Ballistamon material");
     runner
         .execute_action(0, PASS)
         .expect("stop selecting DigiXros materials");
@@ -114,3 +104,6 @@ fn bt10_087_suspends_to_allow_under_tamer_digixros_materials_for_one_play() {
         "the chosen under-Tamer source should leave Taiki's source stack"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

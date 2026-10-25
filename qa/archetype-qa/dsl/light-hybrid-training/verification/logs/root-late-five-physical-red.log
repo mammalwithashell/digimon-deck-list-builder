@@ -1,0 +1,167 @@
+MODULE bt23::bt23_032
+
+running 22 tests
+test bt23::bt23_032::bt23_032_de_digivolve_stops_at_level_3 ... ok
+test bt23::bt23_032::bt23_032_declining_would_leave_play_does_not_play_anything ... ok
+test bt23::bt23_032::bt23_032_dna_digivolve_triggers_de_digivolve_prompt_on_opp_digimon ... ok
+test bt23::bt23_032::bt23_032_granted_force_attack_fires_at_opponent_start_of_main ... ok
+test bt23::bt23_032::bt23_032_has_angel_rule_trait ... ok
+test bt23::bt23_032::bt23_032_has_cs_trait_alt_digivolve_cost3 ... ok
+test bt23::bt23_032::bt23_032_has_dna_digivolve_altpath_cost0 ... ok
+test bt23::bt23_032::bt23_032_has_face_up_and_inherited_would_leave_replacement_clauses ... ok
+test bt23::bt23_032::bt23_032_has_on_dna_digivolve_clause ... ok
+test bt23::bt23_032::bt23_032_has_standard_digivolve_yellow_lv4_cost4 ... ok
+test bt23::bt23_032::bt23_032_has_two_standard_digivolve_paths_yellow_and_black ... ok
+test bt23::bt23_032::bt23_032_has_when_digivolving_clause ... ok
+test bt23::bt23_032::bt23_032_non_dna_digivolve_does_not_trigger_de_digivolve ... ok
+test bt23::bt23_032::bt23_032_when_digivolving_installs_opp_permanent_select_and_grants_force_attack ... ok
+test bt23::bt23_032::bt23_032_when_digivolving_no_select_prompt_when_no_opp_digimon ... ok
+test bt23::bt23_032::bt23_032_would_leave_by_opponent_effect_installs_optional_source_play_prompt ... ok
+test bt23::bt23_032::bt23_032_would_leave_by_own_effect_does_not_fire ... ok
+test bt23::bt23_032::bt23_032_would_leave_no_prompt_when_no_matching_sources ... ok
+test bt23::bt23_032::bt23_032_would_leave_opt_is_tracked_per_permanent_not_globally ... ok
+test bt23::bt23_032::bt23_032_would_leave_opt_lockout_same_permanent_twice_in_one_turn ... ok
+test bt23::bt23_032::bt23_032_would_leave_prompt_offers_only_matching_sources ... FAILED
+test bt23::bt23_032::bt23_032_yaml_printed_metadata ... ok
+
+failures:
+
+---- bt23::bt23_032::bt23_032_would_leave_prompt_offers_only_matching_sources stdout ----
+
+thread 'bt23::bt23_032::bt23_032_would_leave_prompt_offers_only_matching_sources' (46060) panicked at code\digimon-engine\tests\cards_behavioral\bt23\bt23_032.rs:603:5:
+assertion `left == right` failed: only the single matching [Angel]/yellow Lv.4 source should be a legal pick
+  left: 2
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt23::bt23_032::bt23_032_would_leave_prompt_offers_only_matching_sources
+
+test result: FAILED. 21 passed; 1 failed; 0 ignored; 0 measured; 12733 filtered out; finished in 30.99s
+
+MODULE_EXIT 101
+MODULE bt25::bt25_085
+
+running 20 tests
+test bt25::bt25_085::bt25_085_alt_paths ... ok
+test bt25::bt25_085::bt25_085_arts_digivolve_stacks_onto_a_tm_lv5_base ... ok
+test bt25::bt25_085::bt25_085_counter_timing_also_unsuspends ... ok
+test bt25::bt25_085::bt25_085_counter_window_respects_activation_condition ... ok
+test bt25::bt25_085::bt25_085_data_cards_json_is_a_dual_card ... ok
+test bt25::bt25_085::bt25_085_digimon_face_clauses ... ok
+test bt25::bt25_085::bt25_085_dual_metadata ... ok
+test bt25::bt25_085::bt25_085_option_main_declining_place_leaves_hand_untouched ... ok
+test bt25::bt25_085::bt25_085_option_main_deletes_highest_level_then_may_place_tm_card_under_own_digimon ... ok
+test bt25::bt25_085::bt25_085_trash_option_link_card_unsuspends ... ok
+test bt25::bt25_085::bt25_085_unsuspend_cost_takes_a_dual_card_from_digivolution_or_link_cards ... ok
+test bt25::bt25_085::bt25_085_unsuspend_decline_stays_suspended ... ok
+test bt25::bt25_085::bt25_085_unsuspend_no_option_anywhere_no_prompt ... ok
+test bt25::bt25_085::bt25_085_use_decline_does_not_consume_opt ... ok
+test bt25::bt25_085::bt25_085_use_decline_uses_nothing ... ok
+test bt25::bt25_085::bt25_085_use_no_candidate_no_prompt ... ok
+test bt25::bt25_085::bt25_085_use_opt_locks_second_activation_same_turn ... ok
+test bt25::bt25_085::bt25_085_use_tm_option_from_hand_free ... ok
+test bt25::bt25_085::bt25_085_use_ts_option_from_own_digivolution_cards_free ... FAILED
+test bt25::bt25_085::bt25_085_wa_trash_option_from_another_digimons_stack_unsuspends_self ... ok
+
+failures:
+
+---- bt25::bt25_085::bt25_085_use_ts_option_from_own_digivolution_cards_free stdout ----
+
+thread 'bt25::bt25_085::bt25_085_use_ts_option_from_own_digivolution_cards_free' (29020) panicked at code\digimon-engine\tests\cards_behavioral\bt25\bt25_085.rs:369:10:
+the stack Option is encoded as a source-select action
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt25::bt25_085::bt25_085_use_ts_option_from_own_digivolution_cards_free
+
+test result: FAILED. 19 passed; 1 failed; 0 ignored; 0 measured; 12735 filtered out; finished in 32.79s
+
+MODULE_EXIT 101
+MODULE bt26::bt26_009
+
+running 7 tests
+test bt26::bt26_009::bt26_009_alt_digivolve_from_lv2_ts ... ok
+test bt26::bt26_009::bt26_009_inherited_draw_small_hand_keeps_all ... ok
+test bt26::bt26_009::bt26_009_inherited_draw_then_bottom_one_at_six ... FAILED
+test bt26::bt26_009::bt26_009_somp_accepts_shaman_trait ... ok
+test bt26::bt26_009::bt26_009_somp_decline_costs_nothing ... ok
+test bt26::bt26_009::bt26_009_somp_no_candidate_no_prompt ... ok
+test bt26::bt26_009::bt26_009_somp_trash_chronomon_text_card_draws_and_gains_memory ... ok
+
+failures:
+
+---- bt26::bt26_009::bt26_009_inherited_draw_then_bottom_one_at_six stdout ----
+
+thread 'bt26::bt26_009::bt26_009_inherited_draw_then_bottom_one_at_six' (24944) panicked at code\digimon-engine\tests\cards_behavioral\bt26\support.rs:175:5:
+CHRONO is not a legal hand pick (valid [30, 31, 32, 33, 34, 35])
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt26::bt26_009::bt26_009_inherited_draw_then_bottom_one_at_six
+
+test result: FAILED. 6 passed; 1 failed; 0 ignored; 0 measured; 12748 filtered out; finished in 11.27s
+
+MODULE_EXIT 101
+MODULE bt26::bt26_082
+
+running 10 tests
+test bt26::bt26_082::bt26_082_face_down_security_does_nothing ... ok
+test bt26::bt26_082::bt26_082_face_up_security_plays_itself_at_end_of_opponents_turn ... ok
+test bt26::bt26_082::bt26_082_has_birdkin_rule_trait ... ok
+test bt26::bt26_082::bt26_082_on_deletion_discard_then_face_up_bottom_security ... ok
+test bt26::bt26_082::bt26_082_q7121_tk_shuffle_prevents_security_revival ... FAILED
+test bt26::bt26_082::bt26_082_q7122_engage_attack_after_security_play_wins_the_game ... ok
+test bt26::bt26_082::bt26_082_wd_delete_self_deletes_highest_dp ... ok
+test bt26::bt26_082::bt26_082_wd_dont_pay ... ok
+test bt26::bt26_082::bt26_082_wd_trash_two_face_down_keeps_ravemon ... ok
+test bt26::bt26_082::shuffle_security_turns_all_cards_face_down_only_for_shuffled_player ... ok
+
+failures:
+
+---- bt26::bt26_082::bt26_082_q7121_tk_shuffle_prevents_security_revival stdout ----
+
+thread 'bt26::bt26_082::bt26_082_q7121_tk_shuffle_prevents_security_revival' (17972) panicked at code\digimon-engine\tests\cards_behavioral\bt26\bt26_082.rs:317:10:
+pick non-yellow JUNK: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt26::bt26_082::bt26_082_q7121_tk_shuffle_prevents_security_revival
+
+test result: FAILED. 9 passed; 1 failed; 0 ignored; 0 measured; 12745 filtered out; finished in 16.62s
+
+MODULE_EXIT 101
+MODULE bt4::bt4_072
+
+running 5 tests
+test bt4::bt4_072::bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn ... FAILED
+test bt4::bt4_072::bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon ... FAILED
+test bt4::bt4_072::bt4_072_has_inherited_all_turns_dp_aura ... ok
+test bt4::bt4_072::bt4_072_has_main_on_field_digi_burst_source_cost_clause ... ok
+test bt4::bt4_072::bt4_072_source_contributes_1000_dp_on_both_turns ... ok
+
+failures:
+
+---- bt4::bt4_072::bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn stdout ----
+
+thread 'bt4::bt4_072::bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn' (14616) panicked at code\digimon-engine\tests\cards_behavioral\bt4\bt4_072.rs:216:10:
+Digi-Burst source selection resolves: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt4::bt4_072::bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon stdout ----
+
+thread 'bt4::bt4_072::bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon' (51356) panicked at code\digimon-engine\tests\cards_behavioral\bt4\bt4_072.rs:145:5:
+BT4-072 should allow trashing a source from under itself
+
+
+failures:
+    bt4::bt4_072::bt4_072_digi_burst_dp_buff_expires_at_end_of_opponents_next_turn
+    bt4::bt4_072::bt4_072_digi_burst_trashes_self_source_then_buffs_own_digimon
+
+test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 12750 filtered out; finished in 9.31s
+
+MODULE_EXIT 101

@@ -13,6 +13,7 @@ pub mod dna_digivolve;
 pub mod draw;
 pub mod effects;
 mod field_source_results;
+mod security_placement_results;
 pub mod grant_triggered;
 pub mod iteration;
 pub mod link_cards;
@@ -25,6 +26,7 @@ pub mod replacement_outcome;
 pub mod schedule_delayed;
 pub mod selections;
 mod source_play_batch;
+mod security_play_results;
 pub(crate) mod simultaneous_play;
 pub(crate) mod source_prefix_payment;
 pub mod zone_cards;
@@ -302,10 +304,15 @@ pub(crate) fn drain_or_rewrap_pending_tail_with_bindings(
     // Deferred processing retains the original effect controller. Resolve
     // its physical carrier again so compaction cannot attribute a new slot.
     let previous_source = (game.effect_source_player, game.effect_source_card, game.effect_source_permanent);
-    let live_source = source_permanent.and_then(|_| match game.resolve_provenance_token(crate::trigger_context::ProvenanceToken::from(source_card)) {
+    let link_key=crate::dsl_cards::binding_ref::link_source_carrier_pin_key(source_card);
+    let carrier_key=if bindings.selected_identity_pin(&link_key).is_some() { link_key }
+        else { crate::dsl_cards::binding_ref::source_carrier_pin_key(source_card) };
+    let live_source = if bindings.selected_identity_pin(&carrier_key).is_some() {
+        bindings.resolve_selected_identity(game, &carrier_key)
+    } else { source_permanent.and_then(|_| match game.resolve_provenance_token(crate::trigger_context::ProvenanceToken::from(source_card)) {
         Some(crate::trigger_context::EventSubject::Permanent(handle)) => Some(handle),
         _ => None,
-    });
+    }) };
     game.effect_source_player = Some(player);
     game.effect_source_card = Some(source_card);
     game.effect_source_permanent = live_source;
@@ -645,6 +652,33 @@ pub(crate) fn drain_dsl_outer_tail_with_bindings(
     }
 }
 
+/// Release only receipts already armed for abandoned continuation finalizers.
+pub(crate) fn cleanup_aborted_steps(game: &mut crate::game::Game, steps: &[CompiledStep]) {
+    for step in steps {
+        match step {
+            CompiledStep::ReturnReceiptFinalize { receipt } => game.return_receipts.retain(|(id, _)| id != receipt),
+            CompiledStep::SecurityPlacementCancelFinalize { card }
+            | CompiledStep::SecurityPlacementSuccessFinalize { card, .. } => {
+                if let Some(index) = game.security_placement_receipts.iter().rposition(|(id, _)| id == card) {
+                    game.security_placement_receipts.remove(index);
+                }
+            }
+            CompiledStep::FieldSourceFinalize { receipt, .. } => game.field_source_receipts.retain(|(id, _)| id != receipt),
+            CompiledStep::DeleteReceiptFinalize { receipt, .. }
+            | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. }
+            | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } => game.deletion_receipts.retain(|(id, _)| id != receipt),
+            CompiledStep::SecurityPlayFinalize { receipt, player, card } => {
+                game.security_play_receipts.retain(|r| !(r.id == *receipt && r.player == *player && r.card.0 == *card));
+            }
+            CompiledStep::SourcePlayFinalize { receipt, .. } => {
+                game.cancel_prepared_source_play(*receipt);
+                game.source_play_receipts.retain(|(id, _, _)| id != receipt);
+            }
+            _ => {},
+        }
+    }
+}
+
 /// Drive the full step slice to completion. When a selection step is
 /// encountered, `selections::try_install` captures the tail as a
 /// heap-allocated callback and returns `Parked`; the rest of the slice
@@ -724,26 +758,7 @@ fn run_steps_with_runtime_inner(
         // The flag is scoped to the `on_decline` invocation by
         // `effect_queue::resolve_generic_selection` (save+restore).
         if ctx.game.dsl_clause_aborted {
-            for remaining in &steps[i..] {
-                if let CompiledStep::ReturnReceiptFinalize {receipt} = remaining { ctx.game.return_receipts.retain(|(id,_)|id!=receipt); }
-                if let CompiledStep::SecurityPlacementCancelFinalize { card } = remaining {
-                    ctx.game.security_placement_receipts.retain(|(c, _)| c != card);
-                }
-                if let CompiledStep::FieldSourceFinalize { receipt, .. } = remaining {
-                    ctx.game
-                        .field_source_receipts
-                        .retain(|(id, _)| id != receipt);
-                }
-                if let CompiledStep::DeleteReceiptFinalize { receipt, .. } | CompiledStep::PaidDeletionPreventionFinalize { receipt, .. } | CompiledStep::PaidDeletionBatchPreventionFinalize { receipt, .. } = remaining {
-                    ctx.game.deletion_receipts.retain(|(id, _)| id != receipt);
-                }
-                if let CompiledStep::SourcePlayFinalize { receipt, .. } = remaining {
-                    ctx.game.cancel_prepared_source_play(*receipt);
-                    ctx.game
-                        .source_play_receipts
-                        .retain(|(id, _, _)| id != receipt);
-                }
-            }
+            cleanup_aborted_steps(ctx.game, &steps[i..]);
             return RunOutcome::Synchronous;
         }
         let step = &steps[i];
@@ -758,6 +773,10 @@ fn run_steps_with_runtime_inner(
         }
         // Expand in the current lexical slice, so results and named bindings
         // from each resumed play reach the original outer tail unchanged.
+        if let Some(mut expanded) = security_placement_results::expand(step, ctx, bindings) {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
         if let Some(mut expanded) = field_source_results::expand(step, ctx, bindings) {
             expanded.extend_from_slice(&steps[i + 1..]);
             return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
@@ -767,6 +786,10 @@ fn run_steps_with_runtime_inner(
             return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         }
         if let Some(mut expanded) = deletion_results::expand(step, ctx, bindings) {
+            expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
+        if let Some(mut expanded) = security_play_results::expand(step, ctx, bindings) {
             expanded.extend_from_slice(&steps[i + 1..]);
             return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         }
@@ -897,6 +920,11 @@ pub fn run_step_with_runtime(
         }
         return;
     }
+    if let Some(expanded) = security_placement_results::expand(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        return;
+    }
+    if security_placement_results::try_run(step, ctx, bindings) { return; }
     if let Some(expanded) = field_source_results::expand(step, ctx, bindings) {
         run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         return;
@@ -991,6 +1019,10 @@ pub fn run_step_with_runtime(
     if grant_triggered::try_run(step, ctx, bindings) {
         return;
     }
+    if let Some(expanded) = security_play_results::expand(step, ctx, bindings) {
+        run_steps_with_runtime(&expanded, ctx, bindings, runtime); return;
+    }
+    if security_play_results::try_run(step, ctx, bindings) { return; }
     if play_digivolve::try_run(step, ctx, bindings) {
         return;
     }
@@ -1247,7 +1279,7 @@ mod review22_typed_binding_tests {
  #[test]
  fn optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection() {
   let mut r=setup();let c=r.game.players[0].hand[0].handle();let initial=r.game.players[0].hand.len();
-  let pick=CompiledStep::SelectSecurity{of:digimon_dsl::compiled::CompiledPlayerRef::You,filter:Default::default(),bind_as:Some("picked".into()),prompt:"optional security".into(),prompt_key:None,optional:true,then:vec![]};
+  let pick=CompiledStep::SelectSecurity{of:digimon_dsl::compiled::CompiledPlayerRef::You,filter:Default::default(),bind_as:Some("picked".into()),prompt:"optional security".into(),prompt_key:None,optional:true,continue_on_decline:false,then:vec![]};
   let steps=vec![CompiledStep::If{condition:Default::default(),then:vec![pick],else_branch:vec![]},CompiledStep::Draw{of:digimon_dsl::compiled::CompiledPlayerRef::You,count:3}];
   {let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&steps,&mut ctx,&mut Bindings::new());}
   let v=r.pending_selection_view().unwrap();assert_eq!(build_action_mask(&r.game,v.selecting_player)[PASS as usize],1.0);r.execute_action(v.selecting_player,PASS).unwrap();assert!(r.game.pending_selection.is_none());assert!(r.game.dsl_outer_tail.is_none(),"declined no-continuation selection must not leave a stale global tail");assert_eq!(r.game.players[0].hand.len(),initial);
@@ -1280,7 +1312,7 @@ mod review26_typed_repark_tests {
  }
  #[test]
  fn optional_security_accept_executes_bound_enclosing_tail_in_clones() {
-  let mut r=setup();let c=r.game.players[0].hand[0].handle();let initial=r.game.players[0].hand.len();let pick=CompiledStep::SelectSecurity{of:digimon_dsl::compiled::CompiledPlayerRef::You,filter:Default::default(),bind_as:Some("picked".into()),prompt:"optional security".into(),prompt_key:None,optional:true,then:vec![]};let steps=vec![CompiledStep::If{condition:Default::default(),then:vec![pick],else_branch:vec![]},gated(3)];
+  let mut r=setup();let c=r.game.players[0].hand[0].handle();let initial=r.game.players[0].hand.len();let pick=CompiledStep::SelectSecurity{of:digimon_dsl::compiled::CompiledPlayerRef::You,filter:Default::default(),bind_as:Some("picked".into()),prompt:"optional security".into(),prompt_key:None,optional:true,continue_on_decline:false,then:vec![]};let steps=vec![CompiledStep::If{condition:Default::default(),then:vec![pick],else_branch:vec![]},gated(3)];
   {let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&steps,&mut ctx,&mut Bindings::new());}
   let original=r.game.clone();for _ in 0..2 {r.game=original.clone();choose(&mut r);assert!(r.game.pending_selection.is_none());assert_eq!(r.game.players[0].hand.len(),initial+3,"accepted security selection publishes binding to enclosing clause");}
  }

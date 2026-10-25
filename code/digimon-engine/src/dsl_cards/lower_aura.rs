@@ -721,7 +721,7 @@ fn install_source_protection(
                     PredicateSubject::Source(crate::selection::SourceSelectionRef {
                         permanent: host,
                         field_index: host.index,
-                        source_index: *index as u8,
+                        source_index: *index,
                         card: card.handle(),
                     }),
                 )

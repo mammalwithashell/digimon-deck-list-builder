@@ -53,7 +53,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
-use digimon_engine::action::space::{encode_source_select, PASS};
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -696,9 +696,9 @@ fn ex7_073_wd_trash_two_sources_deletes_opp_digimon_and_trashes_security() {
         "only the 2 TM-trait sources are candidates; PLAIN-SRC must be excluded"
     );
 
-    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
-    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    let pick_a = physical_choice::source_action(&runner.game, base, 0);
     runner.execute_action(0, pick_a).expect("pick TM-A");
+    let pick_b = physical_choice::card_action(&runner.game, "TM-B", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     runner.execute_action(0, pick_b).expect("pick TM-B");
     drain_prompts(&mut runner);
 
@@ -743,7 +743,7 @@ fn ex7_073_wd_partial_pick_of_one_source_does_not_trigger_delete_or_security() {
         view.valid_action_ids.contains(&PASS),
         "min:0 → PASS must be offered before any pick"
     );
-    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
+    let pick_a = physical_choice::source_action(&runner.game, base, 0);
     runner.execute_action(0, pick_a).expect("pick only TM-A");
     // After 1 pick (min:0 already satisfied), PASS must still be available —
     // the player may stop at 1.
@@ -835,9 +835,9 @@ fn ex7_073_wd_trash_two_sources_with_no_opp_digimon_still_trashes_security() {
     let view = runner
         .pending_selection_view()
         .expect("trash-2 prompt installs — 2 TM sources exist under BASE");
-    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
-    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    let pick_a = physical_choice::source_action(&runner.game, base, 0);
     runner.execute_action(0, pick_a).expect("pick TM-A");
+    let pick_b = physical_choice::card_action(&runner.game, "TM-B", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     runner.execute_action(0, pick_b).expect("pick TM-B");
     drain_prompts(&mut runner);
 
@@ -874,9 +874,9 @@ fn ex7_073_wd_delete_targets_highest_level_opponent_only() {
     digivolve_ex7_073(&mut runner, base);
     resolve_trigger_order_if_pending(&mut runner, false);
 
-    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
-    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    let pick_a = physical_choice::source_action(&runner.game, base, 0);
     runner.execute_action(0, pick_a).expect("pick TM-A");
+    let pick_b = physical_choice::card_action(&runner.game, "TM-B", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     runner.execute_action(0, pick_b).expect("pick TM-B");
 
     let delete_view = runner
@@ -933,9 +933,9 @@ fn ex7_073_wa_trash_two_sources_deletes_opp_digimon_and_trashes_security() {
     let view = runner
         .pending_selection_view()
         .expect("WA clause offers the trash-2 source-select");
-    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
-    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    let pick_a = physical_choice::source_action(&runner.game, base, 0);
     runner.execute_action(0, pick_a).expect("pick TM-A");
+    let pick_b = physical_choice::card_action(&runner.game, "TM-B", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     runner.execute_action(0, pick_b).expect("pick TM-B");
     drain_prompts(&mut runner);
 
@@ -963,9 +963,9 @@ fn ex7_073_wa_trash_two_sources_with_no_opp_digimon_still_trashes_security() {
 
     fire_when_attacking(&mut runner, base);
 
-    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
-    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    let pick_a = physical_choice::source_action(&runner.game, base, 0);
     runner.execute_action(0, pick_a).expect("pick TM-A");
+    let pick_b = physical_choice::card_action(&runner.game, "TM-B", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     runner.execute_action(0, pick_b).expect("pick TM-B");
     drain_prompts(&mut runner);
 
@@ -990,13 +990,12 @@ fn ex7_073_wd_only_tm_trait_sources_are_selectable() {
     let view = runner
         .pending_selection_view()
         .expect("trash-2 prompt installs");
-    let plain_action =
-        encode_source_select(base.index as u16, 0).expect("PLAIN-SRC source encodes");
-    assert!(
-        !view.valid_action_ids.contains(&plain_action),
-        "PLAIN-SRC (no [Three Musketeers] trait) must not be a candidate; valid={:?}",
-        view.valid_action_ids
-    );
+    let rows = physical_choice::commits(&runner.game);
+    assert_eq!(rows.len(), 2, "only the TM sources qualify");
+    assert!(rows.iter().all(|row| matches!(row.card_id.as_deref(), Some("TM-A" | "TM-B"))),
+        "PLAIN-SRC is excluded by printed trait eligibility");
+    assert!(view.valid_action_ids.contains(&PASS));
+
 }
 
 /// No TM-trait sources at all under the base → Clause 2/3's select_own_sources
@@ -1117,3 +1116,6 @@ fn ex7_073_used_options_main_completes_before_pending_sibling_clause() {
          printed 'trash their top security card'"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

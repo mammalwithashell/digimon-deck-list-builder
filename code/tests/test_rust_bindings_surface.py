@@ -331,13 +331,13 @@ class TestTensorProfiles:
     def test_tensor_profile_positions(self):
         from digimon_engine import TENSOR_SIZE, get_tensor_profile
 
-        # Default profile is now `standard_lite_deck_v2` (8850 floats). The
+        # Default profile is now `standard_lite_deck_v2` (9874 floats). The
         # earlier v1-pinned assertions for compact_v1 moved to the
         # standard_compact_v1-specific test below.
         profile = get_tensor_profile()
         assert profile.id == "standard_lite_deck_v2"
         assert profile.tensor_size == TENSOR_SIZE
-        assert profile.tensor_size == 8850
+        assert profile.tensor_size == 9874
         # Profile shape is self-consistent: every position is either a card
         # slot or a scalar slot, no gaps, no overlap.
         assert (
@@ -394,11 +394,11 @@ class TestTensorProfiles:
 
         assert layout["profile_id"] == "standard_lite_v2"
         assert layout["tensor_version"] == 2
-        # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
-        assert layout["feature_schema_version"] == "standard_lite_v2.3"
-        assert layout["tensor_size"] == 8410
-        assert len(layout["card_id_positions"]) == 572
-        assert len(layout["scalar_positions"]) == 7838
+        # Owned card pages widen pending rows to 128 features.
+        assert layout["feature_schema_version"] == "standard_lite_v2.4"
+        assert layout["tensor_size"] == 9434
+        assert len(layout["card_id_positions"]) == 604
+        assert len(layout["scalar_positions"]) == 8830
         assert layout["layout_hash"].startswith("sha256:")
         assert len(layout["layout_hash"]) == len("sha256:") + 64
         assert layout["sections"][0] == {
@@ -415,8 +415,8 @@ class TestTensorProfiles:
         game = RustHeadlessGame(deck, deck, seed=1, observation_profile="standard_lite_v2")
 
         assert game.observation_profile_id == "standard_lite_v2"
-        assert game.get_observation_layout()["tensor_size"] == 8410
-        assert game.get_board_tensor(1).shape == (8410,)
+        assert game.get_observation_layout()["tensor_size"] == 9434
+        assert game.get_board_tensor(1).shape == (9434,)
 
 
 def _starter_decks():

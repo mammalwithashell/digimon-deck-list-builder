@@ -9,14 +9,20 @@ import json
 import sys
 
 from tools import build_registry
+from tools.card_data.registry import StableCardRegistry, write_registry
 
 
 def _run_offline(tmp_path, monkeypatch, cards: dict) -> dict:
     path = tmp_path / "cards.json"
     path.write_text(json.dumps(cards, indent=2), encoding="utf-8")
+    registry_path = tmp_path / "card_registry.json"
+    write_registry(registry_path, StableCardRegistry.from_cards_json({
+        cid: row for cid, row in cards.items() if row.get("index", 0) > 0
+    }))
     monkeypatch.setattr(build_registry, "CARDS_JSON", str(path))
+    monkeypatch.setattr(build_registry, "CARD_REGISTRY", str(registry_path))
     monkeypatch.setattr(sys, "argv", ["build_registry.py", "--offline"])
-    build_registry.main()
+    assert build_registry.main() == 0
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -33,6 +39,6 @@ def test_offline_indexes_unindexed_cards_after_the_highest_existing_index(tmp_pa
         "BT1-002": 7, "EX12-002": 9, "BT1-001": 3, "EX12-001": 8,
     }
     assert out["EX12-001"]["norm_id"] == 8 / 20000
-    # Same entry shape as every indexed card: index and norm_id lead.
-    assert list(out["EX12-001"])[:3] == ["index", "norm_id", "card_id"]
-    assert list(out) == ["BT1-002", "EX12-002", "BT1-001", "EX12-001"]
+    # Publication is canonical; object insertion order is not the index contract.
+    assert out["EX12-001"]["card_id"] == "EX12-001"
+    assert out["EX12-001"]["card_index"] == 1

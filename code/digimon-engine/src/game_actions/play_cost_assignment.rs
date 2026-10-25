@@ -1,11 +1,25 @@
 //! Declaration-scoped assignment; reductions remain additive and separately typed.
 use super::*;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) struct PlayCostAdjustments {
     pub assigned_base: Option<u16>,
     pub effect_cost: CostDelta,
     pub reduction: i32,
     pub pending_payment: Option<u64>,
+    /// Fixed credit from only the currently parked, not yet completed payment.
+    pub pending_reduction: Option<i32>,
+}
+// Historical verification protocols used these four Debug fields. New pending
+// credit is separately fingerprinted by the current protocol, never injected
+// into archival digest bytes.
+impl std::fmt::Debug for PlayCostAdjustments {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PlayCostAdjustments")
+            .field("assigned_base", &self.assigned_base)
+            .field("effect_cost", &self.effect_cost)
+            .field("reduction", &self.reduction)
+            .field("pending_payment", &self.pending_payment).finish()
+    }
 }
 impl Default for PlayCostAdjustments {
     fn default() -> Self {
@@ -19,6 +33,7 @@ impl PlayCostAdjustments {
             effect_cost,
             reduction: 0,
             pending_payment: None,
+            pending_reduction: None,
         }
     }
     pub fn final_cost(self, original: i32, material_delta: i32) -> u16 {
@@ -119,6 +134,9 @@ impl Game {
         let Some(value) = effect.cost_assignment else {
             if let Some(amount) = self.apply_cost_reduction_candidate(key, target, true) {
                 *total += amount;
+                if self.pending_selection.is_some() {
+                    total.pending_reduction = Some(amount);
+                }
             }
             return;
         };
@@ -172,11 +190,46 @@ impl Game {
             self.finish_play_cost_payment(target, total);
         }
     }
+    /// Fail only the current payment represented by this continuation. Prior
+    /// discounts/assignments and unrelated nested receipts remain intact.
+    pub(crate) fn fail_owned_choice_payment_hook(
+        &mut self, hook: &mut crate::resume::AfterSelectionHook,
+    ) {
+        use crate::resume::AfterSelectionHook as Hook;
+        match hook {
+            Hook::DigivolveReducerChain { paid, .. } => {
+                *paid = false;
+                self.pending_cost_reduction_amount_override = None;
+            }
+            Hook::InteractiveDigivolveReducer { amount, .. }
+            | Hook::InteractiveOptionUseReducer { amount, .. } => {
+                *amount = 0;
+                self.pending_cost_reduction_amount_override = None;
+            }
+            Hook::PlayCostContinuation { accumulated_reduction, .. } => {
+                if let Some(current) = accumulated_reduction.pending_reduction.take() {
+                    accumulated_reduction.reduction -= current;
+                }
+                if let Some(id) = accumulated_reduction.pending_payment {
+                    if let Some(receipt) = self.cost_payment_receipts.iter_mut().find(|r| r.id == id) {
+                        receipt.completed = false;
+                    }
+                }
+                self.pending_cost_reduction_amount_override = None;
+            }
+            Hook::DeletionWindowContinue { .. } | Hook::DigiXrosLeaveContinuation { .. }
+            | Hook::PartitionSecondPlay { .. } => {}
+        }
+    }
+
     pub(crate) fn finish_play_cost_payment(
         &mut self,
         target: CostTargetContext,
         total: &mut PlayCostAdjustments,
     ) {
+        // Successful continuation settles this provisional credit. Failed
+        // completion removes it before this normal finalizer runs.
+        total.pending_reduction = None;
         let Some(id) = total.pending_payment.take() else {
             return;
         };
@@ -225,6 +278,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: state.player_id,
@@ -355,5 +409,80 @@ fn active_play_cost_order_mut(
         | F::DelayPlayFromUnionAfterSelection { inner, .. }
         | F::DelayBodyAfterCost { inner, .. } => active_play_cost_order_mut(inner),
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod owned_choice_payment_tests {
+    use super::*;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::resume::AfterSelectionHook;
+
+    fn fixture() -> (DebugRunner, CardHandle) {
+        let mut card = make_test_card("OWNED-PAY-TARGET", "Payment target");
+        card.play_cost = 10;
+        let mut r = DebugRunner::builder().add_card(card)
+            .hand(0, &["OWNED-PAY-TARGET"]).memory(10).start();
+        r.skip_mulligan();
+        let target = r.game.player(0).hand[0].handle();
+        (r, target)
+    }
+
+    fn play_hook(target: CardHandle, total: PlayCostAdjustments) -> AfterSelectionHook {
+        AfterSelectionHook::PlayCostContinuation {
+            effect_controller: None, player_id: 0, hand_index: 0,
+            target: CostTargetContext { card: target, from_hand: true,
+                is_digivolve: false, target_permanents: [None, None] },
+            cost_delta: CostDelta::Reduce(0), source: PlaySource::ByHand,
+            origin: PendingWouldPlayOrigin::Hand, suppress_on_play: false,
+            accumulated_reduction: total, processed: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn failed_owned_payment_preserves_prior_discount_and_never_credits_current_or_variable_cost() {
+        let (r, target) = fixture();
+        let mut total = PlayCostAdjustments::default();
+        total += 2; // an earlier, actually paid reducer
+        total += 4; // current credit was provisionally added before parking
+        total.pending_reduction = Some(4);
+        let mut original = play_hook(target, total);
+        let mut fork = original.clone();
+        let mut game = r.game;
+        let mut clone = game.clone();
+        for (game, hook) in [(&mut game, &mut original), (&mut clone, &mut fork)] {
+            game.pending_cost_reduction_amount_override = Some(9);
+            game.fail_owned_choice_payment_hook(hook);
+            game.run_after_selection_hook(hook.clone());
+            assert_eq!(game.memory, 2, "pay 10 minus only the prior paid discount of 2");
+            assert!(game.player(0).hand.is_empty());
+            assert_eq!(game.player(0).battle_area[0].top_card().handle(), target);
+            assert!(game.pending_cost_reduction_amount_override.is_none());
+        }
+    }
+
+    #[test]
+    fn failed_owned_assignment_invalidates_only_its_receipt_and_preserves_previous_base() {
+        let (mut r, target) = fixture();
+        let key = CostReductionKey { source_card: target, source_permanent: None,
+            controller: 0, card_id: "OWNED-PAY-TARGET".into(), effect_slot: 0, is_under: false };
+        r.game.cost_payment_receipts = vec![
+            CostPaymentReceipt { id: 7, target, key: key.clone(), assignment: 1,
+                completed: true, record_activation: false, source_identity: None },
+            CostPaymentReceipt { id: 9, target, key, assignment: 3,
+                completed: true, record_activation: false, source_identity: None },
+        ];
+        let mut total = PlayCostAdjustments::default();
+        total.assigned_base = Some(8);
+        total += 2;
+        total.pending_payment = Some(7);
+        let mut hook = play_hook(target, total);
+        r.game.fail_owned_choice_payment_hook(&mut hook);
+        assert!(!r.game.cost_payment_receipts[0].completed);
+        assert!(r.game.cost_payment_receipts[1].completed, "unrelated receipt remains valid");
+        r.game.run_after_selection_hook(hook);
+        assert_eq!(r.game.memory, 4, "retain prior assigned base 8 minus prior paid discount 2");
+        assert_eq!(r.game.player(0).battle_area[0].top_card().handle(), target);
+        assert!(r.game.cost_payment_receipts.iter().any(|receipt| receipt.id == 9 && receipt.completed));
     }
 }

@@ -1,0 +1,12 @@
+
+running 6 tests
+test a_single_available_role_requires_one_choice_and_preserves_each_alias_alternative ... ok
+test a_single_dual_named_physical_card_is_one_pick_not_two ... ok
+test declining_zero_keeps_all_sources_and_runs_the_unconditional_tail_once ... ok
+test dual_named_first_card_keeps_both_complementary_role_choices_in_clones ... ok
+test physical_source_runtime_alias_participates_in_named_role_matching ... ok
+test two_different_primary_names_cannot_both_fill_the_skull_role ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.46s
+
+SUITE_EXIT 0

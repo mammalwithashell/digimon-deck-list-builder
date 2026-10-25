@@ -111,24 +111,22 @@ effects:
         }
     );
     assert!(
-        union_prompt.valid_action_ids.contains(&TRASH_EFFECT_START),
+        crate::union_fixture_candidates(&runner.game).contains(&TRASH_EFFECT_START),
         "Sistermon from trash must be a union candidate"
     );
     assert!(
-        union_prompt
-            .valid_action_ids
+        crate::union_fixture_candidates(&runner.game)
             .contains(&BREEDING_SOURCE_SELECT_START),
         "Alphamon source under breeding King Drasil must be a union candidate"
     );
     assert!(
-        !union_prompt
-            .valid_action_ids
+        !crate::union_fixture_candidates(&runner.game)
             .contains(&(BREEDING_SOURCE_SELECT_START + 1)),
         "Omnimon source is excluded by printed BT13-019 name restriction"
     );
 
     runner
-        .execute_action(0, BREEDING_SOURCE_SELECT_START)
+        .execute_action(0, crate::union_fixture_action(&runner.game, BREEDING_SOURCE_SELECT_START))
         .expect("choose Alphamon source");
     runner.auto_resolve().expect("play chosen source");
 
@@ -190,12 +188,12 @@ fn hand_or_trash_source_cost_places_card_before_success_body() {
         .pending_selection_view()
         .expect("optional hand/trash source-cost prompt opens");
     assert!(
-        prompt.valid_action_ids.contains(&PLAY_HAND_START),
+        crate::union_fixture_candidates(&runner.game).contains(&PLAY_HAND_START),
         "Royal Knight in hand must be a payable source-cost candidate"
     );
 
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, crate::union_fixture_action(&runner.game, PLAY_HAND_START))
         .expect("pay source cost from hand");
     runner.auto_resolve().expect("resolve success body");
 
@@ -340,17 +338,17 @@ fn hand_or_source_play_binds_played_permanent_for_attach_self_follow_up() {
         .pending_selection_view()
         .expect("hand-or-source play prompt opens");
     assert!(
-        prompt.valid_action_ids.contains(&PLAY_HAND_START),
+        crate::union_fixture_candidates(&runner.game).contains(&PLAY_HAND_START),
         "hand candidate must share the same union prompt"
     );
     assert!(
-        prompt.valid_action_ids.contains(&SOURCE_SELECT_START),
+        crate::union_fixture_candidates(&runner.game).contains(&SOURCE_SELECT_START),
         "source candidate must share the same union prompt"
     );
 
     let memory_before = runner.game.memory;
     runner
-        .execute_action(0, SOURCE_SELECT_START)
+        .execute_action(0, crate::union_fixture_action(&runner.game, SOURCE_SELECT_START))
         .expect("choose source candidate");
     runner.auto_resolve().expect("play source and attach self");
 

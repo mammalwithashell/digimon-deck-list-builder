@@ -899,6 +899,9 @@ fn validate_predicate(
             errors,
         );
     }
+    if let Some(inner) = &pred.cost_target_permanent {
+        validate_predicate(inner, &format!("{prefix}.cost_target_permanent"), card_id, ctx, errors);
+    }
     if let Some(inh) = &pred.has_inherited {
         validate_predicate(
             inh,
@@ -972,6 +975,42 @@ fn validate_predicate(
     }
 }
 
+/// Context-free mode checks also required by the direct compiler/inline loader.
+pub(crate) fn validate_scoped_step_modes(
+    step: &StepSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    match step {
+        StepSpec::AddModifier(args) => {
+            if args.opponent_only && !matches!(args.modifier.as_str(),
+                "CannotBeDestroyed" | "CannotBeDestroyedByEffect" |
+                "CannotBeReturnedToDeck" | "CannotBeReturnedToHand" |
+                "CannotBeTrashedByEffect" | "CannotBeDeDigivolved") {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.opponent_only"),
+                    message: "opponent_only requires a modifier with an effect-cause replacement consult".into(),
+                });
+            }
+        }
+        StepSpec::SelectHand(args)
+        | StepSpec::SelectTrash(args)
+        | StepSpec::SelectReveal(args)
+        | StepSpec::SelectSecurity(args) => {
+            if args.continue_on_decline && (!matches!(step, StepSpec::SelectSecurity(_)) || !args.optional || args.cost) {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.continue_on_decline"),
+                    message: "continue_on_decline requires optional non-cost select_security".into(),
+                });
+            }
+        }
+        _ => {}
+    }
+}
+
 fn validate_step(
     step: &StepSpec,
     prefix: &str,
@@ -979,6 +1018,7 @@ fn validate_step(
     ctx: &ValidationContext<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
+    validate_scoped_step_modes(step, prefix, card_id, errors);
     match step {
         StepSpec::PlaceAsBottomSource(args) => {
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
@@ -1789,6 +1829,13 @@ fn validate_step_binding_scope(
         StepSpec::TrashTopNDigivolutionCardsOfEach(args) => {
             validate_formula_binding_scope(&args.n, &format!("{prefix}.n"), card_id, scope, errors);
         }
+        StepSpec::SecurityPlaceStackedCard(args) => {
+            declare_optional_binding(scope, &args.bind_success_as);
+        }
+        StepSpec::SecurityPlaceTopStackedCard(args) | StepSpec::SecurityPlaceTopCard(args) => {
+            validate_binding_ref(&args.carrier, &format!("{prefix}.carrier"), card_id, errors);
+            declare_optional_binding(scope, &args.bind_success_as);
+        }
         StepSpec::TrashOpponentHandToCount(args) => {
             validate_formula_binding_scope(
                 &args.target_count,
@@ -2597,6 +2644,9 @@ fn validate_predicate_binding_scope(
             scope,
             errors,
         );
+    }
+    if let Some(inner) = &pred.cost_target_permanent {
+        validate_predicate_binding_scope(inner, &format!("{prefix}.cost_target_permanent"), card_id, scope, errors);
     }
     if let Some(inh) = &pred.has_inherited {
         validate_predicate_binding_scope(

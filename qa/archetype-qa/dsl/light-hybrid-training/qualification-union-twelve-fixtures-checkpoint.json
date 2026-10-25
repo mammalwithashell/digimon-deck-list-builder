@@ -1,0 +1,98 @@
+{
+  "scope": "12 canonical union-card qualification fixture modules; tests only",
+  "card_ids": [
+    "BT17-095",
+    "BT17-097",
+    "BT19-012",
+    "BT19-061",
+    "BT19-099",
+    "BT20-018",
+    "BT20-056",
+    "BT20-093",
+    "BT20-095",
+    "BT21-062",
+    "BT21-091",
+    "BT21-098"
+  ],
+  "production_edits": false,
+  "actual_red": [
+    {
+      "log": "verification/logs/qualification-union-ten-card-red.log",
+      "passed": 117,
+      "failed": 19,
+      "ignored": 0
+    },
+    {
+      "log": "verification/logs/qualification-union-bt21-extra-red.log",
+      "passed": 26,
+      "failed": 5,
+      "ignored": 0
+    }
+  ],
+  "red_binary": "C:/Users/james/.codex/build-targets/light-hybrid-replay/debug/deps/cards_behavioral-fccdda01a7d2293d.exe",
+  "native_stack_bytes": 268435456,
+  "migration": [
+    "Resolve current CommitCard row by owner, hand/trash zone and printed card identity; validate physical position against actual zone and legal mask.",
+    "Negative eligibility asserts absence of a physical commit row; exact menu and opponent zero masks preserved.",
+    "Optional owned menu count separates explicit PASS from card commits.",
+    "Existing payments, free play, timing, optional declines, both actors, zone ownership, clones, and outcomes retained."
+  ],
+  "final_proof": {
+    "status": "passed",
+    "log": "verification/logs/qualification-union-twelve-final.log",
+    "passed": 167,
+    "failed": 0,
+    "ignored": 0,
+    "batches": [
+      {
+        "batch": "A",
+        "passed": 40,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "batch": "B",
+        "passed": 62,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "batch": "C",
+        "passed": 34,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "batch": "D",
+        "passed": 31,
+        "failed": 0,
+        "ignored": 0
+      }
+    ],
+    "command": "cargo test -p digimon-engine --config profile.dev.opt-level=0 --config profile.dev.debug=0 --test light_hybrid_qualification_union_a --test light_hybrid_qualification_union_b --test light_hybrid_qualification_union_c --test light_hybrid_qualification_union_d -- --test-threads=2",
+    "target": "C:/Users/james/.codex/build-targets/light-hybrid-replay",
+    "log_sha256": "62fa98131f1a7498cd186015adb810c2d92282b1edd6880cffc873d1c3087614"
+  },
+  "qualification_limit": "Focused fixture proof does not replace fresh full cards/DSL/rules/35-lane qualification, final wheel checks, exact deck admission, or DCGO oracle evidence. Original full old cards aggregate remains tracked by parent until fresh aggregate.",
+  "sha256": {
+    "code/digimon-engine/tests/cards_behavioral/bt17/bt17_095.rs": "f6187d39ac8fdc6e3d70cb8b2429d45d280ea5e1dd0f34a2ae5f91b19a65716d",
+    "code/digimon-engine/tests/cards_behavioral/bt17/bt17_097.rs": "4374de2c375eab2858e3b69a6bfef39fe87372d32d7226f92fa317320a5100f6",
+    "code/digimon-engine/tests/cards_behavioral/bt19/bt19_012.rs": "ab96b59a7450650344c4eb37a2be18f5fd985a5c34b6428fc6adc54ca233e76f",
+    "code/digimon-engine/tests/cards_behavioral/bt19/bt19_061.rs": "40acc7ab5350720cde44ea85ebfdf346316c04596bbddcbbfca96d5c9441a0f3",
+    "code/digimon-engine/tests/cards_behavioral/bt19/bt19_099.rs": "d00e43bcd742f439d1c10622139b3109e42341cb6e2c022ba5c2ce1d69ae8e5a",
+    "code/digimon-engine/tests/cards_behavioral/bt20/bt20_018.rs": "7d9ce7c8cc8eecd62e60215af160e3c81057d38f530d6788232eba2fad1f444d",
+    "code/digimon-engine/tests/cards_behavioral/bt20/bt20_056.rs": "a403695061c1efb186473b220e91426d077d46c0326d8bb1f159cf0ea4efbf8b",
+    "code/digimon-engine/tests/cards_behavioral/bt20/bt20_093.rs": "1e59d67851c4224d82d59f89230f31591a7412991bc3e836c09d19ecd7fe604d",
+    "code/digimon-engine/tests/cards_behavioral/bt20/bt20_095.rs": "19ded59a9336a43859dc8c96f583444116da565d931146376cdd0c1b48b38258",
+    "code/digimon-engine/tests/cards_behavioral/bt21/bt21_062.rs": "51d7d969737cb52e1cc8cdb1485e139ffdf9c65ef23add5e873f72882429ca7d",
+    "code/digimon-engine/tests/cards_behavioral/bt21/bt21_091.rs": "f1d79ed3a5755965a8835ef59d8f4fd3c1d1b11fcca63533500cb1369ed25ef2",
+    "code/digimon-engine/tests/cards_behavioral/bt21/bt21_098.rs": "ed4095e5a81457457242e084f2beeffea38be7b815378f6369be5c35213d8b51",
+    "code/digimon-engine/tests/support/owned_union_fixture.rs": "86c8f154bbd2f5939c7c66813ac32a02ab7793e40fec29f53795c7ed7d2918cc",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_a.rs": "663dae046822bd7c598740a119b9a073c46a8ad6838c332ec36af9829fc437ae",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_b.rs": "94f8b2db8dcd4a5a85934999617990725e585f0609b9b891b754e4f9b07276ac",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_c.rs": "a69dc8d88925a4a557da8b8cc9565e1d7ccfacd00d8710507e61d45f5c3420f5",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_d.rs": "e982860a06fe99819a5bcc3d7cb57046cc875c3be089c769d73939f76e960579"
+  },
+  "diff_check": "Passed for all 12 canonical modules (only repository CRLF conversion notices).",
+  "intermediate_log": "verification/logs/qualification-union-initial-snapshot.log is an intermediate compile snapshot: A40 passed, B59/3 before already-authored negative-row/PASS fixture corrections; superseded by final proof."
+}

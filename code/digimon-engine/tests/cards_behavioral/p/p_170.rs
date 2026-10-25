@@ -341,12 +341,7 @@ fn p_170_on_deletion_plays_tm_digimon_free_from_trash() {
         2,
         "TM-COST12 (hand) + TM-COST5 (trash); cost-13 and non-TM cards excluded"
     );
-    let trash_idx = runner.game.players[0]
-        .trash
-        .iter()
-        .position(|c| c.card_id(&runner.game.card_data) == "TM-COST5")
-        .unwrap();
-    let pick = digimon_engine::action::space::TRASH_EFFECT_START + trash_idx as u16;
+    let pick = physical_choice::card_action(&runner.game, "TM-COST5", digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     assert!(view.valid_action_ids.contains(&pick));
     runner.execute_action(0, pick).expect("play from trash");
     runner.auto_resolve().ok();
@@ -466,3 +461,6 @@ fn p_170_opponent_option_is_trashed_before_on_deletion_resolves() {
         "trashed exactly once"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

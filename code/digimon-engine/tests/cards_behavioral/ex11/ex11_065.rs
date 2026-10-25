@@ -41,7 +41,7 @@
 mod dsl_card_data;
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::action::space::{encode_source_select, PLAY_HAND_START};
+
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming};
 use digimon_engine::TriggerSource;
@@ -233,8 +233,9 @@ fn ex11_065_start_of_main_trash_hand_mineral_gains_memory() {
         runner.pending_selection().is_some(),
         "start-of-main cost should prompt when a Mineral card is in hand"
     );
+    let hand_action = physical_choice::card_action(&runner.game, "MIN-HAND", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, hand_action)
         .expect("choose Mineral card from hand");
     runner.auto_resolve().expect("resolve memory gain");
 
@@ -263,16 +264,10 @@ fn ex11_065_start_of_main_trash_source_mineral_gains_memory() {
 
     fire_close_start_main(&mut runner, close);
     let memory_before = runner.game.memory;
-    let source_action = encode_source_select(host.index as u16, 0).expect("source action");
-    let bad_action = encode_source_select(host.index as u16, 1).expect("bad source action");
-    let pending = runner
-        .pending_selection()
-        .expect("start-of-main cost should prompt for Mineral source");
-    assert!(pending.valid_action_ids.contains(&source_action));
-    assert!(
-        !pending.valid_action_ids.contains(&bad_action),
-        "non-Mineral/Rock source must not be payable"
-    );
+    let source_action = physical_choice::source_action(&runner.game, host, 0);
+    let rows = physical_choice::commits(&runner.game);
+    assert_eq!(rows.len(), 1, "non-Mineral/Rock source must not be payable");
+    assert_eq!(rows[0].card_id.as_deref(), Some("MIN-SRC"));
 
     runner
         .execute_action(0, source_action)
@@ -822,3 +817,6 @@ fn ex11_065_all_turns_place_from_hand_increases_source_count() {
         "ally Digimon's source count must increase by 1 after place_as_bottom_source"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

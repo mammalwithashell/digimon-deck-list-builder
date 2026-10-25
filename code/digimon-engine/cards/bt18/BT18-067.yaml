@@ -1,0 +1,50 @@
+# Official observation d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293.
+# Card image additionally shows a Black/Yellow Tamer cost-4 circle (omitted
+# by structured official extraction). Q3002: this Tamer is not treated as a Digimon.
+card: BT18-067
+name: MetalKabuterimon
+kind: digimon
+level: 4
+color: [black, yellow]
+cost: 6
+dp: 7000
+form: Hybrid
+attribute: Variable
+traits: [Cyborg]
+alt_paths:
+  - kind: digivolve
+    from:
+      kind: digimon
+      level_eq: 3
+      any_of:
+        - color_is: black
+        - color_is: yellow
+    cost: 4
+  - kind: digivolve
+    from:
+      kind: tamer
+      any_of:
+        - color_is: black
+        - color_is: yellow
+    cost: 4
+  - kind: digivolve
+    from: { kind: tamer, name_is: "J.P. Shibayama" }
+    cost: 3
+  - kind: digivolve
+    from: { kind: digimon, name_is: Beetlemon }
+    cost: 1
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+  - when: [on_play, when_digivolving]
+    summary: "De-Digivolve 1 one of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+      - de_digivolve: { target: target, amount: 1, stop_at_level: 3 }
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Blocker

@@ -510,12 +510,12 @@ impl<'a> EffectContext<'a> {
         }
         let (removed, host_card) = {
             // Soft-fail: carrier missing (DCGO: `if (_permanent == null) yield break;`).
-            let permanent = match self
-                .game
-                .player_mut(perm.player)
-                .battle_area
-                .get_mut(perm.index as usize)
-            {
+            let player = self.game.player_mut(perm.player);
+            let permanent = match if perm.index == crate::action::space::BREEDING_TARGET as u8 {
+                player.breeding_area.as_mut()
+            } else {
+                player.battle_area.get_mut(perm.index as usize)
+            } {
                 Some(p) => p,
                 None => return false,
             };
@@ -1075,6 +1075,7 @@ impl<'a> EffectContext<'a> {
                         is_optional_zero: false,
                         distinct_by: None,
                         candidate_actions: pending.valid_action_ids.clone(),
+                        source_candidates: None,
                         accum: Vec::new(),
                         prompt: pending.prompt.clone(),
                         previous_phase: pending.previous_phase,

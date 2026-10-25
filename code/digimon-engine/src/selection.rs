@@ -75,7 +75,7 @@ pub enum UnionZoneOrigin {
     /// The card was picked from a carrier's digivolution sources.
     Material {
         carrier: PermanentHandle,
-        source_index: u8,
+        source_index: usize,
     },
 }
 
@@ -83,7 +83,7 @@ pub enum UnionZoneOrigin {
 pub struct SourceSelectionRef {
     pub permanent: PermanentHandle,
     pub field_index: u8,
-    pub source_index: u8,
+    pub source_index: usize,
     pub card: CardHandle,
 }
 
@@ -274,6 +274,8 @@ pub struct EffectChoiceEntry {
 /// A parked selection. Installed by `EffectContext::select_*` helpers and the
 /// queue drainer. Resolved by `Game::resolve_selection(player, action_id)`.
 pub struct PendingSelection {
+    /// Complete physical-card choice; absent for other prompts.
+    pub card_choice: Option<crate::owned_card_choice::OwnedCardChoice>,
     pub kind: SelectionKind,
     /// The player whose turn it is to make this choice. The decoder rejects
     /// actions from any other player; the mask only emits bits when the
@@ -361,6 +363,7 @@ impl Clone for PendingSelection {
                 )
             }),
             on_decline: None,
+            card_choice: self.card_choice.clone(),
             zone_owner: self.zone_owner,
         }
     }
@@ -372,6 +375,7 @@ impl Clone for PendingSelection {
 /// shape emitted by `digimon_gym/engine/game/serialization.py:338`.
 #[derive(Debug, Clone)]
 pub struct PendingSelectionView {
+    pub card_choice: Option<crate::owned_card_choice::CardChoiceView>,
     pub kind: SelectionKind,
     pub selecting_player: PlayerId,
     pub previous_phase: GamePhase,
@@ -403,12 +407,14 @@ impl PendingSelectionView {
 
 impl PendingSelection {
     /// Snapshot of the serializable fields for FFI / UI consumers.
-    pub fn view(&self) -> PendingSelectionView {
+    pub fn view(&self, game: &crate::game::Game) -> PendingSelectionView {
         PendingSelectionView {
+            card_choice: self.card_choice.as_ref().map(|owner| owner.view(game, self.selecting_player)),
             kind: self.kind,
             selecting_player: self.selecting_player,
             previous_phase: self.previous_phase,
-            valid_action_ids: self.valid_action_ids.clone(),
+            valid_action_ids: self.card_choice.as_ref().map(|owner| owner.valid_action_ids(game))
+                .unwrap_or_else(||self.valid_action_ids.clone()),
             is_optional: self.is_optional,
             prompt: self.prompt.clone(),
             effect_choices: self.effect_choices.clone(),

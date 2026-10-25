@@ -298,3 +298,6 @@ fn ex13_013_engage_opens_an_end_of_turn_attack_window() {
         digimon_engine::action::space::SECURITY_TARGET
     )));
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

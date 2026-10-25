@@ -1,0 +1,120 @@
+impact index is current: qa\impact\dsl_impact_index.json
+lowering impact map is current: qa\impact\lowering_verb_map.json
+qa\rules\keyword_semantics_matrix.json is current
+rules coverage check: ok (361 Rust tests found, 0 warnings)
+Comprehensive Rules 4.3 conformance coverage: 1119 obligations (denominator)
+
+| Ch | Chapter | rules | proven | not-testable | gap (blocking) | gap | % proven of testable |
+|---|---|---|---|---|---|---|---|
+| 1 | Game Overview | 55 | 0 | 11 | 0 | 44 | 0.0% |
+| 2 | Card Information | 115 | 0 | 30 | 0 | 85 | 0.0% |
+| 3 | Game Areas | 66 | 10 | 14 | 0 | 42 | 19.2% |
+| 4 | Basic Terminology | 139 | 22 | 34 | 0 | 83 | 21.0% |
+| 5 | Game Preparation | 14 | 0 | 2 | 0 | 12 | 0.0% |
+| 6 | Game Procedures | 45 | 1 | 10 | 0 | 34 | 2.9% |
+| 7 | Playing a Card | 49 | 0 | 6 | 0 | 43 | 0.0% |
+| 8 | Digivolution | 55 | 0 | 8 | 0 | 47 | 0.0% |
+| 9 | Using Cards | 13 | 2 | 1 | 0 | 10 | 16.7% |
+| 10 | Link | 10 | 0 | 2 | 0 | 8 | 0.0% |
+| 11 | Attacking | 40 | 7 | 8 | 0 | 25 | 21.9% |
+| 12 | Blocking | 9 | 4 | 1 | 0 | 4 | 50.0% |
+| 13 | Security Checks | 18 | 7 | 3 | 0 | 8 | 46.7% |
+| 14 | Battles | 10 | 7 | 0 | 0 | 3 | 70.0% |
+| 15 | Effect Rules | 244 | 47 | 66 | 0 | 131 | 26.4% |
+| 16 | Keyword Effects | 206 | 162 | 44 | 0 | 0 | 100.0% |
+| 17 | Rule Checks | 16 | 11 | 3 | 0 | 2 | 84.6% |
+| 18 | Other Information | 15 | 9 | 3 | 0 | 3 | 75.0% |
+| Total | | 1119 | 289 | 246 | 0 | 584 | 33.1% |
+
+Mechanics set: proven 248 / not-testable 152 / gap-blocking 0 / gap 315 of 715 obligations
+Rust conformance tests found: 361
+code\digimon-engine\tests\rules_faq\generated_conformance.rs is current
+authoring guide is current: qa\exam-authoring-guide.json
+ok: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\data\oracle_readiness.json is up to date
+mechanics readiness check: ok. 715 obligations in the mechanics set: 248 proven / 152 not-testable / 0 gap(blocking) / 315 gap(non-blocking) => ready: true
+  ready = no mechanics obligation is flagged outcome-changing (`blocks_training`); 315 open mechanics gaps are unflagged and listed in `qa/rules/cr_obligations.json`
+lowering coverage is current: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\qa\impact\lowering_coverage.json
+card admissibility check: ok. 4477 registered cards: 1062 admissible / 0 unregistered / 3385 untested_lowering / 7 untested_card / 22 failed_verdict / 1 diverged_no_quirk
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 183 items
+
+code\tests\tools\test_impact_index.py ....                               [  2%]
+code\tests\tools\test_impact_lowering_map.py ..                          [  3%]
+code\tests\tools\test_impact_scope.py ............                       [  9%]
+code\tests\tools\test_keyword_semantics_matrix.py ...                    [ 11%]
+code\tests\tools\test_rules_coverage_report.py ..............            [ 19%]
+code\tests\tools\test_rules_build_obligations.py ..............          [ 26%]
+code\tests\tools\test_rules_parse.py .............                       [ 33%]
+code\tests\tools\test_rules_renumber_map.py ......                       [ 37%]
+code\tests\tools\test_faq_conformance_generator.py ..                    [ 38%]
+code\tests\tools\test_clause_coverage_authoring_guide.py ....            [ 40%]
+code\tests\tools\test_clause_coverage_readiness.py ..................... [ 51%]
+.......................................                                  [ 73%]
+code\tests\tools\test_verification_tier_manifest.py ..                   [ 74%]
+code\tests\tools\test_nextest_config.py ..                               [ 75%]
+code\tests\tools\test_verify_script.py ..                                [ 76%]
+code\tests\tools\test_embedded_card_paths_case.py .                      [ 77%]
+code\tests\tools\test_card_loop_interactions_probes.py ................. [ 86%]
+.................                                                        [ 95%]
+code\tests\tools\test_clause_coverage_keyword_brief.py ........          [100%]
+
+============================ 183 passed in 25.29s =============================
+==> tier 0: impact_index_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/impact_index.py --cards-dir code/digimon-engine/cards --out qa/impact/dsl_impact_index.json --check
+    ok in 9.0s
+==> tier 0: impact_lowering_map_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/impact_lowering_map.py --map qa/impact/lowering_verb_map.json --check
+    ok in 0.2s
+==> tier 0: keyword_semantics_matrix_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/keyword_semantics_matrix.py --source docs/digimon-rules/keyword-semantics.md --engine-enum code/digimon-engine/src/enums.rs --out qa/rules/keyword_semantics_matrix.json --check
+    ok in 0.1s
+==> tier 0: rules_coverage_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/rules/coverage_report.py --check
+    ok in 0.2s
+==> tier 0: rules_obligations_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m tools.rules.build_obligations --check
+    ok in 0.4s
+==> tier 0: rules_coverage_report
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/rules/coverage_report.py
+    ok in 0.2s
+==> tier 0: faq_conformance_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/faq_conformance_generator.py --cases qa/rules/faq_conformance_cases.json --out code/digimon-engine/tests/rules_faq/generated_conformance.rs --check
+    ok in 0.2s
+==> tier 0: authoring_guide_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/clause_coverage/authoring_guide.py --check
+    ok in 0.2s
+==> tier 0: oracle_readiness_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' code/tools/clause_coverage/readiness.py --check
+    ok in 4.3s
+==> tier 0: mechanics_readiness_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m tools.rules.mechanics_readiness --check
+    ok in 0.2s
+==> tier 0: lowering_coverage_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m tools.lowering_coverage --check
+    ok in 16.2s
+==> tier 0: card_admissibility_check
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m digimon_gym.agents.card_admissibility --check
+    ok in 16.0s
+==> tier 0: verification_tool_tests
+    'C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe' -m pytest code/tests/tools/test_impact_index.py code/tests/tools/test_impact_lowering_map.py code/tests/tools/test_impact_scope.py code/tests/tools/test_keyword_semantics_matrix.py code/tests/tools/test_rules_coverage_report.py code/tests/tools/test_rules_build_obligations.py code/tests/tools/test_rules_parse.py code/tests/tools/test_rules_renumber_map.py code/tests/tools/test_faq_conformance_generator.py code/tests/tools/test_clause_coverage_authoring_guide.py code/tests/tools/test_clause_coverage_readiness.py code/tests/tools/test_verification_tier_manifest.py code/tests/tools/test_nextest_config.py code/tests/tools/test_verify_script.py code/tests/tools/test_embedded_card_paths_case.py code/tests/tools/test_card_loop_interactions_probes.py code/tests/tools/test_clause_coverage_keyword_brief.py -q
+    ok in 26.3s
+
+Verification summary
+- tier 0 impact_index_check: ok (9.0s)
+- tier 0 impact_lowering_map_check: ok (0.2s)
+- tier 0 keyword_semantics_matrix_check: ok (0.1s)
+- tier 0 rules_coverage_check: ok (0.2s)
+- tier 0 rules_obligations_check: ok (0.4s)
+- tier 0 rules_coverage_report: ok (0.2s)
+- tier 0 faq_conformance_check: ok (0.2s)
+- tier 0 authoring_guide_check: ok (0.2s)
+- tier 0 oracle_readiness_check: ok (4.3s)
+- tier 0 mechanics_readiness_check: ok (0.2s)
+- tier 0 lowering_coverage_check: ok (16.2s)
+- tier 0 card_admissibility_check: ok (16.0s)
+- tier 0 verification_tool_tests: ok (26.3s)

@@ -1,0 +1,66 @@
+# Official observation 3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d.
+# Local image confirms top-scope Security; the generated JSON embeds its text
+# in the main field. Author Security explicitly rather than copying that layout.
+card: BT18-094
+name: Koichi Kimura
+kind: tamer
+color: [purple, yellow]
+cost: 4
+
+effects:
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "By trashing 1 Hybrid or Ten Warriors card from hand, gain 1 memory"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - trait_has: Hybrid
+            - trait_has: Ten Warriors
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: paid
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: Hybrid
+              - trait_has: Ten Warriors
+          prompt: "Trash 1 Hybrid or Ten Warriors card to gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: paid }
+      - gain_memory: 1
+
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    once_per_turn: true
+    summary: "May return 1 Hybrid or Ten Warriors card from trash to hand"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          any_of:
+            - trait_has: Hybrid
+            - trait_has: Ten Warriors
+        n: 1
+    process:
+      - select_trash:
+          of: you
+          bind_as: recovered
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Hybrid
+              - trait_has: Ten Warriors
+          prompt: "Return 1 Hybrid or Ten Warriors card from trash to hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }
+
+  - when: on_security
+    summary: "Play this card without paying its cost"
+    process:
+      - play_from_security: {}

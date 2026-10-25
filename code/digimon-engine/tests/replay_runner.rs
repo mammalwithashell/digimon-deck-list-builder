@@ -1169,3 +1169,115 @@ fn dcgo_opaque_recording_with_initial_state_overwrites_only_my_side() {
         "opponent's opaque hand from the pre-snapshot construction is intact"
     );
 }
+
+#[test]
+fn native_recording_declares_action_semantics_and_rejects_unknown_versions() {
+    let recording = record_game(1);
+    assert_eq!(recording["action_schema_version"], digimon_engine::action::space::SCHEMA_VERSION);
+    for bad in [serde_json::json!(999), serde_json::json!(0), serde_json::json!(true), serde_json::json!("2"), serde_json::Value::Null] {
+        let mut future = recording.clone();
+        future["action_schema_version"] = bad;
+        assert!(ReplaySession::new(future.clone(), &minimal_db(), false).is_err());
+        assert!(ReplayRunner::new(future, &minimal_db(), false).is_err());
+    }
+}
+
+#[test]
+fn legacy_native_replay_stops_before_reinterpreting_owned_card_alias() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut recording = record_game(1);
+    recording.as_object_mut().unwrap().remove("action_schema_version");
+    let mut replay = ReplaySession::new(recording, &minimal_db(), false).unwrap();
+    let source = replay.game.player(0).security[0].handle();
+    EffectContext::new(&mut replay.game, source, None, 0).select_security(
+        0, "Owned security", true, |_, _| true, |_, _| {});
+    let digest = replay.game.verification_digest();
+    replay.step();
+    assert!(replay.is_paused(), "legacy raw aliases must stop at owned card prompts");
+    assert_eq!(replay.current_step(), 0);
+    assert_eq!(replay.game.verification_digest(), digest);
+    assert!(format!("{:?}", replay.divergences()).contains("action_schema_version"));
+}
+
+#[test]
+fn historical_digests_ignore_new_card_choice_allocator_and_shuffle_counters() {
+    use digimon_engine::recorder::VerificationDigestVersion;
+    let db = minimal_db();
+    let deck = test_deck();
+    let mut runner = HeadlessRunner::new(deck.clone(), deck, &db, false, false, false, Some(42)).unwrap();
+    runner.step(0);
+    runner.step(0);
+    runner.game.players[0].security.truncate(1);
+    for version in [VerificationDigestVersion::LegacyV2, VerificationDigestVersion::V3] {
+        let before = runner.game.verification_digest_with_version(version);
+        let current = runner.game.verification_digest();
+        let _ = digimon_engine::owned_card_choice::OwnedCardChoice::security(&mut runner.game, 0, vec![0], true).unwrap();
+        runner.game.shuffle_security(0);
+        assert_ne!(current, runner.game.verification_digest(), "current protocol records page/shuffle state");
+        assert_eq!(before, runner.game.verification_digest_with_version(version),
+            "historical digest bytes cannot absorb new paging state");
+    }
+}
+
+#[test]
+fn current_native_replay_can_apply_owned_card_decline() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut replay = ReplaySession::new(record_game(1), &minimal_db(), false).unwrap();
+    let source = replay.game.player(0).security[0].handle();
+    EffectContext::new(&mut replay.game, source, None, 0).select_security(
+        0, "Owned security", true, |_, _| true, |_, _| {});
+    replay.step();
+    assert!(!replay.is_paused());
+    assert_eq!(replay.current_step(), 1);
+    assert!(replay.game.pending_selection.is_none());
+}
+
+
+#[test]
+fn legacy_native_plain_actions_remain_replayable_and_classic_runner_refuses_owned_aliases() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut recording = record_game(2);
+    recording.as_object_mut().unwrap().remove("action_schema_version");
+    let mut plain = ReplaySession::new(recording.clone(), &minimal_db(), false).unwrap();
+    plain.run_to_completion();
+    assert!(plain.is_complete());
+    assert!(!plain.is_paused());
+    let mut classic = ReplayRunner::new(recording, &minimal_db(), false).unwrap();
+    let source = classic.game.player(0).security[0].handle();
+    EffectContext::new(&mut classic.game, source, None, 0).select_security(
+        0, "Owned security", true, |_, _| true, |_, _| {});
+    let before = classic.game.verification_digest();
+    let result = classic.step();
+    assert!(classic.is_paused());
+    assert_eq!(classic.current_step(), 0);
+    assert_eq!(classic.game.verification_digest(), before);
+    assert_eq!(result.divergences[0].field, "action_schema_version");
+    classic.run_to_completion(); // a refused action cannot spin a completion loop
+    assert!(!classic.is_complete());
+}
+
+#[test]
+fn legacy_verification_metadata_defaults_to_one_and_refuses_owned_aliases() {
+    use digimon_engine::effect_context::EffectContext;
+    let recording = record_verification_game(1);
+    assert_eq!(recording.action_schema_version, digimon_engine::action::space::SCHEMA_VERSION);
+    let mut json = serde_json::to_value(recording).unwrap();
+    json.as_object_mut().unwrap().remove("action_schema_version");
+    json["engine_schema_version"] = serde_json::json!(2);
+    let legacy: VerificationReplayRecording = serde_json::from_value(json).unwrap();
+    assert_eq!(legacy.action_schema_version, 1);
+    let mut replay = ReplaySession::from_verification_recording(legacy, &minimal_db(), false).unwrap();
+    let source = replay.game.player(0).hand[0].handle();
+    // Before mulligan security has not been dealt; use hand source attribution
+    // and an explicit security card to install the owned prompt under test.
+    let card = replay.game.players[0].hand.pop().unwrap();
+    replay.game.players[0].security.push(card);
+    EffectContext::new(&mut replay.game, source, None, 0).select_security(
+        0, "Owned security", true, |_, _| true, |_, _| {});
+    let before = replay.game.verification_digest();
+    replay.step();
+    assert!(replay.is_paused());
+    assert_eq!(replay.current_step(), 0);
+    assert_eq!(replay.game.verification_digest(), before);
+    assert!(format!("{:?}", replay.divergences()).contains("action_schema_version"));
+}

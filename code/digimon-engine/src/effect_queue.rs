@@ -437,6 +437,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: chooser,
@@ -5904,6 +5905,7 @@ impl Game {
         let declined_permanent = qe.source_permanent;
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Replacement,
             selecting_player: chooser,
@@ -6122,6 +6124,7 @@ impl Game {
         self.current_phase = GamePhase::EffectChoice;
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::TriggerOrder,
             selecting_player: chooser,
@@ -6351,6 +6354,64 @@ impl Game {
         self.resolve_selection_with_lifecycle(player, action_id, false)
     }
 
+    fn dispatch_selection_continuations(&mut self, payment_hooks_before: usize,
+        payment_owner: Option<crate::card_source::CardHandle>,
+        mut digivolve_scope_order: Vec<crate::card_source::CardHandle>,
+        declined: bool, payment_aborted: bool, recovery_abort: bool) {
+            for scope in &self.effect_digivolve_scopes {
+                if !digivolve_scope_order.contains(&scope.declaration.result_card) {
+                    digivolve_scope_order.push(scope.declaration.result_card);
+                }
+            }
+            let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
+            let mut indexed: Vec<_> = hooks.into_iter().enumerate().collect();
+            // Nested evolution payments finish before their enclosing payment.
+            // Preserve other continuation kinds and the original index used to
+            // attribute this selection's payment outcome. Scope depth is live
+            // typed ownership, not prompt text or a permanent's shifting index.
+            let chain_positions: Vec<_> = indexed.iter().enumerate().filter_map(|(slot, (_, hook))| {
+                matches!(hook, crate::resume::AfterSelectionHook::DigivolveReducerChain { .. }).then_some(slot)
+            }).collect();
+            let depth = |hook: &crate::resume::AfterSelectionHook| match hook {
+                crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => state.effect.as_ref()
+                    .and_then(|effect| digivolve_scope_order.iter().rposition(|card| *card == effect.result_card))
+                    .map_or(0, |index| index + 1),
+                _ => 0,
+            };
+            // Stable insertion swaps only reducer slots; repeated parking
+            // therefore cannot invert nested ownership on the next decision.
+            for right in 1..chain_positions.len() {
+                let mut at = right;
+                while at > 0 && depth(&indexed[chain_positions[at]].1) > depth(&indexed[chain_positions[at - 1]].1) {
+                    indexed.swap(chain_positions[at], chain_positions[at - 1]);
+                    at -= 1;
+                }
+            }
+            crate::game_actions::effect_dna::order_nested_dna_payment_hooks(&mut indexed);
+            for (index, mut hook) in indexed {
+                if recovery_abort && index < payment_hooks_before {
+                    self.fail_owned_choice_payment_hook(&mut hook);
+                }
+                // Passing an immediate replacement declines that replacement,
+                // not the enclosing evolution used to pay this cost. Its
+                // declaration still commits after the remaining window closes.
+                if index < payment_hooks_before
+                    && (declined
+                        || payment_aborted)
+                {
+                    if let crate::resume::AfterSelectionHook::DigivolveReducerChain {
+                        state, paid, ..
+                    } = &mut hook
+                    {
+                        if payment_owner.is_none() || payment_owner == Some(state.result_card()) {
+                            *paid = false;
+                        }
+                    }
+                }
+                self.run_after_selection_hook(hook);
+            }
+    }
+
     fn resolve_selection_with_lifecycle(
         &mut self,
         player: PlayerId,
@@ -6367,14 +6428,19 @@ impl Game {
             return Err(SelectionError::WrongPlayer);
         }
         let is_pass = action_id == PASS;
-        if is_pass && !sel.is_optional {
-            return Err(SelectionError::InvalidAction);
-        }
-        if !is_pass && !sel.valid_action_ids.contains(&action_id) {
-            return Err(SelectionError::InvalidAction);
+        let recovery_abort = sel.card_choice.as_ref().is_some_and(|owner|
+            owner.recovery(self) == crate::owned_card_choice::CardChoiceRecovery::Impossible);
+        if let Some(owner) = &sel.card_choice {
+            if !owner.valid_action_ids(self).contains(&action_id) { return Err(SelectionError::InvalidAction); }
+        } else {
+            if is_pass && !sel.is_optional { return Err(SelectionError::InvalidAction); }
+            if !is_pass && !sel.valid_action_ids.contains(&action_id) { return Err(SelectionError::InvalidAction); }
         }
         // Page navigation is presentation state only. Do not run payment hooks,
         // triggers, turn checks, or any other post-selection lifecycle.
+        if crate::owned_card_choice::prepare_resolution(self, action_id)? {
+            return Ok(());
+        }
         if self.navigate_play_cost_order(action_id) {
             return Ok(());
         }
@@ -6416,6 +6482,11 @@ impl Game {
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
         let resume = self.pending_selection_resume.take();
+        let raw_continuations = resume.is_none();
+        let raw_hooks_before = self.after_selection_resume_hooks.0.len();
+        let raw_scope_order = self.effect_digivolve_scopes.iter().map(|scope| scope.declaration.result_card).collect();
+        let raw_declined = is_pass && sel.kind != crate::selection::SelectionKind::Replacement;
+        let mut raw_aborted = false;
         self.current_phase = sel.previous_phase;
         // G-ENGINE-TURN-END-MID-EFFECT: the callback and every post-callback
         // continuation below (pay-cost tails, parked security removals,
@@ -6444,7 +6515,17 @@ impl Game {
             let mut digivolve_scope_order: Vec<_> = self.effect_digivolve_scopes.iter()
                 .map(|scope| scope.declaration.result_card).collect();
             let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
-            crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
+            if recovery_abort {
+                self.decline_pending_pay_cost();
+                self.resolved_card_choice = None;
+                self.dsl_clause_aborted = true;
+                crate::dsl_cards::step::selections::abandon_owned_choice(self, stack);
+                if let Some((tail, _, _)) = self.dsl_outer_tail.take() {
+                    crate::dsl_cards::step::cleanup_aborted_steps(self, &tail);
+                }
+            } else {
+                crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
+            }
             let payment_aborted = self.dsl_clause_aborted;
             self.dsl_clause_aborted = prev_aborted;
             // Run continuations that wrappers (play-cost / reducer /
@@ -6453,54 +6534,13 @@ impl Game {
             // run_resume. Each hook is plain data (`AfterSelectionHook`);
             // a hook that installs another resume-driven selection re-arms by
             // pushing onto the (now-drained) channel for the next resolution.
-            for scope in &self.effect_digivolve_scopes {
-                if !digivolve_scope_order.contains(&scope.declaration.result_card) {
-                    digivolve_scope_order.push(scope.declaration.result_card);
-                }
-            }
-            let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
-            let mut indexed: Vec<_> = hooks.into_iter().enumerate().collect();
-            // Nested evolution payments finish before their enclosing payment.
-            // Preserve other continuation kinds and the original index used to
-            // attribute this selection's payment outcome. Scope depth is live
-            // typed ownership, not prompt text or a permanent's shifting index.
-            let chain_positions: Vec<_> = indexed.iter().enumerate().filter_map(|(slot, (_, hook))| {
-                matches!(hook, crate::resume::AfterSelectionHook::DigivolveReducerChain { .. }).then_some(slot)
-            }).collect();
-            let depth = |hook: &crate::resume::AfterSelectionHook| match hook {
-                crate::resume::AfterSelectionHook::DigivolveReducerChain { state, .. } => state.effect.as_ref()
-                    .and_then(|effect| digivolve_scope_order.iter().rposition(|card| *card == effect.result_card))
-                    .map_or(0, |index| index + 1),
-                _ => 0,
-            };
-            // Stable insertion swaps only reducer slots; repeated parking
-            // therefore cannot invert nested ownership on the next decision.
-            for right in 1..chain_positions.len() {
-                let mut at = right;
-                while at > 0 && depth(&indexed[chain_positions[at]].1) > depth(&indexed[chain_positions[at - 1]].1) {
-                    indexed.swap(chain_positions[at], chain_positions[at - 1]);
-                    at -= 1;
-                }
-            }
-            crate::game_actions::effect_dna::order_nested_dna_payment_hooks(&mut indexed);
-            for (index, mut hook) in indexed {
-                // Passing an immediate replacement declines that replacement,
-                // not the enclosing evolution used to pay this cost. Its
-                // declaration still commits after the remaining window closes.
-                if index < payment_hooks_before
-                    && ((is_pass && sel.kind != crate::selection::SelectionKind::Replacement)
-                        || payment_aborted)
-                {
-                    if let crate::resume::AfterSelectionHook::DigivolveReducerChain {
-                        state, paid, ..
-                    } = &mut hook
-                    {
-                        if payment_owner == Some(state.result_card()) {
-                            *paid = false;
-                        }
-                    }
-                }
-                self.run_after_selection_hook(hook);
+            self.dispatch_selection_continuations(payment_hooks_before, payment_owner, digivolve_scope_order,
+                is_pass && sel.kind != crate::selection::SelectionKind::Replacement, payment_aborted, recovery_abort);
+        } else if recovery_abort {
+            self.decline_pending_pay_cost();
+            self.resolved_card_choice = None;
+            if let Some((tail, _, _)) = self.dsl_outer_tail.take() {
+                crate::dsl_cards::step::cleanup_aborted_steps(self, &tail);
             }
         } else if is_pass {
             if let Some(on_decline) = sel.on_decline {
@@ -6514,10 +6554,16 @@ impl Game {
                 // checked by the DSL step runner.
                 let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
                 on_decline(self);
+                raw_aborted = self.dsl_clause_aborted;
                 self.dsl_clause_aborted = prev_aborted;
             }
         } else {
             (sel.callback)(self, action_id);
+            raw_aborted = self.dsl_clause_aborted;
+        }
+        if raw_continuations {
+            self.dispatch_selection_continuations(raw_hooks_before, None, raw_scope_order,
+                raw_declined, raw_aborted, recovery_abort);
         }
         if !resume_lifecycle {
             // The caller is searching payment branches on a clone. Preserve

@@ -1,0 +1,31 @@
+{
+  "source": "p-249-source-candidate/compatibility-before-registry.json",
+  "publication_lane": "supported pre-cutover fixed paths; card_data_revision.json absent",
+  "producer": "code/tools/build_registry.py --offline; code/tools/split_cards_json.py --card P-249",
+  "old_registered_ids": 4476,
+  "new_registered_ids": 4477,
+  "p249_index": 4481,
+  "p249_norm_id": 0.22405,
+  "old_assignments_preserved": true,
+  "intentional_existing_metadata_corrections": [
+    "BT18-094 security section",
+    "BT18-097 security section"
+  ],
+  "data_checks": {
+    "tests_passed": 36,
+    "fixture_repair": "offline allocation test now owns a temporary registry instead of colliding with real committed assignments",
+    "security_section_guard": "Dedicated security field preferred for corrected rows; legacy convention retained, missing Hybrid token regression detects drift."
+  },
+  "behavioral_tests": {
+    "passed": 9,
+    "red_log": "verification/logs/p249-red.log",
+    "green_log": "verification/logs/p249-green-final.log",
+    "independent_review": "approved; official image/text, routes, exact-host placement/evolution and inherited deletion"
+  },
+  "new_contract_foundation": {
+    "active_selectors_migrated": false,
+    "cargo_tests_passed": 5,
+    "internal_overflow_test_passed_standalone": 1,
+    "contract": "../../../../openspec/changes/support-complete-digivolution-source-choices/contract-inventory.md"
+  }
+}

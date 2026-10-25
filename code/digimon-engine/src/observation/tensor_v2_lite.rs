@@ -269,9 +269,11 @@ fn write_pending_choice_features(
             .card_data_for_handle(sel.source_card)
             .map(|card| registry.get_index(&card.card_id) as f32)
             .unwrap_or(0.0);
-        for (row, action_id) in sel
-            .valid_action_ids
-            .iter()
+        let card_page = sel.card_choice.as_ref().map(|owner| owner.view(game, observer));
+        let presented_actions: Vec<u16> = card_page.as_ref()
+            .map(|page| page.rows.iter().map(|row| row.action_id).collect())
+            .unwrap_or_else(|| sel.valid_action_ids.clone());
+        for (row, action_id) in presented_actions.iter()
             .take(layout::PENDING_CHOICE_ROWS)
             .enumerate()
         {
@@ -281,7 +283,7 @@ fn write_pending_choice_features(
             t[base + 2] = *action_id as f32 / crate::action::space::ACTION_SPACE_SIZE as f32;
             t[base + 3] = row as f32 / layout::PENDING_CHOICE_ROWS as f32;
             t[base + 4] =
-                (sel.valid_action_ids.len() as f32 / layout::PENDING_CHOICE_ROWS as f32).min(1.0);
+                (presented_actions.len() as f32 / layout::PENDING_CHOICE_ROWS as f32).min(1.0);
             let choice = sel
                 .effect_choices
                 .as_ref()
@@ -313,6 +315,11 @@ fn write_pending_choice_features(
                 write_effect_category_flags(t, base + 45, choice.observation_metadata.categories);
                 if let Some(count) = choice.count_choice {
                     write_count_choice(t, base, count, observer);
+                }
+            }
+            if let Some(page) = &card_page {
+                if let Some(presented) = page.rows.get(row) {
+                    super::card_choice::write_row(t, base, presented, page, registry, observer);
                 }
             }
         }

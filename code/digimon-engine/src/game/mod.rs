@@ -279,7 +279,17 @@ pub(crate) struct PendingAddedSources {
     pub(crate) cards: Vec<crate::card_source::CardHandle>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// One physical security play's completion, retained across replacement prompts.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct SecurityPlayReceipt {
+    pub(crate) id: u64,
+    pub(crate) player: u8,
+    pub(crate) card: CardHandle,
+    pub(crate) original_index: usize,
+    pub(crate) committed: Option<(PermanentHandle, u64)>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PendingWouldPlayOrigin {
     Hand,
     Trash {
@@ -288,6 +298,8 @@ pub(crate) enum PendingWouldPlayOrigin {
     SecurityTop {
         was_face_up: bool,
     },
+    SecurityRecorded { was_face_up: bool, index: usize, receipt: u64 },
+    SecurityAt { was_face_up: bool, index: usize },
     Reveal {
         index: usize,
     },
@@ -300,10 +312,27 @@ pub(crate) enum PendingWouldPlayOrigin {
     },
 }
 
+// Preserve archival origin Debug bytes; V4 hashes the typed extension separately.
+impl std::fmt::Debug for PendingWouldPlayOrigin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Hand => f.write_str("Hand"),
+            Self::Trash { index } => f.debug_struct("Trash").field("index", index).finish(),
+            Self::SecurityTop { was_face_up } | Self::SecurityAt { was_face_up, .. }
+            | Self::SecurityRecorded { was_face_up, .. } => f.debug_struct("SecurityTop").field("was_face_up", was_face_up).finish(),
+            Self::Reveal { index } => f.debug_struct("Reveal").field("index", index).finish(),
+            Self::Source { permanent, host_identity, source_index, suspended, receipt } => f.debug_struct("Source")
+                .field("permanent", permanent).field("host_identity", host_identity).field("source_index", source_index)
+                .field("suspended", suspended).field("receipt", receipt).finish(),
+        }
+    }
+}
+
 impl PendingWouldPlayOrigin {
     pub(crate) fn source_play_receipt(&self) -> Option<u64> {
         match self {
             Self::Source { receipt, .. } => *receipt,
+            Self::SecurityRecorded { receipt, .. } => Some(*receipt),
             _ => None,
         }
     }
@@ -320,8 +349,7 @@ impl PendingWouldPlayOrigin {
 
 #[derive(Debug, Clone)]
 pub(crate) struct PendingSecurityMove {
-    /// Explicit printed top-stacked-card extraction, not permanent departure.
-    pub(crate) top_only: bool,
+    pub(crate) kind: SecurityMoveKind,
     pub(crate) donor: (PlayerId, u64),
     pub(crate) card: crate::card_source::CardHandle,
     pub(crate) player: PlayerId,
@@ -329,6 +357,13 @@ pub(crate) struct PendingSecurityMove {
     pub(crate) face_up: bool,
     pub(crate) observer: PlayerId,
     pub(crate) leave_complete: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SecurityMoveKind {
+    Permanent,
+    TopCard,
+    SourceCard,
 }
 
 #[derive(Debug, Clone)]
@@ -562,6 +597,9 @@ pub struct Game {
     /// `Game::resolve_selection`. See `selection.rs` for the design.
     /// Always `None` until the selection subsystem lands (PR2/PR3).
     pub pending_selection: Option<PendingSelection>,
+    pub(crate) next_card_choice_id: u64,
+    pub(crate) security_shuffle_generations: [u64; 2],
+    pub(crate) resolved_card_choice: Option<crate::owned_card_choice::ResolvedCardChoice>,
     /// Coexistence-phase data continuation paired with `pending_selection`
     /// (make-engine-cloneable Phase 2). When `Some`, `resolve_generic_selection`
     /// runs the data-frame VM (`crate::resume::run_resume`) instead of the
@@ -760,6 +798,8 @@ pub struct Game {
         Option<(PermanentHandle, u64)>,
     )>,
     pub(crate) next_source_play_receipt: u64,
+    pub(crate) security_play_receipts: Vec<SecurityPlayReceipt>,
+    pub(crate) next_security_play_receipt: u64,
     /// Receipt-owned preparation slots; no ambient batch flag can capture nested plays.
     pub(crate) prepared_source_plays: Vec<(u64, Option<PreparedSourcePlay>)>,
     pub(crate) deletion_receipts: Vec<(u64, Vec<(PermanentHandle, Option<i32>, bool, (u16, u64))>)>,
@@ -1729,6 +1769,20 @@ impl Game {
     /// Works uniformly for every `SelectionKind`: TriggerOrder, OppField,
     /// Hand, Trash, EffectChoice, etc. The callback stored on the
     /// selection does kind-specific decoding.
+    /// Strict transport entry point. Serial engine/RL callers resolve the
+    /// current prompt; asynchronous callers must echo its exact page token.
+    pub fn resolve_selection_checked(
+        &mut self,
+        player: PlayerId,
+        action_id: u16,
+        expected: crate::card_choice_page::CardChoiceToken,
+    ) -> Result<(), crate::selection::SelectionError> {
+        let current = self.pending_selection.as_ref().and_then(|p| p.card_choice.as_ref())
+            .map(|owner| owner.token());
+        if current != Some(expected) { return Err(crate::selection::SelectionError::InvalidAction); }
+        self.resolve_selection(player, action_id)
+    }
+
     pub fn resolve_selection(
         &mut self,
         player: PlayerId,
@@ -3356,10 +3410,27 @@ impl Game {
         effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
         payload: Option<crate::modifiers::ModifierPayload>,
     ) {
+        self.add_floating_mass_modifier_scoped(filter, modifier, value, source_card,
+            source_player, expiry, effect_immunity, payload, false);
+    }
+
+    pub fn add_floating_mass_modifier_scoped(
+        &mut self,
+        filter: digimon_dsl::compiled::CompiledPredicate,
+        modifier: ModifierType,
+        value: i32,
+        source_card: crate::card_source::CardHandle,
+        source_player: PlayerId,
+        expiry: Expiry,
+        effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
+        payload: Option<crate::modifiers::ModifierPayload>,
+        opponent_only: bool,
+    ) {
         let pending_skips =
             crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
         self.floating_mass_modifiers
             .push(crate::floating_modifier::FloatingMassModifier {
+                opponent_only,
                 filter,
                 modifier,
                 value,
@@ -3390,6 +3461,7 @@ impl Game {
             crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
         self.floating_mass_modifiers
             .push(crate::floating_modifier::FloatingMassModifier {
+                opponent_only: false,
                 filter,
                 modifier: ModifierType::ChangeDp,
                 value: 0,

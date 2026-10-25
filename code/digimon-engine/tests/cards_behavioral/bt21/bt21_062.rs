@@ -342,13 +342,13 @@ fn bt21_062_when_digivolving_may_use_ragnarok_cannon_from_trash_free() {
     );
     assert!(view.is_optional, "using the Cannon is declinable (\"you may\")");
     assert_eq!(
-        view.valid_action_ids.len(),
+        view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
         1,
-        "only the Ragnarok Cannon in trash is a legal pick"
+        "only the Ragnarok Cannon in trash is a legal commit (decline remains separate)"
     );
     let memory_before = runner.game.memory;
     runner
-        .execute_action(0, view.valid_action_ids[0])
+        .execute_action(0, owned_union_fixture::action(&runner.game, 0, "CANNON", true).expect("legal physical Cannon trash row"))
         .expect("use the Ragnarok Cannon for free");
     runner.auto_resolve().expect("finish resolution");
 
@@ -758,3 +758,6 @@ fn bt21_062_when_digivolving_ignores_non_cannon_options() {
         "the distractor Option remains untouched in hand"
     );
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

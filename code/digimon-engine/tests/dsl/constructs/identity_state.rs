@@ -741,17 +741,20 @@ fn source_count_at_least_zero_is_always_true() {
     probe(&mut r);
     answer(&mut r, &[encode_attack(0, 0), encode_attack(0, 1)]);
 }
-// DCGO BT25_085 CanTrashCardSource->IsOption->CardKinds uses printed data even
-// face down. Preserve sheet row D pending CR 4-7-9 reconciliation (ledger).
+// CR4-7-9: a face-down stacked card has no referenceable printed name.
+// CR4-7-10 allows its owner to inspect it, without restoring characteristics.
+// The historical DCGO row-D behavior differs; printed rules take priority.
 #[test]
-fn source_count_face_down_row_d_matches_current_dcgo_behavior() {
+fn source_count_face_down_row_d_obeys_cr_4_7_9_characteristic_opacity() {
     let mut r = runner(SOURCES, &[]);
     for _ in 0..2 {
         let h = r.place_stack(0, &["VEM", "VEM", "FIVE"]);
         r.game.players[0].battle_area[h.index as usize].card_sources[1].face_down = true;
     }
     probe(&mut r);
-    answer(&mut r, &[encode_attack(0, 0), encode_attack(0, 1)]);
+    assert!(r.game.pending_selection.is_none(),
+        "each carrier has only one referenceable Vemmon, below the required two");
+    assert_eq!(r.memory(), 6, "empty optional select continues the mandatory tail");
 }
 #[test]
 fn source_count_in_an_if_without_a_permanent_subject_is_false() {

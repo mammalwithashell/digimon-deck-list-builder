@@ -31,6 +31,7 @@ fn add_modifier_filter_targets_every_match() {
     let src_card = runner.game.players[0].hand[0].handle();
 
     let steps = vec![CompiledStep::AddModifier {
+        opponent_only: false,
         target: CompiledModifierTarget::Filter(CompiledPredicate {
             kind: Some(CompiledCardKind::Digimon),
             ..CompiledPredicate::default()
@@ -76,6 +77,7 @@ fn add_modifier_filter_can_install_timing_suppression_modifier() {
     let src_card = runner.game.players[0].hand[0].handle();
 
     let steps = vec![CompiledStep::AddModifier {
+        opponent_only: false,
         target: CompiledModifierTarget::Filter(CompiledPredicate {
             kind: Some(CompiledCardKind::Digimon),
             ..CompiledPredicate::default()

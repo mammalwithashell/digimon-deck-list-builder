@@ -601,10 +601,12 @@ fn bt23_032_would_leave_prompt_offers_only_matching_sources() {
         .expect("select_material prompt must surface after accepting");
     assert_eq!(pending.kind, SelectionKind::Material);
     assert_eq!(
-        pending.valid_action_ids.len(),
+        physical_menu::commits(&r.game).len(),
         1,
-        "only the single matching [Angel]/yellow Lv.4 source should be a legal pick"
+        "only the single matching [Angel]/yellow Lv.4 source should be a legal card pick"
     );
+    let action = physical_menu::source_action(&r.game, shakko, 1);
+    assert!(pending.valid_action_ids.contains(&action));
 }
 
 #[test]
@@ -774,3 +776,6 @@ fn bt23_032_would_leave_opt_lockout_same_permanent_twice_in_one_turn() {
          permanent's face-up clause within the same turn"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

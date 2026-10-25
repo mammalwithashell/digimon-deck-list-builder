@@ -476,11 +476,18 @@ impl<'a> EffectContext<'a> {
                 None => return false,
             }
         };
-        self.place_on_security(
-            target_player,
-            crate::enums::CardSourceRef::Material(carrier, source_index),
-            position,
-            face_up,
+        // A selected active top retains generic permanent-placement behavior.
+        // Underlying cards need an owned continuation before replacements open.
+        let is_top = self.game.player(carrier.player).battle_area[carrier.index as usize]
+            .card_sources.len() == source_index + 1;
+        if is_top {
+            return self.place_on_security(
+                target_player, crate::enums::CardSourceRef::Material(carrier, source_index),
+                position, face_up,
+            );
+        }
+        self.game.place_source_on_security(
+            target_player, carrier, source_card, position, face_up, self.player,
         )
     }
 

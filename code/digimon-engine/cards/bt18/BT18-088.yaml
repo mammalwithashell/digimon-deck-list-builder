@@ -1,0 +1,54 @@
+# Official observation 9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38;
+# card image + base DCGO BT18/Red/BT18_088.cs; Q3045 and Q3046.
+card: BT18-088
+name: Takuya Kanbara & Koji Minamoto
+kind: tamer
+color: [red, yellow]
+cost: 5
+also_treated_as: [Takuya Kanbara, Koji Minamoto]
+effects:
+  - when: start_of_your_turn
+    condition: {memory_lte: 2}
+    process:
+      - set_memory: 3
+  - when: start_of_your_main_phase
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 0
+          optional_zero: true
+          max:
+            formula:
+              base: 1
+              per:
+                card_count_in_zone:
+                  of: you
+                  zone: battle_area
+                  filter:
+                    all_of:
+                      - kind: tamer
+                      - not: {is_source: true}
+              delta: 2
+          distinct_by: name
+          filter: {trait_has: Hybrid}
+          bind_as: spirits
+          prompt: You may place Hybrid cards with different names under this Tamer
+      - place_cards_as_bottom_sources: {cards: spirits, target: source}
+  - scope: inherited
+    when: end_of_your_turn
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        is_source: true
+        kind: digimon
+        any_of: [{trait_has: Hybrid}, {trait_has: Ten Warriors}]
+    process:
+      - may_attack_now: {attacker: source, targets: player, optional: true}
+  - when: on_security
+    process:
+      - play_from_security: {}

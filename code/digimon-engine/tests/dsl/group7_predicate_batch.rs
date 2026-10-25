@@ -550,6 +550,7 @@ fn add_modifier_filter_threads_bindings_for_not_in_binding() {
     let target = runner.place_on_field(0, "HIGH-DP", None);
     let source = src_card(&runner);
     let steps = vec![CompiledStep::AddModifier {
+        opponent_only: false,
         target: CompiledModifierTarget::Filter(CompiledPredicate {
             kind: Some(CompiledCardKind::Digimon),
             not_in_binding: Some("saved".to_string()),
@@ -936,6 +937,7 @@ fn result_bound_suspend_predicate_reads_current_effect_result_log() {
                 ..Default::default()
             },
             then: vec![CompiledStep::AddModifier {
+                opponent_only: false,
                 target: CompiledModifierTarget::Binding(
                     digimon_dsl::compiled::CompiledBindingRef::Named("target".to_string()),
                 ),

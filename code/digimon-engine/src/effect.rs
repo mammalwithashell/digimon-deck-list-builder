@@ -506,6 +506,9 @@ pub struct Effect {
     /// whose effect has this flag) and
     /// `scan_before_pay_cost_reduction_for_hand_card` (which evaluates it).
     pub when_playing_this: bool,
+    /// This exact physical hand card's own digivolution-cost reducer.
+    /// Excluded from field scans and from play/use cost calculation.
+    pub when_digivolving_this: bool,
 
     /// When `true`, a lone triggered firing of this OPTIONAL effect installs
     /// an explicit outer accept/decline `PendingSelection` before its body
@@ -998,6 +1001,7 @@ impl EffectBuilder {
                 ordinary_field_option: false,
                 linked: false,
                 when_playing_this: false,
+                when_digivolving_this: false,
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
                 optional_condition_guard: None,
@@ -1013,6 +1017,12 @@ impl EffectBuilder {
     /// separately in `scan_before_pay_cost_reduction_for_hand_card`.
     pub fn when_playing_this(mut self) -> Self {
         self.inner.when_playing_this = true;
+        self
+    }
+
+    /// Host a reducer on the physical incoming card in hand during evolution.
+    pub fn when_digivolving_this(mut self) -> Self {
+        self.inner.when_digivolving_this = true;
         self
     }
 

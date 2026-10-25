@@ -1,0 +1,39 @@
+
+running 12 tests
+test ex7::ex7_043::ex7_043_cannot_digivolve_from_plain_red_lv3 ... ok
+
+thread 'ex7::ex7_043::ex7_043_cost_paid_with_no_opponent_digimon_still_returns_cards' (11652) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_043.rs:311:10:
+pick 1: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex7::ex7_043::ex7_043_cost_paid_with_no_opponent_digimon_still_returns_cards ... FAILED
+
+thread 'ex7::ex7_043::ex7_043_de_digivolve_stops_at_level_three' (19420) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_043.rs:332:10:
+pick 1: InvalidAction
+test ex7::ex7_043::ex7_043_de_digivolve_stops_at_level_three ... FAILED
+test ex7::ex7_043::ex7_043_decline_first_pick_returns_nothing_and_skips_de_digivolve ... ok
+test ex7::ex7_043::ex7_043_digivolves_from_red_lv3_with_tm_in_text_for_two ... ok
+test ex7::ex7_043::ex7_043_inherited_reboot_grants_keyword_to_carrier ... ok
+test ex7::ex7_043::ex7_043_non_tm_cards_are_not_selectable ... ok
+test ex7::ex7_043::ex7_043_on_play_no_prompt_with_only_two_tm_cards ... ok
+test ex7::ex7_043::ex7_043_on_play_prompts_with_three_tm_cards_across_hand_and_trash ... ok
+
+thread 'ex7::ex7_043::ex7_043_returns_three_to_deck_top_in_pick_order_then_de_digivolves_opponent' (50484) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_043.rs:239:10:
+pick TM-2: InvalidAction
+test ex7::ex7_043::ex7_043_returns_three_to_deck_top_in_pick_order_then_de_digivolves_opponent ... FAILED
+test ex7::ex7_043::ex7_043_structure_matches_printed_text ... ok
+
+thread 'ex7::ex7_043::ex7_043_when_digivolving_offers_the_same_cost' (29220) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_043.rs:367:10:
+pick 1: InvalidAction
+test ex7::ex7_043::ex7_043_when_digivolving_offers_the_same_cost ... FAILED
+
+failures:
+
+failures:
+    ex7::ex7_043::ex7_043_cost_paid_with_no_opponent_digimon_still_returns_cards
+    ex7::ex7_043::ex7_043_de_digivolve_stops_at_level_three
+    ex7::ex7_043::ex7_043_returns_three_to_deck_top_in_pick_order_then_de_digivolves_opponent
+    ex7::ex7_043::ex7_043_when_digivolving_offers_the_same_cost
+
+test result: FAILED. 8 passed; 4 failed; 0 ignored; 0 measured; 12743 filtered out; finished in 19.08s
+
+FILTER_EXIT 101

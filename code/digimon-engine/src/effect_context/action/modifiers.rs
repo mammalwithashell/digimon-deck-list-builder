@@ -107,18 +107,32 @@ impl<'a> EffectContext<'a> {
         expiry: Expiry,
         payload: crate::modifiers::ModifierPayload,
     ) {
+        self.add_modifier_scoped(target, modifier, value, expiry, payload, false);
+    }
+
+    /// Install a modifier with an optional opponent-effect replacement cause.
+    pub fn add_modifier_scoped(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        expiry: Expiry,
+        payload: crate::modifiers::ModifierPayload,
+        opponent_only: bool,
+    ) {
         let pending_skips = crate::modifiers::pending_skips_for_install(
             expiry,
             self.player,
             self.game.turn_player(),
         );
-        self.game.modifiers.add(
-            target,
-            ModifierEntry::simple(modifier, value, expiry, self.player)
-                .with_payload(payload)
-                .with_pending_skips(pending_skips)
-                .with_affecting_source_kind(self.source_kind),
-        );
+        let mut entry = ModifierEntry::simple(modifier, value, expiry, self.player)
+            .with_payload(payload)
+            .with_pending_skips(pending_skips)
+            .with_affecting_source_kind(self.source_kind);
+        if opponent_only {
+            entry = entry.opponent_only();
+        }
+        self.game.modifiers.add(target, entry);
         self.game.mark_until_condition_dirty();
         self.after_recorded_install();
     }

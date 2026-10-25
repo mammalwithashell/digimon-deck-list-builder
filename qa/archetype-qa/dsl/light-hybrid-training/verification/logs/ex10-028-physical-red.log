@@ -1,0 +1,46 @@
+
+running 28 tests
+test ex10::ex10_028::ex10_028_buffs_expire_after_opponents_turn_ends ... ok
+test ex10::ex10_028::ex10_028_buffs_persist_through_own_turn_end ... ok
+test ex10::ex10_028::ex10_028_clause1_has_both_on_play_and_when_digivolving_on_same_clause ... ok
+test ex10::ex10_028::ex10_028_clause1_has_on_play_timing ... ok
+test ex10::ex10_028::ex10_028_clause1_has_when_digivolving_timing ... ok
+test ex10::ex10_028::ex10_028_clause1_is_face_up_scope ... ok
+test ex10::ex10_028::ex10_028_has_inherited_on_digivolution_card_trashed_clause ... ok
+test ex10::ex10_028::ex10_028_has_two_triggered_clauses ... ok
+test ex10::ex10_028::ex10_028_inherited_deletes_cost_4_or_less_digimon ... ok
+test ex10::ex10_028::ex10_028_inherited_does_not_fire_from_non_mineral_rock_host ... ok
+test ex10::ex10_028::ex10_028_inherited_no_selection_when_no_opponent_digimon_cost_4_or_less ... ok
+test ex10::ex10_028::ex10_028_inherited_only_cost_4_or_less_selectable ... ok
+test ex10::ex10_028::ex10_028_inherited_prompts_opp_field_selection_when_trashed_from_mineral_host ... ok
+
+thread 'ex10::ex10_028::ex10_028_on_play_after_source_selection_prompts_own_field' (37872) panicked at code\digimon-engine\tests\cards_behavioral\ex10\ex10_028.rs:376:10:
+pick source at slot 0: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex10::ex10_028::ex10_028_on_play_after_source_selection_prompts_own_field ... FAILED
+
+thread 'ex10::ex10_028::ex10_028_on_play_can_buff_different_digimon_than_source_host' (53824) panicked at code\digimon-engine\tests\cards_behavioral\ex10\ex10_028.rs:562:10:
+pick source at slot 0: InvalidAction
+test ex10::ex10_028::ex10_028_on_play_can_buff_different_digimon_than_source_host ... FAILED
+test ex10::ex10_028::ex10_028_on_play_grants_blocker_to_target ... ok
+test ex10::ex10_028::ex10_028_on_play_grants_plus_3000_dp_to_target ... ok
+test ex10::ex10_028::ex10_028_on_play_grants_reboot_to_target ... ok
+test ex10::ex10_028::ex10_028_on_play_no_selection_when_no_mineral_rock_source ... ok
+test ex10::ex10_028::ex10_028_on_play_no_selection_when_source_has_wrong_trait ... ok
+test ex10::ex10_028::ex10_028_on_play_optional_cost_may_be_declined ... ok
+test ex10::ex10_028::ex10_028_on_play_prompts_source_multi_with_mineral_source ... ok
+test ex10::ex10_028::ex10_028_on_play_prompts_source_multi_with_rock_source ... ok
+test ex10::ex10_028::ex10_028_on_play_source_selected_but_no_buff_target_means_no_keywords ... ok
+test ex10::ex10_028::ex10_028_on_play_trashes_selected_source ... ok
+test ex10::ex10_028::ex10_028_when_digivolving_grants_all_buffs ... ok
+test ex10::ex10_028::ex10_028_when_digivolving_prompts_source_multi ... ok
+test ex10::ex10_028::ex10_028_yaml_compiles_without_error ... ok
+
+failures:
+
+failures:
+    ex10::ex10_028::ex10_028_on_play_after_source_selection_prompts_own_field
+    ex10::ex10_028::ex10_028_on_play_can_buff_different_digimon_than_source_host
+
+test result: FAILED. 26 passed; 2 failed; 0 ignored; 0 measured; 12727 filtered out; finished in 45.29s
+

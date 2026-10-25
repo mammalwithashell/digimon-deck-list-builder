@@ -1,5 +1,56 @@
 # Game State Tensor Specification
 
+## Physical card page allocation (migration in progress)
+
+The coordinated `support-complete-digivolution-source-choices` migration grows
+each of the 32 pending-choice rows from 96 to 128 floats. Existing offsets
+0–85 remain unchanged, including the typed count-choice fields. Rust implements
+the allocation below and the exported descriptors name every offset. Binding,
+model and runtime requalification remains necessary before training admission.
+
+| Offset | Meaning |
+| --- | --- |
+| 86 | Physical card page row present |
+| 87–89 | Commit, previous page, next page or presentation refresh flags |
+| 90 | Typed zone: 1 battle source, 2 breeding source, 3 security, 4 hand, 5 trash, 6 battle top |
+| 91 | Zone owner relative to observer |
+| 92 | Current carrier slot |
+| 93 | Permitted printed registry card ID; hidden/navigation rows zero |
+| 94–97 | Prompt ID, four normalized 16-bit limbs |
+| 98–101 | Page generation, four limbs |
+| 102–105 | Page index, four limbs |
+| 106–109 | Page count, four limbs |
+| 110–113 | Current source/security position, four limbs |
+| 114–117 | Stable carrier identity, four limbs |
+| 118 | Carrier present |
+| 119 | Identity visible to this observer |
+| 120 | Decline or forced unavailable-completion flag |
+| 121 | Inspection-only card row, never a legal commit |
+| 122–127 | Reserved zero |
+
+Internal physical card handles never appear as policy card IDs. Row order
+follows `cardChoice.rows` for owned pages, including nonselectable inspection
+rows and navigation; other prompts retain `valid_action_ids` order. A row's printed
+card identity must obey observer visibility; inspection permissions do not
+transfer to opponents or hidden spectators. Metadata never grants legality.
+The wire operations `refresh_page` and `finish_impossible` reuse navigation
+flag 89 and completion flag 120 respectively; they allocate no new tensor
+positions. The former rebuilds stale security presentation without game effects,
+while the latter abandons an impossible operation without paying its cost or
+running its success tail. The action mask distinguishes these forced recovery
+operations from ordinary card commits.
+
+The extra 1024 floats yield Rust layout sizes 9434 (`standard_lite_v2`), 9874
+(`standard_lite_deck_v2`), and 44506 (`standard_full_v2`). All later sections
+shift by 1024. The active feature schemas are `standard_lite_v2.4`,
+`standard_lite_deck_v2.3` and `standard_full_v2.5`, with action schema version 2.
+The canonical hashes below are verified against exported positions and sections.
+Tensor version remains 2; action capacity remains 2192. Compact compatibility
+remains engine-only. Use exported layouts rather than copied numbers
+when constructing training, inference, export, or frontend contracts. Existing
+weights require authentic matching contracts; stamping new metadata on old
+weights cannot migrate their semantics.
+
 The game state is encoded as a flat `float32` tensor from one player's perspective.
 Card identities are integer registry indices (float-cast). The `nn.Embedding` lookup
 happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer.
@@ -8,19 +59,19 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 
 | Constant | Value | Notes |
 |---|---:|---|
-| `TENSOR_SIZE` | 8850 | Engine default — `standard_lite_deck_v2`. Top-level Rust `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE` both report this value. |
+| `TENSOR_SIZE` | 9874 | Engine default — `standard_lite_deck_v2`. Top-level Rust `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE` both report this value. |
 | `ACTION_SPACE_SIZE` | 2192 | Unchanged by the default-profile flip. |
 
 `standard_compact_v1`-specific layout constants (`SLOT_SIZE = 40`, `FIELD_SLOTS = 14`, `MAX_HAND = 20`, etc.) are now reachable only via their module path: `digimon_engine::tensor_profiles::standard::v1::*` in Rust. (The Python training adapter `digimon_gym.tensor_profiles.get_tensor_profile` no longer serves `standard_compact_v1` — see the retirement note under *Tensor Profiles*.) They are no longer re-exported from the top-level `tensor` module — code that imported them from there must migrate either to the explicit module path (if it intentionally targets v1) or to `TensorSection` / `TensorSlotLayout` profile metadata (if it wants the active default).
 
 ## Tensor Profiles
 
-The engine default pilot observation profile is **`standard_lite_deck_v2`** (`8850` floats; flipped 2026-05-25 per the `flip-engine-default-to-lite-deck-v2` change). It is selected by:
+The engine default pilot observation profile is **`standard_lite_deck_v2`** (current layout `9874` floats; default selected 2026-05-25 per the `flip-engine-default-to-lite-deck-v2` change). It is selected by:
 
 - Rust: `tensor_profiles::standard::DEFAULT_PROFILE`, `tensor_profiles::default_profile()`, `observation::default_observation_profile()` — all return the same value.
 - Python: `digimon_engine.DEFAULT_OBSERVATION_PROFILE` and `digimon_engine.TENSOR_PROFILE_ID` both report `"standard_lite_deck_v2"`.
 
-`standard_lite_v2` (`8410` floats) is the lite_deck_v2 prefix without the own-original-decklist section. Callers that don't need decklist-aware observations can request it explicitly via `observation_profile="standard_lite_v2"` on `RustHeadlessGame`, `--tensor-profile standard_lite_v2` on `pilot_training`, or `profile_by_id("standard_lite_v2")` from Rust.
+`standard_lite_v2` (`9434` floats) is the lite_deck_v2 prefix without the own-original-decklist section. Callers that don't need decklist-aware observations can request it explicitly via `observation_profile="standard_lite_v2"` on `RustHeadlessGame`, `--tensor-profile standard_lite_v2` on `pilot_training`, or `profile_by_id("standard_lite_v2")` from Rust.
 
 `standard_compact_v1` (`1375` floats) is the historical baseline profile. It remains reachable **on the Rust side** for legacy callers (parity tests, archived recordings, baseline models) via `observation_profile="standard_compact_v1"` and `profile_by_id("standard_compact_v1")`. Existing ONNX checkpoints trained against this profile are NOT loadable through the engine's default surface — they must be loaded with an explicit profile pin and an action-space-compatible inference path.
 
@@ -33,7 +84,7 @@ The engine default pilot observation profile is **`standard_lite_deck_v2`** (`88
 > builder above is unaffected — compact remains available on the engine side for
 > offline parity use.
 
-`standard_full_v2` (`43482` floats) is the maximally informative profile used for full-state agents; unchanged by the default flip.
+`standard_full_v2` (`44506` floats) is the maximally informative profile used for full-state agents; unchanged by the default flip.
 
 ### `standard_lite_v2`
 
@@ -54,13 +105,13 @@ The engine default pilot observation profile is **`standard_lite_deck_v2`** (`88
 | `id` | `standard_lite_v2` |
 | `version` | 2 |
 | `tensor_version` | 2 |
-| `feature_schema_version` | `standard_lite_v2.3` |
-| `tensor_size` | 8410 |
+| `feature_schema_version` | `standard_lite_v2.4` |
+| `tensor_size` | 9434 |
 | `field_slots` | 15 |
 | `slot_size` | 99 |
 | `max_sources` | 12 |
-| `card_id_slot_count` | 572 |
-| `scalar_slot_count` | 7838 |
+| `card_id_slot_count` | 604 |
+| `scalar_slot_count` | 8830 |
 
 Top-level sections:
 
@@ -72,10 +123,10 @@ Top-level sections:
 | `own_hand` | 3098 | `[30][32]` | 960 |
 | `known_zone_cards` | 4058 | `[120][8]` | 960 |
 | `decision_context` | 5018 | `[64]` | 64 |
-| `pending_choice_features` | 5082 | `[32][96]` | 3072 |
-| `reserved` | 8154 | `[256]` | 256 |
+| `pending_choice_features` | 5082 | `[32][128]` | 4096 |
+| `reserved` | 9178 | `[256]` | 256 |
 
-`standard_lite_v2` card ID positions total `572`; scalar positions total `7838`. These lists, the section table, layout hash, tensor version, and feature schema version are exported by `digimon_engine.get_observation_layout("standard_lite_v2")`.
+`standard_lite_v2` card ID positions total `604`; scalar positions total `8830`. These lists, the section table, layout hash, tensor version, and feature schema version are exported by `digimon_engine.get_observation_layout("standard_lite_v2")`.
 
 The source-kind features in pending effect-choice rows currently encode four
 single categories: Digimon, Tamer, Option and Rule. The engine's compound
@@ -115,13 +166,13 @@ The decklist section encodes the observer's original submitted deck composition 
 | `id` | `standard_lite_deck_v2` |
 | `version` | 2 |
 | `tensor_version` | 2 |
-| `feature_schema_version` | `standard_lite_deck_v2.2` |
-| `tensor_size` | 8850 |
+| `feature_schema_version` | `standard_lite_deck_v2.3` |
+| `tensor_size` | 9874 |
 | `field_slots` | 15 |
 | `slot_size` | 99 |
 | `max_sources` | 12 |
-| `card_id_slot_count` | 627 |
-| `scalar_slot_count` | 8223 |
+| `card_id_slot_count` | 659 |
+| `scalar_slot_count` | 9215 |
 
 Top-level sections:
 
@@ -133,9 +184,9 @@ Top-level sections:
 | `own_hand` | 3098 | `[30][32]` | 960 |
 | `known_zone_cards` | 4058 | `[120][8]` | 960 |
 | `decision_context` | 5018 | `[64]` | 64 |
-| `pending_choice_features` | 5082 | `[32][96]` | 3072 |
-| `own_original_decklist` | 8154 | `[55][8]` | 440 |
-| `reserved` | 8594 | `[256]` | 256 |
+| `pending_choice_features` | 5082 | `[32][128]` | 4096 |
+| `own_original_decklist` | 9178 | `[55][8]` | 440 |
+| `reserved` | 9618 | `[256]` | 256 |
 
 `own_original_decklist[row]` fields:
 
@@ -148,7 +199,7 @@ Top-level sections:
 | 4 | Digi-Egg flag |
 | 5-7 | Reserved, currently `0.0` |
 
-`standard_lite_deck_v2` card ID positions total `627`; scalar positions total `8223`. The 55 decklist card ID offsets are included in `card_id_positions` so `CardEmbeddingExtractor` embeds them like other card identities.
+`standard_lite_deck_v2` card ID positions total `659`; scalar positions total `9215`. The 55 decklist card ID offsets are included in `card_id_positions` so `CardEmbeddingExtractor` embeds them like other card identities.
 
 ### `standard_full_v2`
 
@@ -178,10 +229,10 @@ remains the training-environment default; the Rust engine default is
 | `id` | `standard_full_v2` |
 | `version` | 2 |
 | `tensor_version` | 2 |
-| `feature_schema_version` | `standard_full_v2.4` |
-| `tensor_size` | 43482 |
-| `card_id_slot_count` | 572 |
-| `scalar_slot_count` | 42910 |
+| `feature_schema_version` | `standard_full_v2.5` |
+| `tensor_size` | 44506 |
+| `card_id_slot_count` | 604 |
+| `scalar_slot_count` | 43902 |
 
 Top-level sections:
 
@@ -193,9 +244,9 @@ Top-level sections:
 | `own_hand` | 3098 | `[30][32]` | 960 |
 | `known_zone_cards` | 4058 | `[120][8]` | 960 |
 | `decision_context` | 5018 | `[64]` | 64 |
-| `pending_choice_features` | 5082 | `[32][96]` | 3072 |
-| `action_id_features` | 8154 | `[2192][16]` | 35072 |
-| `reserved` | 43226 | `[256]` | 256 |
+| `pending_choice_features` | 5082 | `[32][128]` | 4096 |
+| `action_id_features` | 9178 | `[2192][16]` | 35072 |
+| `reserved` | 44250 | `[256]` | 256 |
 
 `action_id_features[action_id]` fields:
 
@@ -433,7 +484,7 @@ For `standard_lite_v2`, this means `572` card-ID positions embedded to `572 × 1
 
 ## Dedicated count-choice contract
 
-Count choices reuse the 96-wide pending-choice rows, in presentation order.
+Count choices retain offsets 60–85 in the 128-wide pending-choice rows, in presentation order.
 The following formerly reserved fields now have explicit meanings in all three
 v2 profiles. This changes semantic layout hashes even though shapes stay fixed.
 Non-count rows and non-chooser views encode zero in these fields.
@@ -466,9 +517,9 @@ and 15 for commit, previous-page, and next-page flags respectively.
 
 | Profile | Feature schema | Size | Layout hash |
 |---|---|---:|---|
-| `standard_lite_v2` | `standard_lite_v2.3` | 8410 | `sha256:c2ff377e261fe572163179e32d97414d68e2fd8d89c5441dae586b4a2caa691b` |
-| `standard_full_v2` | `standard_full_v2.4` | 43482 | `sha256:86e9e086eb3eb7b9a86016c58d68307db84a03063fe52461ba4eca57b2cf8e63` |
-| `standard_lite_deck_v2` | `standard_lite_deck_v2.2` | 8850 | `sha256:964cc52d8c27c512c295663e62a45bbd7cb372f7b758ce1108a872d31aefbaa4` |
+| `standard_lite_v2` | `standard_lite_v2.4` | 9434 | `sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a` |
+| `standard_full_v2` | `standard_full_v2.5` | 44506 | `sha256:2fd19ee35786b40d294d8deaf5fda6f565b0731727adca8fecdfa7ae3235af65` |
+| `standard_lite_deck_v2` | `standard_lite_deck_v2.3` | 9874 | `sha256:d7182574a93cc7472452c5f3d28343092613e1008ec44d3a6458d487aabfee8f` |
 
 Tensor version remains 2 and action space remains 2192. Models with previous
 same-shaped schemas are incompatible: inference, export, hosted publication,
@@ -484,4 +535,4 @@ stamping a legacy checkpoint with current metadata is not a migration.
 
 ### Model action semantic compatibility
 
-Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. This preparatory gate does not bump SCHEMA_VERSION (still 1), resize actions/tensors, or complete the capacity migration.
+Model training contracts require `action_schema_version` in addition to the six observation/action shape fields. Its sole authority is Rust `action::space::SCHEMA_VERSION`, exported by PyO3 as `ACTION_SCHEMA_VERSION`. Equal shapes do not imply compatible actions. Missing, malformed, or mismatched action semantics reject inference, checkpoint resume/export, publication, download and loading. Upload parsers preserve declared artifact values; they never stamp current semantics onto old weights. Legacy database rows remain null and incompatible. New training and newly initialized random exports may capture the current contract; re-export requires the authentic compatible training tuple. SCHEMA_VERSION is now 2 for owned physical card pages; old action semantics are incompatible even when ACTION_SPACE_SIZE remains 2192. Full selector and runtime qualification is still required before admitting the blocked cards.

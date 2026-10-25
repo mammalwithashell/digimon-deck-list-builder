@@ -23,8 +23,8 @@
   "attribute_eng": [
     "Variable"
   ],
-  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has the [Hybrid] or [Ten Warriors] trait, gain 1 memory.",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Hybrid] or [Ten Warriors] trait, gain 1 memory.",
   "security_effect_description_eng": "",
   "evo_costs": [
     {

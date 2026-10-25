@@ -1,0 +1,28 @@
+
+running 13 tests
+test bt21::bt21_074::bt21_074_alt_paths ... ok
+test bt21::bt21_074::bt21_074_link_aura_and_clause_shapes ... ok
+test bt21::bt21_074::bt21_074_linked_dp_bonus_4000_reaches_host ... ok
+test bt21::bt21_074::bt21_074_on_play_decline_tucks_nothing_and_protects_nothing ... ok
+test bt21::bt21_074::bt21_074_on_play_no_eligible_card_no_prompt ... ok
+test bt21::bt21_074::bt21_074_on_play_tucks_from_hand_and_protects_chosen_digimon_until_opponents_turn_ends ... ok
+
+thread 'bt21::bt21_074::bt21_074_on_play_tucks_from_trash' (22504) panicked at code\digimon-engine\tests\cards_behavioral\bt21\bt21_074.rs:321:5:
+assertion failed: view.valid_action_ids.contains(&pick)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt21::bt21_074::bt21_074_on_play_tucks_from_trash ... FAILED
+test bt21::bt21_074::bt21_074_wa_decline_leaves_everything_untouched ... ok
+test bt21::bt21_074::bt21_074_wa_opt_locks_second_activation_same_turn ... ok
+test bt21::bt21_074::bt21_074_wa_trashes_source_then_de_digivolves ... ok
+test bt21::bt21_074::bt21_074_wd_fires_both_clauses ... ok
+test bt21::bt21_074::bt21_074_when_linked_deletes_opp_level_4_or_lower_only ... ok
+test bt21::bt21_074::bt21_074_yaml_has_printed_metadata ... ok
+
+failures:
+
+failures:
+    bt21::bt21_074::bt21_074_on_play_tucks_from_trash
+
+test result: FAILED. 12 passed; 1 failed; 0 ignored; 0 measured; 12742 filtered out; finished in 34.85s
+
+FILTER_EXIT 101

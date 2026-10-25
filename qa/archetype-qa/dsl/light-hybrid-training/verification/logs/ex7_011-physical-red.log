@@ -1,0 +1,42 @@
+
+running 11 tests
+test ex7::ex7_011::ex7_011_cannot_digivolve_from_plain_black_lv4 ... ok
+
+thread 'ex7::ex7_011::ex7_011_cost_paid_but_no_legal_target_still_places_the_option' (33744) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_011.rs:283:10:
+pick Der Blitz: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex7::ex7_011::ex7_011_cost_paid_but_no_legal_target_still_places_the_option ... FAILED
+test ex7::ex7_011::ex7_011_decline_places_nothing_and_deletes_nothing ... ok
+test ex7::ex7_011::ex7_011_digivolves_from_black_lv4_with_tm_in_text_for_three ... ok
+test ex7::ex7_011::ex7_011_inherited_piercing_grants_keyword_to_carrier ... ok
+test ex7::ex7_011::ex7_011_on_play_no_prompt_without_tm_option_in_hand_or_trash ... ok
+
+thread 'ex7::ex7_011::ex7_011_on_play_prompts_union_pick_with_tm_option_in_trash' (44052) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_011.rs:168:5:
+assertion failed: view.valid_action_ids.contains(&TRASH_EFFECT_START)
+test ex7::ex7_011::ex7_011_on_play_prompts_union_pick_with_tm_option_in_trash ... FAILED
+
+thread 'ex7::ex7_011::ex7_011_places_option_from_hand_under_self_and_deletes_low_dp_opponent' (47212) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_011.rs:188:10:
+pick Der Blitz from hand: InvalidAction
+test ex7::ex7_011::ex7_011_places_option_from_hand_under_self_and_deletes_low_dp_opponent ... FAILED
+
+thread 'ex7::ex7_011::ex7_011_places_option_from_trash_under_self' (29196) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_011.rs:239:10:
+pick Der Blitz from trash: InvalidAction
+test ex7::ex7_011::ex7_011_places_option_from_trash_under_self ... FAILED
+test ex7::ex7_011::ex7_011_structure_matches_printed_text ... ok
+
+thread 'ex7::ex7_011::ex7_011_when_digivolving_offers_the_same_effect' (21492) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_011.rs:304:10:
+pick Der Blitz: InvalidAction
+test ex7::ex7_011::ex7_011_when_digivolving_offers_the_same_effect ... FAILED
+
+failures:
+
+failures:
+    ex7::ex7_011::ex7_011_cost_paid_but_no_legal_target_still_places_the_option
+    ex7::ex7_011::ex7_011_on_play_prompts_union_pick_with_tm_option_in_trash
+    ex7::ex7_011::ex7_011_places_option_from_hand_under_self_and_deletes_low_dp_opponent
+    ex7::ex7_011::ex7_011_places_option_from_trash_under_self
+    ex7::ex7_011::ex7_011_when_digivolving_offers_the_same_effect
+
+test result: FAILED. 6 passed; 5 failed; 0 ignored; 0 measured; 12744 filtered out; finished in 18.47s
+
+FILTER_EXIT 101

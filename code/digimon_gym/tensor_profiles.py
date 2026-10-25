@@ -12,7 +12,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 
@@ -41,6 +41,7 @@ class TensorProfile:
     card_id_positions: tuple[int, ...]
     scalar_positions: tuple[int, ...]
     sections: tuple[TensorSection, ...] = ()
+    card_choice: dict[str, Any] | None = field(default=None, compare=False, hash=False)
 
 
 _CANONICAL_STANDARD_COMPACT_V1 = "standard_compact_v1"
@@ -189,6 +190,7 @@ def _profile_from_observation_layout(raw: Any) -> TensorProfile:
         card_id_positions=card_id_positions,
         scalar_positions=scalar_positions,
         sections=sections,
+        card_choice=_raw_get(raw, "card_choice", None),
     )
 
 

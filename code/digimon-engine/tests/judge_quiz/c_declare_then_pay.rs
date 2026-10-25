@@ -1,20 +1,20 @@
-//! Cluster C — cost payability at DECLARATION vs after.
+//! Cluster C â€” cost payability at DECLARATION vs after.
 //!
 //! Questions (see `card-resolution.md`):
 //!   Q5  Omnimon (AD1-025) `[Assembly]` is a legal declaration even if the full
-//!       cost isn't currently affordable, as long as it can be MADE payable —
+//!       cost isn't currently affordable, as long as it can be MADE payable â€”
 //!       judge: YES.  [READY: AD1-025 impl; needs WarGreymon/MetalGarurumon in
-//!       trash — AD1-004/AD1-014 are implemented.]
+//!       trash â€” AD1-004/AD1-014 are implemented.]
 //!   Q26 Dorbickmon (EX3-014) with [DigiXros] targeting WarGreymon; Miraculous
 //!       Mega Knight (BT17-095) DNA-evolves mid-resolution, removing the
-//!       WarGreymon ⇒ Dorbickmon's cost becomes unpayable — judge: returns to
+//!       WarGreymon â‡’ Dorbickmon's cost becomes unpayable â€” judge: returns to
 //!       hand.
-//!   Q27 Same board — judge: pays 0 memory.
+//!   Q27 Same board â€” judge: pays 0 memory.
 //!   Q30 (shared with cluster E) MedievalGallantmon (EX8-074) `<Partition>` is
 //!       interruptive; cost-reduction lets it suspend Imperialdramon: Dragon
 //!       Mode (EX3-063) + Chaosmon: Valdur Arm (BT20-037).
 //!
-//! Scenarios authored under tasks §5.
+//! Scenarios authored under tasks Â§5.
 
 #![allow(unused_imports)]
 
@@ -118,9 +118,9 @@ fn stage_q26_board() -> (DebugRunner, i16) {
     let memory_before = r.memory();
 
     // Declare the DigiXros play of Dorbickmon and select WarGreymon + 4 hand
-    // Dragons as the 5 materials (no auto-select — surfaced material actions).
+    // Dragons as the 5 materials (no auto-select â€” surfaced material actions).
     let _ = r.play(0, 0);
-    let wargreymon_action = wargreymon.index as u16;
+    let wargreymon_action = physical_menu::battle_top_action(&r.game, wargreymon);
     assert!(
         r.pending_selection()
             .is_some_and(|s| s.valid_action_ids.contains(&wargreymon_action)),
@@ -148,44 +148,44 @@ fn stage_q26_board() -> (DebugRunner, i16) {
     (r, memory_before)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Q5 — Omnimon (AD1-025) `[Assembly]` declare-then-pay legality
-// ─────────────────────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Q5 â€” Omnimon (AD1-025) `[Assembly]` declare-then-pay legality
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 //
 // Board (card-resolution.md Q5): memory gauge 0 on Player A's side; Player A has
 // a WarGreymon and a MetalGarurumon in trash; Player A declares to play Omnimon
-// (AD1-025) via `[Assembly]`. JUDGE ANSWER: YES, legal — you may declare a play
+// (AD1-025) via `[Assembly]`. JUDGE ANSWER: YES, legal â€” you may declare a play
 // if it is possible to MAKE the cost become payable; declaring `[Assembly]`
-// (reduce cost 6, materials WarGreymon × MetalGarurumon) makes it payable.
+// (reduce cost 6, materials WarGreymon Ã— MetalGarurumon) makes it payable.
 //
-// DCGO: AD1_025.cs:214-255 — `AddAssemblyConditionClass`, elements
-// `[WarGreymon]` ×1 + `[MetalGarurumon]` ×1, `reduceCost: 6`.
+// DCGO: AD1_025.cs:214-255 â€” `AddAssemblyConditionClass`, elements
+// `[WarGreymon]` Ã—1 + `[MetalGarurumon]` Ã—1, `reduceCost: 6`.
 //
-// ── DISCOVERY-WAVE FINDING (2026-05-28) ──────────────────────────────────────
+// â”€â”€ DISCOVERY-WAVE FINDING (2026-05-28) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // BLOCKED-DATA at the source-data layer (distinct from Q2's engine-primitive
-// block): AD1-025's entry in `data/cards.json` has NO `[Assembly]` keyword — it
+// block): AD1-025's entry in `data/cards.json` has NO `[Assembly]` keyword â€” it
 // captures only `<Raid>/<Blocker>/<Partition>`, the `[On Play]` body, and
-// `xros_req = [DNA Digivolve] … Cost 0`. The real card HAS `[Assembly]`
+// `xros_req = [DNA Digivolve] â€¦ Cost 0`. The real card HAS `[Assembly]`
 // (confirmed in DCGO AD1_025.cs:214-255), so this is a card-data INGEST GAP.
 // Consequently `cards/ad1/AD1-025.yaml` has only a `dna_digivolve` alt_path and
 // no `assembly` alt_path. The `assembly` alt-path KIND itself is supported by
 // the DSL (`CompiledAltPathKind::Assembly`; BT18-102 uses it), so once the data
 // is corrected this is authorable without an engine change.
 //
-// ── RESOLVED (2026-05-29, change `fix-ad1-025-assembly-data`) ────────────────
+// â”€â”€ RESOLVED (2026-05-29, change `fix-ad1-025-assembly-data`) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // The un-block sequence completed: (1) `[Assembly]` added to AD1-025 in
 // `data/card_overrides.json`; (2) the `assembly` alt_path authored in
-// `cards/ad1/AD1-025.yaml` (materials WarGreymon × MetalGarurumon, zones
+// `cards/ad1/AD1-025.yaml` (materials WarGreymon Ã— MetalGarurumon, zones
 // [trash], stack_under, reduce cost 6); (3) the engine Assembly executor wired
-// (G-ASSEMBLY-PLAY-EXECUTION — eligibility from trash, surfaced per-element
+// (G-ASSEMBLY-PLAY-EXECUTION â€” eligibility from trash, surfaced per-element
 // selection, bottom placement, reduced cost, declare-then-pay mask). Q5 now
 // pins as a live mask assertion.
 
-/// Q5 — Omnimon (AD1-025) `[Assembly]` is a legal declaration at memory 0
-/// because the reduced cost (15 − 6 = 9) can be MADE payable: with both
-/// materials in trash, 0 − 9 = −9 ≥ the −10 floor, so the mask offers the play.
-/// Without the assembly reduction the full cost (15) would overdraw past −10
-/// and the play would be illegal — confirming the judge's declare-then-pay rule.
+/// Q5 â€” Omnimon (AD1-025) `[Assembly]` is a legal declaration at memory 0
+/// because the reduced cost (15 âˆ’ 6 = 9) can be MADE payable: with both
+/// materials in trash, 0 âˆ’ 9 = âˆ’9 â‰¥ the âˆ’10 floor, so the mask offers the play.
+/// Without the assembly reduction the full cost (15) would overdraw past âˆ’10
+/// and the play would be illegal â€” confirming the judge's declare-then-pay rule.
 #[test]
 fn q5_assembly_declaration_legal_when_cost_can_be_made_payable() {
     let mut r = DebugRunner::builder()
@@ -207,22 +207,22 @@ fn q5_assembly_declaration_legal_when_cost_can_be_made_payable() {
     let mask = build_action_mask(&r.game, 0);
     assert_eq!(
         mask[PLAY_HAND_START as usize], 1.0,
-        "Q5: declaring Omnimon via [Assembly] is legal at memory 0 — the \
-         reduced cost (15 − 6 = 9) can be made payable (judge: YES)"
+        "Q5: declaring Omnimon via [Assembly] is legal at memory 0 â€” the \
+         reduced cost (15 âˆ’ 6 = 9) can be made payable (judge: YES)"
     );
 }
 
-// ── Q26 / Q27 / Q30 — BLOCKED-CARD ───────────────────────────────────────────
+// â”€â”€ Q26 / Q27 / Q30 â€” BLOCKED-CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/// Q26 — Dorbickmon (EX3-014) [DigiXros] targeting WarGreymon; Miraculous Mega
-/// Knight (BT17-095) DNA-evolves mid-resolution, removing WarGreymon ⇒
+/// Q26 â€” Dorbickmon (EX3-014) [DigiXros] targeting WarGreymon; Miraculous Mega
+/// Knight (BT17-095) DNA-evolves mid-resolution, removing WarGreymon â‡’
 /// Dorbickmon's cost becomes unpayable. Judge: returns to hand.
 ///
-/// ── RESOLVED (2026-06-03, G-DIGIXROS-REDIRECT-EXTRACTION) ─────────────────────
+/// â”€â”€ RESOLVED (2026-06-03, G-DIGIXROS-REDIRECT-EXTRACTION) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /// The leaving/limbo holding slot now exists (`Game::digixros_leaving_limbo`).
 /// When a DigiXros battle-area material's `WhenWouldLeaveBattleArea` window parks
 /// an optional reward (BT17-095's `<Delay>` accept), the material is moved OUT of
-/// `battle_area` into the limbo slot — so it is no longer a standalone top card
+/// `battle_area` into the limbo slot â€” so it is no longer a standalone top card
 /// (Q25/Q26 precondition) yet remains resolvable + EXTRACTABLE: the parked DNA-evo
 /// re-materializes it from limbo into the Omnimon merge
 /// (`rematerialize_digixros_limbo` inside `effect_initiated_dna_digivolve_with_hand_partner`).
@@ -243,11 +243,11 @@ fn q5_assembly_declaration_legal_when_cost_can_be_made_payable() {
 fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {
     let (mut r, _memory_before) = stage_q26_board();
 
-    // Finish material selection — the DigiXros play would commit here. In a
+    // Finish material selection â€” the DigiXros play would commit here. In a
     // faithful engine BT17-095's [All Turns] observer fires on WarGreymon's
     // departure mid-DigiXros, its <Delay> DNA-evo pulls WarGreymon (+ the hand
-    // partner) into Omnimon, removing WarGreymon as a Dorbickmon material ⇒
-    // Dorbickmon can no longer pay its DigiXros cost ⇒ Dorbickmon returns to
+    // partner) into Omnimon, removing WarGreymon as a Dorbickmon material â‡’
+    // Dorbickmon can no longer pay its DigiXros cost â‡’ Dorbickmon returns to
     // hand (judge Q26).
     if r.pending_selection()
         .is_some_and(|s| s.kind == digimon_engine::selection::SelectionKind::Material)
@@ -255,7 +255,7 @@ fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {
         let _ = r.execute_action(0, digimon_engine::action::space::PASS);
     }
     // Drive any DNA-evo / Delay flow the observer would surface (none in the
-    // current engine — the observer never fires).
+    // current engine â€” the observer never fires).
     let _ = r.auto_resolve();
 
     // Load-bearing precondition: the play was genuinely declared with WarGreymon
@@ -280,20 +280,20 @@ fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {
         .any(|p| p.top_card().card_id(&r.game.card_data) == "EX3-014");
     assert!(
         dorbickmon_in_hand && !dorbickmon_on_field,
-        "dorbickmon_returned_to_hand — Dorbickmon must RETURN TO HAND when its \
+        "dorbickmon_returned_to_hand â€” Dorbickmon must RETURN TO HAND when its \
          DigiXros cost becomes unpayable after BT17-095's DNA-evo pulls \
          WarGreymon out (judge Q26); instead in_hand={dorbickmon_in_hand}, \
          on_field={dorbickmon_on_field}"
     );
 }
 
-/// Q27 — Same board. Judge: pays 0 memory (cost unpayable ⇒ no payment).
+/// Q27 â€” Same board. Judge: pays 0 memory (cost unpayable â‡’ no payment).
 ///
-/// ── RESOLVED (2026-06-03, G-DIGIXROS-REDIRECT-EXTRACTION) ─────────────────────
+/// â”€â”€ RESOLVED (2026-06-03, G-DIGIXROS-REDIRECT-EXTRACTION) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 /// Same substrate as Q26. Because the host commits only at
 /// `finalize_digixros_play_after_leave_windows` (after the leave windows resolve)
 /// and the recipe is found unsatisfied once WarGreymon is DNA-extracted, the
-/// declared play is abandoned with the card still in hand and NO memory paid —
+/// declared play is abandoned with the card still in hand and NO memory paid â€”
 /// memory is unchanged from before the (failed) play.
 #[test]
 fn q27_dorbickmon_pays_zero_memory_when_returned_to_hand() {
@@ -317,38 +317,38 @@ fn q27_dorbickmon_pays_zero_memory_when_returned_to_hand() {
         "precondition: WarGreymon must have left the battle area as a DigiXros material"
     );
 
-    // JUDGE Q27: the unpayable play pays 0 memory — memory is unchanged.
+    // JUDGE Q27: the unpayable play pays 0 memory â€” memory is unchanged.
     let memory_after = r.memory();
     assert_eq!(
         memory_after, memory_before,
-        "zero_memory_paid — an unpayable Dorbickmon DigiXros play (cost becomes \
+        "zero_memory_paid â€” an unpayable Dorbickmon DigiXros play (cost becomes \
          unpayable after BT17-095's DNA-evo pulls WarGreymon out) must pay 0 \
          memory and leave memory unchanged (judge Q27); before={memory_before}, \
          after={memory_after}"
     );
 }
 
-/// Q30 (also cluster E) — interruptive `<Partition>` + MedievalGallantmon's
+/// Q30 (also cluster E) â€” interruptive `<Partition>` + MedievalGallantmon's
 /// would-play cost reduction.
 ///
 /// Board (quiz PDF p67): Player A has an UNSUSPENDED Chaosmon: Valdur Arm
 /// (BT20-037) with BanchoLeomon (BT20-036) and MedievalGallantmon (EX8-074)
 /// in its digivolution cards, plus 1 random SUSPENDED Digimon. Player B has
 /// two Dinobeemon (BT16-077); one carries Flamedramon (EX3-008). B ends
-/// their turn → Flamedramon's inherited [End of Your Turn] DNA digivolves
+/// their turn â†’ Flamedramon's inherited [End of Your Turn] DNA digivolves
 /// both Dinobeemon into EX3-063 Imperialdramon: Dragon Mode. Its [When
-/// Digivolving] (DNA): A chooses 1 of their Digimon (the random one) — the
+/// Digivolving] (DNA): A chooses 1 of their Digimon (the random one) â€” the
 /// rest (Chaosmon) get deleted, triggering <Partition>, which A activates.
 ///
-/// Judge feedback (PDF p69): <Partition> is INTERRUPTIVE — it activates
+/// Judge feedback (PDF p69): <Partition> is INTERRUPTIVE â€” it activates
 /// BEFORE Chaosmon is deleted (and before <Blitz> is declared). Both
 /// BanchoLeomon and MedievalGallantmon are played out simultaneously;
 /// Medieval's interruptive "When this card would be played, by suspending 2
 /// Digimon, reduce the play cost by 4" is usable even on a free play.
 /// BanchoLeomon isn't in the battle area yet, and Chaosmon IS still in the
-/// battle area — so the only legal suspend targets are **Imperialdramon:
+/// battle area â€” so the only legal suspend targets are **Imperialdramon:
 /// Dragon Mode & Chaosmon: Valdur Arm** (the suspended random Digimon is
-/// not a legal target). Answer: YES — suspend those two.
+/// not a legal target). Answer: YES â€” suspend those two.
 /// Shared Q30 driver: set up the quiz board and drive to Medieval-
 /// Gallantmon's first suspend pick (his would-play cost reduction accepted).
 /// At the returned state the `<Partition>` SECOND-source play (BanchoLeomon)
@@ -397,7 +397,7 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
     // Player B's turn (their end-of-turn fires Flamedramon's inherited DNA).
     r.set_first_player(1);
 
-    // Player A: Chaosmon stack (bottom→top: BanchoLeomon / Medieval / top),
+    // Player A: Chaosmon stack (bottomâ†’top: BanchoLeomon / Medieval / top),
     // unsuspended, + 1 random suspended Digimon.
     let chaosmon = r.place_stack(0, &["BT20-036", "EX8-074", "BT20-037"]);
     let random = r.place_on_field(0, "Q30-RND", Some(0));
@@ -408,11 +408,11 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
     r.push_source(dino_a, "EX3-008");
     let _dino_b = r.place_on_field(1, "BT16-077", Some(0));
 
-    // ── B ends their turn → Flamedramon inherited [EoT] DNA digivolve ──────
+    // â”€â”€ B ends their turn â†’ Flamedramon inherited [EoT] DNA digivolve â”€â”€â”€â”€â”€â”€
     r.end_turn();
 
-    // Drive: Flamedramon's optional [EoT] accept → partner pick (the other
-    // Dinobeemon) → hand pick (EX3-063). Generic non-PASS walk until the
+    // Drive: Flamedramon's optional [EoT] accept â†’ partner pick (the other
+    // Dinobeemon) â†’ hand pick (EX3-063). Generic non-PASS walk until the
     // keep-pick surfaces for Player A.
     let pass = digimon_engine::action::space::PASS;
     for _ in 0..6 {
@@ -447,7 +447,7 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
         "DNA digivolution enters unsuspended"
     );
 
-    // ── A's keep-pick: choose the random Digimon (Chaosmon gets deleted) ───
+    // â”€â”€ A's keep-pick: choose the random Digimon (Chaosmon gets deleted) â”€â”€â”€
     let view = r
         .pending_selection_view()
         .expect("Imperialdramon [WD]: A's keep-pick must surface");
@@ -463,7 +463,7 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
     r.execute_action(0, keep_random)
         .expect("A keeps the random Digimon");
 
-    // ── <Partition> interrupts Chaosmon's deletion (carrier still on field) ─
+    // â”€â”€ <Partition> interrupts Chaosmon's deletion (carrier still on field) â”€
     let view = r
         .pending_selection_view()
         .expect("Partition accept dialog must surface");
@@ -478,7 +478,7 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&r.game.card_data) == "BT20-037"),
-        "judge Q30: <Partition> is interruptive — Chaosmon is STILL in the \
+        "judge Q30: <Partition> is interruptive â€” Chaosmon is STILL in the \
          battle area when it activates"
     );
     let accept = view.valid_action_ids[0];
@@ -487,9 +487,9 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
     // Pick MedievalGallantmon (source index 1, the higher action id) FIRST so
     // its would-play interrupt is the next flow. BanchoLeomon is then the only
     // card left that can fill the other printed parenthetical
-    // (<Partition (Yellow Lv.6 & Green/Black Lv.6)> — Medieval is black/green,
+    // (<Partition (Yellow Lv.6 & Green/Black Lv.6)> â€” Medieval is black/green,
     // Bancho yellow/black), so it is taken WITHOUT a prompt: general_rule.pdf
-    // §16-29-4 ("a player can't choose to only play one or some of the
+    // Â§16-29-4 ("a player can't choose to only play one or some of the
     // specified cards") leaves no choice, and DCGO likewise skips the
     // SelectCardEffect for a single-candidate slot (`Partition.cs:89,117`).
     let view = r
@@ -500,7 +500,7 @@ fn q30_drive_to_medieval_suspend_prompt() -> (
     r.execute_action(0, *acts.last().unwrap())
         .expect("pick MedievalGallantmon as the Green/Black Lv.6");
 
-    // ── MedievalGallantmon's interruptive suspend-2 cost reduction ─────────
+    // â”€â”€ MedievalGallantmon's interruptive suspend-2 cost reduction â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Accept dialog for the would-play cost reduction.
     let view = r
         .pending_selection_view()
@@ -520,7 +520,7 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
     let pass = digimon_engine::action::space::PASS;
 
     // THE JUDGE PIN: the legal suspend set is EXACTLY {Imperialdramon:
-    // Dragon Mode, Chaosmon: Valdur Arm} — BanchoLeomon is not in the
+    // Dragon Mode, Chaosmon: Valdur Arm} â€” BanchoLeomon is not in the
     // battle area yet, and the random Digimon is already suspended.
     let want_imperial = encode_attack(imperial.player as u16, imperial.index as u16);
     let want_chaosmon = encode_attack(chaosmon.player as u16, chaosmon.index as u16);
@@ -556,9 +556,9 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
         r.execute_action(0, got[0]).expect("suspend a target");
     }
     // Drain anything residual (BanchoLeomon's play, deletion finalize,
-    // Blitz), DECLINING trailing optional prompts — accepting them would
+    // Blitz), DECLINING trailing optional prompts â€” accepting them would
     // cascade into Medieval's [All Turns] re-activation (delete
-    // Imperialdramon → its inherited <Partition> → a nested replacement
+    // Imperialdramon â†’ its inherited <Partition> â†’ a nested replacement
     // park, the engine's single-park boundary; see
     // G-NESTED-PARKED-REPLACEMENT). The judge line ends here.
     for _ in 0..10 {
@@ -576,14 +576,14 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
         }
     }
 
-    // ── End state ───────────────────────────────────────────────────────────
+    // â”€â”€ End state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Imperialdramon: Dragon Mode is suspended (the cost reduction's pick).
     assert!(
         r.game.players[1].battle_area[imperial.index as usize].is_suspended,
         "judge Q30: Imperialdramon: Dragon Mode ends suspended"
     );
     // Chaosmon was suspended DURING the interrupt, then its deletion
-    // completed — it is in A's trash.
+    // completed â€” it is in A's trash.
     assert!(
         r.game.players[0]
             .trash
@@ -604,7 +604,7 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
     assert!(a_ids.contains(&"Q30-RND"), "the kept Digimon survived");
 }
 
-/// make-engine-cloneable — the `<Partition>` SECOND-source play is armed as a
+/// make-engine-cloneable â€” the `<Partition>` SECOND-source play is armed as a
 /// data [`AfterSelectionHook::PartitionSecondPlay`] while the FIRST play's
 /// would-play interrupt chain (Medieval's suspend-2 cost reduction) resolves.
 /// A `Game` cloned mid-chain must carry the armed hook: driving the CLONE to
@@ -675,7 +675,7 @@ fn q30_partition_second_play_hook_clones_faithfully_mid_chain() {
     );
 
     // INDEPENDENCE: the original still sits at the suspend prompt with the
-    // hook armed — resolving the clone did not touch it.
+    // hook armed â€” resolving the clone did not touch it.
     assert!(
         r.game.pending_selection.is_some(),
         "original's suspend pick survives resolving the clone"
@@ -787,3 +787,6 @@ fn q26_limbo_replacement_accept_and_decline_are_both_executable_after_clone() {
         .iter()
         .any(|c| c.card_id(&r.game.card_data) == "EX3-014"));
 }
+
+#[path = "../support/owned_card_choice.rs"]
+mod physical_menu;

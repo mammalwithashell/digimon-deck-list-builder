@@ -320,7 +320,7 @@ fn trash_ids(r: &DebugRunner, player: usize) -> Vec<String> {
 /// printed parenthetical, and a card no slot admits is never playable.
 #[test]
 fn bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest() {
-    use digimon_engine::action::space::{encode_source_select, PASS, REPLACEMENT_ACCEPT};
+    use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
     use digimon_engine::enums::CardColor;
     use digimon_engine::replacement::ReplacementCause;
 
@@ -352,17 +352,15 @@ fn bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest() {
          player can't choose to play only one or some of the specified cards"
     );
     assert_eq!(
-        pending.valid_action_ids,
-        vec![
-            encode_source_select(0, 0).unwrap(),
-            encode_source_select(0, 2).unwrap()
-        ],
+        partition_candidates(&r),
+        vec![(0, "PURPLE-LV4".into()), (2, "RED-LV4".into())],
         "§16-3: only the purple Lv.4 and the red Lv.4 are 'specified \
          cards'; the green Lv.3 source is never offered"
     );
 
+    let purple_action = physical_menu::source_action(&r.game, carrier, 0);
     r.game
-        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .resolve_selection(0, purple_action)
         .expect("pick the purple Lv.4");
     assert!(
         r.game.pending_selection.is_none(),
@@ -391,7 +389,7 @@ fn bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest() {
 /// second pick — one card per parenthetical, never two of the same slot.
 #[test]
 fn bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set() {
-    use digimon_engine::action::space::{encode_source_select, REPLACEMENT_ACCEPT};
+    use digimon_engine::action::space::{REPLACEMENT_ACCEPT};
     use digimon_engine::enums::CardColor;
     use digimon_engine::replacement::ReplacementCause;
 
@@ -413,38 +411,25 @@ fn bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set() {
         .expect("accept <Partition>");
 
     assert_eq!(
-        r.game
-            .pending_selection
-            .as_ref()
-            .expect("first pick")
-            .valid_action_ids,
-        vec![
-            encode_source_select(0, 0).unwrap(),
-            encode_source_select(0, 1).unwrap(),
-            encode_source_select(0, 2).unwrap(),
-            encode_source_select(0, 3).unwrap()
-        ],
+        partition_candidates(&r),
+        vec![(0, "PURPLE-A".into()), (1, "PURPLE-B".into()), (2, "RED-A".into()), (3, "RED-B".into())],
         "every specified card can start a complete slot assignment"
     );
+    let purple_action = physical_menu::source_action(&r.game, carrier, 0);
     r.game
-        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .resolve_selection(0, purple_action)
         .expect("pick PURPLE-A first");
 
+    assert!(r.game.pending_selection.is_some(), "a second pick is still owed");
     assert_eq!(
-        r.game
-            .pending_selection
-            .as_ref()
-            .expect("a second pick is still owed")
-            .valid_action_ids,
-        vec![
-            encode_source_select(0, 2).unwrap(),
-            encode_source_select(0, 3).unwrap()
-        ],
+        partition_candidates(&r),
+        vec![(2, "RED-A".into()), (3, "RED-B".into())],
         "§16-29-4 is ONE of EACH: after a purple Lv.4 is taken the other          purple can no longer fill the red parenthetical and is masked out"
     );
 
+    let red_action = physical_menu::source_action(&r.game, carrier, 3);
     r.game
-        .resolve_selection(0, encode_source_select(0, 3).unwrap())
+        .resolve_selection(0, red_action)
         .expect("pick RED-B");
 
     let mut on_field = field_ids(&r, 0);
@@ -467,7 +452,7 @@ fn bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set() {
 /// slot-blind select used to offer (and play) it.
 #[test]
 fn bt16_077_inherited_partition_never_plays_a_source_no_slot_admits() {
-    use digimon_engine::action::space::{encode_source_select, REPLACEMENT_ACCEPT};
+    use digimon_engine::action::space::{REPLACEMENT_ACCEPT};
     use digimon_engine::enums::CardColor;
     use digimon_engine::replacement::ReplacementCause;
 
@@ -493,16 +478,15 @@ fn bt16_077_inherited_partition_never_plays_a_source_no_slot_admits() {
         .as_ref()
         .expect("the inherited <Partition> source pick must surface");
     assert!(
-        !pending
-            .valid_action_ids
-            .contains(&encode_source_select(0, 2).unwrap()),
+        !partition_candidates(&r).iter().any(|(position, card)| *position == 2 || card == "BT16-077"),
         "the Lv.5 Dinobeemon source matches no parenthetical and must never \
          be offered: it is not one of the 'specified cards' (§16-3)"
     );
 
+    let purple_action = physical_menu::source_action(&r.game, carrier, 0);
     r.game
-        .resolve_selection(0, pending.valid_action_ids[0])
-        .expect("pick a specified card");
+        .resolve_selection(0, purple_action)
+        .expect("pick the specified purple card");
 
     let mut on_field = field_ids(&r, 0);
     on_field.sort();
@@ -515,4 +499,11 @@ fn bt16_077_inherited_partition_never_plays_a_source_no_slot_admits() {
         trash_ids(&r, 0).contains(&"BT16-077".to_string()),
         "Dinobeemon leaves with the carrier"
     );
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;
+
+fn partition_candidates(r: &DebugRunner) -> Vec<(usize, String)> {
+    physical_menu::commits(&r.game).into_iter().map(|row| (row.position.unwrap().parse().unwrap(), row.card_id.unwrap())).collect()
 }

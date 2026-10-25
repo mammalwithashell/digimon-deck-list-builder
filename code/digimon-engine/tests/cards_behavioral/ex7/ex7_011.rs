@@ -39,7 +39,7 @@
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
-use digimon_engine::action::space::{PASS, PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, Keyword, PlaySource};
@@ -165,7 +165,9 @@ fn ex7_011_on_play_prompts_union_pick_with_tm_option_in_trash() {
     let view = runner.pending_selection_view().expect("union prompt");
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
     assert!(runner.pending_is_optional(), "declinable");
-    assert!(view.valid_action_ids.contains(&TRASH_EFFECT_START));
+    let action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Trash);
+    assert!(view.valid_action_ids.contains(&action));
+    assert!(view.valid_action_ids.contains(&PASS));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -183,8 +185,9 @@ fn ex7_011_places_option_from_hand_under_self_and_deletes_low_dp_opponent() {
         index: mega_idx as u8,
     };
 
+    let action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, action)
         .expect("pick Der Blitz from hand");
     let view = runner
         .pending_selection_view()
@@ -234,8 +237,9 @@ fn ex7_011_places_option_from_trash_under_self() {
         player: 0,
         index: mega_idx as u8,
     };
+    let action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     runner
-        .execute_action(0, TRASH_EFFECT_START)
+        .execute_action(0, action)
         .expect("pick Der Blitz from trash");
     let view = runner
         .pending_selection_view()
@@ -278,8 +282,9 @@ fn ex7_011_cost_paid_but_no_legal_target_still_places_the_option() {
         player: 0,
         index: mega_idx as u8,
     };
+    let action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, action)
         .expect("pick Der Blitz");
     assert!(
         runner.pending_selection().is_none(),
@@ -299,8 +304,9 @@ fn ex7_011_when_digivolving_offers_the_same_effect() {
         .game
         .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
     assert_eq!(runner.memory(), memory_before - 3, "Red Lv.4 / cost 3");
+    let action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, action)
         .expect("pick Der Blitz");
     let view = runner
         .pending_selection_view()
@@ -357,3 +363,6 @@ fn ex7_011_cannot_digivolve_from_plain_black_lv4() {
         .game
         .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

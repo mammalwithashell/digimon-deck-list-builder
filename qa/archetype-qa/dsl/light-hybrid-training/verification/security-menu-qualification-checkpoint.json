@@ -1,0 +1,24 @@
+{
+  "date": "2026-10-25",
+  "scope": [
+    "BT13-012",
+    "BT14-033"
+  ],
+  "production_changes": false,
+  "red": {
+    "BT13-012": {
+      "passed": 16,
+      "failed": 1,
+      "log": "logs/root-bt13-012-fixtures-red.log"
+    },
+    "BT14-033": {
+      "passed": 22,
+      "failed": 2,
+      "log": "logs/root-bt14-033-fixtures-red.log"
+    }
+  },
+  "cause": "Owned security menus expose optional decline as a legal action; old fixtures counted only card commits.",
+  "changes": "BT14-033 asserts physical Security CommitCard rows with owner zero and exact legal commits plus PASS; BT13-012 counts two Tamer commits plus legal PASS. Existing free-play, recovery, shuffle, filtered-color and exact-security-movement assertions remain.",
+  "green": "Pending combined cards rebuild and whole-module rerun; initial aggregate failures retained.",
+  "admission": "No ledger or admission promotion."
+}

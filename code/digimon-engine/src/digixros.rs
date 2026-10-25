@@ -726,6 +726,53 @@ pub fn matches_generic_name_requirement_for_test(card: &CardData, required_name:
 }
 
 impl Game {
+    /// Printed recipe fast paths cannot read characteristics of face-down sources.
+    /// Reuse the full three-valued predicate evaluator for those instances while
+    /// retaining structural alternatives and explicit wildcard permissions.
+    fn face_down_digixros_validation_context(&self, transaction: &DigiXrosTransaction,
+        origin: DigiXrosMaterialOrigin) -> Option<DigiXrosTransaction> {
+        if !self.card_is_face_down_source(origin.card()) { return None; }
+        let mut context = transaction.clone();
+        #[cfg(feature = "dsl-yaml-loader")]
+        let filters = self.card_data_for_handle(transaction.played_card)
+            .and_then(|card| self.alt_path_registry.get(&card.card_id))
+            .and_then(|paths| paths.iter().find(|path| matches!(path.kind,
+                digimon_dsl::compiled::CompiledAltPathKind::DigiXros | digimon_dsl::compiled::CompiledAltPathKind::CastTimeAssembly)))
+            .map(|path| path.materials.iter().map(|material| &material.filter).collect::<Vec<_>>());
+        for slot in &mut context.recipe_slots {
+            #[cfg(feature = "dsl-yaml-loader")]
+            let structural_match = filters.as_ref().and_then(|filters| filters.get(slot.slot_index))
+                .map(|filter| self.card_satisfies_material_residual(transaction.controller, transaction.played_card, filter, origin.card()))
+                .unwrap_or_else(|| slot.names.is_empty() && slot.traits.is_empty() && slot.admits_card_instance(origin.card()));
+            #[cfg(not(feature = "dsl-yaml-loader"))]
+            let structural_match = slot.names.is_empty() && slot.traits.is_empty() && slot.admits_card_instance(origin.card());
+            if structural_match && slot.distinct_by.is_none() {
+                slot.names.clear(); slot.traits.clear();
+                slot.eligible_cards = Some(vec![origin.card()]);
+            } else { slot.eligible_cards = Some(Vec::new()); }
+        }
+        Some(context)
+    }
+
+    pub(crate) fn digixros_material_is_eligible(&self, transaction: &DigiXrosTransaction,
+        origin: DigiXrosMaterialOrigin) -> bool {
+        let Some(data) = self.card_data_for_handle(origin.card()) else { return false; };
+        self.face_down_digixros_validation_context(transaction, origin).as_ref().unwrap_or(transaction)
+            .validate_material_origin(origin, data).is_ok()
+    }
+
+    pub(crate) fn select_pending_digixros_material(&mut self, origin: DigiXrosMaterialOrigin) -> bool {
+        let Some(data) = self.card_data_for_handle(origin.card()).cloned() else { return false; };
+        let Some(transaction) = self.pending_digixros_transaction.take() else { return false; };
+        let original_recipe = transaction.recipe_slots.clone();
+        let mut context = self.face_down_digixros_validation_context(&transaction, origin).unwrap_or(transaction);
+        let accepted = context.try_select_material(origin, &data).is_ok();
+        // The temporary visibility context applies to this candidate only.
+        context.recipe_slots = original_recipe;
+        self.pending_digixros_transaction = Some(context);
+        accepted
+    }
+
     /// Build the inert transaction context for a hand card's first authored
     /// DigiXros path. Later slices consume this context for material prompts,
     /// transaction modifiers, cost math, and post-payment source attachment.
@@ -2094,7 +2141,10 @@ alt_paths:
         );
 
         assert_eq!(runner.play(0, 0), None);
-        let action_id = permanent.index as u16;
+        let action_id = crate::card_choice_page::CARD_CHOICE_START;
+        let row = runner.pending_selection().unwrap().card_choice.as_ref().unwrap().view(&runner.game, 0).rows.remove(0);
+        assert_eq!(row.card_id.as_deref(), Some("BT10-111"));
+        assert!(matches!(row.zone, Some(crate::owned_card_choice::CardChoiceZone::BattleTop)));
         assert!(
             runner
                 .pending_selection()
@@ -2115,6 +2165,8 @@ alt_paths:
                 .contains(&action_id),
             "selected wildcard material must be masked after its substitution is consumed"
         );
+        assert_eq!(runner.game.pending_digixros_transaction.as_ref().unwrap()
+            .wildcard_substitutions[0].remaining_uses, 0, "the transaction consumes its one wildcard use");
         runner
             .execute_action(0, crate::action::space::PASS)
             .expect("finish material selection");

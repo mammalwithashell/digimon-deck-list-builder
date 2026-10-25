@@ -68241,7 +68241,7 @@
     "attribute_eng": [
       "Variable"
     ],
-    "effect_description_eng": "[When Digivolving] [End of Opponent's Turn] [Once Per Turn] By placing 1 Digimon card from this Digimon's digivolution cards as your bottom security card, delete all of your opponent's Digimon with the same level as the placed card.\r\n[All Turns] [Once Per Turn] When a Digimon attacks, by adding the top card of your security stack to the hand, unsuspend this Digimon.",
+    "effect_description_eng": "[When Digivolving] [End of Opponent's Turn] [Once Per Turn] By placing 1 Digimon card from this Digimon's digivolution cards as the bottom security card, delete all of your opponent's Digimon with the same level as the placed card.\n[All Turns] [Once Per Turn] When Digimon attack, by adding your top security card to the hand, this Digimon unsuspends.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -70354,9 +70354,9 @@
     "type_eng": [],
     "form_eng": [],
     "attribute_eng": [],
-    "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
+    "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
     "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may return 1 card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand.",
-    "security_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost.",
     "evo_costs": [],
     "xros_req": ""
   },
@@ -70441,8 +70441,8 @@
     "form_eng": [],
     "attribute_eng": [],
     "effect_description_eng": "[Main] You may place up to 5 [Hybrid] trait cards with different names from your hand or trash under 1 of your Tamers. Then, 1 of your Tamers with 5 or more cards under it may digivolve into [MagnaGarurumon] in the hand or trash, ignoring digivolution requirements and without paying the cost.",
-    "inherited_effect_description_eng": "Security Effect [Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand.",
-    "security_effect_description_eng": "",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand.",
     "evo_costs": [],
     "xros_req": ""
   },
@@ -162633,5 +162633,47 @@
         ]
       }
     ]
+  },
+  "P-249": {
+    "index": 4481,
+    "norm_id": 0.22405,
+    "card_id": "P-249",
+    "card_index": 249,
+    "attribute_eng": [
+      "Variable"
+    ],
+    "card_colors": [
+      2
+    ],
+    "card_effect_class_name": "P_249",
+    "card_kind": 0,
+    "card_name_eng": "Strabimon",
+    "card_name_jpn": "",
+    "dp": 1000,
+    "effect_description_eng": "[Start of Your Main Phase] By placing 1 [Hybrid] trait card from your hand or trash as this Digimon's bottom digivolution card or under any of your Tamers with inherited effects, that Digimon or Tamer may digivolve into a [Hybrid] trait card in the hand with the cost reduced by 2.",
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "form_eng": [
+      "Hybrid"
+    ],
+    "inherited_effect_description_eng": "[On Deletion] You may play 1 Tamer card with inherited effects from your hand without paying the cost.",
+    "level": 3,
+    "play_cost": 3,
+    "rarity": 0,
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Beastkin"
+    ],
+    "xros_req": ""
   }
 }

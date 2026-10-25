@@ -1,0 +1,17 @@
+
+running 1 test
+
+thread 'constructs::cost_target_event::source_cost_full_short_and_decline' (23336) panicked at code\digimon-engine\tests\dsl\constructs\cost_target_event.rs:72:5:
+assertion `left == right` failed
+  left: [30, 31, 62]
+ right: [62, 2000, 2001]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test constructs::cost_target_event::source_cost_full_short_and_decline ... FAILED
+
+failures:
+
+failures:
+    constructs::cost_target_event::source_cost_full_short_and_decline
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1592 filtered out; finished in 5.21s
+

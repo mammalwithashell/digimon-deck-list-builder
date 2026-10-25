@@ -114,6 +114,69 @@ fn eval_predicate_ref(
     bindings: Option<&Bindings>,
     inherited_ref: DualRef,
 ) -> bool {
+    let card = match subject {
+        PredicateSubject::Card(card) | PredicateSubject::RevealedCard(card) => Some(card),
+        PredicateSubject::Source(source) => Some(source.card),
+        _ => None,
+    };
+    if card.is_some_and(|card| rctx.game.card_is_face_down_source(card)) {
+        return eval_without_card_information(pred, rctx, subject, bindings, inherited_ref).unwrap_or(false);
+    }
+    eval_predicate_ref_known(pred, rctx, subject, bindings, inherited_ref)
+}
+
+/// Unknown printed information must remain unknown through negation. Known
+/// structural alternatives (for example is_face_down) still determine a menu.
+fn eval_without_card_information(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    subject: PredicateSubject,
+    bindings: Option<&Bindings>,
+    inherited_ref: DualRef,
+) -> Option<bool> {
+    fn and(a: Option<bool>, b: Option<bool>) -> Option<bool> {
+        match (a, b) {
+            (Some(false), _) | (_, Some(false)) => Some(false),
+            (Some(true), Some(true)) => Some(true),
+            _ => None,
+        }
+    }
+    let mut leaf = pred.clone();
+    clear_printed_card_information_constraints(&mut leaf);
+    leaf.all_of.clear(); leaf.any_of.clear(); leaf.none_of.clear(); leaf.not = None;
+    if !eval_predicate_ref_known(&leaf, rctx, subject, bindings, inherited_ref) { return Some(false); }
+    let mut result = if references_printed_card_information(pred) { None } else { Some(true) };
+    for child in &pred.all_of {
+        result = and(result, eval_without_card_information(child, rctx, subject, bindings, inherited_ref));
+    }
+    if !pred.any_of.is_empty() {
+        let mut any = Some(false);
+        for child in &pred.any_of {
+            let value = eval_without_card_information(child, rctx, subject, bindings, inherited_ref);
+            any = match (any, value) {
+                (Some(true), _) | (_, Some(true)) => Some(true),
+                (Some(false), Some(false)) => Some(false),
+                _ => None,
+            };
+        }
+        result = and(result, any);
+    }
+    for child in &pred.none_of {
+        result = and(result, eval_without_card_information(child, rctx, subject, bindings, inherited_ref).map(|v| !v));
+    }
+    if let Some(child) = &pred.not {
+        result = and(result, eval_without_card_information(child, rctx, subject, bindings, inherited_ref).map(|v| !v));
+    }
+    result
+}
+
+fn eval_predicate_ref_known(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    subject: PredicateSubject,
+    bindings: Option<&Bindings>,
+    inherited_ref: DualRef,
+) -> bool {
     // A node's own category (its `kind` or an `all_of` conjunct) wins over the
     // one inherited from an enclosing node. A `Source` subject (a digivolution
     // card) reads like any card in a card zone: a DUAL card lying in the
@@ -140,6 +203,12 @@ fn eval_predicate_ref(
     // (e.g. `is_face_down` / `is_bottom_source`) stay evaluable at any
     // combinator nesting depth.
     let original_subject = subject;
+    if let Some(want) = pred.controller_can_add_security {
+        let can = rctx.game.can_add_security_by_effect(rctx.player);
+        if can != want {
+            return false;
+        }
+    }
     if let Some(spec) = &pred.dna_hand_candidate {
         if !dna_hand_candidate(spec, rctx, original_subject, bindings) {
             return false;
@@ -628,6 +697,20 @@ fn eval_predicate_ref(
             return false;
         };
         if !eval_predicate_with_bindings(inner, rctx, PredicateSubject::Card(target), bindings) {
+            return false;
+        }
+    }
+    if let Some(inner) = &pred.cost_target_permanent {
+        if !rctx.cost_is_digivolve
+            || !rctx.cost_target_permanents.iter().any(|handle| {
+                let subject = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+                    PredicateSubject::BreedingPermanent(handle.player)
+                } else {
+                    PredicateSubject::Permanent(*handle)
+                };
+                eval_predicate_with_bindings(inner, rctx, subject, bindings)
+            })
+        {
             return false;
         }
     }
@@ -3230,6 +3313,30 @@ fn any_physical_card_name_matches(
         || runtime_names.iter().any(|name| matches(name))
 }
 
+macro_rules! printed_card_information_constraints {
+    ($($field:ident),+ $(,)?) => {
+        fn references_printed_card_information(pred: &CompiledPredicate) -> bool {
+            false $(|| pred.$field.is_some())+
+        }
+        fn clear_printed_card_information_constraints(pred: &mut CompiledPredicate) {
+            $(pred.$field = None;)+
+        }
+    };
+}
+
+printed_card_information_constraints!(
+    kind, level_eq, level_eq_binding, level_lte_binding, level_gte_binding,
+    level_lte, level_gte, level_matches_aggregate, color_is, color_only,
+    color_matches_any_field_digimon, color_matches_binding, color_matches_returned_card,
+    color_matches_own_source_stack, trait_has, trait_contains, form_is, attribute_is,
+    name_is, name_contains, name_in, name_not_shared_by_field_digimon,
+    name_not_shared_by_field_tamer, name_not_in_binding, card_number_is,
+    effect_text_contains, in_text_contains, printed_keyword, has_keyword,
+    has_inherited, has_on_deletion_effect, play_cost_lte, play_cost_gte,
+    play_cost_eq, play_cost_eq_binding, play_or_use_cost_lte, affordable_with_cost_reduce,
+    dp_eq, dp_lte, dp_gte, self_color_count_gte, self_color_count_lte,
+);
+
 fn eval_card_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -3248,6 +3355,12 @@ fn eval_card_fields(
             || pred.can_attack.is_some()
             || pred.can_change_orientation.is_some())
     {
+        return false;
+    }
+    // Inspection permission does not restore printed characteristics to a
+    // face-down source. Apply this to Card as well as Source subjects, so
+    // aggregate filters and card-local selection guards use the same rule.
+    if rctx.game.card_is_face_down_source(card) && references_printed_card_information(pred) {
         return false;
     }
     let data = match rctx.game.card_data_for_handle(card) {

@@ -1,4 +1,4 @@
-use digimon_engine::action::space::{encode_source_select, SEL_REVEAL_START};
+use digimon_engine::action::space::{SEL_REVEAL_START};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
@@ -96,7 +96,7 @@ fn bt19_008_on_play_may_digivolve_from_omnishoutmon_under_tamer() {
         .pending_selection()
         .expect("On Play should offer OmniShoutmon under a Tamer");
     assert!(pending.is_optional, "printed 'may digivolve' is declinable");
-    let action = encode_source_select(tamer.index as u16, 0).unwrap();
+    let action = physical_menu::source_action(&runner.game,tamer,0);
     assert!(pending.valid_action_ids.contains(&action));
     runner
         .execute_action(0, action)
@@ -163,3 +163,6 @@ fn bt19_008_inherited_grants_rush_to_xros_heart_carrier() {
         "Shoutmon inherited text should grant Rush to an Xros Heart carrier"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

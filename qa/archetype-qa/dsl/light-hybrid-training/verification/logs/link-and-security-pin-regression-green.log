@@ -1,0 +1,31 @@
+
+running 6 tests
+test game::verification::security_play_hash::tests::raw_security_origin_index_is_current_state_but_archival_projection_is_stable ... ok
+test game::verification::security_play_hash::tests::security_active_receipt_alpha_rename_preserves_v4_but_wrong_reference_does_not ... ok
+test game::verification::security_play_hash::tests::security_origin_keeps_archival_debug_and_hashes_current_correlation ... ok
+test game::verification::security_play_hash::tests::security_receipt_store_is_v4_only_and_counter_is_not_state ... ok
+test game::verification::security_play_hash::tests::security_runtime_steps_preserve_legacy_tail_and_cost_reference_positions ... ok
+test game::verification::security_play_hash::tests::security_steps_in_global_and_nested_outer_tails_are_versioned ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 501 filtered out; finished in 1.92s
+
+FILTER_EXIT security_play_hash::tests 0
+
+running 2 tests
+test dsl_cards::bindings::private_link_identity_tests::private_link_pin_clear_and_explicit_rebind_override_prior_metadata ... ok
+test dsl_cards::bindings::private_link_identity_tests::private_link_pins_survive_clone_merge_and_resolve_compacted_carriers ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 505 filtered out; finished in 1.98s
+
+FILTER_EXIT private_link_identity_tests 0
+
+running 5 tests
+test game::verification::link_pin_projection_tests::tests::existing_reserved_source_identity_pin_remains_in_v3 ... ok
+test game::verification::link_pin_projection_tests::tests::private_link_clear_is_current_state_without_archival_debug_or_digest_changes ... ok
+test game::verification::link_pin_projection_tests::tests::private_link_pins_are_v4_only_without_authored_slots_or_debug_changes ... ok
+test game::verification::link_pin_projection_tests::tests::private_link_pins_in_dna_declaration_keep_v3_and_affect_v4 ... ok
+test game::verification::link_pin_projection_tests::tests::security_runtime_in_dna_tail_is_legacy_neutral_and_v4_alpha_equivalent ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 502 filtered out; finished in 2.00s
+
+FILTER_EXIT link_pin_projection_tests 0

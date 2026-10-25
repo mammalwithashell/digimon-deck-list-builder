@@ -69,7 +69,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_source_select, PASS};
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -489,8 +489,8 @@ fn ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends() {
         !view.valid_action_ids.contains(&PASS),
         "PASS must not be exposed before the minimum is met"
     );
-    let pick_a = encode_source_select(0, 0).expect("source (slot 0, idx 0) encodes");
-    let pick_b = encode_source_select(1, 0).expect("source (slot 1, idx 0) encodes");
+    let pick_a = physical_choice::card_action(&runner.game, "OPP-A1", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
+    let pick_b = physical_choice::card_action(&runner.game, "OPP-B1", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     assert!(
         view.valid_action_ids.contains(&pick_a) && view.valid_action_ids.contains(&pick_b),
         "both opponent stacks' sources are candidates (cross-permanent); got {:?}",
@@ -508,6 +508,7 @@ fn ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends() {
         !view.valid_action_ids.contains(&PASS),
         "PASS must not appear after 1 of 2 mandatory picks"
     );
+    let pick_b = physical_choice::card_action(&runner.game, "OPP-B1", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     runner
         .execute_action(0, pick_b)
         .expect("pick the source under opponent stack B");
@@ -575,11 +576,11 @@ fn ex7_021_wd_picks_any_two_from_same_stack_and_no_unsuspend_while_sources_remai
         3,
         "all 3 digivolution cards of the lone stack are candidates"
     );
-    let pick_bottom = encode_source_select(0, 0).expect("bottom source encodes");
-    let pick_middle = encode_source_select(0, 1).expect("middle source encodes");
+    let pick_bottom = physical_choice::card_action(&runner.game, "OPP-A1", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     runner
         .execute_action(0, pick_bottom)
         .expect("pick the bottom digivolution card");
+    let pick_middle = physical_choice::card_action(&runner.game, "OPP-A2", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
     runner
         .execute_action(0, pick_middle)
         .expect("pick the middle digivolution card");
@@ -860,3 +861,6 @@ fn ex7_021_aura_off_when_carrier_lacks_ice_snow_trait() {
         "Security A. +1 must be absent when the carrier lacks the Ice-Snow trait"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

@@ -371,13 +371,7 @@ fn bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible() {
         1,
         "exactly one eligible card (the trash Agumon); got {card_actions:?}"
     );
-    assert!(
-        card_actions[0] >= TRASH_EFFECT_START,
-        "the only eligible card action must be a trash slot (>= TRASH_EFFECT_START), \
-         not a hand slot ({}); got {}",
-        PLAY_HAND_START,
-        card_actions[0]
-    );
+    assert!(owned_union_fixture::is_zone(&runner.game, card_actions[0], true));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -1179,9 +1173,8 @@ fn bt17_095_security_auto_collapses_zone_when_only_trash_eligible() {
         1,
         "exactly one eligible card (the trash Tai Kamiya); got {card_actions:?}"
     );
-    assert!(
-        card_actions[0] >= TRASH_EFFECT_START,
-        "the only eligible card action must be a trash slot; got {}",
-        card_actions[0]
-    );
+    assert!(owned_union_fixture::is_zone(&runner.game, card_actions[0], true));
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

@@ -1,0 +1,26 @@
+
+running 11 tests
+test p::p_170::p_170_accept_reducer_returns_three_tm_text_cards_and_pays_seven ... ok
+test p::p_170::p_170_alt_paths_two_circles_cost5_and_tm_text_cost4 ... ok
+test p::p_170::p_170_declares_keywords_cost_reducer_and_optional_on_deletion ... ok
+test p::p_170::p_170_decline_reducer_pays_full_thirteen ... ok
+test p::p_170::p_170_on_deletion_decline_plays_nothing ... ok
+test p::p_170::p_170_on_deletion_no_eligible_card_no_prompt ... ok
+test p::p_170::p_170_on_deletion_plays_tm_digimon_free_from_hand ... ok
+
+thread 'p::p_170::p_170_on_deletion_plays_tm_digimon_free_from_trash' (46024) panicked at code\digimon-engine\tests\cards_behavioral\p\p_170.rs:350:5:
+assertion failed: view.valid_action_ids.contains(&pick)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test p::p_170::p_170_on_deletion_plays_tm_digimon_free_from_trash ... FAILED
+test p::p_170::p_170_only_two_tm_text_cards_no_reducer_offered ... ok
+test p::p_170::p_170_opponent_option_is_trashed_before_on_deletion_resolves ... ok
+test p::p_170::p_170_yaml_has_printed_metadata_including_rule_trait ... ok
+
+failures:
+
+failures:
+    p::p_170::p_170_on_deletion_plays_tm_digimon_free_from_trash
+
+test result: FAILED. 10 passed; 1 failed; 0 ignored; 0 measured; 12744 filtered out; finished in 15.94s
+
+FILTER_EXIT 101

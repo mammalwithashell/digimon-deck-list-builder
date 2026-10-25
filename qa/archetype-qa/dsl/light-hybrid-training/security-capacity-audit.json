@@ -1,0 +1,238 @@
+{
+  "date": "2026-10-24",
+  "gap_id": "G-ACTION-COMPLETE-SECURITY-SELECTION",
+  "status": "BLOCKED",
+  "affected_card_ids": [
+    "BT18-037"
+  ],
+  "scope": {
+    "exact_pool_unique_ids": 20,
+    "existing_yaml_scanned": 18,
+    "missing_yaml": [
+      "P-249",
+      "BT18-042"
+    ]
+  },
+  "authority": {
+    "official_observation": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+    "image_inspected": "C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/BT18-037.webp",
+    "printed_effect": "Search your security stack; may add one Hybrid or Ten Warriors to hand; if added recover 1; then shuffle security",
+    "rules_reference": "docs/digimon-rules/cr-4.3.txt section 3-7"
+  },
+  "mechanism": {
+    "selector": "code/digimon-engine/src/effect_context/selections.rs:1254",
+    "cap": "security_len.min(MAX_SECURITY)",
+    "max_security_actions": 10,
+    "own_security_action_ids": "40..49",
+    "security_storage": "Vec; recovery has no corresponding ten-card cap",
+    "consequence": "Only eligible card at physical index 10 is silently unreachable; action 50 cannot be reused because it belongs to opponent security"
+  },
+  "test": "code/digimon-engine/tests/light_hybrid_security_capacity.rs",
+  "red": {
+    "command": "cargo test -p digimon-engine --test light_hybrid_security_capacity -- --nocapture",
+    "result": "1 passed, 1 failed, 0 ignored",
+    "failure": "lobomon_security_index_10_is_selectable: pending_selection absent",
+    "log": "verification/security-capacity-red.log"
+  },
+  "green": {
+    "command": "cargo test -p digimon-engine --test light_hybrid_security_capacity -- --nocapture",
+    "result": "1 passed, 0 failed, 1 ignored",
+    "ignored": "only index 10 witness, tagged with gap ID",
+    "log": "verification/security-capacity-green.log"
+  },
+  "control_assertions": [
+    "index9 is sole eligible card and explicit legal masked choice",
+    "selected physical card reaches hand",
+    "compensating recovery preserves security count and consumes one deck card",
+    "physical security order and RNG match exactly one shuffle after recovery"
+  ],
+  "environment": {
+    "CARGO_TARGET_DIR": "D:/cargo-target/light-hybrid-training",
+    "RUST_MIN_STACK": "33554432"
+  },
+  "inventory": [
+    {
+      "card_id": "EX7-002",
+      "path": "code/digimon-engine/cards/ex7/EX7-002.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT6-022",
+      "path": "code/digimon-engine/cards/bt6/BT6-022.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT17-020",
+      "path": "code/digimon-engine/cards/bt17/BT17-020.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT16-082",
+      "path": "code/digimon-engine/cards/bt16/BT16-082.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT17-023",
+      "path": "code/digimon-engine/cards/bt17/BT17-023.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT18-037",
+      "path": "code/digimon-engine/cards/bt18/BT18-037.yaml",
+      "security_mentions": [
+        {
+          "line": 38,
+          "text": "- select_security:"
+        },
+        {
+          "line": 47,
+          "text": "prompt: Add 1 Hybrid or Ten Warriors card from security to your hand"
+        },
+        {
+          "line": 48,
+          "text": "- add_to_hand_from_security: { of: you, card: pick }"
+        },
+        {
+          "line": 53,
+          "text": "- shuffle_security: { of: you }"
+        }
+      ],
+      "indexed_security_selector": true
+    },
+    {
+      "card_id": "BT18-067",
+      "path": "code/digimon-engine/cards/bt18/BT18-067.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT18-063",
+      "path": "code/digimon-engine/cards/bt18/BT18-063.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT18-077",
+      "path": "code/digimon-engine/cards/bt18/BT18-077.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT18-076",
+      "path": "code/digimon-engine/cards/bt18/BT18-076.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "AD1-015",
+      "path": "code/digimon-engine/cards/ad1/AD1-015.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT7-038",
+      "path": "code/digimon-engine/cards/bt7/BT7-038.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT18-081",
+      "path": "code/digimon-engine/cards/bt18/BT18-081.yaml",
+      "security_mentions": [],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "P-153",
+      "path": "code/digimon-engine/cards/p/P-153.yaml",
+      "security_mentions": [
+        {
+          "line": 58,
+          "text": "- owner_can_add_security: true"
+        },
+        {
+          "line": 59,
+          "text": "summary: \"By placing this Digimon's top stacked card as top security, this Digimon or Tamer unsuspends\""
+        },
+        {
+          "line": 61,
+          "text": "- security_place_top_stacked_card:"
+        }
+      ],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT18-088",
+      "path": "code/digimon-engine/cards/bt18/BT18-088.yaml",
+      "security_mentions": [
+        {
+          "line": 51,
+          "text": "- when: on_security"
+        },
+        {
+          "line": 53,
+          "text": "- play_from_security: {}"
+        }
+      ],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "AD1-023",
+      "path": "code/digimon-engine/cards/ad1/AD1-023.yaml",
+      "security_mentions": [
+        {
+          "line": 42,
+          "text": "- security_count_gte: 1"
+        },
+        {
+          "line": 44,
+          "text": "- add_top_security_to_hand: {of: you}"
+        },
+        {
+          "line": 49,
+          "text": "- when: on_security"
+        },
+        {
+          "line": 51,
+          "text": "- play_from_security: {}"
+        }
+      ],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT18-094",
+      "path": "code/digimon-engine/cards/bt18/BT18-094.yaml",
+      "security_mentions": [
+        {
+          "line": 63,
+          "text": "- when: on_security"
+        },
+        {
+          "line": 66,
+          "text": "- play_from_security: {}"
+        }
+      ],
+      "indexed_security_selector": false
+    },
+    {
+      "card_id": "BT18-097",
+      "path": "code/digimon-engine/cards/bt18/BT18-097.yaml",
+      "security_mentions": [
+        {
+          "line": 2,
+          "text": "# and BT18-097.webp. Generated runtime security text has incorrect zones."
+        },
+        {
+          "line": 56,
+          "text": "- when: on_security"
+        }
+      ],
+      "indexed_security_selector": false
+    }
+  ],
+  "resolution": "Separate coordinated action/tensor contract plan required; no contract expansion, hidden choice, security cap, YAML edits or unrelated global hand/battle limits changed."
+}

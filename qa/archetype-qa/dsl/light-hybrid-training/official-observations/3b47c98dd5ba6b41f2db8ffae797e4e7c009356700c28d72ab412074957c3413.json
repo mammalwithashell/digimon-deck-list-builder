@@ -1,0 +1,151 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "BT18-063",
+    "card_type": "Digimon",
+    "colors": [
+      "Black",
+      "Yellow"
+    ],
+    "dp": 5000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Black",
+          "Yellow"
+        ],
+        "cost": 3,
+        "from_level": 3,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Black",
+          "Yellow"
+        ],
+        "dp": 5000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 4,
+        "name": "Beetlemon",
+        "play_cost": 5,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] [J.P. Shibayama]: Cost 2/[MetalKabuterimon]: Cost 0"
+          },
+          {
+            "label": "Effect",
+            "text": "[When Digivolving] Until the end of your opponent's turn, this Digimon can't be deleted by their effects.\n[When Attacking] 1 of your Digimon or Tamers may digivolve into a black or yellow Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1."
+          },
+          {
+            "label": "Inherited Effect",
+            "text": "[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 Tamer card with inherited effects from this Digimon's digivolution cards without paying the cost."
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 4,
+    "name": "Beetlemon",
+    "play_cost": 5,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522025",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT18-063.png?260529",
+      "printing_id": "BT18-063"
+    },
+    "printing_field_gaps": [],
+    "qa": [
+      {
+        "answer": "No, it digivolves from the Tamer as-is. It isn't treated as a Digimon that digivolves, therefore \"when a Digimon would digivolve\" effects and \"when a Digimon digivolves\" effects don't trigger.\nIn addition, this digivolution requirement can be used to digivolve a Tamer even if a \"Digimon can't digivolve\" effect activates.",
+        "date": "Jun. 19, 2026",
+        "number": "Q2993",
+        "question": "Does a digivolution requirement that digivolves from a Tamer mean that the Tamer that will become a digivolution card is treated as a Digimon when it digivolves?"
+      },
+      {
+        "answer": "The effects trigger simultaneously, so the player can choose the activation order.",
+        "date": "Jun. 19, 2026",
+        "number": "Q2994",
+        "question": "When a Digimon that has this card in its digivolution cards and an [On Deletion] effect would be deleted, I activated this card's inherited effect and played a Tamer card that has an [On Play] effect.\nAt such times, in what order can the deleted Digimon's [On Deletion] effect and the played Tamer's [On Play] effect activate?"
+      },
+      {
+        "answer": "Yes, you perform a digivolution bonus draw.\nA digivolution bonus draw is performed for any kind of digivolution.",
+        "date": "Jun. 19, 2026",
+        "number": "Q2995",
+        "question": "Is a digivolution bonus draw performed even when a Tamer digivolves?"
+      },
+      {
+        "answer": "No, it can't.\nA card cannot attack on the turn it is played, even if it digivolves from a card placed on the field. It can only attack if it was not played that turn.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6633",
+        "question": "If this card digivolves from a Tamer that was played this turn, can it attack this turn?"
+      },
+      {
+        "answer": "Yes, it is.\nIf the Digimon leaves the field, that Tamer is trashed like normal digivolution cards.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6634",
+        "question": "Is a Tamer card placed under a Digimon considered a digivolution card?"
+      },
+      {
+        "answer": "No, it does not.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6635",
+        "question": "Does a Digimon gain the security effects in the lower text of a Tamer card in its digivolution cards?"
+      },
+      {
+        "answer": "Yes, it does.",
+        "date": "Jun. 19, 2026",
+        "number": "Q6636",
+        "question": "Does a Digimon gain the inherited effects in the lower text of a Tamer card in its digivolution cards?"
+      }
+    ],
+    "rarity": "SR",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] [J.P. Shibayama]: Cost 2/[MetalKabuterimon]: Cost 0"
+    ],
+    "tamer_evolution_routes": [
+      {
+        "colors": [
+          "Black",
+          "Yellow"
+        ],
+        "cost": 3,
+        "from_kind": "Tamer",
+        "slot": 2
+      }
+    ],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] [J.P. Shibayama]: Cost 2/[MetalKabuterimon]: Cost 0"
+      },
+      {
+        "label": "Effect",
+        "text": "[When Digivolving] Until the end of your opponent's turn, this Digimon can't be deleted by their effects.\n[When Attacking] 1 of your Digimon or Tamers may digivolve into a black or yellow Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1."
+      },
+      {
+        "label": "Inherited Effect",
+        "text": "[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 Tamer card with inherited effects from this Digimon's digivolution cards without paying the cost."
+      }
+    ],
+    "type": "Cyborg"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "8639bd1c2beb0c57dfa05a8c533f45bd31f0039cfd7f4c70a53b8e708fd8769d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522025:BT18-063:BT18-063",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522025"
+}

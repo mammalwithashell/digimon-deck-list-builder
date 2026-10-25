@@ -180,6 +180,7 @@ pub fn install_count_choice(
         source_kind: ctx.source_kind,
         callback: Box::new(|_, _| panic!("count choice requires its typed resume frame")),
         on_decline: None,
+        card_choice: None,
         zone_owner: None,
     });
     ctx.game.pending_selection_resume = Some(ResumeStack {

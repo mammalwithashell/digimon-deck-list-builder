@@ -34,6 +34,32 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 use serde_json::Value;
 
+/// Async transports carry the token of the page actually rendered. Serial RL
+/// callers retain step(); checking and stepping here share the same mutable
+/// runner borrow so a token cannot be validated against a different prompt.
+fn validate_card_choice_submission(
+    game: &::digimon_engine::game::Game,
+    expected: Option<&Bound<'_, PyDict>>,
+) -> PyResult<()> {
+    let current = game.pending_selection.as_ref().and_then(|p| p.card_choice.as_ref());
+    match (current, expected) {
+        (None, None) => Ok(()),
+        (Some(owner), Some(expected)) if expected.len() == 2 => {
+            let prompt: String = expected.get_item("prompt_id")?
+                .ok_or_else(|| PyValueError::new_err("Missing card choice prompt_id"))?.extract()?;
+            let generation: String = expected.get_item("page_generation")?
+                .ok_or_else(|| PyValueError::new_err("Missing card choice page_generation"))?.extract()?;
+            let token = owner.token();
+            if prompt == token.prompt_id.to_string() && generation == token.page_generation.to_string() {
+                Ok(())
+            } else {
+                Err(PyValueError::new_err("Stale card choice prompt or page"))
+            }
+        }
+        _ => Err(PyValueError::new_err("Missing or stale card choice token")),
+    }
+}
+
 use pyo3::wrap_pyfunction;
 
 use ::digimon_engine::action::space::{
@@ -646,6 +672,33 @@ fn profile_to_pydict(py: Python<'_>, profile: &RustTensorProfile) -> PyResult<Py
         )?;
         count.set_item("row_offsets", offsets)?;
         d.set_item("count_choice", count)?;
+        let card = PyDict::new_bound(py);
+        card.set_item("encoding", "u64_le_u16_normalized")?;
+        card.set_item("limb_count", count_layout::PENDING_COUNT_LIMBS)?;
+        card.set_item("limb_denominator", count_layout::PENDING_COUNT_LIMB_DENOMINATOR)?;
+        card.set_item("row_size", count_layout::PENDING_CHOICE_ROW_SIZE)?;
+        card.set_item("rows_per_page", ::digimon_engine::card_choice_page::CARD_CHOICES_PER_PAGE)?;
+        card.set_item("presentation_order", "card_choice.rows")?;
+        card.set_item("includes_nonselectable_inspection_rows", true)?;
+        let offsets = PyDict::new_bound(py);
+        for &(name, offset) in count_layout::PENDING_CARD_ROW_OFFSETS {
+            offsets.set_item(name, offset)?;
+        }
+        card.set_item("row_offsets", offsets)?;
+        let zones = PyDict::new_bound(py);
+        for (name, code) in [("battle_source", 1), ("breeding_source", 2), ("security", 3), ("hand", 4), ("trash", 5), ("battle_top", 6)] {
+            zones.set_item(name, code)?;
+        }
+        card.set_item("zone_codes", zones)?;
+        let actions = PyDict::new_bound(py);
+        actions.set_item("commit_start", ::digimon_engine::card_choice_page::CARD_CHOICE_START)?;
+        actions.set_item("previous_page", ::digimon_engine::card_choice_page::CARD_CHOICE_PREVIOUS)?;
+        actions.set_item("next_page", ::digimon_engine::card_choice_page::CARD_CHOICE_NEXT)?;
+        actions.set_item("decline", ::digimon_engine::card_choice_page::CARD_CHOICE_DECLINE)?;
+        actions.set_item("refresh_page", ::digimon_engine::card_choice_page::CARD_CHOICE_NEXT)?;
+        actions.set_item("finish_impossible", ::digimon_engine::card_choice_page::CARD_CHOICE_DECLINE)?;
+        card.set_item("actions", actions)?;
+        d.set_item("card_choice", card)?;
     }
 
     Ok(d.into_py(py))
@@ -812,6 +865,13 @@ impl RustHeadlessGame {
         self.inner.step(action_id);
     }
 
+    #[pyo3(signature = (action_id, expected_card_choice = None))]
+    fn step_checked(&mut self, action_id: u16, expected_card_choice: Option<&Bound<'_, PyDict>>) -> PyResult<()> {
+        validate_card_choice_submission(&self.inner.game, expected_card_choice)?;
+        self.inner.step(action_id);
+        Ok(())
+    }
+
     /// Return the action mask for the current decision player as a
     /// numpy `float32` array of shape `(ACTION_SPACE_SIZE,)`.
     fn get_action_mask<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f32>> {
@@ -975,7 +1035,7 @@ impl RustHeadlessGame {
         match game.pending_selection.as_ref() {
             None => Ok(py.None()),
             Some(sel) => {
-                let v = sel.view();
+                let v = sel.view(game);
                 let d = PyDict::new_bound(py);
                 d.set_item("kind", v.kind_str())?;
                 d.set_item("phase", v.previous_phase_str())?;
@@ -983,6 +1043,11 @@ impl RustHeadlessGame {
                 d.set_item("validIndices", v.valid_action_ids.clone())?;
                 d.set_item("isOptional", v.is_optional)?;
                 d.set_item("prompt", v.prompt.clone())?;
+                if let Some(choice) = &v.card_choice {
+                    let value = serde_json::to_value(choice)
+                        .map_err(|error| PyValueError::new_err(error.to_string()))?;
+                    d.set_item("cardChoice", json_to_pyobject(py, &value)?)?;
+                }
                 if let Some(choices) = v.effect_choices.as_ref() {
                     let list = PyList::empty_bound(py);
                     for c in choices {
@@ -1273,6 +1338,13 @@ impl RustDebugGame {
         self.inner.step(action_id);
     }
 
+    #[pyo3(signature = (action_id, expected_card_choice = None))]
+    fn step_checked(&mut self, action_id: u16, expected_card_choice: Option<&Bound<'_, PyDict>>) -> PyResult<()> {
+        validate_card_choice_submission(&self.inner.game, expected_card_choice)?;
+        self.inner.step(action_id);
+        Ok(())
+    }
+
     fn get_action_mask<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<f32>> {
         PyArray1::from_vec_bound(py, self.inner.get_action_mask())
     }
@@ -1308,7 +1380,7 @@ impl RustDebugGame {
         match game.pending_selection.as_ref() {
             None => Ok(py.None()),
             Some(sel) => {
-                let v = sel.view();
+                let v = sel.view(game);
                 let d = PyDict::new_bound(py);
                 d.set_item("kind", v.kind_str())?;
                 d.set_item("phase", v.previous_phase_str())?;
@@ -1316,6 +1388,11 @@ impl RustDebugGame {
                 d.set_item("validIndices", v.valid_action_ids.clone())?;
                 d.set_item("isOptional", v.is_optional)?;
                 d.set_item("prompt", v.prompt.clone())?;
+                if let Some(choice) = &v.card_choice {
+                    let value = serde_json::to_value(choice)
+                        .map_err(|error| PyValueError::new_err(error.to_string()))?;
+                    d.set_item("cardChoice", json_to_pyobject(py, &value)?)?;
+                }
                 Ok(d.into_py(py))
             }
         }

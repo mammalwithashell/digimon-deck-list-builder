@@ -3,6 +3,71 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SelectionPanel } from './SelectionPanel';
 import { GamePhase, type PendingSelection } from '@/types/game';
+import type { CardChoiceRow } from '@/types/cardChoice';
+
+describe('owned physical card pages', () => {
+  it('labels mixed union hand and trash cards and sends their supplied page actions', () => {
+    const onAction = vi.fn();
+    const mask = new Array(2192).fill(0); mask[30] = mask[31] = 1;
+    const row: CardChoiceRow = { action_id: 30, operation: 'commit_card', zone: 'hand',
+      owner: 0, carrier_slot: null, carrier_identity: null, position: '39',
+      card_id: 'HAND', card_registry_index: 42, identity_visible: true };
+    renderPanel({ currentPhase: GamePhase.SelectUnion, onAction, actionMask: mask,
+      pendingSelection: { ...makeEffectChoiceSelection(), phase: GamePhase.SelectUnion,
+        validIndices: [30, 31], effectChoices: undefined,
+        cardChoice: { prompt_id: '1', page_generation: '0', page_index: '1', page_count: '2',
+          rows: [row, { ...row, action_id: 31, zone: 'trash', card_id: 'TRASH' }] } },
+    });
+    fireEvent.click(screen.getByText('Hand 40').closest('button')!);
+    fireEvent.click(screen.getByText('Trash 40').closest('button')!);
+    expect(onAction.mock.calls).toEqual([[30], [31]]);
+  });
+  it('shows inspected ineligible cards with a Done action instead of allowing payment', () => {
+    const onAction = vi.fn();
+    const mask = new Array(2192).fill(0);
+    mask[62] = 1;
+    const row: CardChoiceRow = { action_id: 30, operation: 'inspect_card', zone: 'security',
+      owner: 0, carrier_slot: null, carrier_identity: null, position: '0',
+      card_id: 'INSPECTED', card_registry_index: 42, identity_visible: true };
+    renderPanel({ currentPhase: GamePhase.SelectSecurity, onAction, actionMask: mask,
+      pendingSelection: { ...makeEffectChoiceSelection(), phase: GamePhase.SelectSecurity,
+        validIndices: [62], isOptional: true, effectChoices: undefined,
+        cardChoice: { prompt_id: '1', page_generation: '0', page_index: '0', page_count: '1',
+          inspection_only: true, rows: [row, { ...row, action_id: 62, operation: 'decline' }] } },
+    });
+    expect(screen.getByTitle('INSPECTED')).toBeInTheDocument();
+    expect(screen.getByText('Security 1').closest('button')).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(onAction.mock.calls).toEqual([[62]]);
+  });
+  it('uses typed rows for deep security, hides identities, and dispatches navigation', () => {
+    const onAction = vi.fn();
+    const row: CardChoiceRow = {
+      action_id: 30, operation: 'commit_card', zone: 'security', owner: 0,
+      carrier_slot: null, carrier_identity: null, position: '39',
+      card_id: 'SECRET', card_registry_index: 42, identity_visible: false,
+    };
+    const mask = new Array(2192).fill(0);
+    mask[30] = mask[58] = mask[59] = 1;
+    renderPanel({
+      currentPhase: GamePhase.SelectSecurity, onAction, actionMask: mask,
+      pendingSelection: {
+        ...makeEffectChoiceSelection(), phase: GamePhase.SelectSecurity,
+        validIndices: [30, 58, 59], effectChoices: undefined,
+        cardChoice: { prompt_id: '18446744073709551615', page_generation: '99',
+          page_index: '9007199254740993', page_count: '9007199254740995',
+          rows: [row, { ...row, action_id: 58, operation: 'previous_page' },
+            { ...row, action_id: 59, operation: 'next_page' }] },
+      },
+    });
+    expect(screen.getByText('Security 40')).toBeInTheDocument();
+    expect(screen.getByText('Page 9007199254740994 of 9007199254740995')).toBeInTheDocument();
+    expect(screen.queryByTitle('SECRET')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Security 40').closest('button')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(onAction.mock.calls).toEqual([[30], [59]]);
+  });
+});
 
 function makeEffectChoiceSelection(): PendingSelection {
   return {
@@ -275,5 +340,31 @@ describe('numeric count choices', () => {
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
     expect(onAction).not.toHaveBeenCalled();
+  });
+});
+
+describe('invalidated owned card choices', () => {
+  const row: CardChoiceRow = { action_id: 59, operation: 'refresh_page', zone: null,
+    owner: null, carrier_slot: null, carrier_identity: null, position: null,
+    card_id: null, card_registry_index: null, identity_visible: false };
+  it('shows a mandatory refresh without cards or a decline action', () => {
+    const onAction = vi.fn(); const mask = new Array(2192).fill(0); mask[59] = 1;
+    renderPanel({ currentPhase: GamePhase.SelectSecurity, onAction, actionMask: mask,
+      pendingSelection: { ...makeEffectChoiceSelection(), phase: GamePhase.SelectSecurity,
+        validIndices: [59], effectChoices: undefined,
+        cardChoice: { prompt_id: '9', page_generation: '3', page_index: '0', page_count: '2', rows: [row] } } });
+    expect(screen.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh choices' }));
+    expect(onAction.mock.calls).toEqual([[59]]);
+  });
+  it('shows forced unavailable completion as Done and sends its supplied action', () => {
+    const onAction = vi.fn(); const mask = new Array(2192).fill(0); mask[62] = 1;
+    renderPanel({ currentPhase: GamePhase.SelectSecurity, onAction, actionMask: mask,
+      pendingSelection: { ...makeEffectChoiceSelection(), phase: GamePhase.SelectSecurity,
+        validIndices: [62], isOptional: false, effectChoices: undefined,
+        cardChoice: { prompt_id: '9', page_generation: '3', page_index: '0', page_count: '2',
+          rows: [{ ...row, action_id: 62, operation: 'finish_impossible' }] } } });
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(onAction.mock.calls).toEqual([[62]]);
   });
 });

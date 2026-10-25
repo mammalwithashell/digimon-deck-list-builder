@@ -1120,6 +1120,7 @@ fn compile_predicate(
         can_change_orientation: p.can_change_orientation,
         can_unsuspend: p.can_unsuspend,
         owner_can_add_security: p.owner_can_add_security,
+        controller_can_add_security: p.controller_can_add_security,
         can_attack: p.can_attack.map(|c| crate::compiled::CompiledCanAttack {
             targets: compile_attack_target_spec(c.targets),
             without_suspending: c.without_suspending,
@@ -1596,6 +1597,9 @@ fn compile_predicate(
                 card_id,
                 errors,
             ))
+        }),
+        cost_target_permanent: p.cost_target_permanent.as_ref().map(|b| {
+            Box::new(compile_predicate(b, &format!("{prefix}.cost_target_permanent"), card_id, errors))
         }),
         source_is_cost_target_permanent: p.source_is_cost_target_permanent,
         cost_target_from_hand: p.cost_target_from_hand,
@@ -2458,8 +2462,12 @@ fn compile_declarative(
             }
         }
         B::CostReduction(c) => {
+            if c.when_playing_this && c.when_digivolving_this {
+                errors.push(ValidationError { card_id: card_id.into(), path: prefix.into(),
+                    message: "when_playing_this and when_digivolving_this are mutually exclusive".into() });
+            }
             if c.set_cost.is_some()
-                && (c.amount.is_some() || c.when_any_ally_digivolves_into.is_some())
+                && (c.amount.is_some() || c.when_any_ally_digivolves_into.is_some() || c.when_digivolving_this)
             {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
@@ -2475,6 +2483,7 @@ fn compile_declarative(
                 active_when,
                 reduction_timing: c.reduction_timing,
                 when_playing_this: c.when_playing_this,
+                when_digivolving_this: c.when_digivolving_this,
                 when_any_ally_played: c.when_any_ally_played.as_ref().map(|p| {
                     compile_predicate(
                         p,
@@ -2830,6 +2839,7 @@ fn compile_step(
     errors: &mut Vec<ValidationError>,
 ) -> CompiledStep {
     use crate::step::StepSpec as S;
+    crate::validator::validate_scoped_step_modes(s, prefix, card_id, errors);
     match s {
         S::GainMemory(f) => {
             match split_scalar_formula(f, &format!("{prefix}.gain_memory"), card_id, errors) {
@@ -3651,6 +3661,8 @@ fn compile_step(
                 });
             }
             CompiledStep::SecurityPlaceStackedCard {
+                bind_success_as: a.bind_success_as.clone(),
+                to_owner: a.to_owner,
                 carrier: compile_binding_ref(&a.carrier),
                 source: a.source.as_ref().map(compile_binding_ref),
                 source_index_from_top: a.source_index_from_top,
@@ -3660,12 +3672,16 @@ fn compile_step(
             }
         }
         S::SecurityPlaceTopStackedCard(a) => CompiledStep::SecurityPlaceTopStackedCard {
+            bind_success_as: a.bind_success_as.clone(),
+            to_owner: a.to_owner,
             carrier: compile_binding_ref(&a.carrier),
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
             face_up: a.face.is_up(),
         },
         S::SecurityPlaceTopCard(a) => CompiledStep::SecurityPlaceTopCard {
+            bind_success_as: a.bind_success_as.clone(),
+            to_owner: a.to_owner,
             carrier: compile_binding_ref(&a.carrier),
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
@@ -3755,6 +3771,7 @@ fn compile_step(
             expiry: a.expiry.clone(),
         },
         S::AddModifier(a) => CompiledStep::AddModifier {
+            opponent_only: a.opponent_only,
             target: compile_modifier_target(
                 &a.target,
                 &format!("{prefix}.target"),
@@ -4136,6 +4153,7 @@ fn compile_step(
             min: a.min,
             max: a.max,
             optional_zero: a.optional_zero,
+            distinct_by: a.distinct_by.map(compile_distinct_by),
             play_cost_budget: a.play_cost_budget.as_ref().map(|f| {
                 compile_formula(f, &format!("{prefix}.play_cost_budget"), card_id, errors)
             }),
@@ -4219,6 +4237,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
         },
         S::SelectSecurity(a) => CompiledStep::SelectSecurity {
+            continue_on_decline: a.continue_on_decline,
             of: compile_player_ref(a.of),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),

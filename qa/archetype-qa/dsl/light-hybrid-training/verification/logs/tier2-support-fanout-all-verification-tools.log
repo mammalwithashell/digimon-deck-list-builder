@@ -1,0 +1,29 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 179 items
+
+code\tests\tools\test_impact_index.py ....                               [  2%]
+code\tests\tools\test_impact_lowering_map.py ..                          [  3%]
+code\tests\tools\test_impact_scope.py ........                           [  7%]
+code\tests\tools\test_keyword_semantics_matrix.py ...                    [  9%]
+code\tests\tools\test_rules_coverage_report.py ..............            [ 17%]
+code\tests\tools\test_rules_build_obligations.py ..............          [ 25%]
+code\tests\tools\test_rules_parse.py .............                       [ 32%]
+code\tests\tools\test_rules_renumber_map.py ......                       [ 35%]
+code\tests\tools\test_faq_conformance_generator.py ..                    [ 36%]
+code\tests\tools\test_clause_coverage_authoring_guide.py ....            [ 39%]
+code\tests\tools\test_clause_coverage_readiness.py ..................... [ 50%]
+.......................................                                  [ 72%]
+code\tests\tools\test_verification_tier_manifest.py ..                   [ 73%]
+code\tests\tools\test_nextest_config.py ..                               [ 74%]
+code\tests\tools\test_verify_script.py ..                                [ 75%]
+code\tests\tools\test_embedded_card_paths_case.py .                      [ 76%]
+code\tests\tools\test_card_loop_interactions_probes.py ................. [ 86%]
+.................                                                        [ 95%]
+code\tests\tools\test_clause_coverage_keyword_brief.py ........          [100%]
+
+============================ 179 passed in 25.66s =============================

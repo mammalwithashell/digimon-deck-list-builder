@@ -171,27 +171,27 @@ fn union_zone_filter_excludes_in_play_name_across_hand_and_trash() {
     let trash_blanc = TRASH_EFFECT_START + 1;
 
     assert!(
-        pending.valid_action_ids.contains(&hand_noir),
+        crate::union_fixture_candidates(&runner.game).contains(&hand_noir),
         "Sistermon Noir in hand is a legal candidate"
     );
     assert!(
-        pending.valid_action_ids.contains(&trash_ciel),
+        crate::union_fixture_candidates(&runner.game).contains(&trash_ciel),
         "Sistermon Ciel in trash is a legal candidate"
     );
     assert!(
-        !pending.valid_action_ids.contains(&hand_blanc),
+        !crate::union_fixture_candidates(&runner.game).contains(&hand_blanc),
         "Sistermon Blanc in hand must be excluded — name already in play"
     );
     assert!(
-        !pending.valid_action_ids.contains(&trash_blanc),
+        !crate::union_fixture_candidates(&runner.game).contains(&trash_blanc),
         "Sistermon Blanc in trash must be excluded — name already in play"
     );
     assert!(
-        !pending.valid_action_ids.contains(&hand_gankoomon),
+        !crate::union_fixture_candidates(&runner.game).contains(&hand_gankoomon),
         "Gankoomon must be excluded — not a [Sistermon] card"
     );
     assert_eq!(
-        pending.valid_action_ids.len(),
+        crate::union_fixture_candidates(&runner.game).len(),
         2,
         "exactly the two distinct legal Sistermon names survive the filter"
     );
@@ -234,7 +234,7 @@ fn union_zone_filter_keeps_all_sistermon_when_field_empty() {
         .as_ref()
         .expect("select_union_zone must install a pending selection");
     assert_eq!(
-        pending.valid_action_ids.len(),
+        crate::union_fixture_candidates(&runner.game).len(),
         2,
         "both Sistermon (hand + trash) are legal when no name is in play"
     );

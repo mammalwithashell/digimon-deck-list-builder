@@ -459,12 +459,14 @@ fn ex3_014_digixros_five_field_materials_reduce_cost_and_attach_sources() {
         let pending = runner
             .pending_selection()
             .expect("material prompt should re-install per material");
+        let action = physical_menu::battle_top_action(&runner.game,
+            digimon_engine::permanent::PermanentHandle { player: 0, index: slot as u8 });
         assert!(
-            pending.valid_action_ids.contains(&slot),
+            pending.valid_action_ids.contains(&action),
             "field material slot {slot} must be selectable"
         );
         runner
-            .execute_action(0, slot)
+            .execute_action(0, action)
             .unwrap_or_else(|_| panic!("select DigiXros material slot {slot}"));
     }
     runner
@@ -490,3 +492,6 @@ fn ex3_014_digixros_five_field_materials_reduce_cost_and_attach_sources() {
         "all five field materials should become digivolution sources beneath Dorbickmon"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

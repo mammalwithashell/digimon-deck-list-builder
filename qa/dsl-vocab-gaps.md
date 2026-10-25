@@ -1,5 +1,96 @@
 # DSL Vocabulary Gaps Tracker
 
+## Selected-source security payment and saved card level — focused repair verified (2026-10-24)
+
+`security_place_stacked_card` supports opt-in `bind_success_as` and `to_owner`
+in pack format 0.31.0. Underlying-card placement now owns a typed SourceCard
+continuation before opening replacement windows; it re-finds donor and chosen
+physical card after field/source compaction. Active-top selection retains the
+existing owned whole-permanent placement semantics. Canceled/custom/non-security
+redirected operations do not pay; finalizers consume correlated physical receipts.
+Ten selected-source and twelve top-placement controls pass, including cloned
+optional replacements and stale-result overwrite. Independent runtime review
+approved the complete path after tests exposed the legacy non-owned source route.
+
+`bind_permanent_property: {from: <card binding>, property: level, bind_as: ...}`
+also captures a bound card's printed level before movement. Existing permanent
+property behavior is preserved. Its focused public regression passes. These
+primitives do not qualify BT18-042: source paging and its own full card tests
+remain required.
+
+## Count picker bounds above ten [G-DSL-COUNT-CAPPED-LEGACY-TEN-LIMIT] — focused repair verified (2026-10-24)
+
+BT18-088's formula permits thirteen differently named trash cards with six
+other Tamers. Its behavioral regression exposed a silent `clamp(0, 10)` and,
+after that was removed, a second `max <= 10` debug assertion. Count bounds now
+use their existing u8 range and retain `min <= max`; candidate availability
+and action geometry remain separate checks. The picker commits at the bound,
+so its u8 picked-count conversion cannot overflow. A public construct test
+also chooses thirteen literal-bound trash cards through explicit masked actions.
+Independent review approved both runtime paths. This does not resolve the
+separate twelve-source action-addressing gap or alter ordered-permutation caps.
+
+## Top-security placement payment receipts — focused repair verified (2026-10-24)
+
+`security_place_top_stacked_card` and alias `security_place_top_card` support
+`bind_success_as` (literal 0/1 after actual processing) and `to_owner: true`.
+Typed correlated finalizers distinguish canceled/custom/non-security redirected
+moves from actual placement, survive cloned pending replacements and consume
+only their own LIFO receipt. Replay reset also clears stale typed continuations.
+Twelve public construct and four internal receipt tests pass, alongside nine
+existing specialized movement controls. P-153 additionally exposed a deferred
+source-carrier identity gap; its paid tail uses an existing stable permanent pin
+rather than the departed top card or a reused field index. Pins also cover
+field compaction before the placement step. Card qualification
+is recorded separately. Top placement was introduced in pack format 0.30.0; selected-source support
+is recorded above in 0.31.0.
+
+## Scoped temporary protection and security-decline tails — focused repair verified (Light Hybrid, 2026-10-24)
+
+- `G-OPPONENT-SCOPED-EFFECT-PROTECTION-DSL`: BT18-063 requires an opponent-only
+  temporary CannotBeDestroyedByEffect modifier. Existing generic add_modifier
+  cannot express the engine's cause filter. The new opponent_only opt-in is
+  verified across ordinary and floating/continuous materialization paths.
+  This is not certification of previously blocked cards such as ST17-07.
+- `G-DSL-SECURITY-DECLINE-CONTINUATION`: BT18-037 must shuffle its security
+  even when its optional addition is declined. Existing select_security aborts
+  its tail on PASS. The new continue_on_decline opt-in preserves that legacy
+  default and resumes only the unconditional dispatcher tail with an unbound
+  selection receipt. The card's deterministic shuffle regression exposed the
+  gap; no-match behavior already continued correctly.
+
+New shared construct regressions are in
+`tests/dsl/constructs/scoped_protection_security_tail.rs`. The shared suite has 13 passing tests and independent spec/quality approval.
+Card ledgers are promoted separately after production-card tests and review.
+No action or tensor contract changed; these flags were introduced in pack format 0.29.0.
+
+
+## Mixed-zone distinct card selection [G-DSL-MIXED-ZONE-DISTINCT-PICKS] — focused repair verified (Light Hybrid, 2026-10-24)
+
+`select_zone_cards` now accepts `distinct_by` and preserves the choice constraint
+in compiled IR and clone-safe resume state. It updates each successive action
+mask using the established card-number/level/name/color semantics. Color choices
+reuse injective matching, so multicolor cards represent one available color.
+Name mode retains the existing primary-name equality semantics.
+
+Required floors count unique, currently encodable physical cards. A distinct
+picker with a play-cost budget only offers a prefix that can complete its
+required minimum: minimum-cost matroid augmentation tests feasibility without
+choosing cards for the player. Optional zero, early completion, and omitted-mode
+behavior are preserved. The real cards AD1-023 and BT18-097 use optional
+zero-floor name/color selections without a budget.
+
+TDD observed missing-field, distinct-rank, and budget-prefix failures before the
+respective fixes. Focused verification: 39 passed (14 new regressions and 25
+existing zone-movement controls), followed by independent spec/quality approval.
+Tests cover duplicate names across hand/trash, multicolor/colorless cases,
+clones, physical origins, budget contraction, repeated zones and action-range
+limits. No action or observation contract changed. Distinct mixed-zone selection was introduced in pack 0.27.0; the later
+hand-cost hook uses 0.28.0. Rebuild external packs against the current version.
+
+Source evidence: `qa/archetype-qa/dsl/light-hybrid-training/`.
+This closes the primitive gap, not DCGO parity or full-deck training admission.
+
 ## Direction-specific unsuspend eligibility and no-op activation [G-DSL-UNSUSPEND-TARGET-ELIGIBILITY] — focused and paired live checks verified
 
 BT20-027's security-removal effect permits an own Digimon with Dracomon or

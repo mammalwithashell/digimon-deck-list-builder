@@ -1,0 +1,46 @@
+{
+  "status": "implemented_and_focused_verified_not_full_training_qualification",
+  "action_schema_version": 2,
+  "verification_engine_schema_version": 3,
+  "digest_protocols": {
+    "1": "legacy_v2_preserved",
+    "2": "v3_preserved",
+    "3": "v4_current_includes_owned_card_page_state"
+  },
+  "new_recordings": "Native JSON and verification recordings explicitly emit action_schema_version=2.",
+  "legacy_policy": "Missing action schema means 1. Legacy ordinary actions remain replayable. Both native ReplayRunner and ReplaySession pause before consuming any raw action at an owned physical-card page. DCGO raw actions also pause; DCGO semantic selection payloads retain their independent live mapping path.",
+  "unsupported_policy": "Malformed or unknown action schema metadata fails construction. Corpus blessing fails preflight without rewriting or retiring files for unknown action schemas.",
+  "proof": [
+    {
+      "log": "verification/logs/replay-action-schema-red-runtime.log",
+      "result": "31 passed, 3 failed before implementation",
+      "scope": "Metadata and legacy-alias assertions are actual behavioral RED. The third historical-digest test initially failed because its security fixture had not completed mulligan; fixture subsequently corrected."
+    },
+    {
+      "log": "verification/logs/replay-action-schema-green-final.log",
+      "result": "36 replay tests passed; 1 committed archival trace test passed",
+      "scope": "Current/legacy action compatibility, malformed metadata, unchanged-state refusal, explicit versioned digest counters, ordinary roundtrip/seek/divergence controls. The committed schema1 trace was consumed without rewriting its stored digests; it also validates a pending clone."
+    },
+    {
+      "log": "verification/logs/replay-infra-contracts.log",
+      "result": "14 passed, 1 ignored subprocess helper, 29 filtered",
+      "scope": "Focused replay infrastructure, schema1 rehash preserving its protocol, unsupported engine/action schemas do not rewrite or retire files, generated/current replay roundtrip, cross-process digest determinism."
+    },
+    {
+      "log": "verification/logs/replay-action-schema-final-controls.log",
+      "result": "compile failed during concurrent source_pool initializer migration",
+      "scope": "Transient shared-source state, not a replay regression; preserved log."
+    },
+    {
+      "log": "verification/logs/replay-action-schema-final-controls-rerun.log",
+      "result": "36 passed, 0 failed",
+      "scope": "Successful follow-up after shared source migration compiled. Subsequent edits only format digest block, privatize serde default helper, and derive mismatch text from current constant."
+    }
+  ],
+  "limits": [
+    "No whole replay corpus regeneration or full verification ladder performed by this subtask.",
+    "No bindings wheel rebuilt by this subtask.",
+    "No model migration, training, or card admission promotion performed.",
+    "Do not relabel legacy recordings as semantic version 2 merely to bypass refusal."
+  ]
+}

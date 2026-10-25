@@ -3,7 +3,7 @@
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_attack, encode_source_select, PASS, PLAY_HAND_START};
+use digimon_engine::action::space::{encode_attack, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -217,31 +217,12 @@ fn ex11_053_on_deletion_material_scan_restricted_to_king_drasil_carriers() {
 
     delete_omekamon(&mut runner, omekamon.index as usize);
 
-    let pending = runner
-        .pending_selection()
-        .expect("On Deletion surfaces a union-zone selection");
+    let rows = physical_choice::commits(&runner.game);
+    assert_eq!(rows.len(), 1, "exactly the King Drasil source is legal");
+    let action = physical_choice::source_action(&runner.game, king, 0);
+    assert_eq!(rows[0].action_id, action);
+    assert_ne!(rows[0].carrier_slot, Some(non_king.index), "non-King carrier must be excluded");
 
-    // The Omnimon X under the King Drasil carrier (source index 0) is legal.
-    let king_src = encode_source_select(king.index as u16, 0).expect("king source action");
-    // The Omnimon X under the non-King carrier (source index 0) must be MASKED.
-    let non_king_src =
-        encode_source_select(non_king.index as u16, 0).expect("non-king source action");
-
-    let ids = &pending.valid_action_ids;
-    assert!(
-        ids.contains(&king_src),
-        "Omnimon X under King Drasil_7D6 must be a legal pick; ids = {ids:?}"
-    );
-    assert!(
-        !ids.contains(&non_king_src),
-        "Omnimon X under a NON-King-Drasil Digimon must NOT be offered; ids = {ids:?}"
-    );
-    // Only the King Drasil source is legal (no hand candidates here).
-    assert_eq!(
-        ids.len(),
-        1,
-        "exactly one legal candidate (the King Drasil source); ids = {ids:?}"
-    );
 }
 
 /// (a) Play an Omnimon X from HAND, then attach this Omekamon as its bottom
@@ -264,17 +245,11 @@ fn ex11_053_on_deletion_plays_omnimon_x_from_hand_and_attaches_self() {
         pending.is_optional,
         "printed 'you may play' must expose PASS"
     );
-    // Hand Omnimon X is the only legal pick (hand index 0).
-    assert_eq!(
-        pending.valid_action_ids,
-        vec![PLAY_HAND_START],
-        "the hand Omnimon X is the single legal candidate"
-    );
-
+    assert!(pending.valid_action_ids.contains(&PASS));
+    assert_eq!(physical_choice::commits(&runner.game).len(), 1);
+    let action = physical_choice::card_action(&runner.game, "OMNI-X", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     let mem_before = runner.memory();
-    runner
-        .execute_action(0, PLAY_HAND_START)
-        .expect("play Omnimon X from hand");
+    runner.execute_action(0, action).expect("play Omnimon X from hand");
     runner.auto_resolve().ok();
 
     // Omnimon X entered the battle area for free.
@@ -329,12 +304,10 @@ fn ex11_053_on_deletion_plays_omnimon_x_from_king_drasil_source_and_attaches_sel
     let pending = runner
         .pending_selection()
         .expect("On Deletion union-zone selection opens");
-    let king_src = encode_source_select(king.index as u16, 0).expect("king source action");
-    assert_eq!(
-        pending.valid_action_ids,
-        vec![king_src],
-        "the King Drasil Omnimon X source is the single legal candidate"
-    );
+    assert!(pending.is_optional);
+    assert!(pending.valid_action_ids.contains(&PASS));
+    assert_eq!(physical_choice::commits(&runner.game).len(), 1);
+    let king_src = physical_choice::source_action(&runner.game, king, 0);
 
     runner
         .execute_action(0, king_src)
@@ -470,3 +443,6 @@ fn ex11_053_on_deletion_decline_leaves_board_unchanged() {
         "the hand Omnimon X stays in hand when declined"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

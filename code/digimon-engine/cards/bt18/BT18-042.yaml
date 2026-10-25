@@ -1,0 +1,67 @@
+# Official observation 29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574
+# and inspected BT18-042.webp. The first clause says "the bottom security
+# card", so the selected card returns to its owner's security (CR3-1-3-8).
+# Each printed effect has one shared OPT across its respective trigger times.
+card: BT18-042
+name: MagnaGarurumon
+kind: digimon
+level: 6
+color: [yellow, purple, black]
+cost: 13
+dp: 13000
+form: Hybrid
+attribute: Variable
+traits: [Cyborg]
+alt_paths:
+  - kind: digivolve
+    from:
+      kind: digimon
+      level_eq: 5
+      any_of: [{color_is: yellow}, {color_is: purple}, {color_is: black}]
+    cost: 5
+  - kind: digivolve
+    from:
+      name_is: Koji Minamoto
+      source_count: {filter: {trait_has: Hybrid}, at_least: 5}
+    cost: 5
+effects:
+  - when: [when_digivolving, end_of_opponents_turn]
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    condition:
+      all_of:
+        - self_source_count: {filter: {kind: digimon}, op: gte, value: 1}
+        - controller_can_add_security: true
+    process:
+      - select_material:
+          of_permanent: source
+          filter: {kind: digimon}
+          bind_as: chosen
+          optional: true
+          prompt: Place 1 Digimon digivolution card as the bottom security card
+      - bind_permanent_property: {from: chosen, property: level, bind_as: chosen_level}
+      - security_place_stacked_card:
+          carrier: source
+          source: chosen
+          of: you
+          position: bottom
+          face: down
+          to_owner: true
+          bind_success_as: paid
+      - if:
+          condition: {equals: [paid, 1]}
+          then:
+            - delete_all_permanents:
+                over: {of: opponent, kind: digimon, level_eq_binding: chosen_level}
+  - when: [on_ally_attack, on_opponent_attack]
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    condition: {security_count_gte: 1}
+    process:
+      - add_top_security_to_hand: {of: you}
+      - if:
+          condition: {effect_added_any_card_to_hand: true}
+          then:
+            - unsuspend: {target: source}

@@ -1,0 +1,28 @@
+# Official observation: ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d.
+# Image cross-check: EX7-002.webp. DCGO EX7_002.cs agrees with battle-area check.
+card: EX7-002
+name: Hiyarimon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+form: In-Training
+traits: [Lesser]
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "If your opponent has no Digimon with digivolution cards, Draw 1"
+    condition:
+      not:
+        count_gte:
+          filter:
+            owner: opponent
+            zone: [battle_area]
+            kind: digimon
+            source_count:
+              filter: {}
+              at_least: 1
+          n: 1
+    process:
+      - draw: { of: you, count: 1 }

@@ -1,0 +1,77 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "BT6-022",
+    "card_type": "Digimon",
+    "colors": [
+      "Blue"
+    ],
+    "dp": 3000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "cost": 0,
+        "from_level": 2,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Blue"
+        ],
+        "dp": 3000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 3,
+        "name": "Strabimon",
+        "play_cost": 4,
+        "text_sections": [
+          {
+            "label": "Inherited Effect",
+            "text": "[When Attacking][Once Per Turn] If this Digimon has [Hybrid] or [Ten Warriors] in its form or type, gain 1 memory."
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 3,
+    "name": "Strabimon",
+    "play_cost": 4,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522005",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT6-022.png?260529",
+      "printing_id": "BT6-022"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Inherited Effect",
+        "text": "[When Attacking][Once Per Turn] If this Digimon has [Hybrid] or [Ten Warriors] in its form or type, gain 1 memory."
+      }
+    ],
+    "type": "Beastkin"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "dd830f0089f3061f2de474c3ddc7082d60159778c8b2db782f234273b6c69aa8",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522005:BT6-022:BT6-022",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522005"
+}

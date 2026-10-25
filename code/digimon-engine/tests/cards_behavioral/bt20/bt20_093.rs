@@ -335,10 +335,14 @@ fn play_setup(security: bool) -> DebugRunner {
 }
 fn pick_card(game: &mut digimon_engine::game::Game, id: &str) {
     let player = game.pending_selection.as_ref().unwrap().selecting_player;
-    let row:digimon_engine::dcgo_recording::SelectionRow=serde_json::from_value(serde_json::json!({"step":0,"actor":player,"prompt":"SelectCardEffect","phase":"Main","card_ids":[id]})).unwrap();
-    let a = digimon_engine::runners::selection_resolve::resolve_next(game, &row, 0)
-        .unwrap()
-        .unwrap();
+    let a = if game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some() {
+        owned_union_fixture::action(game, player, id, false)
+            .or_else(||owned_union_fixture::action(game, player, id, true))
+            .expect("printed eligible card has a physical union row")
+    } else {
+        let row:digimon_engine::dcgo_recording::SelectionRow=serde_json::from_value(serde_json::json!({"step":0,"actor":player,"prompt":"SelectCardEffect","phase":"Main","card_ids":[id]})).unwrap();
+        digimon_engine::runners::selection_resolve::resolve_next(game, &row, 0).unwrap().unwrap()
+    };
     assert!(digimon_engine::action::mask::build_action_mask(game, player)[a as usize] > 0.5);
     game.resolve_selection(player, a).unwrap();
 }
@@ -384,7 +388,8 @@ fn security_plays_name_only_from_both_zones_free_and_always_places_option() {
             .pending_selection
             .as_ref()
             .expect("security union selection");
-        assert_eq!(s.valid_action_ids.len(), 2, "hand/trash Dracomon only");
+        assert_eq!(s.valid_action_ids.iter().filter(|&&a|a!=digimon_engine::action::space::PASS).count(), 2, "hand/trash Dracomon commits only");
+        assert!(s.valid_action_ids.contains(&digimon_engine::action::space::PASS), "explicit optional decline");
         assert!(s.is_optional);
         let mut clone = r.game.clone();
         for g in [&mut r.game, &mut clone] {
@@ -405,3 +410,6 @@ fn security_plays_name_only_from_both_zones_free_and_always_places_option() {
         }
     }
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

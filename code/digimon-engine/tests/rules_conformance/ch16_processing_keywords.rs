@@ -47,8 +47,7 @@ use crate::support::*;
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
     encode_digivolve, ATTACK_START, BREEDING_TARGET, DNA_DIGIVOLVE_START, EFFECTS_PER_PERMANENT,
-    FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, HAND_EFFECT_START, PASS, SOURCES_PER_FIELD,
-    SOURCE_SELECT_END, SOURCE_SELECT_START, TRASH_EFFECT_END, TRASH_EFFECT_START,
+    FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, HAND_EFFECT_START, PASS, TRASH_EFFECT_END, TRASH_EFFECT_START,
 };
 use digimon_engine::card_data::{parse_printed_keywords, CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -1834,37 +1833,45 @@ fn process_material_save(r: &mut DebugRunner) {
     pick_field(r, tamer.index as u16);
 }
 
-/// The card a pick action of the pending card choice names: a card of P1's
-/// trash (`TRASH_EFFECT_START + i`) or a digivolution card in P1's battle
-/// area (`SOURCE_SELECT_START + field * SOURCES_PER_FIELD + source`).
-fn picked_card(r: &DebugRunner, action: u16) -> String {
-    if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action) {
-        let i = (action - TRASH_EFFECT_START) as usize;
-        return card_ids(r, &r.game.player(1).trash)[i].clone();
-    }
-    if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action) {
-        let k = action - SOURCE_SELECT_START;
-        let (field, source) = (k / SOURCES_PER_FIELD, k % SOURCES_PER_FIELD);
-        let h = PermanentHandle {
-            player: 1,
-            index: field as u8,
+/// Resolve a typed card row to its real physical source. Unowned legacy trash
+/// prompts retain their existing contract; owned pages never decode old bands.
+fn picked_handle(r: &DebugRunner, action: u16) -> digimon_engine::card_source::CardHandle {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let pending = r.game.pending_selection.as_ref().expect("card choice");
+    if let Some(owner) = &pending.card_choice {
+        let row = owner.view(&r.game, pending.selecting_player).rows.into_iter()
+            .find(|row| row.action_id == action && matches!(row.operation, CardChoiceOperation::CommitCard))
+            .expect("action must be an actual card commit, not navigation");
+        assert_eq!(build_action_mask(&r.game, pending.selecting_player)[action as usize], 1.0);
+        assert_eq!(build_action_mask(&r.game, 1-pending.selecting_player)[action as usize], 0.0);
+        let player = r.game.player(row.owner.expect("physical zone owner"));
+        let index: usize = row.position.as_deref().expect("physical position").parse().unwrap();
+        return match row.zone.expect("typed origin zone") {
+            CardChoiceZone::BattleSource => player.battle_area[row.carrier_slot.unwrap() as usize].card_sources[index].handle(),
+            CardChoiceZone::BreedingSource => player.breeding_area.as_ref().unwrap().card_sources[index].handle(),
+            CardChoiceZone::Trash => player.trash[index].handle(),
+            CardChoiceZone::Hand => player.hand[index].handle(),
+            other => panic!("unexpected Material Save origin {other:?}"),
         };
-        return stack_ids(r, h)[source as usize].clone();
     }
-    panic!("unexpected card-choice action {action}")
+    if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action) {
+        return r.game.player(pending.selecting_player).trash[(action-TRASH_EFFECT_START) as usize].handle();
+    }
+    panic!("unexpected unowned card-choice action {action}")
+}
+fn picked_card(r: &DebugRunner, action: u16) -> String {
+    r.game.card_data_for_handle(picked_handle(r, action)).unwrap().card_id.clone()
 }
 
-/// Pick a `card_id` option of the pending card choice; returns the action.
-fn pick_material(r: &mut DebugRunner, card_id: &str) -> u16 {
+/// Pick a `card_id` from the supplied menu; return the committed physical copy.
+fn pick_material(r: &mut DebugRunner, card_id: &str) -> digimon_engine::card_source::CardHandle {
     let p = current_prompt(r).expect("a card choice");
-    let action = *p
-        .actions
-        .iter()
-        .find(|&&a| picked_card(r, a) == card_id)
+    let action = *p.actions.iter().find(|&&a| picked_card(r, a) == card_id)
         .unwrap_or_else(|| panic!("{card_id} is not offered: {p:?}"));
-    r.execute_action(p.player, action)
-        .unwrap_or_else(|e| panic!("pick {card_id}: {e:?}"));
-    action
+    let selected = picked_handle(r, action);
+    assert_eq!(build_action_mask(&r.game, p.player)[action as usize], 1.0);
+    r.execute_action(p.player, action).unwrap_or_else(|e| panic!("pick {card_id}: {e:?}"));
+    selected
 }
 
 /// §16-21-3 "The processing from <Material Save> is OPTIONAL. ..."

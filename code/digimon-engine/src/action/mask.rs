@@ -53,12 +53,13 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
     // restored. The mask must expose only the prompt's valid action ids.
     if let Some(sel) = &game.pending_selection {
         if sel.selecting_player == player_id {
-            for &aid in &sel.valid_action_ids {
+            let valid = sel.card_choice.as_ref().map(|owner| owner.valid_action_ids(game));
+            for &aid in valid.as_ref().unwrap_or(&sel.valid_action_ids) {
                 if (aid as usize) < ACTION_SPACE_SIZE {
                     mask[aid as usize] = 1.0;
                 }
             }
-            if sel.is_optional {
+            if sel.is_optional && sel.card_choice.is_none() {
                 mask[PASS as usize] = 1.0;
             }
             // CONCEDE_GAME (93) is intentionally NOT exposed in the action
@@ -943,6 +944,19 @@ pub(crate) fn end_of_turn_keyword_attack_action_ids(
     attacker: PermanentHandle,
     keyword: Keyword,
 ) -> Vec<u16> {
+    if game.pending_attack.is_some() {
+        return Vec::new();
+    }
+    end_of_turn_keyword_potential_attack_action_ids(game, attacker, keyword)
+}
+
+/// Intrinsic targets for a keyword activation that may defer its offer until
+/// the current attack ends. This is not a legal-now declaration list.
+pub(crate) fn end_of_turn_keyword_potential_attack_action_ids(
+    game: &Game,
+    attacker: PermanentHandle,
+    keyword: Keyword,
+) -> Vec<u16> {
     let (restriction, vortex, unsuspended_targets) = match keyword {
         Keyword::Engage => (AttackTargetRestriction::Any, false, false),
         Keyword::Execute => (AttackTargetRestriction::Any, false, true),
@@ -970,6 +984,11 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
     without_suspending: bool,
     ignore_summoning_sickness: bool,
 ) -> Vec<u16> {
+    // CR 11-2-4 / BT18-088 Q3046: activation can occur during an attack,
+    // but a new declaration cannot, including in EndOfAttackDrain.
+    if game.pending_attack.is_some() {
+        return Vec::new();
+    }
     attack_declaration_action_ids(
         game,
         attacker,
@@ -981,9 +1000,9 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
     )
 }
 
-/// The one target enumeration behind every effect-offered attack
-/// declaration (`effect_attack_target_action_ids*`, the end-of-turn attack
-/// keywords). `vortex` exempts the played-this-turn check (§16-33-1);
+/// Intrinsic targets behind immediate attack offers and deferred keyword
+/// activation. Legal-now wrappers separately enforce the declaration window;
+/// keyword activation must survive while its offer waits for an earlier attack. `vortex` exempts the played-this-turn check (§16-33-1);
 /// `unsuspended_targets` adds the opponent's unsuspended Digimon
 /// (`<Execute>`, §16-38-1) on top of a `CanAttackUnsuspended` grant.
 fn attack_declaration_action_ids(

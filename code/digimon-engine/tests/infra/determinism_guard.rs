@@ -113,12 +113,14 @@ fn verification_replay_digests_are_process_deterministic() {
     );
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let line = stdout
+    // Serial libtest can print its test-name prefix before the helper marker
+    // on the same line. Keep JSON parsing and exact digest equality strict.
+    let payload = stdout
         .lines()
-        .find(|line| line.starts_with(DIGEST_STREAM_PREFIX))
+        .find_map(|line| line.split_once(DIGEST_STREAM_PREFIX).map(|(_, payload)| payload))
         .unwrap_or_else(|| panic!("digest helper did not print stream marker; stdout={stdout}"));
     let cross_process: Vec<u64> =
-        serde_json::from_str(&line[DIGEST_STREAM_PREFIX.len()..]).unwrap();
+        serde_json::from_str(payload).unwrap();
 
     assert_eq!(
         first, cross_process,

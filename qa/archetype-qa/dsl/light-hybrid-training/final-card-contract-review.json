@@ -1,0 +1,309 @@
+{
+  "generated_at": "2026-10-25T03:17:43.988032+00:00",
+  "review_role": "Independent final card/spec reviewer per implement-rust-dsl-archetype skill; reviewer did not author these four YAML cards. Read-only source/evidence audit; no Cargo run or admission promotion in this review.",
+  "verdict": "card_source_review_pass_with_data_and_final_qualification_blockers",
+  "exact_deck": {
+    "live_source": "C:/Users/james/Documents/DCGO_Application/Assets/Decks/LightHybrid_ZWd06BaFMXQ.txt",
+    "frozen_source": "qa/archetype-qa/dsl/light-hybrid-training/dcgo-deck.txt",
+    "same_bytes": true,
+    "sha256": "92ec23d1c154591f50c0ced36ffbede106f9bb84d7ef01d810e5485b22994091",
+    "unique_ids": 20,
+    "copies": 54,
+    "egg_copies": 4,
+    "main_copies": 50,
+    "counts": {
+      "EX7-002": 4,
+      "BT6-022": 2,
+      "BT17-020": 1,
+      "P-249": 4,
+      "BT16-082": 4,
+      "BT17-023": 4,
+      "BT18-037": 1,
+      "BT18-067": 2,
+      "BT18-063": 1,
+      "BT18-077": 3,
+      "BT18-076": 3,
+      "AD1-015": 4,
+      "BT7-038": 1,
+      "BT18-081": 2,
+      "BT18-042": 3,
+      "P-153": 2,
+      "BT18-088": 3,
+      "AD1-023": 4,
+      "BT18-094": 3,
+      "BT18-097": 3
+    },
+    "current_admissible_ids": 16,
+    "current_admissible_copies": 46,
+    "blocked_ids": [
+      "BT18-037",
+      "BT18-042",
+      "BT18-063",
+      "BT18-076"
+    ],
+    "blocked_copies": 8
+  },
+  "authority": [
+    "Inspected exact four local card images, crosschecked stored official observations and production cards.json.",
+    "CR3-1-3-8 unspecified destination uses physical card owner.",
+    "CR4-7-9/4-7-10 inspection permission does not restore face-down printed characteristics.",
+    "CR15-8-3 triggered timing and official Q2994/Q3021 simultaneous played-Tamer OnPlay/original-Digimon OnDeletion ordering.",
+    "Printed text/rules take priority over DCGO; no live DCGO oracle claim."
+  ],
+  "cards": {
+    "BT18-037": {
+      "source_review": "pass",
+      "printed_behavior": "Both yellow/blue Lv3 and Tamer circles cost3; Koji2/Kendo0 name-only routes. Entire security search is inspectable, Hybrid/Ten Warriors commits optional, actual hand-add precedes recovery, shuffle independent of accepting, inherited <=7 hand draw has no OPT.",
+      "evidence": "17 canonical tests in prior204 run. Includes physical security9/10/32/39, full40-card inspection with ineligible/no-match cards, unchanged RNG/movement on navigation, clone accept/decline exact recovery/shuffle, peer identity hiding, normal/named routes and inherited7/8/repeat boundaries.",
+      "limits": "Deep card-level search cases are seat0; do not describe evidence as an exhaustive seat x depth matrix.",
+      "official_observation": {
+        "path": "qa/archetype-qa/dsl/light-hybrid-training/official-observations/50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c.json",
+        "observation_id": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "official_qa": [
+          "Q2957",
+          "Q2958",
+          "Q2959",
+          "Q2960",
+          "Q6605",
+          "Q6606",
+          "Q6607"
+        ]
+      },
+      "image_inspected": "C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/BT18-037.webp",
+      "yaml_sha256": "0b077ce5d5f0efa3d5b819c10b514f02e09be3e21ba8c904bae704271bea5880",
+      "test_sha256": "b1f9690a5537af43d939eeca10a5afcd8c1ce3cc34cb55369348b14328822df6",
+      "current_canonical_test_count": 17,
+      "current_ledger": {
+        "card_name": "Lobomon",
+        "validated_date": "2026-10-24",
+        "report": "light-hybrid-training",
+        "status": "BLOCKED",
+        "gap_kind": "engine",
+        "archetype": "Light Hybrid",
+        "yaml_path": "code/digimon-engine/cards/bt18/BT18-037.yaml",
+        "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_037.rs",
+        "test_count": 9,
+        "notes": "G-ACTION-COMPLETE-SECURITY-SELECTION: nine shallow behavioral tests pass, but actual boundary audit passed index-9 control and failed to expose the eligible security card at index 10. Deep witness explicitly ignored pending coordinated contract migration; see light-hybrid-training/security-capacity-audit.json."
+      },
+      "current_admission": {
+        "admissible": false,
+        "dsl": true,
+        "has_card_test": true,
+        "needs_card_test": true,
+        "reason": "failed_verdict",
+        "reasons": [
+          "failed_verdict"
+        ],
+        "untested_constructs": []
+      }
+    },
+    "BT18-042": {
+      "source_review": "pass",
+      "printed_behavior": "Normal Lv5 circles cost5; Koji with at least5 referenceable Hybrid sources cost5. First printed clause shares OPT across digivolve/end-of-opponent-turn; optional actual Digimon-source security payment captures level before movement, returns card to actual owner under CR3-1-3-8 and deletes ALL exact-level opponents only after completed receipt. Second clause shares OPT across either player attack and adds actual top security to hand before unsuspend.",
+      "evidence": "19 canonical tests in prior204 run. Both seats/timings for clause1 and attack clause; all52 physical selections across depth13/39 with clones in seat0; cancel/trash/security/custom replacement outcomes; foreign card owner; no reward availability gate; accepted-cost decline vs outer decline OPT; simultaneous deletion observers; face-down kind/trait exclusion; actual AD1-023 alias. Deferred selected-source receipt/clone coverage exists separately in dsl/constructs/selected_source_security_receipt.rs, not as19 additional card cases.",
+      "limits": "Fresh combined qualification after generic recovery/payment changes is still required. Do not infer current binary agreement from the earlier204 log.",
+      "official_observation": {
+        "path": "qa/archetype-qa/dsl/light-hybrid-training/official-observations/29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574.json",
+        "observation_id": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "official_qa": [
+          "Q2966",
+          "Q2967",
+          "Q6608",
+          "Q6609",
+          "Q6610",
+          "Q6611",
+          "Q6612",
+          "Q6613"
+        ]
+      },
+      "image_inspected": "C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/BT18-042.webp",
+      "yaml_sha256": "279ba2387d4e181bf7152bc4a96f4cafdfe928f52d576b9609057bd03b960355",
+      "test_sha256": "5ad4a3566ec010596eee05d31b7ff4da04792a7b8bf992ba10503b0ec326cc65",
+      "current_canonical_test_count": 19,
+      "current_ledger": {
+        "card_name": "MagnaGarurumon",
+        "validated_date": "2026-10-24",
+        "report": "light-hybrid-training",
+        "status": "BLOCKED",
+        "gap_kind": "engine",
+        "archetype": "Light Hybrid",
+        "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs",
+        "test_count": 1,
+        "notes": "G-ACTION-COMPLETE-SOURCE-SELECTION: actual RED exposed only 12 of 13 eligible choices. Witness explicitly ignored pending coordinated contract change; no production YAML or readiness claim. See openspec/changes/support-complete-digivolution-source-choices/. Selected-source security cost also needs a completed success receipt."
+      },
+      "current_admission": {
+        "admissible": false,
+        "dsl": false,
+        "has_card_test": true,
+        "needs_card_test": false,
+        "reason": "failed_verdict",
+        "reasons": [
+          "failed_verdict"
+        ],
+        "untested_constructs": []
+      }
+    },
+    "BT18-063": {
+      "source_review": "pass",
+      "printed_behavior": "Native black/yellow Lv3/Tamer3, J.P.2 and MetalKabuterimon0 routes add no unprinted name-route card-kind restriction. Protection is only opponent-effect deletion through end of opponent turn. Attack evolves one own Digimon/Tamer into legal black/yellow Hybrid from hand, cost reduced1. Inherited optional free Tamer play with inherited text never cancels original leave and excludes own-effect departure.",
+      "evidence": "19 canonical cases in prior204 run, now20 after Q2994 regression. Deep12/39 and paged duplicate physical instances/clones, independent second-seat deep12 ownership, optional activation and processing decline, filters/protection expiry, legal attack route/cost/negative masks. New Q2994 helper reviewed and native standalone case passes both seats/both activation orders/two independent clones per order.",
+      "limits": "New canonical case has standalone targeted proof; it is not yet included in a fresh206 combined result.",
+      "official_observation": {
+        "path": "qa/archetype-qa/dsl/light-hybrid-training/official-observations/3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413.json",
+        "observation_id": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "official_qa": [
+          "Q2993",
+          "Q2994",
+          "Q2995",
+          "Q6633",
+          "Q6634",
+          "Q6635",
+          "Q6636"
+        ]
+      },
+      "image_inspected": "C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/BT18-063.webp",
+      "yaml_sha256": "c22a69cc0c170876cc7f514b7151591c07f1e472acd4afdfd323f9ad0660065d",
+      "test_sha256": "ef55d5b7a04552fb31302785a7a01b3a4b01884d9507daee4ea1f09cb1df6214",
+      "current_canonical_test_count": 20,
+      "current_ledger": {
+        "card_name": "Beetlemon",
+        "validated_date": "2026-10-24",
+        "report": "light-hybrid-training",
+        "status": "BLOCKED",
+        "gap_kind": "engine",
+        "archetype": "Light Hybrid",
+        "yaml_path": "code/digimon-engine/cards/bt18/BT18-063.yaml",
+        "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_063.rs",
+        "test_count": 13,
+        "notes": "G-ACTION-COMPLETE-SOURCE-SELECTION: 13 shallow card tests passed and were reviewed, but actual deep-source audit failed to expose an eligible Tamer at index 12. Index-11 controls passed. Deep witnesses explicitly ignored pending coordinated contract change; see light-hybrid-training/source-capacity-audit.json and OpenSpec plan."
+      },
+      "current_admission": {
+        "admissible": false,
+        "dsl": true,
+        "has_card_test": true,
+        "needs_card_test": true,
+        "reason": "failed_verdict",
+        "reasons": [
+          "failed_verdict"
+        ],
+        "untested_constructs": []
+      }
+    },
+    "BT18-076": {
+      "source_review": "pass",
+      "printed_behavior": "Native purple/yellow Lv3/Tamer3, Koichi2/KaiserLeomon0 name-only routes. Digivolve draws then exposes mandatory hand trash. Attack evolves own Digimon/Tamer into legal purple/yellow Hybrid from trash at printed cost. Inherited optional free Tamer play is the same non-cancelling/non-own-effect shape as Beetlemon.",
+      "evidence": "19 canonical cases in prior204 run, now20 after Q3021 regression. Depth11/12/39, second-page no-movement/RNG, different physical duplicate choices after clone, second-seat deep ownership, draw/mandatory trash and hand-vs-trash exclusions, named literal/Rule-alias opposing card-kind cases. New Q3021 standalone native case passes both actors/both activation orders/independent clones.",
+      "limits": "New canonical case has standalone targeted proof; it is not yet included in a fresh206 combined result.",
+      "official_observation": {
+        "path": "qa/archetype-qa/dsl/light-hybrid-training/official-observations/80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac.json",
+        "observation_id": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "official_qa": [
+          "Q3020",
+          "Q3021",
+          "Q3022",
+          "Q6649",
+          "Q6650",
+          "Q6651",
+          "Q6652"
+        ]
+      },
+      "image_inspected": "C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/BT18-076.webp",
+      "yaml_sha256": "abdad6a8333707e3742f93106c9307dec7d73cee1dd175b2695ff5f827cce1bb",
+      "test_sha256": "d09c620a4e25bbf9c6d736fb07b6d428ff19a4c8ac37f2a6ea1338935253d1a2",
+      "current_canonical_test_count": 20,
+      "current_ledger": {
+        "card_name": "Loweemon",
+        "validated_date": "2026-10-24",
+        "report": "light-hybrid-training",
+        "status": "BLOCKED",
+        "gap_kind": "engine",
+        "archetype": "Light Hybrid",
+        "yaml_path": "code/digimon-engine/cards/bt18/BT18-076.yaml",
+        "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_076.rs",
+        "test_count": 13,
+        "notes": "G-ACTION-COMPLETE-SOURCE-SELECTION: 13 shallow card tests passed and were reviewed, but actual deep-source audit failed to expose an eligible Tamer at index 12. Index-11 controls passed. Deep witnesses explicitly ignored pending coordinated contract change; see light-hybrid-training/source-capacity-audit.json and OpenSpec plan."
+      },
+      "current_admission": {
+        "admissible": false,
+        "dsl": true,
+        "has_card_test": true,
+        "needs_card_test": true,
+        "reason": "failed_verdict",
+        "reasons": [
+          "failed_verdict"
+        ],
+        "untested_constructs": []
+      }
+    }
+  },
+  "blocking_findings": [
+    {
+      "id": "DATA-SPLIT-CIRCLES",
+      "kind": "data-gap",
+      "status": "resolved_after_review",
+      "details": "Three split production JSON files omit the second printed native Lv3 color circle although central data and YAML include it. Regenerate through supported split metadata tooling; preserve unrelated rows.",
+      "observed": {},
+      "resolution": {
+        "authoritative_log": "verification/logs/exact-deck-split-data-final-green.log",
+        "result": "20/20 exact-deck split JSON records match central data",
+        "method": "Existing supported generator, scoped8IDs. Original3RED plus5other stale exact-deck split records corrected; historical observation preserved."
+      }
+    },
+    {
+      "id": "TEST-LEGACY-CAPACITY-WITNESSES",
+      "kind": "test-gap",
+      "status": "open_at_review",
+      "details": "light_hybrid_source_capacity.rs still ignores both index12 witnesses. light_hybrid_security_capacity.rs still ignores index10 and its active index9 control asserts one valid ID and legacy security aliases, incompatible with current explicit owner commit+decline. Migrate to real typed-row public choices and unignore; keep historical RED logs as history.",
+      "paths": [
+        "code/digimon-engine/tests/light_hybrid_source_capacity.rs",
+        "code/digimon-engine/tests/light_hybrid_security_capacity.rs"
+      ]
+    },
+    {
+      "id": "FINAL-SHARED-QUALIFICATION",
+      "kind": "test-gap",
+      "status": "open_at_review",
+      "details": "Prior combined-card-contract-rerun-fixed.log proves204/204 canonical cases on an earlier shared-engine snapshot, not the current generic source/security/recovery/credit/replay implementation. Root reports raw payment-abort continuation repair still under qualification. Require fresh complete card+contract run, release binding agreement, mandated tier2 and broader suite when requested, artifact regeneration and exact20/20 IDs54/54 copies public-gate check before promotion.",
+      "additional_native_evidence": {
+        "log": "verification/logs/owned-recovery-and-light-hybrid-green.log",
+        "result": "235 passed,0 failed,0 ignored across five focused targets:206cards+6recovery+9ownedselection+9sourceprefix+5paymentfinalizers.",
+        "boundary": "Fresh focused native qualification after review; full-tier DSL aggregate subsequently1535passed/57failed/1ignored and final ladder/gate still pending. This condition remains open."
+      }
+    }
+  ],
+  "addressed_findings": [
+    {
+      "id": "Q2994-Q3021-SIMULTANEOUS-ORDER",
+      "kind": "test-gap",
+      "status": "addressed_targeted_pending_combined",
+      "details": "Independent review found no direct coverage in initial063/076 tests. Worker added shared helper driven by actual inherited YAML, real public TriggerOrder choices/masks and source-attributed MemoryChange ordering. Both actors and orders plus independent clones covered.",
+      "helper": "code/digimon-engine/tests/cards_behavioral/bt18/light_hybrid_inherited_order.rs",
+      "log": "verification/logs/light-hybrid-inherited-order-initial.log",
+      "native_result": "2 passed,0 failed",
+      "canonical_total_change": "204 to206 expected; not yet freshly verified together."
+    }
+  ],
+  "ledger_changes_only_after_qualification": {
+    "path": "qa/qa-reports/validated_cards_dsl.json",
+    "four_rows": [
+      "BT18-037",
+      "BT18-042",
+      "BT18-063",
+      "BT18-076"
+    ],
+    "status": "BLOCKED -> IMPLEMENTED only after all conditions pass",
+    "gap_kind": "engine -> null after source/security contract/recovery blockers close",
+    "validated_date": "actual final qualification date",
+    "yaml_path": "Add missing code/digimon-engine/cards/bt18/BT18-042.yaml to BT18-042 row; other three paths already exist.",
+    "test_count": "Use actual final canonical counts and fresh combined results; current static counts17/19/20/20.",
+    "notes": "Replace stale no-YAML/ignored-geometry claims with scoped printed/image review, complete page/physical receipt evidence and final verification references; retain historical RED records separately. Do not imply DCGO certification or trained-model quality.",
+    "generated_artifacts": "Regenerate impact/lowering/card_admissibility and any mechanics readiness input after evidence changes. Do not set generated admissible or dsl flags manually. Current four artifact rows remain inadmissible failed_verdict; BT18-042 dsl:false is stale relative to newly authored YAML."
+  },
+  "evidence_boundaries": [
+    "No confirmed remaining mismatch between four printed card bodies and current YAML was identified by static review. This is not a full gameplay/oracle certification.",
+    "Reviewer read existing native logs; did not rerun binaries.",
+    "This report intentionally does not certify its author's union/replay implementation.",
+    "Current committed gate remains16/20 IDs and46/54 copies. No admission flags or ledgers changed here."
+  ],
+  "post_review_annotation": "Split-data condition resolved and newer206card proof recorded. The full qualification/gate condition is explicitly not cleared; aggregate failures remain visible."
+}

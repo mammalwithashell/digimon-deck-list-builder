@@ -1,0 +1,10 @@
+
+running 5 tests
+test e_partition_digixros::q25_all_turns_fires_on_digixros_departure_not_battle ... ok
+test e_partition_digixros::q29_legal_digixros_stack_orderings_with_yuu_amano ... ok
+test e_partition_digixros::q29_single_under_tamer_card_yields_third_legal_stack ... ok
+test e_partition_digixros::q16_partition_not_triggered_when_leaving_by_own_granted_effect ... ok
+test e_partition_digixros::q15_sequential_de_digivolve_halted_by_x_antibody_immunity ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 40 filtered out; finished in 10.67s
+

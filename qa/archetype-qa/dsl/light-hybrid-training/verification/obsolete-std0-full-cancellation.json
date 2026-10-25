@@ -1,0 +1,54 @@
+{
+  "status": "intentionally_canceled_obsolete",
+  "authorization": "Parent root explicitly authorized after expanded optimized first full12764 completed with all162 failures tracked; no timeout restart.",
+  "provenance": "obsolete-std0-full-process-tree.json",
+  "validation": "Every targeted live process checked exact PID, creation time and full command line against snapshot before Stop-Process.",
+  "stop_order": [
+    21840,
+    40088,
+    13744,
+    36788,
+    43856,
+    4928,
+    51672,
+    41664
+  ],
+  "actually_stopped": [
+    21840,
+    13744,
+    4928
+  ],
+  "remaining_targeted_processes": [],
+  "script32392_observer_exit": -1,
+  "cached32193_observer": "Parent owner asked to collect terminal result; exact OS ancestry absent.",
+  "protected_current_optimized_processes_confirmed_alive": [
+    26260,
+    54268,
+    44712,
+    34392
+  ],
+  "protected_focused_processes": "50636/30764 were never targeted and had naturally exited before final inventory.",
+  "preserved_logs": {
+    "final-tier2-mimalloc-full-run.log": {
+      "bytes": 1253144,
+      "sha256": "a2572da0001721fda86b166cdeef11bb99cd971bf9334ffe0c4056edcef7ea1c",
+      "tail": [
+        "test ex12::ex12_031::ex12_031_printed_op_wd_exact_tb_is_selectable ... ok",
+        "test ex12::ex12_031::ex12_031_printed_op_wd_hand_selector_includes_card_kinds_and_excludes_bad_cards ... ok",
+        "test ex12::ex12_031::ex12_031_printed_op_wd_level_bearing_option_card_is_selectable ... ok",
+        "test ex12::ex12_031::ex12_031_printed_op_wd_level_bearing_tamer_card_is_selectable ... "
+      ]
+    },
+    "full-cards-cached-test-data.log": {
+      "bytes": 714682,
+      "sha256": "1ebfc0aa3cec4728df4648bb464d9c8ff18ede578663cd51133cf98bcef80566",
+      "tail": [
+        "test ex11::ex11_022::ex11_022_turn_end_cleanup_survives_index_shift_and_deletes_only_played_puppet ... ok",
+        "test ex11::ex11_022::ex11_022_when_digivolving_uses_same_optional_play_and_cleanup_body ... ok",
+        "test ex11::ex11_023::ex11_023_alliance_keyword_is_present_while_face_up ... ok",
+        "test ex11::ex11_023::ex11_023_does_not_trigger_trash_play_when_kaguyamon_itself_is_deleted ... "
+      ]
+    }
+  },
+  "limits": "Canceled incomplete historical snapshots are not counted as passing aggregate runs. Current optimized full77 continues; final fresh inclusive qualification still required."
+}

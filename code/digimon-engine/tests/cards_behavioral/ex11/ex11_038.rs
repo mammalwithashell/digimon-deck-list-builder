@@ -21,7 +21,7 @@
 //!   trashed-source-id conditions, `draw: { of: you, count: 1 }` body.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::action::space::{encode_source_select, PLAY_HAND_START};
+
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect_context::EffectContext;
@@ -130,13 +130,14 @@ fn ex11_038_on_play_trash_hand_mineral_draws_one() {
     let prompt = runner
         .pending_selection_view()
         .expect("EX11-038 hand/source cost prompt opens");
+    let hand_action = physical_choice::card_action(&runner.game, "MIN-HAND", digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     assert!(
-        prompt.valid_action_ids.contains(&PLAY_HAND_START),
+        prompt.valid_action_ids.contains(&hand_action),
         "Mineral card in hand must be a payable cost candidate"
     );
 
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, hand_action)
         .expect("trash Mineral card from hand");
     runner.auto_resolve().expect("resolve draw");
 
@@ -172,7 +173,7 @@ fn ex11_038_on_play_trash_own_source_rock_draws_one() {
     let host = runner.place_stack(0, &["ROCK-SRC", "HOST"]);
 
     runner.play(0, 0).expect("play EX11-038");
-    let source_action = encode_source_select(host.index as u16, 0).expect("encode source action");
+    let source_action = physical_choice::source_action(&runner.game, host, 0);
     let prompt = runner
         .pending_selection_view()
         .expect("EX11-038 hand/source cost prompt opens");
@@ -229,3 +230,6 @@ fn ex11_038_on_play_no_eligible_card_no_draw() {
         "unpayable cost must not draw from deck"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

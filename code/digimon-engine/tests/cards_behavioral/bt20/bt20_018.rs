@@ -130,6 +130,9 @@ fn zone_action(r: &DebugRunner, id: &str, trash: bool) -> u16 {
         .iter()
         .position(|c| c.card_id(&r.game.card_data) == id)
         .expect("zone card");
+    if r.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some() {
+        return owned_union_fixture::action(&r.game, 0, id, trash).expect("printed eligible card has a legal physical row");
+    }
     (if trash {
         space::TRASH_EFFECT_START
     } else {
@@ -358,11 +361,7 @@ fn bt20_018_union_filters_require_chronicle_level_at_most_six_and_legal_evolutio
         "WRONG-LEVEL",
         "TAMER",
     ] {
-        assert_eq!(
-            build_action_mask(&r.game, 0)[zone_action(&r, id, false) as usize],
-            0.0,
-            "{id}"
-        );
+        assert!(owned_union_fixture::action(&r.game, 0, id, false).is_none(), "{id} must have no legal physical row");
     }
     let action = zone_action(&r, "EVO5", false);
     choose(&mut r, action);
@@ -523,3 +522,6 @@ fn bt20_018_inherited_attack_trashes_only_for_exact_ouryuken_once_each_turn() {
         assert_eq!(r.security_count(1), if top == "OURYUKEN" { 3 } else { 5 });
     }
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

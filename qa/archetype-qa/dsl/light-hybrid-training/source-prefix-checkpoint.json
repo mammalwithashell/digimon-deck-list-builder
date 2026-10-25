@@ -1,0 +1,59 @@
+{
+  "scope": "Physical selected prefixes and original candidate pools for raw and DSL source-multi and DSL capped-material continuations",
+  "action_schema_version": 2,
+  "implementation": [
+    "SourceChoicePin.resolve_ref rebases a physical source under its original stable carrier.",
+    "Raw and DSL source-multi prefixes retain original pins; moved prefixes cannot count toward the required floor.",
+    "SourceMultiState target_carrier_identity follows the restricted physical carrier through field compaction.",
+    "MultiPickState source_pool captures the complete originally filtered material pool and rebuilds live positions without reoffering selected physical cards.",
+    "Material pool refresh preserves distinct-by and named-role feasibility using only surviving physical cards.",
+    "All DSL continuations remain cloneable data; no shared callbacks were introduced.",
+    "Named source-group controls dispatch owned physical rows, preserving original role legality and alias assertions."
+  ],
+  "red_evidence": [
+    {
+      "log": "verification/logs/source-prefix-stability-red.log",
+      "passed": 0,
+      "failed": 2,
+      "failures": [
+        "Raw prefix retained old carrier slot after compaction.",
+        "Moved DSL prefix incorrectly earned four memory."
+      ]
+    },
+    {
+      "log": "verification/logs/capped-prefix-compaction-red.log",
+      "passed": 0,
+      "failed": 1,
+      "failures": [
+        "A selected physical material reappeared after source compaction: two remaining rows instead of one."
+      ]
+    },
+    {
+      "log": "verification/logs/source-target-compaction-red.log",
+      "passed": 4,
+      "failed": 1,
+      "failures": [
+        "Positional target restriction lost its physical carrier after compaction."
+      ]
+    }
+  ],
+  "green_evidence": {
+    "log": "verification/logs/source-prefix-final-green.log",
+    "command": "cargo test -p digimon-engine --config profile.dev.opt-level=0 --config profile.dev.debug=0 --test source_prefix_stability --test owned_card_selection --test named_source_group_selection",
+    "cargo_target_dir": "C:/Users/james/.codex/build-targets/light-hybrid-prefix",
+    "rust_min_stack": 33554432,
+    "exit_code": 0,
+    "suites": {
+      "source_prefix_stability": 5,
+      "owned_card_selection": 9,
+      "named_source_group_selection": 6
+    },
+    "total_passed": 20,
+    "failed": 0
+  },
+  "remaining": [
+    "Mandatory live prompts whose entire candidate page or required prefix becomes impossible still need shared mask recovery/cancellation before submission.",
+    "Other selector families, actual rebuilt bindings and final aggregate training admission are tracked by the parent task.",
+    "This checkpoint is focused simulator evidence, not DCGO oracle certification, fresh-wheel verification or training promotion."
+  ]
+}

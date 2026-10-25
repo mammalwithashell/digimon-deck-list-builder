@@ -394,7 +394,7 @@ fn q25_all_turns_fires_on_digixros_departure_not_battle() {
         digimon_engine::selection::SelectionKind::Material,
         "Dorbickmon's play must surface a DigiXros material selection"
     );
-    let wargreymon_action = wargreymon.index as u16;
+    let wargreymon_action = physical_menu::battle_top_action(&r.game, wargreymon);
     assert!(
         material_prompt
             .valid_action_ids
@@ -527,7 +527,7 @@ fn q29_runner() -> DebugRunner {
 /// closed with PASS if it is still open. Then both DigiXros material slots
 /// are filled from hand and the transaction committed.
 fn q29_drive_darkness_bagramon_play(r: &mut DebugRunner, under_tamer_picks: &[bool]) {
-    use digimon_engine::action::space::{PASS, SOURCE_SELECT_START};
+    use digimon_engine::action::space::PASS;
     use digimon_engine::selection::SelectionKind;
 
     let _ = r.play(0, 0); // EX10-059 is hand index 0
@@ -548,11 +548,7 @@ fn q29_drive_darkness_bagramon_play(r: &mut DebugRunner, under_tamer_picks: &[bo
             "judge Q29: Yuu Amano's would-play hook resolves BEFORE the DigiXros \
              material selection"
         );
-        if !view
-            .valid_action_ids
-            .iter()
-            .any(|&a| a >= SOURCE_SELECT_START)
-        {
+        if view.card_choice.is_none() {
             assert!(
                 view.is_optional,
                 "Yuu Amano's hook accept prompt is optional"
@@ -572,23 +568,14 @@ fn q29_drive_darkness_bagramon_play(r: &mut DebugRunner, under_tamer_picks: &[bo
             "judge Q29: Yuu Amano's would-play hook resolves BEFORE the DigiXros \
              material selection"
         );
-        let mut source_actions: Vec<u16> = view
-            .valid_action_ids
-            .iter()
-            .copied()
-            .filter(|&a| a >= SOURCE_SELECT_START)
+        let mut source_rows: Vec<_> = physical_menu::commits(&r.game).into_iter()
+            .filter(|row| matches!(row.zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::BattleSource)))
             .collect();
-        source_actions.sort_unstable();
-        assert!(
-            !source_actions.is_empty(),
-            "under-Tamer purple Digimon sources must be selectable; got {:?}",
-            view.valid_action_ids
-        );
-        let action = if pick_highest {
-            *source_actions.last().unwrap()
-        } else {
-            source_actions[0]
-        };
+        source_rows.sort_by_key(|row| row.position.as_deref().unwrap().parse::<usize>().unwrap());
+        assert!(!source_rows.is_empty(), "under-Tamer purple Digimon sources must be selectable; got {:?}", view.valid_action_ids);
+        let row = if pick_highest { source_rows.last().unwrap() } else { &source_rows[0] };
+        assert!(matches!(row.card_id.as_deref(), Some("EX10-039" | "EX10-044")), "only the printed purple source cards may pay Yuu's hook");
+        let action = row.action_id;
         r.execute_action(0, action)
             .expect("pick an under-Tamer purple Digimon card for Yuu Amano's hook");
     }
@@ -742,3 +729,6 @@ fn q29_single_under_tamer_card_yields_third_legal_stack() {
 
 // Q30 spans clusters C and E — its test lives in `c_declare_then_pay.rs`
 // (`q30_partition_interruptive_suspends_both_with_cost_reduction`).
+
+#[path = "../support/owned_card_choice.rs"]
+mod physical_menu;

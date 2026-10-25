@@ -1,0 +1,420 @@
+{
+  "requested_tier": 2,
+  "mode": "dry_run",
+  "metadata": {
+    "impact_scope": {
+      "cards": [],
+      "cards_behavioral_filter": "",
+      "full_suite_required": true,
+      "reasons": [
+        "code/digimon-engine/src/card_choice_page.rs is an unmapped engine/core file"
+      ],
+      "side_binaries": [
+        "dsl"
+      ],
+      "verbs": []
+    }
+  },
+  "suites": [
+    {
+      "tier": 0,
+      "name": "impact_index_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/impact_index.py",
+        "--cards-dir",
+        "code/digimon-engine/cards",
+        "--out",
+        "qa/impact/dsl_impact_index.json",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "impact_lowering_map_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/impact_lowering_map.py",
+        "--map",
+        "qa/impact/lowering_verb_map.json",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "keyword_semantics_matrix_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/keyword_semantics_matrix.py",
+        "--source",
+        "docs/digimon-rules/keyword-semantics.md",
+        "--engine-enum",
+        "code/digimon-engine/src/enums.rs",
+        "--out",
+        "qa/rules/keyword_semantics_matrix.json",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "rules_coverage_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/rules/coverage_report.py",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "rules_obligations_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "-m",
+        "tools.rules.build_obligations",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      }
+    },
+    {
+      "tier": 0,
+      "name": "rules_coverage_report",
+      "kind": "python",
+      "required": false,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/rules/coverage_report.py"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "faq_conformance_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/faq_conformance_generator.py",
+        "--cases",
+        "qa/rules/faq_conformance_cases.json",
+        "--out",
+        "code/digimon-engine/tests/rules_faq/generated_conformance.rs",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "authoring_guide_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/clause_coverage/authoring_guide.py",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "oracle_readiness_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/clause_coverage/readiness.py",
+        "--check"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 0,
+      "name": "mechanics_readiness_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "-m",
+        "tools.rules.mechanics_readiness",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      }
+    },
+    {
+      "tier": 0,
+      "name": "lowering_coverage_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "-m",
+        "tools.lowering_coverage",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      }
+    },
+    {
+      "tier": 0,
+      "name": "card_admissibility_check",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "-m",
+        "digimon_gym.agents.card_admissibility",
+        "--check"
+      ],
+      "env": {
+        "PYTHONPATH": "code"
+      }
+    },
+    {
+      "tier": 0,
+      "name": "verification_tool_tests",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "-m",
+        "pytest",
+        "code/tests/tools/test_impact_index.py",
+        "code/tests/tools/test_impact_lowering_map.py",
+        "code/tests/tools/test_impact_scope.py",
+        "code/tests/tools/test_keyword_semantics_matrix.py",
+        "code/tests/tools/test_rules_coverage_report.py",
+        "code/tests/tools/test_rules_build_obligations.py",
+        "code/tests/tools/test_rules_parse.py",
+        "code/tests/tools/test_rules_renumber_map.py",
+        "code/tests/tools/test_faq_conformance_generator.py",
+        "code/tests/tools/test_clause_coverage_authoring_guide.py",
+        "code/tests/tools/test_clause_coverage_readiness.py",
+        "code/tests/tools/test_verification_tier_manifest.py",
+        "code/tests/tools/test_nextest_config.py",
+        "code/tests/tools/test_verify_script.py",
+        "code/tests/tools/test_embedded_card_paths_case.py",
+        "code/tests/tools/test_card_loop_interactions_probes.py",
+        "code/tests/tools/test_clause_coverage_keyword_brief.py",
+        "-q"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 1,
+      "name": "dsl",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "dsl"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "judge_quiz",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "judge_quiz"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "rules_conformance",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "rules_conformance"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "rules_faq",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "rules_faq"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "keyword_semantics_matrix",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "keyword_semantics_matrix"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 1,
+      "name": "determinism_guard",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "infra",
+        "determinism_guard"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "impact_scope",
+      "kind": "python",
+      "required": true,
+      "command": [
+        "C:\\Users\\james\\AppData\\Local\\Microsoft\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\python.exe",
+        "code/tools/impact_scope.py",
+        "--json",
+        "--path",
+        "code/digimon-engine/cards/p/P-249.yaml",
+        "--path",
+        "code/digimon-engine/src/card_choice_page.rs",
+        "--path",
+        "code/tests/test_cards_json_integrity.py"
+      ],
+      "env": {}
+    },
+    {
+      "tier": 2,
+      "name": "cards_behavioral_full_required",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "cards_behavioral"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "side_dsl",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "dsl"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "replay_goldens_verify",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "run",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--bin",
+        "replay_corpus",
+        "--",
+        "verify",
+        "--goldens",
+        "qa/replay-goldens",
+        "--cards",
+        "data/cards.json"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    },
+    {
+      "tier": 2,
+      "name": "invariant_fuzz",
+      "kind": "cargo",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "invariant_fuzz"
+      ],
+      "env": {
+        "RUST_MIN_STACK": "268435456",
+        "RUST_TEST_THREADS": "1"
+      }
+    }
+  ]
+}

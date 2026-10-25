@@ -134,7 +134,7 @@ fn lite_deck_v2_collapses_original_deck_copies_into_sorted_rows() {
     let (tensor, registry) = tensor_for(deck_one(), deck_two(), 1, 0);
     let rows = decklist_rows(&tensor);
 
-    assert_eq!(tensor.len(), 8850);
+    assert_eq!(tensor.len(), 9874);
     assert_eq!(rows[0][0], 1.0);
     assert_eq!(rows[0][1], registry.get_index("CARD-B") as f32);
     assert_eq!(rows[0][2], 2.0 / 4.0);

@@ -10,6 +10,7 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core';
 import { useGameStore } from '@/stores/gameStore';
+import { cardChoiceToken } from '@/types/cardChoice';
 import { useActionMask } from '@/hooks/useActionMask';
 import { useEffectHighlight } from '@/hooks/useEffectHighlight';
 import { useDropZone, type DragData } from '@/hooks/useDropZone';
@@ -171,8 +172,9 @@ export function GamePage() {
   // Use WebSocket sendAction for PvP / vs-AI-online / spectator; HTTP for local games.
   const sendAction = useCallback(
     async (actionId: number) => {
+      const expectedCardChoice = cardChoiceToken(store.pendingSelection?.cardChoice);
       if (useWebSocket) {
-        ws.sendAction(actionId);
+        ws.sendAction(actionId, expectedCardChoice);
         return;
       }
       if (!store.gameId || actionPendingRef.current) return;
@@ -185,6 +187,7 @@ export function GamePage() {
       try {
         const actionResult = await gameApi.sendAction(store.gameId, actionId, {
           paced,
+          expectedCardChoice,
         });
         applyGameResponse(actionResult);
 

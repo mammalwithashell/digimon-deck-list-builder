@@ -1,0 +1,71 @@
+{
+  "status": "focused_rules_fixture_migration_verified_full_aggregate_pending",
+  "production_changes": false,
+  "scope": [
+    "code/digimon-engine/tests/rules_conformance/ch16_replacement_keywords.rs",
+    "code/digimon-engine/tests/rules_conformance/ch16_processing_keywords.rs"
+  ],
+  "aggregate_before": {
+    "log": "verification/logs/final-tier2-mimalloc-full-run.log",
+    "passed": 346,
+    "failed": 15,
+    "ignored": 1,
+    "total": 362
+  },
+  "assigned_original_failures": [
+    "ch16_processing_keywords::material_save_allows_duplicate_specified_cards_and_places_at_bottom",
+    "ch16_processing_keywords::material_save_places_the_full_number_whenever_possible",
+    "ch16_processing_keywords::material_save_player_chooses_placement_order",
+    "ch16_replacement_keywords::fragment_kind_matches_rule",
+    "ch16_replacement_keywords::decode_plays_specified_card_not_in_battle",
+    "ch16_replacement_keywords::fragment_trashes_exact_count_of_chosen_sources",
+    "ch16_replacement_keywords::fragment_timing_matches_rule",
+    "ch16_replacement_keywords::partition_plays_one_of_each_specified_all_or_nothing",
+    "ch16_replacement_keywords::partition_timing_matches_rule",
+    "ch16_replacement_keywords::specified_cards_follow_the_icon_note"
+  ],
+  "changes": [
+    "Decode/Fragment/Partition source picks locate a legal owned CommitCard row by actual owner, carrier and current physical position; selecting and other-seat masks are checked. No per-source encoded bands dispatched.",
+    "Specified-icon identity assertion now checks that the nonmatching red source has no row and the matching blue source has a legal row; all original rule assertions remain.",
+    "Material Save reads typed source/trash/hand metadata for the actual card. Its duplicate-copy test compares committed physical CardHandle values, because presentation action aliases may legitimately be reused after each pick. Original full-count, ownership, bottom-placement and player-chosen ordering assertions remain.",
+    "No face-down rule expectations in these assigned rules cases required changing. Existing cite! fingerprints and test names were preserved."
+  ],
+  "checks": [
+    {
+      "log": "verification/logs/qualification-rules-replacement-keywords.log",
+      "passed": 37,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "log": "verification/logs/qualification-rules-processing-keywords.log",
+      "passed": 62,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "focused_total": {
+    "passed": 99,
+    "failed": 0,
+    "ignored": 0
+  },
+  "test_sha256": {
+    "code/digimon-engine/tests/rules_conformance/ch16_replacement_keywords.rs": "9c34a1cb23e8e013d178a3ad24a84dde06ca7aae64eda819fa5e3839fa343ad8",
+    "code/digimon-engine/tests/rules_conformance/ch16_processing_keywords.rs": "16c95a79346545c0903cf1daccbffa0b5594328ad46bdff73ed2d7b8549ccf53"
+  },
+  "stale_pointer_search": {
+    "old_name": "source_count_face_down_row_d_matches_current_dcgo_behavior",
+    "searched": [
+      "qa/rules",
+      "docs",
+      "code/tests"
+    ],
+    "direct_matches": 0,
+    "generated_lowering_map_matches": "Present and already reported to parent for regeneration; not manually edited."
+  },
+  "limits": [
+    "These99focusedpasses close the assigned10original failures; they do not overwrite the full rules362 denominator or full-tier ladder status.",
+    "Parent owns remainingchapter03fixtures and final unfiltered aggregation.",
+    "No engine, YAML, wheel, production model or admission ledger changes by this subtask."
+  ]
+}

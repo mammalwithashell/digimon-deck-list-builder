@@ -376,60 +376,18 @@ fn count_capped_zone_ids(game: &Game, valid: &[u16]) -> Option<(Vec<String>, u16
 /// `(ids, range_start)` shape the contiguous-band arms use — there is no base
 /// to count from.
 ///
-/// So the mapping comes from the engine, not from arithmetic — the same shape
-/// as `material_source_ids` / `count_capped_zone_ids` above. The data-VM
-/// installer parks a `ResumeFrame::SourceMultiStep` whose `candidates` field
-/// IS the `(action_id, SourceSelectionRef)` snapshot the prompt was built from
-/// (`install_source_multi_resume_step` in `dsl_cards/step/selections.rs`
-/// derives `valid_action_ids` from exactly that vector), and each
-/// `SourceSelectionRef` carries the `CardHandle` of the offered source.
-///
-/// Each pair is then resolved against LIVE state — the handle is looked up
-/// under its own carrier, mirroring `run_source_multi_step`'s DCGO-parity
-/// revalidation — so a source an intervening observer removed drops out
-/// instead of lending its id to a card that is no longer there. The frame is
-/// also cross-checked against the live prompt: every non-PASS id the prompt
-/// accepts must be one of the frame's candidates. A prompt with no data frame
-/// (a legacy closure-only installer, `effect_context/selections.rs`) returns
-/// `None` here and surfaces as an honest resolution error rather than a wrong
-/// pick.
+/// The prompt's physical owner supplies the current page mapping, including
+/// raw callback selections without a VM frame. Only live legal commit rows
+/// with printed identity visible to the selecting seat can answer an exam.
+/// A missing owner is an honest resolution error; numeric source bands never
+/// infer a card or an owning player.
 fn source_multi_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, String)>> {
-    use crate::resume::ResumeFrame;
-
-    let stack = game.pending_selection_resume.as_ref()?;
-    // Frames run inner-to-outer, so the live prompt is the innermost one —
-    // same traversal as `material_source_ids` / `count_capped_zone_ids`.
-    let state = stack.frames.iter().rev().find_map(|f| match f {
-        ResumeFrame::SourceMultiStep(s) => Some(s),
-        _ => None,
-    })?;
-
-    let non_pass: Vec<u16> = valid.iter().copied().filter(|id| *id != PASS).collect();
-    if non_pass.is_empty()
-        || !non_pass
-            .iter()
-            .all(|id| state.candidates.iter().any(|(c, _)| c == id))
-    {
-        return None;
-    }
-
-    Some(
-        state
-            .candidates
-            .iter()
-            .filter_map(|(action, source_ref)| {
-                let perm = game
-                    .player(source_ref.permanent.player)
-                    .battle_area
-                    .get(source_ref.permanent.index as usize)?;
-                let card = perm
-                    .card_sources
-                    .iter()
-                    .find(|c| c.handle() == source_ref.card)?;
-                Some((*action, card.card_id(&game.card_data).to_string()))
-            })
-            .collect(),
-    )
+    let pending = game.pending_selection.as_ref()?;
+    let owner = pending.card_choice.as_ref()?;
+    Some(owner.view(game, pending.selecting_player).rows.into_iter()
+        .filter(|row| valid.contains(&row.action_id)
+            && matches!(row.operation, crate::owned_card_choice::CardChoiceOperation::CommitCard))
+        .filter_map(|row| row.card_id.map(|id| (row.action_id, id))).collect())
 }
 
 /// `(action_id, card_id)` pairs of a parked zone-card pick
@@ -874,6 +832,27 @@ pub fn resolve_next(
                 .map(|c| c.card_id(&game.card_data).to_string())
                 .collect()
         };
+        if let Some(owner) = &pending.card_choice {
+            // Owned pages reuse numeric aliases. Resolve only visible legal
+            // rows on this page, never by guessing a legacy zone band. Exam
+            // callers must navigate explicitly before naming an off-page card.
+            let named_carrier = matches!(pending.kind, SelectionKind::UnionZone { .. })
+                .then(|| payload.targets.as_ref().filter(|targets| !targets.is_empty())
+                    .and_then(|targets| targets.get(picks_done).or_else(|| targets.first()))
+                    .and_then(|target| usize::try_from(target.frame).ok()))
+                .flatten();
+            let view = owner.view(game, pending.selecting_player);
+            if let Some(row) = view.rows.iter().find(|row| {
+                matches!(row.operation, crate::owned_card_choice::CardChoiceOperation::CommitCard)
+                    && row.card_id.as_deref() == Some(want.as_str())
+                    && accepts(row.action_id)
+                    && named_carrier.is_none_or(|slot| row.carrier_slot.map(usize::from) == Some(slot))
+            }) {
+                return Ok(Some(row.action_id));
+            }
+            return Err(format!("card pick '{}' not found in {:?} visible legal physical rows on page {} of '{}'",
+                want, pending.kind, view.page_index, pending.prompt));
+        }
         // A zone-card pick (hand / trash / stack / link cards in one prompt)
         // carries its own candidate list; it is answered from the parked frame
         // whatever kind tag it shows (CountCappedMultiSelect / PlayCostBudget /
@@ -1334,6 +1313,7 @@ mod tests {
             source_kind: EffectSourceKind::Digimon,
             callback: Box::new(|_, _| {}),
             on_decline: None,
+            card_choice: None,
             zone_owner: None,
         });
     }
@@ -1357,6 +1337,7 @@ mod tests {
             source_kind: EffectSourceKind::Digimon,
             callback: Box::new(|_, _| {}),
             on_decline: None,
+            card_choice: None,
             zone_owner: None,
         });
     }
@@ -1399,6 +1380,7 @@ mod tests {
             source_kind: EffectSourceKind::Digimon,
             callback: Box::new(|_, _| {}),
             on_decline: None,
+            card_choice: None,
             zone_owner: None,
         });
     }
@@ -1816,6 +1798,7 @@ mod tests {
             on_decline: None,
             // `select_material` never sets a zone owner — so the carrier's
             // side cannot be inferred from the prompt either.
+            card_choice: None,
             zone_owner: None,
         });
         game.pending_selection_resume = Some(ResumeStack {
@@ -2037,7 +2020,7 @@ mod tests {
         game: &mut Game,
         of_player: crate::enums::PlayerId,
         selecting_player: crate::enums::PlayerId,
-        candidates: Vec<(u16, crate::selection::SourceSelectionRef)>,
+        candidates: Vec<crate::selection::SourceSelectionRef>,
         min: u8,
         max: u8,
     ) {
@@ -2055,10 +2038,12 @@ mod tests {
             min,
             max,
             picked: Vec::new(),
+            picked_pins: Vec::new(),
             candidates,
             filter: digimon_dsl::compiled::CompiledPredicate::default(),
             filter_bindings: Bindings::new(),
             target_permanent: None,
+            target_carrier_identity: None,
             target_resolution_failed: false,
             eval_on_card: false,
             prompt: "Choose sources to trash".to_string(),
@@ -2072,26 +2057,17 @@ mod tests {
         crate::dsl_cards::step::selections::install_source_multi_resume_step(game, state);
     }
 
-    /// `(action id, SourceSelectionRef)` for one live source slot, exactly as
-    /// `source_multi_candidates_data` encodes it.
+    /// A physical candidate; the owner assigns its current page-row action.
     fn source_candidate(
         game: &Game,
         carrier: PermanentHandle,
-        source_index: u8,
-    ) -> (u16, crate::selection::SourceSelectionRef) {
+        source_index: usize,
+    ) -> crate::selection::SourceSelectionRef {
         let card = game.player(carrier.player).battle_area[carrier.index as usize].card_sources
-            [source_index as usize]
-            .handle();
-        (
-            crate::action::space::encode_source_select(carrier.index as u16, source_index as u16)
-                .expect("source slot is addressable"),
-            crate::selection::SourceSelectionRef {
-                permanent: carrier,
-                field_index: carrier.index,
-                source_index,
-                card,
-            },
-        )
+            [source_index].handle();
+        crate::selection::SourceSelectionRef {
+            permanent: carrier, field_index: carrier.index, source_index, card,
+        }
     }
 
     #[test]
@@ -2105,11 +2081,11 @@ mod tests {
 
         assert_eq!(
             resolve_next(&runner.game, &card_row("SRC-A"), 0),
-            Ok(Some(c0.0))
+            Ok(Some(30))
         );
         assert_eq!(
             resolve_next(&runner.game, &card_row("SRC-B"), 0),
-            Ok(Some(c1.0))
+            Ok(Some(31))
         );
     }
 
@@ -2131,7 +2107,7 @@ mod tests {
         // On the carrier SRC-B is source 1; on player 0's decoy it is source 0.
         assert_eq!(
             resolve_next(&runner.game, &card_row("SRC-B"), 0),
-            Ok(Some(c1.0))
+            Ok(Some(31))
         );
     }
 
@@ -2171,7 +2147,7 @@ mod tests {
         let c0 = source_candidate(&runner.game, carrier, 0);
         let c1 = source_candidate(&runner.game, carrier, 1);
         park_source_multi_selection(&mut runner.game, 0, 0, vec![c0, c1], 0, 2);
-        runner.game.decode_action(c0.0, 0);
+        runner.game.decode_action(30, 0);
         assert!(
             matches!(
                 runner.game.pending_selection.as_ref().map(|s| s.kind),
@@ -2204,6 +2180,7 @@ mod tests {
             source_kind: EffectSourceKind::Digimon,
             callback: Box::new(|_, _| {}),
             on_decline: None,
+            card_choice: None,
             zone_owner: None,
         });
         game.pending_selection_resume = None;
@@ -2287,7 +2264,7 @@ mod tests {
 
         assert_eq!(
             resolve_next(&runner.game, &card_row("SRC-B"), 0),
-            Ok(Some(c_second.0))
+            Ok(Some(31))
         );
     }
 
@@ -2306,7 +2283,7 @@ mod tests {
 
         assert_eq!(
             resolve_next(&runner.game, &card_row("SRC-DUP"), 0),
-            Ok(Some(c0.0))
+            Ok(Some(30))
         );
     }
 
@@ -2321,7 +2298,7 @@ mod tests {
 
         assert_eq!(
             resolve_next(&runner.game, &card_row("SRC-DUP"), 0),
-            Ok(Some(c2.0))
+            Ok(Some(30))
         );
     }
 
@@ -2344,20 +2321,18 @@ mod tests {
     }
 
     #[test]
-    fn source_multi_without_a_data_frame_is_an_honest_err_not_a_guess() {
-        // A legacy closure-only installer (`effect_context/selections.rs`)
-        // parks no `SourceMultiStep`, so the candidate mapping is unknowable
-        // and guessing a side would take a source out of the wrong stack.
+    fn source_multi_requires_a_physical_owner_but_not_a_vm_frame() {
+        // Raw callbacks have no VM frame, but their physical owner still
+        // supplies the selecting seat with an unambiguous candidate mapping.
         let mut runner = runner_with_cards(&["SRC-A", "SRC-TOP"]);
         let carrier = runner.place_stack(0, &["SRC-A", "SRC-TOP"]);
         let c0 = source_candidate(&runner.game, carrier, 0);
         park_source_multi_selection(&mut runner.game, 0, 0, vec![c0], 0, 1);
         runner.game.pending_selection_resume = None;
-
-        assert!(
-            resolve_next(&runner.game, &card_row("SRC-A"), 0).is_err(),
-            "a frame-less SourceMulti prompt must not resolve to an action id"
-        );
+        assert_eq!(resolve_next(&runner.game, &card_row("SRC-A"), 0), Ok(Some(30)));
+        runner.game.pending_selection.as_mut().unwrap().card_choice = None;
+        assert!(resolve_next(&runner.game, &card_row("SRC-A"), 0).is_err(),
+            "without a physical owner the resolver must not guess a source");
     }
 
     // ── CountCappedMultiSelect picks answered by CARD IDENTITY ───────────
@@ -2422,6 +2397,7 @@ mod tests {
             on_decline: None,
             // Every installer hardcodes this — the resolver's
             // `unwrap_or(selecting_player)` fallback is a guess, not a read.
+            card_choice: None,
             zone_owner: None,
         });
         game.pending_selection_resume = frame.map(|f| ResumeStack { frames: vec![f] });
@@ -2443,6 +2419,7 @@ mod tests {
             is_optional_zero: true,
             distinct_by: None,
             candidate_actions,
+            source_candidates: None,
             accum: Vec::new(),
             prompt: "Assembly: select 8 card(s) from trash to place under \
                      (No Selection to skip)."
@@ -2477,6 +2454,7 @@ mod tests {
             max: 8,
             is_optional_zero: true,
             distinct_by: None,
+            source_pool: None,
             candidate_indices,
             accum: Vec::new(),
             bind_as: None,
@@ -2910,7 +2888,13 @@ mod tests {
                 .unwrap()
                 .valid_action_ids
                 .contains(&action));
-            assert_eq!(action, crate::action::space::SOURCE_SELECT_START);
+            assert_eq!(action, crate::card_choice_page::CARD_CHOICE_START);
+            let row = game.pending_selection.as_ref().unwrap().card_choice.as_ref().unwrap()
+                .view(&game, actor).rows.into_iter().find(|row| row.action_id == action).unwrap();
+            assert_eq!(row.card_id.as_deref(), Some("BT20-042"));
+            assert_eq!(row.owner, Some(0));
+            assert_eq!(row.carrier_slot, Some(h.index));
+            assert_eq!(row.position.as_deref(), Some("0"));
         }
     }
 

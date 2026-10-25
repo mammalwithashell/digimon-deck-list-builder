@@ -51,7 +51,7 @@ pub(super) fn install(
     let attainable = maximum_matching(&groups, &[]).unwrap_or(0).min(max as usize) as u8;
     if min > attainable { return InstallResult::TailAlreadyRan; }
     let floor = if require_max { attainable } else { min };
-    let candidate_indices = candidates.into_iter().filter(|&index| {
+    let candidate_indices: Vec<usize> = candidates.into_iter().filter(|&index| {
         let Some(card) = material_zone_slice(ctx.game, perm).and_then(|s| s.get(index)) else { return false; };
         maximum_matching(&groups, &[card.handle()])
             .is_some_and(|n| n >= floor.max(1) as usize)
@@ -65,6 +65,7 @@ pub(super) fn install(
         zone: CountCappedZone::Material(perm),
         range_start: material_zone_geometry(ctx.game, perm).map(|(_, range)| range).unwrap_or(0),
         min: floor, max: attainable, is_optional_zero: optional_zero, distinct_by: None,
+        source_pool: capture_material_pool(ctx.game, CountCappedZone::Material(perm), &candidate_indices),
         candidate_indices, accum: Vec::new(), named_groups: Some(groups),
         bind_as, inner_tail: Arc::new(tail), bindings, runtime,
         trigger_context: ctx.game.current_trigger_context.clone(), outer_conts: Vec::new(),

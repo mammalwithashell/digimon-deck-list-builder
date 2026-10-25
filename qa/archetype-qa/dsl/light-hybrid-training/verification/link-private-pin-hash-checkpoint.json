@@ -1,0 +1,39 @@
+{
+  "status": "frozen_green",
+  "scope": "Independent private Link carrier identity fingerprint and merge audit; gameplay source worker owns Link semantics.",
+  "actual_runtime_red": {
+    "passed": 1,
+    "failed": 4,
+    "log": "logs/link-private-pin-clear-version-red.log"
+  },
+  "focused_green": {
+    "passed": 5,
+    "failed": 0,
+    "ignored": 0,
+    "log": "logs/link-private-pin-version-green.log"
+  },
+  "combined_latest_source_green": {
+    "passed": 13,
+    "failed": 0,
+    "ignored": 0,
+    "groups": {
+      "security_receipt": 6,
+      "private_binding_merge": 2,
+      "link_projection": 5
+    },
+    "log": "logs/link-and-security-pin-regression-green.log"
+  },
+  "coverage": [
+    "V3 excludes exactly new private Link source/material carrier prefixes and clear tombstones",
+    "Historical reserved source carrier pin remains V3 state",
+    "V4 includes both new identity pins and explicit private clears",
+    "Metadata stays outside authored slots and archival Bindings Debug",
+    "EffectDNA declarations apply versioned binding projection",
+    "Runtime security steps in DNA tails preserve legacy bytes and V4 correlated-token alpha equivalence",
+    "Clone merge preserves compacted carrier identity; explicit clear/rebind precedence tested"
+  ],
+  "limits": [
+    "Current native library binary has 507 tests; historical 500/500 whole-library proof predates latest Link changes. This checkpoint provides 13 focused current-source cases, not a fresh aggregate claim.",
+    "Final inclusive verification and wheel qualification remain root-owned; no ledger promotion."
+  ]
+}

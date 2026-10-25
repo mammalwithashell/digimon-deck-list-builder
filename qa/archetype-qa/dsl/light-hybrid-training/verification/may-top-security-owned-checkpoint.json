@@ -1,0 +1,38 @@
+{
+  "status": "frozen_green",
+  "scope": "May-add-top-security-to-hand owned physical choice migration; permission and typed legacy continuation preserved.",
+  "actual_runtime_red": {
+    "passed": 0,
+    "failed": 3,
+    "log": "logs/may-top-security-owned-red.log"
+  },
+  "canonical_fixture_red": {
+    "passed": 36,
+    "failed": 3,
+    "log": "logs/may-top-security-canonical-red.log"
+  },
+  "primitive_green": {
+    "passed": 5,
+    "failed": 0,
+    "ignored": 0,
+    "log": "logs/may-top-security-owned-green-final.log"
+  },
+  "canonical_green": {
+    "passed": 39,
+    "failed": 0,
+    "ignored": 0,
+    "seconds": 39.46,
+    "log": "logs/may-top-security-canonical-green.log"
+  },
+  "coverage": [
+    "Actual top indices9/10/39 across actors, target owners, selecting-player override and clones",
+    "Full legal owned mask and explicit decline; hidden identity permission preserved",
+    "Stale shuffle and same-number replacement reject old physical choice",
+    "Decline and empty-security enclosing tail behavior",
+    "Legacy nonowned post-AddTopToHand frame still resolves actual top"
+  ],
+  "limits": [
+    "Canonical wrapper qualification is scoped; final full verification and release wheel are root-owned.",
+    "No action-space expansion or ledger promotion."
+  ]
+}

@@ -184,6 +184,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectPlayOrder;
         self.pending_selection = Some(crate::selection::PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: crate::selection::SelectionKind::PlayOrder,
             selecting_player: loser_id,
@@ -271,6 +272,7 @@ impl Game {
         self.game_over = true;
         self.cancel_all_prepared_source_plays();
         self.source_play_receipts.clear();
+        self.security_play_receipts.clear();
         self.cost_payment_receipts.clear();
         self.active_cost_payment_receipt = None;
         self.deletion_receipts.clear();

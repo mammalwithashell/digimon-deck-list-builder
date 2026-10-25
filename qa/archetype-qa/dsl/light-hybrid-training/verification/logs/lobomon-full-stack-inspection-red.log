@@ -1,0 +1,27 @@
+
+running 2 tests
+test bt18_037_full_stack_inspection_without_matches_finishes_then_shuffles_once ... FAILED
+test bt18_037_full_stack_inspection_includes_ineligible_cards ... FAILED
+
+failures:
+
+---- bt18_037_full_stack_inspection_without_matches_finishes_then_shuffles_once stdout ----
+
+thread 'bt18_037_full_stack_inspection_without_matches_finishes_then_shuffles_once' (25252) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_037.rs:86:14:
+nonempty security remains inspectable even without a match
+
+---- bt18_037_full_stack_inspection_includes_ineligible_cards stdout ----
+
+thread 'bt18_037_full_stack_inspection_includes_ineligible_cards' (39176) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_037.rs:131:5:
+assertion `left == right` failed: search permits inspection of every security card, including ineligible cards
+  left: [39]
+ right: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt18_037_full_stack_inspection_includes_ineligible_cards
+    bt18_037_full_stack_inspection_without_matches_finishes_then_shuffles_once
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 15 filtered out; finished in 4.46s
+

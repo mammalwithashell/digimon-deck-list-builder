@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GameState, GameEvent } from '@/types/game';
+import type { CardChoiceToken } from '@/types/cardChoice';
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
 
@@ -240,8 +241,9 @@ export function useWebSocketGame(options: UseWebSocketGameOptions | null) {
     };
   }, [options?.gameId, options?.role]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sendAction = useCallback((actionId: number) => {
-    wsRef.current?.send(JSON.stringify({ type: 'action', action_id: actionId }));
+  const sendAction = useCallback((actionId: number, expectedCardChoice?: CardChoiceToken) => {
+    wsRef.current?.send(JSON.stringify({ type: 'action', action_id: actionId,
+      expected_card_choice: expectedCardChoice }));
   }, []);
 
   const sendSurrender = useCallback(() => {

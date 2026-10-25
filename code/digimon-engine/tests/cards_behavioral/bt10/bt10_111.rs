@@ -71,14 +71,15 @@ fn bt10_111_on_play_wildcard_can_replace_one_missing_digixros_requirement_this_t
     let material_prompt = runner
         .pending_selection()
         .expect("DigiXros material prompt should be installed");
+    let king_action = physical_menu::battle_top_action(&runner.game, digimon_engine::permanent::PermanentHandle { player: 0, index: king_index });
     assert!(
         material_prompt
             .valid_action_ids
-            .contains(&(king_index as u16)),
+            .contains(&king_action),
         "BT10-111 should be legal as a wildcard material for one missing Ballistamon requirement"
     );
     runner
-        .execute_action(0, king_index as u16)
+        .execute_action(0, king_action)
         .expect("select BT10-111 as wildcard DigiXros material");
     runner
         .execute_action(0, PASS)
@@ -104,3 +105,6 @@ fn bt10_111_on_play_wildcard_can_replace_one_missing_digixros_requirement_this_t
         "BT10-111 should become the selected DigiXros source"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

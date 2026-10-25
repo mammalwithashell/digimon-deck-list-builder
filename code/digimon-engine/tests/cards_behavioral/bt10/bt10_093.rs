@@ -22,7 +22,7 @@
 //! (`tests/judge_quiz/e_partition_digixros.rs`). This file covers the hook on
 //! a plain (non-DigiXros) ≥Lv4 [Bagra Army] play.
 
-use digimon_engine::action::space::{PASS, SOURCE_SELECT_START};
+use digimon_engine::action::space::{PASS};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::selection::SelectionKind;
 
@@ -73,11 +73,7 @@ fn bt10_093_hook_places_under_tamer_card_and_reduces_cost_by_2() {
         view.is_optional,
         "the printed 'by placing...' hook is optional"
     );
-    if !view
-        .valid_action_ids
-        .iter()
-        .any(|&a| a >= SOURCE_SELECT_START)
-    {
+    if view.card_choice.is_none() {
         let accept = view.valid_action_ids[0];
         r.execute_action(0, accept).expect("accept the hook");
     }
@@ -86,12 +82,8 @@ fn bt10_093_hook_places_under_tamer_card_and_reduces_cost_by_2() {
     let view = r
         .pending_selection_view()
         .expect("the under-Tamer source pick must surface");
-    let pick = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a >= SOURCE_SELECT_START)
-        .expect("ChuuChuumon must be selectable from under Yuu Amano");
+    let pick = physical_menu::card_action(&r.game, "EX10-039", digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
+    assert!(view.valid_action_ids.contains(&pick));
     r.execute_action(0, pick).expect("pick ChuuChuumon");
     if r.pending_selection_view()
         .is_some_and(|v| matches!(v.kind, SelectionKind::SourceMulti { .. }))
@@ -170,3 +162,6 @@ fn bt10_093_declining_hook_plays_at_full_cost() {
         "ChuuChuumon must stay under Yuu Amano when the hook is declined"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

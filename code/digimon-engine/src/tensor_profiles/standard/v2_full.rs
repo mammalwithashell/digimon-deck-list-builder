@@ -13,9 +13,9 @@ pub const TENSOR_VERSION: u16 = v2_lite::TENSOR_VERSION;
 // (re-exported here) grows `permanent_slots` by 90 floats, shifting every
 // later section and `tensor_size` 43392 -> 43482. The LAYOUT_HASH below is
 // recomputed for the new layout.
-pub const FEATURE_SCHEMA_VERSION: &str = "standard_full_v2.4";
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_full_v2.5";
 pub const LAYOUT_HASH: &str =
-    "sha256:86e9e086eb3eb7b9a86016c58d68307db84a03063fe52461ba4eca57b2cf8e63";
+    "sha256:2fd19ee35786b40d294d8deaf5fda6f565b0731727adca8fecdfa7ae3235af65";
 
 pub const GLOBAL_FEATURES_SIZE: usize = v2_lite::GLOBAL_FEATURES_SIZE;
 pub const PLAYER_SUMMARY_SIZE: usize = v2_lite::PLAYER_SUMMARY_SIZE;

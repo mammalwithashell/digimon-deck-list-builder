@@ -38,7 +38,7 @@
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
-use digimon_engine::action::space::{PASS, PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, Keyword, PlaySource};
@@ -203,24 +203,13 @@ fn ex7_051_union_pick_offers_only_tm_options_from_hand_and_trash() {
     runner.inject_trash(0, "PLAIN-OPT");
     enter_main(&mut runner);
     let view = runner.pending_selection_view().expect("union prompt");
-    let hand_picks: Vec<u16> = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .filter(|&a| a != PASS && a < PLAY_HAND_START + 30)
-        .collect();
-    let trash_picks: Vec<u16> = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .filter(|&a| a >= TRASH_EFFECT_START)
-        .collect();
-    assert_eq!(
-        hand_picks,
-        vec![PLAY_HAND_START + 1],
-        "only Der Blitz (hand idx 1)"
-    );
-    assert_eq!(trash_picks.len(), 1, "only the trashed Der Blitz");
+    let rows = physical_choice::commits(&runner.game);
+    assert_eq!(rows.len(), 2, "only Der Blitz in hand and trash qualify; plain Option and TM Digimon are excluded");
+    let hand_action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    let trash_action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Trash);
+    assert_ne!(hand_action, trash_action);
+    assert!(view.valid_action_ids.contains(&PASS));
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -235,8 +224,9 @@ fn ex7_051_places_hand_option_under_chosen_digimon_and_draws_one() {
     enter_main(&mut runner);
     let deck_before = runner.deck_size(0);
 
+    let action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, action)
         .expect("pick Der Blitz from hand");
     let view = runner.pending_selection_view().expect("own Digimon prompt");
     assert_eq!(view.kind, SelectionKind::OwnField);
@@ -276,8 +266,9 @@ fn ex7_051_places_trash_option_under_self_and_draws_one() {
     let deck_before = runner.deck_size(0);
     let trash_before = runner.trash_size(0);
 
+    let action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     runner
-        .execute_action(0, TRASH_EFFECT_START)
+        .execute_action(0, action)
         .expect("pick Der Blitz from trash");
     let view = runner.pending_selection_view().expect("own Digimon prompt");
     assert_eq!(
@@ -319,8 +310,9 @@ fn ex7_051_token_is_not_a_legal_host() {
     runner.place_on_field(0, CARD_ID, Some(0));
     runner.place_on_field(0, "TOKEN", Some(0));
     enter_main(&mut runner);
+    let action = physical_choice::card_action(&runner.game, DER_BLITZ, digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     runner
-        .execute_action(0, PLAY_HAND_START)
+        .execute_action(0, action)
         .expect("pick Der Blitz");
     let view = runner.pending_selection_view().expect("own Digimon prompt");
     assert_eq!(
@@ -383,3 +375,6 @@ fn ex7_051_cannot_digivolve_from_plain_red_lv2() {
         .game
         .digivolve_from_hand(0, 0, base_perm.index as usize, PlaySource::ByHand));
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

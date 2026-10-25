@@ -133,6 +133,8 @@ fn permanent_and_stacked_security_verbs_compile() {
     assert_eq!(
         steps[2],
         CompiledStep::SecurityPlaceTopStackedCard {
+            bind_success_as: None,
+            to_owner: false,
             carrier: digimon_dsl::compiled::CompiledBindingRef::Source,
             of: CompiledPlayerRef::Opponent,
             position: CompiledStackPosition::Bottom,

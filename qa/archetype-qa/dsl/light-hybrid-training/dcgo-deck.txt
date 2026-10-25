@@ -1,0 +1,26 @@
+Name: LightHybrid
+Key Card: 3903
+Sort Index: 0
+
+// DeckList
+
+4 Hiyarimon   EX7-002 
+2 Strabimon   BT6-022 
+1 Strabimon   BT17-020 
+4 Strabimon   P-249 
+4 Ukkomon   BT16-082 
+4 KendoGarurumon   BT17-023 
+1 Lobomon   BT18-037 
+2 MetalKabuterimon   BT18-067 
+1 Beetlemon   BT18-063 
+3 KaiserLeomon   BT18-077 
+3 Loweemon   BT18-076 
+4 Beowolfmon   AD1-015 
+1 JetSilphymon   BT7-038 
+2 Rhihimon   BT18-081 
+3 MagnaGarurumon   BT18-042 
+2 MagnaGarurumon   P-153 
+3 Takuya Kanbara & Koji Minamoto   BT18-088 
+4 J.P., Koji, & Koichi   AD1-023 
+3 Koichi Kimura   BT18-094 
+3 Dark to Light, Thunder to Gunfire   BT18-097 

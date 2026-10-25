@@ -1,0 +1,495 @@
+{
+  "scope": "Remaining physical source selectors and Light Hybrid boundary qualification",
+  "evidence_kind": "native simulator behavioral tests; no live DCGO oracle claim",
+  "green_suites": [
+    {
+      "suite": "raw Partition physical paging and replacement controls",
+      "passed": 7,
+      "ignored": 0,
+      "log": "logs/partition-prefix-green.log"
+    },
+    {
+      "suite": "nonDSL keyword source paging, recipe Partition, prefix recovery and controls",
+      "passed": 16,
+      "ignored": 0,
+      "log": "logs/non-dsl-owned-final-green.log",
+      "latest_normalized_count_check": "logs/non-dsl-prefix-final-green.log"
+    },
+    {
+      "suite": "DigiXros complete menu, physical payment, clones, face-down rules and conditional zones",
+      "passed": 8,
+      "ignored": 0,
+      "log": "logs/digixros-final-green.log"
+    },
+    {
+      "suite": "DigiXros existing library unit controls including wildcard action migration",
+      "passed": 22,
+      "ignored": 0,
+      "log": "logs/digixros-unit-controls-green.log"
+    },
+    {
+      "suite": "BT18-063 Q2994 and BT18-076 Q3021 simultaneous activation orders",
+      "passed": 2,
+      "ignored": 0,
+      "log": "logs/light-hybrid-inherited-order-initial.log",
+      "canonical_compilation_and_filtered_run": "logs/light-hybrid-inherited-order-canonical-green.log",
+      "cases": "Each card: both actors, both activation orders, two independent clones per order"
+    },
+    {
+      "suite": "active security boundary witnesses",
+      "passed": 3,
+      "ignored": 0,
+      "log": "logs/light-hybrid-capacity-active-green.log",
+      "boundaries": [
+        9,
+        10,
+        39
+      ],
+      "actors": [
+        0,
+        1
+      ],
+      "cloned_payment": true
+    },
+    {
+      "suite": "active inherited source boundary witnesses",
+      "passed": 6,
+      "ignored": 0,
+      "log": "logs/light-hybrid-capacity-active-green.log",
+      "boundaries": [
+        11,
+        12,
+        39,
+        300
+      ],
+      "actors": [
+        0,
+        1
+      ],
+      "cloned_payment": true
+    },
+    {
+      "suite": "full exact Light Hybrid canonical card suite plus source/recovery controls checkpoint",
+      "passed": 235,
+      "ignored": 0,
+      "canonical_cards_passed": 206,
+      "source_controls_passed": 29,
+      "log": "logs/owned-recovery-and-light-hybrid-green.log",
+      "snapshot_note": "Verified aggregate checkpoint before the final typed Partition role-liveness follow-up; final tier2 remains separately required"
+    },
+    {
+      "suite": "typed Partition role-liveness follow-up and full nonDSL keyword controls",
+      "passed": 17,
+      "ignored": 0,
+      "log": "logs/typed-partition-role-loss-green.log",
+      "role_loss_cases": "Both actors, unchanged physical source count, all sources of one printed role face-down, all dead-end commits masked, only FinishImpossible62, independent cloned recovery, no Play event or cost"
+    }
+  ],
+  "behavioral_red_evidence": [
+    {
+      "log": "logs/partition-owned-red.log",
+      "reason": "legacy action mapping did not expose the owned physical source row"
+    },
+    {
+      "log": "logs/partition-prefix-red.log",
+      "reason": "previous selected source position remained39 after compaction to38"
+    },
+    {
+      "log": "logs/non-dsl-owned-corrected-red.log",
+      "reason": "corrected nested-frame fixture paid source0 instead of physical source11 under legacy decoder",
+      "method": "bounded legacy-function counterfactual; current implementation restored in finally"
+    },
+    {
+      "log": "logs/non-dsl-prefix-red.log",
+      "reason": "lost selected source silently ended required Fragment choice despite remaining live candidates"
+    },
+    {
+      "log": "logs/keyword-partition-recipe-red.log",
+      "reason": "printed recipe entirely below source12 failed the activation gate"
+    },
+    {
+      "log": "logs/digixros-owned-red.log",
+      "reason": "eligible sources12+ were omitted so no material prompt was installed"
+    },
+    {
+      "log": "logs/digixros-whole-menu-caps-red.log",
+      "reason": "legacy Hand/Trash caps exposed1 eligible menu card rather than3",
+      "method": "bounded cap-only counterfactual; uncapped collector restored in finally"
+    },
+    {
+      "log": "logs/digixros-face-down-red.log",
+      "reason": "named recipe incorrectly offered face-down source;2 commits instead of1"
+    },
+    {
+      "log": "logs/light-hybrid-security-legacy-contract-red.log",
+      "reason": "active old index9 fixture assumed one legacy legal action instead of commit plus optional decline",
+      "category": "stale fixture contract, not current engine failure"
+    },
+    {
+      "log": "logs/typed-partition-role-loss-red.log",
+      "reason": "Typed keyword Partition still offered a commit after all sources for one required printed role became face-down, despite enough other physical sources remaining",
+      "category": "actual live-role legality defect"
+    }
+  ],
+  "fixture_diagnostics_not_behavioral_red": [
+    "logs/non-dsl-owned-red.log",
+    "logs/non-dsl-owned-debug.log"
+  ],
+  "source_capacity_ignored_witnesses_removed": 2,
+  "security_capacity_ignored_witnesses_removed": 1,
+  "gate_promotion_performed_by_this_worker": false,
+  "remaining_integration_owner": "root: final required tier checks, release bindings and actual training admission proof",
+  "typed_partition_role_guard": {
+    "implementation": "Read-only completion predicate over compiled printed slots, original physical SourceChoicePins and picked_so_far; exact existing bipartite matcher",
+    "initial_factory": "cards/keyword_effects.rs::park_keyword_count_capped_frame",
+    "repark_factory": "dsl_cards/step/selections.rs::park_non_dsl_count_capped_state",
+    "source_frozen": true
+  },
+  "tier2_fixture_contract_migration": {
+    "production_changed": false,
+    "files": [
+      "code/digimon-engine/tests/support/owned_card_choice.rs",
+      "code/digimon-engine/tests/dsl/digixros_transaction_steps.rs",
+      "code/digimon-engine/tests/dsl/xros_reusable_primitives.rs",
+      "code/digimon-engine/tests/judge_quiz/c_declare_then_pay.rs",
+      "code/digimon-engine/tests/judge_quiz/e_partition_digixros.rs"
+    ],
+    "original_aggregate_failures_retained": [
+      {
+        "suite": "DSL",
+        "passed": 1535,
+        "failed": 57,
+        "ignored": 1,
+        "total": 1593,
+        "log": "logs/final-tier2-mimalloc-full-run.log"
+      },
+      {
+        "suite": "judge_quiz",
+        "passed": 38,
+        "failed": 6,
+        "ignored": 1,
+        "total": 45,
+        "log": "logs/final-tier2-mimalloc-full-run.log"
+      }
+    ],
+    "focused_green": [
+      {
+        "suite": "digixros_transaction_steps",
+        "passed": 4,
+        "failed": 0,
+        "log": "logs/tier2-digixros-transaction-fixtures-green.log"
+      },
+      {
+        "suite": "xros_reusable_primitives",
+        "passed": 9,
+        "failed": 0,
+        "log": "logs/tier2-xros-primitive-fixtures-green.log"
+      },
+      {
+        "suite": "judge c_declare_then_pay",
+        "passed": 6,
+        "failed": 0,
+        "log": "logs/tier2-judge-declare-physical-fixtures.log"
+      },
+      {
+        "suite": "judge e_partition_digixros",
+        "passed": 5,
+        "failed": 0,
+        "log": "logs/tier2-judge-partition-physical-fixtures.log"
+      }
+    ],
+    "preserved_assertions": "Exact card origins, clone independence, return-to-hand and zero payment, optional choices, masks, all three exact stack orders, trigger timing, and atomic payment assertions remain intact.",
+    "test_only_mapping": "Lookup live legal commit rows by zone, owner, printed card identity, carrier slot, and physical position. No old aliases are submitted to production.",
+    "environment_diagnostics": "First direct DSL attempts omitted per-command RUST_MIN_STACK and overflowed; corrected focused reruns use recorded tier2 268435456-byte thread stacks.",
+    "limit": "Focused results do not erase the original full tier2 aggregate; a complete refreshed ladder remains separately required.",
+    "fresh_judge_aggregate": {
+      "passed": 44,
+      "failed": 0,
+      "ignored": 1,
+      "total": 45,
+      "log": "logs/tier2-judge-all-physical-fixtures.log",
+      "snapshot_note": "Current fixture migrations and frozen gameplay source; judge allocator-only harness addition occurred afterward."
+    }
+  },
+  "tier2_card_digixros_fixture_migration": {
+    "production_changed": false,
+    "files": [
+      "bt10/bt10_009.rs",
+      "bt10/bt10_087.rs",
+      "bt10/bt10_093.rs",
+      "bt10/bt10_111.rs",
+      "bt11/bt11_095.rs",
+      "bt12/bt12_112.rs",
+      "bt18/bt18_065.rs",
+      "bt19/bt19_065.rs",
+      "ex3/ex3_014.rs"
+    ],
+    "first_side_family_probe": {
+      "passed": 24,
+      "failed": 5,
+      "ignored": 0,
+      "selected": 29,
+      "full_binary_total": 12755,
+      "log": "logs/tier2-all-digixros-cards-first-probe.log"
+    },
+    "fresh_green": [
+      {
+        "selected": 29,
+        "passed": 29,
+        "failed": 0,
+        "ignored": 0,
+        "filter": "digixros",
+        "log": "logs/tier2-all-digixros-cards-fixtures-green.log"
+      },
+      {
+        "selected": 3,
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "filter": "bt10::bt10_093::",
+        "log": "logs/tier2-bt10-093-physical-fixture.log"
+      },
+      {
+        "selected": 1,
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "filter": "bt12::bt12_112::",
+        "log": "logs/tier2-bt12-112-physical-fixture.log"
+      }
+    ],
+    "preserved_assertions": "Exact costs, material attachment and source consumption, optional transaction permissions and suspension costs, wildcard substitution, conditional trash-zone admission, and duplicate printed-card-number exclusion.",
+    "migration": "Tests select the supplied legal action using typed physical zone, printed card ID, carrier and position; current page IDs are re-read after each pick.",
+    "aggregate_limit": "These 33 selected tests do not establish a clean unfiltered 12755-card test result. Full cached card qualification remains owned by root."
+  },
+  "security_play_actual_result_receipts": {
+    "actual_red": [
+      "logs/security-search-actual-play-audit-red.log",
+      "logs/security-search-actual-play-audit-current.log"
+    ],
+    "actual_failure": "Selection was credited despite CannotPlayTamerByEffect; after gating on actual results, a declined pre-play cancellation really played the Tamer but lost its completion result across the parked continuation.",
+    "implementation": "Separate typed physical security-play receipts, explicit originating ID carried across cost/replacement continuations, commit captured before OnPlay, exactly-once lexical finalizer; original selected slot and face-up marker restored on refusal. Existing compiled enum tags preserved by appending runtime variants.",
+    "green": {
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "log": "logs/security-play-receipt-correlated-green.log",
+      "tests": "security_search_actual_outcomes.rs",
+      "coverage": "Both actors; real GeoGreymon blocked/canceled/resumed play, independent divergent clones, selected middle physical origin and face-up restoration, current-effect completion before queued OnPlay and exactly-once benefit, and live-stack PlayFromSecurity exact top-card cancellation/success. Raw nonreceipted top and selected-middle cancellation restore exact handle order and face-up markers in both actors and clones."
+    },
+    "limit": "V4/legacy hashing audit is tracked separately by source_prefix_stability; full refreshed aggregate and wheel qualification remain required.",
+    "lifecycle_cleanup": {
+      "red": {
+        "passed": 1,
+        "failed": 1,
+        "log": "logs/security-play-receipt-reset-red.log"
+      },
+      "green": {
+        "passed": 2,
+        "failed": 0,
+        "log": "logs/security-play-receipt-reset-green.log"
+      },
+      "proof": "Reset clears armed/results and nonce; terminal drops in-flight receipts; independent original clone is intact. Abandoned-tail cleanup removes only exact receipt ID/player/physical-card, preserving unrelated armed receipt."
+    },
+    "raw_origin_followup": {
+      "red": {
+        "passed": 0,
+        "failed": 2,
+        "log": "logs/security-play-raw-origins-red.log"
+      },
+      "fix": "Nonreceipted SecurityAt origin captures original slot without allocating a result receipt. Recorded and raw indexed plays restore exact original position; legacy SecurityTop fallback retains security.len() top restoration.",
+      "green_log": "logs/security-play-receipt-correlated-green.log"
+    }
+  },
+  "tier2_source_card_fixture_followup": {
+    "canonical_modules": [
+      "BT18-092",
+      "BT19-008",
+      "BT19-014",
+      "BT19-033",
+      "BT19-047",
+      "BT19-057",
+      "BT19-090",
+      "BT21-023",
+      "BT21-073",
+      "BT16-077"
+    ],
+    "actual_red": {
+      "first_nine_modules": {
+        "passed": 59,
+        "failed": 10,
+        "ignored": 1,
+        "total": 70,
+        "log": "logs/tier2-source-cards-batch-red.log"
+      },
+      "bt21_073": {
+        "passed": 22,
+        "failed": 1,
+        "ignored": 0,
+        "log": "logs/tier2-bt21-073-raw-source-red.log"
+      },
+      "stronger_bt19_090_optional_control": {
+        "batch_passed": 42,
+        "batch_failed": 1,
+        "log": "logs/tier2-source-cards-batch-green.log",
+        "failure": "Public source play was mandatory despite printed You may; not a stale fixture."
+      }
+    },
+    "production_fixes": [
+      {
+        "file": "src/dsl_cards/step/link_cards.rs",
+        "reason": "Both BT21 source-link canonical tests actually panicked by decoding owned physical menu action as legacy source position. VM now consumes typed resolved source and validates exact live card, owner, carrier, usize index, filter and link gate. No new state fields."
+      },
+      {
+        "file": "cards/bt19/BT19-090.yaml",
+        "reason": "Local printed image explicitly makes Main source-play mode and Security source play optional. Both min values changed1->0, max1 and all filters/payment unchanged."
+      }
+    ],
+    "fresh_green": [
+      {
+        "target": "light_hybrid_qualification_source_cards_a",
+        "passed": 28,
+        "failed": 0,
+        "ignored": 1,
+        "log": "logs/tier2-source-cards-batch-green.log"
+      },
+      {
+        "target": "light_hybrid_qualification_source_cards_b",
+        "passed": 67,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-source-cards-batch-b-final-green.log"
+      }
+    ],
+    "new_controls": "BT21-023 depth11/12/39/300, both actors and clones, exact source link handles and no payment; moved physical source/same-number replacement masked and never substituted. BT19-090 both actors, Main and Security explicit decline in independent clones, exact source unchanged and no extra payment.",
+    "preserved": "All canonical module tests retained, authored filters, exact Partition role assignments, physical material play/evolution/link/deletion and cost outcomes; existing BT18-092 trash-event ignore retained.",
+    "limit": "95 passed and1 existing ignored across96 focused canonical cases; this does not replace the separately required full unfiltered cards aggregate. No verdict rows promoted."
+  },
+  "link_source_carrier_lifecycle": {
+    "actual_reds": [
+      {
+        "log": "logs/link-carrier-compaction-red.log",
+        "finding": "Public source row followed compacted original carrier, but stale numeric Link continuation attached nothing."
+      },
+      {
+        "log": "logs/link-other-source-destination-red.log",
+        "finding": "Generic other-source to self did not retain original destination through compaction."
+      },
+      {
+        "log": "logs/link-source-host-picker-red.log",
+        "finding": "Chosen physical source carrier was lost between source selection and host selection."
+      },
+      {
+        "log": "logs/link-source-tail-identity-red.log",
+        "finding": "Moving physical effect card redirected authored Source tail despite original destination remaining live."
+      }
+    ],
+    "implementation": "Metadata-only selected identity pins under two reserved NUL key prefixes preserve original effect carrier and original picked source carrier without new DTO fields or authored slots. Clone/merge preserves pins; explicit clears and rebinds win. Masks, Link VM, attachment and deferred Source tails resolve strict original identities. Exact physical source must remain below its original carrier before payment/attachment; failed primitive cannot publish linked success.",
+    "private_prefixes": [
+      "\\0link_source_carrier:",
+      "\\0link_material_carrier:"
+    ],
+    "green": {
+      "canonical_wrapper_b": {
+        "passed": 70,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/tier2-source-cards-batch-b-carrier-pins-green.log"
+      },
+      "private_pin_merge": {
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "log": "logs/link-private-pin-merge-green.log"
+      }
+    },
+    "coverage": "Both actors and independent clones; depth39 original self carrier slot1->0 and replacement old slot; generic different-source carrier and self destination, moved physical effect card, original destination loss without retarget; source-pick->host-picker source compaction, moved physical source/same-number replacement with no payment or false success; authored Source continuation keeps original carrier.",
+    "audit_limit": "Independent hash audit is green; full final aggregate remains separately required.",
+    "independent_hash_audit": {
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0,
+      "components": {
+        "security": 6,
+        "link_private_projection": 5,
+        "private_merge": 2
+      },
+      "log": "logs/link-and-security-pin-regression-green.log",
+      "link_projection_log": "logs/link-private-pin-version-green.log",
+      "versioning": "V3 excludes exactly new private Link prefixes including clear tombstones, preserving historical reserved source pins. V4 includes new identities and clears; DNA canonical projection follows the same versioning."
+    }
+  },
+  "late_source_card_fixture_migration": {
+    "production_changed": false,
+    "canonical_modules": [
+      "BT24-098",
+      "BT25-092",
+      "BT26-066",
+      "BT26-069",
+      "BT26-085",
+      "BT26-096",
+      "BT26-097"
+    ],
+    "actual_red": {
+      "passed": 52,
+      "failed": 26,
+      "ignored": 0,
+      "total": 78,
+      "log": "logs/tier2-late-source-cards-red.log",
+      "snapshot": "Retained immutable full cards binary, explicit268435456-byte test stack; optimized full ladder independently reported same stale fixture families."
+    },
+    "fresh_green": [
+      {
+        "target": "light_hybrid_qualification_late_source_cards_a",
+        "passed": 39,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "target": "light_hybrid_qualification_late_source_cards_b",
+        "passed": 39,
+        "failed": 0,
+        "ignored": 0
+      }
+    ],
+    "green_log": "logs/tier2-late-source-cards-green.log",
+    "shared_fixture_contract": "bt26/support.rs hand/trash pickers use public legal row zone+owner+current physical index for owned selections, with no fallback when row missing. Identity checked only when identity_visible. Raw geometry is retained only when card_choice=None.",
+    "preserved_assertions": "All78 original canonical tests retained. Exact trait/name/level/cost filters, mandatory/optional timing, complete legal masks, rejected digivolution failing to prevent leave, successful prevention, actual payment and reduced evolution/play cost, physical source cost removal, hand/trash origins, after-timing and declined follow-up behavior remain checked.",
+    "limit": "Focused78/78 does not replace the required final full unfiltered cards aggregate; no verdict rows promoted."
+  },
+  "ex13_last_five_fixture_migration": {
+    "production_changed": false,
+    "canonical_modules": [
+      "EX13-055",
+      "EX13-057",
+      "EX13-065",
+      "EX13-066",
+      "EX13-067"
+    ],
+    "actual_red": {
+      "passed": 75,
+      "failed": 12,
+      "ignored": 0,
+      "total": 87,
+      "log": "logs/tier2-ex13-source-last-five-red.log"
+    },
+    "fresh_green": [
+      {
+        "target": "light_hybrid_qualification_ex13_source_cards_a",
+        "passed": 72,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "target": "light_hybrid_qualification_ex13_source_cards_b",
+        "passed": 15,
+        "failed": 0,
+        "ignored": 0
+      }
+    ],
+    "green_log": "logs/tier2-ex13-source-last-five-green.log",
+    "shared_helper": "chronicle_support.rs hand/trash picks and offered predicates resolve public owned row zone+owner+physical position with current legal mask. Raw selectors retain their geometry only when card_choice=None; no owned fallback.",
+    "preserved": "All87 original canonical tests retained: exact Chronicle/name/cost and legal-route filtering, paid hand/trash evolution, free Sistermon/Nokia play, declined play retaining independent benefit, DP and De-Digivolve amounts, optional/deferred timing, suspend cost and Nokia second-copy resolution recheck. Negative cost-five checks identify the actual physical hand position, not a colliding old alias. Identity is checked only when visible.",
+    "limit": "Focused87/87 does not replace final full unfiltered cards qualification. No production or verdict rows changed."
+  }
+}

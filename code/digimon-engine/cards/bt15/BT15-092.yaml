@@ -1,3 +1,5 @@
+# Printed search grants full-stack private inspection, including no-match pages.
+# The filter controls legal commits; the existing common continuation remains below.
 card: BT15-092
 name: Revelation of Light
 kind: option
@@ -77,10 +79,10 @@ effects:
   - when: main_from_hand
     summary: "[Main] Search security; may play 1 yellow Lv<=4 Digimon free; shuffle; if [Kari Kamiya] Tamer in play, place self on top of security"
     process:
-      - select_security:
-          of: you
+      - search_own_security_stack:
           bind_as: sec_pick
           optional: true
+          on_select: []
           filter:
             all_of:
               - kind: digimon

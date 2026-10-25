@@ -1,0 +1,16 @@
+
+running 2 tests
+test ex10::ex10_003::ex10_003_optional_cost_may_be_declined_leaving_sources_and_attack_intact ... ok
+
+thread 'ex10::ex10_003::ex10_003_trashes_three_matching_carrier_sources_to_cancel_attack' (37512) panicked at code\digimon-engine\tests\cards_behavioral\ex10\ex10_003.rs:94:5:
+assertion failed: pending.valid_action_ids.contains(&self_source)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex10::ex10_003::ex10_003_trashes_three_matching_carrier_sources_to_cancel_attack ... FAILED
+
+failures:
+
+failures:
+    ex10::ex10_003::ex10_003_trashes_three_matching_carrier_sources_to_cancel_attack
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 12753 filtered out; finished in 7.06s
+

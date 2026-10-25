@@ -1,0 +1,25 @@
+
+running 6 tests
+test ex11::ex11_038::ex11_038_has_inherited_source_trash_draw_clause ... ok
+test ex11::ex11_038::ex11_038_has_on_play_when_moving_draw_clause ... ok
+test ex11::ex11_038::ex11_038_on_play_no_eligible_card_no_draw ... ok
+
+thread 'ex11::ex11_038::ex11_038_on_play_trash_hand_mineral_draws_one' (30280) panicked at code\digimon-engine\tests\cards_behavioral\ex11\ex11_038.rs:133:5:
+Mineral card in hand must be a payable cost candidate
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex11::ex11_038::ex11_038_on_play_trash_hand_mineral_draws_one ... FAILED
+
+thread 'ex11::ex11_038::ex11_038_on_play_trash_own_source_rock_draws_one' (42148) panicked at code\digimon-engine\tests\cards_behavioral\ex11\ex11_038.rs:179:5:
+Rock source under an own Digimon must be a payable cost candidate
+test ex11::ex11_038::ex11_038_on_play_trash_own_source_rock_draws_one ... FAILED
+test ex11::ex11_038::ex11_038_source_trash_draws_one ... ok
+
+failures:
+
+failures:
+    ex11::ex11_038::ex11_038_on_play_trash_hand_mineral_draws_one
+    ex11::ex11_038::ex11_038_on_play_trash_own_source_rock_draws_one
+
+test result: FAILED. 4 passed; 2 failed; 0 ignored; 0 measured; 12749 filtered out; finished in 10.12s
+
+FILTER_EXIT 101

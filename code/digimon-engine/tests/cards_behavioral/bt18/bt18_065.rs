@@ -33,7 +33,7 @@
 mod dsl_card_data;
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::action::space::{PASS, TRASH_EFFECT_START};
+use digimon_engine::action::space::{PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -326,7 +326,7 @@ fn bt18_065_digixros_trash_material_hidden_when_non_vemmon_digimon_present() {
     assert_eq!(runner.play(0, 0), None, "DigiXros play installs a material prompt");
     let prompt = runner.pending_selection().expect("material prompt");
     assert!(
-        !prompt.valid_action_ids.contains(&TRASH_EFFECT_START),
+        !physical_menu::commits(&runner.game).iter().any(|row| matches!(row.zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash))),
         "a non-[Vemmon] own Digimon on the field must hide the trash material zone"
     );
 }
@@ -348,8 +348,9 @@ fn bt18_065_digixros_trash_material_exposed_when_only_vemmon_on_field() {
 
     assert_eq!(runner.play(0, 0), None, "DigiXros play installs a material prompt");
     let prompt = runner.pending_selection().expect("material prompt");
+    let trash_action = physical_menu::card_action(&runner.game, "VEM-1D", digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     assert!(
-        prompt.valid_action_ids.contains(&TRASH_EFFECT_START),
+        prompt.valid_action_ids.contains(&trash_action),
         "with only [Vemmon] on the field, the trash material zone must be exposed"
     );
 }
@@ -367,16 +368,13 @@ fn bt18_065_digixros_material_from_battle_area_offered() {
         .hand(0, &["BT18-065", "VEM-1E", "VEM-2E", "VEM-3E"])
         .memory(20)
         .start();
-    runner.place_on_field(0, "VEM-FIELD-E", None);
+    let field_vemmon = runner.place_on_field(0, "VEM-FIELD-E", None);
 
     assert_eq!(runner.play(0, 0), None, "DigiXros play installs a material prompt");
     let prompt = runner.pending_selection().expect("material prompt");
-    // Battle-area DigiXros material candidates are encoded as the raw
-    // battle-area index (see `Game::pending_digixros_material_candidates`,
-    // code/digimon-engine/src/game_actions/mod.rs) — VEM-FIELD-E sits at
-    // battle-area index 0, so action id 0 is the field-material pick.
+    let field_action = physical_menu::battle_top_action(&runner.game, field_vemmon);
     assert!(
-        prompt.valid_action_ids.contains(&0),
+        prompt.valid_action_ids.contains(&field_action),
         "a battle-area [Vemmon] at index 0 must be offered as a legal DigiXros material \
          (valid_action_ids = {:?})",
         prompt.valid_action_ids
@@ -938,3 +936,6 @@ fn bt18_065_inherited_is_once_per_turn() {
          (host remains suspended since we manually re-suspended it)"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;
