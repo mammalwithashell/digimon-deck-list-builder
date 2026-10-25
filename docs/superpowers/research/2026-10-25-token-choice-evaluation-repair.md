@@ -46,6 +46,25 @@ now records incomplete-game/error and replay evidence before re-raising native
 panics, and cloud evaluation workers set a separate failure directory per panel.
 No failed game is scored as a draw or admitted to training.
 
+The Python diagnostics/controller tests passed 15 tests, including explicit
+native-panic propagation and replay persistence. The desktop lookup was patched
+consistently; a full desktop build was not run locally.
+
+## Rebuilt Linux runtime
+
+CI run [40237951404](https://github.com/mammalwithashell/digimon-deck-list-builder/actions/runs/40237951404)
+passed its image build and native/Python smoke checks, publishing
+`training-search-v2026.10.25.5` from source `7465b31a4`:
+`sha256:76d7cf1e6fd0c25af41bbb4b0199c5da812eb0bac952d0db3dcbf57072ab8444`.
+
+Using the original frozen development model, the failed game now completes at
+107 decisions with player 1 winning. Its first 102 actions match the failed
+replay exactly. Four original balanced-schedule cases (indices 204-207) each
+complete both with and without telemetry: eight executions, identical action
+sequences and winners within every pair, no caps or crashes. Evidence is in
+`2026-10-25-token-choice-image-validation.json` and at
+`/opt/digimon-search/token-eval-validation-v5-20261025` on the cloud host.
+
 The original experiment remains stopped. Its models, successful reports and
-failed report are preserved. A rebuilt runtime and full Python game replay must
-be validated before retrying the evaluation.
+failed report are preserved. The repair is validated for retrying evaluation;
+the incomplete development panel and mixed seed still need their full evaluations.

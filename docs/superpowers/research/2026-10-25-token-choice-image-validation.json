@@ -1,0 +1,55 @@
+{
+  "status": "passed",
+  "candidate_sha256": "5f1b8ec03057bcf9af0f7d01556a28a7d3c1c42b37cbfeab4390fabad310fee8",
+  "games": [
+    {
+      "index": 206,
+      "seed": 56522462,
+      "archetypes": [
+        "Medusamon",
+        "SW"
+      ],
+      "winner": 1,
+      "decisions": 107,
+      "telemetry_parity": true
+    },
+    {
+      "index": 207,
+      "seed": 56522465,
+      "archetypes": [
+        "Medusamon",
+        "SW"
+      ],
+      "winner": 2,
+      "decisions": 62,
+      "telemetry_parity": true
+    },
+    {
+      "index": 204,
+      "seed": 56522458,
+      "archetypes": [
+        "Medusamon",
+        "ShineGreymon Data Squad"
+      ],
+      "winner": 1,
+      "decisions": 90,
+      "telemetry_parity": true
+    },
+    {
+      "index": 205,
+      "seed": 56522461,
+      "archetypes": [
+        "Medusamon",
+        "ShineGreymon Data Squad"
+      ],
+      "winner": 2,
+      "decisions": 101,
+      "telemetry_parity": true
+    }
+  ],
+  "elapsed_seconds": 1.2714457511901855,
+  "image": "ghcr.io/mammalwithashell/digimon-search-cpu@sha256:76d7cf1e6fd0c25af41bbb4b0199c5da812eb0bac952d0db3dcbf57072ab8444",
+  "source_commit": "7465b31a4",
+  "ci_run": "https://github.com/mammalwithashell/digimon-deck-list-builder/actions/runs/40237951404",
+  "original_prefix_actions_matched": 102
+}
