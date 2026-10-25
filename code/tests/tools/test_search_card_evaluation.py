@@ -93,6 +93,7 @@ def test_window_timeout_is_recorded_without_mutating_inputs(tmp_path, monkeypatc
     calls = []
     def timeout(command, **kwargs):
         calls.append(command)
+        assert Path(kwargs["env"]["DIGIMON_EVAL_FAILURE_DIR"]).is_relative_to(out)
         raise subprocess.TimeoutExpired(command, 10)
     monkeypatch.setattr(worker.subprocess, "run", timeout)
     args = SimpleNamespace(panels=[("meta", "heldout.json"), ("pet", "pets.json")],
@@ -115,12 +116,19 @@ def test_anchors_and_panels_do_not_merge():
     assert len(rows) == 3 and all(r["games"] == 1 for r in rows)
 
 
-def test_collector_attaches_before_opponent_reset_and_detaches_on_error(monkeypatch):
+class NativePanic(BaseException):
+    """PyO3 PanicException inherits BaseException rather than Exception."""
+
+
+@pytest.mark.parametrize("error_type", [RuntimeError, NativePanic])
+def test_collector_attaches_before_opponent_reset_and_detaches_on_error(monkeypatch, tmp_path, error_type):
     collector = CardEvalCollector(0, 0)
     instances = []
     class Inner:
         def __init__(self, **kwargs):
             instances.append(self)
+        def get_recording(self):
+            return {"actions": [], "seed": 2}
     class Wrapper:
         def __init__(self, inner, opponent_fn):
             self.inner = inner
@@ -129,17 +137,20 @@ def test_collector_attaches_before_opponent_reset_and_detaches_on_error(monkeypa
             assert attached is collector
             attached.start_game({}, (["A"], ["B"]), seed)
             attached.card(2, "B")["plays"] += 1
-            raise RuntimeError("opponent failed")
+            raise error_type("opponent failed")
         def close(self):
             self.closed = True
-    monkeypatch.delenv("DIGIMON_EVAL_FAILURE_DIR", raising=False)
+    monkeypatch.setenv("DIGIMON_EVAL_FAILURE_DIR", str(tmp_path))
     monkeypatch.setattr(anchored_eval, "DigimonEnv", Inner)
     monkeypatch.setattr(anchored_eval, "OpponentWrapper", Wrapper)
-    with pytest.raises(RuntimeError, match="opponent failed"):
+    with pytest.raises(error_type, match="opponent failed"):
         anchored_eval.play_one(None, None, ["A"], ["B"], 2, "standard_lite_v2", collector)
     assert instances[0].card_eval_collector is None
     report = collector.report()
     assert report["games"][0]["terminal_reason"] == "evaluation_end"
+    assert report["games"][0]["evaluation_error"] == "opponent failed"
+    assert len(list(tmp_path.glob("*.context.json"))) == 1
+    assert len(list(tmp_path.glob("*.recording.json"))) == 1
     assert next(r for r in report["cards"] if r["player"] == 2)["plays"] == 1
     assert all(r["incomplete"] == 1 and r["draws"] == 0 for r in report["cards"])
 

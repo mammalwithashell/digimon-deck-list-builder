@@ -104,7 +104,9 @@ def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
         if outcome.get("reason") in {"step_limit", "crash"}:
             raise RuntimeError(f"Anchored evaluation ended with {outcome['reason']} (seed {seed})")
         return _unwrap_to_digimon_env(env).winner_id
-    except Exception as exc:
+    except BaseException as exc:
+        # PyO3 PanicException is a BaseException. Preserve its replay evidence
+        # and mark the game incomplete, then re-raise; never score it as a draw.
         if collector is not None:
             # Env may already have finalized an engine safety termination.
             collector.finish_game(None, "evaluation_end")

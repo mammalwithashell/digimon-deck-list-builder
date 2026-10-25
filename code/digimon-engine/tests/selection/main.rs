@@ -20,3 +20,4 @@ mod reveal_buckets;
 mod source_multi;
 mod selfplay_phase_resume;
 mod union_zone;
+mod departed_source_serialization;

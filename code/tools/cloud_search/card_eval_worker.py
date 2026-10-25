@@ -130,7 +130,9 @@ def evaluate_window(root, out, checkpoint, window, reason, args):
                 command += ["--games-per-archetype", str(args.games_per_archetype)]
             with (folder / f"{panel}.log").open("w", encoding="utf-8") as log:
                 subprocess.run(command, stdout=log, stderr=subprocess.STDOUT,
-                               timeout=args.timeout, check=True)
+                               timeout=args.timeout, check=True,
+                               env={**os.environ, "DIGIMON_EVAL_FAILURE_DIR":
+                                    str(folder / "failures" / panel)})
         except (subprocess.SubprocessError, OSError) as error:
             failures.append({"panel": panel, "error": str(error)})
     result = dict(status="failed" if failures else "complete", window=window,

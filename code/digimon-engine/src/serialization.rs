@@ -569,7 +569,10 @@ fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
                         // Resolve the branch's source card so the chooser can
                         // render the actual card face instead of a blank box
                         // (mirrors the desktop wire's EffectChoiceDto).
-                        let card = c.source_card.map(|h| game.card(h));
+                        // On-deletion choices can outlive a token's physical
+                        // card. Keep the labeled action even when its optional
+                        // card-face metadata no longer resolves in a live zone.
+                        let card = c.source_card.and_then(|h| game.card_data_for_handle(h));
                         json!({
                             "label": c.label,
                             "countChoice": c.count_choice.map(crate::count_choice_wire::CountChoiceDto::from),
