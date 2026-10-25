@@ -1322,6 +1322,23 @@ passes the recorded game-268 search regression. It does not modify or resume
 the failed baseline. W&B has one run per arm, including bootstrap counts,
 checkpoint artifacts and per-card evaluation reports.
 
+An explicitly approved retry before search starts can use
+`--validate-resume`, followed by `--resume-before-search`, on the same root.
+The gate requires a failed comparison, unchanged frozen inputs/settings and
+runtime contract, qualified bootstrap corpora, byte-identical saved seed copies,
+the shared anchor, and no generation beyond `gen0`. Completed evaluation windows
+are reused only after model/cohort provenance and complete paired-game checks.
+Failed windows move into a timestamped `resume-history` directory before being
+rerun in full; old reports are never mixed into the replacement window. No
+bootstrap recollection or fitting occurs. The resume record preserves old/new
+image digests, controller hash, seed hashes and archived deployment metadata.
+This is not automatic recovery or support for resuming interrupted search.
+
+For a controller-only operational overlay, mount the committed controller file
+read-only into the tested immutable image and retain its source commit and
+SHA-256 in the host resume record. Keep `Restart=no`, preserve the original
+service definition, and verify the resumed stage and existing W&B run IDs.
+
 Preserve any `failure.json`, partial shards and recording. Investigate and use
 a new directory/image for a changed teacher; do not skip a failed game, resume
 into an altered corpus, or fit from partial outputs. DNA denominators are exact
