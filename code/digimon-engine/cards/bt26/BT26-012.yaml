@@ -18,12 +18,13 @@
 # [Main] OPT (OnDeclaration, maxCountPerTurn 1, CanUseCondition: a [TB] hand
 #   card exists): canNoSelect:true SelectHandEffect over [TB] cards →
 #   ChangeCostClass -2 → PlayOptionCards (Option) / PlayPermanentCards
-#   (Digimon/Tamer), payCost:true. Nothing picked → activateClass.RemoveUse()
-#   (OPT not spent).
+#   (Digimon/Tamer), payCost:true. This local DCGO source calls RemoveUse() on
+#   decline, conflicting with CR 4.3 15-14-1-1/4: activation spends the use.
+#   Preserve the use even when the optional processing is declined.
 #   → `when: main_on_field` + once_per_turn + condition (a [TB] card in hand);
 #   optional `select_hand` (non-cost: decline still runs the tail) → `play_or_use_from_hand
 #   { cost_delta: { reduce: 2 } }` (kind-routing verb, G-PLAY-OR-USE-FROM-HAND;
-#   DUAL cards surface the play/use face choice); `refund_opt` on decline.
+#   DUAL cards surface the play/use face choice). No OPT refund on decline.
 #   DCGO additionally pre-filters candidates by CanPlayOrUse(fixedCost); the
 #   play/use verb itself enforces playability at resolution (same as the
 #   shipped BT26-032 / BT25-041 play-or-use clauses).
@@ -68,8 +69,8 @@ effects:
           of: you
           bind_as: pick
           optional: true
-          # A declined (non-cost) select_hand still runs the tail, so the
-          # else-branch refund (DCGO RemoveUse) is reached.
+          # Choosing this Main effect already spent its once-per-turn use.
+          # Declining its optional processing does not undo that activation.
           filter: { trait_has: "TB" }
           prompt: "You may play or use 1 [TB] trait card from your hand with the cost reduced by 2"
       - if:
@@ -79,8 +80,6 @@ effects:
                 of: you
                 hand_index: pick
                 cost_delta: { reduce: 2 }
-          else:
-            - refund_opt: {}
 
   # ─── Inherited [When Attacking][OPT] opp Digimon -2000 for the turn ───────
   - scope: inherited

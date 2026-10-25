@@ -54,21 +54,21 @@ read-only. The diagnostic used one CPU, low CPU shares, and at most 3 GiB.
 Printed card image inspected:
 `C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/BT26-012.webp`.
 Its main effect optionally plays or uses a TB card with cost reduced by two.
-The authored YAML explicitly refunds OPT on decline, and the existing behavioral
-test `bt26_012_declining_refunds_once_per_turn` requires reopening to remain legal.
+The original YAML explicitly refunded OPT on decline, and the then-existing
+test `bt26_012_declining_refunds_once_per_turn` incorrectly required reopening.
 DCGO's `BT26_012.cs` likewise calls `RemoveUse()` when no card was selected.
 
-This establishes the implementation's intended cancellation behavior, not a
-publisher ruling that repeatedly reopening a selector is a distinct game action.
-CR 4.3 sections 15-8-4, 15-9-2 and 15-14-1 distinguish declaring activation,
-optional processing and counting uses. A fix must explicitly distinguish a
-cancelled pre-commit selection from an already declared activation. Do not
-silently spend OPT or remove legal target choices merely to stop the loop.
+Follow-up correction: the explicit Main-effect action is the declaration of
+activation, not a provisional selection. CR 4.3 15-14-1-1/4 counts that activation
+toward the use even when processing does not execute. Declining the optional
+hand play therefore must not refund OPT. The user's installed-DCGO observation
+also reports the use remains spent; the local C# refund is conflicting reference
+evidence, not certification of that installed build or authority over the rule.
 
-Search currently bounds traversal depth but does not identify this repeated
-decision cycle. Review cancellation semantics first, then implement a tested
-cycle-aware search/collection policy that preserves engine legality. Keep the
-simulation budget and determinization quality separate from this issue.
+The refund has been removed. No repetition penalty, action override, simulation
+budget change or cycle-aware search is needed to eliminate this specific cycle.
+The other 52 YAML files mentioning `refund_opt` have not been adjudicated by this
+single-card repair; cost-payment/declaration boundaries require individual review.
 
 ## Game 850: orphaned effect-choice phase after nested combat
 
@@ -136,10 +136,9 @@ branches over accepting/declining that replacement and playing/declining the
 reward, compares legal masks and UI state after cloned resumption, and requires
 completion into playable Main or GameOver without an orphaned prompt phase.
 
-Game 340's Manekimon cancellation cycle remains unresolved. The existing
-cancel/refund behavior is intentional in both the card test and DCGO reference;
-this patch does not consume OPT on cancellation or hide the activation. The old
-collection remains excluded from training. The cloud service is unchanged;
+At completion of the phase repair, game 340 was still unresolved; the later
+activation-use correction above supersedes that disposition. The old collection
+remains excluded from training. The cloud service is unchanged;
 the repaired engine must be built into a new image before a future campaign
 can use it.
 
@@ -149,3 +148,19 @@ complete with a winner (not a loop draw), with original/clone masks and UI state
 matching after each choice. Selection: 80 passed; replacement: 126 passed;
 combat: 299 passed, 1 pre-existing ignored; Option flow: 143 passed. All 13 tier-0
 checks passed. These are focused engine checks, not a full-engine or DCGO run.
+
+## Follow-up validation: Manekimon activation consumes its use
+
+Before the card fix, `capped_game_340_cannot_reopen_manekimon_after_declining`
+failed because action 1002 remained legal after the recorded activation and
+decline. After removing the authored refund, the same prefix passes in original
+and cloned states: hand and memory are unchanged, Main resumes, the spent
+activation is unavailable, and ordinary legal actions remain. This verifies the
+specific recorded cancellation cycle is eliminated; it is not a fresh complete
+search-game outcome or a trained-model quality evaluation.
+
+Validation: all 6 Manekimon card tests passed, all 81 selection tests passed
+(including both capped-game regressions), and all 13 tier-0 checks passed.
+The corrected per-card test also verifies another copy retains its own use.
+Generated impact/coverage/admission metadata was refreshed. The running cloud
+campaign was not changed; this correction still requires a new deployed image.

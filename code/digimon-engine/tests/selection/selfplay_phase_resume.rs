@@ -1,5 +1,5 @@
-//! Regression from capped self-play game 850. A nested leave replacement must
-//! finish before the Delay hand reward, including in cloned search states.
+//! Regressions from capped self-play games 340 and 850: spent Main activations
+//! and nested leave continuations must survive selection and search cloning.
 use digimon_engine::{
     action::{
         build_action_mask,
@@ -145,4 +145,97 @@ fn capped_game_850_resumes_after_nested_replacement_and_block() {
             );
         }
     }
+}
+
+#[test]
+fn capped_game_340_cannot_reopen_manekimon_after_declining() {
+    let evidence: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../docs/superpowers/research/2026-10-25-cap-investigation.json",
+    ))
+    .unwrap();
+    let case = evidence["games"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|g| g["game"] == 340)
+        .unwrap();
+    let cards = CardData::load_from_str(
+        &std::fs::read_to_string(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../data/cards.json",
+        ))
+        .unwrap(),
+    )
+    .unwrap();
+    let deck = |name: &str| {
+        case[name]["cards"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|id| id.as_str().unwrap().to_owned())
+            .collect()
+    };
+    let mut runner = HeadlessRunner::new(
+        deck("deck1"),
+        deck("deck2"),
+        &cards,
+        false,
+        false,
+        false,
+        Some(case["seed"].as_u64().unwrap()),
+    )
+    .unwrap();
+    for (i, step) in case["prefix_actions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .take(94)
+        .enumerate()
+    {
+        let player = step["player"].as_u64().unwrap() as u8;
+        let action = step["action"].as_u64().unwrap() as u16;
+        assert!(
+            build_action_mask(&runner.game, player)[action as usize] > 0.0,
+            "decision {i}"
+        );
+        runner.game.decode_action(action, player);
+    }
+    let pid = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .selecting_player;
+    let hand: Vec<_> = runner.game.players[pid as usize]
+        .hand
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    let memory = runner.game.memory;
+    let mut cloned = runner.game.clone();
+    for game in [&mut runner.game, &mut cloned] {
+        game.resolve_selection(pid, PASS).unwrap();
+        assert!(game.pending_selection.is_none());
+        assert_eq!(game.current_phase, GamePhase::Main);
+        assert_eq!(game.memory, memory);
+        assert_eq!(
+            game.players[pid as usize]
+                .hand
+                .iter()
+                .map(|c| c.handle())
+                .collect::<Vec<_>>(),
+            hand
+        );
+        let mask = build_action_mask(game, pid);
+        assert_eq!(
+            mask[1002], 0.0,
+            "declining must not refund Manekimon's activation"
+        );
+        assert_eq!(mask[PASS as usize], 1.0);
+        assert!(
+            mask.iter().filter(|v| **v > 0.0).count() > 1,
+            "ordinary plays/digivolutions remain available"
+        );
+    }
+    assert_eq!(to_ui_json(&runner.game), to_ui_json(&cloned));
 }

@@ -14673,7 +14673,6 @@
     "verb:add_dp_modifier",
     "verb:if",
     "verb:play_or_use_from_hand",
-    "verb:refund_opt",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:all_of",

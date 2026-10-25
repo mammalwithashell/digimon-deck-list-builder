@@ -11701,7 +11701,7 @@
       "archetype": "Toho Braves",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-012.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_012.rs",
-      "notes": "TDD vs DCGO BT26_012.cs; [Main][OPT] optional select_hand [TB] -> play_or_use_from_hand reduce 2; refund_opt on decline (DCGO RemoveUse); inherited [WA][OPT] -2000 for the turn. DCGO's CanPlayOrUse candidate pre-filter is enforced by the play/use verb at resolution (shared BT26-032/BT25-041 idiom)."
+      "notes": "[Main][OPT] optional select_hand [TB] -> play_or_use_from_hand reduce 2; corrected 2026-10-25 to spend the use on activation even if processing is declined (CR 4.3 15-14-1-1/4). The local DCGO source's RemoveUse refund conflicts with that rule; no installed-DCGO replay certification claimed. Regression: capped cloud game 340 plus per-card decline/copy isolation. Inherited [WA][OPT] -2000 for the turn. DCGO's CanPlayOrUse candidate pre-filter is enforced by the play/use verb at resolution (shared BT26-032/BT25-041 idiom)."
     },
     "BT26-013": {
       "card_name": "Musyamon",

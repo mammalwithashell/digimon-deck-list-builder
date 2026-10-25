@@ -12386,7 +12386,6 @@
         "add_dp_modifier",
         "if",
         "play_or_use_from_hand",
-        "refund_opt",
         "select_hand",
         "select_opponent_permanent"
       ]
@@ -43767,7 +43766,6 @@
       "BT25-089",
       "BT25-103",
       "BT26-007",
-      "BT26-012",
       "BT26-015",
       "BT26-016",
       "BT26-021",
