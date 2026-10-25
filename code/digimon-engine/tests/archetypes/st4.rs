@@ -362,13 +362,13 @@ fn hercules_digi_burst_suspend_feeds_izzy_memory() {
     runner
         .execute_action(
             0,
-            encode_source_select(hercules.index as u16, 0).expect("first source pick"),
+            crate::owned_choices::source_action(&runner.game, hercules, 0),
         )
         .expect("pick first Digi-Burst source");
     runner
         .execute_action(
             0,
-            encode_source_select(hercules.index as u16, 1).expect("second source pick"),
+            crate::owned_choices::source_action(&runner.game, hercules, 1),
         )
         .expect("pick second Digi-Burst source");
 

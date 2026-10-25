@@ -93,11 +93,11 @@ fn install_emits_source_select_action_ids_excluding_top() {
     assert_eq!(r.game.current_phase, GamePhase::SelectMaterial);
 
     // Indices 0 and 1 only — index 2 (TOP) is excluded.
-    let expected: Vec<u16> = (0..2)
-        .map(|i| SOURCE_SELECT_START + (oc.index as u16) * SOURCES_PER_FIELD + i as u16)
-        .collect();
-    assert_eq!(sel.valid_action_ids, expected);
-    assert_eq!(sel.valid_action_ids.len(), 2);
+    let expected:Vec<_>=(0..2).map(|i|crate::owned_choices::source_action(&r.game,oc,i)).collect();
+    assert_eq!(crate::owned_choices::commits(&r.game).iter().map(|row|row.action_id).collect::<Vec<_>>(),expected);
+    assert_eq!(expected.len(),2);
+    assert!(sel.valid_action_ids.contains(&PASS));
+
 }
 
 #[test]
@@ -128,7 +128,7 @@ fn filter_excludes_specific_source_positions() {
     assert_eq!(sel.valid_action_ids.len(), 1);
     assert_eq!(
         sel.valid_action_ids[0],
-        SOURCE_SELECT_START + (oc.index as u16) * SOURCES_PER_FIELD + 1
+        crate::owned_choices::source_action(&r.game,oc,1)
     );
     assert!(!sel.is_optional);
 }
@@ -196,17 +196,11 @@ fn breeding_carrier_select_material_emits_breeding_source_ids() {
         .expect("breeding-carrier select_material must install a SelectMaterial prompt");
     assert_eq!(sel.kind, SelectionKind::Material);
     assert_eq!(r.game.current_phase, GamePhase::SelectMaterial);
-    // Two sources (KD-BASE, KD-MID); KD-TOP excluded as the active card.
-    assert_eq!(sel.valid_action_ids.len(), 2);
-    for &aid in &sel.valid_action_ids {
-        assert!(
-            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
-            "action id {aid} must be a breeding-source ID"
-        );
-    }
-    // tp == 0 in DebugRunner default → 2168 + 0*12 + i.
-    assert_eq!(sel.valid_action_ids[0], BREEDING_SOURCE_SELECT_START);
-    assert_eq!(sel.valid_action_ids[1], BREEDING_SOURCE_SELECT_START + 1);
+    let rows=crate::owned_choices::commits(&r.game);
+    assert_eq!(rows.len(),2);
+    assert!(rows.iter().all(|row| matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::BreedingSource)) && row.owner==Some(tp)));
+    assert_eq!(rows.iter().map(|row|row.position.as_deref()).collect::<Vec<_>>(),vec![Some("0"),Some("1")]);
+
 }
 
 /// Resolving a breeding-carrier `select_material` pick delivers the correct
@@ -248,7 +242,7 @@ fn breeding_carrier_select_material_callback_receives_source_index() {
     }
 
     // Pick the second source (KD-MID, source index 1).
-    let action = BREEDING_SOURCE_SELECT_START + 1;
+    let action = crate::owned_choices::source_action(&r.game, carrier, 1);
     r.game.resolve_selection(tp, action).expect("resolve pick");
     assert_eq!(
         *received.lock().unwrap(),
@@ -292,11 +286,7 @@ fn callback_receives_decoded_source_index() {
     }
 
     // Resolve with the action ID for source index 2 (MID2 — a material, not the top).
-    let action = SOURCE_SELECT_START + (oc.index as u16) * SOURCES_PER_FIELD + 2;
-    let (decoded_field, decoded_source) = decode_source_select(action);
-    assert_eq!(decoded_field, oc.index as u16);
-    assert_eq!(decoded_source, 2);
-
+    let action = crate::owned_choices::source_action(&r.game,oc,2);
     r.game.resolve_selection(tp, action).unwrap();
     assert_eq!(*observed.lock().unwrap(), Some(2));
     assert_ne!(

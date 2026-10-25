@@ -148,6 +148,7 @@ fn stack_deck_top(r: &mut DebugRunner, p: u8, top: &[&str]) {
 }
 
 fn hand_action(r: &DebugRunner, view: &PendingSelectionView, p: u8, id: &str) -> Option<u16> {
+    if view.card_choice.is_some() { return super::support::physical_zone_action(r,p,id,false); }
     let slot = hand_ids(r, p).iter().position(|h| h == id)? as u16;
     [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
         .into_iter()
@@ -155,6 +156,7 @@ fn hand_action(r: &DebugRunner, view: &PendingSelectionView, p: u8, id: &str) ->
 }
 
 fn trash_action(r: &DebugRunner, view: &PendingSelectionView, p: u8, id: &str) -> Option<u16> {
+    if view.card_choice.is_some() { return super::support::physical_zone_action(r,p,id,true); }
     let i = trash_ids(r, p).iter().position(|t| t == id)? as u16;
     let a = TRASH_EFFECT_START + i;
     view.valid_action_ids.contains(&a).then_some(a)

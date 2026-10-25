@@ -701,7 +701,7 @@ fn choose_breakdramon_from_union(runner: &mut DebugRunner) {
         .iter()
         .position(|c| c == BREAKDRAMON)
         .expect("Breakdramon is one of Examon's digivolution cards");
-    let a = encode_source_select(ex.index as u16, src as u16).expect("encodable");
+    let a = crate::owned_choices::source_action(&runner.game, ex, src);
     act(runner, a);
 }
 

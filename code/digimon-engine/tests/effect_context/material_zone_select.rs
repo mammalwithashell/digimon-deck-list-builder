@@ -138,55 +138,24 @@ fn material_zone_collects_permanent_card_sources() {
     );
     assert_eq!(r.game.current_phase, GamePhase::SelectBudgeted);
 
-    // The 3 source-index action IDs (0, 1, 2) should be offered.
-    let base = SOURCE_SELECT_START + perm_handle.index as u16 * SOURCES_PER_FIELD;
-    for src_idx in 0u16..3 {
-        assert!(
-            sel.valid_action_ids.contains(&(base + src_idx)),
-            "source {} must be offered (action id {})",
-            src_idx,
-            base + src_idx
-        );
+    // Assert all three physical source positions and exclude the top card.
+    let rows = crate::owned_choices::commits(&r.game);
+    assert_eq!(rows.len(), 3);
+    for index in 0..3 {
+        let action = crate::owned_choices::source_action(&r.game, perm_handle, index);
+        assert!(sel.valid_action_ids.contains(&action));
     }
-    // The top card (index 3) must NOT be offered.
-    assert!(
-        !sel.valid_action_ids.contains(&(base + 3)),
-        "top card (index 3) must NOT be offered as a source candidate"
-    );
-
-    // Pick source at index 0 (SRC-A).
-    r.game.resolve_selection(tp, base + 0).unwrap();
-
-    // Now pick source at index 1 (SRC-B) — but SRC-A removed from candidates,
-    // so its action id must not appear. SRC-C (index 2) stays.
-    {
-        let sel2 = r.game.pending_selection.as_ref().expect("step 2 selection");
-        assert!(matches!(
-            sel2.kind,
-            SelectionKind::CountCappedMultiSelect {
-                max: 2,
-                picked: 1,
-                ..
-            }
-        ));
-        // SRC-A's action id must be gone.
-        assert!(
-            !sel2.valid_action_ids.contains(&(base + 0)),
-            "SRC-A already picked, must not reappear"
-        );
-        // SRC-B and SRC-C must remain.
-        assert!(
-            sel2.valid_action_ids.contains(&(base + 1)),
-            "SRC-B must still be available"
-        );
-        assert!(
-            sel2.valid_action_ids.contains(&(base + 2)),
-            "SRC-C must still be available"
-        );
-    }
-
-    // Pick source at index 2 (SRC-C) — reaches max=2, auto-commits.
-    r.game.resolve_selection(tp, base + 2).unwrap();
+    assert!(!rows.iter().any(|row| row.position.as_deref() == Some("3")));
+    let first = crate::owned_choices::source_action(&r.game, perm_handle, 0);
+    r.game.resolve_selection(tp, first).unwrap();
+    let sel2 = r.game.pending_selection.as_ref().expect("step 2 selection");
+    assert!(matches!(sel2.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 1, .. }));
+    let rows = crate::owned_choices::commits(&r.game);
+    assert_eq!(rows.len(), 2);
+    assert!(!rows.iter().any(|row| row.position.as_deref() == Some("0")), "picked SRC-A must not reappear");
+    for index in [1,2] { crate::owned_choices::source_action(&r.game, perm_handle, index); }
+    let second = crate::owned_choices::source_action(&r.game, perm_handle, 2);
+    r.game.resolve_selection(tp, second).unwrap();
 
     assert!(
         r.game.pending_selection.is_none(),

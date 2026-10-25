@@ -160,9 +160,9 @@ fn move_selected_sources_under_tamer_uses_filtered_up_to_n_selection() {
         );
     }
 
-    let a_action = encode_source_select(host.index as u16, 0).unwrap();
-    let b_action = encode_source_select(host.index as u16, 1).unwrap();
-    let c_action = encode_source_select(host.index as u16, 2).unwrap();
+    let a_action = crate::owned_choices::source_action(&runner.game, host, 0);
+    assert!(!crate::owned_choices::commits(&runner.game).iter().any(|row| row.position.as_deref() == Some("1")));
+    let c_action = crate::owned_choices::source_action(&runner.game, host, 2);
     let pending = runner
         .game
         .pending_selection
@@ -170,7 +170,7 @@ fn move_selected_sources_under_tamer_uses_filtered_up_to_n_selection() {
         .expect("filtered source movement installs source selection");
     assert!(pending.valid_action_ids.contains(&a_action));
     assert!(pending.valid_action_ids.contains(&c_action));
-    assert!(!pending.valid_action_ids.contains(&b_action));
+
 
     runner
         .game
@@ -181,6 +181,7 @@ fn move_selected_sources_under_tamer_uses_filtered_up_to_n_selection() {
         .pending_selection
         .as_ref()
         .expect("up-to-N source selection remains open");
+    let c_action = crate::owned_choices::source_action(&runner.game, host, 2);
     runner
         .game
         .resolve_selection(pending.selecting_player, c_action)

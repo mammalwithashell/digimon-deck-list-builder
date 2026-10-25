@@ -650,12 +650,7 @@ fn c7_nokia_plays_gabumon_free_when_lone_agumon_becomes_greymon() {
     accept(&mut runner);
     // Union [hand, trash] pick: the trashed Gabumon.
     let v = view(&runner);
-    let a = v
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a >= TRASH_EFFECT_START && a != PASS)
-        .unwrap_or_else(|| panic!("a trash pick; view={v:?}"));
+    let a = super::support::physical_zone_action(&runner,0,GABUMON,true).expect("physical Gabumon trash pick");
     runner.execute_action(v.selecting_player, a).expect("pick Gabumon");
     let _ = runner.auto_resolve();
 
