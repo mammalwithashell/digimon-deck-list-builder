@@ -85,3 +85,11 @@ Both failed outputs remain preserved on the cloud host. Neither was fitted:
 `mixed-seed-image-validation-20261025/` and
 `mixed-seed-teacher-qualification-v3/`. Corrected preflight must run in a fresh
 `mixed-seed-image-validation-v4-20261025/` directory before launch.
+
+
+The v3 diagnostic sweep (no fitting, no corpus reuse) finished all schedules:
+greedy 416/416 completed; mixed had three deferred-payment failures;
+development had six deferred-payment and two repeated-target failures. The
+corrected native teacher completes the two additional captured target games
+(102 and 401). Existing PIMC/IS-MCTS determinism, hidden-permutation invariance,
+root legality and forced-win tests all pass (five tests).

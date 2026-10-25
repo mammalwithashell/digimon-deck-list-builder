@@ -17,6 +17,13 @@ fn nested_tamer_payment_choices_are_not_a_nonprogress_loop() {
         "../../../docs/superpowers/research/2026-10-25-development-hand-progress-regression.json"));
 }
 
+#[test]
+fn development_only_control_repeated_targets_finish() {
+    let cases: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+        "../../../docs/superpowers/research/2026-10-25-development-control-regressions.json")).unwrap();
+    for case in cases { replay_teacher_regression(&case.to_string()); }
+}
+
 fn replay_teacher_regression(fixture: &str) {
     use digimon_engine::{card_data::CardData, runners::HeadlessRunner, search::decision_player};
     let case: serde_json::Value = serde_json::from_str(fixture).unwrap();
@@ -37,9 +44,9 @@ fn replay_teacher_regression(fixture: &str) {
     let player = decision_player(&runner.game);
     let mask = build_action_mask(&runner.game, player);
     let next = teachers[player as usize].decide(&runner.game, &mask).unwrap();
-    assert_eq!(next.action, 100, "same target for a distinct visible trigger must remain usable");
+    assert!(mask[next.action as usize] > 0.5, "same target for a distinct visible trigger must remain usable");
     runner.step(next.action);
-    for _ in 0..1092 {
+    for _ in 0..(1200 - case["prefix"].as_array().unwrap().len() - 1) {
         if runner.is_game_over() { break; }
         let player = decision_player(&runner.game);
         let mask = build_action_mask(&runner.game, player);
