@@ -1,0 +1,215 @@
+{
+  "generated_at": "2026-10-24T23:21:27.048880+00:00",
+  "status": "verified_with_scoped_corrections_exact_deck_blocked",
+  "base_revision": "ec360e352",
+  "branch": "feat/light-hybrid-training",
+  "environment": {
+    "cargo_target_dir": "D:/cargo-target/light-hybrid-training",
+    "focused_rust_min_stack": 33554432,
+    "verification_ladder_rust_min_stack": 268435456
+  },
+  "gate": {
+    "ids": 16,
+    "id_denominator": 20,
+    "copies": 46,
+    "copy_denominator": 54,
+    "exact_deck_trainable": false,
+    "public_gate_smoke": "training-gate-smoke.json"
+  },
+  "focused_checks": [
+    {
+      "name": "focused_cards",
+      "passed": 155,
+      "failed": 0,
+      "ignored": 1
+    },
+    {
+      "name": "top_security_receipt_constructs",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "predicate_and_count_constructs",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "mixed_zone_and_controls",
+      "passed": 39,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "incoming_hand_digivolve_reducers",
+      "passed": 15,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "scoped_protection_security_tail",
+      "passed": 13,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "source_capacity_controls",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 2
+    },
+    {
+      "name": "security_capacity_control",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 1
+    },
+    {
+      "name": "receipt_internal_cleanup_lifo",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "specialized_movement_controls",
+      "passed": 9,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "dsl_pack_roundtrip",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "admission_lowering_python",
+      "passed": 97,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "verification_tool_python",
+      "passed": 174,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "immediate_and_deferred_attack_controls",
+      "passed": 33,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "folded_may_audit_corrected",
+      "passed": 10,
+      "failed": 0,
+      "ignored": 0
+    },
+    {
+      "name": "granted_body_composition_corrected",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0
+    }
+  ],
+  "generated_checks": {
+    "impact_index": "passed",
+    "lowering_coverage": "passed",
+    "card_admissibility": "passed",
+    "implemented_pool_snapshot": "passed: 1180 IDs from actual compiled CLI",
+    "dsl_vocabulary": "passed",
+    "openspec_strict": "passed",
+    "diff_whitespace": "passed"
+  },
+  "broader_checks": {
+    "tier_2_initial_results": "verification/tier-2-results.json",
+    "tier_2_initial_exit_code": 1,
+    "initial_failure": "DSL legacy test constructor omitted when_digivolving_this; added false to preserve its behavior. All other ladder suites passed.",
+    "full_cards": {
+      "passed": 12667,
+      "failed": 0,
+      "ignored": 36,
+      "phase": "before final Takuya activation/mask correction; current 155-card focused run and 33 controls passed afterward"
+    },
+    "full_dsl_after_constructor_fix": {
+      "passed": 1576,
+      "failed": 1,
+      "ignored": 1,
+      "failure": "new BT17-020#1 and BT18-094#1 absent from reviewed folded-may audit list",
+      "correction": "official text/Q1818 reviewed; decline/retry tests pass; audit module now 10 passed"
+    },
+    "current_attack_filtered_dsl": {
+      "passed": 67,
+      "failed": 1,
+      "failure": "old test expected second attack target while first attack remained pending, without executing that choice",
+      "correction": "CR11-2-4/Q3046 fixture now proves two memory tails but one declaration/check; all four module tests pass"
+    },
+    "rules_conformance": {
+      "passed": 361,
+      "ignored": 1
+    },
+    "judge_quiz": {
+      "passed": 44,
+      "ignored": 1
+    },
+    "rules_faq": {
+      "passed": 31
+    },
+    "keyword_semantics_matrix": {
+      "passed": 3
+    },
+    "determinism": {
+      "passed": 2,
+      "ignored_helpers": 1
+    },
+    "replay_goldens_verified": 10,
+    "invariant_fuzz": {
+      "passed": 5,
+      "failed": 0
+    },
+    "boundary": "Whole ladder was not restarted after scoped corrections; no blanket clean-aggregate claim."
+  },
+  "limits": {
+    "live_dcgo_oracle": "not run",
+    "wheel_installation": "not performed",
+    "model_training_or_promotion": "not performed",
+    "standalone_dsl_inventory": "Pre-existing inventory enum coverage errors encountered during authoring were not repaired; pack unit tests and engine DSL tests cover this change."
+  },
+  "unrelated_preserved_files": [
+    "qa/dcgo-exams/P/P-092-tail-face.yaml",
+    "qa/dcgo-exams/P/P-092-tail-inherited.yaml"
+  ],
+  "p249_followup": {
+    "data_tests_passed": 36,
+    "behavioral_tests_passed": 9,
+    "independent_review": "approved",
+    "runtime_pool_implemented_ids": 1181,
+    "source_artifact_sha256": "1128f4efc64fe9881a0e797a76ce49d11d7489fa3297f144dfcb579e53dc5e9a",
+    "card_choice_kernel_cargo_tests_passed": 5,
+    "card_choice_kernel_internal_overflow_standalone_passed": 1,
+    "active_paging_selectors_installed": false,
+    "full_suite_required_by_impact_scope": true,
+    "broader_rerun_status": "pending coordinated paging implementation; earlier ladder snapshot retained below",
+    "proof": "p249-publication-and-review.json",
+    "full_focused_card_tests_passed": 164,
+    "full_focused_card_tests_ignored": 1,
+    "gate_lowering_python_tests_passed": 110,
+    "source_pin_cargo_tests_passed": 6,
+    "source_pin_review": "approved; current six include same-printing replacement carrier"
+  },
+  "selected_source_prerequisites": {
+    "pack_format": "0.31.0",
+    "selected_source_tests_passed": 10,
+    "top_card_controls_passed": 12,
+    "bound_card_level_tests_passed": 1,
+    "review": "independent full runtime path approved",
+    "runtime_red_log": "verification/logs/selected-source-security-receipt-runtime-red.log",
+    "green_log": "verification/logs/selected-source-security-receipt-green-final.log",
+    "active_paging_installed": false,
+    "BT18-042_qualified": false,
+    "pack_tests_passed": 4,
+    "attribution_hygiene": "Inline selector-argument rewrite is not credited as an of_permanent predicate; no unintended global promotion."
+  }
+}

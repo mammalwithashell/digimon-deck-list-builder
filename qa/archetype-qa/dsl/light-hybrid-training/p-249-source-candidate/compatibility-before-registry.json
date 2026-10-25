@@ -1,0 +1,39 @@
+{
+  "attribute_eng": [
+    "Variable"
+  ],
+  "card_colors": [
+    2
+  ],
+  "card_effect_class_name": "P_249",
+  "card_id": "P-249",
+  "card_kind": 0,
+  "card_name_eng": "Strabimon",
+  "card_name_jpn": "",
+  "dp": 1000,
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 [Hybrid] trait card from your hand or trash as this Digimon's bottom digivolution card or under any of your Tamers with inherited effects, that Digimon or Tamer may digivolve into a [Hybrid] trait card in the hand with the cost reduced by 2.",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    },
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 Tamer card with inherited effects from your hand without paying the cost.",
+  "level": 3,
+  "play_cost": 3,
+  "rarity": 0,
+  "security_effect_description_eng": "",
+  "type_eng": [
+    "Beastkin"
+  ],
+  "xros_req": ""
+}

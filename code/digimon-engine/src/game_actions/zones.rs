@@ -168,6 +168,7 @@ impl Game {
     /// Turn every card in `player_id`'s security stack face down, then shuffle
     /// without changing its contents (qa:Q7121).
     pub fn shuffle_security(&mut self, player_id: PlayerId) {
+        self.security_shuffle_generations[player_id as usize] = self.security_shuffle_generations[player_id as usize].checked_add(1).expect("security shuffle generation exhausted");
         self.player_mut(player_id).face_up_security.clear();
         let mut security = std::mem::take(&mut self.player_mut(player_id).security);
         security.shuffle(&mut self.rng);

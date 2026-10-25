@@ -235,6 +235,7 @@ impl<'a> EffectContext<'a> {
 
         self.game.current_phase = GamePhase::SelectTarget;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Target,
             selecting_player,
@@ -452,6 +453,7 @@ impl<'a> EffectContext<'a> {
 
         self.game.current_phase = GamePhase::SelectTarget;
         self.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Target,
             selecting_player,

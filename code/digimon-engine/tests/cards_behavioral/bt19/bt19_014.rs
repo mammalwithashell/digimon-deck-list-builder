@@ -1,4 +1,3 @@
-use digimon_engine::action::space::encode_source_select;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
@@ -86,7 +85,7 @@ fn bt19_014_on_play_debuffs_by_source_colors_and_offers_shootingstarmon() {
     let pending = runner
         .pending_selection()
         .expect("On Play should offer ShootingStarmon under a Tamer");
-    let action = encode_source_select(tamer.index as u16, 0).unwrap();
+    let action = physical_menu::source_action(&runner.game,tamer,0);
     assert!(pending.valid_action_ids.contains(&action));
     runner
         .execute_action(0, action)
@@ -98,3 +97,6 @@ fn bt19_014_on_play_debuffs_by_source_colors_and_offers_shootingstarmon() {
         .iter()
         .any(|perm| perm.top_card().handle() == shooting));
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

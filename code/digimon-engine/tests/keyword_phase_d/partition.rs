@@ -230,7 +230,7 @@ fn partition_plays_two_picked_sources_on_opponent_effect_deletion() {
             .expect("second source-pick must be parked");
         // The previously-picked index must be excluded from the new
         // candidate set.
-        assert_eq!(pending.valid_action_ids.len(), 2);
+        assert_eq!(crate::owned_choices::commits(&r.game).len(), 2);
     }
     let action_2 = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     r.game.resolve_selection(0, action_2).expect("second pick");

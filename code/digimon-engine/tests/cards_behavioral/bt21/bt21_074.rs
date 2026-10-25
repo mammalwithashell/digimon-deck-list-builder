@@ -49,7 +49,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
     CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_attack, PASS, TRASH_EFFECT_START};
+use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::CardColor;
@@ -317,7 +317,8 @@ fn bt21_074_on_play_tucks_from_trash() {
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == "TM-CARD")
         .unwrap();
-    let pick = TRASH_EFFECT_START + idx as u16;
+    let exact_card = runner.game.players[0].trash[idx].handle();
+    let pick = physical_menu::card_action(&runner.game, "TM-CARD", digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     assert!(view.valid_action_ids.contains(&pick));
     assert_eq!(
         view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
@@ -333,6 +334,7 @@ fn bt21_074_on_play_tucks_from_trash() {
 
     let stack = &runner.game.players[0].battle_area[host.index as usize].card_sources;
     assert_eq!(stack[0].card_id(&runner.game.card_data), "TM-CARD");
+    assert_eq!(stack[0].handle(), exact_card, "the selected physical trash card is tucked");
     assert!(has_protection(&runner, host));
 }
 
@@ -505,3 +507,6 @@ fn bt21_074_when_linked_deletes_opp_level_4_or_lower_only() {
         .iter()
         .all(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-LV5"));
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

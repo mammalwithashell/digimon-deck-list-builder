@@ -32,6 +32,11 @@
       "card_color": 6,
       "level": 3,
       "memory_cost": 4
+    },
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 4
     }
   ],
   "xros_req": "[Digivolve] [Koichi Kimura]: Cost 3 \r\n[Digivolve] [Loweemon]: Cost 1"

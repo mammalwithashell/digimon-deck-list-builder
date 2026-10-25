@@ -14,7 +14,7 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    encode_breeding_select, encode_breeding_source_select, EFFECTS_PER_PERMANENT,
+    encode_breeding_select, EFFECTS_PER_PERMANENT,
     FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, PLAY_HAND_START,
 };
 use digimon_engine::card_data::CardData;
@@ -248,7 +248,7 @@ fn bt13_110_delay_plays_royal_knight_from_breeding_sources_with_rush() {
         .execute_action(0, encode_breeding_select(0).unwrap())
         .expect("choose breeding carrier");
     runner
-        .execute_action(0, encode_breeding_source_select(0, 0).unwrap())
+        .execute_action(0, physical_menu::source_action(&runner.game, PermanentHandle { player: 0, index: digimon_engine::action::space::BREEDING_TARGET as u8 }, 0))
         .expect("choose Royal Knight source");
 
     let played = find_field_card(&runner, "MAGNAMON");
@@ -277,3 +277,6 @@ fn bt13_110_security_places_self() {
         _ => false,
     }));
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

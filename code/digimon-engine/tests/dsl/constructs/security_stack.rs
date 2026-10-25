@@ -232,6 +232,45 @@ fn pick(r: &mut DebugRunner, expected: &[u16], action: u16) {
     r.execute_action(0, action).unwrap();
     no_prompt(r);
 }
+fn assert_security_menu(r: &DebugRunner, owner: u8, positions: &[usize]) -> Vec<u16> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let pending = r.game.pending_selection.as_ref().expect("real security choice");
+    assert_eq!(pending.kind, SelectionKind::Security);
+    assert_eq!(pending.zone_owner, Some(owner));
+    assert!(pending.is_optional);
+    let view = pending.card_choice.as_ref().expect("physical security owner")
+        .view(&r.game, pending.selecting_player);
+    let rows: Vec<_> = view.rows.iter().filter(|row|
+        matches!(row.operation, CardChoiceOperation::CommitCard)).collect();
+    assert_eq!(rows.iter().map(|row| row.position.as_ref().unwrap().parse::<usize>().unwrap())
+        .collect::<Vec<_>>(), positions, "offered physical security positions");
+    assert!(rows.iter().all(|row| row.owner == Some(owner)
+        && matches!(row.zone, Some(CardChoiceZone::Security))));
+    let mut expected = rows.iter().map(|row| row.action_id).collect::<Vec<_>>();
+    expected.push(PASS);
+    assert_eq!(pending.valid_action_ids, expected);
+    let mask = build_action_mask(&r.game, pending.selecting_player);
+    for (id, &legal) in mask.iter().enumerate() {
+        assert_eq!(legal, if expected.contains(&(id as u16)) { 1.0 } else { 0.0 }, "mask action {id}");
+    }
+    rows.iter().map(|row| row.action_id).collect()
+}
+fn security_action(r: &DebugRunner, owner: u8, position: usize) -> u16 {
+    use digimon_engine::owned_card_choice::CardChoiceOperation;
+    let pending = r.game.pending_selection.as_ref().unwrap();
+    let view = pending.card_choice.as_ref().unwrap().view(&r.game, pending.selecting_player);
+    let row = view.rows.iter().find(|row| row.owner == Some(owner)
+        && row.position.as_deref() == Some(position.to_string().as_str())
+        && matches!(row.operation, CardChoiceOperation::CommitCard)).expect("exact physical position");
+    assert_eq!(build_action_mask(&r.game, pending.selecting_player)[row.action_id as usize], 1.0);
+    row.action_id
+}
+fn pick_security(r: &mut DebugRunner, owner: u8, positions: &[usize], selected: Option<usize>) {
+    assert_security_menu(r, owner, positions);
+    let action = selected.map_or(PASS, |position| security_action(r, owner, position));
+    r.execute_action(0, action).unwrap();
+    no_prompt(r);
+}
 fn restrict(r: &mut DebugRunner, p: u8) {
     r.game.modifiers.add_player_modifier(
         p,
@@ -430,12 +469,12 @@ fn trash_selected_security_surfaces_a_real_security_pick_over_the_opponents_stac
     assert_eq!(p.kind, SelectionKind::Security);
     assert_eq!(p.zone_owner, Some(1));
     assert_eq!(ids(&r, 1, "security"), ["SA", "SB", "SC"]);
-    pick(&mut r, &[50, 51, 52], 51);
+    pick_security(&mut r, 1, &[0, 1, 2], Some(1));
 }
 #[test]
 fn trash_selected_security_trashes_the_chosen_middle_card() {
     let mut r = trash_runner(&[]);
-    pick(&mut r, &[50, 51, 52], 51);
+    pick_security(&mut r, 1, &[0, 1, 2], Some(1));
     assert_eq!(ids(&r, 1, "security"), ["SA", "SC"]);
     assert_eq!(ids(&r, 1, "trash"), ["SB"]);
     assert!(ids(&r, 0, "trash").is_empty());
@@ -443,7 +482,7 @@ fn trash_selected_security_trashes_the_chosen_middle_card() {
 #[test]
 fn trash_selected_security_pass_changes_nothing() {
     let mut r = trash_runner(&[]);
-    pick(&mut r, &[50, 51, 52], PASS);
+    pick_security(&mut r, 1, &[0, 1, 2], None);
     assert_eq!(ids(&r, 1, "security"), ["SA", "SB", "SC"]);
     assert!(ids(&r, 1, "trash").is_empty());
 }
@@ -456,10 +495,10 @@ fn trash_selected_security_with_empty_stack_installs_no_selection() {
 }
 #[test]
 fn trash_selected_security_fires_on_discard_security_on_the_trashed_card_only() {
-    for (a, m) in [(51, 2), (50, 3), (PASS, 3)] {
+    for (a, m) in [(Some(1), 2), (Some(0), 3), (None, 3)] {
         let mut r = trash_runner(&[DISCARD]);
         r.game.memory = 3;
-        pick(&mut r, &[50, 51, 52], a);
+        pick_security(&mut r, 1, &[0, 1, 2], a);
         assert_eq!(r.memory(), m);
     }
 }
@@ -473,7 +512,7 @@ fn play_runner(extra: &[&str]) -> DebugRunner {
 fn play_security_card_offers_only_filter_matches_and_plays_the_pick_free() {
     let mut r = play_runner(&[]);
     probe(&mut r);
-    pick(&mut r, &[40], 40);
+    pick_security(&mut r, 0, &[0], Some(0));
     assert_eq!(r.battle_area_size(0), 3);
     assert_eq!(
         r.game.players[0].battle_area[2]
@@ -489,7 +528,7 @@ fn play_security_card_offers_only_filter_matches_and_plays_the_pick_free() {
 fn play_security_card_pass_changes_nothing() {
     let mut r = play_runner(&[]);
     probe(&mut r);
-    pick(&mut r, &[40], PASS);
+    pick_security(&mut r, 0, &[0], None);
     assert_eq!(r.battle_area_size(0), 2);
     assert_eq!(ids(&r, 0, "security"), ["TAM", "DIG"]);
     assert_eq!(r.memory(), 3);
@@ -502,7 +541,7 @@ fn play_security_card_with_a_binding_that_left_the_stack_is_a_no_op() {
     );
     let mut r = runner(&y, &[], &["TAM", "DIG"], &[]);
     probe(&mut r);
-    pick(&mut r, &[40], 40);
+    pick_security(&mut r, 0, &[0], Some(0));
     assert_eq!(r.battle_area_size(0), 1);
     assert_eq!(ids(&r, 0, "hand"), ["TAM"]);
     assert_eq!(ids(&r, 0, "security"), ["DIG"]);
@@ -512,7 +551,7 @@ fn play_security_card_fires_on_lose_security_once() {
     let mut r = play_runner(&[LOSE]);
     r.place_on_field(0, "OBS", Some(0));
     probe(&mut r);
-    pick(&mut r, &[40], 40);
+    pick_security(&mut r, 0, &[0], Some(0));
     assert_eq!(r.memory(), 6);
     assert_eq!(ids(&r, 0, "security"), ["DIG"]);
 }
@@ -723,12 +762,10 @@ fn play_security_card_resumed_commit_fires_each_removal_timing_once_and_not_the_
         r.place_on_field(player, "OBS", Some(0));
         r.place_on_field(0, "CANCEL", Some(0));
         probe(&mut r);
-        assert_eq!(
-            r.game.pending_selection.as_ref().unwrap().valid_action_ids,
-            [40]
-        );
+        assert_security_menu(&r, 0, &[0]);
         let field_before = r.battle_area_size(0);
-        r.execute_action(0, 40).unwrap();
+        let action = security_action(&r, 0, 0);
+        r.execute_action(0, action).unwrap();
         let replacement = r
             .game
             .pending_selection
@@ -772,7 +809,9 @@ fn play_security_card_cancelled_commit_emits_no_removal() {
         r.place_on_field(player, "OBS", Some(0));
         r.place_on_field(0, "CANCEL", Some(0));
         probe(&mut r);
-        r.execute_action(0, 41).unwrap();
+        assert_security_menu(&r, 0, &[1]);
+        let action = security_action(&r, 0, 1);
+        r.execute_action(0, action).unwrap();
         let p = r
             .game
             .pending_selection
@@ -806,7 +845,7 @@ fn play_security_card_rejected_commit_emits_no_removal() {
             ),
         );
         probe(&mut r);
-        pick(&mut r, &[40], 40);
+        pick_security(&mut r, 0, &[0], Some(0));
         assert_eq!(r.memory(), 5);
         assert_eq!(ids(&r, 0, "security"), ["TAM", "DIG"]);
         assert_eq!(r.battle_area_size(0), if player == 0 { 2 } else { 1 });

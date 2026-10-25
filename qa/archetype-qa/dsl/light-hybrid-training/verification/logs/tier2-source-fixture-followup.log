@@ -1,0 +1,148 @@
+
+running 31 tests
+test constructs::cost_target_event::bound_deletion_evade_not_logged ... ok
+test constructs::cost_target_event::bound_deletion_two_targets_one_evades ... ok
+test constructs::cost_target_event::added_cards_batch_any_and_adjacent_timing ... ok
+test constructs::cost_target_event::binding_count_single_list_and_decline ... ok
+test constructs::cost_target_event::decoy_substitute_is_not_original_effect_deletion ... ok
+test constructs::cost_target_event::binding_card_kind_categories_and_multilist ... ok
+test constructs::cost_target_event::deletion_cost_prevention_not_credited ... ok
+test constructs::cost_target_event::cost_target_matches_digivolve_and_play ... ok
+test constructs::cost_target_event::deletion_cost_reduction_credits_only_completed_payment ... ok
+test constructs::cost_target_event::during_attack_false_in_effect_battle ... ok
+test constructs::cost_target_event::deletion_results_include_tokens ... ok
+test constructs::cost_target_event::during_attack_lasts_through_end ... ok
+test constructs::cost_target_event::main_phase_both_timings_share_pool_turn_player_first ... ok
+test constructs::cost_target_event::event_target_names_and_deleted_snapshot ... ok
+test constructs::cost_target_event::opponent_main_phase_owner_and_breeding ... ok
+test constructs::cost_target_event::ordinary_digivolve_never_addition_event ... ok
+test constructs::cost_target_event::opponent_deletion_completed_declined_and_evade ... ok
+test constructs::cost_target_event::source_added_observer_nonhost_once_and_after_body ... ok
+test constructs::cost_target_event::source_cost_below_min_not_offered ... ok
+test constructs::cost_target_event::names_exclude_printed_and_alias_clashes ... ok
+test constructs::cost_target_event::source_cost_refused_pick_is_atomic ... ok
+test constructs::cost_target_event::own_deletion_completed_and_evade ... ok
+test constructs::cost_target_event::source_cost_zero_sources_aborts_outer_tail ... ok
+test constructs::cost_target_event::source_cost_full_short_and_decline ... ok
+test constructs::cost_target_event::source_payment_two_cards_one_observer_event ... ok
+test constructs::cost_target_event::source_trash_never_dispatches_unconditional_addition_observer ... ok
+test constructs::cost_target_event::tail_event_target_is_source_absent_permanent_target ... ok
+test constructs::cost_target_event::tail_event_target_is_source_inherited_physical_carrier ... ok
+test constructs::cost_target_event::source_cost_target_carrier_and_inheritance ... ok
+test constructs::cost_target_event::tail_on_ally_played_own_opponent_and_adjacent_digivolve ... ok
+test constructs::cost_target_event::tail_event_target_is_source_live_self_other_and_adjacent_timing ... ok
+
+test result: ok. 31 passed; 0 failed; 0 ignored; 0 measured; 1562 filtered out; finished in 28.21s
+
+FILTER_EXIT constructs::cost_target_event:: 0
+
+running 13 tests
+test phase2g_select_sources::empty_select_opponent_sources_silently_skips_outer_tail_when_min_positive ... ok
+test phase2g_select_sources::empty_select_own_sources_silently_skips_outer_tail_when_min_positive ... ok
+test phase2g_select_sources::select_opponent_sources_binds_opponent_source_refs_for_trashing ... ok
+test phase2g_select_sources::digi_burst_two_selects_exact_self_sources_and_fires_source_trash_once_per_event ... ok
+test phase2g_select_sources::select_opponent_sources_formula_counts_resolve_at_runtime ... ok
+test phase2g_select_sources::select_opponent_sources_clamp_to_available_zero_candidates_skips_pick ... ok
+test phase2g_select_sources::select_opponent_sources_clamp_to_available_clamps_min_and_max ... ok
+test phase2g_select_sources::select_opponent_sources_formula_zero_skips_pick_entirely ... ok
+test phase2g_select_sources::select_opponent_sources_restricts_to_target_opponent_permanent ... ok
+test phase2g_select_sources::select_own_sources_binds_source_refs_for_trashing ... ok
+test phase2g_select_sources::select_own_sources_filters_cards_from_source_carrier_only ... ok
+test phase2g_select_sources::source_trash_observer_triggers_once_per_event_and_again_per_new_event ... ok
+test phase2g_select_sources::select_opponent_sources_unclamped_min_above_available_still_drops_continuation ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 1580 filtered out; finished in 4.25s
+
+FILTER_EXIT phase2g_select_sources:: 0
+
+running 7 tests
+
+thread 'select_materials::select_materials_breeding_carrier_distinct_by_exercises_recursive_path' (20096) panicked at code\digimon-engine\tests\dsl\select_materials.rs:811:5:
+assertion `left == right` failed: recursive distinct_by over the breeding stack masks the duplicate Omnimon; Alphamon + Gankoomon stay selectable
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test select_materials::select_materials_breeding_carrier_installs_real_pending_selection ... ok
+test select_materials::select_materials_breeding_carrier_distinct_by_exercises_recursive_path ... FAILED
+test select_materials::play_from_materials_can_suppress_on_play_for_picked_breeding_sources ... ok
+test select_materials::select_materials_batch_play_from_materials_plays_every_picked_source ... ok
+test select_materials::select_materials_yaml_lowers_uniqueness_max_and_filter ... ok
+
+thread 'select_materials::select_materials_name_uniqueness_caps_mask_to_one_per_name' (44376) panicked at code\digimon-engine\tests\dsl\select_materials.rs:237:5:
+assertion `left == right` failed: after picking Omnimon, the duplicate Omnimon must be masked out by uniqueness=name; Alphamon + Gankoomon stay selectable
+  left: 3
+ right: 2
+test select_materials::select_materials_name_uniqueness_caps_mask_to_one_per_name ... FAILED
+test select_materials::select_materials_empty_carrier_runs_tail_synchronously ... ok
+
+failures:
+
+failures:
+    select_materials::select_materials_breeding_carrier_distinct_by_exercises_recursive_path
+    select_materials::select_materials_name_uniqueness_caps_mask_to_one_per_name
+
+test result: FAILED. 5 passed; 2 failed; 0 ignored; 0 measured; 1586 filtered out; finished in 1.85s
+
+FILTER_EXIT select_materials:: 101
+
+running 8 tests
+test stack_pair_and_protection::aura_modifier_from_compiles_opponent_scoped ... ok
+test stack_pair_and_protection::same_by_level_compiles_from_yaml_and_rejects_uniqueness ... ok
+test stack_pair_and_protection::same_level_pair_unpayable_picks_nothing_and_skips_the_tail ... ok
+test stack_pair_and_protection::same_level_pair_offers_every_level_that_has_a_pair ... ok
+test stack_pair_and_protection::same_level_pair_first_pick_only_from_levels_with_a_partner ... ok
+test stack_pair_and_protection::same_level_pair_resolves_on_a_cloned_game ... ok
+test stack_pair_and_protection::stack_return_protection_blocks_only_opponent_returns ... ok
+test stack_pair_and_protection::stack_trash_protection_is_controller_scoped_and_blocks_de_digivolve ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 1585 filtered out; finished in 2.69s
+
+FILTER_EXIT stack_pair_and_protection:: 0
+
+running 8 tests
+test st2_substrate::battle_opponent_no_sources_yaml_lowers_predicate_leaf ... ok
+test st2_substrate::trash_bottom_sources_count_two_trashes_in_bottom_to_top_order ... ok
+test st2_substrate::trash_bottom_sources_count_one_trashes_bottom_source_without_prompt ... ok
+test st2_substrate::kaiser_nail_shape_selects_one_source_then_plays_it_for_free ... ok
+test st2_substrate::trash_bottom_sources_yaml_lowers_to_compiled_step ... ok
+test st2_substrate::trash_bottom_sources_soft_fails_for_no_sources_and_stale_target ... ok
+test st2_substrate::trash_bottom_sources_soft_fails_when_count_exceeds_available_sources ... ok
+test st2_substrate::battle_opponent_no_sources_predicate_matches_only_opposing_combatant ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 1585 filtered out; finished in 5.44s
+
+FILTER_EXIT st2_substrate:: 0
+
+running 17 tests
+test zone_movement_verbs::move_trash_card_to_deck_top_feeds_returned_card_matching ... ok
+test zone_movement_verbs::bulk_trash_and_hand_reduction_verbs_call_helpers ... ok
+test zone_movement_verbs::for_each_merges_body_result_log_into_parent_bindings ... ok
+test zone_movement_verbs::move_trash_card_to_deck_top_noop_when_card_absent ... ok
+test zone_movement_verbs::bounce_self_and_place_self_at_security_lower_into_self_helpers ... ok
+test zone_movement_verbs::move_trash_card_to_deck_top_routes_selected_card_to_owner_deck_top ... ok
+test zone_movement_verbs::permanent_and_stacked_card_security_verbs_move_expected_cards ... ok
+test zone_movement_verbs::return_selected_sources_to_deck_routes_picked_source_to_owner_deck_bottom ... ok
+test zone_movement_verbs::return_selected_sources_to_deck_routes_to_source_owner_deck_top ... ok
+test zone_movement_verbs::place_self_option_at_security_consumes_pending_option ... ok
+test zone_movement_verbs::return_all_trash_to_deck_bottom_records_returned_cards_in_result_log ... ok
+test zone_movement_verbs::return_selected_sources_to_hand_routes_to_source_owner_not_controller ... ok
+test zone_movement_verbs::return_selected_sources_to_hand_routes_picked_source_to_owner_hand ... ok
+test zone_movement_verbs::return_to_hand_records_returned_card_in_result_log ... ok
+test zone_movement_verbs::returned_card_matching_does_not_fire_without_a_matching_card ... ok
+test zone_movement_verbs::returned_card_matching_fires_when_a_matching_card_was_returned ... ok
+
+thread 'zone_movement_verbs::search_own_security_stack_runs_select_or_no_match_body' (17460) panicked at code\digimon-engine\tests\dsl\zone_movement_verbs.rs:368:9:
+assertion `left == right` failed
+  left: [31]
+ right: [31, 62]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test zone_movement_verbs::search_own_security_stack_runs_select_or_no_match_body ... FAILED
+
+failures:
+
+failures:
+    zone_movement_verbs::search_own_security_stack_runs_select_or_no_match_body
+
+test result: FAILED. 16 passed; 1 failed; 0 ignored; 0 measured; 1576 filtered out; finished in 2.31s
+
+FILTER_EXIT zone_movement_verbs:: 101

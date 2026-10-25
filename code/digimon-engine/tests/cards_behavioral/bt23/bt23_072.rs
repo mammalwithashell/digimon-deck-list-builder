@@ -302,7 +302,7 @@ fn bt23_072_inherited_breeding_start_main_plays_king_drasil_source_at_six_source
         "accepted inherited trigger should prompt for a King Drasil source"
     );
     runner
-        .execute_action(0, encode_breeding_source_select(0, 1).unwrap())
+        .execute_action(0, owned_fixture::action(&runner.game,0,"KING-SOURCE","breeding"))
         .expect("choose King Drasil source");
     runner.auto_resolve().expect("play source");
 
@@ -364,7 +364,7 @@ fn bt23_072_inherited_can_play_self_as_king_drasil_source() {
         "accepted inherited trigger should prompt for a King Drasil source"
     );
     runner
-        .execute_action(0, encode_breeding_source_select(0, 0).unwrap())
+        .execute_action(0, owned_fixture::action(&runner.game,0,"BT23-072","breeding"))
         .expect("choose BT23-072 source itself");
     runner.auto_resolve().expect("play source itself");
 
@@ -376,3 +376,6 @@ fn bt23_072_inherited_can_play_self_as_king_drasil_source() {
         bt23_source
     );
 }
+
+#[path="../../support/late_owned_fixture.rs"]
+mod owned_fixture;

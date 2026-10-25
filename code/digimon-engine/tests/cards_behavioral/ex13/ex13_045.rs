@@ -302,10 +302,7 @@ fn ex13_045_winning_a_battle_plays_a_dracomon_text_digimon_from_hand_free() {
 fn ex13_045_winning_a_battle_uses_an_examon_text_option_from_sources() {
     let (mut runner, me, opp) = win_runner(&[], &["GREEN6", "EXA-OPT"]);
     win_battle(&mut runner, me, opp);
-    let a = non_pass(&runner)
-        .into_iter()
-        .find(|&a| a >= SOURCE_SELECT_START)
-        .expect("stacked Option offered");
+    let a = physical_fixture::commits(&runner.game).into_iter().find(|row|row.card_id.as_deref()==Some("EXA-OPT")).expect("physical Examon text source option").action_id;
     runner.execute_action(0, a).expect("use");
     let _ = runner.auto_resolve();
     assert_eq!(runner.hand_size(0), 1, "the Option's body drew 1");
@@ -358,3 +355,6 @@ fn ex13_045_win_trigger_is_once_per_turn() {
     runner.battle_digimon(me, opp2);
     assert!(runner.pending_selection().is_none(), "OPT spent");
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

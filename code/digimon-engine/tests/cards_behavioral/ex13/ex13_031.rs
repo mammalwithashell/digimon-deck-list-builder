@@ -103,7 +103,7 @@ fn hand_slot(r: &DebugRunner, card_id: &str) -> u16 {
 
 fn pick_hand_cost(r: &mut DebugRunner, card_id: &str) {
     let view = r.pending_selection_view().expect("cost prompt");
-    let id = PLAY_HAND_START + hand_slot(r, card_id);
+    let id = physical_fixture::zone_action(&r.game,0,hand_slot(r,card_id) as usize,digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     assert!(view.valid_action_ids.contains(&id), "{card_id} payable: {view:?}");
     r.execute_action(0, id).expect("pay cost");
 }
@@ -239,7 +239,7 @@ fn ex13_031_cost_can_be_a_chuumon_source_under_your_digimon() {
     let host = r.place_stack(0, &["CHUU-L4", "HOST"]);
     fire(&mut r, EffectTiming::OnPlay, me);
     let view = r.pending_selection_view().expect("cost prompt");
-    let src = encode_source_select(host.index as u16, 0).expect("source action");
+    let src = physical_fixture::source_action(&r.game,host,0);
     assert!(view.valid_action_ids.contains(&src), "Chuumon source payable: {view:?}");
     r.execute_action(0, src).expect("trash source");
     pick_field(&mut r, opp);
@@ -254,9 +254,9 @@ fn ex13_031_non_matching_cards_are_not_payable() {
     let (mut r, me, _opp) = main_setup(&["PLAIN-H", "CHUU-H"]);
     fire(&mut r, EffectTiming::OnPlay, me);
     let view = r.pending_selection_view().expect("cost prompt");
-    let plain = PLAY_HAND_START + hand_slot(&r, "PLAIN-H");
-    let chuu = PLAY_HAND_START + hand_slot(&r, "CHUU-H");
-    assert!(!view.valid_action_ids.contains(&plain), "no [Chuumon]/[Sukamon] in name");
+    let plain = physical_fixture::commits(&r.game).into_iter().find(|row|row.card_id.as_deref()==Some("PLAIN-H"));
+    let chuu = physical_fixture::zone_action(&r.game,0,hand_slot(&r,"CHUU-H") as usize,digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    assert!(plain.is_none(), "no [Chuumon]/[Sukamon] in name");
     assert!(view.valid_action_ids.contains(&chuu));
 }
 
@@ -600,3 +600,6 @@ fn ex13_031_assembly_excludes_lv5_and_non_sukamon_materials() {
         assert_eq!(view.valid_action_ids.contains(&a), legal, "{id} legal={legal}: {view:?}");
     }
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

@@ -1,0 +1,60 @@
+# Official observation 50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c.
+# Image confirms BOTH yellow/blue Lv.3 and yellow/blue Tamer circles, cost 3.
+card: BT18-037
+name: Lobomon
+kind: digimon
+level: 4
+color: [yellow, blue]
+cost: 5
+dp: 5000
+form: Hybrid
+attribute: Variable
+traits: [Warrior]
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - color_is: yellow
+            - color_is: blue
+    cost: 3
+  - kind: digivolve
+    from:
+      kind: tamer
+      any_of:
+        - color_is: yellow
+        - color_is: blue
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Koji Minamoto }
+    cost: 2
+  - kind: digivolve
+    from: { name_is: KendoGarurumon }
+    cost: 0
+effects:
+  - when: when_digivolving
+    process:
+      - search_own_security_stack:
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Hybrid
+              - trait_has: Ten Warriors
+          prompt: Add 1 Hybrid or Ten Warriors card from security to your hand
+          on_select:
+            - add_to_hand_from_security: { of: you, card: pick }
+            - if:
+                condition: { effect_added_any_card_to_hand: true }
+                then:
+                  - recover: { of: you, count: 1 }
+      - shuffle_security: { of: you }
+  - scope: inherited
+    when: when_attacking
+    condition:
+      count_lte:
+        filter: { owner: you, zone: [hand] }
+        n: 7
+    process:
+      - draw: { of: you, count: 1 }

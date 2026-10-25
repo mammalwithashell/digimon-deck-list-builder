@@ -1,0 +1,18 @@
+
+running 13 tests
+test p_153_production_card_loads ... ok
+test p_153_printed_metadata_and_all_digivolution_paths ... ok
+test p_153_end_attack_security_prohibition_prevents_cost_and_unsuspend ... ok
+test p_153_foreign_owned_top_goes_to_its_actual_owners_top_security ... ok
+test p_153_paid_pending_tail_follows_carrier_after_field_compaction ... ok
+test p_153_end_attack_clone_keeps_physical_source_and_sibling_identity ... ok
+test p_153_grouped_return_picks_each_level_before_any_departure ... ok
+test p_153_end_attack_places_exact_top_card_and_unsuspends_underlying_digimon_or_tamer ... ok
+test p_153_end_attack_can_decline_and_single_card_has_no_payment ... ok
+test p_153_missing_levels_do_not_expand_group_to_unselected_targets ... ok
+test p_153_prevented_payment_never_unsuspends_and_pending_clones_resume_correctly ... ok
+test p_153_armor_purge_real_battle_can_accept_or_decline ... ok
+test p_153_legal_route_masks_and_actual_payment_enforce_exactly_three_colors ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 58.45s
+

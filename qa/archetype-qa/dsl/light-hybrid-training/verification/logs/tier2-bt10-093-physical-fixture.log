@@ -1,0 +1,8 @@
+
+running 3 tests
+test bt10::bt10_093::bt10_093_compiles_and_is_in_pack ... ok
+test bt10::bt10_093::bt10_093_declining_hook_plays_at_full_cost ... ok
+test bt10::bt10_093::bt10_093_hook_places_under_tamer_card_and_reduces_cost_by_2 ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 12752 filtered out; finished in 5.54s
+

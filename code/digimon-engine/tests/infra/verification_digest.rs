@@ -186,6 +186,7 @@ fn selection(kind: SelectionKind) -> PendingSelection {
         source_kind: EffectSourceKind::Digimon,
         callback: Box::new(|_, _| {}),
         on_decline: None,
+        card_choice: None,
         zone_owner: None,
     }
 }

@@ -1,0 +1,6 @@
+REGISTRATION/DATA AND GLOBAL MECHANICS PASS 54 20
+NotAdmissibleDeckError exact Light Hybrid contains cards that are not admissible: BT18-037 (failed_verdict), BT18-042 (failed_verdict), BT18-063 (failed_verdict), BT18-076 (failed_verdict)
+{"seed": 41, "steps": 158, "terminated": true, "truncated": false, "reward": 11.05, "profile": "standard_lite_v2"}
+{"seed": 42, "steps": 283, "terminated": true, "truncated": false, "reward": 10.0, "profile": "standard_lite_v2"}
+{"seed": 43, "steps": 229, "terminated": true, "truncated": false, "reward": -10.0, "profile": "standard_lite_v2"}
+{"seed": 44, "steps": 157, "terminated": true, "truncated": false, "reward": 11.075, "profile": "standard_lite_v2"}

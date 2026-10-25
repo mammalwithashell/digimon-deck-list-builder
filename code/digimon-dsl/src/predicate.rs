@@ -312,6 +312,10 @@ pub struct PredicateSpec {
     /// Driver BT24-040 Venusmon.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub owner_can_add_security: Option<bool>,
+    /// Global leaf: the resolving effect's controller may add security by
+    /// effect. Independent of source-card ownership and selection override.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub controller_can_add_security: Option<bool>,
     /// Permanent-subject leaf: the permanent can attack right now via an
     /// effect-granted attack â€” i.e. the engine would offer at least one legal
     /// attack target for `may_attack_now` with the same `targets` /
@@ -1083,6 +1087,12 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cost_target: Option<Box<PredicateSpec>>,
 
+    /// Match at least one actual permanent being digivolved during cost
+    /// calculation (including a breeding-area base). False outside evolution
+    /// cost dispatch. Unlike `cost_target`, this reads the existing base.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_target_permanent: Option<Box<PredicateSpec>>,
+
     /// True when the effect's `source_permanent` is the (or one of the)
     /// permanent(s) being digivolved by the action whose cost is being
     /// computed. Use to gate "When THIS Digimon would digivolve into â€¦"
@@ -1174,7 +1184,7 @@ where
     } else {
         let keys: Vec<&str> = extra.keys().map(String::as_str).collect();
         Err(serde::de::Error::custom(format!(
-            "unknown predicate key(s): {} (not a PredicateSpec field â€” check the spelling \
+            "unknown predicate key(s): {} (not a PredicateSpec field — check the spelling \
              against code/digimon-dsl/src/predicate.rs)",
             keys.join(", ")
         )))

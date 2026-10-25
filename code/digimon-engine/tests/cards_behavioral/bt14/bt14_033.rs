@@ -163,6 +163,18 @@ fn place_patamon(runner: &mut DebugRunner) -> PermanentHandle {
     runner.place_on_field(0, "BT14-033", None)
 }
 
+fn security_commits(runner: &DebugRunner) -> Vec<u16> {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let view = runner.pending_selection_view().expect("security choice");
+    let page = view.card_choice.expect("physical security rows");
+    let commits: Vec<_> = page.rows.iter().filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard)).collect();
+    assert!(commits.iter().all(|row| row.owner == Some(0) && matches!(row.zone, Some(CardChoiceZone::Security))));
+    let mut legal: Vec<_> = commits.iter().map(|row| row.action_id).collect();
+    legal.push(digimon_engine::action::space::PASS);
+    assert_eq!(view.valid_action_ids, legal, "only matching cards plus optional decline are legal");
+    commits.iter().map(|row| row.action_id).collect()
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════
@@ -368,7 +380,7 @@ fn bt14_033_security_selection_filters_out_non_matching_colors_and_traits() {
         .pending_selection_view()
         .expect("selection view present");
     assert_eq!(
-        view.valid_action_ids.len(),
+        security_commits(&runner).len(),
         1,
         "only the yellow [Vaccine] security card should be a legal pick (RED-VAC excluded)"
     );
@@ -454,7 +466,7 @@ fn bt14_033_accepting_digivolve_removes_exactly_the_picked_card_from_security_pr
     let view = runner
         .pending_selection_view()
         .expect("Security selection must install");
-    assert_eq!(view.valid_action_ids.len(), 1, "only YEL-VAC is eligible");
+    assert_eq!(security_commits(&runner).len(), 1, "only YEL-VAC is eligible");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("accept");
@@ -1072,4 +1084,19 @@ fn bt14_033_inherited_dormant_while_patamon_is_top_card() {
         memory_before,
         "RULES 15-3-1: Patamon's own inherited clause is dormant while it is the top card of its own permanent"
     );
+}
+
+#[path = "../../support/printed_security_search.rs"]
+mod printed_security_search;
+
+#[test]
+fn bt14_033_printed_search_inspects_full_stack_with_and_without_matches_for_both_seats() {
+    for actor in [0,1] { for has_match in [false,true] {
+        let mut security=vec!["RED-VAC";40];if has_match {security[39]="YEL-VAC";}
+        let mut r=patamon_base().security(actor,&security).deck(0,&["FILLER";20]).deck(1,&["FILLER";20]).start();
+        r.skip_mulligan();r.game.turn_player_idx=actor as usize;
+        let host=r.place_on_field(actor,"BT14-033",Some(0));
+        r.game.enqueue_triggered(digimon_engine::EffectTiming::StartOfYourMainPhase,digimon_engine::TriggerSource::Permanent(host));r.game.drain_effect_queue();
+        printed_security_search::inspect_all_then_decline(&mut r,actor,if has_match {&[39]}else{&[]});
+    }}
 }

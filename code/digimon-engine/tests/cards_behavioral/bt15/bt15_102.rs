@@ -39,6 +39,22 @@ use digimon_engine::{CardEffect, CardHandle, Effect};
 
 const YAML: &str = include_str!("../../../cards/bt15/BT15-102.yaml");
 
+/// Find the printed Dark Master in the current owned mixed-zone menu. Rows
+/// rebind after each pick; cached aliases must never be treated as card identity.
+fn material_action(runner: &DebugRunner, card_id: &str) -> u16 {
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let pending = runner.game.pending_selection.as_ref().expect("material selection");
+    let row = pending.card_choice.as_ref().expect("material selection owns its page")
+        .view(&runner.game, pending.selecting_player).rows.into_iter()
+        .find(|row| matches!(row.operation, CardChoiceOperation::CommitCard)
+            && row.card_id.as_deref() == Some(card_id)).expect("the requested Dark Master is a legal physical candidate");
+    assert!(matches!(row.zone, Some(CardChoiceZone::BattleTop | CardChoiceZone::Trash)));
+    assert_eq!(row.owner, Some(pending.selecting_player));
+    assert_eq!(build_action_mask(&runner.game, pending.selecting_player)[row.action_id as usize], 1.0);
+    assert_eq!(build_action_mask(&runner.game, 1-pending.selecting_player)[row.action_id as usize], 0.0);
+    row.action_id
+}
+
 fn dark_master(card_id: &str, name: &str) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card_with_level(card_id, name, 6);
     card.traits = vec!["Dark Masters".to_string()];
@@ -200,13 +216,13 @@ fn bt15_102_play_with_three_dark_masters_pays_three_and_stacks_them_under() {
     assert_eq!(runner.current_phase(), GamePhase::SelectMaterial);
 
     runner
-        .execute_action(0, machine.index as u16)
+        .execute_action(0, material_action(&runner, "DM-MACHINE"))
         .expect("place the battle-area Machinedramon (top card only)");
     runner
-        .execute_action(0, TRASH_EFFECT_START)
+        .execute_action(0, material_action(&runner, "DM-PIED"))
         .expect("place Piedmon from trash");
     runner
-        .execute_action(0, TRASH_EFFECT_START + 1)
+        .execute_action(0, material_action(&runner, "DM-METAL"))
         .expect("place MetalSeadramon from trash");
     runner.execute_action(0, PASS).expect("finish at the cap");
 
@@ -274,7 +290,7 @@ fn bt15_102_same_named_dark_masters_cannot_both_be_placed() {
 
     assert_eq!(runner.game.play_from_hand(0, 0), None);
     runner
-        .execute_action(0, TRASH_EFFECT_START)
+        .execute_action(0, material_action(&runner, "DM-PUPPET"))
         .expect("place the first Puppetmon");
     let sel = runner.pending_selection().expect("selection re-installs");
     assert!(
@@ -306,7 +322,7 @@ fn bt15_102_mask_offers_play_at_memory_zero_only_via_potential_reduction() {
     // DCGO CanNoSelect: cannot stop while the remaining cost is unpayable.
     assert_eq!(runner.game.play_from_hand(0, 0), None);
     assert!(!runner.pending_selection().unwrap().is_optional);
-    runner.execute_action(0, TRASH_EFFECT_START).expect("1st");
+    runner.execute_action(0, material_action(&runner, "DM-PIED")).expect("1st");
     assert!(!runner.pending_selection().unwrap().is_optional, "cost 11");
     let next = *runner
         .pending_selection()

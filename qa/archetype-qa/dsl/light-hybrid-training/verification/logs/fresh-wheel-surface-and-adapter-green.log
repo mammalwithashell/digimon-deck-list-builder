@@ -1,0 +1,13 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 65 items
+
+code\tests\test_rust_bindings_surface.py ............................... [ 47%]
+.........................                                                [ 86%]
+code\tests\rl\test_rust_runner_adapter.py .........                      [100%]
+
+============================= 65 passed in 13.73s =============================

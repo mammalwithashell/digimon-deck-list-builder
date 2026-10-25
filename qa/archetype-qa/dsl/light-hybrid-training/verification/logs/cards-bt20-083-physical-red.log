@@ -1,0 +1,25 @@
+
+running 8 tests
+test bt20::bt20_083::bt20_083_has_blocker_grant_and_low_security_on_play_digivolve ... ok
+test bt20::bt20_083::bt20_083_has_on_deletion_and_inherited_security_removed_clauses ... ok
+test bt20::bt20_083::bt20_083_has_printed_metadata ... ok
+test bt20::bt20_083::bt20_083_inherited_breeding_effect_does_not_trigger_from_the_battle_area ... ok
+test bt20::bt20_083::bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload ... ok
+test bt20::bt20_083::bt20_083_inherited_breeding_security_removed_suspends_carrier_and_plays_omekamon_source ... FAILED
+test bt20::bt20_083::bt20_083_on_deletion_can_decline_place_self_under_king_drasil ... ok
+test bt20::bt20_083::bt20_083_on_deletion_places_self_under_king_drasil_only ... ok
+
+failures:
+
+---- bt20::bt20_083::bt20_083_inherited_breeding_security_removed_suspends_carrier_and_plays_omekamon_source stdout ----
+
+thread 'bt20::bt20_083::bt20_083_inherited_breeding_security_removed_suspends_carrier_and_plays_omekamon_source' (32416) panicked at code\digimon-engine\tests\cards_behavioral\bt20\bt20_083.rs:461:10:
+choose Omekamon breeding source: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    bt20::bt20_083::bt20_083_inherited_breeding_security_removed_suspends_carrier_and_plays_omekamon_source
+
+test result: FAILED. 7 passed; 1 failed; 0 ignored; 0 measured; 12747 filtered out; finished in 22.02s
+

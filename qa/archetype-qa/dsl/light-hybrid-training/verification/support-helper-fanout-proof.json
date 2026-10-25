@@ -1,0 +1,57 @@
+{
+  "actual_cargo_target_count": 266,
+  "discovered_target_count": 266,
+  "uncertain_targets": [],
+  "helper_scope": {
+    "dsl_card_data.rs": {
+      "full_suite_required": false,
+      "cards_behavioral_filter": "",
+      "cards": [],
+      "verbs": [],
+      "side_binaries": [
+        "cards_behavioral",
+        "effects",
+        "infra",
+        "light_hybrid_qualification_security_search",
+        "light_hybrid_training"
+      ],
+      "reasons": []
+    },
+    "named_material_kind_witness.rs": {
+      "full_suite_required": false,
+      "cards_behavioral_filter": "",
+      "cards": [],
+      "verbs": [],
+      "side_binaries": [
+        "named_material_kind_witness",
+        "review_named_material_independent"
+      ],
+      "reasons": []
+    },
+    "owned_card_choice.rs": {
+      "full_suite_required": false,
+      "cards_behavioral_filter": "",
+      "cards": [],
+      "verbs": [],
+      "side_binaries": [
+        "cards_behavioral",
+        "dsl",
+        "judge_quiz",
+        "replacements"
+      ],
+      "reasons": []
+    },
+    "printed_security_search.rs": {
+      "full_suite_required": false,
+      "cards_behavioral_filter": "",
+      "cards": [],
+      "verbs": [],
+      "side_binaries": [
+        "cards_behavioral",
+        "light_hybrid_qualification_bt15",
+        "light_hybrid_qualification_security_search"
+      ],
+      "reasons": []
+    }
+  }
+}

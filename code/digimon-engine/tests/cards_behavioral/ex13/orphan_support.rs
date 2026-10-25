@@ -176,6 +176,10 @@ pub(super) fn offered_hand_ids(r: &DebugRunner) -> Vec<String> {
 pub(super) fn pick_hand(r: &mut DebugRunner, id: &str) {
     let view = r.pending_selection_view().expect("hand prompt pending");
     let p = view.selecting_player;
+    if r.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some(){
+        let a=physical_fixture::zone_action(&r.game,p,hand_index(r,p,id),digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+        r.execute_action(p,a).expect("physical hand choice");return;
+    }
     let slot = hand_index(r, p, id) as u16;
     let a = [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
         .into_iter()
@@ -188,6 +192,11 @@ pub(super) fn pick_hand(r: &mut DebugRunner, id: &str) {
 pub(super) fn pick_trash(r: &mut DebugRunner, id: &str) {
     let view = r.pending_selection_view().expect("trash prompt pending");
     let p = view.selecting_player;
+    if r.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some(){
+        let index=r.game.player(p).trash.iter().position(|c|c.card_id(&r.game.card_data)==id).expect("named fixture trash card");
+        let a=physical_fixture::zone_action(&r.game,p,index,digimon_engine::owned_card_choice::CardChoiceZone::Trash);
+        r.execute_action(p,a).expect("physical trash choice");return;
+    }
     let trash = trash_ids(r, p);
     let a = view
         .valid_action_ids
@@ -348,3 +357,6 @@ pub(super) fn cycle_to_my_turn_with_memory(r: &mut DebugRunner, my_memory: i16) 
     r.game.memory = -my_memory;
     r.end_turn();
 }
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;

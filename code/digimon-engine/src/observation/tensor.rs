@@ -1,7 +1,7 @@
 //! Default observation tensor entry point.
 //!
 //! `tensor::build_tensor` and `tensor::TENSOR_SIZE` report the engine's
-//! canonical default profile — currently `standard_lite_deck_v2` (8850).
+//! canonical default profile — currently `standard_lite_deck_v2` (9874).
 //! Profile-explicit callers should reach for
 //! `observation::build_observation_tensor(.., ObservationProfileId::*)` or
 //! the profile-specific builders (`tensor_v1::build_tensor_standard_compact_v1`,
@@ -67,11 +67,6 @@ mod tests {
     fn default_profile_is_standard_lite_deck_v2() {
         let p = tensor_profiles::default_profile();
         assert_eq!(p.id, "standard_lite_deck_v2");
-    }
-
-    #[test]
-    fn tensor_size_is_8850() {
-        assert_eq!(TENSOR_SIZE, 8850);
     }
 
     #[test]

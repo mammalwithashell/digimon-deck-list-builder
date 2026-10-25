@@ -1,0 +1,180 @@
+{
+  "status": "complete_required_qualification_and_exact_deck_training_admission_passed",
+  "target_dir": "C:/Users/james/.codex/build-targets/light-hybrid-training-qualification-opt",
+  "profile": "dev",
+  "opt_level": 2,
+  "debug": 0,
+  "debug_assertions": true,
+  "live_rustc_observation": "Process31820 compiled digimon_engine with -C opt-level=2 -C debug-assertions=on -C strip=debuginfo",
+  "scope": "Run scripts/verify --tier2 --continue-on-failure after corrected helper fanout plan and stable source. No filters or test scope reductions. SERIAL_ENV remains stack268435456 and one thread wherever verifier mandates.",
+  "preliminary_plan": "optimized-tier2-plan.json",
+  "preliminary_plan_limit": "40-entry preliminary plan includes nonexistent side_support; mapper correction must replace it with real helper consumers, not drop their coverage.",
+  "warmup_log": "logs/optimized-qualification-library-warmup.log",
+  "warmup_seconds": 434,
+  "latest_plan": "frozen-final-tier2-plan.json",
+  "latest_plan_suites": 93,
+  "latest_plan_scope": "Frozen complete inclusive plan, full_suite_required=true; all93 suites retained with no gameplay test filters or scope reductions.",
+  "verification_tool_tests_passed": 183,
+  "pending": null,
+  "run_session": 3003,
+  "plan": "frozen-final-tier2-plan.json",
+  "planned_suites": 93,
+  "run_log": "logs/frozen-final-tier2-clean-run.log",
+  "first_cards_snapshot": {
+    "total": 12764,
+    "passed": 12567,
+    "failed": 162,
+    "ignored": 35,
+    "seconds": 2705.13,
+    "scope": "Earlier immutable snapshot; failed-case modules migrated and whole canonical modules requalified, plus actual Link tail fix. Does not count as a passing aggregate."
+  },
+  "final_source_unit_proof": {
+    "passed": 507,
+    "failed": 0,
+    "log": "logs/optimized-final-current-engine-unit-tests.log"
+  },
+  "final_source_native_python_proof": {
+    "passed": 123,
+    "failed": 0,
+    "log": "logs/final-link-pin-release-wheel-normal-stack-check.log"
+  },
+  "obsolete_std0_jobs": {
+    "old_primary_32392_exit": -1,
+    "old_cached_32193_exit": -1,
+    "proof": "obsolete-std0-full-cancellation.json",
+    "scope": "Authoritatively terminal after expanded optimized full-card snapshot; logs retained. Current frozen final session3003 is separate and active."
+  },
+  "planning_history": {
+    "previous_inclusive_plan": "optimized-tier2-plan-inclusive.json",
+    "previous_inclusive_suites": 67,
+    "previous_scope": "All42 prior real suites retained,25 new native sides from inclusive staged/unstaged/untracked inventory; all side targets validated against Cargo metadata.",
+    "previous_expanded_plan": "optimized-final-tier2-plan.json",
+    "previous_expanded_suites": 77
+  },
+  "prior_expanded_77_run": {
+    "session": 35818,
+    "status": "terminal_failed",
+    "exit_code": 1,
+    "log": "logs/optimized-final-tier2-full-run.log",
+    "failed_suite_summary_rows": [
+      "- tier 2 cards_behavioral_full_required: failed (3027.3s)",
+      "- tier 2 side_cards_behavioral: failed (2307.5s)",
+      "- tier 2 side_mixed_zone_distinct: failed (1.2s)",
+      "- tier 2 replay_goldens_verify: failed (67.9s)"
+    ],
+    "first_fullcards": {
+      "passed": 12567,
+      "failed": 162,
+      "ignored": 35
+    },
+    "second_fullcards": {
+      "passed": 12712,
+      "failed": 17,
+      "ignored": 35
+    },
+    "qualification_limit": "Historical immutable card snapshots failed. All mapped canonical fixtures subsequently passed; missing mixed-zone wrapper resolver separately fixed with39passing cases. Three old replay failures diagnosed and bounded refresh qualified10recordings/635actions. This run is not a clean aggregate pass."
+  },
+  "first_clean_fullcards": {
+    "total": 12764,
+    "passed": 12729,
+    "failed": 0,
+    "ignored": 35,
+    "filtered_out": 0,
+    "seconds": 2324.93,
+    "log": "logs/frozen-final-tier2-clean-run.log",
+    "scope": "First of two complete full-card passes in terminal successful frozen final93 run; existing35 ignores retained in each pass."
+  },
+  "current_second_fullcards": {
+    "status": "passed",
+    "total": 12764,
+    "passed": 12729,
+    "failed": 0,
+    "ignored": 35,
+    "filtered_out": 0,
+    "seconds": 2040.1,
+    "log": "logs/frozen-final-tier2-clean-run.log"
+  },
+  "replay_corpus_qualification": {
+    "status": "passed_bounded_supported_refresh",
+    "recordings": 10,
+    "actions": 635,
+    "failed": 0,
+    "log": "logs/replay-three-bounded-whole-corpus-verify.log",
+    "retirement_audit": "qa/replay-goldens/retired/2026-10-25-owned-choice-p249/retirement-audit.json",
+    "scope": "Only three diagnosed generated recordings refreshed via supported replay tooling; byte-identical originals and SHA256 provenance retained, seven other recordings unchanged. Includes P-249 static token data-index diagnosis; no production changes.",
+    "aggregate_limit": "Final93 replay_goldens_verify suite also passed; invariant fuzz passed."
+  },
+  "card_gate": {
+    "status": "accepted",
+    "admitted_unique_ids": 20,
+    "total_unique_ids": 20,
+    "admitted_copies": 54,
+    "total_copies": 54,
+    "blocked_ids": [],
+    "promotion_performed": true,
+    "promoted_ids": [
+      "BT18-037",
+      "BT18-042",
+      "BT18-063",
+      "BT18-076"
+    ],
+    "global_admissible_ids": 1066,
+    "global_total_ids": 4477,
+    "public_validate_admissible_deck": "accepted",
+    "mechanics_ready": true,
+    "registered_and_production_data": true,
+    "evidence": "final-exact-deck-admission.json",
+    "source_sha256": "92ec23d1c154591f50c0ced36ffbede106f9bb84d7ef01d810e5485b22994091",
+    "wheel_sha256": "5ddd98b9124c86d74d86cd1eb2c716d25b02330784eadff9887e65d775c53fa9",
+    "scope": "Simulator training admission only; no live DCGO certification or trained-model quality claim."
+  },
+  "completion_proven": true,
+  "run_status": "terminal_passed",
+  "run_exit_code": 0,
+  "aggregate_result": {
+    "session": 3003,
+    "status": "terminal_passed",
+    "exit_code": 0,
+    "suites": 93,
+    "passed_suites": 93,
+    "failed_suites": 0,
+    "summary_rows_verified": true,
+    "log": "logs/frozen-final-tier2-clean-run.log",
+    "full_card_passes": [
+      {
+        "passed": 12729,
+        "failed": 0,
+        "ignored": 35,
+        "filtered_out": 0,
+        "seconds": 2324.93
+      },
+      {
+        "passed": 12729,
+        "failed": 0,
+        "ignored": 35,
+        "filtered_out": 0,
+        "seconds": 2040.1
+      }
+    ],
+    "replay_recordings": 10,
+    "replay_actions": 635,
+    "replay_passed": true,
+    "invariant_fuzz_passed": true
+  },
+  "final_tier0_freshness": {
+    "status": "terminal_passed",
+    "session": 84850,
+    "exit_code": 0,
+    "suites": 13,
+    "passed_suites": 13,
+    "failed_suites": 0,
+    "summary_rows_verified": true,
+    "log": "logs/promoted-final-tier0-full-run.log",
+    "scope": "Final post-promotion impact/lowering/admission and all Tier0 artifact freshness checks passed."
+  },
+  "qualification_scope": "Exact frozen local54-copy20-ID Light Hybrid list is accepted for simulator training. No trained-policy quality or live DCGO certification claim.",
+  "out_of_scope": [
+    "trained-policy quality or production-model promotion",
+    "live DCGO oracle certification"
+  ]
+}

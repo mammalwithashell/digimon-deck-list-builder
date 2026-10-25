@@ -1,6 +1,9 @@
 use digimon_dsl::compiled::{CompiledBindingRef, CompiledClause, CompiledStep, CompiledZone};
 use digimon_dsl::{compile::compile, spec::CardSpec};
-use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
+use digimon_engine::action::space::PASS;
+use digimon_engine::owned_card_choice::CardChoiceZone;
+#[path = "../support/owned_card_choice.rs"]
+mod physical_menu;
 use digimon_engine::debug_runner::DebugRunner;
 
 fn digixros_yaml() -> &'static str {
@@ -173,12 +176,11 @@ fn turn_scoped_wildcard_step_makes_source_legal_for_later_digixros() {
     let prompt = runner
         .pending_selection()
         .expect("DigiXros material prompt");
-    assert!(
-        prompt.valid_action_ids.contains(&wildcard_index),
-        "turn-scoped wildcard source should be offered as the missing Ballistamon requirement"
-    );
+    let wildcard_action = physical_menu::battle_top_action(&runner.game, digimon_engine::permanent::PermanentHandle { player: 0, index: wildcard_index as u8 });
+    assert!(prompt.valid_action_ids.contains(&wildcard_action),
+        "turn-scoped wildcard source should be offered as the missing Ballistamon requirement");
     runner
-        .execute_action(0, wildcard_index)
+        .execute_action(0, wildcard_action)
         .expect("select wildcard material");
     runner
         .execute_action(0, PASS)
@@ -212,7 +214,7 @@ fn digixros_material_prompt_clones_faithfully() {
         "DigiXros material prompt must park a data frame"
     );
 
-    let material_action = HAND_EFFECT_START + 1;
+    let material_action = physical_menu::card_action(&runner.game, "DX-WILDCARD", CardChoiceZone::Hand);
     let mut clone = runner.game.clone();
     clone
         .resolve_selection(0, material_action)

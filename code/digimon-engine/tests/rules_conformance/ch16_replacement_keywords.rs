@@ -39,7 +39,7 @@
 
 use crate::fixtures;
 use crate::support::*;
-use digimon_engine::action::space::{encode_source_select, ATTACK_START};
+use digimon_engine::action::space::ATTACK_START;
 use digimon_engine::card_data::{parse_printed_keywords, CardData};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{Keyword, PlayerId};
@@ -203,21 +203,33 @@ fn attack_with_lv5(r: &mut DebugRunner, defender: PermanentHandle) {
     r.attack_digimon(attacker, defender, false);
 }
 
-/// Pick the digivolution card `card_id` of `h` in a pending source pick.
+/// Look up the current legal row for a physical source, without old ID geometry.
+fn source_action(r: &DebugRunner, host: PermanentHandle, index: usize) -> Option<u16> {
+    use digimon_engine::{action::build_action_mask, owned_card_choice::{CardChoiceOperation, CardChoiceZone}};
+    let pending = r.game.pending_selection.as_ref().expect("a source pick");
+    let owner = pending.card_choice.as_ref().expect("source pick owns its physical page");
+    let row = owner.view(&r.game, pending.selecting_player).rows.into_iter().find(|row| {
+        matches!(row.operation, CardChoiceOperation::CommitCard)
+            && matches!(row.zone, Some(CardChoiceZone::BattleSource | CardChoiceZone::BreedingSource))
+            && row.owner == Some(host.player) && row.carrier_slot == Some(host.index)
+            && row.position.as_deref().and_then(|p| p.parse::<usize>().ok()) == Some(index)
+    })?;
+    assert_eq!(build_action_mask(&r.game, pending.selecting_player)[row.action_id as usize], 1.0);
+    assert_eq!(build_action_mask(&r.game, 1-pending.selecting_player)[row.action_id as usize], 0.0);
+    Some(row.action_id)
+}
+
+/// Pick the exact currently resident digivolution card `card_id` under `h`.
 fn pick_source(r: &mut DebugRunner, h: PermanentHandle, card_id: &str) {
-    let index = stack_ids(r, h)
-        .iter()
-        .position(|c| c == card_id)
+    let index = stack_ids(r, h).iter().position(|c| c == card_id)
         .unwrap_or_else(|| panic!("{card_id} is not in the stack of {h:?}"));
-    let action = encode_source_select(h.index as u16, index as u16).expect("addressable source");
-    let sel = r.pending_selection().expect("a source pick");
-    assert!(
-        sel.valid_action_ids.contains(&action),
-        "{card_id} (source {index}) is a legal pick: {sel:?}"
-    );
-    let player = sel.selecting_player;
-    r.execute_action(player, action)
-        .unwrap_or_else(|e| panic!("source pick {card_id} rejected: {e:?}"));
+    let selected = r.game.player(h.player).battle_area[h.index as usize].card_sources[index].handle();
+    let action = source_action(r, h, index).unwrap_or_else(|| panic!("{card_id} (source {index}) is not in the legal physical menu"));
+    let player = r.pending_selection().unwrap().selecting_player;
+    // The lookup is tied to a real source, rather than accepting an alias that
+    // can point at a different row after the candidate pool contracts.
+    assert_eq!(r.game.card_data_for_handle(selected).unwrap().card_id, card_id);
+    r.execute_action(player, action).unwrap_or_else(|e| panic!("source pick {card_id} rejected: {e:?}"));
 }
 
 // ─── §16-18 <Decoy> ─────────────────────────────────────────────────────────
@@ -1643,14 +1655,10 @@ fn specified_cards_follow_the_icon_note() {
     assert!(advance_to(&mut r, optional_for(1)));
     accept(&mut r, 1);
     if r.pending_selection().is_some() {
-        let blue = encode_source_select(decode.index as u16, 1).unwrap();
-        let red = encode_source_select(decode.index as u16, 0).unwrap();
-        let sel = r.pending_selection().unwrap();
-        assert!(
-            !sel.valid_action_ids.contains(&red),
-            "the red Lv.4 is not a specified card: {sel:?}"
-        );
-        assert!(sel.valid_action_ids.contains(&blue), "{sel:?}");
+        assert!(source_action(&r, decode, 0).is_none(),
+            "red Lv.4 is not a specified card and has no legal row");
+        let blue = source_action(&r, decode, 1).expect("blue Lv.4 is the specified physical card");
+        assert!(r.pending_selection().unwrap().valid_action_ids.contains(&blue));
     }
     settle_declining(&mut r);
     assert_eq!(field_top_ids(&r, 1), owned(&["BLUE_LV4"]));

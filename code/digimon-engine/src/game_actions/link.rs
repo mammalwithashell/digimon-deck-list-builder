@@ -280,6 +280,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(owner),
             kind: SelectionKind::OwnField,
             selecting_player: owner,
@@ -462,6 +463,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(owner),
             kind: SelectionKind::OwnField,
             selecting_player: owner,
@@ -1459,6 +1461,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: state.chooser,

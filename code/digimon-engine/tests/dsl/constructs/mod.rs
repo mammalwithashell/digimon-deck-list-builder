@@ -1,4 +1,5 @@
 //! Behavioral tests for DSL constructs, grouped by family.
+mod light_hybrid_predicates;
 
 pub mod security_stack;
 pub mod play_digivolve_link;
@@ -21,3 +22,19 @@ pub mod breeding_move_binding;
 pub mod evolution_candidate_cost;
 pub mod reveal_digivolve_candidate;
 pub mod meta_play_and_source_predicates;
+
+pub mod mixed_zone_distinct;
+
+mod hand_target_digivolve_reduction;
+
+mod scoped_protection_security_tail;
+
+mod security_top_placement_receipt;
+
+mod effect_attack_pending_guard;
+
+mod selected_source_security_receipt;
+
+mod bound_card_property;
+mod controller_security_add_eligibility;
+mod effect_play_results;

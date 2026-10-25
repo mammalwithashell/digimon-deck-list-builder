@@ -63,8 +63,8 @@ fn bt10_009_declares_digixros_x4_recipe() {
 #[test]
 fn bt10_009_digixros_two_field_materials_reduce_cost_and_attach_sources() {
     let mut runner = runner_with_bt10_009();
-    runner.place_on_field(0, "BT10-008", Some(0));
-    runner.place_on_field(0, "BT10-049", Some(0));
+    let shoutmon = runner.place_on_field(0, "BT10-008", Some(0));
+    let ballistamon = runner.place_on_field(0, "BT10-049", Some(0));
 
     let memory_before = runner.memory();
     let _ = runner.play(0, 0);
@@ -77,27 +77,30 @@ fn bt10_009_digixros_two_field_materials_reduce_cost_and_attach_sources() {
         first_prompt.is_optional,
         "DigiXros material selection must allow stopping with fewer than all recipe materials"
     );
+    let shoutmon_action = physical_menu::battle_top_action(&runner.game, shoutmon);
+    let ballistamon_action = physical_menu::battle_top_action(&runner.game, ballistamon);
     assert!(
-        first_prompt.valid_action_ids.contains(&0),
+        first_prompt.valid_action_ids.contains(&shoutmon_action),
         "Shoutmon in battle-area slot 0 must be selectable as DigiXros material"
     );
     assert!(
-        first_prompt.valid_action_ids.contains(&1),
+        first_prompt.valid_action_ids.contains(&ballistamon_action),
         "Ballistamon in battle-area slot 1 must be selectable as DigiXros material"
     );
 
     runner
-        .execute_action(0, 0)
+        .execute_action(0, shoutmon_action)
         .expect("select Shoutmon as first DigiXros material");
     let second_prompt = runner
         .pending_selection()
         .expect("DigiXros transaction should continue after first material");
+    let ballistamon_action = physical_menu::battle_top_action(&runner.game, ballistamon);
     assert!(
-        second_prompt.valid_action_ids.contains(&1),
+        second_prompt.valid_action_ids.contains(&ballistamon_action),
         "Ballistamon remains selectable as second DigiXros material"
     );
     runner
-        .execute_action(0, 1)
+        .execute_action(0, ballistamon_action)
         .expect("select Ballistamon as second DigiXros material");
     runner
         .execute_action(0, PASS)
@@ -134,3 +137,6 @@ fn bt10_009_digixros_two_field_materials_reduce_cost_and_attach_sources() {
         "Ballistamon source should be attached"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

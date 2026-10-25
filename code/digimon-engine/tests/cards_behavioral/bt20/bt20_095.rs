@@ -173,6 +173,9 @@ fn union_action(r: &DebugRunner, owner: u8, id: &str, trash: bool) -> u16 {
         .iter()
         .position(|c| c.card_id(&r.game.card_data) == id)
         .expect("zone card exists");
+    if r.game.pending_selection.as_ref().and_then(|p|p.card_choice.as_ref()).is_some() {
+        return owned_union_fixture::action(&r.game, owner, id, trash).expect("printed eligible card has a legal physical row");
+    }
     (if trash {
         space::TRASH_EFFECT_START
     } else {
@@ -515,12 +518,8 @@ fn bt20_095_evolution_mask_keeps_printed_routes_and_chronicle_digimon_restrictio
     accept_move(&mut r);
     choices(&r, 0, 2, true);
     for id in hand {
-        let action = union_action(&r, 0, id, false);
-        assert_eq!(
-            build_action_mask(&r.game, 0)[action as usize],
-            if id == "EVOLUTION" { 1.0 } else { 0.0 },
-            "{id}"
-        );
+        let action = owned_union_fixture::action(&r.game, 0, id, false);
+        assert_eq!(action.is_some(), id == "EVOLUTION", "{id} physical eligibility");
     }
     choose(&mut r, space::PASS);
 }
@@ -642,16 +641,8 @@ fn bt20_095_security_union_mask_excludes_wrong_trait_cost_options_and_eggs() {
     attack_security(&mut r);
     choices(&r, 1, 4, true);
     for id in hand {
-        let action = union_action(&r, 1, id, false);
-        assert_eq!(
-            build_action_mask(&r.game, 1)[action as usize],
-            if ["CHRON5", "TAMER"].contains(&id) {
-                1.0
-            } else {
-                0.0
-            },
-            "{id}"
-        );
+        let action = owned_union_fixture::action(&r.game, 1, id, false);
+        assert_eq!(action.is_some(), ["CHRON5", "TAMER"].contains(&id), "{id} physical eligibility");
     }
     choose(&mut r, space::PASS);
     r.auto_resolve().unwrap();
@@ -707,3 +698,6 @@ fn bt20_095_security_masks_effect_play_prohibitions_without_suppressing_delay_pl
         assert!(has(&r, 1, blocked, false));
     }
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

@@ -579,16 +579,10 @@ fn bt26_097_security_plays_cost_five_or_lower_ts_from_hand_free_then_adds_self()
     reveal_from_security(&mut r);
     let v = r.pending_selection_view().expect("security play prompt");
     assert!(v.is_optional, "'you may play'");
-    let ts5 = r.game.players[0].hand.iter().position(|c| c.card_id(&r.game.card_data) == "TS5").unwrap();
-    let ts6 = r.game.players[0].hand.iter().position(|c| c.card_id(&r.game.card_data) == "TS6").unwrap();
-    let plain = r.game.players[0].hand.iter().position(|c| c.card_id(&r.game.card_data) == "PLAIN3").unwrap();
-    let opt = r.game.players[0].hand.iter().position(|c| c.card_id(&r.game.card_data) == "TSOPT").unwrap();
-    let ids = v.valid_action_ids.clone();
-    let hand_action = |i: usize| digimon_engine::action::space::PLAY_HAND_START + i as u16;
-    assert!(ids.contains(&hand_action(ts5)));
-    assert!(!ids.contains(&hand_action(ts6)), "play cost 6 is too high");
-    assert!(!ids.contains(&hand_action(plain)), "not [TS]");
-    assert!(!ids.contains(&hand_action(opt)), "an Option card is used, not played");
+    let rows=physical_menu::commits(&r.game);
+    assert_eq!(rows.len(),1,"only the cost-five-or-lower TS Digimon is a legal play; TS6, plain and Option are excluded");
+    let index=r.game.player(0).hand.iter().position(|card|card.card_id(&r.game.card_data)=="TS5").unwrap();
+    assert_eq!(rows[0].action_id,physical_menu::zone_action(&r.game,0,index,digimon_engine::owned_card_choice::CardChoiceZone::Hand));
     pick_hand(&mut r, 0, "TS5");
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"TS5".to_string()));
@@ -630,12 +624,15 @@ fn bt26_097_security_can_play_a_cost_five_or_lower_ts_tamer_free() {
     let pos = |r: &DebugRunner, id: &str| {
         r.game.players[0].hand.iter().position(|c| c.card_id(&r.game.card_data) == id).unwrap()
     };
-    let hand_action = |i: usize| digimon_engine::action::space::PLAY_HAND_START + i as u16;
-    assert!(v.valid_action_ids.contains(&hand_action(pos(&r, "DAN"))), "a cost-3 [TS] Tamer is offered");
-    assert!(!v.valid_action_ids.contains(&hand_action(pos(&r, "TSTAMER6"))), "play cost 6 is too high");
+    let rows=physical_menu::commits(&r.game);
+    assert_eq!(rows.len(),1,"only the cost-three TS Tamer can play; cost-six Tamer is excluded");
+    assert_eq!(rows[0].action_id,physical_menu::zone_action(&r.game,0,pos(&r,"DAN"),digimon_engine::owned_card_choice::CardChoiceZone::Hand));
     pick_hand(&mut r, 0, "DAN");
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"DAN".to_string()), "the Tamer is played");
     assert!(hand_ids(&r, 0).contains(&CARD_ID.to_string()), "then add this card to the hand");
     assert_eq!(r.memory(), mem, "without paying the cost");
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

@@ -46,7 +46,7 @@ pub fn try_install(
     step: &CompiledStep,
     tail: &[CompiledStep],
     ctx: &mut EffectContext<'_>,
-    bindings: Bindings,
+    mut bindings: Bindings,
     runtime: &StepRuntime,
 ) -> bool {
     let CompiledStep::LinkCards {
@@ -64,6 +64,15 @@ pub fn try_install(
     else {
         return false;
     };
+
+    let carrier_key = link_source_carrier_key(ctx.source_card);
+    if bindings.selected_identity_pin(&carrier_key).is_none() {
+        if let Some(host) = ctx.source_permanent {
+            if let Some(identity) = ctx.game.capture_source_play_host_identity(host) {
+                bindings.pin_private_link_identity(&carrier_key, host.player, identity);
+            }
+        }
+    }
 
     let spec = Arc::new(LinkCardsSpec {
         from: from.clone(),
@@ -87,6 +96,21 @@ pub fn try_install(
         runtime.clone(),
     );
     true
+}
+
+fn link_source_carrier_key(card: CardHandle) -> String { crate::dsl_cards::binding_ref::link_source_carrier_pin_key(card) }
+fn link_material_carrier_key(card: CardHandle) -> String { format!("\0link_material_carrier:{}", card.0) }
+
+fn resolve_link_material(game: &crate::game::Game, bindings: &Bindings, card: CardHandle, source: LinkCardSource) -> Option<LinkCardSource> {
+    let LinkCardSource::DigivolutionSource(host) = source else { return Some(source); };
+    let key=link_material_carrier_key(card);
+    let live=if let Some((player,identity))=bindings.selected_identity_pin(&key) {
+        if player != host.player { return None; }
+        game.resolve_source_play_host_identity(host,identity)?
+    } else { host };
+    let carrier=crate::effect_context::material_carrier_permanent(game,live)?;
+    carrier.card_sources.iter().take(carrier.card_sources.len().saturating_sub(1))
+        .any(|source|source.handle()==card).then_some(LinkCardSource::DigivolutionSource(live))
 }
 
 /// Immutable per-step configuration, shared across the recursive pick loop.
@@ -263,8 +287,8 @@ pub(crate) enum LinkStage {
     /// `select_hand` / `select_trash` over the zone's filtered cards. Decode by
     /// index; optional (UpTo) ⇒ PASS runs the captured tail.
     CardSelectHandTrash { zone: CompiledLinkSourceZone },
-    /// `select_own_sources(min,1)` over the digivolution-source zones. Decode via
-    /// `decode_source_select`; PASS (min=0) runs the captured tail. `restrict_to`
+    /// `select_own_sources(min,1)` over the digivolution-source zones. Consume
+    /// the owned physical source; PASS (min=0) runs the captured tail. `restrict_to`
     /// is `Some` for `SelfSources` (the effect's own permanent).
     CardSelectSources {
         restrict_to: Option<PermanentHandle>,
@@ -342,51 +366,23 @@ fn link_card_at_index(
         .then_some(card)
 }
 
-/// Reconstruct + validate the digivolution source at `(field, source_index)`
-/// under the controller's own permanent (mirrors `install_card_select_sources`'s
-/// `matches_source`). Must be BELOW the stack top and pass the link filter on the
-/// card; honors `restrict_to` (`SelfSources`). `None` ⇒ stale/invalid.
+/// Revalidate the physical source resolved by the owned menu, without decoding
+/// its page action as an old positional source action.
 fn link_source_at(
     game: &crate::game::Game,
     prov: &crate::resume::ResumeProvenance,
     filter: &CompiledPredicate,
     bindings: &Bindings,
     restrict_to: Option<PermanentHandle>,
-    field: u16,
-    source_index: u16,
+    source: SourceSelectionRef,
 ) -> Option<SourceSelectionRef> {
-    let player = prov.controller;
-    let permanent = PermanentHandle {
-        player,
-        index: field as u8,
-    };
-    if let Some(only) = restrict_to {
-        if permanent != only {
-            return None;
-        }
-    }
-    let perm = game.player(player).battle_area.get(field as usize)?;
-    let top = perm.card_sources.len().saturating_sub(1);
-    if source_index as usize >= top {
-        return None; // the stack top is the live Digimon, never a link source
-    }
-    let card = perm.card_sources.get(source_index as usize)?.handle();
+    if source.permanent.player != prov.controller || restrict_to.is_some_and(|only| only != source.permanent) { return None; }
+    let carrier=crate::effect_context::material_carrier_permanent(game,source.permanent)?;
+    if source.source_index >= carrier.card_sources.len().saturating_sub(1)
+        || carrier.card_sources.get(source.source_index)?.handle() != source.card { return None; }
     let read = crate::effect_context::EffectReadContext::new_with_source_kind(
-        game,
-        prov.source_card,
-        prov.source_permanent,
-        prov.source_kind,
-        player,
-    );
-    if !eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(card), Some(bindings)) {
-        return None;
-    }
-    Some(SourceSelectionRef {
-        permanent,
-        field_index: field as u8,
-        source_index: source_index as u8,
-        card,
-    })
+        game,prov.source_card,prov.source_permanent,prov.source_kind,prov.controller);
+    eval_predicate_with_bindings(filter,&read,PredicateSubject::Card(source.card),Some(bindings)).then_some(source)
 }
 
 /// Drive one resolution of a parked `LinkPickState` (resumable VM). Decodes the
@@ -403,7 +399,7 @@ pub(crate) fn run_link_pick_step(
     };
 
     let LinkPickState {
-        prov,
+        mut prov,
         spec,
         pick_index,
         stage,
@@ -413,6 +409,10 @@ pub(crate) fn run_link_pick_step(
         outer_conts,
         trigger_context,
     } = state;
+    let carrier_key=link_source_carrier_key(prov.source_card);
+    if bindings.selected_identity_pin(&carrier_key).is_some() {
+        prov.source_permanent=bindings.resolve_selected_identity(game,&carrier_key);
+    }
     let previous_trigger_context =
         std::mem::replace(&mut game.current_trigger_context, trigger_context);
 
@@ -469,16 +469,20 @@ pub(crate) fn run_link_pick_step(
             if is_pass {
                 Advance::RunTail
             } else {
-                let (field, source_index) = crate::action::space::decode_source_select(action_id);
-                match link_source_at(
+                let selected = game.resolved_card_choice.take().and_then(|choice|choice.source_ref());
+                // SelfSources candidates were pinned under the original carrier.
+                // Its resolved identity is authoritative after board compaction.
+                let live_restriction = if restrict_to.is_some() {
+                    prov.source_permanent
+                } else { None };
+                match selected.and_then(|source|link_source_at(
                     game,
                     &prov,
                     &spec.filter,
                     &bindings,
-                    *restrict_to,
-                    field,
-                    source_index,
-                )
+                    live_restriction,
+                    source,
+                ))
                 .filter(|s| {
                     LinkGate::for_spec(&spec, prov.source_permanent).ok(
                         game,
@@ -904,25 +908,26 @@ fn install_card_select_sources(
         _ => None,
     };
     let filter_bindings = bindings.clone();
-    let gate = LinkGate::for_spec(&spec, ctx.source_permanent);
+    let source_identity = source_permanent.and_then(|host| ctx.game.capture_source_play_host_identity(host));
+    let filter_spec = Arc::clone(&spec);
 
     // `select_own_sources` exposes PASS once min is met; min=0 for UpTo,
     // min=1 for Exactly (the pick is mandatory). max=1: exactly one card.
     let min = if optional { 0 } else { 1 };
 
-    let matches_source = move |game: &crate::game::Game, sref: SourceSelectionRef| -> bool {
+    let matches_source: Arc<dyn Fn(&crate::game::Game, SourceSelectionRef) -> bool + Send + Sync> = Arc::new(move |game: &crate::game::Game, sref: SourceSelectionRef| -> bool {
         if sref.permanent.player != player {
             return false;
         }
-        if let Some(only) = restrict_to {
-            if sref.permanent != only {
-                return false;
-            }
-        }
+        let live_source = source_permanent.zip(source_identity)
+            .and_then(|(host, identity)| game.resolve_source_play_host_identity(host, identity));
+        if restrict_to.is_some() && live_source != Some(sref.permanent) { return false; }
+        if matches!(filter_spec.to, CompiledLinkTo::SelfPermanent) && live_source.is_none() { return false; }
+        let gate = LinkGate::for_spec(&filter_spec, live_source);
         let read = crate::effect_context::EffectReadContext::new_with_source_kind(
             game,
             source_card,
-            source_permanent,
+            live_source,
             source_kind,
             player,
         );
@@ -932,7 +937,8 @@ fn install_card_select_sources(
             PredicateSubject::Card(sref.card),
             Some(&filter_bindings),
         ) && gate.ok(game, player, sref.card)
-    };
+    });
+    let mask_filter=Arc::clone(&matches_source);
 
     // Resumable-VM copies captured before the callback moves them.
     let frame_spec = Arc::clone(&spec);
@@ -944,19 +950,28 @@ fn install_card_select_sources(
         &prompt,
         min,
         1,
-        matches_source,
+        move |game, source| matches_source(game,source),
         move |cb_ctx, picked: Vec<SourceSelectionRef>| {
             let Some(sref) = picked.first().copied() else {
                 // PASS / no pick (only reachable when min == 0): end the loop.
                 run_captured_tail(cb_ctx, &tail, bindings, &runtime);
                 return;
             };
+            cb_ctx.source_permanent = source_permanent.zip(source_identity)
+                .and_then(|(host, identity)| cb_ctx.game.resolve_source_play_host_identity(host, identity));
             let source = LinkCardSource::DigivolutionSource(sref.permanent);
             after_card_chosen(
                 cb_ctx, spec, pick_index, sref.card, source, tail, bindings, runtime,
             );
         },
     );
+    if let Some(owner)=ctx.game.pending_selection.as_mut().and_then(|pending|pending.card_choice.as_mut()) {
+        owner.set_source_completion_filter(move |game,candidate| match candidate {
+            None => true,
+            Some(crate::owned_card_choice::CardChoicePin::Source(pin)) => pin.resolve_ref(game).is_some_and(|source|mask_filter(game,source)),
+            _ => false,
+        });
+    }
     park_link_frame(
         ctx,
         frame_spec,
@@ -1006,9 +1021,14 @@ fn after_card_chosen(
     card: CardHandle,
     source: LinkCardSource,
     tail: Arc<Vec<CompiledStep>>,
-    bindings: Bindings,
+    mut bindings: Bindings,
     runtime: StepRuntime,
 ) {
+    if let LinkCardSource::DigivolutionSource(host) = source {
+        if let Some(identity)=ctx.game.capture_source_play_host_identity(host) {
+            bindings.pin_private_link_identity(&link_material_carrier_key(card),host.player,identity);
+        }
+    }
     match spec.to {
         CompiledLinkTo::SelfPermanent => {
             let Some(host) = ctx.source_permanent else {
@@ -1153,6 +1173,12 @@ fn attach_and_continue(
     bindings: Bindings,
     runtime: StepRuntime,
 ) {
+    let Some(source)=resolve_link_material(ctx.game,&bindings,card,source) else {
+        run_captured_tail(ctx,&tail,bindings,&runtime);return;
+    };
+    if !ctx.game.link_card_qualifies_for(host,card) {
+        run_captured_tail(ctx,&tail,bindings,&runtime);return;
+    }
     // Pay the per-card cost (currently always 0 for the cards this serves; the
     // primitive does not pay). `pay_memory` deducts from the active player's
     // memory exactly like `commit_digimon_link`.
@@ -1210,7 +1236,12 @@ fn link_and_continue(
     mut bindings: Bindings,
     runtime: StepRuntime,
 ) {
-    let _ = ctx.link_chosen_card_into_host(host, card, source);
+    let Some(source)=resolve_link_material(ctx.game,&bindings,card,source) else {
+        run_captured_tail(ctx,&tail,bindings,&runtime);return;
+    };
+    if !ctx.link_chosen_card_into_host(host, card, source) {
+        run_captured_tail(ctx,&tail,bindings,&runtime);return;
+    }
 
     // Capture the just-linked card into the optional `bind_as` CardList. The
     // slot is created only here (on a real link), so it stays absent after a

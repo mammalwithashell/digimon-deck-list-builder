@@ -1,0 +1,100 @@
+
+running 18 tests
+
+thread 'bt18_042_outer_decline_preserves_opt_but_accepted_cost_decline_spends_it' (19516) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'bt18_042_every_deep_physical_source_is_reachable_after_clone' (23936) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_face_down_hybrid_does_not_complete_five_hybrid_named_evolution_route' (36972) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:530:10:
+called `Result::unwrap()` on an `Err` value: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_attack_decline_preserves_opt_empty_security_never_unsuspends' (7804) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_paying_without_possible_unsuspend_is_legal_and_consumes_opt' (52476) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_production_card_loads' (20464) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_same_level_deletions_complete_before_any_deletion_observer' (51312) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_security_and_hand_observers_run_after_paid_unsuspend' (52040) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_actual_ad1_023_name_alias_satisfies_named_hybrid_evolution' (41236) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:559:10:
+called `Result::unwrap()` on an `Err` value: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_printed_normal_and_named_five_hybrid_routes_use_legal_mask_and_cost_five' (41752) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:436:14:
+called `Result::unwrap()` on an `Err` value: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_places_selected_source_bottom_deletes_all_same_level_both_seats_and_timings' (30240) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_only_digimon_sources_pay_but_missing_reward_targets_do_not_block_payment' (50804) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_face_down_digimon_has_no_characteristics_and_cannot_pay_source_cost' (47460) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_attack_cost_adds_exact_top_unsuspends_and_shares_opt' (53444) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_security_add_prohibition_suppresses_unpayable_source_cost' (40976) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_only_completed_security_payment_deletes_failed_payment_spends_opt' (18628) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+test bt18_042_actual_ad1_023_name_alias_satisfies_named_hybrid_evolution ... FAILED
+test bt18_042_attack_decline_preserves_opt_empty_security_never_unsuspends ... FAILED
+test bt18_042_only_digimon_sources_pay_but_missing_reward_targets_do_not_block_payment ... FAILED
+
+thread 'bt18_042_source_payment_uses_card_owner_security' (16900) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+
+thread 'bt18_042_unsuspend_cost_to_foreign_owners_hand_still_pays' (39624) panicked at code/digimon-engine/tests/cards_behavioral/bt18/bt18_042.rs:17:10:
+real production YAML: "DSL card BT18-042 not found in embedded pack"
+test bt18_042_outer_decline_preserves_opt_but_accepted_cost_decline_spends_it ... FAILED
+test bt18_042_paying_without_possible_unsuspend_is_legal_and_consumes_opt ... FAILED
+test bt18_042_face_down_hybrid_does_not_complete_five_hybrid_named_evolution_route ... FAILED
+test bt18_042_attack_cost_adds_exact_top_unsuspends_and_shares_opt ... FAILED
+test bt18_042_printed_normal_and_named_five_hybrid_routes_use_legal_mask_and_cost_five ... FAILED
+test bt18_042_same_level_deletions_complete_before_any_deletion_observer ... FAILED
+test bt18_042_production_card_loads ... FAILED
+test bt18_042_only_completed_security_payment_deletes_failed_payment_spends_opt ... FAILED
+test bt18_042_security_and_hand_observers_run_after_paid_unsuspend ... FAILED
+test bt18_042_security_add_prohibition_suppresses_unpayable_source_cost ... FAILED
+test bt18_042_face_down_digimon_has_no_characteristics_and_cannot_pay_source_cost ... FAILED
+test bt18_042_places_selected_source_bottom_deletes_all_same_level_both_seats_and_timings ... FAILED
+test bt18_042_every_deep_physical_source_is_reachable_after_clone ... FAILED
+test bt18_042_source_payment_uses_card_owner_security ... FAILED
+test bt18_042_unsuspend_cost_to_foreign_owners_hand_still_pays ... FAILED
+
+failures:
+
+failures:
+    bt18_042_actual_ad1_023_name_alias_satisfies_named_hybrid_evolution
+    bt18_042_attack_cost_adds_exact_top_unsuspends_and_shares_opt
+    bt18_042_attack_decline_preserves_opt_empty_security_never_unsuspends
+    bt18_042_every_deep_physical_source_is_reachable_after_clone
+    bt18_042_face_down_digimon_has_no_characteristics_and_cannot_pay_source_cost
+    bt18_042_face_down_hybrid_does_not_complete_five_hybrid_named_evolution_route
+    bt18_042_only_completed_security_payment_deletes_failed_payment_spends_opt
+    bt18_042_only_digimon_sources_pay_but_missing_reward_targets_do_not_block_payment
+    bt18_042_outer_decline_preserves_opt_but_accepted_cost_decline_spends_it
+    bt18_042_paying_without_possible_unsuspend_is_legal_and_consumes_opt
+    bt18_042_places_selected_source_bottom_deletes_all_same_level_both_seats_and_timings
+    bt18_042_printed_normal_and_named_five_hybrid_routes_use_legal_mask_and_cost_five
+    bt18_042_production_card_loads
+    bt18_042_same_level_deletions_complete_before_any_deletion_observer
+    bt18_042_security_add_prohibition_suppresses_unpayable_source_cost
+    bt18_042_security_and_hand_observers_run_after_paid_unsuspend
+    bt18_042_source_payment_uses_card_owner_security
+    bt18_042_unsuspend_cost_to_foreign_owners_hand_still_pays
+
+test result: FAILED. 0 passed; 18 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.71s
+

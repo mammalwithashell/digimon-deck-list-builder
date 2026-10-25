@@ -4,7 +4,6 @@
 //! opponent's Digimon attacks, by trashing 3 [Mineral] or [Rock] trait cards
 //! from this Digimon's digivolution cards, end that attack.
 
-use digimon_engine::action::space::encode_source_select;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::selection::SelectionKind;
 use digimon_engine::CardData;
@@ -79,37 +78,19 @@ fn ex10_003_trashes_three_matching_carrier_sources_to_cancel_attack() {
         .accept_optional_trigger()
         .expect("accept the optional processing condition");
 
-    let pending = runner
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("Tumblemon source-cost prompt should be exposed after accepting");
-    let self_source = encode_source_select(carrier.index as u16, 0).expect("self source action");
-    let rock = encode_source_select(carrier.index as u16, 1).expect("rock source action");
-    let mineral = encode_source_select(carrier.index as u16, 2).expect("mineral source action");
-    let second_rock =
-        encode_source_select(carrier.index as u16, 3).expect("second rock source action");
-    let bad = encode_source_select(carrier.index as u16, 4).expect("bad source action");
-    let other_rock = encode_source_select(other.index as u16, 0).expect("other stack source");
-    assert!(pending.valid_action_ids.contains(&self_source));
-    assert!(pending.valid_action_ids.contains(&rock));
-    assert!(pending.valid_action_ids.contains(&mineral));
-    assert!(pending.valid_action_ids.contains(&second_rock));
-    assert!(!pending.valid_action_ids.contains(&bad));
-    assert!(!pending.valid_action_ids.contains(&other_rock));
-
-    runner
-        .game
-        .resolve_selection(0, self_source)
-        .expect("pick EX10-003");
-    runner
-        .game
-        .resolve_selection(0, rock)
-        .expect("pick Rock source");
-    runner
-        .game
-        .resolve_selection(0, mineral)
-        .expect("pick Mineral source");
+    let rows = physical_choice::commits(&runner.game);
+    assert_eq!(rows.len(), 4, "only the four matching sources on the original carrier are legal");
+    for index in 0..4 {
+        physical_choice::source_action(&runner.game, carrier, index);
+    }
+    assert!(rows.iter().all(|row| row.carrier_slot == Some(carrier.index)
+        && row.owner == Some(0)
+        && row.position.as_deref() != Some("4")), "bad traits and other carriers are excluded");
+    for (id, label) in [("EX10-003", "self"), ("SRC-ROCK-1", "Rock"), ("SRC-MINERAL", "Mineral")] {
+        let action = physical_choice::card_action(&runner.game, id,
+            digimon_engine::owned_card_choice::CardChoiceZone::BattleSource);
+        runner.game.resolve_selection(0, action).unwrap_or_else(|error| panic!("pick {label}: {error:?}"));
+    }
 
     assert!(runner.game.pending_attack.is_none(), "attack was cancelled");
     assert_eq!(runner.security_count(0), 1, "security was not checked");
@@ -189,3 +170,6 @@ fn ex10_003_optional_cost_may_be_declined_leaving_sources_and_attack_intact() {
         "declining must NOT end the attack: security must still be checked"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

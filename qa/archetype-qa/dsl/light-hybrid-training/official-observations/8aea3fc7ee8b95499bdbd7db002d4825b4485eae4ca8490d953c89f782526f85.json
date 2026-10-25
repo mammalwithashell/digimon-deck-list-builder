@@ -1,0 +1,77 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "BT7-038",
+    "card_type": "Digimon",
+    "colors": [
+      "Yellow"
+    ],
+    "dp": 7000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "cost": 3,
+        "from_level": 4,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow"
+        ],
+        "dp": 7000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 5,
+        "name": "JetSilphymon",
+        "play_cost": 7,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "When one of your Digimon with a Tamer card in its digivolution cards digivolves into this card in your hand, reduce the memory cost of the digivolution by 2.\n[When Digivolving] If a card with [Hybrid] in its traits is in this Digimon's digivolution cards, ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.)"
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 5,
+    "name": "JetSilphymon",
+    "play_cost": 7,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522007",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT7-038.png?260529",
+      "printing_id": "BT7-038"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "U",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "When one of your Digimon with a Tamer card in its digivolution cards digivolves into this card in your hand, reduce the memory cost of the digivolution by 2.\n[When Digivolving] If a card with [Hybrid] in its traits is in this Digimon's digivolution cards, ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.)"
+      }
+    ],
+    "type": "Cyborg"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "84bef7d48327abbd97ec0b6a61b795e67b130465a6053844b8e297c1bb06132e",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522007:BT7-038:BT7-038",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522007"
+}

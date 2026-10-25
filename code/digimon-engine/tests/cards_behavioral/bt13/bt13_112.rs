@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use digimon_engine::action::space::{
-    encode_attack, PASS, encode_breeding_select, encode_breeding_source_select,
+    encode_attack, PASS, encode_breeding_select,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
@@ -80,7 +80,7 @@ fn source_action(runner: &DebugRunner, card_id: &str) -> u16 {
         .iter()
         .position(|source| runner.game.card_data[source.data_index].card_id == card_id)
         .unwrap_or_else(|| panic!("{card_id} source in breeding"));
-    encode_breeding_source_select(0, idx as u16).expect("breeding source action")
+    physical_menu::source_action(&runner.game, PermanentHandle { player: 0, index: digimon_engine::action::space::BREEDING_TARGET as u8 }, idx)
 }
 
 /// Accept the printed "You may" gate (DCGO `SetUpActivateClass(..., isOptional:
@@ -382,3 +382,6 @@ fn bt13_112_both_branches_legal_prompts_with_two_options() {
     assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
     assert_eq!(runner.pending_action_count(), 2);
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

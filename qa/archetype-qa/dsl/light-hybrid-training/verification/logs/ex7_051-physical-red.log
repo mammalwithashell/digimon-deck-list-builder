@@ -1,0 +1,41 @@
+
+running 12 tests
+test ex7::ex7_051::ex7_051_cannot_digivolve_from_plain_red_lv2 ... ok
+test ex7::ex7_051::ex7_051_decline_draws_nothing_and_moves_nothing ... ok
+test ex7::ex7_051::ex7_051_digivolves_for_zero_from_lv2_with_tm_in_text_regardless_of_color ... ok
+test ex7::ex7_051::ex7_051_does_not_fire_on_opponents_main_phase ... ok
+test ex7::ex7_051::ex7_051_has_optional_start_of_main_clause_and_inherited_retaliation ... ok
+test ex7::ex7_051::ex7_051_inherited_retaliation_grants_keyword_to_carrier ... ok
+
+thread 'ex7::ex7_051::ex7_051_places_hand_option_under_chosen_digimon_and_draws_one' (43956) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_051.rs:240:10:
+pick Der Blitz from hand: InvalidAction
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test ex7::ex7_051::ex7_051_places_hand_option_under_chosen_digimon_and_draws_one ... FAILED
+
+thread 'ex7::ex7_051::ex7_051_places_trash_option_under_self_and_draws_one' (47668) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_051.rs:281:10:
+pick Der Blitz from trash: InvalidAction
+test ex7::ex7_051::ex7_051_places_trash_option_under_self_and_draws_one ... FAILED
+test ex7::ex7_051::ex7_051_start_of_main_no_prompt_without_tm_option ... ok
+test ex7::ex7_051::ex7_051_start_of_main_prompts_union_pick_when_tm_option_in_hand ... ok
+
+thread 'ex7::ex7_051::ex7_051_token_is_not_a_legal_host' (49916) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_051.rs:324:10:
+pick Der Blitz: InvalidAction
+test ex7::ex7_051::ex7_051_token_is_not_a_legal_host ... FAILED
+
+thread 'ex7::ex7_051::ex7_051_union_pick_offers_only_tm_options_from_hand_and_trash' (13556) panicked at code\digimon-engine\tests\cards_behavioral\ex7\ex7_051.rs:218:5:
+assertion `left == right` failed: only Der Blitz (hand idx 1)
+  left: []
+ right: [1]
+test ex7::ex7_051::ex7_051_union_pick_offers_only_tm_options_from_hand_and_trash ... FAILED
+
+failures:
+
+failures:
+    ex7::ex7_051::ex7_051_places_hand_option_under_chosen_digimon_and_draws_one
+    ex7::ex7_051::ex7_051_places_trash_option_under_self_and_draws_one
+    ex7::ex7_051::ex7_051_token_is_not_a_legal_host
+    ex7::ex7_051::ex7_051_union_pick_offers_only_tm_options_from_hand_and_trash
+
+test result: FAILED. 8 passed; 4 failed; 0 ignored; 0 measured; 12743 filtered out; finished in 18.87s
+
+FILTER_EXIT 101

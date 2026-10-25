@@ -1,7 +1,6 @@
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    encode_attack, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, SOURCES_PER_FIELD,
-    SOURCE_SELECT_START,
+    encode_attack, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
 };
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -182,18 +181,7 @@ fn material_save_filters_recipe_sources_and_enforces_cap() {
     let valid_source_ids: Vec<_> = source_prompt
         .valid_action_ids
         .iter()
-        .map(|action| {
-            let k = action - SOURCE_SELECT_START;
-            assert_eq!(
-                k / SOURCES_PER_FIELD,
-                carrier.index as u16,
-                "picked from the carrier's own digivolution cards"
-            );
-            runner.game.players[0].battle_area[carrier.index as usize].card_sources
-                [(k % SOURCES_PER_FIELD) as usize]
-                .card_id(&runner.game.card_data)
-                .to_string()
-        })
+        .map(|action| picked_source_id(&runner, carrier, *action))
         .collect();
     assert!(valid_source_ids.iter().any(|id| id == "SRC-SHOUT"));
     assert!(valid_source_ids.iter().any(|id| id == "SRC-BALLISTA"));
@@ -341,16 +329,12 @@ fn picked_source_id(
     carrier: digimon_engine::permanent::PermanentHandle,
     action: u16,
 ) -> String {
-    let k = action - SOURCE_SELECT_START;
-    assert_eq!(
-        k / SOURCES_PER_FIELD,
-        carrier.index as u16,
-        "pick {action} addresses the carrier's own digivolution cards"
-    );
-    runner.game.players[0].battle_area[carrier.index as usize].card_sources
-        [(k % SOURCES_PER_FIELD) as usize]
-        .card_id(&runner.game.card_data)
-        .to_string()
+    let pending = runner.game.pending_selection.as_ref().expect("source prompt");
+    let view = pending.card_choice.as_ref().expect("owned source prompt").view(&runner.game, pending.selecting_player);
+    let row = view.rows.iter().find(|row| row.action_id == action).expect("presented source row");
+    assert_eq!(row.owner, Some(carrier.player));
+    assert_eq!(row.carrier_slot, Some(carrier.index), "source row belongs to original carrier");
+    row.card_id.clone().expect("own source identity is visible")
 }
 
 /// The field-pick action for the (only non-token) `TAMER`.

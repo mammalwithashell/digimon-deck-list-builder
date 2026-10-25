@@ -1,0 +1,11 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 2 items
+
+code\tests\rl\test_owned_card_choice_bindings.py ..                      [100%]
+
+============================== 2 passed in 6.75s ==============================

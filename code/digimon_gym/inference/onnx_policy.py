@@ -147,7 +147,7 @@ class OnnxLstmPolicy:
     ):
         if episode_start is not None and bool(np.asarray(episode_start).reshape(-1)[0]):
             self.reset()
-        if state is not None:
+        elif state is not None:
             self.h, self.c = state
         action = self.predict(obs, action_mask, deterministic=deterministic)
         return action, (self.h, self.c)

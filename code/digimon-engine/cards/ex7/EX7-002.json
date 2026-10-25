@@ -19,8 +19,8 @@
   ],
   "form_eng": [],
   "attribute_eng": [],
-  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] If your opponent has no Digimon with digivolution cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
-  "inherited_effect_description_eng": "",
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If your opponent has no Digimon with digivolution cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
   "security_effect_description_eng": "",
   "evo_costs": [],
   "xros_req": ""

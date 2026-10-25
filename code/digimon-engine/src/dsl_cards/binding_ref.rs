@@ -29,7 +29,16 @@ pub fn resolve_binding_ref(
 ) -> Option<ResolvedBinding> {
     match r {
         CompiledBindingRef::SelfRef => Some(ResolvedBinding::Card(ctx.source_card)),
-        CompiledBindingRef::Source => resolve_source_permanent(ctx).map(ResolvedBinding::Permanent),
+        CompiledBindingRef::Source => {
+            let link_key=link_source_carrier_pin_key(ctx.source_card);
+            let key=if bindings.selected_identity_pin(&link_key).is_some() { link_key }
+                else { source_carrier_pin_key(ctx.source_card) };
+            if bindings.selected_identity_pin(&key).is_some() {
+                bindings.resolve_selected_identity(ctx.game, &key).map(ResolvedBinding::Permanent)
+            } else {
+                resolve_source_permanent(ctx).map(ResolvedBinding::Permanent)
+            }
+        },
         CompiledBindingRef::TopOf(name) => {
             let ResolvedBinding::Permanent(host) =
                 resolve_binding_ref(&CompiledBindingRef::Named(name.clone()), ctx, bindings)?
@@ -364,4 +373,13 @@ mod tests {
             other => panic!("expected CardList, got {other:?}"),
         }
     }
+}
+
+/// Lexical carrier pin for a source whose top card can leave during its effect.
+pub(crate) fn link_source_carrier_pin_key(card: CardHandle) -> String {
+    format!("\0link_source_carrier:{}",card.0)
+}
+
+pub(crate) fn source_carrier_pin_key(card: CardHandle) -> String {
+    format!("\u{0}source_carrier:{}", card.0)
 }

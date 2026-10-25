@@ -1,0 +1,49 @@
+
+running 14 tests
+test bt22::bt22_098::bt22_098_delay_does_not_fire_on_the_placing_turn ... ok
+test bt22::bt22_098::bt22_098_delay_after_arisa_suspend_exposes_base_then_hand_evo_choices ... ok
+test bt22::bt22_098::bt22_098_delay_does_not_fire_when_a_non_arisa_suspends ... ok
+test bt22::bt22_098::bt22_098_delay_trashes_self_as_cost_even_when_digivolve_is_declined ... ok
+test bt22::bt22_098::bt22_098_has_event_gated_delay_for_own_arisa_suspend ... ok
+test bt22::bt22_098::bt22_098_is_yellow_liberator_option_cost_3 ... ok
+test bt22::bt22_098::bt22_098_main_can_choose_shoemon_or_arisa_from_hand_or_trash_in_one_masked_choice ... FAILED
+test bt22::bt22_098::bt22_098_main_hand_slice_selects_shoemon_or_arisa_and_plays_free ... ok
+test bt22::bt22_098::bt22_098_main_hand_target_is_masked_and_played_without_extra_cost ... FAILED
+test bt22::bt22_098::bt22_098_option_pipeline_decline_still_places_as_delayed_option ... ok
+test bt22::bt22_098::bt22_098_option_pipeline_plays_target_then_places_as_delayed_option ... ok
+test bt22::bt22_098::bt22_098_security_activates_main_union_play_then_places_self ... FAILED
+test bt22::bt22_098::bt22_098_yaml_parses_and_compiles ... ok
+test bt22::bt22_098::bt22_098_security_mirrors_supported_main_hand_slice ... ok
+
+failures:
+
+---- bt22::bt22_098::bt22_098_main_can_choose_shoemon_or_arisa_from_hand_or_trash_in_one_masked_choice stdout ----
+
+thread 'bt22::bt22_098::bt22_098_main_can_choose_shoemon_or_arisa_from_hand_or_trash_in_one_masked_choice' (14832) panicked at code\digimon-engine\tests\cards_behavioral\bt22\bt22_098.rs:853:5:
+assertion `left == right` failed: only [Shoemon] (trash) and [Arisa Kinosaki] (hand) should be eligible; non-matching cards must be filtered out
+  left: 3
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- bt22::bt22_098::bt22_098_main_hand_target_is_masked_and_played_without_extra_cost stdout ----
+
+thread 'bt22::bt22_098::bt22_098_main_hand_target_is_masked_and_played_without_extra_cost' (2152) panicked at code\digimon-engine\tests\cards_behavioral\bt22\bt22_098.rs:438:5:
+assertion `left == right` failed: only exact Shoemon/Arisa should be legal union targets; ShoeShoemon must not match [Shoemon]
+  left: 2
+ right: 1
+
+---- bt22::bt22_098::bt22_098_security_activates_main_union_play_then_places_self stdout ----
+
+thread 'bt22::bt22_098::bt22_098_security_activates_main_union_play_then_places_self' (37452) panicked at code\digimon-engine\tests\cards_behavioral\bt22\bt22_098.rs:1001:5:
+assertion `left == right` failed: only the Arisa Kinosaki card in player 1's hand is an eligible target
+  left: 2
+ right: 1
+
+
+failures:
+    bt22::bt22_098::bt22_098_main_can_choose_shoemon_or_arisa_from_hand_or_trash_in_one_masked_choice
+    bt22::bt22_098::bt22_098_main_hand_target_is_masked_and_played_without_extra_cost
+    bt22::bt22_098::bt22_098_security_activates_main_union_play_then_places_self
+
+test result: FAILED. 11 passed; 3 failed; 0 ignored; 0 measured; 12741 filtered out; finished in 9.86s
+

@@ -1,6 +1,6 @@
 use digimon_dsl::{compile::compile, spec::CardSpec};
 use digimon_engine::action::space::{
-    encode_attack, encode_source_select, PASS, PLAY_HAND_START, TRASH_EFFECT_START,
+    encode_attack, PASS, PLAY_HAND_START,
 };
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
@@ -160,10 +160,10 @@ effects:
 
     assert_eq!(outcome, RunOutcome::Parked);
     let pending = runner.game.pending_selection.as_ref().unwrap();
-    let tamer_source = encode_source_select(tamer.index as u16, 0).unwrap();
-    let digimon_source = encode_source_select(digimon.index as u16, 0).unwrap();
+    let tamer_source = physical_menu::source_action(&runner.game, tamer, 0);
     assert!(pending.valid_action_ids.contains(&tamer_source));
-    assert!(!pending.valid_action_ids.contains(&digimon_source));
+    assert!(!physical_menu::commits(&runner.game).iter().any(|row| row.carrier_slot == Some(digimon.index)),
+        "Digimon-hosted copy must remain excluded from the under-Tamer source choice");
 
     runner
         .game
@@ -228,7 +228,7 @@ effects:
         );
     }
 
-    let action = encode_source_select(tamer.index as u16, 0).unwrap();
+    let action = physical_menu::source_action(&runner.game, tamer, 0);
     let pending = runner.game.pending_selection.as_ref().unwrap();
     assert!(pending.valid_action_ids.contains(&action));
     runner
@@ -438,8 +438,8 @@ effects:
     }
 
     let pending = runner.game.pending_selection.as_ref().unwrap();
-    let tamer_a_action = encode_source_select(tamer_a.index as u16, 0).unwrap();
-    let tamer_b_action = encode_source_select(tamer_b.index as u16, 0).unwrap();
+    let tamer_a_action = physical_menu::source_action(&runner.game, tamer_a, 0);
+    let tamer_b_action = physical_menu::source_action(&runner.game, tamer_b, 0);
     assert!(pending.valid_action_ids.contains(&tamer_a_action));
     assert!(pending.valid_action_ids.contains(&tamer_b_action));
 }
@@ -490,7 +490,7 @@ effects:
         );
     }
 
-    let action = TRASH_EFFECT_START;
+    let action = physical_menu::card_action(&runner.game, "TRASH-XH", digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     let pending = runner.game.pending_selection.as_ref().unwrap();
     assert!(pending.valid_action_ids.contains(&action));
     runner
@@ -715,3 +715,6 @@ effects:
         "unexpected errors: {wildcard_errors}"
     );
 }
+
+#[path = "../support/owned_card_choice.rs"]
+mod physical_menu;

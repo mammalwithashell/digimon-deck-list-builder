@@ -23,7 +23,7 @@ use crate::fixtures;
 use crate::support::*;
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    encode_attack, encode_digivolve, BREEDING_TARGET, SOURCE_SELECT_START,
+    encode_attack, encode_digivolve, BREEDING_TARGET,
 };
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::DebugRunner;
@@ -49,12 +49,15 @@ fn stash_board(stashed: &str, option: &str) -> (DebugRunner, PermanentHandle, Pe
 fn use_on_the_stashed_card(r: &mut DebugRunner, option: &str) {
     use_option(r, 0, option);
     let sel = r.pending_selection().expect("the pick of the card under the Tamer");
-    let pick = sel
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a >= SOURCE_SELECT_START)
-        .unwrap_or_else(|| panic!("the face-down card is offered: {sel:?}"));
+    let rows = sel.card_choice.as_ref().expect("physical source owner")
+        .view(&r.game, sel.selecting_player).rows;
+    let candidates: Vec<_> = rows.iter().filter(|row|
+        matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard)
+        && matches!(row.zone, Some(digimon_engine::owned_card_choice::CardChoiceZone::BattleSource))
+        && row.position.as_deref() == Some("0")).collect();
+    assert_eq!(candidates.len(), 1, "the sole face-down stashed source is offered");
+    let pick = candidates[0].action_id;
+    assert_eq!(build_action_mask(&r.game, sel.selecting_player)[pick as usize], 1.0);
     let player = sel.selecting_player;
     r.execute_action(player, pick).expect("pick the card under the Tamer");
     resolve_prompts(r);

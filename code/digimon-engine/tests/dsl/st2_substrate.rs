@@ -4,7 +4,7 @@
 //! cards: deterministic bottom-source trash and battle-context predicates.
 
 use digimon_dsl::compiled::{CompiledBindingRef, CompiledClause, CompiledPredicate, CompiledStep};
-use digimon_engine::action::space::encode_source_select;
+
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_steps;
@@ -41,6 +41,22 @@ fn run_trash_bottom_sources(
 
     let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
     run_steps(&steps, &mut ctx, &mut bindings);
+}
+
+
+// Resolve the currently presented physical source, never a legacy positional action.
+fn physical_source_action(r: &DebugRunner, host: digimon_engine::permanent::PermanentHandle, index: usize) -> u16 {
+    let selection = r.game.pending_selection.as_ref().expect("source prompt");
+    let position = index.to_string();
+    selection.card_choice.as_ref().expect("physical source owner")
+        .view(&r.game, selection.selecting_player).rows.into_iter()
+        .find(|row| row.owner == Some(host.player) && row.carrier_slot == Some(host.index)
+            && row.position.as_deref() == Some(position.as_str())
+            && matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard))
+        .map(|row| {
+            assert_eq!(digimon_engine::action::build_action_mask(&r.game, selection.selecting_player)[row.action_id as usize], 1.0);
+            row.action_id
+        }).unwrap_or(u16::MAX)
 }
 
 #[test]
@@ -324,7 +340,6 @@ effects:
         run_steps(&steps, &mut ctx, &mut bindings);
     }
 
-    let first_source = encode_source_select(host.index as u16, 0).expect("source action");
     {
         let pending = runner
             .game
@@ -336,12 +351,12 @@ effects:
             2,
             "both real sources are candidates; the host top card is not"
         );
-        assert!(pending.valid_action_ids.contains(&first_source));
+        assert!(pending.valid_action_ids.contains(&physical_source_action(&runner, host, 0)));
     }
 
     runner
         .game
-        .resolve_selection(0, first_source)
+        .resolve_selection(0, physical_source_action(&runner, host, 0))
         .expect("select source to play");
     runner.game.drain_effect_queue();
 

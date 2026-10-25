@@ -1,0 +1,80 @@
+{
+  "extracted": {
+    "attribute": "",
+    "card_id": "BT18-097",
+    "card_type": "Option",
+    "colors": [
+      "Yellow",
+      "Purple",
+      "Black"
+    ],
+    "dp": null,
+    "evolution_routes": [],
+    "faces": [
+      {
+        "colors": [
+          "Yellow",
+          "Purple",
+          "Black"
+        ],
+        "dp": null,
+        "face_id": "primary",
+        "kind": "option",
+        "level": null,
+        "name": "Dark to Light, Thunder to Gunfire",
+        "play_cost": 3,
+        "text_sections": [
+          {
+            "label": "Effect",
+            "text": "[Main] You may place up to 5 [Hybrid] trait cards with different names from your hand or trash under 1 of your Tamers. Then, 1 of your Tamers with 5 or more cards under it may digivolve into [MagnaGarurumon] in the hand or trash, ignoring digivolution requirements and without paying the cost."
+          },
+          {
+            "label": "Security Effect",
+            "text": "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand."
+          }
+        ]
+      }
+    ],
+    "form": "",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": null,
+    "name": "Dark to Light, Thunder to Gunfire",
+    "play_cost": 3,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522025",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/BT18-097.png?260529",
+      "printing_id": "BT18-097"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "C",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Effect",
+        "text": "[Main] You may place up to 5 [Hybrid] trait cards with different names from your hand or trash under 1 of your Tamers. Then, 1 of your Tamers with 5 or more cards under it may digivolve into [MagnaGarurumon] in the hand or trash, ignoring digivolution requirements and without paying the cost."
+      },
+      {
+        "label": "Security Effect",
+        "text": "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand."
+      }
+    ],
+    "type": "Ten Warriors"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "8639bd1c2beb0c57dfa05a8c533f45bd31f0039cfd7f4c70a53b8e708fd8769d",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522025:BT18-097:BT18-097",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522025"
+}

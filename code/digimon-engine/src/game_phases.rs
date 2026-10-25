@@ -1061,6 +1061,7 @@ impl Game {
         let decline_state = callback_state.clone();
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(player),
             kind: SelectionKind::OwnField,
             selecting_player: player,

@@ -214,13 +214,24 @@ fn bt15_092_main_plays_yellow_lv4_or_lower_from_security_free() {
         pending.is_optional,
         "the play is 'you may', so the security-search prompt is optional"
     );
-    assert_eq!(
-        pending.valid_action_ids.len(),
-        1,
-        "only the yellow Lv4 Digimon is a legal pick (yellow Lv<=4 filter); got {:?}",
-        pending.valid_action_ids
-    );
-    let (player, action_id) = (pending.selecting_player, pending.valid_action_ids[0]);
+    use digimon_engine::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+    let player = pending.selecting_player;
+    let rows = pending.card_choice.as_ref().expect("security search owns its physical page")
+        .view(&runner.game, player).rows;
+    let commits: Vec<_> = rows.iter().filter(|row| matches!(row.operation, CardChoiceOperation::CommitCard)).collect();
+    assert_eq!(commits.len(), 1, "only the yellow Lv4 passes the printed filter");
+    let chosen = commits[0];
+    assert!(matches!(chosen.zone, Some(CardChoiceZone::Security)));
+    assert_eq!(chosen.card_id.as_deref(), Some("Y-LV4"));
+    assert_eq!(chosen.position.as_deref(), Some("3"));
+    let action_id = chosen.action_id;
+    let expected = runner.game.player(0).security[3].handle();
+    let mask = digimon_engine::action::build_action_mask(&runner.game, player);
+    assert_eq!(mask[action_id as usize], 1.0);
+    assert_eq!(mask[PASS as usize], 1.0);
+    for row in rows.iter().filter(|row| matches!(row.operation, CardChoiceOperation::InspectCard)) {
+        assert_eq!(mask[row.action_id as usize], 0.0, "inspected ineligible cards cannot be committed");
+    }
     runner
         .execute_action(player, action_id)
         .expect("security pick resolves");
@@ -230,8 +241,8 @@ fn bt15_092_main_plays_yellow_lv4_or_lower_from_security_free() {
         runner.game.players[0]
             .battle_area
             .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "Y-LV4"),
-        "the chosen yellow Lv4 Digimon must be played free onto P0's field"
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "Y-LV4" && p.top_card().handle() == expected),
+        "the exact chosen yellow Lv4 Digimon must be played free onto P0's field"
     );
     // BT15-092 itself resolves and is disposed to trash (no Kari Kamiya Tamer).
     assert!(
@@ -487,4 +498,18 @@ fn bt15_092_normal_security_check_is_not_an_effect_trash_dispatch() {
         0,
         "the security card is resolved by the attack's security check"
     );
+}
+
+#[path = "../../support/printed_security_search.rs"]
+mod printed_security_search;
+
+#[test]
+fn bt15_092_printed_search_inspects_full_stack_with_and_without_matches_for_both_seats() {
+    for actor in [0,1] { for has_match in [false,true] {
+        let mut security=vec!["B-LV4";40];if has_match {security[39]="Y-LV4";}
+        let mut r=base().hand(actor,&[CARD_ID]).security(actor,&security).memory(10).start();
+        r.skip_mulligan();r.game.turn_player_idx=actor as usize;
+        r.place_on_field(actor,"Y-LV3",Some(0));r.game.play_option_from_hand(actor,0);
+        printed_security_search::inspect_all_then_decline(&mut r,actor,if has_match {&[39]}else{&[]});
+    }}
 }

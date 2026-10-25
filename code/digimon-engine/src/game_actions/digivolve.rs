@@ -687,6 +687,7 @@ impl Game {
         self.current_phase = GamePhase::EffectChoice;
         let callback_state = state.clone();
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: state.acting_player,
@@ -847,6 +848,7 @@ impl Game {
         }
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player: state.player_id,
@@ -1307,6 +1309,7 @@ impl Game {
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: acting_player,
@@ -1829,6 +1832,7 @@ impl Game {
         let accepted = state.clone();
         let declined = state.clone();
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::EffectChoice,
             selecting_player: state.acting_player,
@@ -1886,6 +1890,7 @@ impl Game {
         self.current_phase = GamePhase::SelectTarget;
         let resumed = state.clone();
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: Some(state.acting_player),
             kind: SelectionKind::OwnField,
             selecting_player: state.acting_player,
@@ -2333,6 +2338,7 @@ impl Game {
         let source_card = card.handle();
 
         self.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::Material,
             selecting_player,
@@ -2393,6 +2399,7 @@ impl Game {
                 // stage-1 was installed; we preserve it through the chain
                 // so the final resolution returns to Main.
                 game.pending_selection = Some(PendingSelection {
+                    card_choice: None,
                     zone_owner: None,
                     kind: SelectionKind::Material,
                     selecting_player: first_player,

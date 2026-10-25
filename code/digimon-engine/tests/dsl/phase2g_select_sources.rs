@@ -4,12 +4,28 @@
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCountBound, CompiledPredicate, CompiledStep,
 };
-use digimon_engine::action::space::{encode_source_select, PASS};
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::selection::SelectionKind;
+
+
+// Resolve the currently presented physical source, never a legacy positional action.
+fn physical_source_action(r: &DebugRunner, host: digimon_engine::permanent::PermanentHandle, index: usize) -> u16 {
+    let selection = r.game.pending_selection.as_ref().expect("source prompt");
+    let position = index.to_string();
+    selection.card_choice.as_ref().expect("physical source owner")
+        .view(&r.game, selection.selecting_player).rows.into_iter()
+        .find(|row| row.owner == Some(host.player) && row.carrier_slot == Some(host.index)
+            && row.position.as_deref() == Some(position.as_str())
+            && matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard))
+        .map(|row| {
+            assert_eq!(digimon_engine::action::build_action_mask(&r.game, selection.selecting_player)[row.action_id as usize], 1.0);
+            row.action_id
+        }).unwrap_or(u16::MAX)
+}
 
 #[test]
 fn select_own_sources_binds_source_refs_for_trashing() {
@@ -54,10 +70,8 @@ fn select_own_sources_binds_source_refs_for_trashing() {
         })
     );
 
-    let action_a = encode_source_select(stack_a.index as u16, 0).expect("stack A source action");
-    let action_b = encode_source_select(stack_b.index as u16, 0).expect("stack B source action");
-    runner.execute_action(0, action_a).expect("pick source A");
-    runner.execute_action(0, action_b).expect("pick source B");
+    runner.execute_action(0, physical_source_action(&runner, stack_a, 0)).expect("pick source A");
+    runner.execute_action(0, physical_source_action(&runner, stack_b, 0)).expect("pick source B");
 
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(
@@ -180,21 +194,17 @@ effects:
         })
     );
 
-    let pick_a = encode_source_select(carrier.index as u16, 0).expect("source A action");
-    let pick_b = encode_source_select(carrier.index as u16, 1).expect("source B action");
-    let pick_c = encode_source_select(carrier.index as u16, 2).expect("source C action");
-    let other_pick = encode_source_select(other.index as u16, 0).expect("other source action");
     {
         let selection = runner
             .game
             .pending_selection
             .as_ref()
             .expect("source cost pending");
-        assert!(selection.valid_action_ids.contains(&pick_a));
-        assert!(selection.valid_action_ids.contains(&pick_b));
-        assert!(selection.valid_action_ids.contains(&pick_c));
+        assert!(selection.valid_action_ids.contains(&physical_source_action(&runner, carrier, 0)));
+        assert!(selection.valid_action_ids.contains(&physical_source_action(&runner, carrier, 1)));
+        assert!(selection.valid_action_ids.contains(&physical_source_action(&runner, carrier, 2)));
         assert!(
-            !selection.valid_action_ids.contains(&other_pick),
+            !selection.valid_action_ids.contains(&physical_source_action(&runner, other, 0)),
             "Digi-Burst must not expose sources under another own stack"
         );
         assert!(
@@ -204,7 +214,7 @@ effects:
     }
 
     runner
-        .execute_action(0, pick_a)
+        .execute_action(0, physical_source_action(&runner, carrier, 0))
         .expect("first Digi-Burst source pick resolves");
     assert_eq!(
         runner.pending_kind(),
@@ -220,15 +230,15 @@ effects:
             .pending_selection
             .as_ref()
             .expect("second source still pending");
-        assert!(!selection.valid_action_ids.contains(&pick_a));
-        assert!(selection.valid_action_ids.contains(&pick_b));
-        assert!(selection.valid_action_ids.contains(&pick_c));
-        assert!(!selection.valid_action_ids.contains(&other_pick));
+        assert!(!selection.valid_action_ids.contains(&physical_source_action(&runner, carrier, 0)));
+        assert!(selection.valid_action_ids.contains(&physical_source_action(&runner, carrier, 1)));
+        assert!(selection.valid_action_ids.contains(&physical_source_action(&runner, carrier, 2)));
+        assert!(!selection.valid_action_ids.contains(&physical_source_action(&runner, other, 0)));
         assert!(!selection.valid_action_ids.contains(&PASS));
     }
 
     runner
-        .execute_action(0, pick_b)
+        .execute_action(0, physical_source_action(&runner, carrier, 1))
         .expect("second Digi-Burst source pick resolves");
 
     // §15-8-3-2: the observer can't activate while Digi-Burst is still
@@ -421,13 +431,11 @@ fn select_opponent_sources_binds_opponent_source_refs_for_trashing() {
     // count (one per opponent source) is the soundness check that own sources
     // are excluded: 2 opponent stacks × 1 source each = exactly 2 candidates
     // (the PASS action is not added at an exact-N minimum).
-    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
-    let action_b = encode_source_select(opp_b.index as u16, 0).expect("opp B source action");
     {
         let pending = runner.game.pending_selection.as_ref().expect("pending");
         assert_eq!(pending.selecting_player, 0, "controller picks");
-        assert!(pending.valid_action_ids.contains(&action_a));
-        assert!(pending.valid_action_ids.contains(&action_b));
+        assert!(pending.valid_action_ids.contains(&physical_source_action(&runner, opp_a, 0)));
+        assert!(pending.valid_action_ids.contains(&physical_source_action(&runner, opp_b, 0)));
         assert_eq!(
             pending.valid_action_ids.len(),
             2,
@@ -435,8 +443,8 @@ fn select_opponent_sources_binds_opponent_source_refs_for_trashing() {
         );
     }
 
-    runner.execute_action(0, action_a).expect("pick opp A");
-    runner.execute_action(0, action_b).expect("pick opp B");
+    runner.execute_action(0, physical_source_action(&runner, opp_a, 0)).expect("pick opp A");
+    runner.execute_action(0, physical_source_action(&runner, opp_b, 0)).expect("pick opp B");
 
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(
@@ -499,17 +507,15 @@ fn select_opponent_sources_restricts_to_target_opponent_permanent() {
     };
     assert_eq!(outcome, RunOutcome::Parked);
 
-    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
-    let action_b = encode_source_select(opp_b.index as u16, 0).expect("opp B source action");
     {
         let pending = runner.game.pending_selection.as_ref().expect("pending");
-        assert!(pending.valid_action_ids.contains(&action_a));
+        assert!(pending.valid_action_ids.contains(&physical_source_action(&runner, opp_a, 0)));
         assert!(
-            !pending.valid_action_ids.contains(&action_b),
+            !pending.valid_action_ids.contains(&physical_source_action(&runner, opp_b, 0)),
             "target binding must restrict to the chosen opponent permanent"
         );
     }
-    runner.execute_action(0, action_a).expect("pick opp A");
+    runner.execute_action(0, physical_source_action(&runner, opp_a, 0)).expect("pick opp A");
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(runner.game.players[1].trash.len(), 1);
 }
@@ -690,10 +696,8 @@ fn select_opponent_sources_formula_counts_resolve_at_runtime() {
         );
     }
 
-    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
-    let action_b = encode_source_select(opp_b.index as u16, 0).expect("opp B source action");
-    runner.execute_action(0, action_a).expect("pick opp A");
-    runner.execute_action(0, action_b).expect("pick opp B");
+    runner.execute_action(0, physical_source_action(&runner, opp_a, 0)).expect("pick opp A");
+    runner.execute_action(0, physical_source_action(&runner, opp_b, 0)).expect("pick opp B");
 
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(
@@ -742,8 +746,7 @@ fn select_opponent_sources_clamp_to_available_clamps_min_and_max() {
         "min/max must clamp from the resolved 3 down to the 1 available candidate"
     );
 
-    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
-    runner.execute_action(0, action_a).expect("pick opp A");
+    runner.execute_action(0, physical_source_action(&runner, opp_a, 0)).expect("pick opp A");
 
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(
@@ -859,24 +862,9 @@ effects:
         runner.game.activate_field_main(0, carrier.index as usize),
         "fixture exposes its Main effect"
     );
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::SourceMulti {
-            min: 2,
-            max: 2,
-            picked: 0,
-        }),
-        "unclamped: the selection installs with the authored exact-2 counts"
-    );
-
-    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
-    runner
-        .execute_action(0, action_a)
-        .expect("pick the only candidate");
-
-    // After the only candidate is picked, no candidates remain and
-    // picked (1) < min (2): the continuation is dropped — nothing is
-    // trashed and neither the then-body nor the outer tail runs.
+    // The authored exact-two floor has no feasible physical completion.
+    // Recovery rejects this prefix before presenting a misleading first pick;
+    // it still leaves both the paid body and outer tail unexecuted.
     assert!(runner.game.pending_selection.is_none());
     assert!(
         runner.game.players[1].trash.is_empty(),
@@ -943,20 +931,14 @@ fn select_own_sources_filters_cards_from_source_carrier_only() {
         .pending_selection
         .as_ref()
         .expect("source selection should be pending");
-    let rock_action = encode_source_select(carrier.index as u16, 0).expect("rock source action");
-    let mineral_action =
-        encode_source_select(carrier.index as u16, 1).expect("mineral source action");
-    let bad_action = encode_source_select(carrier.index as u16, 2).expect("bad source action");
-    let other_rock_action =
-        encode_source_select(other_stack.index as u16, 0).expect("other rock source action");
-    assert!(pending.valid_action_ids.contains(&rock_action));
-    assert!(pending.valid_action_ids.contains(&mineral_action));
-    assert!(!pending.valid_action_ids.contains(&bad_action));
-    assert!(!pending.valid_action_ids.contains(&other_rock_action));
+    assert!(pending.valid_action_ids.contains(&physical_source_action(&runner, carrier, 0)));
+    assert!(pending.valid_action_ids.contains(&physical_source_action(&runner, carrier, 1)));
+    assert!(!pending.valid_action_ids.contains(&physical_source_action(&runner, carrier, 2)));
+    assert!(!pending.valid_action_ids.contains(&physical_source_action(&runner, other_stack, 0)));
 
-    runner.execute_action(0, rock_action).expect("pick rock");
+    runner.execute_action(0, physical_source_action(&runner, carrier, 0)).expect("pick rock");
     runner
-        .execute_action(0, mineral_action)
+        .execute_action(0, physical_source_action(&runner, carrier, 1))
         .expect("pick mineral");
 
     assert!(runner.game.pending_selection.is_none());

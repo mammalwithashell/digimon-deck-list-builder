@@ -1,0 +1,65 @@
+{
+  "policy": "Printed corrections maintained in durable overrides; split metadata refreshed only through supported split_cards_json producer. Pre-cutover append-only registry tooling is active while revision marker is absent.",
+  "findings": [
+    {
+      "card_id": "BT6-022",
+      "kind": "text_placement",
+      "authority": "official inherited section and local image",
+      "remediation": "Supported producer refresh completed; see p249-publication-and-review.json.",
+      "historical_finding": "per-card JSON puts inherited text in main effect field",
+      "status": "resolved_metadata",
+      "historical_runtime_cross_check": "Central cards.json puts the text in inherited correctly; split metadata is stale."
+    },
+    {
+      "card_id": "BT18-067",
+      "kind": "evolution_circles",
+      "authority": "local card image and official Q3002; authored all image routes",
+      "remediation": "Ordinary central circle metadata reprojected into split JSON; image-confirmed Tamer circles remain explicit DSL alt_paths, not ordinary evo_costs.",
+      "historical_finding": "generated JSON omits yellow level-3 and both black/yellow Tamer cost-4 circles; older official structured extraction omits Tamer circle",
+      "status": "ordinary_circle_split_drift_resolved_tamer_routes_in_dsl",
+      "historical_runtime_cross_check": "Central data/cards.json already has both ordinary Digimon circle colors; only split per-card JSON is stale. Native Tamer circles remain authored as explicit DSL routes."
+    },
+    {
+      "card_id": "BT18-077",
+      "kind": "evolution_circles",
+      "authority": "local card image; authored all image routes",
+      "remediation": "Ordinary central circle metadata reprojected into split JSON; image-confirmed Tamer circles remain explicit DSL alt_paths, not ordinary evo_costs.",
+      "historical_finding": "generated JSON omits yellow level-3 and both purple/yellow Tamer cost-4 circles; older official structured extraction omits Tamer circle",
+      "status": "ordinary_circle_split_drift_resolved_tamer_routes_in_dsl",
+      "historical_runtime_cross_check": "Central data/cards.json already has both ordinary Digimon circle colors; only split per-card JSON is stale. Native Tamer circles remain authored as explicit DSL routes."
+    },
+    {
+      "card_id": "BT18-094",
+      "kind": "text_placement",
+      "authority": "official Security section and image",
+      "remediation": "Supported producer refresh completed; see p249-publication-and-review.json.",
+      "historical_finding": "Central and split JSON store Security play text with main text; security section empty.",
+      "status": "resolved_metadata"
+    },
+    {
+      "card_id": "BT18-097",
+      "kind": "text_placement",
+      "authority": "official observation8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71 and image",
+      "remediation": "Supported producer refresh completed; see p249-publication-and-review.json.",
+      "historical_finding": "Central and split JSON store Security effect as inherited text; security section empty.",
+      "status": "resolved_metadata"
+    },
+    {
+      "card_id": "P-249",
+      "kind": "missing_registered_data",
+      "authority": "saved official HTML, parser-generated source candidate with two printing observations",
+      "candidate": "p-249-source-candidate/",
+      "remediation": "Official-derived missing row and durable override added; append-only producer assigned index4481 with all existing assignments preserved; nine behavior tests and independent review pass.",
+      "historical_finding": "no runtime registry assignment or metadata record",
+      "status": "resolved_metadata"
+    },
+    {
+      "card_id": "BT17-023",
+      "kind": "split_evolution_circle_staleness",
+      "authority": "official observation/image and central runtime cross-check",
+      "remediation": "Supported producer refresh completed; see p249-publication-and-review.json.",
+      "historical_finding": "split per-card JSON omits yellow lv3 cost3; central runtime cards.json already has blue and yellow",
+      "status": "resolved_metadata"
+    }
+  ]
+}

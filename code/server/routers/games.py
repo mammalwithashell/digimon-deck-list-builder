@@ -314,7 +314,8 @@ def game_action(game_id: str, request: GameActionRequest):
     # regenerates them.
     meta.human_action_history.append(int(request.action))
     try:
-        game.step(int(request.action))
+        game.step_checked(int(request.action),
+            request.expected_card_choice.model_dump() if request.expected_card_choice else None)
     except Exception as exc:
         # Roll the history back so a failed action doesn't leave a phantom
         # entry that would diverge a later undo replay.

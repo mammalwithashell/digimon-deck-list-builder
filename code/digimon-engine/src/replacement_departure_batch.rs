@@ -150,6 +150,7 @@ fn finish_departure_window(game: &mut crate::game::Game, mut window: Replacement
         game.current_phase = GamePhase::EffectChoice;
         game.replacement_pending_outcome = None;
         game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None,
             kind: SelectionKind::AnyField,
             selecting_player: actor,

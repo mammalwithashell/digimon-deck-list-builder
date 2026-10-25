@@ -42,6 +42,7 @@ fn play_token_binds_created_handle() {
             bind_as: Some("tok".to_string()),
         },
         CompiledStep::AddModifier {
+            opponent_only: false,
             target: CompiledModifierTarget::Binding(CompiledBindingRef::Named("tok".into())),
             modifier: "CannotAttack".into(),
             value: CompiledModifierValue::Literal(0),

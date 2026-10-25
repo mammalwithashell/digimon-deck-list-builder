@@ -267,33 +267,33 @@ fn st9_06_when_digivolving_plays_blue_and_green_from_stack_free() {
     );
     assert_mask_matches_pending(&runner, 0);
 
-    let blue = encode_source_select(carrier.index as u16, 0).expect("blue source action");
-    let green = encode_source_select(carrier.index as u16, 1).expect("green source action");
-    let red = encode_source_select(carrier.index as u16, 2).expect("red source action");
-    let blue_lv5 = encode_source_select(carrier.index as u16, 3).expect("blue Lv5 source action");
-    let other_blue = encode_source_select(other.index as u16, 0).expect("other blue action");
+    let blue = source_row(&runner,carrier,0);
+    let green = source_row(&runner,carrier,1);
+    let red = source_row(&runner,carrier,2);
+    let blue_lv5 = source_row(&runner,carrier,3);
+    let other_blue = source_row(&runner,other,0);
     let view = runner
         .pending_selection_view()
         .expect("blue source pending");
-    assert!(view.valid_action_ids.contains(&blue));
+    assert!(view.valid_action_ids.contains(&blue.expect("legal physical blue source")));
     assert!(
-        !view.valid_action_ids.contains(&green),
+        green.is_none(),
         "green source is not a blue pick"
     );
     assert!(
-        !view.valid_action_ids.contains(&red),
+        red.is_none(),
         "red source is filtered out"
     );
     assert!(
-        !view.valid_action_ids.contains(&blue_lv5),
+        blue_lv5.is_none(),
         "Lv5 blue source is filtered out"
     );
     assert!(
-        !view.valid_action_ids.contains(&other_blue),
+        other_blue.is_none(),
         "selection must be restricted to this Digimon's sources"
     );
 
-    runner.execute_action(0, blue).expect("choose blue source");
+    runner.execute_action(0, blue.expect("legal blue source")).expect("choose blue source");
 
     assert!(
         top_card_ids(&runner, 0).contains(&"BLUE-LV4".to_string()),
@@ -313,8 +313,8 @@ fn st9_06_when_digivolving_plays_blue_and_green_from_stack_free() {
         .pending_selection_view()
         .expect("green source pending");
     let shifted_green =
-        encode_source_select(carrier.index as u16, 0).expect("green source shifts after blue play");
-    assert!(green_view.valid_action_ids.contains(&shifted_green));
+        source_row(&runner,carrier,0);
+    assert!(green_view.valid_action_ids.contains(&shifted_green.expect("rebased physical green source")));
     assert_eq!(
         green_view
             .valid_action_ids
@@ -326,7 +326,7 @@ fn st9_06_when_digivolving_plays_blue_and_green_from_stack_free() {
     );
 
     runner
-        .execute_action(0, shifted_green)
+        .execute_action(0, shifted_green.expect("rebased physical green source"))
         .expect("choose green source");
 
     assert!(runner.pending_selection().is_none());
@@ -356,16 +356,16 @@ fn st9_06_when_digivolving_no_blue_candidate_still_offers_green_candidate() {
         }),
         "empty blue bucket should skip into the green source selection"
     );
-    let green = encode_source_select(carrier.index as u16, 0).expect("green source action");
-    let red = encode_source_select(carrier.index as u16, 1).expect("red source action");
+    let green = source_row(&runner,carrier,0);
+    let red = source_row(&runner,carrier,1);
     let view = runner
         .pending_selection_view()
         .expect("green source pending");
-    assert!(view.valid_action_ids.contains(&green));
-    assert!(!view.valid_action_ids.contains(&red));
+    assert!(view.valid_action_ids.contains(&green.expect("legal physical green source")));
+    assert!(red.is_none());
 
     runner
-        .execute_action(0, green)
+        .execute_action(0, green.expect("legal green source"))
         .expect("choose green source");
 
     assert!(runner.pending_selection().is_none());
@@ -380,8 +380,8 @@ fn st9_06_when_digivolving_no_green_candidate_skips_green_pick() {
 
     fire_when_digivolving(&mut runner, carrier);
 
-    let blue = encode_source_select(carrier.index as u16, 0).expect("blue source action");
-    runner.execute_action(0, blue).expect("choose blue source");
+    let blue = source_row(&runner,carrier,0);
+    runner.execute_action(0, blue.expect("legal blue source")).expect("choose blue source");
 
     assert!(
         runner.pending_selection().is_none(),
@@ -426,4 +426,11 @@ fn st9_06_when_digivolving_declining_does_nothing() {
         vec!["BLUE-LV4", "GREEN-LV4", "ST9-06"],
         "declining leaves the stack unchanged"
     );
+}
+
+#[path="../../support/owned_card_choice.rs"]
+mod physical_fixture;
+
+fn source_row(r:&DebugRunner,host:digimon_engine::permanent::PermanentHandle,index:usize)->Option<u16>{
+ physical_fixture::commits(&r.game).into_iter().find(|row|row.owner==Some(host.player)&&row.carrier_slot==Some(host.index)&&row.position.as_deref()==Some(index.to_string().as_str())).map(|row|row.action_id)
 }

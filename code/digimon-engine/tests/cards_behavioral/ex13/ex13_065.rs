@@ -346,7 +346,7 @@ fn ex13_065_option_plays_sistermon_from_hand_then_dp_minus_per_ally() {
     let view = r.pending_selection_view().expect("union pick");
     assert!(matches!(view.kind, SelectionKind::UnionZone { .. }));
     assert!(view.is_optional, "'You may play'");
-    let ciel = PLAY_HAND_START + hand_pos(&r, 0, "SIS-CIEL") as u16;
+    let ciel = physical_menu::zone_action(&r.game,0,hand_pos(&r,0,"SIS-CIEL"),digimon_engine::owned_card_choice::CardChoiceZone::Hand);
     assert!(view.valid_action_ids.contains(&ciel));
     r.execute_action(0, ciel).unwrap();
     assert!(field_ids(&r, 0).contains(&"SIS-CIEL".to_string()));
@@ -363,7 +363,7 @@ fn ex13_065_option_plays_sistermon_from_trash() {
     let mut r = option_runner(&[CARD_ID], &["SIS-BLANC"]);
     let idx = hand_pos(&r, 0, CARD_ID);
     assert_eq!(r.game.play_option_from_hand(0, idx), OptionPlayResult::Pending);
-    let blanc = TRASH_EFFECT_START + trash_pos(&r, 0, "SIS-BLANC") as u16;
+    let blanc = physical_menu::zone_action(&r.game,0,trash_pos(&r,0,"SIS-BLANC"),digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     let view = r.pending_selection_view().expect("union pick");
     assert!(view.valid_action_ids.contains(&blanc));
     r.execute_action(0, blanc).unwrap();
@@ -374,13 +374,15 @@ fn ex13_065_option_plays_sistermon_from_trash() {
 fn ex13_065_option_excludes_cost_5_sistermon() {
     let mut r = option_runner(&[CARD_ID, "SIS-BIG"], &[]);
     let idx = hand_pos(&r, 0, CARD_ID);
-    let big = PLAY_HAND_START + hand_pos(&r, 0, "SIS-BIG") as u16 - 1; // after the Option leaves hand
     // Nothing to do (no eligible card, no opp Digimon, no Arts base) → the
     // Option may resolve straight through; either way SIS-BIG is never offered.
     let _ = r.game.play_option_from_hand(0, idx);
     if let Some(view) = r.pending_selection_view() {
         if matches!(view.kind, SelectionKind::UnionZone { .. }) {
-            assert!(!view.valid_action_ids.contains(&big), "play cost 5 is not 4 or lower");
+            let big_position=hand_pos(&r,0,"SIS-BIG").to_string();
+            assert!(physical_menu::commits(&r.game).iter().all(|row|!(row.owner==Some(0)
+                &&matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::Hand))
+                &&row.position.as_deref()==Some(big_position.as_str()))),"play cost 5 is not 4 or lower");
         }
     }
     let _ = r.auto_resolve();
@@ -432,3 +434,6 @@ fn ex13_065_arts_digivolves_onto_sistermon_blanc_instead_of_trashing() {
     assert_eq!(r.trash_size(0), trash_before, "Arts replaces the trash");
     assert_eq!(r.game.memory, mem, "without paying the cost");
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

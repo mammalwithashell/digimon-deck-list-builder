@@ -539,6 +539,9 @@ fn perm_data(
 fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
     let mut m = Map::new();
     m.insert("kind".into(), Value::String(v.kind_str()));
+    if let Some(choice) = &v.card_choice {
+        m.insert("cardChoice".into(), serde_json::to_value(choice).expect("card choice DTO serializes"));
+    }
     // phase: int matching Python's GamePhase.value (not a debug string).
     m.insert("phase".into(), Value::from(phase_int(v.previous_phase)));
     m.insert(
@@ -608,7 +611,7 @@ pub fn to_ui_json(game: &Game) -> Value {
     let pending_sel_value = game
         .pending_selection
         .as_ref()
-        .map(|s| pending_selection_data(&s.view(), game))
+        .map(|s| pending_selection_data(&s.view(game), game))
         .unwrap_or(Value::Null);
 
     let pending_attack = game

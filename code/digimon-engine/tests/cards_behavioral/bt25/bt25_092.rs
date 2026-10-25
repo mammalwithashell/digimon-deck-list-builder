@@ -29,7 +29,7 @@
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledTiming};
 use digimon_engine::action::space::{
-    encode_attack, encode_source_select, PASS, PLAY_HAND_START, TRASH_EFFECT_START,
+    encode_attack, PASS, PLAY_HAND_START, TRASH_EFFECT_START,
 };
 use digimon_engine::card_data::EvoCost;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -235,9 +235,9 @@ fn bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced() {
         !view.is_optional,
         "the Option trash is a mandatory cost (DCGO canNoSelect false)"
     );
-    let opt_action = PLAY_HAND_START + hand_index_of(&runner, "OPT-HAND") as u16;
+    let opt_action = owned_hand(&runner,"OPT-HAND");
     assert_eq!(
-        view.valid_action_ids,
+        offered_actions(&runner),
         vec![opt_action],
         "only the Option card is trashable"
     );
@@ -258,7 +258,7 @@ fn bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced() {
     );
     let base_action = encode_attack(0, base.index as u16);
     assert_eq!(
-        view.valid_action_ids,
+        offered_actions(&runner),
         vec![base_action],
         "only BASE is offered (the Tamer is not a Digimon)"
     );
@@ -279,9 +279,9 @@ fn bt25_092_main_cost_from_hand_then_digivolve_from_hand_cost_reduced() {
         view.is_optional,
         "result pick is declinable (DCGO isOptional)"
     );
-    let evo_hand_action = PLAY_HAND_START + hand_index_of(&runner, "EVO-HAND") as u16;
-    let evo_trash_action = TRASH_EFFECT_START + trash_index_of(&runner, "EVO-TRASH") as u16;
-    let mut offered = view.valid_action_ids.clone();
+    let evo_hand_action = owned_hand(&runner,"EVO-HAND");
+    let evo_trash_action = owned_trash(&runner,"EVO-TRASH");
+    let mut offered = offered_actions(&runner);
     offered.sort_unstable();
     let mut expected = vec![evo_hand_action, evo_trash_action];
     expected.sort_unstable();
@@ -326,9 +326,9 @@ fn bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon() {
 
     assert!(activate_main(&mut runner, tamer.index as usize));
     let view = runner.pending_selection_view().expect("cost union prompt");
-    let source_action = encode_source_select(base.index as u16, 0).expect("encodes");
+    let source_action = physical_menu::source_action(&runner.game,base,0);
     assert_eq!(
-        view.valid_action_ids,
+        offered_actions(&runner),
         vec![source_action],
         "only the buried Option (BASE source 0) is offered; the hand holds no Option"
     );
@@ -351,8 +351,8 @@ fn bt25_092_main_cost_from_digivolution_cards_of_any_own_digimon() {
         .execute_action(0, encode_attack(0, base.index as u16))
         .expect("pick BASE");
     let view = runner.pending_selection_view().expect("result prompt");
-    let evo_action = PLAY_HAND_START + hand_index_of(&runner, "EVO-HAND") as u16;
-    assert_eq!(view.valid_action_ids, vec![evo_action]);
+    let evo_action = owned_hand(&runner,"EVO-HAND");
+    assert_eq!(offered_actions(&runner), vec![evo_action]);
     runner.execute_action(0, evo_action).expect("digivolve");
     let _ = runner.auto_resolve();
     assert_eq!(field_top_id(&runner, base.index as usize), "EVO-HAND");
@@ -371,11 +371,11 @@ fn bt25_092_main_cost_union_offers_both_hand_and_sources_in_one_prompt() {
 
     assert!(activate_main(&mut runner, tamer.index as usize));
     let view = runner.pending_selection_view().expect("cost union prompt");
-    let mut offered = view.valid_action_ids.clone();
+    let mut offered = offered_actions(&runner);
     offered.sort_unstable();
     let mut expected = vec![
-        PLAY_HAND_START + hand_index_of(&runner, "OPT-HAND") as u16,
-        encode_source_select(base.index as u16, 0).expect("encodes"),
+        owned_hand(&runner,"OPT-HAND"),
+        physical_menu::source_action(&runner.game,base,0),
     ];
     expected.sort_unstable();
     assert_eq!(
@@ -393,16 +393,16 @@ fn bt25_092_main_digivolve_into_card_resident_in_trash() {
     enter_main(&mut runner);
 
     assert!(activate_main(&mut runner, tamer.index as usize));
-    let opt_action = PLAY_HAND_START + hand_index_of(&runner, "OPT-HAND") as u16;
+    let opt_action = owned_hand(&runner,"OPT-HAND");
     runner.execute_action(0, opt_action).expect("trash Option");
     runner
         .execute_action(0, encode_attack(0, base.index as u16))
         .expect("pick BASE");
 
     let view = runner.pending_selection_view().expect("result prompt");
-    let evo_trash_action = TRASH_EFFECT_START + trash_index_of(&runner, "EVO-TRASH") as u16;
+    let evo_trash_action = owned_trash(&runner,"EVO-TRASH");
     assert_eq!(
-        view.valid_action_ids,
+        offered_actions(&runner),
         vec![evo_trash_action],
         "only the trash-resident [Three Musketeers]-text card is offered"
     );
@@ -431,7 +431,7 @@ fn bt25_092_main_target_pick_excludes_digimon_without_a_legal_result() {
     enter_main(&mut runner);
 
     assert!(activate_main(&mut runner, tamer.index as usize));
-    let opt_action = PLAY_HAND_START + hand_index_of(&runner, "OPT-HAND") as u16;
+    let opt_action = owned_hand(&runner,"OPT-HAND");
     runner.execute_action(0, opt_action).expect("trash Option");
 
     assert!(
@@ -455,7 +455,7 @@ fn bt25_092_main_decline_target_keeps_cost_paid_and_does_not_digivolve() {
     let memory_before = runner.memory();
 
     assert!(activate_main(&mut runner, tamer.index as usize));
-    let opt_action = PLAY_HAND_START + hand_index_of(&runner, "OPT-HAND") as u16;
+    let opt_action = owned_hand(&runner,"OPT-HAND");
     runner.execute_action(0, opt_action).expect("trash Option");
 
     let view = runner.pending_selection_view().expect("target prompt");
@@ -489,7 +489,7 @@ fn bt25_092_main_decline_result_pick_after_target() {
     let memory_before = runner.memory();
 
     assert!(activate_main(&mut runner, tamer.index as usize));
-    let opt_action = PLAY_HAND_START + hand_index_of(&runner, "OPT-HAND") as u16;
+    let opt_action = owned_hand(&runner,"OPT-HAND");
     runner.execute_action(0, opt_action).expect("trash Option");
     runner
         .execute_action(0, encode_attack(0, base.index as u16))
@@ -690,4 +690,23 @@ fn make_option(id: &str) -> digimon_engine::CardData {
     card.dp = None;
     card.play_cost = 2;
     card
+}
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;
+fn owned_hand(r:&DebugRunner,id:&str)->u16 {
+    physical_menu::zone_action(&r.game,0,hand_index_of(r,id),digimon_engine::owned_card_choice::CardChoiceZone::Hand)
+}
+fn owned_trash(r:&DebugRunner,id:&str)->u16 {
+    physical_menu::zone_action(&r.game,0,trash_index_of(r,id),digimon_engine::owned_card_choice::CardChoiceZone::Trash)
+}
+fn offered_actions(r:&DebugRunner)->Vec<u16> {
+    let pending=r.game.pending_selection.as_ref().unwrap();
+    if pending.card_choice.is_none() {return pending.valid_action_ids.clone();}
+    let actions:Vec<_>=physical_menu::commits(&r.game).iter().map(|row|row.action_id).collect();
+    let mask=digimon_engine::action::build_action_mask(&r.game,pending.selecting_player);
+    for (index,enabled) in mask.iter().enumerate() {
+        assert_eq!(*enabled,if actions.contains(&(index as u16)) || (pending.is_optional && index==PASS as usize) {1.0}else{0.0},"whole physical menu mask at {index}");
+    }
+    actions
 }

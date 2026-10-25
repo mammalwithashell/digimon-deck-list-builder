@@ -1,3 +1,5 @@
+# Printed search grants full-stack private inspection, including no-match pages.
+# The filter controls legal commits; the existing common continuation remains below.
 card: BT13-012
 name: GeoGreymon
 kind: digimon
@@ -41,9 +43,9 @@ alt_paths:
 # `play_from_security`). The `select_security` `filter` field — previously
 # ignored by `install_select_security` — is now evaluated per security card.
 #
-# Step (b): "If you did" is gated with `binding_present: sec_tamer` — when the
-# player declines the optional `select_security`, no binding is set and the
-# Recovery is skipped.
+# Step (b): "If you did" is gated on the actual played-result log after
+# `play_security_card`. Declining, blocked play, and canceled play cannot earn
+# Recovery merely by setting the selected-card binding.
 #
 # Step (c): `shuffle_security` runs unconditionally outside the `if`.
 
@@ -55,10 +57,10 @@ effects:
   - when: when_digivolving
     summary: "[When Digivolving] search security; may play 1 red/yellow Tamer free; if played, Recovery +1; then shuffle security"
     process:
-      - select_security:
-          of: you
+      - search_own_security_stack:
           bind_as: sec_tamer
           optional: true
+          on_select: []
           filter:
             all_of:
               - kind: tamer
@@ -70,7 +72,12 @@ effects:
           condition: { binding_present: sec_tamer }
           then:
             - play_security_card: { of: you, card: sec_tamer }
-            - recover: { of: you, count: 1 }
+            # Legacy predicate name: the result log records actual played
+            # permanents, including Tamers. A selected binding alone is not payment.
+            - if:
+                condition: { effect_played_any_digimon: true }
+                then:
+                  - recover: { of: you, count: 1 }
       - shuffle_security: { of: you }
 
   # ─────────────────────────────────────────────────────────────────────────

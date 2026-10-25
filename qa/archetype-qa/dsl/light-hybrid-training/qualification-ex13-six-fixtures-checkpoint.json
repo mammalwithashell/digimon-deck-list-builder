@@ -1,0 +1,51 @@
+{
+  "scope": "EX13 first six whole canonical card modules; tests only",
+  "cards": [
+    "ex13_013",
+    "ex13_014",
+    "ex13_031",
+    "ex13_035",
+    "ex13_045",
+    "ex13_053"
+  ],
+  "actual_red": {
+    "log": "verification/logs/qualification-ex13-six-red.log",
+    "passed": 69,
+    "failed": 26,
+    "ignored": 0
+  },
+  "final_green": {
+    "log": "verification/logs/qualification-ex13-six-current.log",
+    "passed": 95,
+    "failed": 0,
+    "ignored": 0,
+    "batches": {
+      "I": 68,
+      "J": 27
+    }
+  },
+  "native_stack_bytes": 268435456,
+  "production_edits": false,
+  "migration": [
+    "Shared orphan_support pick_hand/pick_trash resolves owned physical owner+zone+position and legal mask, checking printed identity only when visible; original raw hand/trash path retained only when no owned menu exists.",
+    "Named source Option choices use public physical card identity rather than numeric source bands.",
+    "EX13-031 hand/source payment choices preserve all resulting name/color/base-DP changes, deletion triggers and Assembly controls.",
+    "EX13-035 preserves named eligibility, shared total budget and two plays; negative candidates have no physical commit row.",
+    "EX13-053 offered trash identities project typed rows, preserving exact eligible sets, return order and count-derived deletion caps."
+  ],
+  "command": "cargo test -p digimon-engine --config profile.dev.opt-level=0 --config profile.dev.debug=0 --test light_hybrid_qualification_union_i --test light_hybrid_qualification_union_j -- --test-threads=2",
+  "limit": "95 focused tests do not certify full aggregate or training gate. Remaining five EX13 modules belong to remaining_source_selectors.",
+  "sha256": {
+    "code/digimon-engine/tests/cards_behavioral/ex13/ex13_013.rs": "24b79aac7a93fe8a3969f9e00573b26d53ff4423768e8cac71367d628eadf616",
+    "code/digimon-engine/tests/cards_behavioral/ex13/ex13_014.rs": "d9769aadf81a14f26e5c425563122586294241bf1e2886a8adc1f566867355fb",
+    "code/digimon-engine/tests/cards_behavioral/ex13/ex13_031.rs": "9c1e2185af86174dbd49ea323ad58da70745261940858c8334ea4ec55cf10a6a",
+    "code/digimon-engine/tests/cards_behavioral/ex13/ex13_035.rs": "1238c35f9c6ae98589314170fd095eb00535ba0b35945a4f819be14b87095b6e",
+    "code/digimon-engine/tests/cards_behavioral/ex13/ex13_045.rs": "9ee1840b4e196118042ad120c387e89c32dbdf0c44a9f747d98027a00e8f9df3",
+    "code/digimon-engine/tests/cards_behavioral/ex13/ex13_053.rs": "ea838933b4ef38903779c25f81ee8186efda9431847087b5de6260df830a7951",
+    "code/digimon-engine/tests/cards_behavioral/ex13/orphan_support.rs": "34aee61b24658220d7d822a2f88e49528349b2a0a4e77b1a61234635b3642bf6",
+    "code/digimon-engine/tests/support/owned_card_choice.rs": "6ac86132c341c42619b1eac3925ca1752d64c462a07ed946d069231f2cc04753",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_i.rs": "f064a03dba8925b6186b141483ebaee4f07f27eb91aa56bdfe50196d25be4dca",
+    "code/digimon-engine/tests/light_hybrid_qualification_union_j.rs": "70f2b217b74589f99d8e6509a1a750af00ffe828ece755a75972c4de290410c9"
+  },
+  "log_sha256": "0004d5042744d6a53c9084b3f5285a824ecc9ae039f60b56fd4b822ddf78ab59"
+}

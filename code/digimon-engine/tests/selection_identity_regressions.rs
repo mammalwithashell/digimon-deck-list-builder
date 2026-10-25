@@ -96,6 +96,7 @@ fn blast_dna_field_material_uses_parked_defender_and_raw_slot() {
         let h = r.place_on_field(defender, "PAD", Some(0));
         let source_card = r.game.players[defender as usize].battle_area[0].top_card().handle();
         r.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
             zone_owner: None, kind: SelectionKind::Material, selecting_player: defender,
             previous_phase: GamePhase::Main, valid_action_ids: vec![0], is_optional: false,
             prompt: "Select Blast DNA field material".into(), effect_choices: None,

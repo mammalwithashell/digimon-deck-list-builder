@@ -1,0 +1,98 @@
+[
+  {
+    "ProcessId": 30172,
+    "ParentProcessId": 40488,
+    "CreationDate": "2026-10-24T23:13:24.468726-05:00",
+    "Name": "pwsh.exe",
+    "ExecutablePath": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "CommandLine": "\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\" -NoProfile -Command \"try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}\n$env:CARGO_TARGET_DIR='C:/Users/james/.codex/build-targets/light-hybrid-training-tdd'; $env:CARGO_PROFILE_DEV_OPT_LEVEL='0'; $env:CARGO_PROFILE_DEV_DEBUG='0'; $env:CARGO_PROFILE_DEV_DEBUG_ASSERTIONS='true'; $env:RUSTC_WRAPPER=''; $env:PYTHONPATH='code'; $env:PYTHONUNBUFFERED='1'; $env:RUST_MIN_STACK='268435456'; & C:/Users/james/.codex/build-targets/light-hybrid-training-venv/Scripts/python.exe scripts/verify --tier 2 --continue-on-failure --json *> qa/archetype-qa/dsl/light-hybrid-training/verification/logs/final-tier2-mimalloc-full-run.log; exit $LASTEXITCODE\""
+  },
+  {
+    "ProcessId": 50128,
+    "ParentProcessId": 30172,
+    "CreationDate": "2026-10-24T23:13:24.481641-05:00",
+    "Name": "conhost.exe",
+    "ExecutablePath": "C:\\WINDOWS\\system32\\conhost.exe",
+    "CommandLine": "\\??\\C:\\WINDOWS\\system32\\conhost.exe 0x4"
+  },
+  {
+    "ProcessId": 40088,
+    "ParentProcessId": 30172,
+    "CreationDate": "2026-10-24T23:13:24.914088-05:00",
+    "Name": "python.exe",
+    "ExecutablePath": "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe",
+    "CommandLine": "\"C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe\" scripts/verify --tier 2 --continue-on-failure --json"
+  },
+  {
+    "ProcessId": 21840,
+    "ParentProcessId": 40088,
+    "CreationDate": "2026-10-24T23:13:24.953345-05:00",
+    "Name": "python3.13.exe",
+    "ExecutablePath": "C:\\Program Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3824.0_x64__qbz5n2kfra8p0\\python3.13.exe",
+    "CommandLine": "\"C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-venv\\Scripts\\python.exe\" scripts/verify --tier 2 --continue-on-failure --json"
+  },
+  {
+    "ProcessId": 13744,
+    "ParentProcessId": 21840,
+    "CreationDate": "2026-10-24T23:31:32.98502-05:00",
+    "Name": "cargo.exe",
+    "ExecutablePath": "C:\\Users\\james\\.cargo\\bin\\cargo.exe",
+    "CommandLine": "cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral"
+  },
+  {
+    "ProcessId": 36788,
+    "ParentProcessId": 13744,
+    "CreationDate": "2026-10-24T23:31:33.051409-05:00",
+    "Name": "cargo.exe",
+    "ExecutablePath": "C:\\Users\\james\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+    "CommandLine": "\"C:\\Users\\james\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe\" test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral"
+  },
+  {
+    "ProcessId": 43856,
+    "ParentProcessId": 36788,
+    "CreationDate": "2026-10-24T23:33:27.076978-05:00",
+    "Name": "cards_behavioral-fccdda01a7d2293d.exe",
+    "ExecutablePath": "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-training-tdd\\debug\\deps\\cards_behavioral-fccdda01a7d2293d.exe",
+    "CommandLine": "\"C:/Users/james/.codex/build-targets/light-hybrid-training-tdd\\debug\\deps\\cards_behavioral-fccdda01a7d2293d.exe\""
+  },
+  {
+    "ProcessId": 26204,
+    "ParentProcessId": 40488,
+    "CreationDate": "2026-10-24T23:40:49.187837-05:00",
+    "Name": "pwsh.exe",
+    "ExecutablePath": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "CommandLine": "\"C:\\Program Files\\PowerShell\\7\\pwsh.exe\" -NoProfile -Command \"try { [Console]::OutputEncoding=[System.Text.Encoding]::UTF8 } catch {}\n$env:CARGO_TARGET_DIR='C:/Users/james/.codex/build-targets/light-hybrid-replay'; $env:RUST_MIN_STACK='268435456'; $env:RUSTC_WRAPPER=''; $env:RUST_TEST_THREADS='1'; cargo test -p digimon-engine --test cards_behavioral --config profile.dev.opt-level=0 --config profile.dev.debug=0 *> qa/archetype-qa/dsl/light-hybrid-training/verification/logs/full-cards-cached-test-data.log; exit $LASTEXITCODE\""
+  },
+  {
+    "ProcessId": 19804,
+    "ParentProcessId": 26204,
+    "CreationDate": "2026-10-24T23:40:49.202186-05:00",
+    "Name": "conhost.exe",
+    "ExecutablePath": "C:\\WINDOWS\\system32\\conhost.exe",
+    "CommandLine": "\\??\\C:\\WINDOWS\\system32\\conhost.exe 0x4"
+  },
+  {
+    "ProcessId": 4928,
+    "ParentProcessId": 26204,
+    "CreationDate": "2026-10-24T23:40:49.665005-05:00",
+    "Name": "cargo.exe",
+    "ExecutablePath": "C:\\Users\\james\\.cargo\\bin\\cargo.exe",
+    "CommandLine": "\"C:\\Users\\james\\.cargo\\bin\\cargo.exe\" test -p digimon-engine --test cards_behavioral --config profile.dev.opt-level=0 --config profile.dev.debug=0"
+  },
+  {
+    "ProcessId": 51672,
+    "ParentProcessId": 4928,
+    "CreationDate": "2026-10-24T23:40:49.733678-05:00",
+    "Name": "cargo.exe",
+    "ExecutablePath": "C:\\Users\\james\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+    "CommandLine": "\"C:\\Users\\james\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe\" test -p digimon-engine --test cards_behavioral --config profile.dev.opt-level=0 --config profile.dev.debug=0"
+  },
+  {
+    "ProcessId": 41664,
+    "ParentProcessId": 51672,
+    "CreationDate": "2026-10-24T23:42:37.708322-05:00",
+    "Name": "cards_behavioral-fccdda01a7d2293d.exe",
+    "ExecutablePath": "C:\\Users\\james\\.codex\\build-targets\\light-hybrid-replay\\debug\\deps\\cards_behavioral-fccdda01a7d2293d.exe",
+    "CommandLine": "\"C:/Users/james/.codex/build-targets/light-hybrid-replay\\debug\\deps\\cards_behavioral-fccdda01a7d2293d.exe\""
+  }
+]

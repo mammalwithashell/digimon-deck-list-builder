@@ -1,0 +1,45 @@
+
+running 40 tests
+test constructs::security_stack::add_top_security_to_hand_of_opponent_moves_their_top_card ... ok
+test constructs::security_stack::add_top_security_to_hand_routes_to_the_card_owner_not_the_stack_owner ... ok
+test constructs::security_stack::add_top_security_to_hand_on_empty_stack_is_a_no_op_that_does_not_abort_the_clause ... ok
+test constructs::security_stack::owner_can_add_security_false_inverts ... ok
+test constructs::security_stack::on_lose_security_does_not_fire_when_security_is_added ... ok
+test constructs::security_stack::add_top_security_to_hand_moves_the_top_card_to_its_owners_hand_without_a_prompt ... ok
+test constructs::security_stack::on_lose_security_does_not_fire_for_the_other_players_stack ... ok
+test constructs::security_stack::add_top_security_to_hand_clears_the_face_up_record ... ok
+test constructs::security_stack::on_lose_security_fires_once_for_an_effect_removal_with_the_effect_bit ... ok
+test constructs::security_stack::owner_can_add_security_ignores_the_acting_player ... ok
+test constructs::security_stack::on_lose_security_fires_for_a_security_check_without_the_effect_bit ... ok
+test constructs::security_stack::owner_can_add_security_excludes_digimon_whose_owner_cannot_add_security ... ok
+test constructs::security_stack::on_lose_security_and_on_opponent_security_removed_are_disjoint ... ok
+test constructs::security_stack::play_security_card_pass_changes_nothing ... ok
+test constructs::security_stack::play_security_card_with_a_binding_that_left_the_stack_is_a_no_op ... ok
+test constructs::security_stack::play_security_card_offers_only_filter_matches_and_plays_the_pick_free ... ok
+test constructs::security_stack::owner_can_add_security_reads_the_top_cards_owner_not_the_controller ... ok
+test constructs::security_stack::return_top_security_to_deck_fires_on_lose_security_once_with_the_effect_bit ... ok
+test constructs::security_stack::on_lose_security_optional_variant_offers_a_real_prompt ... ok
+test constructs::security_stack::return_top_security_to_deck_bottom_puts_the_card_at_deck_index_zero_and_records_the_return ... ok
+test constructs::security_stack::on_lose_security_security_scoped_self_clause_fires_once_unscoped_does_not ... ok
+test constructs::security_stack::owner_can_add_security_true_without_restrictions ... ok
+test constructs::security_stack::play_security_card_fires_on_lose_security_once ... ok
+test constructs::security_stack::add_top_security_to_hand_records_the_added_card ... ok
+test constructs::security_stack::return_top_security_to_deck_on_empty_stack_records_nothing ... ok
+test constructs::security_stack::return_top_security_to_deck_top_puts_it_on_the_next_draw ... ok
+test constructs::security_stack::return_top_security_to_deck_routes_to_the_card_owner ... ok
+test constructs::security_stack::trash_selected_security_surfaces_a_real_security_pick_over_the_opponents_stack ... ok
+test constructs::security_stack::security_place_top_card_moves_the_visible_top_card_face_down_to_the_bottom_and_keeps_the_stack_in_play ... ok
+test constructs::security_stack::security_place_top_card_blocked_by_the_destination_players_restriction ... ok
+test constructs::security_stack::trash_selected_security_pass_changes_nothing ... ok
+test constructs::security_stack::security_place_top_card_blocked_by_the_acting_players_cannot_add_security_by_effect ... ok
+test constructs::security_stack::security_place_top_card_with_a_lone_card_is_a_no_op ... ok
+test constructs::security_stack::trash_selected_security_trashes_the_chosen_middle_card ... ok
+test constructs::security_stack::trash_selected_security_with_empty_stack_installs_no_selection ... ok
+test constructs::security_stack::play_security_card_resumed_commit_fires_each_removal_timing_once_and_not_the_new_body ... ok
+test constructs::security_stack::play_security_card_rejected_commit_emits_no_removal ... ok
+test constructs::security_stack::play_security_card_cancelled_commit_emits_no_removal ... ok
+test constructs::security_stack::trash_selected_security_fires_on_discard_security_on_the_trashed_card_only ... ok
+test constructs::security_stack::security_place_top_card_top_and_face_up_variants ... ok
+
+test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 1553 filtered out; finished in 11.48s
+

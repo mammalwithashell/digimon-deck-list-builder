@@ -1,0 +1,20 @@
+
+running 15 tests
+test bt18_037_inspection_grant_does_not_expose_card_identities_to_the_other_seat ... ok
+test bt18_037_no_match_still_shuffles_security ... ok
+test bt18_037_no_matching_card_does_not_recover ... ok
+test bt18_037_decline_still_shuffles_security_exactly_once ... ok
+test bt18_037_decline_does_not_recover ... ok
+test bt18_037_paging_only_changes_presentation_until_an_actual_card_is_committed ... ok
+test bt18_037_named_koji_route_accepts_a_non_tamer_rule_alias ... ok
+test bt18_037_named_koji_route_accepts_a_non_tamer_named_subject ... ok
+test bt18_037_cloned_second_page_accept_and_decline_preserve_recovery_and_shuffle ... ok
+test bt18_037_real_repeated_attacks_draw_twice_without_opt ... ok
+test bt18_037_search_filters_traits_and_adds_then_recovers ... ok
+test bt18_037_named_koji_route_and_rule_alias_cost_two ... ok
+test bt18_037_sparse_deep_security_choices_preserve_physical_identity_and_exact_shuffle ... ok
+test bt18_037_inherited_seven_eight_boundary_and_repeat ... ok
+test bt18_037_native_circle_masks_and_kendo_zero_cost ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 57.57s
+

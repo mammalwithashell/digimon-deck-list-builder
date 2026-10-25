@@ -1,0 +1,90 @@
+{
+  "extracted": {
+    "attribute": "Variable",
+    "card_id": "P-153",
+    "card_type": "Digimon",
+    "colors": [
+      "Yellow",
+      "Blue"
+    ],
+    "dp": 12000,
+    "evolution_routes": [
+      {
+        "colors": [
+          "Yellow",
+          "Blue"
+        ],
+        "cost": 4,
+        "from_level": 5,
+        "slot": 1
+      }
+    ],
+    "faces": [
+      {
+        "colors": [
+          "Yellow",
+          "Blue"
+        ],
+        "dp": 12000,
+        "face_id": "primary",
+        "kind": "digimon",
+        "level": 6,
+        "name": "MagnaGarurumon",
+        "play_cost": 12,
+        "text_sections": [
+          {
+            "label": "Special Digivolution Condition",
+            "text": "[Digivolve] 3 color [MagnaGarurumon]: Cost 2"
+          },
+          {
+            "label": "Effect",
+            "text": "＜Armor Purge＞\n[When Digivolving] Return 1 of your opponent's level 3, 1 of their level 4 and 1 of their level 5 Digimon to the hand.\n[End of Attack] By placing this Digimon's top stacked card as the top security card, this Digimon or Tamer unsuspends."
+          }
+        ]
+      }
+    ],
+    "form": "Hybrid",
+    "grade_evolution_routes": [],
+    "layout": "single",
+    "level": 6,
+    "name": "MagnaGarurumon",
+    "play_cost": 12,
+    "printing": {
+      "alternate_art": false,
+      "category_id": "522901",
+      "image_url": "https://world.digimoncard.com/images/cardlist/card/P-153.png?260529",
+      "printing_id": "P-153"
+    },
+    "printing_field_gaps": [],
+    "qa": [],
+    "rarity": "P",
+    "rule_grants": {
+      "attributes": [],
+      "traits": []
+    },
+    "special_evolution_routes": [
+      "[Digivolve] 3 color [MagnaGarurumon]: Cost 2"
+    ],
+    "tamer_evolution_routes": [],
+    "text_sections": [
+      {
+        "label": "Special Digivolution Condition",
+        "text": "[Digivolve] 3 color [MagnaGarurumon]: Cost 2"
+      },
+      {
+        "label": "Effect",
+        "text": "＜Armor Purge＞\n[When Digivolving] Return 1 of your opponent's level 3, 1 of their level 4 and 1 of their level 5 Digimon to the hand.\n[End of Attack] By placing this Digimon's top stacked card as the top security card, this Digimon or Tamer unsuspends."
+      }
+    ],
+    "type": "Cyborg"
+  },
+  "first_acquired_at": "2026-07-13T00:00:00Z",
+  "observation_id": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+  "parser_version": "official-html-v2",
+  "raw_payload_digest": "4163c69eeb2accbdaaf7fd53d0819dbe2822df97d5e385efc9b7a115f3f090d2",
+  "schema_version": 1,
+  "source": "official",
+  "source_record_key": "522901:P-153:P-153",
+  "source_schema_version": "world-card-list-html-v1",
+  "source_url": "https://world.digimoncard.com/cards/?search=true&category=522901"
+}

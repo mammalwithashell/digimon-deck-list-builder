@@ -16,7 +16,6 @@ use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
 
-const TRASH_EFFECT_START: u16 = digimon_engine::action::space::TRASH_EFFECT_START;
 
 fn sistermon(id: &str) -> CardData {
     let mut card = make_test_card(id, "Sistermon Blanc");
@@ -66,11 +65,10 @@ fn add_breeding_source(runner: &mut DebugRunner, player: u8, card_id: &str) {
     breeding.card_sources.insert(0, source);
 }
 
-/// The breeding-source action id for the source at `source_index` under
-/// player `owner`'s breeding carrier.
-fn breeding_source_action(owner: u8, source_index: u16) -> u16 {
-    digimon_engine::action::space::encode_breeding_source_select(owner, source_index)
-        .expect("valid breeding-source action id")
+fn breeding_source_action(runner: &DebugRunner, owner: u8, source_index: usize) -> u16 {
+    physical_menu::source_action(&runner.game, digimon_engine::permanent::PermanentHandle {
+        player: owner, index: digimon_engine::action::space::BREEDING_TARGET as u8,
+    }, source_index)
 }
 
 #[test]
@@ -137,48 +135,19 @@ fn bt13_019_plays_sistermon_or_royal_knight_from_breeding_sources() {
         "printed 'you may play 1' must expose PASS (decline)"
     );
 
-    // Trash indices: SISTERMON-TRASH at trash[0] (legal), OMNIMON-TRASH at
-    // trash[1] (excluded by name).
-    let sistermon_action = TRASH_EFFECT_START; // trash[0]
-    let omnimon_action = TRASH_EFFECT_START + 1; // trash[1]
-
-    // `add_breeding_source` inserts each new source at card_sources index 0, so
-    // the three inserts (PLAIN-SRC, then GANKOOMON-SRC, then RK-SRC) leave the
-    // stack as: idx 0 = RK-SRC (last inserted), idx 1 = GANKOOMON-SRC, idx 2 =
-    // PLAIN-SRC, idx 3 = BREED-HOST (top). RK-SRC is the legal Royal Knight;
-    // GANKOOMON-SRC is excluded by name; PLAIN-SRC is not a Royal Knight.
-    let rk_action = breeding_source_action(0, 0);
-    let gankoomon_action = breeding_source_action(0, 1);
-    let plain_src_action = breeding_source_action(0, 2);
-
-    let ids = &pending.valid_action_ids;
-    assert!(
-        ids.contains(&sistermon_action),
-        "trash [Sistermon] must be a legal pick; ids = {ids:?}"
-    );
-    assert!(
-        ids.contains(&rk_action),
-        "breeding [Royal Knight] source must be a legal pick; ids = {ids:?}"
-    );
-    assert!(
-        !ids.contains(&omnimon_action),
-        "Omnimon (name-excluded) must be masked from trash; ids = {ids:?}"
-    );
-    assert!(
-        !ids.contains(&gankoomon_action),
-        "Gankoomon (name-excluded) must be masked from breeding sources; ids = {ids:?}"
-    );
-    assert!(
-        !ids.contains(&plain_src_action),
-        "non-Royal-Knight breeding source must be masked; ids = {ids:?}"
-    );
-
-    // Both zones offered in one prompt: exactly two legal candidates.
-    assert_eq!(
-        ids.len(),
-        2,
-        "union must offer exactly the legal trash Sistermon + breeding Royal Knight; ids = {ids:?}"
-    );
+    let sistermon_action = physical_menu::card_action(&runner.game, "SISTERMON-TRASH",
+        digimon_engine::owned_card_choice::CardChoiceZone::Trash);
+    let rk_action = breeding_source_action(&runner, 0, 0);
+    let commits = physical_menu::commits(&runner.game);
+    let mut offered: Vec<_> = commits.iter().map(|row| row.card_id.as_deref().unwrap()).collect();
+    offered.sort();
+    assert_eq!(offered, vec!["RK-SRC", "SISTERMON-TRASH"],
+        "exact union excludes Omnimon, Gankoomon and non-Royal-Knight sources");
+    assert!(pending.valid_action_ids.contains(&sistermon_action));
+    assert!(pending.valid_action_ids.contains(&rk_action));
+    assert!(pending.valid_action_ids.contains(&digimon_engine::action::space::PASS));
+    assert_eq!(pending.valid_action_ids.len(), commits.len() + 1,
+        "the whole menu is exactly the two legal cards plus printed decline");
 
     // Submit the trash Sistermon → it enters P0's battle area for free.
     let mem_before = runner.memory();
@@ -224,11 +193,11 @@ fn bt13_019_plays_royal_knight_from_breeding_only() {
     let pending = runner
         .pending_selection()
         .expect("breeding-only union still surfaces a selection");
-    let rk_action = breeding_source_action(0, 0);
+    let rk_action = breeding_source_action(&runner, 0, 0);
     assert_eq!(
         pending.valid_action_ids,
-        vec![rk_action],
-        "only the single breeding Royal Knight is legal"
+        vec![rk_action, digimon_engine::action::space::PASS],
+        "only the single breeding Royal Knight and printed decline are legal"
     );
 
     let breeding_sources_before = runner
@@ -302,3 +271,6 @@ fn bt13_019_decline_leaves_board_unchanged() {
         "no further selection after declining"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

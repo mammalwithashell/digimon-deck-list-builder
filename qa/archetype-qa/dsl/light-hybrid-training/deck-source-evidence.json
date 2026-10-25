@@ -1,0 +1,1036 @@
+{
+  "deck_name": "LightHybrid",
+  "source_path": "C:/Users/james/Documents/DCGO_Application/Assets/Decks/LightHybrid_ZWd06BaFMXQ.txt",
+  "total_cards": 54,
+  "unique_ids": 20,
+  "authority_base_path": "C:\\Users\\james\\Documents\\digimon-deck-list-builder-1\\data",
+  "cards": [
+    {
+      "card_id": "EX7-002",
+      "count": 4,
+      "official_fields": {
+        "attribute_eng": [],
+        "card_colors": [
+          "Blue"
+        ],
+        "card_kind": "Digi-Egg",
+        "card_name_eng": "Hiyarimon",
+        "effect_description_eng": "",
+        "evo_costs": [],
+        "form_eng": [
+          "In-Training"
+        ],
+        "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If your opponent has no Digimon with digivolution cards, ＜Draw 1＞.",
+        "level": 2,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Lesser"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "card_colors": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "card_kind": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "card_name_eng": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "effect_description_eng": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "evo_costs": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "faces": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "form_eng": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "inherited_effect_description_eng": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "level": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "security_effect_description_eng": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d",
+        "type_eng": "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d": "official-observations/ebd670529b9e530a6b9adaabbddc5c94fcfb29717da299ff2409daee05fcc01d.json"
+      }
+    },
+    {
+      "card_id": "BT6-022",
+      "count": 2,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Blue"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Strabimon",
+        "dp": 3000,
+        "effect_description_eng": "",
+        "evo_costs": [
+          {
+            "colors": [
+              "Blue"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "[When Attacking][Once Per Turn] If this Digimon has [Hybrid] or [Ten Warriors] in its form or type, gain 1 memory.",
+        "level": 3,
+        "play_cost": 4,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Beastkin"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "card_colors": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "card_kind": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "card_name_eng": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "dp": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "effect_description_eng": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "evo_costs": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "faces": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "form_eng": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "inherited_effect_description_eng": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "level": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "play_cost": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "security_effect_description_eng": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440",
+        "type_eng": "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440": "official-observations/c2e5311758c452b8dfa7cd44d7d2492d241c63b231d5ca9e990b5629e50e5440.json"
+      }
+    },
+    {
+      "card_id": "BT17-020",
+      "count": 1,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Blue"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Strabimon",
+        "dp": 1000,
+        "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 Tamer card with inherited effects among them to the hand. Return the rest to the bottom of the deck.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Blue",
+              "Yellow"
+            ],
+            "cost": 0,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may play 1 Tamer card with inherited effects from your hand with the play cost reduced by 2.",
+        "level": 3,
+        "play_cost": 3,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Beastkin"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "card_colors": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "card_kind": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "card_name_eng": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "dp": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "effect_description_eng": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "evo_costs": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "faces": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "form_eng": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "inherited_effect_description_eng": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "level": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "play_cost": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "security_effect_description_eng": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d",
+        "type_eng": "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d": "official-observations/9fbc939f23ca8784ce270cf6cf7c9372181b01196d07dd6efab189baa749256d.json"
+      }
+    },
+    {
+      "card_id": "P-249",
+      "count": 4,
+      "official_fields": null,
+      "official_observations": {},
+      "source_status": "missing_official_and_runtime_data",
+      "official_observation_paths": {}
+    },
+    {
+      "card_id": "BT16-082",
+      "count": 4,
+      "official_fields": {
+        "attribute_eng": [
+          "Free"
+        ],
+        "card_colors": [
+          "White"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Ukkomon",
+        "dp": 2000,
+        "effect_description_eng": "[Your Turn] [Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, reveal the top 3 cards of your deck. Add 1 Digimon card or Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, you may hatch in your breeding area.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Red",
+              "Blue",
+              "Yellow",
+              "Green",
+              "White",
+              "Black",
+              "Purple"
+            ],
+            "cost": 1,
+            "from_level": 2,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Rookie"
+        ],
+        "inherited_effect_description_eng": "",
+        "level": 3,
+        "play_cost": 3,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Ancient Fairy"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "card_colors": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "card_kind": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "card_name_eng": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "dp": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "effect_description_eng": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "evo_costs": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "faces": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "form_eng": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "inherited_effect_description_eng": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "level": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "play_cost": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "security_effect_description_eng": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972",
+        "type_eng": "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972": "official-observations/758a482331cfa4aa28c723749a4fcdb9fd3be87ffa6eae4e23f3003934161972.json"
+      }
+    },
+    {
+      "card_id": "BT17-023",
+      "count": 4,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Blue",
+          "Yellow"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "KendoGarurumon",
+        "dp": 6000,
+        "effect_description_eng": "This card may digivolve from the hand onto one of your yellow Tamers as if that card is a level 3 yellow Digimon.\n[When Attacking] ＜Draw 1＞\n[When Attacking] This Digimon may digivolve into a Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Blue",
+              "Yellow"
+            ],
+            "cost": 3,
+            "from_level": 3,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "[When Attacking] If you have 7 or fewer cards in your hand, ＜Draw 1＞.",
+        "level": 4,
+        "play_cost": 6,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Cyborg"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "card_colors": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "card_kind": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "card_name_eng": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "dp": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "effect_description_eng": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "evo_costs": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "faces": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "form_eng": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "inherited_effect_description_eng": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "level": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "play_cost": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "security_effect_description_eng": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755",
+        "type_eng": "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755": "official-observations/b2425d7be87f04cc4e19aa0ae328bdee2c935e66f3db38830ea87845bcfdd755.json"
+      }
+    },
+    {
+      "card_id": "BT18-037",
+      "count": 1,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Yellow",
+          "Blue"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Lobomon",
+        "dp": 5000,
+        "effect_description_eng": "[When Digivolving] Search your security stack. You may add 1 card with the [Hybrid] or [Ten Warriors] trait among it to the hand. If this added, ＜Recovery +1 ≪Deck≫＞. Then, shuffle your security stack.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Yellow",
+              "Blue"
+            ],
+            "cost": 3,
+            "from_level": 3,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "[When Attacking] If you have 7 or fewer cards in your hand, ＜Draw 1＞.",
+        "level": 4,
+        "play_cost": 5,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Warrior"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "card_colors": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "card_kind": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "card_name_eng": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "dp": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "effect_description_eng": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "evo_costs": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "faces": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "form_eng": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "inherited_effect_description_eng": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "level": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "play_cost": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "security_effect_description_eng": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c",
+        "type_eng": "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c": "official-observations/50bc757c3a9a85ce07391dc68c094ee715de6f0e207142386a4edbf96e3df94c.json"
+      }
+    },
+    {
+      "card_id": "BT18-067",
+      "count": 2,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Black",
+          "Yellow"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "MetalKabuterimon",
+        "dp": 7000,
+        "effect_description_eng": "＜Blocker＞\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Black",
+              "Yellow"
+            ],
+            "cost": 4,
+            "from_level": 3,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+        "level": 4,
+        "play_cost": 6,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Cyborg"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "card_colors": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "card_kind": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "card_name_eng": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "dp": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "effect_description_eng": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "evo_costs": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "faces": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "form_eng": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "inherited_effect_description_eng": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "level": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "play_cost": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "security_effect_description_eng": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293",
+        "type_eng": "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293": "official-observations/d0fa3065d737b7c9a44461bbe0d8a4a4eac06164fc825e6365519bef90014293.json"
+      }
+    },
+    {
+      "card_id": "BT18-063",
+      "count": 1,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Black",
+          "Yellow"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Beetlemon",
+        "dp": 5000,
+        "effect_description_eng": "[When Digivolving] Until the end of your opponent's turn, this Digimon can't be deleted by their effects.\n[When Attacking] 1 of your Digimon or Tamers may digivolve into a black or yellow Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Black",
+              "Yellow"
+            ],
+            "cost": 3,
+            "from_level": 3,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 Tamer card with inherited effects from this Digimon's digivolution cards without paying the cost.",
+        "level": 4,
+        "play_cost": 5,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Cyborg"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "card_colors": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "card_kind": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "card_name_eng": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "dp": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "effect_description_eng": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "evo_costs": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "faces": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "form_eng": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "inherited_effect_description_eng": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "level": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "play_cost": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "security_effect_description_eng": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413",
+        "type_eng": "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413": "official-observations/3b47c98dd5ba6b41f2db8ffae797e4e7c009356700c28d72ab412074957c3413.json"
+      }
+    },
+    {
+      "card_id": "BT18-077",
+      "count": 3,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Purple",
+          "Yellow"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "KaiserLeomon",
+        "dp": 7000,
+        "effect_description_eng": "＜Retaliation＞\n[On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Purple",
+              "Yellow"
+            ],
+            "cost": 4,
+            "from_level": 3,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)",
+        "level": 4,
+        "play_cost": 6,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Cyborg"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "card_colors": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "card_kind": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "card_name_eng": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "dp": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "effect_description_eng": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "evo_costs": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "faces": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "form_eng": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "inherited_effect_description_eng": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "level": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "play_cost": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "security_effect_description_eng": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67",
+        "type_eng": "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67": "official-observations/a1e821b4f6f6b8f8746a938fa59b19fba2badc0ffb49f797f8d4039bfa79dc67.json"
+      }
+    },
+    {
+      "card_id": "BT18-076",
+      "count": 3,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Purple",
+          "Yellow"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Loweemon",
+        "dp": 5000,
+        "effect_description_eng": "[When Digivolving] ＜Draw 1＞ and trash 1 card in your hand.\n[When Attacking] 1 of your Digimon or Tamers may digivolve into a purple or yellow Digimon card with the [Hybrid] trait in your trash.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Purple",
+              "Yellow"
+            ],
+            "cost": 3,
+            "from_level": 3,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 Tamer card with inherited effects from this Digimon's digivolution cards without paying the cost.",
+        "level": 4,
+        "play_cost": 5,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Warrior"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "card_colors": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "card_kind": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "card_name_eng": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "dp": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "effect_description_eng": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "evo_costs": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "faces": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "form_eng": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "inherited_effect_description_eng": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "level": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "play_cost": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "security_effect_description_eng": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac",
+        "type_eng": "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac": "official-observations/80da24a136d15f6ba9fb480564eeeb7cff2ef4ea3aae0cc8d64dfc0346b3c6ac.json"
+      }
+    },
+    {
+      "card_id": "AD1-015",
+      "count": 4,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Yellow"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Beowolfmon",
+        "dp": 8000,
+        "effect_description_eng": "＜Jamming＞\n[When Digivolving] [When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn.\n[End of Attack] [On Deletion] You may play 1 yellow, black or purple Tamer card with inherited effects from your hand or trash without paying the cost. Then, by placing 1 [Hybrid] or [Ten Warriors] trait card from your hand under this Digimon or your Tamers, ＜Draw 2＞.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 3,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "[When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn.",
+        "level": 5,
+        "play_cost": 8,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Warrior"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "card_colors": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "card_kind": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "card_name_eng": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "dp": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "effect_description_eng": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "evo_costs": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "faces": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "form_eng": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "inherited_effect_description_eng": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "level": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "play_cost": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "security_effect_description_eng": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f",
+        "type_eng": "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f": "official-observations/63ebc7effb67480770acaa46cb7452e91de8b704df75b8c49ca57c291ad2c31f.json"
+      }
+    },
+    {
+      "card_id": "BT7-038",
+      "count": 1,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Yellow"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "JetSilphymon",
+        "dp": 7000,
+        "effect_description_eng": "When one of your Digimon with a Tamer card in its digivolution cards digivolves into this card in your hand, reduce the memory cost of the digivolution by 2.\n[When Digivolving] If a card with [Hybrid] in its traits is in this Digimon's digivolution cards, ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.)",
+        "evo_costs": [
+          {
+            "colors": [
+              "Yellow"
+            ],
+            "cost": 3,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "",
+        "level": 5,
+        "play_cost": 7,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Cyborg"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "card_colors": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "card_kind": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "card_name_eng": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "dp": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "effect_description_eng": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "evo_costs": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "faces": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "form_eng": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "inherited_effect_description_eng": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "level": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "play_cost": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "security_effect_description_eng": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85",
+        "type_eng": "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85": "official-observations/8aea3fc7ee8b95499bdbd7db002d4825b4485eae4ca8490d953c89f782526f85.json"
+      }
+    },
+    {
+      "card_id": "BT18-081",
+      "count": 2,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Purple",
+          "Yellow"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "Rhihimon",
+        "dp": 8000,
+        "effect_description_eng": "[Hand] [Main] By placing 1 [Loweemon] and 1 [KaiserLeomon] from your trash under 1 of your purple or yellow Tamers, digivolve it into this card for a digivolution cost of 3, ignoring digivolution requirements.\n＜Jamming＞\n[When Digivolving] You may play 1 Tamer card with inherited effects from your trash without paying the cost.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Purple",
+              "Yellow"
+            ],
+            "cost": 4,
+            "from_level": 4,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.",
+        "level": 5,
+        "play_cost": 8,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Warrior"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "card_colors": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "card_kind": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "card_name_eng": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "dp": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "effect_description_eng": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "evo_costs": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "faces": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "form_eng": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "inherited_effect_description_eng": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "level": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "play_cost": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "security_effect_description_eng": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03",
+        "type_eng": "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03": "official-observations/e6e0d69e064aecadcdc9f5afe6cf97857bf21292a5856f35d8664839a1967c03.json"
+      }
+    },
+    {
+      "card_id": "BT18-042",
+      "count": 3,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Yellow",
+          "Purple",
+          "Black"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "MagnaGarurumon",
+        "dp": 13000,
+        "effect_description_eng": "[When Digivolving] [End of Opponent's Turn] [Once Per Turn] By placing 1 Digimon card from this Digimon's digivolution cards as the bottom security card, delete all of your opponent's Digimon with the same level as the placed card.\n[All Turns] [Once Per Turn] When Digimon attack, by adding your top security card to the hand, this Digimon unsuspends.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Yellow",
+              "Purple",
+              "Black"
+            ],
+            "cost": 5,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "",
+        "level": 6,
+        "play_cost": 13,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Cyborg"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "card_colors": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "card_kind": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "card_name_eng": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "dp": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "effect_description_eng": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "evo_costs": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "faces": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "form_eng": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "inherited_effect_description_eng": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "level": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "play_cost": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "security_effect_description_eng": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574",
+        "type_eng": "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574": "official-observations/29a8a226c5203a732be047d6c5923e176a6e564271f9df87f09d75a49071d574.json"
+      }
+    },
+    {
+      "card_id": "P-153",
+      "count": 2,
+      "official_fields": {
+        "attribute_eng": [
+          "Variable"
+        ],
+        "card_colors": [
+          "Yellow",
+          "Blue"
+        ],
+        "card_kind": "Digimon",
+        "card_name_eng": "MagnaGarurumon",
+        "dp": 12000,
+        "effect_description_eng": "＜Armor Purge＞\n[When Digivolving] Return 1 of your opponent's level 3, 1 of their level 4 and 1 of their level 5 Digimon to the hand.\n[End of Attack] By placing this Digimon's top stacked card as the top security card, this Digimon or Tamer unsuspends.",
+        "evo_costs": [
+          {
+            "colors": [
+              "Yellow",
+              "Blue"
+            ],
+            "cost": 4,
+            "from_level": 5,
+            "slot": 1
+          }
+        ],
+        "form_eng": [
+          "Hybrid"
+        ],
+        "inherited_effect_description_eng": "",
+        "level": 6,
+        "play_cost": 12,
+        "security_effect_description_eng": "",
+        "type_eng": [
+          "Cyborg"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "card_colors": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "card_kind": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "card_name_eng": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "dp": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "effect_description_eng": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "evo_costs": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "faces": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "form_eng": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "inherited_effect_description_eng": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "level": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "play_cost": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "security_effect_description_eng": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767",
+        "type_eng": "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767": "official-observations/6fbee7bf1ec01fa7e476045989ec0b3ce6524dd18e4d171c56e0bf6ea9f72767.json"
+      }
+    },
+    {
+      "card_id": "BT18-088",
+      "count": 3,
+      "official_fields": {
+        "attribute_eng": [],
+        "card_colors": [
+          "Red",
+          "Yellow"
+        ],
+        "card_kind": "Tamer",
+        "card_name_eng": "Takuya Kanbara & Koji Minamoto",
+        "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\n[Start of Your Main Phase] You may place up to 1 [Hybrid] trait card with different names from your trash under this Tamer. For each of your other Tamers, add 2 to the maximum number this effect may place.\n(Rule) Name: Also treated as [Takuya Kanbara]/[Koji Minamoto].",
+        "evo_costs": [],
+        "form_eng": [],
+        "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] This Digimon with the [Hybrid] or [Ten Warriors] trait may attack a player.",
+        "level": null,
+        "play_cost": 5,
+        "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+        "type_eng": []
+      },
+      "official_observations": {
+        "attribute_eng": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "card_colors": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "card_kind": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "card_name_eng": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "effect_description_eng": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "evo_costs": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "faces": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "form_eng": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "inherited_effect_description_eng": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "play_cost": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "security_effect_description_eng": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38",
+        "type_eng": "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38": "official-observations/9caf5deb5439e0b108dc408aac9946a071b63a3b160c11e3fc1b63c018134a38.json"
+      }
+    },
+    {
+      "card_id": "AD1-023",
+      "count": 4,
+      "official_fields": {
+        "attribute_eng": [],
+        "card_colors": [
+          "Black",
+          "Yellow",
+          "Purple"
+        ],
+        "card_kind": "Tamer",
+        "card_name_eng": "J.P., Koji, & Koichi",
+        "effect_description_eng": "[Start of Your Main Phase] [On Play] You may place up to 2 [Hybrid] trait cards with different colors from your hand or trash under this Tamer. If this effect placed, ＜Draw 1＞. Then, if there are 4 or more [Hybrid] trait cards under this Tamer, gain 2 memory.\n(Rule) Name: Also treated as [J.P. Shibayama]/[Koji Minamoto]/[Koichi Kimura].",
+        "evo_costs": [],
+        "form_eng": [],
+        "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon with the [Hybrid] or [Ten Warriors] trait would leave the battle area, by adding your top security card to the hand, it doesn't leave.",
+        "level": null,
+        "play_cost": 5,
+        "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+        "type_eng": []
+      },
+      "official_observations": {
+        "attribute_eng": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "card_colors": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "card_kind": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "card_name_eng": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "effect_description_eng": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "evo_costs": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "faces": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "form_eng": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "inherited_effect_description_eng": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "play_cost": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "security_effect_description_eng": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572",
+        "type_eng": "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572": "official-observations/add28324e4ff3904188252fa1c5a80b63ac63977395d48ffbfa023982073f572.json"
+      }
+    },
+    {
+      "card_id": "BT18-094",
+      "count": 3,
+      "official_fields": {
+        "attribute_eng": [],
+        "card_colors": [
+          "Purple",
+          "Yellow"
+        ],
+        "card_kind": "Tamer",
+        "card_name_eng": "Koichi Kimura",
+        "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
+        "evo_costs": [],
+        "form_eng": [],
+        "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may return 1 card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand.",
+        "level": null,
+        "play_cost": 4,
+        "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+        "type_eng": []
+      },
+      "official_observations": {
+        "attribute_eng": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "card_colors": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "card_kind": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "card_name_eng": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "effect_description_eng": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "evo_costs": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "faces": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "form_eng": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "inherited_effect_description_eng": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "play_cost": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "security_effect_description_eng": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d",
+        "type_eng": "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d": "official-observations/3cc3ca248260cf295a06338506c4aae3a05793ea6da2b7db26aa43e9b7d9229d.json"
+      }
+    },
+    {
+      "card_id": "BT18-097",
+      "count": 3,
+      "official_fields": {
+        "attribute_eng": [],
+        "card_colors": [
+          "Yellow",
+          "Purple",
+          "Black"
+        ],
+        "card_kind": "Option",
+        "card_name_eng": "Dark to Light, Thunder to Gunfire",
+        "effect_description_eng": "[Main] You may place up to 5 [Hybrid] trait cards with different names from your hand or trash under 1 of your Tamers. Then, 1 of your Tamers with 5 or more cards under it may digivolve into [MagnaGarurumon] in the hand or trash, ignoring digivolution requirements and without paying the cost.",
+        "evo_costs": [],
+        "form_eng": [],
+        "inherited_effect_description_eng": "",
+        "level": null,
+        "play_cost": 3,
+        "security_effect_description_eng": "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand.",
+        "type_eng": [
+          "Ten Warriors"
+        ]
+      },
+      "official_observations": {
+        "attribute_eng": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "card_colors": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "card_kind": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "card_name_eng": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "effect_description_eng": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "evo_costs": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "faces": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "form_eng": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "inherited_effect_description_eng": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "play_cost": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "security_effect_description_eng": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71",
+        "type_eng": "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71"
+      },
+      "source_status": "official_local_observation",
+      "official_observation_paths": {
+        "8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71": "official-observations/8e806eeab8b19a423ab939ff715d56cf252503eda8b98bec2a5a683ffe270a71.json"
+      }
+    }
+  ],
+  "p_249_online_evidence": {
+    "url": "https://world.digimoncard.com/cards/index.php?free=Store+Tournament+2026+Vol.+4&search=true",
+    "page": "p-249-official-page.html",
+    "sha256": "25923eaadc56900c233d9cddda51d00522e517390f35c1e6be0bc2d3d51052cb",
+    "status": "official_source_published_via_supported_pre_cutover_lane",
+    "qa": "Q7481: placed card goes on the bottom under the Tamer"
+  }
+}

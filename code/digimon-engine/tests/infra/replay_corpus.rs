@@ -383,7 +383,7 @@ fn legacy_schema_rehash_stays_legacy_and_replays_cleanly() {
 #[test]
 fn unsupported_versions_never_retire_or_rewrite_corpus_files() {
     let db = test_card_db();
-    for (format, schema) in [(1, 3), (2, 2), (1, 999)] {
+    for (format, schema) in [(1, 4), (2, 2), (1, 999)] {
         let root = std::env::temp_dir().join(format!("digimon_unknown_protocol_{}_{}_{}_{}", std::process::id(), format, schema, std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
         let goldens = root.join("goldens"); let retired = root.join("retired");
         fs::create_dir_all(&goldens).unwrap();
@@ -418,4 +418,20 @@ fn regenerate_rerecords_one_golden_from_its_inline_decks_and_seed() {
     let mut unseeded = original;
     unseeded.seed = None;
     assert!(regenerate_greedy_replay(&unseeded, b"{cards fixture}", &db, None).is_err());
+}
+
+#[test]
+fn unsupported_action_semantics_never_retire_or_rewrite_corpus_files() {
+    let db = test_card_db();
+    let root = std::env::temp_dir().join(format!("digimon_unknown_action_protocol_{}_{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
+    let goldens = root.join("goldens"); let retired = root.join("retired");
+    fs::create_dir_all(&goldens).unwrap();
+    let mut recording = generated_recording(6, 803);
+    recording.action_schema_version = 999;
+    let bytes = serde_json::to_vec_pretty(&recording).unwrap();
+    let file = goldens.join("future.replay.json"); fs::write(&file, &bytes).unwrap();
+    assert!(bless_replay_corpus_dir(&goldens, &retired, &db).is_err());
+    assert_eq!(fs::read(&file).unwrap(), bytes);
+    assert!(!retired.join("future.retired.json").exists());
+    fs::remove_dir_all(root).unwrap();
 }

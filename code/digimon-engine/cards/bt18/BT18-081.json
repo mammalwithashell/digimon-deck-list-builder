@@ -32,6 +32,11 @@
       "card_color": 6,
       "level": 4,
       "memory_cost": 4
+    },
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
     }
   ],
   "xros_req": "[Digivolve] Purple/Yellow Lv.4 w/[Hybrid] trait: Cost 3"

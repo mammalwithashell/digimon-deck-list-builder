@@ -112,7 +112,7 @@ impl crate::game::Game {
                 let sref = crate::selection::SourceSelectionRef {
                     permanent: handle,
                     field_index: handle.index,
-                    source_index: source_index as u8,
+                    source_index,
                     card: source.handle(),
                 };
                 if filter(&ctx, sref) {

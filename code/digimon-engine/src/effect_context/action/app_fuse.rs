@@ -191,6 +191,7 @@ impl EffectContext<'_> {
             source_card,
             source_permanent,
             source_kind,
+            card_choice: None,
             zone_owner: None,
             callback: Box::new(move |game, action_id| {
                 run_app_fuse_host_selection_step(game, callback_state, action_id);
@@ -317,6 +318,7 @@ fn install_result_selection(
         source_card,
         source_permanent,
         source_kind,
+        card_choice: None,
         zone_owner: None,
         callback: Box::new(move |game, action_id| {
             run_app_fuse_result_selection_step(game, callback_state, action_id);

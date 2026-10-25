@@ -1,0 +1,27 @@
+warning: methods `page_index` and `candidates` are never used
+  --> C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\digimon-engine\src\card_choice_page.rs:81:12
+   |
+54 | impl<T: Clone + Eq + Hash> CardChoicePage<T> {
+   | -------------------------------------------- methods in this implementation
+...
+81 |     pub fn page_index(&self) -> usize {
+   |            ^^^^^^^^^^
+...
+87 |     pub fn candidates(&self) -> &[T] {
+   |            ^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: 1 warning emitted
+
+
+running 6 tests
+test regressions::empty_and_duplicate_physical_candidates_are_rejected ... ok
+test card_choice_page::tests::generation_overflow_fails_without_mutating_owner ... ok
+test regressions::clone_and_back_navigation_preserve_physical_pins_but_invalidate_tokens ... ok
+test regressions::invalid_navigation_decline_and_cross_prompt_tokens_leave_owner_unchanged ... ok
+test regressions::stale_click_cannot_select_a_different_card_using_the_same_action ... ok
+test regressions::every_physical_candidate_is_reachable_without_a_depth_cap ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

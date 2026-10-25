@@ -787,10 +787,7 @@ fn bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free() {
         .copied()
         .find(|&a| a != PASS)
         .expect("at least one eligible [Wicked God] card action");
-    assert_eq!(
-        action, PLAY_HAND_START,
-        "the sole candidate is the hand's [Wicked God] at hand index 0"
-    );
+    assert!(owned_union_fixture::is_zone(&runner.game, action, false));
     let player = sel.selecting_player;
     runner
         .game
@@ -864,14 +861,14 @@ fn bt19_099_reward_plays_wicked_god_from_trash() {
         .collect();
     assert_eq!(
         non_pass,
-        vec![TRASH_EFFECT_START],
+        vec![owned_union_fixture::action(&runner.game, 0, "BT19099-WG-T", true).expect("eligible Wicked God")],
         "the sole candidate is the trash's [Wicked God] at trash index 0"
     );
 
     let player = sel.selecting_player;
     runner
         .game
-        .resolve_selection(player, TRASH_EFFECT_START)
+        .resolve_selection(player, non_pass[0])
         .expect("pick the Wicked God Digimon from trash");
     runner.game.drain_effect_queue();
     drive_to_completion(&mut runner, 10);
@@ -936,7 +933,7 @@ fn bt19_099_reward_offers_only_exact_cost_plus_one() {
         .collect();
     assert_eq!(
         non_pass,
-        vec![PLAY_HAND_START],
+        vec![owned_union_fixture::action(&runner.game, 0, "BT19099-WG-11", false).expect("eligible Wicked God")],
         "only the cost-11 [Wicked God] (hand index 0) is offered; the cost-10 \
          sibling (hand index 1) fails the +1 comparator"
     );
@@ -1288,3 +1285,6 @@ fn bt19_099_security_places_self_in_battle_area_on_attack() {
          defender's battle area"
     );
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

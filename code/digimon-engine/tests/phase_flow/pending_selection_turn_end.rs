@@ -174,6 +174,7 @@ fn pending_selection_takes_precedence_over_main_phase_mask_and_decode() {
         source_card: CardHandle(0),
         source_permanent: None,
         source_kind: EffectSourceKind::Rule,
+        card_choice: None,
         zone_owner: None,
         callback: Box::new(|game, _action_id| {
             game.set_memory(4);
@@ -253,6 +254,7 @@ fn end_turn_selection_resolution_resumes_turn_rotation() {
         source_card: CardHandle(0),
         source_permanent: None,
         source_kind: EffectSourceKind::Rule,
+        card_choice: None,
         zone_owner: None,
         callback: Box::new(|_game, _action_id| {}),
         on_decline: None,

@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use digimon_engine::action::space::{encode_source_select, PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::card_choice_page::CARD_CHOICE_START;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::DebugRunner;
@@ -158,18 +159,15 @@ fn bt16_025_partition_requires_one_each_matching_source() {
     );
     assert_eq!(
         pending.valid_action_ids,
-        vec![
-            encode_source_select(0, 0).unwrap(),
-            encode_source_select(0, 1).unwrap()
-        ],
+        vec![CARD_CHOICE_START, CARD_CHOICE_START + 1],
         "both matching sources are offered; the top card is not"
     );
 
     r.game
-        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .resolve_selection(0, CARD_CHOICE_START)
         .expect("pick blue source");
     r.game
-        .resolve_selection(0, encode_source_select(0, 1).unwrap())
+        .resolve_selection(0, CARD_CHOICE_START)
         .expect("pick green source");
 
     let field_ids: Vec<String> = r.game.players[0]
@@ -248,7 +246,7 @@ fn bt16_025_partition_masks_picks_that_cannot_complete_requirements() {
         .expect("accept Partition");
 
     r.game
-        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .resolve_selection(0, CARD_CHOICE_START)
         .expect("pick first blue source");
 
     let pending = r
@@ -258,9 +256,12 @@ fn bt16_025_partition_masks_picks_that_cannot_complete_requirements() {
         .expect("second source pick");
     assert_eq!(
         pending.valid_action_ids,
-        vec![encode_source_select(0, 2).unwrap()],
+        vec![CARD_CHOICE_START],
         "after a Blue-only source is picked, only a Green-completing source remains selectable"
     );
+    let view = pending.card_choice.as_ref().unwrap().view(&r.game, 0);
+    assert_eq!(view.rows[0].card_id.as_deref(), Some("GREEN-LV4"),
+        "the remaining row must identify the completing green source");
 }
 
 #[test]
@@ -289,10 +290,10 @@ fn bt16_025_partition_failed_source_play_does_not_cancel_or_strand_cards() {
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept Partition");
     r.game
-        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .resolve_selection(0, CARD_CHOICE_START)
         .expect("pick blue source");
     r.game
-        .resolve_selection(0, encode_source_select(0, 1).unwrap())
+        .resolve_selection(0, CARD_CHOICE_START)
         .expect("pick green source");
 
     assert_eq!(
@@ -334,10 +335,10 @@ fn bt16_025_partition_places_all_sources_before_draining_on_play_effects() {
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept Partition");
     r.game
-        .resolve_selection(0, encode_source_select(0, 0).unwrap())
+        .resolve_selection(0, CARD_CHOICE_START)
         .expect("pick blue source");
     r.game
-        .resolve_selection(0, encode_source_select(0, 1).unwrap())
+        .resolve_selection(0, CARD_CHOICE_START)
         .expect("pick green source");
 
     let field_ids: Vec<String> = r.game.players[0]

@@ -796,7 +796,7 @@ impl DebugRunner {
     }
 
     pub fn pending_selection_view(&self) -> Option<PendingSelectionView> {
-        self.pending_selection().map(PendingSelection::view)
+        self.pending_selection().map(|selection| selection.view(&self.game))
     }
 
     pub fn pending_kind(&self) -> Option<SelectionKind> {

@@ -1,0 +1,116 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 65 items
+
+code\tests\test_rust_bindings_surface.py ............................... [ 47%]
+..............F...FF.....                                                [ 86%]
+code\tests\rl\test_rust_runner_adapter.py .FF......                      [100%]
+
+================================== FAILURES ===================================
+______________ TestTensorProfiles.test_tensor_profile_positions _______________
+
+self = <test_rust_bindings_surface.TestTensorProfiles object at 0x0000012EE987ED70>
+
+    def test_tensor_profile_positions(self):
+        from digimon_engine import TENSOR_SIZE, get_tensor_profile
+    
+        # Default profile is now `standard_lite_deck_v2` (8850 floats). The
+        # earlier v1-pinned assertions for compact_v1 moved to the
+        # standard_compact_v1-specific test below.
+        profile = get_tensor_profile()
+        assert profile.id == "standard_lite_deck_v2"
+        assert profile.tensor_size == TENSOR_SIZE
+>       assert profile.tensor_size == 8850
+E       assert 9874 == 8850
+E        +  where 9874 = <digimon_engine.TensorProfile object at 0x0000012EFF033050>.tensor_size
+
+code\tests\test_rust_bindings_surface.py:340: AssertionError
+_______ TestTensorProfiles.test_observation_layout_for_standard_lite_v2 _______
+
+self = <test_rust_bindings_surface.TestTensorProfiles object at 0x0000012EE99A0160>
+
+    def test_observation_layout_for_standard_lite_v2(self):
+        from digimon_engine import (
+            DEFAULT_OBSERVATION_PROFILE,
+            get_observation_layout,
+            list_observation_profiles,
+        )
+    
+        # After `flip-engine-default-to-lite-deck-v2`, the default is
+        # `standard_lite_deck_v2`. This test exercises the explicit
+        # standard_lite_v2 profile, which must still be registered.
+        assert DEFAULT_OBSERVATION_PROFILE == "standard_lite_deck_v2"
+        assert "standard_lite_v2" in list_observation_profiles()
+        layout = get_observation_layout("standard_lite_v2")
+    
+        assert layout["profile_id"] == "standard_lite_v2"
+        assert layout["tensor_version"] == 2
+        # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
+>       assert layout["feature_schema_version"] == "standard_lite_v2.3"
+E       AssertionError: assert 'standard_lite_v2.4' == 'standard_lite_v2.3'
+E         
+E         - standard_lite_v2.3
+E         ?                  ^
+E         + standard_lite_v2.4
+E         ?                  ^
+
+code\tests\test_rust_bindings_surface.py:398: AssertionError
+___ TestTensorProfiles.test_rust_headless_game_accepts_observation_profile ____
+
+self = <test_rust_bindings_surface.TestTensorProfiles object at 0x0000012EE98E4C50>
+
+    def test_rust_headless_game_accepts_observation_profile(self):
+        from digimon_engine import RustHeadlessGame
+    
+        deck = ["ST1-01"] * 5 + ["ST1-03"] * 45
+        game = RustHeadlessGame(deck, deck, seed=1, observation_profile="standard_lite_v2")
+    
+        assert game.observation_profile_id == "standard_lite_v2"
+>       assert game.get_observation_layout()["tensor_size"] == 8410
+E       assert 9434 == 8410
+
+code\tests\test_rust_bindings_surface.py:418: AssertionError
+__________ test_digimon_env_uses_requested_standard_lite_v2_profile ___________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000012EFF01A890>
+
+    def test_digimon_env_uses_requested_standard_lite_v2_profile(monkeypatch):
+        env = _rust_env(monkeypatch, tensor_profile="standard_lite_v2")
+        obs, info = env.reset(seed=7)
+    
+        assert env.tensor_profile == "standard_lite_v2"
+        # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
+>       assert env.observation_space.shape == (8410,)
+E       assert (9434,) == (8410,)
+E         
+E         At index 0 diff: 9434 != 8410
+E         Use -v to get more diff
+
+code\tests\rl\test_rust_runner_adapter.py:37: AssertionError
+________ test_digimon_env_uses_requested_standard_lite_deck_v2_profile ________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000012EE9DD9BE0>
+
+    def test_digimon_env_uses_requested_standard_lite_deck_v2_profile(monkeypatch):
+        env = _rust_env(monkeypatch, tensor_profile="standard_lite_deck_v2")
+        obs, info = env.reset(seed=7)
+    
+        assert env.tensor_profile == "standard_lite_deck_v2"
+>       assert env.observation_space.shape == (8850,)
+E       assert (9874,) == (8850,)
+E         
+E         At index 0 diff: 9874 != 8850
+E         Use -v to get more diff
+
+code\tests\rl\test_rust_runner_adapter.py:49: AssertionError
+=========================== short test summary info ===========================
+FAILED code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_tensor_profile_positions
+FAILED code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_observation_layout_for_standard_lite_v2
+FAILED code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_rust_headless_game_accepts_observation_profile
+FAILED code/tests/rl/test_rust_runner_adapter.py::test_digimon_env_uses_requested_standard_lite_v2_profile
+FAILED code/tests/rl/test_rust_runner_adapter.py::test_digimon_env_uses_requested_standard_lite_deck_v2_profile
+======================== 5 failed, 60 passed in 31.75s ========================

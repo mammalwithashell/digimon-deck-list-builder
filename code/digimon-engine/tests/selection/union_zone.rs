@@ -131,27 +131,14 @@ fn valid_action_ids_covers_both_zones() {
     let sel = r.game.pending_selection.as_ref().unwrap();
     assert_eq!(sel.valid_action_ids.len(), 4, "2 hand + 2 trash = 4 IDs");
 
-    // Hand IDs in PLAY_HAND range
-    let hand_ids: Vec<u16> = sel
-        .valid_action_ids
-        .iter()
-        .copied()
-        .filter(|&id| id < PLAY_HAND_START + 30)
-        .collect();
-    assert_eq!(hand_ids.len(), 2);
-    assert!(hand_ids.contains(&(PLAY_HAND_START)));
-    assert!(hand_ids.contains(&(PLAY_HAND_START + 1)));
+    use digimon_engine::owned_card_choice::CardChoiceZone;
+    let rows=crate::owned_choices::commits(&r.game);
+    assert_eq!(rows.iter().filter(|r|matches!(r.zone,Some(CardChoiceZone::Hand))).count(),2);
+    assert_eq!(rows.iter().filter(|r|matches!(r.zone,Some(CardChoiceZone::Trash))).count(),2);
+    for zone in [CardChoiceZone::Hand,CardChoiceZone::Trash] {
+        for i in 0..2 { let a=crate::owned_choices::zone_action(&r.game,tp,i,zone.clone());assert!(sel.valid_action_ids.contains(&a)); }
+    }
 
-    // Trash IDs in TRASH_EFFECT range
-    let trash_ids: Vec<u16> = sel
-        .valid_action_ids
-        .iter()
-        .copied()
-        .filter(|&id| id >= TRASH_EFFECT_START)
-        .collect();
-    assert_eq!(trash_ids.len(), 2);
-    assert!(trash_ids.contains(&TRASH_EFFECT_START));
-    assert!(trash_ids.contains(&(TRASH_EFFECT_START + 1)));
 }
 
 // ── filter ───────────────────────────────────────────────────────────────────
@@ -191,10 +178,7 @@ fn filter_restricts_valid_action_ids() {
         2,
         "only 2 trash cards pass the filter"
     );
-    assert!(sel
-        .valid_action_ids
-        .iter()
-        .all(|&id| id >= TRASH_EFFECT_START));
+    assert!(crate::owned_choices::commits(&r.game).iter().all(|row|matches!(row.zone,Some(digimon_engine::owned_card_choice::CardChoiceZone::Trash))));
 }
 
 // ── empty filter → no-op ─────────────────────────────────────────────────────
@@ -262,7 +246,7 @@ fn hand_only_zone_excludes_trash() {
 
     let sel = r.game.pending_selection.as_ref().unwrap();
     assert_eq!(sel.valid_action_ids.len(), 1);
-    assert_eq!(sel.valid_action_ids[0], PLAY_HAND_START);
+    assert_eq!(sel.valid_action_ids[0],crate::owned_choices::zone_action(&r.game,tp,0,digimon_engine::owned_card_choice::CardChoiceZone::Hand));
 }
 
 #[test]
@@ -291,7 +275,7 @@ fn trash_only_zone_excludes_hand() {
 
     let sel = r.game.pending_selection.as_ref().unwrap();
     assert_eq!(sel.valid_action_ids.len(), 1);
-    assert_eq!(sel.valid_action_ids[0], TRASH_EFFECT_START);
+    assert_eq!(sel.valid_action_ids[0],crate::owned_choices::zone_action(&r.game,tp,0,digimon_engine::owned_card_choice::CardChoiceZone::Trash));
 }
 
 // ── callback resolution ───────────────────────────────────────────────────────
@@ -333,7 +317,7 @@ fn callback_receives_correct_handle_for_trash_pick() {
     }
 
     // Resolve with trash index 1 → TRASH_EFFECT_START + 1
-    let action_id = TRASH_EFFECT_START + 1;
+    let action_id = crate::owned_choices::zone_action(&r.game,tp,1,digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     r.game.resolve_selection(tp, action_id).unwrap();
 
     assert_eq!(
@@ -383,7 +367,8 @@ fn callback_receives_correct_handle_for_hand_pick() {
     }
 
     // Resolve with hand index 0 → PLAY_HAND_START + 0
-    r.game.resolve_selection(tp, PLAY_HAND_START).unwrap();
+    let action=crate::owned_choices::zone_action(&r.game,tp,0,digimon_engine::owned_card_choice::CardChoiceZone::Hand);
+    r.game.resolve_selection(tp, action).unwrap();
 
     assert_eq!(
         *observed.lock().unwrap(),

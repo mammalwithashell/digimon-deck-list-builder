@@ -200,7 +200,7 @@ fn use_noir_option(
         seen.push(format!("{:?}", v.kind));
         let action = match v.kind {
             SelectionKind::UnionZone { .. } => match free_play {
-                Some(id) => TRASH_EFFECT_START + trash_pos(r, id) as u16,
+                Some(id) => super::support::physical_zone_action(r,0,id,true).expect("physical trash card"),
                 None => PASS,
             },
             SelectionKind::OwnField
@@ -365,7 +365,7 @@ fn king_digivolve(trash: &[&str], deck: &[&str]) -> (DebugRunner, PermanentHandl
 fn take_trash(r: &mut DebugRunner, id: &str) {
     let v = r.pending_selection_view().expect("free-play pick");
     assert!(matches!(v.kind, SelectionKind::UnionZone { .. }), "{:?}", v.kind);
-    let a = TRASH_EFFECT_START + trash_pos(r, id) as u16;
+    let a = super::support::physical_zone_action(r,0,id,true).expect("physical trash card");
     assert!(v.valid_action_ids.contains(&a), "{id} offered");
     r.execute_action(0, a).unwrap();
 }
@@ -472,7 +472,8 @@ fn c4_returning_ten_lets_chuuchuumon_and_sukamon_both_land() {
     assert_eq!(zone_ids(&r, 0, true), vec![SUKAMON.to_string()], "1 Sukamon left in trash");
 
     let v = r.pending_selection_view().expect("first pick");
-    r.execute_action(0, PLAY_HAND_START + hand_pos(&r, CHUUCHUUMON) as u16).unwrap();
+    let action = super::support::physical_zone_action(&r,0,CHUUCHUUMON,false).expect("physical hand card");
+    r.execute_action(0, action).unwrap();
     let _ = v;
     take_trash(&mut r, SUKAMON);
     let _ = r.auto_resolve();
@@ -491,11 +492,11 @@ fn c4_unhappy_declining_the_return_leaves_no_room_for_the_sukamon() {
     let mut r = king_on_play_with_eleven_sukamon();
     r.execute_branch(1).expect("decline the return");
     assert_eq!(r.trash_size(0), 11);
-    r.execute_action(0, PLAY_HAND_START + hand_pos(&r, CHUUCHUUMON) as u16).unwrap();
+    let action = super::support::physical_zone_action(&r,0,CHUUCHUUMON,false).expect("physical hand card");
+    r.execute_action(0, action).unwrap();
     if let Some(v) = r.pending_selection_view() {
         if matches!(v.kind, SelectionKind::UnionZone { .. }) {
-            let a = TRASH_EFFECT_START + trash_pos(&r, SUKAMON) as u16;
-            assert!(!v.valid_action_ids.contains(&a), "only 2 of the 6 maximum left");
+            assert!(super::support::physical_zone_action(&r,0,SUKAMON,true).is_none(), "only 2 of the 6 maximum left");
             r.execute_action(0, PASS).unwrap();
         }
     }

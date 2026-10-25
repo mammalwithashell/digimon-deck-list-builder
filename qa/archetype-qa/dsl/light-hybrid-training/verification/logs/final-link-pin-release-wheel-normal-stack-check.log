@@ -1,0 +1,158 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0 -- C:\Users\james\.codex\build-targets\light-hybrid-training-venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collecting ... collected 123 items
+
+code/tests/rl/test_owned_card_choice_bindings.py::test_native_security_inspection_checked_tokens_and_navigation PASSED [  0%]
+code/tests/rl/test_owned_card_choice_bindings.py::test_native_layout_publishes_complete_card_page_descriptor PASSED [  1%]
+code/tests/rl/test_owned_card_choice_bindings.py::test_native_recurrent_export_preserves_masks_and_resets_state PASSED [  2%]
+code/tests/rl/test_tensor_profiles.py::test_default_observation_profile_shape PASSED [  3%]
+code/tests/rl/test_tensor_profiles.py::test_compact_tensor_profile_is_retired PASSED [  4%]
+code/tests/rl/test_tensor_profiles.py::test_get_standard_lite_v2_tensor_profile_from_rust PASSED [  4%]
+code/tests/rl/test_tensor_profiles.py::test_get_standard_full_v2_tensor_profile_from_rust PASSED [  5%]
+code/tests/rl/test_tensor_profiles.py::test_get_standard_lite_deck_v2_tensor_profile_from_rust PASSED [  6%]
+code/tests/rl/test_tensor_profiles.py::test_tensor_profile_positions_cover_tensor PASSED [  7%]
+code/tests/rl/test_tensor_profiles.py::test_feature_extractor_uses_profile_positions PASSED [  8%]
+code/tests/rl/test_tensor_profiles.py::test_digimon_env_defaults_to_standard_lite_v2_with_unset_backend PASSED [  8%]
+code/tests/rl/test_tensor_profiles.py::test_digimon_env_defaults_to_standard_lite_v2_under_rust_backend PASSED [  9%]
+code/tests/rl/test_tensor_profiles.py::test_digimon_env_rejects_compact_profile_with_unset_backend PASSED [ 10%]
+code/tests/rl/test_tensor_profiles.py::test_digimon_env_rejects_compact_profile_under_rust_backend PASSED [ 11%]
+code/tests/rl/test_tensor_profiles.py::test_digimon_env_accepts_standard_full_v2_under_rust_backend PASSED [ 12%]
+code/tests/rl/test_tensor_profiles.py::test_digimon_env_accepts_standard_lite_deck_v2_under_rust_backend PASSED [ 13%]
+code/tests/rl/test_tensor_profiles.py::test_feature_extractor_accepts_observation_layout PASSED [ 13%]
+code/tests/rl/test_tensor_profiles.py::test_feature_extractor_accepts_standard_full_v2 PASSED [ 14%]
+code/tests/rl/test_tensor_profiles.py::test_feature_extractor_accepts_standard_lite_deck_v2 PASSED [ 15%]
+code/tests/rl/test_tensor_profiles.py::test_feature_extractor_infers_unique_profile_from_observation_space_shape PASSED [ 16%]
+code/tests/rl/test_tensor_profiles.py::test_tensor_profile_raises_when_engine_lacks_profile_functions PASSED [ 17%]
+code/tests/rl/test_tensor_profiles.py::test_tensor_profile_requires_engine_wheel PASSED [ 17%]
+code/tests/rl/test_tensor_profiles.py::test_compact_aliases_are_rejected[standard_compact_v1] PASSED [ 18%]
+code/tests/rl/test_tensor_profiles.py::test_compact_aliases_are_rejected[standard_v1] PASSED [ 19%]
+code/tests/rl/test_tensor_profiles.py::test_compact_aliases_are_rejected[compact_v1] PASSED [ 20%]
+code/tests/rl/test_tensor_profiles.py::test_unknown_profile_is_rejected PASSED [ 21%]
+code/tests/rl/test_tensor_profiles.py::test_tensor_profile_lite_v2_requires_engine_layout_support PASSED [ 21%]
+code/tests/rl/test_tensor_profiles.py::test_tensor_profile_for_tensor_size_requires_unique_registry_match PASSED [ 22%]
+code/tests/rl/test_tensor_profiles.py::test_tensor_profile_for_tensor_size_rejects_unknown_shape PASSED [ 23%]
+code/tests/rl/test_tensor_profiles.py::test_tensor_profile_does_not_hide_engine_import_error PASSED [ 24%]
+code/tests/rl/test_tensor_profiles.py::test_tensor_profile_malformed_engine_profile_raises PASSED [ 25%]
+code/tests/rl/test_tensor_profiles.py::test_list_tensor_profiles_does_not_hide_binding_errors PASSED [ 26%]
+code/tests/test_rust_bindings_surface.py::test_module_imports PASSED     [ 26%]
+code/tests/test_rust_bindings_surface.py::test_rust_headless_game_still_exported PASSED [ 27%]
+code/tests/test_rust_bindings_surface.py::TestCardDatabase::test_construct PASSED [ 28%]
+code/tests/test_rust_bindings_surface.py::TestCardDatabase::test_get_known_card PASSED [ 29%]
+code/tests/test_rust_bindings_surface.py::TestCardDatabase::test_get_unknown_card_returns_none PASSED [ 30%]
+code/tests/test_rust_bindings_surface.py::TestCardDatabase::test_count_cards PASSED [ 30%]
+code/tests/test_rust_bindings_surface.py::TestCardDatabase::test_card_id_field PASSED [ 31%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_parse_tts_simple PASSED [ 32%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_parse_text_basic PASSED [ 33%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_parse_deck_dispatches_tts PASSED [ 34%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_parse_deck_dispatches_text PASSED [ 34%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_summarize_deck PASSED [ 35%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_validate_deck_invalid_too_many_copies PASSED [ 36%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_validate_deck_for_game_mode_eden PASSED [ 37%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_out_of_set_cards_returns_unknowns PASSED [ 38%]
+code/tests/test_rust_bindings_surface.py::TestDeckTools::test_out_of_set_cards_dedupe PASSED [ 39%]
+code/tests/test_rust_bindings_surface.py::TestRestrictedList::test_restricted_list_shape PASSED [ 39%]
+code/tests/test_rust_bindings_surface.py::TestRestrictedList::test_restricted_list_known_entries PASSED [ 40%]
+code/tests/test_rust_bindings_surface.py::TestRestrictedList::test_eden_restricted_list_known_entries PASSED [ 41%]
+code/tests/test_rust_bindings_surface.py::TestExpandDeckDict::test_expand_basic PASSED [ 42%]
+code/tests/test_rust_bindings_surface.py::TestExpandDeckDict::test_expand_empty PASSED [ 43%]
+code/tests/test_rust_bindings_surface.py::TestExpandDeckDict::test_expand_zero_count PASSED [ 43%]
+code/tests/test_rust_bindings_surface.py::TestEnums::test_card_kind_variants_distinct PASSED [ 44%]
+code/tests/test_rust_bindings_surface.py::TestEnums::test_card_kind_pycard_returns_typed PASSED [ 45%]
+code/tests/test_rust_bindings_surface.py::TestEnums::test_game_phase_python_names_present PASSED [ 46%]
+code/tests/test_rust_bindings_surface.py::TestEnums::test_game_phase_pairwise_distinct PASSED [ 47%]
+code/tests/test_rust_bindings_surface.py::TestTestedCards::test_load_tested_cards_returns_set PASSED [ 47%]
+code/tests/test_rust_bindings_surface.py::TestTestedCards::test_is_card_tested_unknown_returns_false PASSED [ 48%]
+code/tests/test_rust_bindings_surface.py::TestTestedCards::test_is_card_tested_consistent_with_set PASSED [ 49%]
+code/tests/test_rust_bindings_surface.py::TestCardRegistry::test_capacity_constant PASSED [ 50%]
+code/tests/test_rust_bindings_surface.py::TestCardRegistry::test_embedding_dim_constant PASSED [ 51%]
+code/tests/test_rust_bindings_surface.py::TestCardRegistry::test_construct PASSED [ 52%]
+code/tests/test_rust_bindings_surface.py::TestCardRegistry::test_index_of_known_card PASSED [ 52%]
+code/tests/test_rust_bindings_surface.py::TestCardRegistry::test_index_of_unknown_card_returns_none PASSED [ 53%]
+code/tests/test_rust_bindings_surface.py::TestCardRegistry::test_id_of_round_trips PASSED [ 54%]
+code/tests/test_rust_bindings_surface.py::TestCardRegistry::test_norm_id_within_unit_interval PASSED [ 55%]
+code/tests/test_rust_bindings_surface.py::TestGetModelsDir::test_default PASSED [ 56%]
+code/tests/test_rust_bindings_surface.py::TestGetModelsDir::test_env_override PASSED [ 56%]
+code/tests/test_rust_bindings_surface.py::TestLoadImplementedCardIds::test_returns_set PASSED [ 57%]
+code/tests/test_rust_bindings_surface.py::TestLoadImplementedCardIds::test_includes_complete_st5_machine_black_pool PASSED [ 58%]
+code/tests/test_rust_bindings_surface.py::TestLoadImplementedCardIds::test_unknown_not_in_set PASSED [ 59%]
+code/tests/test_rust_bindings_surface.py::TestActionAndTensorConstants::test_action_space_size PASSED [ 60%]
+code/tests/test_rust_bindings_surface.py::TestActionAndTensorConstants::test_tensor_size PASSED [ 60%]
+code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_default_profile_id_matches_profile PASSED [ 61%]
+code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_list_tensor_profiles PASSED [ 62%]
+code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_tensor_profile_positions PASSED [ 63%]
+code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_standard_compact_v1_profile_positions PASSED [ 64%]
+code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_legacy_tensor_profile_aliases_resolve_to_canonical_profile PASSED [ 65%]
+code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_get_unknown_tensor_profile_raises PASSED [ 65%]
+code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_observation_layout_for_standard_lite_v2 PASSED [ 66%]
+code/tests/test_rust_bindings_surface.py::TestTensorProfiles::test_rust_headless_game_accepts_observation_profile PASSED [ 67%]
+code/tests/test_rust_bindings_surface.py::test_rust_headless_game_resets_with_exact_st5_machine_black_starter PASSED [ 68%]
+code/tests/test_rust_bindings_surface.py::test_rust_headless_game_exposes_rl_state_snapshot PASSED [ 69%]
+code/tests/test_rust_bindings_surface.py::test_rust_headless_game_rejects_invalid_board_tensor_player_ids PASSED [ 69%]
+code/tests/test_rust_bindings_surface.py::test_rust_headless_game_starts_with_explicit_mulligan_choices PASSED [ 70%]
+code/tests/test_rust_bindings_surface.py::test_real_binding_exports_live_action_semantic_version PASSED [ 71%]
+code/tests/rl/test_rust_runner_adapter.py::test_rust_env_reports_current_player_without_legacy_game_object PASSED [ 72%]
+code/tests/rl/test_rust_runner_adapter.py::test_digimon_env_uses_requested_standard_lite_v2_profile PASSED [ 73%]
+code/tests/rl/test_rust_runner_adapter.py::test_digimon_env_uses_requested_standard_lite_deck_v2_profile PASSED [ 73%]
+code/tests/rl/test_rust_runner_adapter.py::test_non_rust_backend_is_rejected PASSED [ 74%]
+code/tests/rl/test_rust_runner_adapter.py::test_rust_env_ansi_render_uses_backend_neutral_state PASSED [ 75%]
+code/tests/rl/test_rust_runner_adapter.py::test_rust_env_step_computes_reward_without_runner_game_attribute PASSED [ 76%]
+code/tests/rl/test_rust_runner_adapter.py::test_rust_env_truncation_forces_winner PASSED [ 77%]
+code/tests/rl/test_rust_runner_adapter.py::test_rust_env_greedy_policy_uses_rust_policy_surface PASSED [ 78%]
+code/tests/rl/test_rust_runner_adapter.py::test_opponent_wrapper_reset_and_step_work_with_rust_runner PASSED [ 78%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_onnx_parser_accepts_tensor_profile PASSED [ 79%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_onnx_parser_defaults_tensor_profile_to_none PASSED [ 80%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_random_onnx_parser_accepts_tensor_profile PASSED [ 81%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_random_onnx_parser_defaults_tensor_profile_to_none PASSED [ 82%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_random_onnx_direct_script_help_runs_from_repo_root PASSED [ 82%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_onnx_writes_profile_metadata PASSED [ 83%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_onnx_checkpoint_observation_profile_match_passes PASSED [ 84%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_onnx_checkpoint_observation_profile_mismatch_fails PASSED [ 85%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_random_onnx_writes_profile_metadata PASSED [ 86%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_onnx_writes_standard_lite_deck_v2_metadata PASSED [ 86%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_metadata_rejects_old_actions_without_relabeling_weights PASSED [ 87%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_action_field_alone_refuses_without_rewriting_artifact[missing] PASSED [ 88%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_action_field_alone_refuses_without_rewriting_artifact[None] PASSED [ 89%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_action_field_alone_refuses_without_rewriting_artifact[True] PASSED [ 90%]
+code/tests/rl/test_onnx_export_profiles.py::test_export_action_field_alone_refuses_without_rewriting_artifact[mismatch] PASSED [ 91%]
+code/tests/rl/test_onnx_export_profiles.py::test_random_export_real_binding_embedded_contract_round_trip PASSED [ 91%]
+code/tests/rl/test_onnx_export_profiles.py::test_lstm_export_gates_checkpoint_before_writing_both_contracts[None] PASSED [ 92%]
+code/tests/rl/test_onnx_export_profiles.py::test_lstm_export_gates_checkpoint_before_writing_both_contracts[missing] PASSED [ 93%]
+code/tests/rl/test_onnx_export_profiles.py::test_lstm_export_gates_checkpoint_before_writing_both_contracts[True] PASSED [ 94%]
+code/tests/rl/test_onnx_export_profiles.py::test_lstm_export_gates_checkpoint_before_writing_both_contracts[mismatch] PASSED [ 95%]
+code/tests/rl/test_onnx_export_profiles.py::test_lstm_export_gates_checkpoint_before_writing_both_contracts[valid] PASSED [ 95%]
+code/tests/test_action_semantics_contract.py::ActionSemanticVersionTests::test_exact_declared_action_semantics_survive_validation PASSED [ 96%]
+code/tests/test_action_semantics_contract.py::ActionSemanticVersionTests::test_malformed_action_version_is_rejected PASSED [ 97%]
+code/tests/test_action_semantics_contract.py::ActionSemanticVersionTests::test_missing_semantics_cannot_be_inferred_from_shape PASSED [ 98%]
+code/tests/test_action_semantics_contract.py::ActionSemanticVersionTests::test_old_extension_failure_is_a_compatibility_error PASSED [ 99%]
+code/tests/test_action_semantics_contract.py::ActionSemanticVersionTests::test_same_shapes_and_layout_do_not_admit_previous_action_meanings PASSED [100%]
+
+============================== warnings summary ===============================
+code/tests/rl/test_owned_card_choice_bindings.py::test_native_recurrent_export_preserves_masks_and_resets_state
+  C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\tools\export_onnx.py:313: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html
+    torch.onnx.export(
+
+code/tests/rl/test_owned_card_choice_bindings.py::test_native_recurrent_export_preserves_masks_and_resets_state
+code/tests/rl/test_owned_card_choice_bindings.py::test_native_recurrent_export_preserves_masks_and_resets_state
+code/tests/rl/test_onnx_export_profiles.py::test_random_export_real_binding_embedded_contract_round_trip
+  C:\Users\james\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\torch\onnx\_internal\torchscript_exporter\utils.py:218: DeprecationWarning: The feature will be removed. Please remove usage of this function
+    setup_onnx_logging(verbose) as log_ctx,
+
+code/tests/rl/test_owned_card_choice_bindings.py::test_native_recurrent_export_preserves_masks_and_resets_state
+  C:\Users\james\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\LocalCache\local-packages\Python313\site-packages\torch\onnx\_internal\torchscript_exporter\symbolic_opset9.py:4463: UserWarning: Exporting a model to ONNX with a batch_size other than 1, with a variable length with LSTM can cause an error when running the ONNX model with a different batch size. Make sure to save the model with a batch size of 1, or define the initial states (h0/c0) as inputs of the model. 
+    return _generic_rnn(
+
+code/tests/rl/test_owned_card_choice_bindings.py::test_native_recurrent_export_preserves_masks_and_resets_state
+  C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\tools\export_onnx.py:334: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html
+    torch.onnx.export(
+
+code/tests/rl/test_onnx_export_profiles.py::test_random_export_real_binding_embedded_contract_round_trip
+  C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1\code\tools\export_random_onnx.py:120: DeprecationWarning: You are using the legacy TorchScript-based ONNX export. Starting in PyTorch 2.9, the new torch.export-based ONNX exporter has become the default. Learn more about the new export logic: https://docs.pytorch.org/docs/stable/onnx_export.html. For exporting control flow: https://pytorch.org/tutorials/beginner/onnx/export_control_flow_model_to_onnx_tutorial.html
+    torch.onnx.export(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+====================== 123 passed, 7 warnings in 15.43s =======================

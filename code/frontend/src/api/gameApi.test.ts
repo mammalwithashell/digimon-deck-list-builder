@@ -4,11 +4,25 @@ import {
   createGame,
   dtoToGameState,
   normalizeSeedInput,
+  sendAction,
   toTensorSummary,
 } from './gameApi';
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+it('submits the rendered physical page token without rounding or dropping it', async () => {
+  const token = { prompt_id: '18446744073709551615', page_generation: '9007199254740993' };
+  const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+    expect(JSON.parse(String(init?.body))).toEqual({
+      action: 59, paced: true, expected_card_choice: token,
+    });
+    return { ok: true, json: async () => ({ state: {}, action_mask: [], events: [], logs: [] }) };
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const opts = { paced: true, expectedCardChoice: token };
+  await sendAction('game-1', 59, opts);
 });
 
 describe('toTensorSummary', () => {

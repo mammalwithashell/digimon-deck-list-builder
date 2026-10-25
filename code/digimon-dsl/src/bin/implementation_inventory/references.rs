@@ -100,6 +100,13 @@ impl<A: Walk, B: Walk> Walk for (A, B) {
         self.1.walk(c, &format!("{path}.1"), role);
     }
 }
+impl<A: Walk, B: Walk, C: Walk> Walk for (A, B, C) {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        self.0.walk(c, &format!("{path}.0"), role);
+        self.1.walk(c, &format!("{path}.1"), role);
+        self.2.walk(c, &format!("{path}.2"), role);
+    }
+}
 impl<T: Walk> Walk for indexmap::IndexMap<String, T> {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(path, "IndexMap", "ORDERED_CONTAINER", json!(self.len()));
@@ -156,6 +163,7 @@ impl Walk for digimon_dsl::spec::CardSpec {
             alt_paths,
             effects,
             spec_version,
+            deck_rule,
         } = self;
         card.walk(c, &format!("{}.card", path), "OWNER_IDENTITY");
         name.walk(c, &format!("{}.name", path), "OWNER_IDENTITY");
@@ -188,7 +196,8 @@ impl Walk for digimon_dsl::spec::CardSpec {
         alt_paths.walk(c, &format!("{}.alt_paths", path), "UNCLASSIFIED_STRING");
         effects.walk(c, &format!("{}.effects", path), "UNCLASSIFIED_STRING");
         spec_version.walk(c, &format!("{}.spec_version", path), "UNCLASSIFIED_STRING");
-    }
+            deck_rule.walk(c, &format!("{}.deck_rule", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::spec::AttributeSpec {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -910,6 +919,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
             once_per_turn,
             max_per_turn,
             process,
+            trigger_if,
         } = self;
         when.walk(c, &format!("{}.when", path), "UNCLASSIFIED_STRING");
         scope.walk(c, &format!("{}.scope", path), "UNCLASSIFIED_STRING");
@@ -935,7 +945,8 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
         once_per_turn.walk(c, &format!("{}.once_per_turn", path), "UNCLASSIFIED_STRING");
         max_per_turn.walk(c, &format!("{}.max_per_turn", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
-    }
+            trigger_if.walk(c, &format!("{}.trigger_if", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::clause::TimingCondition {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -1367,7 +1378,9 @@ impl Walk for digimon_dsl::clause::Timing {
                 "ENUM_SCALAR",
                 serde_json::json!("OnLinkCardTrashed"),
             ),
-        }
+                    digimon_dsl::clause::Timing::OnTopCardTrashed => c.node(path, "digimon_dsl::clause::Timing", "ENUM_SCALAR", serde_json::json!("OnTopCardTrashed")),
+            digimon_dsl::clause::Timing::StartOfOpponentsMainPhase => c.node(path, "digimon_dsl::clause::Timing", "ENUM_SCALAR", serde_json::json!("StartOfOpponentsMainPhase")),
+}
     }
 }
 impl Walk for digimon_dsl::clause::ClauseScope {
@@ -1718,6 +1731,7 @@ impl Walk for digimon_dsl::clause::AuraBody {
             effect_immunity,
             modifier_from,
             dna_material_identity,
+            source_card_trash_protection,
         } = self;
         target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
         target_player.walk(c, &format!("{}.target_player", path), "UNCLASSIFIED_STRING");
@@ -1771,7 +1785,8 @@ impl Walk for digimon_dsl::clause::AuraBody {
             &format!("{}.dna_material_identity", path),
             "UNCLASSIFIED_STRING",
         );
-    }
+            source_card_trash_protection.walk(c, &format!("{}.source_card_trash_protection", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::clause::DnaMaterialIdentitySpec {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -1785,11 +1800,13 @@ impl Walk for digimon_dsl::clause::DnaMaterialIdentitySpec {
             for_result,
             level,
             name,
+            result_scope,
         } = self;
         for_result.walk(c, &format!("{}.for_result", path), "MATCH_DNA_RESULT_NAME");
         level.walk(c, &format!("{}.level", path), "UNCLASSIFIED_STRING");
         name.walk(c, &format!("{}.name", path), "CONDITIONAL_NAME_DEFINITION");
-    }
+            result_scope.walk(c, &format!("{}.result_scope", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::clause::AuraEffectImmunity {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -1835,6 +1852,7 @@ impl Walk for digimon_dsl::clause::CostReductionBody {
         let digimon_dsl::clause::CostReductionBody {
             reduction_timing,
             when_playing_this,
+            when_digivolving_this,
             when_any_ally_played,
             when_any_ally_digivolves_into,
             condition,
@@ -1843,6 +1861,7 @@ impl Walk for digimon_dsl::clause::CostReductionBody {
             amount,
             pay_cost,
             unlocks,
+            set_cost,
         } = self;
         reduction_timing.walk(
             c,
@@ -1854,6 +1873,7 @@ impl Walk for digimon_dsl::clause::CostReductionBody {
             &format!("{}.when_playing_this", path),
             "UNCLASSIFIED_STRING",
         );
+        when_digivolving_this.walk(c, &format!("{}.when_digivolving_this", path), "UNCLASSIFIED_STRING");
         when_any_ally_played.walk(
             c,
             &format!("{}.when_any_ally_played", path),
@@ -1870,7 +1890,8 @@ impl Walk for digimon_dsl::clause::CostReductionBody {
         amount.walk(c, &format!("{}.amount", path), "UNCLASSIFIED_STRING");
         pay_cost.walk(c, &format!("{}.pay_cost", path), "UNCLASSIFIED_STRING");
         unlocks.walk(c, &format!("{}.unlocks", path), "UNCLASSIFIED_STRING");
-    }
+            set_cost.walk(c, &format!("{}.set_cost", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::clause::ReplacementBody {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -1890,6 +1911,7 @@ impl Walk for digimon_dsl::clause::ReplacementBody {
             outcome,
             then_steps,
             process,
+            prevent_all_matching,
         } = self;
         trigger.walk(c, &format!("{}.trigger", path), "ENGINE_TIMING_NAME");
         timing.walk(c, &format!("{}.timing", path), "ENGINE_TIMING_NAME");
@@ -1900,7 +1922,8 @@ impl Walk for digimon_dsl::clause::ReplacementBody {
         outcome.walk(c, &format!("{}.outcome", path), "UNCLASSIFIED_STRING");
         then_steps.walk(c, &format!("{}.then_steps", path), "UNCLASSIFIED_STRING");
         process.walk(c, &format!("{}.process", path), "UNCLASSIFIED_STRING");
-    }
+            prevent_all_matching.walk(c, &format!("{}.prevent_all_matching", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::clause::ReplacementCostBody {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -2253,6 +2276,7 @@ impl Walk for digimon_dsl::compiled::CompiledCard {
             use_requirement,
             alt_paths,
             effects,
+            deck_rule,
         } = self;
         card.walk(c, &format!("{}.card", path), "OWNER_IDENTITY");
         name.walk(c, &format!("{}.name", path), "OWNER_IDENTITY");
@@ -2284,7 +2308,8 @@ impl Walk for digimon_dsl::compiled::CompiledCard {
         );
         alt_paths.walk(c, &format!("{}.alt_paths", path), "UNCLASSIFIED_STRING");
         effects.walk(c, &format!("{}.effects", path), "UNCLASSIFIED_STRING");
-    }
+            deck_rule.walk(c, &format!("{}.deck_rule", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::compiled::CompiledCardKind {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -3680,6 +3705,7 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
             process,
             summary,
             summary_key,
+            trigger_if,
         } = self;
         when.walk(c, &format!("{}.when", path), "UNCLASSIFIED_STRING");
         scope.walk(c, &format!("{}.scope", path), "UNCLASSIFIED_STRING");
@@ -3705,7 +3731,8 @@ impl Walk for digimon_dsl::compiled::CompiledTriggeredClause {
             &format!("{}.summary_key", path),
             "METADATA_NO_EXECUTABLE_REFERENCE",
         );
-    }
+            trigger_if.walk(c, &format!("{}.trigger_if", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::compiled::CompiledTimingCondition {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -3752,7 +3779,8 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 dna_material_identity,
                 summary,
                 summary_key,
-            } => {
+            source_card_trash_protection,
+        } => {
                 c.node(
                     path,
                     "digimon_dsl::compiled::CompiledDeclarativeClause",
@@ -3872,12 +3900,14 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                     &format!("{}.summary_key", &format!("{}@Aura", path)),
                     "METADATA_NO_EXECUTABLE_REFERENCE",
                 );
-            }
+            source_card_trash_protection.walk(c, &format!("{}@Aura.source_card_trash_protection", path), "UNCLASSIFIED_STRING");
+}
             digimon_dsl::compiled::CompiledDeclarativeClause::CostReduction {
                 scope,
                 active_when,
                 reduction_timing,
                 when_playing_this,
+            when_digivolving_this,
                 when_any_ally_played,
                 when_any_ally_digivolves_into,
                 condition,
@@ -3888,7 +3918,8 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 pay_cost,
                 summary,
                 summary_key,
-            } => {
+            set_cost,
+        } => {
                 c.node(
                     path,
                     "digimon_dsl::compiled::CompiledDeclarativeClause",
@@ -3915,6 +3946,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                     &format!("{}.when_playing_this", &format!("{}@CostReduction", path)),
                     "UNCLASSIFIED_STRING",
                 );
+                when_digivolving_this.walk(c, &format!("{}.when_digivolving_this", &format!("{}@CostReduction", path)), "UNCLASSIFIED_STRING");
                 when_any_ally_played.walk(
                     c,
                     &format!(
@@ -3971,7 +4003,8 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                     &format!("{}.summary_key", &format!("{}@CostReduction", path)),
                     "METADATA_NO_EXECUTABLE_REFERENCE",
                 );
-            }
+            set_cost.walk(c, &format!("{}@CostReduction.set_cost", path), "UNCLASSIFIED_STRING");
+}
             digimon_dsl::compiled::CompiledDeclarativeClause::Replacement {
                 scope,
                 active_when,
@@ -4942,7 +4975,9 @@ impl Walk for digimon_dsl::compiled::CompiledTiming {
                 "ENUM_SCALAR",
                 serde_json::json!("OnLinkCardTrashed"),
             ),
-        }
+                    digimon_dsl::compiled::CompiledTiming::OnTopCardTrashed => c.node(path, "digimon_dsl::compiled::CompiledTiming", "ENUM_SCALAR", serde_json::json!("OnTopCardTrashed")),
+            digimon_dsl::compiled::CompiledTiming::StartOfOpponentsMainPhase => c.node(path, "digimon_dsl::compiled::CompiledTiming", "ENUM_SCALAR", serde_json::json!("StartOfOpponentsMainPhase")),
+}
     }
 }
 impl Walk for digimon_dsl::compiled::CompiledGrantKeywordValue {
@@ -5056,11 +5091,13 @@ impl Walk for digimon_dsl::compiled::CompiledDnaMaterialIdentity {
             for_result,
             level,
             name,
+            result_scope,
         } = self;
         for_result.walk(c, &format!("{}.for_result", path), "MATCH_DNA_RESULT_NAME");
         level.walk(c, &format!("{}.level", path), "UNCLASSIFIED_STRING");
         name.walk(c, &format!("{}.name", path), "CONDITIONAL_NAME_DEFINITION");
-    }
+            result_scope.walk(c, &format!("{}.result_scope", path), "UNCLASSIFIED_STRING");
+}
 }
 impl Walk for digimon_dsl::compiled::CompiledFieldSelector {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
@@ -5507,7 +5544,11 @@ impl Walk for digimon_dsl::compiled::CompiledBindingRef {
                 "ENUM_SCALAR",
                 serde_json::json!("OwnBreeding"),
             ),
-        }
+                    digimon_dsl::compiled::CompiledBindingRef::TopOf(value) => {
+                c.node(path, "digimon_dsl::compiled::CompiledBindingRef", "VARIANT", serde_json::json!("TopOf"));
+                value.walk(c, &format!("{}@TopOf.0", path), "EXISTING_INSTANCE_BINDING");
+            }
+}
     }
 }
 impl Walk for digimon_dsl::compiled::CompiledModifierTarget {
@@ -5697,6 +5738,31 @@ impl Walk for digimon_dsl::compiled::CompiledRemainderDestination {
                 "ENUM_SCALAR",
                 serde_json::json!("DeckBottom"),
             ),
+        }
+    }
+}
+
+impl Walk for digimon_dsl::deck_rule::DeckCopyRule {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::deck_rule::DeckCopyRule", "COMPOSITE", serde_json::Value::Null);
+        let digimon_dsl::deck_rule::DeckCopyRule { max_copies, evidence_observation_id } = self;
+        max_copies.walk(c, &format!("{}.max_copies", path), "UNCLASSIFIED_STRING");
+        evidence_observation_id.walk(c, &format!("{}.evidence_observation_id", path), "METADATA_NO_EXECUTABLE_REFERENCE");
+    }
+}
+
+impl Walk for digimon_dsl::clause::DnaMaterialResultScope {
+    fn walk(&self, c: &mut Collector, path: &str, _role: &str) {
+        match self {
+            digimon_dsl::clause::DnaMaterialResultScope::OwnHand => c.node(path, "digimon_dsl::clause::DnaMaterialResultScope", "ENUM_SCALAR", serde_json::json!("OwnHand")),
+        }
+    }
+}
+
+impl Walk for digimon_dsl::compiled::CompiledDnaMaterialResultScope {
+    fn walk(&self, c: &mut Collector, path: &str, _role: &str) {
+        match self {
+            digimon_dsl::compiled::CompiledDnaMaterialResultScope::OwnHand => c.node(path, "digimon_dsl::compiled::CompiledDnaMaterialResultScope", "ENUM_SCALAR", serde_json::json!("OwnHand")),
         }
     }
 }

@@ -270,10 +270,10 @@ pub enum ResumeSelectKind {
         right_prompt: String,
         optional: bool,
     },
-    /// Union-zone select spanning hand ∪ trash ∪ material. The tri-range decode
-    /// is captured at install as `(action_id, handle, origin)` candidates (the
-    /// decode runs once), so the arm linear-searches and binds via
-    /// `insert_union_card` (recording the origin zone for downstream replay).
+    /// Union-zone select spanning hand, trash and material. Production prompts
+    /// own a complete physical page; its resolved card supplies the live origin.
+    /// `candidates` supports directly-constructed legacy frames only and is empty
+    /// for production installers. Binding records origin for downstream verbs.
     /// Dual-tail: success uses `inner_tail`; decline uses the frame's `decline`.
     UnionZone {
         of_player: PlayerId,
@@ -1007,7 +1007,8 @@ pub struct DigiXrosMaterialSelectionState {
     pub(crate) origin: crate::game::PendingWouldPlayOrigin,
     pub(crate) suppress_on_play: bool,
     pub(crate) total_reduction: crate::game_actions::PlayCostAdjustments,
-    pub(crate) candidates: Vec<(u16, crate::digixros::DigiXrosMaterialOrigin)>,
+    pub(crate) candidates: Vec<crate::digixros::DigiXrosMaterialOrigin>,
+    pub(crate) selected_pins: Vec<crate::owned_card_choice::CardChoicePin>,
     pub(crate) outer_conts: Vec<OuterContinuation>,
 }
 
@@ -1199,6 +1200,7 @@ pub struct NonDslCountCappedState {
     pub is_optional_zero: bool,
     pub distinct_by: Option<DistinctByMode>,
     pub candidate_actions: Vec<u16>,
+    pub source_candidates: Option<Vec<crate::card_choice_page::SourceChoicePin>>,
     pub accum: Vec<CardHandle>,
     pub prompt: String,
     pub previous_phase: GamePhase,
@@ -1354,16 +1356,19 @@ pub struct SourceMultiState {
     pub max: u8,
     /// Sources picked so far (de-duplicated by card).
     pub picked: Vec<SourceSelectionRef>,
-    /// This step's candidate snapshot `(action_id, source_ref)`. Carried (not
-    /// recomputed on resolve) so a pick decodes to the SAME `source_ref` the
-    /// install offered — the live-revalidation check then asks whether that
-    /// card is still present (mirrors the closure's `action_to_source` snapshot).
-    pub candidates: Vec<(u16, SourceSelectionRef)>,
+    /// Original physical carrier/card pins; refresh the refs before resuming.
+    pub picked_pins: Vec<crate::card_choice_page::SourceChoicePin>,
+    /// Complete filtered physical candidate snapshot. PendingSelection owns
+    /// the visible page and its stable carrier/card pins; no position is
+    /// narrowed or encoded into a permanent action band here.
+    pub candidates: Vec<SourceSelectionRef>,
     pub filter: CompiledPredicate,
     pub filter_bindings: Bindings,
     /// `target` binding restriction: if `Some`, only sources under this permanent
     /// are candidates. `target_resolution_failed` rejects all (binding missing).
     pub target_permanent: Option<PermanentHandle>,
+    /// Stable identity of a restricted carrier; its field slot can compact.
+    pub target_carrier_identity: Option<u64>,
     pub target_resolution_failed: bool,
     /// Both `select_own_sources` and `select_opponent_sources` evaluate the
     /// predicate on `PredicateSubject::Source` (a digivolution card is on the
@@ -1466,7 +1471,7 @@ pub struct RemainderPlacement {
 /// In-flight state of a `count_capped`-family multi-pick selection, as data.
 /// Re-parked once per pick; the data terminal fires when the count is satisfied
 /// (or candidates exhausted, or the player passes at/above the floor).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NamedSourceGroups {
     pub role_count: usize,
     pub members: Vec<(CardHandle, Vec<usize>)>,
@@ -1489,6 +1494,9 @@ pub struct MultiPickState {
     pub distinct_by: Option<DistinctByMode>,
     /// Zone indices still eligible to pick.
     pub candidate_indices: Vec<usize>,
+    /// For materials, the original filtered physical pool, including picked cards.
+    /// Slot compaction never substitutes another card into this pool.
+    pub source_pool: Option<Vec<crate::card_choice_page::SourceChoicePin>>,
     /// Handles picked so far, in order.
     pub accum: Vec<CardHandle>,
     // ── data terminal (count_capped binds the accumulated list, then runs the tail) ──
@@ -1550,6 +1558,7 @@ mod tests {
                     panic!("closure path must NOT run when pending_selection_resume is set")
                 }),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: Some(0),
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -1620,6 +1629,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: Some(0),
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -1680,6 +1690,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: None,
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -1743,6 +1754,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: Some(0),
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -1808,6 +1820,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: Some(0),
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -1874,6 +1887,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: None,
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -1936,6 +1950,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: Some(0),
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -1999,6 +2014,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: None,
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -2068,6 +2084,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: None,
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -2134,6 +2151,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: None,
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -2195,6 +2213,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: Some(0),
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -2261,6 +2280,7 @@ mod tests {
             max: 2,
             is_optional_zero: true,
             distinct_by: None,
+            source_pool: None,
             candidate_indices: vec![0, 1, 2],
             accum: vec![],
             bind_as: Some("picks".to_string()),
@@ -2341,6 +2361,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: Some(0),
             });
             game.pending_selection_resume = Some(ResumeStack {
@@ -2522,6 +2543,7 @@ mod tests {
                     source_kind: EffectSourceKind::Digimon,
                     callback: Box::new(|_g, _a| unreachable!("resume path drives this")),
                     on_decline: None,
+                    card_choice: None,
                     zone_owner: Some(0),
                 });
                 game.pending_selection_resume = Some(ResumeStack {
@@ -2621,6 +2643,7 @@ mod tests {
                 source_kind: EffectSourceKind::Digimon,
                 callback: Box::new(|_g, _a| unreachable!("resume path drives this")),
                 on_decline: None,
+                card_choice: None,
                 zone_owner: None,
             });
             game.pending_selection_resume = Some(ResumeStack {

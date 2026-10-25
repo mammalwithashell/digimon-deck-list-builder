@@ -31,7 +31,7 @@ fn default_profile_is_standard_lite_deck_v2() {
     assert_eq!(profile.id, "standard_lite_deck_v2");
     assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.tensor_size, DEFAULT_TENSOR_SIZE);
-    assert_eq!(profile.tensor_size, 8850);
+    assert_eq!(profile.tensor_size, 9874);
 }
 
 #[test]

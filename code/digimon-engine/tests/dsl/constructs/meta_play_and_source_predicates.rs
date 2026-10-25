@@ -142,6 +142,8 @@ fn mask(r: &DebugRunner, actor: u8, expected: &[u16], optional: bool) {
     let pending = r.game.pending_selection.as_ref().expect("real DSL choice");
     assert_eq!(pending.selecting_player, actor);
     assert_eq!(pending.is_optional, optional);
+    let mut expected = expected.iter().map(|&a| crate::union_fixture_action(&r.game, a)).collect::<Vec<_>>();
+    if pending.card_choice.is_some() && optional { expected.push(PASS); }
     assert_eq!(pending.valid_action_ids, expected);
     for (action, enabled) in build_action_mask(&r.game, actor).iter().enumerate() {
         assert_eq!(
@@ -160,6 +162,7 @@ fn mask(r: &DebugRunner, actor: u8, expected: &[u16], optional: bool) {
 }
 
 fn choose(r: &mut DebugRunner, owner: u8, action: u16) {
+    let action = crate::union_fixture_action(&r.game, action);
     assert_eq!(build_action_mask(&r.game, owner)[action as usize], 1.0);
     r.execute_action(owner, action).unwrap();
 }

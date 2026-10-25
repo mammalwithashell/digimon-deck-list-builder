@@ -212,7 +212,7 @@ fn can_digivolve_onto_filters_the_union_result_to_routable_cards() {
     r.execute_action(0, encode_attack(0, lv4.index as u16))
         .expect("pick the Lv.4 base");
     let view = r.pending_selection_view().expect("result prompt installs");
-    let mut offered = view.valid_action_ids.clone();
+    let mut offered = crate::union_fixture_candidates(&r.game);
     offered.sort_unstable();
     let hand_idx = r
         .game

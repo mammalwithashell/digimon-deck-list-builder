@@ -1,0 +1,30 @@
+
+running 8 tests
+test bt16::bt16_077::bt16_077_compiles_with_dna_path_and_dual_partition ... ok
+test bt16::bt16_077::bt16_077_dna_digivolve_plays_a_free_trait_digimon_from_trash ... ok
+test bt16::bt16_077::bt16_077_grants_raid_and_partition_on_field ... ok
+test bt16::bt16_077::bt16_077_inherited_partition_never_plays_a_source_no_slot_admits ... ok
+test bt16::bt16_077::bt16_077_non_dna_digivolve_still_offers_rush_attack_but_not_trash_play ... ok
+
+thread 'bt16::bt16_077::bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set' (12308) panicked at code\digimon-engine\tests\cards_behavioral\bt16\bt16_077.rs:415:5:
+assertion `left == right` failed: every specified card can start a complete slot assignment
+  left: [30, 31, 32, 33]
+ right: [2000, 2001, 2002, 2003]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test bt16::bt16_077::bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set ... FAILED
+
+thread 'bt16::bt16_077::bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest' (32380) panicked at code\digimon-engine\tests\cards_behavioral\bt16\bt16_077.rs:354:5:
+assertion `left == right` failed: §16-3: only the purple Lv.4 and the red Lv.4 are 'specified cards'; the green Lv.3 source is never offered
+  left: [30, 31]
+ right: [2000, 2002]
+test bt16::bt16_077::bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest ... FAILED
+test bt16::bt16_077::bt16_077_rush_pick_attacks_the_player_immediately ... ok
+
+failures:
+
+failures:
+    bt16::bt16_077::bt16_077_partition_masks_picks_that_cannot_complete_the_slot_set
+    bt16::bt16_077::bt16_077_partition_plays_one_of_each_specified_card_and_ignores_the_rest
+
+test result: FAILED. 6 passed; 2 failed; 0 ignored; 0 measured; 12747 filtered out; finished in 7.13s
+

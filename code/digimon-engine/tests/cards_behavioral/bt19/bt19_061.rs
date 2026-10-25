@@ -105,8 +105,8 @@ fn bt19_061_on_deletion_places_matching_hand_or_trash_card_under_own_tamer() {
             view.kind,
             SelectionKind::UnionZone { .. } | SelectionKind::Hand | SelectionKind::Trash
         ) {
-            let hand_action = PLAY_HAND_START + hand_index(&runner, 0, "XH-HAND") as u16;
-            let trash_action = TRASH_EFFECT_START + trash_index(&runner, 0, "BF-TRASH") as u16;
+            let hand_action = owned_union_fixture::action(&runner.game, 0, "XH-HAND", false).expect("eligible hand card");
+            let trash_action = owned_union_fixture::action(&runner.game, 0, "BF-TRASH", true).expect("eligible trash card");
             assert!(
                 view.valid_action_ids.contains(&hand_action),
                 "Xros Heart card in hand should be legal"
@@ -153,3 +153,6 @@ fn bt19_061_on_deletion_places_matching_hand_or_trash_card_under_own_tamer() {
         "the selected Blue Flare trash card should be under the Tamer"
     );
 }
+
+#[path = "../../support/owned_union_fixture.rs"]
+mod owned_union_fixture;

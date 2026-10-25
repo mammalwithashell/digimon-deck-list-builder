@@ -5,7 +5,7 @@
 //! - That hook applies a one-shot -1 cost modifier.
 //! - The same transaction can then use trash cards as DigiXros materials.
 
-use digimon_engine::action::space::{PASS, TRASH_EFFECT_START};
+use digimon_engine::action::space::{PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card_with_level, DebugRunner};
@@ -71,14 +71,15 @@ fn bt12_112_preattaches_shoutmon_reduces_cost_and_unlocks_trash_materials() {
     let material_prompt = runner
         .pending_selection()
         .expect("DigiXros transaction should continue with material selection");
+    let trash_action = physical_menu::card_action(&runner.game, "BT10-049", digimon_engine::owned_card_choice::CardChoiceZone::Trash);
     assert!(
         material_prompt
             .valid_action_ids
-            .contains(&TRASH_EFFECT_START),
+            .contains(&trash_action),
         "accepting the Shoutmon hook must unlock trash as a DigiXros material zone"
     );
     runner
-        .execute_action(0, TRASH_EFFECT_START)
+        .execute_action(0, trash_action)
         .expect("select Ballistamon from trash as a DigiXros material");
     runner
         .execute_action(0, PASS)
@@ -128,3 +129,6 @@ fn bt12_112_preattaches_shoutmon_reduces_cost_and_unlocks_trash_materials() {
         "trash material should be consumed into the DigiXros stack"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

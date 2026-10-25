@@ -284,6 +284,8 @@ pub fn bless_verification_recording(
 ) -> Result<BlessOutcome, ReplayCorpusError> {
     // Unsupported versions are not gameplay divergences. In particular they
     // must never become retirement instructions that remove a corpus file.
+    crate::runners::replay::validate_action_schema_version(recording.action_schema_version)
+        .map_err(|err| ReplayCorpusError::Engine(err.to_string()))?;
     if recording.format_version != crate::recorder::VERIFICATION_REPLAY_FORMAT_VERSION
         || crate::recorder::VerificationDigestVersion::from_engine_schema(recording.engine_schema_version).is_none()
     {

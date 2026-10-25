@@ -1,5 +1,5 @@
 use digimon_engine::action::space::{
-    HAND_EFFECT_START, PASS, PLAY_HAND_START, SOURCE_SELECT_START,
+    HAND_EFFECT_START, PASS, PLAY_HAND_START,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
@@ -145,7 +145,7 @@ fn bt11_095_suspends_to_allow_under_tamer_cards_as_digixros_materials_for_one_pl
 
     let tamer = runner.place_on_field(0, CARD_ID, Some(0));
     runner.push_source(tamer, "BT10-008");
-    runner.place_on_field(0, "BT10-049", Some(0));
+    let ballistamon = runner.place_on_field(0, "BT10-049", Some(0));
 
     let _ = runner.play(0, 0);
 
@@ -174,23 +174,13 @@ fn bt11_095_suspends_to_allow_under_tamer_cards_as_digixros_materials_for_one_pl
     let material_prompt = runner
         .pending_selection()
         .expect("DigiXros material selection should follow BT11-095 acceptance");
-    let under_tamer_action = material_prompt
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|action| *action >= SOURCE_SELECT_START)
-        .expect("card under BT11-095 must be selectable as a DigiXros material");
+    let under_tamer_action = physical_menu::source_action(&runner.game, tamer, 0);
+    assert!(material_prompt.valid_action_ids.contains(&under_tamer_action), "the original under-Tamer Shoutmon remains a legal material");
     runner
         .execute_action(0, under_tamer_action)
         .expect("select under-Tamer Shoutmon as DigiXros material");
-    if runner
-        .pending_selection()
-        .is_some_and(|selection| selection.valid_action_ids.contains(&1))
-    {
-        runner
-            .execute_action(0, 1)
-            .expect("select Ballistamon from battle area");
-    }
+    let ballistamon_action = physical_menu::battle_top_action(&runner.game, ballistamon);
+    runner.execute_action(0, ballistamon_action).expect("select the remaining battle-area Ballistamon material");
     runner
         .execute_action(0, PASS)
         .expect("stop selecting DigiXros materials");
@@ -214,3 +204,6 @@ fn bt11_095_suspends_to_allow_under_tamer_cards_as_digixros_materials_for_one_pl
         "the chosen under-Tamer source should leave BT11-095's stack"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_menu;

@@ -1,0 +1,41 @@
+
+running 12 tests
+test p::p_244::p_244_delay_decline_keeps_option_parked ... ok
+test p::p_244::p_244_delay_does_not_fire_on_placing_turn ... ok
+test p::p_244::p_244_delay_not_offered_on_opponents_turn ... ok
+test p::p_244::p_244_delay_not_offered_when_placed_card_is_not_vemmon ... ok
+test p::p_244::p_244_delay_not_triggered_by_normal_digivolution_onto_vemmon ... ok
+test p::p_244::p_244_delay_offered_for_fixture_vemmon_placement_on_your_turn ... ok
+
+thread 'p::p_244::p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3' (47520) panicked at code\digimon-engine\tests\cards_behavioral\p\p_244.rs:341:5:
+assertion `left == right` failed: EVO in hand
+  left: 2
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test p::p_244::p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3 ... FAILED
+test p::p_244::p_244_main_decline_still_places_self ... ok
+
+thread 'p::p_244::p_244_main_plays_vemmon_from_hand_free_then_places_self' (55000) panicked at code\digimon-engine\tests\cards_behavioral\p\p_244.rs:194:5:
+assertion `left == right` failed: only [Vemmon] (not [Vemmon]-text cards)
+  left: 2
+ right: 1
+test p::p_244::p_244_main_plays_vemmon_from_hand_free_then_places_self ... FAILED
+
+thread 'p::p_244::p_244_main_plays_zenith_or_xeno_alias_from_trash' (42724) panicked at code\digimon-engine\tests\cards_behavioral\p\p_244.rs:233:5:
+assertion `left == right` failed: [Zenith] and Xeno (also treated as [Zenith]) are both eligible
+  left: 3
+ right: 2
+test p::p_244::p_244_main_plays_zenith_or_xeno_alias_from_trash ... FAILED
+test p::p_244::p_244_security_runs_main_then_places_self ... ok
+test p::p_244::p_244_structure ... ok
+
+failures:
+
+failures:
+    p::p_244::p_244_delay_vemmon_placed_by_effect_digivolves_with_cost_minus_3
+    p::p_244::p_244_main_plays_vemmon_from_hand_free_then_places_self
+    p::p_244::p_244_main_plays_zenith_or_xeno_alias_from_trash
+
+test result: FAILED. 9 passed; 3 failed; 0 ignored; 0 measured; 12743 filtered out; finished in 21.45s
+
+FILTER_EXIT 101

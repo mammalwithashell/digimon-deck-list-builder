@@ -12,12 +12,15 @@ use crate::{
     selection::QueuedEffect,
 };
 
-type PinRows = Vec<(
-    String,
-    Vec<(String, PlayerId, u64, Option<PermanentHandle>)>,
-)>;
+#[derive(Default)]
+struct PinRows {
+    pins: Vec<(String,Vec<(String,PlayerId,u64,Option<PermanentHandle>)>)>,
+    link_clears: Vec<(String,Vec<String>)>,
+}
 
 fn bindings(game: &Game, path: &str, value: &Bindings, rows: &mut PinRows) {
+    let clears=value.private_link_clears_for_verification();
+    if !clears.is_empty(){rows.link_clears.push((path.to_owned(),clears));}
     let pins: Vec<_> = value
         .selected_identity_pins_for_verification()
         .into_iter()
@@ -29,7 +32,7 @@ fn bindings(game: &Game, path: &str, value: &Bindings, rows: &mut PinRows) {
         })
         .collect();
     if !pins.is_empty() {
-        rows.push((path.to_owned(), pins));
+        rows.pins.push((path.to_owned(), pins));
     }
 }
 
@@ -263,8 +266,8 @@ fn frames(game: &Game, path: &str, stack: &ResumeStack, rows: &mut PinRows) {
     }
 }
 
-pub(super) fn write(hasher: &mut Sha256, game: &Game) {
-    let mut rows = Vec::new();
+pub(super) fn write(hasher: &mut Sha256, game: &Game, include_link_pins: bool) {
+    let mut rows = PinRows::default();
     if let Some(stack) = &game.pending_selection_resume {
         frames(game, "pending", stack, &mut rows);
     }
@@ -331,7 +334,14 @@ pub(super) fn write(hasher: &mut Sha256, game: &Game) {
         );
     }
     // Empty/default states keep their existing saved-state goldens.
-    if !rows.is_empty() {
-        debug_field(hasher, "selected_permanent_identity_pins", &rows);
+    if !include_link_pins {
+        for (_,pins) in &mut rows.pins {pins.retain(|(name,_,_,_)|!crate::dsl_cards::bindings::is_private_link_pin_name(name));}
+        rows.pins.retain(|(_,pins)|!pins.is_empty());
+    }
+    if !rows.pins.is_empty() {
+        debug_field(hasher, "selected_permanent_identity_pins", &rows.pins);
+    }
+    if include_link_pins && !rows.link_clears.is_empty() {
+        debug_field(hasher,"private_link_identity_clears",&rows.link_clears);
     }
 }

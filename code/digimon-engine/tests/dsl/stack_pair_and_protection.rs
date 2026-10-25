@@ -113,6 +113,17 @@ fn trash_ids(r: &DebugRunner, p: usize) -> Vec<String> {
         .collect()
 }
 
+fn pair_rows(game: &digimon_engine::Game) -> Vec<(u16, String)> {
+    let selection = game.pending_selection.as_ref().expect("pair prompt");
+    selection.card_choice.as_ref().expect("physical pair owner")
+        .view(game, selection.selecting_player).rows.into_iter()
+        .filter(|row| matches!(row.operation, digimon_engine::owned_card_choice::CardChoiceOperation::CommitCard))
+        .map(|row| (row.action_id, row.card_id.expect("face-up pair card"))).collect()
+}
+fn pair_action(game: &digimon_engine::Game, card: &str) -> u16 {
+    pair_rows(game).into_iter().find(|(_, id)| id == card).expect("selectable pair card").0
+}
+
 #[test]
 fn same_level_pair_first_pick_only_from_levels_with_a_partner() {
     let mut r = runner();
@@ -129,18 +140,19 @@ fn same_level_pair_first_pick_only_from_levels_with_a_partner() {
     );
     assert!(!pending.is_optional, "min 2: PASS is not legal before 2 picks");
     let ids = pending.valid_action_ids.clone();
-    // Stack indices 0 (A4) and 2 (B4): actions are range_start + index.
-    assert_eq!(ids[1] - ids[0], 2, "offered A4 (index 0) and B4 (index 2)");
+    let mut offered: Vec<_> = pair_rows(&r.game).into_iter().map(|(_, id)| id).collect();
+    offered.sort();
+    assert_eq!(offered, vec!["A4", "B4"], "only physical level-four pair offered");
     let who = pending.selecting_player;
-    r.game.resolve_selection(who, ids[0]).expect("pick A4");
+    r.game.resolve_selection(who, pair_action(&r.game, "A4")).expect("pick A4");
     let pending = r.game.pending_selection.as_ref().expect("second pick pending");
     assert_eq!(
         pending.valid_action_ids,
-        vec![ids[1]],
+        vec![pair_action(&r.game, "B4")],
         "after A4 only the other level-4 card (B4) is offered"
     );
     assert!(!pending.is_optional, "still below the floor of 2");
-    r.game.resolve_selection(who, ids[1]).expect("pick B4");
+    r.game.resolve_selection(who, pair_action(&r.game, "B4")).expect("pick B4");
     assert!(r.game.pending_selection.is_none(), "auto-commits at max 2");
     assert_eq!(source_ids(&r, carrier), vec!["C5", "D6"], "both level-4 cards left");
     let trash = trash_ids(&r, 0);
@@ -159,9 +171,9 @@ fn same_level_pair_offers_every_level_that_has_a_pair() {
     let ids = pending.valid_action_ids.clone();
     let who = pending.selecting_player;
     // Pick D6 (stack index 1) → only E6 (index 3) remains.
-    r.game.resolve_selection(who, ids[1]).expect("pick D6");
+    r.game.resolve_selection(who, pair_action(&r.game, "D6")).expect("pick D6");
     let pending = r.game.pending_selection.as_ref().expect("pending");
-    assert_eq!(pending.valid_action_ids, vec![ids[3]], "only the other level 6");
+    assert_eq!(pending.valid_action_ids, vec![pair_action(&r.game, "E6")], "only the other level 6");
 }
 
 #[test]
@@ -188,10 +200,10 @@ fn same_level_pair_resolves_on_a_cloned_game() {
     let ids = pending.valid_action_ids.clone();
     let who = pending.selecting_player;
     assert_eq!(ids.len(), 2);
-    g.resolve_selection(who, ids[0]).expect("clone pick 1");
+    g.resolve_selection(who, pair_action(&g, "A4")).expect("clone pick 1");
     let pending = g.pending_selection.as_ref().expect("clone pick 2 pending");
-    assert_eq!(pending.valid_action_ids, vec![ids[1]]);
-    g.resolve_selection(who, ids[1]).expect("clone pick 2");
+    assert_eq!(pending.valid_action_ids, vec![pair_action(&g, "B4")]);
+    g.resolve_selection(who, pair_action(&g, "B4")).expect("clone pick 2");
     assert!(g.pending_selection.is_none());
     assert_eq!(g.players[0].battle_area[0].card_sources.len(), 3, "C5, D6, TOP");
 }

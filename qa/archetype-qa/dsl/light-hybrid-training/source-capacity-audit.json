@@ -1,0 +1,47 @@
+{
+  "gap": "G-ACTION-COMPLETE-SOURCE-SELECTION",
+  "scope": "Exact LightHybrid 20 unique requested IDs; audit of other authored YAML beyond BT18-042",
+  "affected_authored_cards": [
+    "BT18-063",
+    "BT18-076"
+  ],
+  "previously_confirmed_blocked_card": "BT18-042",
+  "reason": "select_material caps candidate source indices to 0..11 while SourceVec and inherited replacement scanning are uncapped. Eligible inherited-text Tamer at index 12 cannot be chosen.",
+  "diagnostic": "code/digimon-engine/tests/light_hybrid_source_capacity.rs",
+  "before_ignore": {
+    "passed": 2,
+    "failed": 2,
+    "ignored": 0,
+    "failures": [
+      "BT18-063: eligible Tamer at source index 12 must be played",
+      "BT18-076: eligible Tamer at source index 12 must be played"
+    ]
+  },
+  "final": {
+    "passed": 2,
+    "failed": 0,
+    "ignored": 2,
+    "ignored_reason": "G-ACTION-COMPLETE-SOURCE-SELECTION: source index 12 cannot be encoded",
+    "controls": "Actual DSL inherited effect at index 0; 10 TEST filler sources; inherited-text TEST Tamer index 11; TEST carrier top; opponent-effect deletion; explicit non-PASS choices; mask checks; Tamer plays and carrier leaves",
+    "deep": "Actual DSL inherited effect at index 0; 11 TEST filler sources; inherited-text TEST Tamer index 12; TEST carrier top. Both failed before ignore."
+  },
+  "static_source_count_unaffected": [
+    "EX7-002",
+    "AD1-015",
+    "BT7-038"
+  ],
+  "static_source_count_evidence": [
+    "src/dsl_cards/predicate.rs self_source_count: full iter.rev.skip(1)",
+    "src/dsl_cards/predicate.rs source_count: full source slice [..n-1]"
+  ],
+  "other_requested_authored_yaml": "No other exact-pool YAML uses select_material, select_materials, or select_own_sources",
+  "source_evidence": [
+    "code/digimon-engine/src/action/space.rs SOURCES_PER_FIELD=12 and encode_source_select rejects source>=12",
+    "code/digimon-engine/src/effect_context/selections.rs select_material caps source_count.min(SOURCES_PER_FIELD)",
+    "code/digimon-engine/src/replacement.rs push_from_perm scans all card_sources.iter().enumerate()"
+  ],
+  "contracts_changed": false,
+  "card_yaml_changed": false,
+  "card_owned_tests_changed": false,
+  "training_admission": "BT18-063 and BT18-076 remain blocked for complete legal-state fidelity; shallow tests alone do not admit them"
+}

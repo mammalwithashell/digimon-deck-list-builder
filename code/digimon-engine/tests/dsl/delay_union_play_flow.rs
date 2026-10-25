@@ -183,7 +183,7 @@ fn delay_union_flow_plays_reward_on_field_and_subject_completes_leave() {
         .copied()
         .find(|&a| a != PASS)
         .expect("the cost+1 reward candidate is offered");
-    assert_eq!(action, PLAY_HAND_START, "hand index 0 candidate");
+    assert_eq!(action, crate::union_fixture_action(&runner.game, PLAY_HAND_START), "typed row for hand index 0 candidate");
 
     let player = sel.selecting_player;
     runner

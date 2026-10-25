@@ -462,7 +462,7 @@ fn ex12_031_printed_op_wd_only_own_hand_qualifies_for_cost() {
 
 #[test]
 fn ex12_031_printed_decode_main_and_inherited_preserve_digimon_kind_and_level() {
-    use digimon_engine::action::space::{PASS, SOURCE_SELECT_START};
+    use digimon_engine::action::space::PASS;
     use digimon_engine::enums::CardKind;
     use digimon_engine::selection::SelectionKind;
     for seat in [0, 1] {
@@ -504,12 +504,11 @@ fn ex12_031_printed_decode_main_and_inherited_preserve_digimon_kind_and_level() 
                 .pending_selection_view()
                 .expect("Decode source selection");
             assert_eq!(selection.kind, SelectionKind::Material);
-            assert_eq!(
-                selection.valid_action_ids,
-                vec![SOURCE_SELECT_START],
-                "only the level-4 Digimon Aqua witness qualifies for Decode"
-            );
-            predicate_masked_action(&mut runner, seat, SOURCE_SELECT_START);
+            let rows = physical_choice::commits(&runner.game);
+            assert_eq!(rows.len(), 1, "only level-4 Digimon Aqua witness qualifies for Decode");
+            assert_eq!(rows[0].card_id.as_deref(), Some("DECODE-GOOD"));
+            let action = physical_choice::source_action(&runner.game, carrier, 0);
+            predicate_masked_action(&mut runner, seat, action);
             assert!(runner.pending_selection().is_none());
             assert!(field_contains(&runner, seat, "DECODE-GOOD"));
             assert_eq!(runner.memory(), 10, "Decode plays without cost");
@@ -833,3 +832,6 @@ fn ex12_031_decode_does_not_open_a_window_for_another_permanents_leave() {
         "the bounce itself must have committed"
     );
 }
+
+#[path = "../../support/owned_card_choice.rs"]
+mod physical_choice;

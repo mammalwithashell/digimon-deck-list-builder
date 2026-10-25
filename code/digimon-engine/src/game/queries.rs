@@ -16,6 +16,17 @@ use crate::selection::*;
 use crate::trigger_context::*;
 
 impl Game {
+    /// Acting-controller eligibility shared by security cost offers and their
+    /// actual movement. Card ownership determines destinations separately.
+    pub fn can_add_security_by_effect(&self, controller: PlayerId) -> bool {
+        let Some(player) = self.players.get(controller as usize) else { return false; };
+        !self.modifiers.player_has(controller, ModifierType::CannotAddSecurityByEffect)
+            && !player.battle_area.iter().enumerate().any(|(index, _)| {
+                self.modifiers.has(PermanentHandle { player: controller, index: index as u8 },
+                    ModifierType::CannotAddSecurity)
+            })
+    }
+
     /// Returns `true` when `card` may digivolve onto `perm` per standard
     /// evo-cost rules: `card` has an `EvoCost` entry whose `level` matches
     /// `perm.top_card()`'s level and whose color is present on

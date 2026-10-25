@@ -1,0 +1,504 @@
+{
+  "status": "in_progress_not_training_qualification",
+  "gate_unchanged": {
+    "ids": 16,
+    "total_ids": 20,
+    "copies": 46,
+    "total_copies": 54
+  },
+  "checks": [
+    {
+      "command": "python -m pytest code/tests/api/test_card_choice_privacy.py -q",
+      "stage": "red",
+      "passed": 1,
+      "failed": 2
+    },
+    {
+      "command": "python -m pytest code/tests/api/test_card_choice_privacy.py code/tests/api/test_state_filter_perspective.py code/tests/api/test_state_filter_modifiers.py -q",
+      "stage": "green",
+      "passed": 16,
+      "failed": 0
+    },
+    {
+      "command": "npm test -- src/components/game/SelectionPanel.test.tsx",
+      "cwd": "code/frontend",
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "command": "npx --no-install tsc --noEmit",
+      "cwd": "code/frontend",
+      "exit_code": 0
+    },
+    {
+      "command": "npm test -- src/api/gameApi.test.ts",
+      "cwd": "code/frontend",
+      "stage": "red",
+      "passed": 11,
+      "failed": 1,
+      "reason": "rendered page token dropped from HTTP payload"
+    },
+    {
+      "command": "npm test -- src/api/gameApi.test.ts src/components/game/SelectionPanel.test.tsx",
+      "cwd": "code/frontend",
+      "stage": "green",
+      "passed": 23,
+      "failed": 0
+    },
+    {
+      "command": "python -m pytest code/tests/api/test_card_choice_token_schema.py code/tests/api/test_card_choice_privacy.py -q",
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "command": "python -m pytest code/tests/api/test_card_choice_token_routing.py -q",
+      "passed": 2,
+      "failed": 0,
+      "scope": "HTTP/WebSocket forwarding and rejection/history handling with boundary test double; native enforcement unverified"
+    },
+    {
+      "command": "source-face-down-red.exe --nocapture",
+      "stage": "red",
+      "passed": 0,
+      "failed": 1,
+      "log": "verification/logs/source-face-down-characteristics-red.log",
+      "build": "Direct rustc against current pre-fix engine rlib0f496505005e1c05"
+    },
+    {
+      "command": "C isolated Cargo source/card contract RED",
+      "passed": 6,
+      "failed": 6,
+      "log": "verification/logs/source-contract-isolated-red.log"
+    },
+    {
+      "command": "C focused embedded Light Hybrid baseline",
+      "passed": 199,
+      "failed": 0,
+      "ignored": 0,
+      "log": "verification/logs/embedded-deck-requalification.log",
+      "scope": "Before latest named-route and full-inspection follow-ups"
+    },
+    {
+      "command": "C controller/source/face-down focused checks",
+      "passed": 13,
+      "failed": 0,
+      "log": "verification/logs/source-and-security-eligibility-green.log"
+    },
+    {
+      "command": "C Lobomon full-inspection follow-up",
+      "passed": 17,
+      "failed": 0,
+      "log": "verification/logs/lobomon-full-inspection-green.log"
+    },
+    {
+      "command": "C card page observations and computed layout hashes",
+      "passed": 4,
+      "failed": 0,
+      "log": "verification/logs/card-page-observation-green.log"
+    },
+    {
+      "command": "npm SelectionPanel and gameApi",
+      "passed": 24,
+      "failed": 0
+    },
+    {
+      "command": "C isolated combined card/contract rerun",
+      "passed": 226,
+      "failed": 0,
+      "breakdown": {
+        "canonical_card_cases": 204,
+        "owned_selectors": 9,
+        "card_tensor": 4,
+        "count_tensor": 5,
+        "face_down": 2,
+        "controller_security_eligibility": 2
+      },
+      "log": "verification/logs/combined-card-contract-rerun-fixed.log",
+      "scope": "Current authored 19-card modules plus shared contract checks; BT16-082 unchanged; not final training qualification or a fresh wheel"
+    },
+    {
+      "command": "cargo check -p digimon-engine-py (isolated C target, dev opt0/debug0)",
+      "exit_code": 0,
+      "log": "verification/logs/pyo3-card-choice-check.log"
+    },
+    {
+      "command": "maturin build --profile dev (diagnostic only)",
+      "exit_code": 0,
+      "log": "verification/logs/pyo3-diagnostic-wheel-build.log",
+      "wheel_sha256": "75e6d77e62e09f26efc54ecfb3667a42b48399e1dff2ab48d982adcf724d0bcd",
+      "installed_in": "C:/Users/james/.codex/build-targets/light-hybrid-training-venv",
+      "scope": "Snapshot before latest source-prefix and replay changes; release rebuild required; global wheel unchanged"
+    },
+    {
+      "command": "fresh-wheel pytest tensor profiles and owned page bindings in 32MB Python worker thread",
+      "passed": 30,
+      "failed": 1,
+      "log": "verification/logs/fresh-wheel-profile-and-pages-large-stack.log",
+      "failure": "New scenario fixture did not set player1 active before staged digivolution; corrected via set_first_player(1). All 29 tensor profile tests passed."
+    },
+    {
+      "command": "fresh-wheel pytest owned page bindings after active-seat fixture correction, 32MB Python worker thread",
+      "passed": 2,
+      "failed": 0,
+      "log": "verification/logs/fresh-wheel-owned-pages-green.log",
+      "scope": "Real native security inspection; disabled printed rows; missing/stale token rejection before mutation; navigation token generation; current descriptor"
+    },
+    {
+      "command": "fresh diagnostic wheel pytest on default Windows Python main-thread stack",
+      "status": "process_stack_overflow",
+      "log": "verification/logs/fresh-wheel-profile-and-pages.log",
+      "scope": "Unoptimized diagnostic only. No training started. Must verify final release under normal runtime."
+    },
+    {
+      "command": "fresh diagnostic wheel binding surface and actual DigimonEnv runner adapter, 32MB Python worker thread",
+      "passed": 65,
+      "failed": 0,
+      "log": "verification/logs/fresh-wheel-surface-and-adapter-green.log",
+      "preceded_by": "verification/logs/fresh-wheel-surface-and-adapter.log: 60 pass, 5 stale layout fixture failures; updated expected shape/schema/slot counts to current contracts.",
+      "scope": "Real isolated wheel snapshot; no training fit; not final source/release qualification"
+    },
+    {
+      "command": "fresh diagnostic wheel ONNX export-profile and action-semantic tests",
+      "passed": 26,
+      "failed": 0,
+      "log": "verification/logs/fresh-wheel-export-semantics.log",
+      "scope": "Includes actual new random-policy ONNX embedded/sidecar current-contract round trip and rejection of obsolete semantic fields; recurrent checkpoint cases use test doubles. No trained policy or model quality promotion."
+    },
+    {
+      "command": "cargo check -p digimon-tcg --lib (default desktop features, isolated C target)",
+      "exit_code": 0,
+      "log": "verification/logs/tauri-card-choice-check.log",
+      "scope": "Native desktop library compiles with coordinated checked submission DTO; snapshot before final union/DigiXros/recovery changes. Not a packaged desktop launch."
+    },
+    {
+      "command": "cargo test --test owned_choice_recovery --nocapture",
+      "passed": 0,
+      "failed": 2,
+      "stage": "actual_runtime_red",
+      "log": "verification/logs/owned-choice-recovery-runtime-red.log",
+      "scope": "Mandatory security shuffle lacks refresh operation; all physical security candidates removed lacks completion operation. Recovery worker implementing live eligibility and safe failure lifecycle; no promotion."
+    },
+    {
+      "command": "cargo test --lib full engine baseline during current migration",
+      "passed": 487,
+      "failed": 3,
+      "log": "verification/logs/engine-lib-current-contract.log",
+      "scope": "Three scoped failures: old DigiXros wildcard alias fixture; V4 pending-credit actual RED compiled before fix; owned Partition exam mapping. Subsequent scoped fixes tracked separately. Not full-suite certification."
+    },
+    {
+      "command": "cargo test --lib partition_card_identity_survives after physical row resolver and fixture migration",
+      "passed": 1,
+      "failed": 0,
+      "log": "verification/logs/partition-owned-exam-resolver-green.log",
+      "scope": "Live legal printed owned rows; preserves carrier/owner/physical position. No legacy-band fallback for owned prompts. Off-page exam picks require explicit navigation."
+    },
+    {
+      "command": "actual public raw play-cost recovery pipeline before wrapper fix",
+      "passed": 0,
+      "failed": 1,
+      "stage": "actual_runtime_red",
+      "log": "verification/logs/raw-payment-public-pipeline-red.log",
+      "scope": "Impossible current security payment left memory10/stuck; expected complete play at10-previous paid2=8cost. Resolved in recoveryworker expanded green and combined235."
+    },
+    {
+      "command": "current source/security/recovery plus canonical exact-deck cases",
+      "passed": 235,
+      "failed": 0,
+      "log": "verification/logs/owned-recovery-and-light-hybrid-green.log",
+      "breakdown": {
+        "canonical_card_cases": 206,
+        "named_roles": 6,
+        "owned_selectors": 9,
+        "mandatory_recovery": 9,
+        "prefix_stability": 5
+      },
+      "scope": "Native behavioral simulator evidence, not live DCGO. Predates last raw Partition role-liveness follow-up and final release rebuild."
+    },
+    {
+      "command": "fresh native env recurrent checkpoint and actual actor/critic ONNX export reset regression",
+      "passed": 0,
+      "failed": 1,
+      "stage": "actual_runtime_red",
+      "log": "verification/logs/fresh-wheel-recurrent-reset-red.log",
+      "scope": "ONNX episode_start reset overwritten by supplied previous state; actual hidden output differed. Fresh untrained weights only; no trainingfit."
+    },
+    {
+      "command": "fresh diagnostic wheel native pages, descriptors, real recurrent export and episode reset after fix",
+      "passed": 3,
+      "failed": 0,
+      "log": "verification/logs/fresh-wheel-recurrent-and-pages-green.log",
+      "scope": "SB3 and ONNX legal masked inference, actor/critic real export verification, explicit episode reset. Untrained fresh weights, no quality promotion. New descriptor zone/recovery aliases subsequently added for final release check."
+    },
+    {
+      "command": "scoped split generator validation across exact deck",
+      "passed": 20,
+      "failed": 0,
+      "log": "verification/logs/exact-deck-split-data-final-green.log",
+      "preceded_by": [
+        "verification/logs/four-card-split-data-red.log",
+        "verification/logs/exact-deck-split-data-green.log"
+      ],
+      "scope": "Three missing second-color circles plus five additional stale splits reconciled using existing generator; central data unchanged in this step."
+    },
+    {
+      "command": "pytest central card integrity and offline registry tests",
+      "passed": 11,
+      "failed": 0,
+      "log": "verification/logs/exact-deck-data-integrity.log"
+    },
+    {
+      "command": "first optimized release PyO3 wheel build and install in isolated venv",
+      "exit_code": 0,
+      "log": "verification/logs/pyo3-release-wheel-build.log",
+      "wheel_sha256": "27932a392dc1a993677725ceee3be58f95148400cce50869cde8aec4c310cc36",
+      "scope": "Initial optimized snapshot; raw Partition role follow-up and diagnostic repair require final Cargo freshness rebuild."
+    },
+    {
+      "command": "normal Windows Python main-thread pytest, optimized wheel, profiles/bindings/env/pages/real recurrent actor+critic ONNX/action semantics",
+      "passed": 123,
+      "failed": 0,
+      "log": "verification/logs/release-wheel-normal-stack-first-check.log",
+      "scope": "No enlarged Python stack needed. Fresh untrained recurrent weights only; no training fit or model quality promotion. Full final source wheel still pending."
+    },
+    {
+      "command": "refresh implemented-only deck-builder snapshot from optimized wheel registry intersected with production data",
+      "exit_code": 0,
+      "log": "verification/logs/current-tested-cards-regenerate.log",
+      "pool_proof": "verification/logs/release-registration-pool.log",
+      "scope": "All20exactdeckIDs registered; this is not training admission. Four failed-verdict ledger rows retained."
+    },
+    {
+      "command": "fresh entire DSL executable after physical-choice fixture migration, no filter",
+      "passed": 1592,
+      "failed": 0,
+      "ignored": 1,
+      "total": 1593,
+      "log": "verification/logs/final-dsl-all-physical-fixtures.log",
+      "seconds": 243.29,
+      "scope": "Supersedes original1535/57/1 DSL snapshot with all assertions and test scope preserved; no new gameplay modification in fixture fixes."
+    },
+    {
+      "command": "whole security_stack mechanics module with physical-position/menu/mask assertions",
+      "passed": 40,
+      "failed": 0,
+      "log": "verification/logs/tier2-security-stack-physical-fixture-final.log"
+    },
+    {
+      "command": "whole zone_movement_verbs module with live physical source picks and mandatory/no-match inspection semantics",
+      "passed": 17,
+      "failed": 0,
+      "log": "verification/logs/tier2-zone-physical-fixture-final.log",
+      "scope": "Corrected root fixture default-mandatory expectation: eligible search has no PASS; empty eligible set still allows inspection Done before no-match tail."
+    },
+    {
+      "command": "full mask_and_tensor contract fixture migration",
+      "passed": 177,
+      "failed": 0,
+      "log": "verification/logs/tier2-mask-and-tensor-contract-green.log",
+      "scope": "Current explicit schemas/positions/hashes and both pending card-ID slots44/93; production layout unchanged."
+    },
+    {
+      "command": "final source optimized release wheel build before adjacent printed-search correction",
+      "exit_code": 0,
+      "log": "verification/logs/pyo3-final-source-release-wheel-build.log",
+      "wheel_sha256": "2fc356145becf3606a7599119f70c86183bbfe3551300b0c313fa67865603df1",
+      "scope": "Includes raw/typed Partition roles and failed-payment continuation fixes. Adjacent three-card printed-search correction requires later rebuild."
+    },
+    {
+      "command": "normal Windows Python main-thread native profiles/bindings/env/pages/recurrent ONNX semantics",
+      "passed": 123,
+      "failed": 0,
+      "log": "verification/logs/final-release-wheel-normal-stack-check.log",
+      "scope": "Release wheel above, no enlarged Python stack; real fresh untrained actor/critic exports, no model-quality promotion."
+    },
+    {
+      "command": "actual exact-deck release registration/mechanics/admissibility and four random legal-action runtime games",
+      "passed_episodes": 4,
+      "runtime_exceptions": 0,
+      "truncated_episodes": 0,
+      "log": "verification/logs/exact-deck-release-runtime-smoke.log",
+      "report": "verification/exact-deck-release-runtime-smoke.json",
+      "scope": "54copies20IDs. Registration/data and global mechanics pass; separate card admission rejects exactly037/042/063/076 failed_verdict. Explicit CLI registration check is not the card-admissibility gate."
+    },
+    {
+      "command": "whole rules_conformance executable, unfiltered",
+      "passed": 361,
+      "failed": 0,
+      "ignored": 1,
+      "total": 362,
+      "seconds": 308.45,
+      "exit_code": 0,
+      "log": "verification/logs/tier2-rules-conformance-all-physical-fixtures.log",
+      "scope": "Fresh physical-source/keyword fixtures, debug assertions enabled,256MB Rust test stack. Predates adjacent three-card printed-search YAML correction."
+    },
+    {
+      "command": "optimized release wheel after three printed-search inspection migrations",
+      "exit_code": 0,
+      "seconds": 354,
+      "wheel_sha256": "5bf2089c0f434aea0574a629da059fd7a5002c5a1d804a976f87b574080cefa8",
+      "log": "verification/logs/pyo3-printed-search-release-wheel-build.log",
+      "scope": "Source snapshot before subsequent actual-play Recovery correction; final refresh required."
+    },
+    {
+      "command": "normal Windows Python native current profiles/bindings/env/pages/recurrent exports/action semantics",
+      "passed": 123,
+      "failed": 0,
+      "seconds": 14.38,
+      "log": "verification/logs/printed-search-release-wheel-normal-stack-check.log",
+      "scope": "No enlarged Python stack; wheel5bf2089 above. Compatible fresh untrained exports, no model quality promotion."
+    },
+    {
+      "command": "four complete adjacent card modules, including three new whole-security inspection regressions",
+      "passed": 68,
+      "failed": 0,
+      "ignored": 0,
+      "log": "verification/logs/printed-search-three-card-modules-green.log",
+      "scope": "Both actors,40-card security stacks, eligible and no-match cases, actor inspection and peer privacy. Predates actual-play late restriction follow-up."
+    },
+    {
+      "command": "actual-play outcome audit after late CannotPlayTamerByEffect restriction",
+      "stage": "actual_runtime_red",
+      "passed": 0,
+      "failed": 1,
+      "log": "verification/logs/security-search-actual-play-audit-red.log",
+      "scope": "Selected binding incorrectly enabled Recovery after no Tamer play; fix must gate on actual recorded play."
+    },
+    {
+      "command": "cargo test -p digimon-engine --lib, complete fresh optimized unit suite",
+      "passed": 492,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 22.68,
+      "log": "verification/logs/optimized-current-engine-unit-tests.log",
+      "scope": "devopt2/debug assertions ON,serial256MBstack; source after actual-play YAML result gate but before new deferred-security-play receipt. Supersedes historical487pass3fail integration baseline; rerun after receipt changes."
+    },
+    {
+      "command": "reusable actual-play predicate controls in full DSL test executable",
+      "passed": 4,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 12.96,
+      "log": "verification/logs/effect-play-results-construct-controls.log",
+      "scope": "Both actors; completed Digimon and Tamer play, optional decline, late CannotPlayTamerByEffect, isolated subsequent effect. Actual engine actions and observable memory/zone outcomes."
+    },
+    {
+      "command": "regenerate impact/lowering/admission after successful reusable play-result controls",
+      "exit_code": 0,
+      "log": "verification/logs/security-receipt-admission-regenerate.log",
+      "admissible": 1062,
+      "registered": 4477,
+      "scope": "Restores BT13-012 lowering evidence; four exact-deck failed-verdict rows retained. Receipt hash/raw-origin follow-up remains open."
+    },
+    {
+      "command": "full current-source engine unit suite, optimized with debug assertions enabled",
+      "passed": 507,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 28.37,
+      "log": "verification/logs/optimized-final-current-engine-unit-tests.log",
+      "scope": "Includes final Link identity merge and V3/V4/DNA projection follow-ups; supersedes earlier500 snapshot."
+    },
+    {
+      "command": "five complete late source/security consumer modules",
+      "passed": 64,
+      "failed": 0,
+      "ignored": 0,
+      "log": "verification/logs/root-late-five-physical-green.log",
+      "scope": "Test-only contract migration, actual immutable58pass6fail RED retained."
+    },
+    {
+      "command": "final frozen receipt/Link/top-choice optimized PyO3 wheel build and isolated install",
+      "exit_code": 0,
+      "seconds": 485,
+      "wheel_sha256": "5ddd98b9124c86d74d86cd1eb2c716d25b02330784eadff9887e65d775c53fa9",
+      "log": "verification/logs/pyo3-final-link-pin-release-wheel-build.log",
+      "install_log": "verification/logs/final-link-pin-release-wheel-install.log",
+      "scope": "Global wheel untouched; installed only task venv. Later edits are canonical test fixtures/helpers, not production engine/card data."
+    },
+    {
+      "command": "final normal Windows Python native binding/profile/env/recurrent actor+critic export/action semantic qualification",
+      "passed": 123,
+      "failed": 0,
+      "seconds": 15.43,
+      "log": "verification/logs/final-link-pin-release-wheel-normal-stack-check.log",
+      "scope": "No enlarged Python stack; fresh untrained compatible model exports only. Does not replace card admission or aggregate tests."
+    }
+  ],
+  "implemented": [
+    "Per-recipient search security identity redaction and zero-based typed row owner normalization",
+    "Typed physical card page frontend rendering with exact decimal display and concrete masked actions",
+    "PyO3 and desktop DTO threading of card choice metadata; Rust compile verification pending",
+    "Reserved action and tensor migration documented without claiming active schema completion",
+    "Frontend HTTP, WebSocket and desktop calls carry rendered page tokens as exact strings",
+    "HTTP token schema rejects numeric, missing-field and extra-field tokens",
+    "PyO3 serial step retained and async step_checked authored, with HTTP/WebSocket callers and desktop worker token validation; native compile and fresh-wheel runtime verification pending",
+    "Actual face-down printed-characteristic RED captured; reusable Game under-top query and DSL predicate guard authored, GREEN pending"
+  ],
+  "outstanding": [],
+  "build_observation": {
+    "note": "Historical process observations; inspect live state before relying on any handle.",
+    "primary_target": "C:/Users/james/.codex/build-targets/light-hybrid-training-tdd",
+    "profile": "profile.dev.opt-level=0, profile.dev.debug=0; assertions remain enabled; RUSTC_WRAPPER empty",
+    "focused_full_current_session": 35479,
+    "old_d_builds": "Obsolete worker runs canceled only after completed C missing-card RED; D queued builds then failed OS32 while old direct linker held rlib; direct negative run canceled after stronger completed C RED. C target now provides verified evidence."
+  },
+  "active_rust_contract": {
+    "action_schema_version": 2,
+    "pending_row_size": 128,
+    "profiles": {
+      "standard_lite_v2": {
+        "size": 9434,
+        "schema": "standard_lite_v2.4",
+        "card_id_slots": 604,
+        "hash": "sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a"
+      },
+      "standard_lite_deck_v2": {
+        "size": 9874,
+        "schema": "standard_lite_deck_v2.3",
+        "card_id_slots": 659,
+        "hash": "sha256:d7182574a93cc7472452c5f3d28343092613e1008ec44d3a6458d487aabfee8f"
+      },
+      "standard_full_v2": {
+        "size": 44506,
+        "schema": "standard_full_v2.5",
+        "card_id_slots": 604,
+        "hash": "sha256:2fd19ee35786b40d294d8deaf5fda6f565b0731727adca8fecdfa7ae3235af65"
+      }
+    },
+    "binding_wheel": "final_release_runtime_qualified_123_normal_stack_checks"
+  },
+  "native_regressions_verified": [
+    "Own/opponent source depth39 and300; boundary11/12 loop expansion awaits current combined run",
+    "Count-capped material39 in battle/breeding; boundary11/12 loop expansion awaits current combined run",
+    "Raw and DSL physical row resolution, page navigation, clone and required prefix",
+    "Full security inspection including ineligible cards and no-match finish; recipient privacy",
+    "128-wide row observations, exact u64 limbs, four-layout checks and action schema2",
+    "Face-down positive/negative characteristic filters with structural alternatives",
+    "Controller/recipient ownership separation and controller field/player security prohibitions"
+  ],
+  "final_status": "qualified_training_admission",
+  "historical_outstanding": [
+    "Remaining source chooser families: Partition, union and DigiXros and typed non-DSL capped frames",
+    "Prefix compaction/source movement and mandatory invalidation recovery",
+    "Compile and verify PyO3/Tauri strict token submissions and actual recipient boundaries",
+    "Synchronize stale consumer fixture expectations with new Rust descriptors",
+    "Replay/model compatibility migration and legacy semantic rejection",
+    "Fresh isolated binding wheel plus actual env/recurrent/export contract validation",
+    "Final all-card follow-up review, full tier2 and broader checks, regenerate gate artifacts and prove20/20 IDs54/54copies"
+  ],
+  "final_evidence": {
+    "aggregate_suites": 93,
+    "aggregate_failed": 0,
+    "postpromotion_tier0_suites": 13,
+    "postpromotion_failed": 0,
+    "engine_unit_passed": 507,
+    "native_python_passed": 123,
+    "admitted_unique_ids": 20,
+    "admitted_copies": 54,
+    "admission_report": "verification/final-exact-deck-admission.json",
+    "aggregate_log": "verification/logs/frozen-final-tier2-clean-run.log",
+    "tier0_log": "verification/logs/promoted-final-tier0-full-run.log",
+    "historical_notes": "Earlier implemented/outstanding/native_regressions/build observations describe intermediate snapshots. Final evidence supersedes pending statements; historical failures remain retained.",
+    "scope": "Simulator training eligibility; no live DCGO certification or trained policy quality promotion"
+  }
+}

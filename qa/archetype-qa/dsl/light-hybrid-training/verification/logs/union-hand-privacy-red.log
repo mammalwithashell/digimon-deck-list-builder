@@ -1,0 +1,32 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-8.4.2, pluggy-1.6.0
+rootdir: C:\Users\james\.codex\worktrees\light-hybrid-training\digimon-deck-list-builder-1
+configfile: pyproject.toml
+plugins: anyio-4.12.1, asyncio-0.24.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collected 4 items
+
+code\tests\api\test_card_choice_privacy.py ...F                          [100%]
+
+================================== FAILURES ===================================
+___ test_union_hand_rows_are_private_to_owner_and_trash_rows_remain_public ____
+
+    def test_union_hand_rows_are_private_to_owner_and_trash_rows_remain_public():
+        for owner in (0, 1):
+            raw = state(owner + 1)
+            raw["pendingSelection"]["cardChoice"]["rows"] = [
+                {"zone": "hand", "owner": owner, "card_id": "PRIVATE-HAND", "card_registry_index": 41, "identity_visible": True},
+                {"zone": "trash", "owner": owner, "card_id": "PUBLIC-TRASH", "card_registry_index": 42, "identity_visible": True},
+            ]
+            before = deepcopy(raw)
+            mine = filter_state_for_player(raw, owner + 1)["pendingSelection"]["cardChoice"]["rows"]
+            assert mine[0]["card_id"] == "PRIVATE-HAND"
+            for view in (filter_state_for_player(raw, 2 - owner), filter_state_for_spectator(raw)):
+                hand, trash = view["pendingSelection"]["cardChoice"]["rows"]
+>               assert hand["card_id"] is None
+E               AssertionError: assert 'PRIVATE-HAND' is None
+
+code\tests\api\test_card_choice_privacy.py:64: AssertionError
+=========================== short test summary info ===========================
+FAILED code/tests/api/test_card_choice_privacy.py::test_union_hand_rows_are_private_to_owner_and_trash_rows_remain_public
+========================= 1 failed, 3 passed in 2.69s =========================

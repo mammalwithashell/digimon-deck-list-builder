@@ -1,0 +1,36 @@
+{
+  "status": "implemented_and_focused_verified",
+  "scope": "V4 pending fixed play-reduction credit fingerprint; rollback implementation belongs to parent",
+  "current_protocol": "verification engine schema3 / digestV4",
+  "historical_protocols": "LegacyV2 andV3 exclude pending_reduction; PlayCostAdjustments manualDebug keeps original4fields.",
+  "hashed_owners": [
+    "AfterSelectionHook::PlayCostContinuation accumulated_reduction",
+    "AfterSelectionHook::DigiXrosLeaveContinuation total_reduction via getter",
+    "ResumeFrame::PlayFromHandCostReductionPrompt accumulated_reduction (including ordering)",
+    "ResumeFrame::DigiXrosMaterialSelection total_reduction",
+    "ResumeFrame::NonDslCountCappedStep AssemblyPlayParams total_reduction",
+    "Nested replacement, field-top and Delay resume wrappers recurse preserving frame/hook positions"
+  ],
+  "proof": [
+    {
+      "log": "verification/logs/pending-play-credit-digest-red.log",
+      "result": "0 passed,1 failed",
+      "scope": "ActualRED: changing only pending_reduction in a cloned parked play-cost hook left current digest identical, while both historical protocols stayed equal."
+    },
+    {
+      "log": "verification/logs/pending-play-credit-digest-hooks-and-frames-rerun.log",
+      "result": "2 passed",
+      "scope": "Current credit distinction, historical byte invariance, clone equality; direct and nested ordering frames."
+    },
+    {
+      "log": "verification/logs/pending-credit-and-receipt-controls.log",
+      "result": "15 passed,0 failed",
+      "scope": "New credit cases plus existing canonical receipt alpha-renaming, dangling/reference/association, effect scopes and cloned resume controls."
+    }
+  ],
+  "limits": [
+    "Not a new proof of payment/rollback behavior itself; parent owns actual payment tests.",
+    "DigiXros andAssembly credit-owner branches are explicit hash coverage, not separately exercised credit mutations in these2new tests.",
+    "No bindings rebuild or full ladder performed by this subtask."
+  ]
+}
