@@ -77,6 +77,7 @@ def main():
             '--generations', '1', '--games', str(plan['games']), '--procs', str(plan['workers']),
             '--chunk-games', '4', '--worker-timeout-seconds', '7200',
             '--sims', '320', '--worlds', '4', '--eval-batch-size', '4', '--decision-cap', '1200',
+            '--fail-on-truncation',
             '--window', '3', '--epochs', '2', '--batch-size', '512', '--lr', '0.0001',
             '--train-device', 'cpu', '--eval-n', '300', '--seed', '26261024',
             '--deck-pool-snapshot', str(inputs / 'heldout_snapshot.json'),

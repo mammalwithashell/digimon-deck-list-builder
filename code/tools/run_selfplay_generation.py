@@ -328,6 +328,11 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
     )
     t_selfplay = time.time() - t0
 
+    if getattr(args, "fail_on_truncation", False):
+        truncated = sum(json.loads((p / "manifest.json").read_text())["truncated_games"] for p in proc_dirs)
+        if truncated:
+            raise RuntimeError(f"Collected {truncated} truncated games; preserving shards and refusing to fit until investigated")
+
     window_dirs = collect_window_shard_dirs(Path(args.run_dir), gen, args.window)
     print(f"training: warm-start {warm_start_zip}, window = {len(window_dirs)} shard dir(s)", flush=True)
 
@@ -445,6 +450,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--mode", default="pimc")
     p.add_argument("--temperature-decisions", type=int, default=16)
     p.add_argument("--decision-cap", type=int, default=600)
+    p.add_argument("--fail-on-truncation", action="store_true",
+                   help="preserve collected shards and stop before fitting if any new game reaches its cap")
     p.add_argument("--shard-rows", type=int, default=4096)
 
     p.add_argument("--window", type=int, default=3, help="sliding-window generations of shards for training")
