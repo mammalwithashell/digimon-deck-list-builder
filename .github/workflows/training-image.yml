@@ -96,6 +96,7 @@ jobs:
           context: .
           file: code/tools/cloud_search/Dockerfile.cpu
           tags: digimon-search-cpu:smoke
+          labels: org.opencontainers.image.revision=${{ github.sha }}
           load: true
           push: false
       - name: Check native search and Python runtime together

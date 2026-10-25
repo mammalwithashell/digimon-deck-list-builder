@@ -1,4 +1,4 @@
-"""Four bounded search updates with one fixed-cohort evaluation per model.
+"""Up to four bounded search updates with one fixed-cohort evaluation per model.
 
 Starts from an explicitly prepared, hash-bound checkpoint and archive. No
 automatic restart, promotion, partial-run adoption or source-data mutation.
@@ -18,7 +18,7 @@ from tools.selfplay_scheduler import atomic_json, controller_lock, sha256
 
 
 def validate(root, plan):
-    if plan['generations'] != 4 or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
+    if plan['generations'] not in range(1, 5) or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
         raise ValueError('Unexpected campaign scope')
     if os.environ.get('DIGIMON_DEPLOYED_IMAGE') != plan['image']:
         raise ValueError('Image differs from approved engine')

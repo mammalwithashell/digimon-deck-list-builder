@@ -90,6 +90,15 @@ def test_campaign_accepts_validated_parent(campaign):
     assert len(validate(*campaign)) == 12
 
 
+def test_campaign_accepts_two_remaining_updates_with_fresh_replay(campaign):
+    root, plan = campaign
+    plan['generations'] = 2
+    assert len(validate(root, plan)) == 12
+    selected, record = bounded_window(root / 'generation', 1, 3, 1000, 123)
+    assert selected == []  # A warm-start checkpoint alone is not replay data.
+    assert all(g['games_before_quarantine'] == 0 for g in record['generations'])
+
+
 @pytest.mark.parametrize('change', ['parent', 'image', 'hash', 'scope', 'already_started', 'pool_size'])
 def test_campaign_refuses_drift(campaign, monkeypatch, change):
     root, plan = campaign
