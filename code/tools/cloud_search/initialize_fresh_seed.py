@@ -15,7 +15,9 @@ def main():
     inputs, work = root / 'inputs', root / 'bootstrap'
     if any(work.iterdir()) or (root / 'generation').exists():
         raise FileExistsError('Fresh bootstrap requires empty preparation directories')
-    from digimon_gym.agents.gauntlet import require_mechanics_ready, validate_admissible_deck
+    from digimon_gym.agents.gauntlet import (
+        GeneralistDeckPool, require_mechanics_ready, validate_admissible_deck,
+    )
     import digimon_engine
     from model_contract import current_contract, validate_checkpoint
     from tools.english_meta_search_job import collect_bootstrap, bootstrap
@@ -27,6 +29,12 @@ def main():
         validate_admissible_deck(deck['cards'], label=deck['name'])
         if not set(deck['cards']) <= registered or not digimon_engine.validate_deck(deck['cards']).is_valid:
             raise ValueError(f"Invalid deck: {deck['name']}")
+    for name in ('train_snapshot.json', 'heldout_snapshot.json', 'pet_evaluation_snapshot.json'):
+        pool = GeneralistDeckPool.from_snapshot(inputs / name, implemented_card_ids=registered)
+        for entries in pool.archetypes.values():
+            for deck in entries:
+                if not digimon_engine.validate_deck(deck.card_ids).is_valid:
+                    raise ValueError(f'Invalid evaluation/training deck: {deck.deck_id}')
     contract = current_contract('standard_lite_v2')
     if contract['action_schema_version'] != 2:
         raise ValueError('Fresh campaign requires action schema 2')
