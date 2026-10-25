@@ -5,6 +5,7 @@ credentials or training controls belong in this process.
 """
 import argparse
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -57,6 +58,13 @@ def due_checkpoint(ready, state, now, interval, terminal=False):
     return None
 
 
+def advance_generation(state, index):
+    if state.get('generation_index', 0) != index:
+        # Keep unique report IDs and checkpoint history across continuation,
+        # but re-evaluate the active checkpoint on the newly deployed engine.
+        state.update(generation_index=index, final_attempted=False, next_due_unix=0)
+
+
 def evaluate_window(root, out, checkpoint, window, reason, args):
     folder = out / f"window-{window:06d}"
     folder.mkdir(parents=True, exist_ok=False)
@@ -71,6 +79,7 @@ def evaluate_window(root, out, checkpoint, window, reason, args):
         training_games_collected=training_games, evaluation_started_unix=time.time(),
         trigger=reason, frozen_during_collection=True, training_algorithm="search_selfplay",
         comparison="fixed seeds and deck snapshots; repeated same-hash windows are not independent samples")
+    context['engine_image'] = os.environ.get('DIGIMON_DEPLOYED_IMAGE') or read_json(root / 'deployment-plan.json').get('image')
     atomic_json(folder / "context.json", context)
     failures = []
     for panel, snapshot in args.panels:
@@ -123,7 +132,9 @@ def main():
         # Reserve window IDs before launching, so interrupted runs are retained.
         while True:
             now = time.time()
-            pipeline = read_json(args.root / "experiment_state.json").get("stage")
+            pipeline_state = read_json(args.root / "experiment_state.json")
+            pipeline = pipeline_state.get("stage")
+            advance_generation(state, pipeline_state.get('generation_index', 0))
             terminal = pipeline in ("complete", "failed")
             due = due_checkpoint(checkpoints(args.root, now), state, now, args.interval_seconds, terminal)
             if due:

@@ -71,6 +71,31 @@ def test_checkpoint_must_be_stable_and_valid(tmp_path):
     assert monitor.stable_checkpoint_files(tmp_path, 200) == [path]
 
 
+def test_next_generation_does_not_report_previous_progress_or_checkpoint(tmp_path):
+    write(tmp_path, "experiment_state.json", {"stage": "generation", "generation_index": 1})
+    write(tmp_path, "generation/gen0/scheduler_progress.json", {"old": True})
+    write(tmp_path, "generation/gen0/summary.json", {"old": True})
+    write(tmp_path, "generation/gen1/scheduler_progress.json", {
+        "status": "running", "requested_games": 3300, "committed_games": 4,
+        "committed_rows": 200, "truncated_games": 0, "workers": 8,
+        "pending_chunks": 824, "active": [],
+        "elapsed_seconds_this_invocation": 20, "heartbeat_unix": 100})
+    (tmp_path / "pet_anchored_eval.txt").write_text("vs greedy 20-10-0 WR=66.7% (n=30)")
+    result = monitor.collect(tmp_path, 100)
+    assert result["pipeline/generation_index"] == 1
+    assert result["selfplay/committed_games"] == 4
+    assert not any(k.startswith("evaluation/pet_same_list/") for k in result)
+    assert monitor.stable_checkpoint_files(tmp_path, 100) == []
+    log = tmp_path / "log"
+    log.write_text("epoch 0: policy_loss 1.2 value_loss 0.2\n")
+    assert monitor.epoch_events(tmp_path, log) == []
+    log.write_text("epoch 0: policy_loss 9.9 value_loss 9.9\n"
+                   "=== GENERATION_MONITOR_INDEX=1 ===\n"
+                   "epoch 0: policy_loss 1.2 value_loss 0.2\n")
+    assert monitor.epoch_events(tmp_path, log)[0]["train/generation_index"] == 1
+    assert monitor.epoch_events(tmp_path, log)[0]["train/policy_loss"] == 1.2
+
+
 def test_spool_recovers_interrupted_append_but_rejects_earlier_corruption(tmp_path):
     path = tmp_path / "spool"
     path.write_bytes(b'{"seq": 0}\n{"seq":')

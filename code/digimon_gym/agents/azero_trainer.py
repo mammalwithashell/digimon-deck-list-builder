@@ -44,6 +44,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -68,6 +69,8 @@ class ShardDataset:
     game_ids: np.ndarray
     manifests: list[dict] = field(default_factory=list)
     exclusions: list[dict] = field(default_factory=list)
+    # Own the temporary backing file for as long as the dataset is alive.
+    _observation_storage: object | None = field(default=None, repr=False)
 
     def __len__(self) -> int:
         return self.obs.shape[0]
@@ -79,7 +82,9 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
     Optional training_exclusions.json removes whole games before either loss.
     Original committed shard files remain untouched for replay and auditing.
     """
-    obs_parts, off_parts, act_parts, vis_parts, z_parts, end_parts, game_parts = [], [], [], [], [], [], []
+    off_parts, act_parts, vis_parts, z_parts, end_parts, game_parts = [], [], [], [], [], []
+    observation_storage = tempfile.TemporaryFile(prefix="digimon-replay-")
+    observation_rows = 0
     manifests: list[dict] = []
     exclusions: list[dict] = []
     obs_dim = action_dim = None
@@ -164,7 +169,12 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
             # (it duplicates the previous shard's final offset).
             base = sum(a.shape[0] for a in act_parts)
             off_parts.append((off if not off_parts else off[1:]).astype(np.int64) + base)
-            obs_parts.append(obs.astype(np.float32, copy=False))
+            # Stream each validated shard once. Retaining every dense array and
+            # then concatenating it doubles peak RAM for multi-generation replay.
+            # The mapping preserves row order/float bits and supports the same
+            # shuffled minibatch indexing; the OS can evict unused disk pages.
+            observation_storage.write(obs.astype(np.float32, copy=False).tobytes(order="C"))
+            observation_rows += len(obs)
             act_parts.append(act)
             vis_parts.append(vis.astype(np.float32, copy=False))
             z_parts.append(z.astype(np.float32, copy=False))
@@ -180,8 +190,12 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
         raise ValueError("no shard directories given")
 
     offsets = np.concatenate(off_parts)
+    observation_storage.flush()
+    observations = (np.memmap(observation_storage, dtype=np.float32, mode="r+",
+                             shape=(observation_rows, obs_dim)) if observation_rows else
+                    np.empty((0, obs_dim), dtype=np.float32))
     return ShardDataset(
-        obs=np.concatenate(obs_parts),
+        obs=observations,
         offsets=offsets,
         actions=np.concatenate(act_parts).astype(np.int32),
         visits=np.concatenate(vis_parts),
@@ -192,6 +206,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
         game_ids=np.concatenate(game_parts),
         manifests=manifests,
         exclusions=exclusions,
+        _observation_storage=observation_storage,
     )
 
 

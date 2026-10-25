@@ -35,6 +35,18 @@ def test_partial_checkpoint_is_not_evaluated(tmp_path):
     assert len(worker.checkpoints(tmp_path, path.stat().st_mtime + 100)) == 1
 
 
+def test_continuation_keeps_report_ids_and_refreshes_engine_evaluation():
+    state = dict(final_attempted=True, attempted=['a', 'b'], next_window=7, next_due_unix=999)
+    worker.advance_generation(state, 1)
+    assert state['next_window'] == 7 and state['attempted'] == ['a', 'b']
+    checkpoint = dict(step=1, sha256='b')
+    assert worker.due_checkpoint([checkpoint], state, 100, 7200) == (checkpoint, 'interval')
+    state['next_due_unix'] = 1000
+    worker.advance_generation(state, 1)
+    assert state['next_due_unix'] == 1000
+    assert worker.due_checkpoint([checkpoint], state, 100, 7200, True) == (checkpoint, 'final')
+
+
 def test_window_timeout_is_recorded_without_mutating_inputs(tmp_path, monkeypatch):
     import subprocess
     root = tmp_path / "experiment"

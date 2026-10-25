@@ -58,18 +58,29 @@ def recover_spool(path):
     return records
 
 
+def active_generation(root):
+    state = read_json(root / "experiment_state.json") or {}
+    if "generation_index" in state:
+        return int(state["generation_index"])
+    return max((int(p.name[3:]) for p in (root / "generation").glob("gen*")
+                if p.is_dir() and p.name[3:].isdigit()), default=0)
+
+
 def collect(root, now):
     state = read_json(root / "experiment_state.json") or {"stage": "pending"}
     plan = read_json(root / "deployment-plan.json") or {}
     started = read_json(root / "started.json") or {}
     phase = state["stage"]
+    gen = active_generation(root)
+    gen_dir = root / "generation" / f"gen{gen}"
     metrics = {"monitor/unix_time": now, "pipeline/stage": phase,
         "pipeline/stage_code": STAGES.get(phase, -1), "pipeline/failed": int(phase == "failed"),
-        "pipeline/complete": int(phase == "complete"),
+        "pipeline/complete": int(phase == "complete"), "pipeline/generation_index": gen,
         "pipeline/elapsed_hours": max(0, now - started.get("time_unix", now)) / 3600}
+    metrics["pipeline/image"] = state.get("image", plan.get("image", "unknown"))
     queues = [("health160", root / "check-160/scheduler_progress.json"),
               ("health320", root / "check-320/scheduler_progress.json"),
-              ("selfplay", root / "generation/gen0/scheduler_progress.json")]
+              ("selfplay", gen_dir / "scheduler_progress.json")]
     for prefix, path in queues:
         progress = read_json(path)
         if not progress:
@@ -106,12 +117,13 @@ def collect(root, now):
     selected = read_json(root / "worker_selection.json")
     if selected:
         metrics["pipeline/selected_workers"] = selected["workers"]
-    generation = read_json(root / "generation/gen0/summary.json")
+    generation = read_json(gen_dir / "summary.json")
     if generation:
         for key, value in generation["timings_sec"].items():
             metrics[f"timings/{key}_seconds"] = value
-    for panel, path in (("meta_validation", root / "generation/gen0/anchored_eval.txt"),
-                        ("pet_same_list", root / "pet_anchored_eval.txt")):
+    pet_path = root / "pet_anchored_eval.txt" if gen == 0 else gen_dir / "pet_anchored_eval.txt"
+    for panel, path in (("meta_validation", gen_dir / "anchored_eval.txt"),
+                        ("pet_same_list", pet_path)):
         for name, wins, losses, draws, wr, games in ANCHOR.findall(read_text(path)):
             for key, value in {"wins": int(wins), "losses": int(losses), "draws": int(draws),
                                "win_rate": float(wr) / 100, "games": int(games)}.items():
@@ -124,14 +136,25 @@ def collect(root, now):
 
 def epoch_events(root, log_path):
     # stdout is available during fitting; the final summary carries full precision.
+    gen = active_generation(root)
+    log = read_text(log_path)
+    marker = f"=== GENERATION_MONITOR_INDEX={gen} ==="
+    if marker in log:
+        log = log.rsplit(marker, 1)[1]
+    elif gen > 0:
+        log = ""  # Previous invocation's stdout is not this generation's loss.
     found = {int(epoch): {"train/epoch": int(epoch), "train/policy_loss": float(policy),
              "train/value_loss": float(value), "train/source": "stdout"}
-             for epoch, policy, value in EPOCH.findall(read_text(log_path))}
-    summary = read_json(root / "generation/gen0/summary.json") or {}
+             for epoch, policy, value in EPOCH.findall(log)}
+    summary = read_json(root / "generation" / f"gen{gen}" / "summary.json") or {}
     for row in summary.get("train", {}).get("epochs", []):
         found[row["epoch"]] = {"train/epoch": row["epoch"], "train/policy_loss": row["policy_loss"],
                                "train/value_loss": row["value_loss"], "train/source": "summary"}
-    return list(found.values())
+    preceding_epochs = sum(len((read_json(root / 'generation' / f'gen{i}' / 'summary.json') or {})
+                               .get('train', {}).get('epochs', [])) for i in range(gen))
+    return [dict(event, **{"train/generation_index": gen,
+                           "train/optimizer_epoch": preceding_epochs + event['train/epoch']})
+            for event in found.values()]
 
 
 def wandb_config(root):
@@ -147,7 +170,7 @@ def wandb_config(root):
 
 
 def stable_checkpoint_files(root, now, stable_seconds=60):
-    directory = root / "generation/gen0"
+    directory = root / "generation" / f"gen{active_generation(root)}"
     model = directory / "model.zip"
     if not model.exists() or now - model.stat().st_mtime < stable_seconds:
         return []
@@ -189,12 +212,12 @@ def main():
         if args.online:
             import wandb
             run = wandb.init(entity=args.entity, project=args.project, id=args.run_id, resume="allow",
-                name="English meta + pet decks | 3300 games | 320/4", job_type="search-monitor",
+                name="English meta + pet decks | 3300 games/generation | 320/4", job_type="search-monitor",
                 dir=str(args.state_dir), config=wandb_config(args.root),
                 settings=wandb.Settings(disable_code=True, disable_git=True, x_disable_stats=True))
-            run.define_metric("train/epoch")
-            run.define_metric("train/policy_loss", step_metric="train/epoch")
-            run.define_metric("train/value_loss", step_metric="train/epoch")
+            run.define_metric("train/optimizer_epoch")
+            run.define_metric("train/policy_loss", step_metric="train/optimizer_epoch")
+            run.define_metric("train/value_loss", step_metric="train/optimizer_epoch")
             local["uploaded"] = max(local["uploaded"], run.step - 1)
             atomic_json(args.state_dir / "wandb_run.json", {"url": run.url, "id": run.id,
                 "entity": args.entity, "project": args.project})
@@ -209,7 +232,7 @@ def main():
                     (card_status.get("last_result") or {}).get("status") == "failed")
             payloads = [metrics]
             for event in epoch_events(args.root, args.training_log):
-                key = str(event["train/epoch"])
+                key = f"{event['train/generation_index']}:{event['train/epoch']}"
                 if local["epochs"].get(key) != event:
                     payloads.append(event)
                     local["epochs"][key] = event
@@ -251,10 +274,10 @@ def main():
                         signature = hashlib.sha256(b"".join(p.name.encode() + p.read_bytes() for p in sorted(files))).hexdigest()
                         if signature not in local["artifacts"]:
                             artifact = wandb.Artifact(f"checkpoint-{args.run_id}", type="model",
-                                metadata={"generation": 0, "automatic_promotion": False})
+                                metadata={"generation": active_generation(args.root), "automatic_promotion": False})
                             for file in files:
                                 artifact.add_file(str(file), name=file.name)
-                            run.log_artifact(artifact, aliases=["latest", "generation-0"]).wait()
+                            run.log_artifact(artifact, aliases=["latest", f"generation-{active_generation(args.root)}"]).wait()
                             local["artifacts"].append(signature)
                 except Exception as error:
                     upload_ok = False

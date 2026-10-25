@@ -115,6 +115,11 @@ def test_loader_stitches_multiple_dirs(tmp_path):
     # Row 6 is gen1's row 0 — its slice must land on gen1 data, not gen0's.
     s, e = ds.offsets[6], ds.offsets[7]
     assert list(ds.actions[s:e]) == [1, 3, 5]
+    expected = np.concatenate([np.load(p / 'shard-000/obs.npy') for p in (a, b)])
+    assert isinstance(ds.obs, np.memmap)
+    assert ds.obs.tobytes() == expected.tobytes()
+    assert ds.obs[[9, 0, 6, 2]].tobytes() == expected[[9, 0, 6, 2]].tobytes()
+    assert ds.obs.flags.writeable  # private backing file; same ndarray contract
 
 
 def _exclude_games(directory, ids):
