@@ -156,3 +156,31 @@ current diagnostic results separate. A changed multi-list schedule is a new
 cohort, so use its saved schedule/hash for subsequent checkpoint comparisons.
 These repairs do not establish how much of any observed simulator/meta win-rate
 gap they explain, and a static timing inventory is not full-pool certification.
+
+## CI regression fixtures
+
+Linux CI on `ac86b510` subsequently completed the full DSL suite (1,596
+passed, one ignored) and all three disjoint card-test partitions (12,738
+passed, 35 ignored). These completed results supplement the earlier local
+scoped validation; the interrupted local run remains recorded as interrupted.
+
+The first PR run exposed four rules-conformance fixtures that used a printed
+`end_of_attack` clause to observe every attack. Their shared `EOA_OBS` witness
+now uses an explicit native broad observer, with its card metadata and all
+original timing, security, blocking and Execute-order assertions preserved.
+Printed card effects remain scoped to the attacking carrier.
+All four failures reproduced before the fixture correction. The complete
+rules-conformance suite then passed: 361 passed, zero failed and one
+pre-existing ignored test. The rules-coverage ledger remains valid.
+
+Two historical game-prefix tests also diverged before reaching their intended
+regression states. Those recordings remain historical evidence; their original
+action IDs are not a stable fixture contract across corrected game rules.
+The token test now creates and batch-deletes four genuine Petrification Tokens,
+retaining the missing-source metadata, mandatory-choice, mask and cloned-world
+checks. The game-850 test directly constructs the original Chronomon attack,
+Sanmyojin Arrival, MarineBullmon Decode, Ryugumon reward and Susanoomon block
+interaction. It retains all four accept/decline branches and adds explicit
+checks that the inner replacement belongs to MarineBullmon and blocking occurs.
+Both repaired regressions pass without changing production engine code or the
+historical replay JSON.

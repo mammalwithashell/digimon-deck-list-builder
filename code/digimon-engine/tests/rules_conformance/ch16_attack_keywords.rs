@@ -67,14 +67,16 @@ fn ch16_atk() -> DebugRunnerBuilder {
 /// P0 (memory `memory`, hand `hand0`) to move in its main phase; both
 /// players have 6 deck cards; P0 has 3 security cards, P1 the stack `sec1`.
 fn board_with(hand0: &[&str], sec1: &[&str], memory: i16) -> DebugRunner {
-    ch16_atk()
+    let mut runner = ch16_atk()
         .hand(0, hand0)
         .deck(0, &[FILL; 6])
         .deck(1, &[FILL; 6])
         .security(0, &[FILL; 3])
         .security(1, sec1)
         .memory(memory)
-        .start()
+        .start();
+    fixtures::register_attack_end_observer(&mut runner);
+    runner
 }
 
 /// P0 (memory 5, empty hand) to move; P1 has the security stack `sec1`.

@@ -2,6 +2,8 @@
 #   [All Turns] At the end of an attack, gain 1 memory.
 # The end-of-attack witness: it resolves whenever the end of attack timing
 # arrives (§11-6), whichever Digimon attacked.
+# This broad observer is registered natively by register_attack_end_observer;
+# printed DSL [End of Attack] is carrier-scoped (§15-16-15-1).
 card: EOA_OBS
 name: Afterattackmon
 kind: digimon
@@ -9,8 +11,4 @@ level: 3
 color: [red]
 cost: 2
 dp: 1000
-effects:
-  - when: end_of_attack
-    summary: "[All Turns] At the end of an attack, gain 1 memory."
-    process:
-      - gain_memory: 1
+effects: []
