@@ -197,6 +197,13 @@ def main():
         with overview_tab:
             overview(st, snapshot, reports, now)
         with results_tab:
+            duel = snapshot.get("head_to_head", {})
+            if duel:
+                st.subheader("Direct mixed versus development result")
+                st.metric("Mixed score (draws count half)", f"{100*duel['score']:.1f}%")
+                st.caption(f"{duel['games']:,} games · 95% block-bootstrap interval "
+                           f"{100*duel['ci95'][0]:.1f}–{100*duel['ci95'][1]:.1f}% · No automatic promotion")
+                st.dataframe(duel["matrix"], hide_index=True, use_container_width=True)
             checkpoint_view(st, reports, snapshot.get("comparisons", {}))
         with cards_tab:
             arms = sorted({r["arm"] for r in reports})

@@ -134,6 +134,7 @@ def collect(root, known=None, now=None, dna_catalog=None):
             bootstrap=read(root / "corpora" / name / "progress.json", {})))
     for file in sorted(root.glob("paired-checkpoint-*.json")):
         result["comparisons"][file.stem.removeprefix("paired-checkpoint-")] = read(file, {})
+    result["head_to_head"] = read(root / "head_to_head_result.json", {})
     return result
 
 
@@ -201,6 +202,7 @@ def compact_status(snapshot, now=None):
                 win_rate=counts["wins"]/total if total else None))
     return dict(collected_at=snapshot["collected_at"], source_age_seconds=age, fresh=age <= 150,
                 state=snapshot["state"], arms=arms, results=results,
+                head_to_head={k:v for k,v in snapshot.get("head_to_head", {}).items() if k != "matrix"},
                 paired={step:{arm:value.get("aggregate") for arm,value in comparisons.items()}
                         for step,comparisons in snapshot.get("comparisons", {}).items()}, errors=snapshot.get("errors", []))
 

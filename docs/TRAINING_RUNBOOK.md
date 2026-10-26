@@ -1351,3 +1351,27 @@ card behavior, see [Live experiment dashboard](CARD_EVALUATION.md#live-experimen
 Its SSH collector caches compact summaries and never starts or stops training.
 The dashboard distinguishes stale observations, saved models, completed
 evaluation panels and per-game progress (when supported by the deployed image).
+
+### Frozen mixed/development head-to-head
+
+`python -m tools.cloud_search.head_to_head --prepare --source /source --root /experiment`
+validates the completed seed comparison, checkpoint-1 model contracts, card-data
+hash and native-image identity. It combines the frozen held-out meta and pet
+snapshots through the existing admission gate, copies both models, and saves
+the exact game schedule. Run the same command without `--prepare` to evaluate;
+the root cannot be silently restarted or overwritten.
+
+Default coverage is 6,760 policy-only games: 13 x 13 ordered deck cells x 40
+games. Each model is the candidate in one 3,380-game evaluator process, with
+opposite first players for each deck pair. Both processes use Torch inference,
+unchanged action masks and fresh fixed seeds, with per-card reports and progress
+heartbeats. No optimizer or search runs. Meta/pet source identities remain in
+the plan; the joint pool adds the previously missing cross-pool matchups.
+
+The result normalizes both engine roles to mixed's perspective and emits a full
+matrix plus a 95% bootstrap interval over four-game blocks (both roles/openers).
+Missing, duplicate, mismatched or incomplete games fail the comparison rather
+than counting as draws. A small per-cell sample is descriptive; the aggregate
+interval does not certify every matchup. Use the same immutable native image
+plus a recorded, committed read-only Python overlay; retain failure recordings
+and keep `Restart=no`. No automatic model promotion follows evaluation.
