@@ -42,3 +42,22 @@ port 8501. For this active evaluation, inspect `comparison_state.json`, both
 then `head_to_head_result.json`. The final result includes the full matchup
 matrix and a four-game-block bootstrap interval; no result was available at
 launch. Per-card reports retain both player roles and are uploaded separately.
+
+## Completed result
+
+Finished at 22:36:22 Central, about ten minutes after launch. All 6,760 games
+passed the exact-cohort, completeness and both-role/opening-order checks; each
+of the 169 matrix cells contains 40 games. Mixed won 3,603, development won
+3,157, and there were no draws. Mixed's score is 53.2988%, with a 95% block
+bootstrap interval of 52.3077% to 54.3343%. This supports a modest advantage
+on this frozen evaluation pool, not a general claim across training seeds.
+
+Mixed's win rate by row-pool/column-pool: meta/meta 54.10% (1,385/2,560),
+meta/pet 56.19% (899/1,600), pet/meta 51.38% (822/1,600), pet/pet 49.70%
+(497/1,000). Individual matchup cells remain exploratory at 40 games each.
+
+Both card-evaluation reports were saved and confirmed uploaded by their W&B
+publishers (`card_reports_uploaded=1` for each direction). The full matrix and
+aggregate are preserved in `2026-10-25-head-to-head-result.json`. Local HTML
+view: `runs/head-to-head-dashboard/matchup-matrix.html`. No model was promoted,
+no new training started, and the original comparison artifacts were retained.

@@ -1,0 +1,1369 @@
+{
+  "status": "complete",
+  "perspective": "mixed",
+  "games": 6760,
+  "wins": 3603,
+  "losses": 3157,
+  "draws": 0,
+  "score": 0.5329881656804734,
+  "ci95": [
+    0.5230769230769231,
+    0.5433431952662722
+  ],
+  "bootstrap_unit": "four games: both player roles and both opening orders",
+  "matrix": [
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 23,
+      "losses": 17,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 26,
+      "losses": 14,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 19,
+      "losses": 21,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 31,
+      "losses": 9,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronicle",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 32,
+      "losses": 8,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 23,
+      "losses": 17,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 26,
+      "losses": 14,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 26,
+      "losses": 14,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 13,
+      "losses": 27,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 23,
+      "losses": 17,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Chronomon",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 26,
+      "losses": 14,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 15,
+      "losses": 25,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 16,
+      "losses": 24,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 12,
+      "losses": 28,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Examon",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 19,
+      "losses": 21,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 13,
+      "losses": 27,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 19,
+      "losses": 21,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 16,
+      "losses": 24,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 9,
+      "losses": 31,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Glowing Dawn",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 13,
+      "losses": 27,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 14,
+      "losses": 26,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 7,
+      "losses": 33,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 12,
+      "losses": 28,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Light Hybrid",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 16,
+      "losses": 24,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 16,
+      "losses": 24,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 19,
+      "losses": 21,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 29,
+      "losses": 11,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 29,
+      "losses": 11,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Medusamon",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 29,
+      "losses": 11,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 29,
+      "losses": 11,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 23,
+      "losses": 17,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "SW",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 12,
+      "losses": 28,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 16,
+      "losses": 24,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 23,
+      "losses": 17,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 11,
+      "losses": 29,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 12,
+      "losses": 28,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 14,
+      "losses": 26,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 16,
+      "losses": 24,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 15,
+      "losses": 25,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "ShineGreymon Data Squad",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 19,
+      "losses": 21,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Jupitermon",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 23,
+      "losses": 17,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 26,
+      "losses": 14,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 29,
+      "losses": 11,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 26,
+      "losses": 14,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 26,
+      "losses": 14,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 30,
+      "losses": 10,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 15,
+      "losses": 25,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 31,
+      "losses": 9,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "TS Mervamon",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 15,
+      "losses": 25,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 19,
+      "losses": 21,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 29,
+      "losses": 11,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 14,
+      "losses": 26,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 16,
+      "losses": 24,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 12,
+      "losses": 28,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Three Musketeers",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 19,
+      "losses": 21,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 30,
+      "losses": 10,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 21,
+      "losses": 19,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 15,
+      "losses": 25,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 28,
+      "losses": 12,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Toho Braves",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 29,
+      "losses": 11,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Chronicle",
+      "games": 40,
+      "wins": 18,
+      "losses": 22,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Chronomon",
+      "games": 40,
+      "wins": 22,
+      "losses": 18,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Examon",
+      "games": 40,
+      "wins": 17,
+      "losses": 23,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Glowing Dawn",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Light Hybrid",
+      "games": 40,
+      "wins": 23,
+      "losses": 17,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Medusamon",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "SW",
+      "games": 40,
+      "wins": 14,
+      "losses": 26,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "ShineGreymon Data Squad",
+      "games": 40,
+      "wins": 20,
+      "losses": 20,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "TS Jupitermon",
+      "games": 40,
+      "wins": 15,
+      "losses": 25,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "TS Mervamon",
+      "games": 40,
+      "wins": 24,
+      "losses": 16,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Three Musketeers",
+      "games": 40,
+      "wins": 27,
+      "losses": 13,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Toho Braves",
+      "games": 40,
+      "wins": 12,
+      "losses": 28,
+      "draws": 0
+    },
+    {
+      "mixed_deck": "Virus Busters",
+      "development_deck": "Virus Busters",
+      "games": 40,
+      "wins": 25,
+      "losses": 15,
+      "draws": 0
+    }
+  ],
+  "automatic_promotion": false
+}
