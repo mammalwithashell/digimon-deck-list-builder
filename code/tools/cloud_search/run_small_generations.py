@@ -69,6 +69,19 @@ def validate(root, plan):
     return slots
 
 
+def generation_command(root, plan):
+    return [sys.executable, '-m', 'tools.run_selfplay_generation',
+        '--run-dir', str(root / 'generation'), '--seed-model', str(root / 'inputs/seed.zip'),
+        '--seed-model-onnx', str(root / 'inputs/seed.onnx'), '--decks', str(root / 'inputs/decks.json'),
+        '--cli-bin', '/usr/local/bin/digimon-engine-cli', '--cards-json', '/app/data/cards.json',
+        '--generations', '1', '--games', str(plan['games']), '--procs', str(plan['workers']),
+        '--chunk-games', '4', '--worker-timeout-seconds', '7200', '--sims', '320',
+        '--worlds', '4', '--eval-batch-size', '4', '--decision-cap', '1200',
+        '--fail-on-truncation', '--window', '3', '--replay-games-per-generation', str(plan['games']),
+        '--epochs', '2', '--batch-size', '512', '--lr', '0.0001', '--train-device', 'cpu',
+        '--seed', str(plan['seed']), '--skip-eval']
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=Path('/experiment'))
@@ -114,16 +127,7 @@ def main():
             for index in range(1, plan['generations'] + 1):
                 stage('generation', index, games=plan['games'], workers=plan['workers'])
                 print(f'=== GENERATION_MONITOR_INDEX={index} ===', flush=True)
-                subprocess.run([sys.executable, '-m', 'tools.run_selfplay_generation',
-                    '--run-dir', str(root / 'generation'), '--seed-model', str(root / 'inputs/seed.zip'),
-                    '--seed-model-onnx', str(root / 'inputs/seed.onnx'), '--decks', str(root / 'inputs/decks.json'),
-                    '--cli-bin', '/usr/local/bin/digimon-engine-cli', '--cards-json', '/app/data/cards.json',
-                    '--generations', '1', '--games', str(plan['games']), '--procs', str(plan['workers']),
-                    '--chunk-games', '4', '--worker-timeout-seconds', '7200', '--sims', '320',
-                    '--worlds', '4', '--eval-batch-size', '4', '--decision-cap', '1200',
-                    '--fail-on-truncation', '--window', '3', '--replay-games-per-generation', str(plan['games']),
-                    '--epochs', '2', '--batch-size', '512', '--lr', '0.0001', '--train-device', 'cpu',
-                    '--seed', str(plan['seed']), '--skip-eval'], check=True)
+                subprocess.run(generation_command(root, plan), check=True)
                 stage('checkpoint_evaluation', index)
                 evaluate(index)
             stage('complete', index)

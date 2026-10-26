@@ -15344,7 +15344,6 @@
     "verb:add_modifier",
     "verb:if",
     "verb:play_from_trash",
-    "verb:refund_opt",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "verb:select_own_permanent",

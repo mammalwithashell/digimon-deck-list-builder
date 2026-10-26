@@ -4,6 +4,7 @@ The experiment mount must be read-only. Sidecar state/spool lives elsewhere.
 No engine, training, scheduler or network failures can alter gameplay here.
 """
 import argparse
+import gc
 import hashlib
 import json
 import os
@@ -15,14 +16,15 @@ import zipfile
 from tools.selfplay_scheduler import atomic_json, controller_lock
 
 STAGES = {name: i for i, name in enumerate(("pending", "input_validation", "batch_parity",
-    "worker_scaling", "health_check", "generation", "pet_deck_evaluation", "complete", "failed"))}
+    "worker_scaling", "health_check", "generation", "pet_deck_evaluation", "complete", "failed", "checkpoint_evaluation"))}
 EPOCH = re.compile(r"epoch (\d+): policy_loss ([\d.eE+-]+) value_loss ([\d.eE+-]+)")
 ANCHOR = re.compile(r"vs\s+(\S+)\s+(\d+)-(\d+)-(\d+)\s+WR=\s*([\d.]+)%\s+\(n=(\d+)\)")
 
 
 def read_json(path):
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        with path.open(encoding="utf-8") as source:
+            return json.load(source)
     except (FileNotFoundError, json.JSONDecodeError):
         return None
 
@@ -133,13 +135,16 @@ def collect(root, now):
         for key, value in generation["timings_sec"].items():
             metrics[f"timings/{key}_seconds"] = value
     pet_path = root / "pet_anchored_eval.txt" if gen == 0 else gen_dir / "pet_anchored_eval.txt"
-    for panel, path in (("meta_validation", gen_dir / "anchored_eval.txt"),
-                        ("pet_same_list", pet_path)):
+    panels = [("meta_validation", gen_dir / "anchored_eval.txt"), ("pet_same_list", pet_path)]
+    for panel, _ in plan.get('evaluation_panels', []):
+        if panel not in ('meta_validation', 'pet_same_list') and Path(panel).name == panel:
+            panels.append((panel, gen_dir / f'{panel}.txt'))
+    for panel, path in panels:
         for name, wins, losses, draws, wr, games in ANCHOR.findall(read_text(path)):
             for key, value in {"wins": int(wins), "losses": int(losses), "draws": int(draws),
                                "win_rate": float(wr) / 100, "games": int(games)}.items():
                 metrics[f"evaluation/{panel}/{name}/{key}"] = value
-    metrics["pipeline/target_games"] = plan.get("generation", {}).get("games", 0)
+    metrics["pipeline/target_games"] = plan.get('games', plan.get("generation", {}).get("games", 0))
     if state.get("error"):
         metrics["pipeline/error"] = state["error"]
     return metrics
@@ -278,6 +283,10 @@ def main():
             upload_ok = True
             if run:
                 try:
+                    def artifact_logged(seq):
+                        local['card_artifact_seq'] = seq
+                        atomic_json(state_path, local)
+
                     with spool.open("rb") as pending:
                         pending.seek(local["upload_offset"])
                         for line in pending:
@@ -293,9 +302,13 @@ def main():
                                     if not report or not publish_report(report, path, run,
                                             step=seq, wait=True,
                                             skip_artifact=local.get("card_artifact_seq") == seq,
-                                            on_artifact_logged=lambda: local.update(card_artifact_seq=seq)):
+                                            on_artifact_logged=lambda: artifact_logged(seq)):
                                         raise RuntimeError(f"Card report not uploaded: {path.name}")
                                     local["card_reports_uploaded"] = local.get("card_reports_uploaded", 0) + 1
+                                    # Do not retain the previous large report while
+                                    # decoding the next checkpoint's JSON.
+                                    del report
+                                    gc.collect()
                                 else:
                                     run.log(record["payload"], step=record["seq"])
                                 local["uploaded"] = record["seq"]
