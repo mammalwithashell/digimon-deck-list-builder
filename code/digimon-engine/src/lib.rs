@@ -32,6 +32,7 @@ pub mod effect_context;
 pub mod effect_queue;
 pub mod enums;
 pub mod events;
+pub mod evaluation_context;
 pub mod floating_modifier;
 pub mod format;
 pub mod game;

@@ -36,6 +36,31 @@ winner. An interrupted/reset game is marked incomplete rather than a draw.
 
 ## Metric definitions
 
+New reports also include `route_decisions`: one opportunity per player, route,
+and decision boundary when **any** legal card offers that route. Choosing one
+of three distinct raising evolution cards counts as one choice out of one
+opportunity, while the older per-card `routes` table correctly counts three
+card opportunities. Use `route_decisions` to answer how often the model evolves
+in raising when it can. Both search-policy evaluation and PPO callbacks collect
+these fields through the same inner `DigimonEnv` collector.
+
+With a rebuilt native wheel exposing `get_eval_decision_context` (card-evaluation
+capability version 2), `effect_sequences` tracks Nyaromon EX12-001's inherited
+DNA process. Native diagnostics identify concrete resume stages and the physical
+egg; English prompt text is never parsed. Legal opportunities include usable
+Nyaromon choices in trigger ordering (including decline-all), partner selection,
+and DNA result selection, deduplicated per physical egg/global turn. Ordering a
+trigger is not counted as accepting DNA: partner and result accept/decline counts
+remain distinct. `dna_completed` requires an actual DNA event for the selected
+result in the resolving step. Follow-up attack offers, accept/decline choices,
+and actual attack declarations are tracked separately from the DNA count.
+
+These observer-only diagnostics never enter tensors, masks, public UI state,
+reward events, or policy decisions. Older wheels retain raising route metrics
+but mark effect-sequence coverage **unmeasured**. Old reports cannot be backfilled
+from aggregate card counts. W&B publishes `card_eval/route_decisions` and
+`card_eval/effect_sequences`; both dashboards expose these tables and coverage.
+
 - **Plays:** resolved Play events, split by the engine's `effect_initiated`
   flag. A discounted play is still direct unless initiated by an effect.
   Using an Option from hand appears in the play opportunity/choice table;
@@ -75,8 +100,9 @@ arrival paths without adding reward occurrences to the existing reward bus.
 
 ## Weights & Biases
 
-With an active W&B run, every checkpoint publishes `card_eval/cards` and
-`card_eval/routes` Tables (partitioned for very large reports), with the training
+With an active W&B run, every checkpoint publishes the nonempty `card_eval/cards`,
+`card_eval/routes`, `card_eval/route_decisions`, and `card_eval/effect_sequences`
+Tables (partitioned for very large reports), with the training
 step in every row. `card_eval/checkpoint_step` is the custom chart axis; the
 publisher does not set W&B's internal step, which TensorBoard sync also uses.
 

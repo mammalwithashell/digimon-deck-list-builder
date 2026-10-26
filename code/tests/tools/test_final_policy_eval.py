@@ -63,3 +63,14 @@ def test_summary_rejects_duplicate_missing_changed_and_incomplete_games():
                 [dict(games[0], terminal_reason='truncated')]+games[1:]]:
         with pytest.raises(ValueError):
             summarize(rows, bad, 'self')
+
+
+def test_true_mirrors_have_unique_games_and_balance_opening_order():
+    rows = schedule([str(i) for i in range(13)], 'mirror', 23261026, 100)
+    assert len(rows) == len({r['seed'] for r in rows}) == 2600
+    assert all(r['deck1'] == r['deck2'] and r['model1'] == r['model2'] == 4 for r in rows)
+    assert set(Counter((r['deck1'], r['seed'] % 2) for r in rows).values()) == {100}
+    result = summarize(rows, outcomes(rows, lambda r: 1 if r['seed'] % 2 == 0 else 2), 'mirror')
+    assert result['perspective'] == 'first_player'
+    assert result['score'] == 1
+    assert all(d['games'] == 200 for d in result['decks'])

@@ -30,12 +30,14 @@ def test_dashboard_local_checkpoints_filter_and_empty(tmp_path):
     app.sidebar.text_input[0].set_value(str(tmp_path))
     app.sidebar.button[0].click().run()
     assert not app.exception
-    assert len(app.dataframe) == 2
+    assert len(app.dataframe) == 3
     assert set(app.dataframe[0].value.checkpoint_step) == {100, 200}
     # Select only one checkpoint; cards and routes must both filter.
     next(m for m in app.multiselect if m.label == "Checkpoints").set_value([200]).run()
     assert not app.exception
     assert set(app.dataframe[0].value.checkpoint_step) == {200}
+    assert set(app.dataframe[2].value.checkpoint_step) == {200}
+    assert set(app.dataframe[2].value.choice_rate) == {1.0}
     next(m for m in app.multiselect if m.label == "Cards").set_value([]).run()
     assert not app.exception
     assert any("No samples" in i.value for i in app.info)

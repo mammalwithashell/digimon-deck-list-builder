@@ -1,7 +1,8 @@
-"""Frozen policy-only cross-deck round robin and adjacent-checkpoint evaluation.
+"""Frozen policy-only cross-deck, adjacent-checkpoint, and true-mirror evaluation.
 
 Uses the production masked evaluator, records both players, and stops on any
-incomplete game. Four-game blocks balance model roles and opening order.
+incomplete game. Four-game blocks balance model roles and opening order;
+true mirrors use two-game opening-order blocks with checkpoint 4 on both sides.
 """
 import argparse
 from collections import Counter, defaultdict
@@ -17,11 +18,17 @@ from tools.selfplay_scheduler import atomic_json, sha256
 
 
 def schedule(names, panel, seed, repetitions=10):
-    if panel not in {'self', 'adjacent'} or repetitions < 1:
+    if panel not in {'self', 'adjacent', 'mirror'} or repetitions < 1:
         raise ValueError('Invalid panel or repetitions')
     names = sorted(names)
     if len(set(names)) != len(names):
         raise ValueError('Duplicate archetypes')
+    if panel == 'mirror':
+        return [dict(index=2*block+opening, block=block,
+                     seed=2*(seed+2*block+opening)+opening,
+                     deck1=name, deck2=name, model1=4, model2=4)
+                for block, name in enumerate(n for n in names for _ in range(repetitions))
+                for opening in range(2)]
     pairs = (itertools.combinations(names, 2) if panel == 'self'
              else itertools.product(names, repeat=2))
     rows = []
@@ -55,7 +62,11 @@ def summarize(rows, games, panel):
                 None, '', 'step_limit', 'truncated', 'crash', 'evaluation_end', 'reset_before_terminal'}:
             raise ValueError('Incomplete or invalid outcome')
         winner = g['winner']
-        if panel == 'self':
+        if panel == 'mirror':
+            first = 1 if r['seed'] % 2 == 0 else 2
+            matrix[r['deck1'], r['deck2']]['draws' if not winner else 'wins' if winner == first else 'losses'] += 1
+            blocks[r['block']].append(.5 if not winner else float(winner == first))
+        elif panel == 'self':
             for pid, a, b in [(1, r['deck1'], r['deck2']), (2, r['deck2'], r['deck1'])]:
                 matrix[a, b]['draws' if not winner else 'wins' if winner == pid else 'losses'] += 1
         else:
@@ -72,22 +83,24 @@ def summarize(rows, games, panel):
                   decks=[dict(deck=a, games=sum(c.values()),
                               score=(c['wins']+.5*c['draws'])/sum(c.values()), **dict(c))
                          for a, c in sorted(decks.items())], automatic_promotion=False)
-    if panel == 'adjacent':
-        if any(len(b) != 4 for b in blocks.values()):
+    if panel in {'adjacent', 'mirror'}:
+        block_size = 2 if panel == 'mirror' else 4
+        if any(len(b) != block_size for b in blocks.values()):
             raise ValueError('Incomplete paired block')
-        means = np.array([sum(b)/4 for b in blocks.values()])
+        means = np.array([sum(b)/block_size for b in blocks.values()])
         rng = np.random.default_rng(10262026)
         samples = np.concatenate([means[rng.integers(len(means), size=(100, len(means)))].mean(axis=1)
                                   for _ in range(100)])
         totals = sum(decks.values(), Counter())
-        result.update(perspective='checkpoint4', score=float(means.mean()),
+        result.update(perspective='first_player' if panel == 'mirror' else 'checkpoint4', score=float(means.mean()),
                       ci95=list(np.quantile(samples, [.025, .975])),
                       **{k: totals[k] for k in ['wins', 'losses', 'draws']},
-                      bootstrap_unit='four-game deck/seed block; model roles and opening order balanced')
+                      bootstrap_unit=('two-game opening-order pair' if panel == 'mirror' else
+                                      'four-game deck/seed block; model roles and opening order balanced'))
     return result
 
 
-def prepare(source, root):
+def prepare(source, root, mirrors=False):
     import digimon_engine
     from sb3_contrib import MaskablePPO
     from model_contract import validate_checkpoint
@@ -123,13 +136,16 @@ def prepare(source, root):
             raise ValueError('Checkpoint changed during copy')
     if contracts['3'] != contracts['4']:
         raise ValueError('Model contracts differ')
-    for panel, seed in [('self', 21261026), ('adjacent', 22261026)]:
-        atomic_json(root/f'{panel}-schedule.json', schedule(pool.archetype_names, panel, seed))
-    files = ['pool.json', 'self-schedule.json', 'adjacent-schedule.json', 'checkpoint3.zip', 'checkpoint4.zip']
+    panels = [('mirror', 23261026)] if mirrors else [('self', 21261026), ('adjacent', 22261026)]
+    for panel, seed in panels:
+        atomic_json(root/f'{panel}-schedule.json', schedule(pool.archetype_names, panel, seed, 100 if mirrors else 10))
+    files = ['pool.json', 'checkpoint3.zip', 'checkpoint4.zip']+[f'{p}-schedule.json' for p, _ in panels]
     plan = dict(image=state['image'], models=hashes, contract=contracts['4'],
                 files={f: sha256(root/f) for f in files}, controller_sha256=sha256(Path(__file__)),
                 cards_sha256=sha256(Path('/app/data/cards.json')), search=False, training=False,
-                automatic_promotion=False, self_games=3120, adjacent_games=6760, workers_per_panel=4)
+                automatic_promotion=False, panels=[p for p, _ in panels],
+                mirror_games=2600 if mirrors else 0, self_games=0 if mirrors else 3120,
+                adjacent_games=0 if mirrors else 6760, workers_per_panel=4)
     atomic_json(root/'plan.json', plan)
     print(json.dumps(plan), flush=True)
 
@@ -164,7 +180,7 @@ def worker(root, panel, shard):
     os.environ['DIGIMON_EVAL_FAILURE_DIR'] = str(folder/'failures')
     pool = GeneralistDeckPool.from_snapshot(root/'pool.json', implemented_card_ids=digimon_engine.load_implemented_card_ids())
     decks = {k: v[0] for k, v in pool.archetypes.items()}
-    indices = [4] if panel == 'self' else [3, 4]
+    indices = [3, 4] if panel == 'adjacent' else [4]
     models = {i: MaskablePPO.load(root/f'checkpoint{i}.zip', device='cpu') for i in indices}
     opponents = {i: make_agent_opponent_fn(str(root/f'checkpoint{i}.zip'), algorithm='mlp') for i in indices}
     collector = CardEvalCollector(4, 2000+(0 if panel == 'self' else 10)+shard, digimon_engine.CardDatabase().get_card)
@@ -202,7 +218,7 @@ def run(root):
     atomic_json(root/'state.json', dict(stage='running', time_unix=time.time()))
     processes, logs = [], []
     try:
-        for panel in ['self', 'adjacent']:
+        for panel in validate(root).get('panels', ['self', 'adjacent']):
             for shard in range(4):
                 log = (root/f'{panel}-{shard}.log').open('w')
                 logs.append(log)
@@ -214,7 +230,7 @@ def run(root):
             time.sleep(2)
         if any(p.returncode for p in processes):
             raise RuntimeError('Evaluator failed')
-        for panel in ['self', 'adjacent']:
+        for panel in validate(root).get('panels', ['self', 'adjacent']):
             rows = json.loads((root/f'{panel}-schedule.json').read_text())
             games = [g for shard in range(4) for g in json.loads((root/panel/f'shard{shard}'/'outcomes.json').read_text())]
             atomic_json(root/f'{panel}-result.json', summarize(rows, games, panel))
@@ -240,12 +256,13 @@ if __name__ == '__main__':
     ap.add_argument('--root', type=Path, default=Path('/evaluation'))
     ap.add_argument('--source', type=Path, default=Path('/source'))
     ap.add_argument('--prepare', action='store_true')
+    ap.add_argument('--mirrors', action='store_true')
     ap.add_argument('--worker', action='store_true')
-    ap.add_argument('--panel', choices=['self', 'adjacent'])
+    ap.add_argument('--panel', choices=['self', 'adjacent', 'mirror'])
     ap.add_argument('--shard', type=int)
     args = ap.parse_args()
     if args.prepare:
-        prepare(args.source, args.root)
+        prepare(args.source, args.root, args.mirrors)
     elif args.worker:
         worker(args.root, args.panel, args.shard)
     else:

@@ -56,6 +56,7 @@ def main():
         return
     frame = pd.DataFrame(cards)
     route_frame = pd.DataFrame(routes)
+    selections = {}
     for col, label in (("panel", "Evaluation panel"), ("anchor", "Anchor policy"),
                        ("evaluation_mode", "Evaluation mode"), ("candidate_sha256", "Checkpoint hash"),
                        ("evaluation_status", "Evaluation status")):
@@ -64,6 +65,7 @@ def main():
         frame[col] = frame[col].fillna("")
         options = sorted(frame[col].unique())
         chosen = st.sidebar.multiselect(label, options, default=options)
+        selections[col] = chosen
         frame = frame[frame[col].isin(chosen)]
         if not route_frame.empty and col in route_frame:
             route_frame[col] = route_frame[col].fillna("")
@@ -84,6 +86,7 @@ def main():
     for col, label in (("agent_archetype", "Model deck"), ("opponent_archetype", "Opponent")):
         options = sorted(frame[col].unique())
         chosen = st.sidebar.multiselect(label, options, default=options)
+        selections[col] = chosen
         frame = frame[frame[col].isin(chosen)]
         if not route_frame.empty:
             route_frame = route_frame[route_frame[col].isin(chosen)]
@@ -128,6 +131,32 @@ def main():
         trend["choice_rate"] = trend.choices / trend.opportunities
         st.line_chart(trend.choice_rate.unstack("route"))
         st.download_button("Download opportunity CSV", route_frame.to_csv(index=False), "card_opportunities.csv", "text/csv")
+    for key, title in [("route_decisions", "Decision-level route choices"), ("effect_sequences", "Nyaromon DNA sequences")]:
+        rows = []
+        for report in reports:
+            if report["window_id"] not in selected_windows or report["checkpoint_step"] not in selected_steps:
+                continue
+            provenance = report.get("provenance", {})
+            for row in report.get(key, []):
+                merged = dict(row, candidate_sha256=provenance.get("candidate_sha256", ""),
+                    evaluation_status=provenance.get("status", "legacy"),
+                    checkpoint_step=report["checkpoint_step"], window_id=report["window_id"])
+                if row["player"] != player or any(merged.get(k, "") not in values for k, values in selections.items()):
+                    continue
+                if key == "effect_sequences" and row["card_id"] not in selected_cards:
+                    continue
+                rows.append(merged)
+        st.subheader(title)
+        if rows:
+            extra = pd.DataFrame(rows)
+            if key == "route_decisions":
+                extra["choice_rate"] = extra.choices / extra.opportunities.replace(0, float("nan"))
+            st.dataframe(extra, hide_index=True)
+            st.download_button("Download " + title, extra.to_csv(index=False), key+".csv", "text/csv")
+        else:
+            st.info("No measured rows. Older reports do not contain these metrics; missing coverage is not zero usage.")
+    st.caption("Decision-level routes apply to the whole selected deck, independently of card filters. "
+               "Nyaromon opportunities count each physical egg once per global turn, including trigger-order declines.")
     with st.expander("Measurement coverage"):
         st.json(reports[-1]["coverage"])
         st.write("Windows remain separate by window_id, including resumed runs at the same checkpoint step. "

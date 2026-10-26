@@ -14,7 +14,7 @@ def read(path):
 
 def render(root):
     plan = read(root/'plan.json')
-    results = {panel: read(root/f'{panel}-result.json') for panel in ['self', 'adjacent']}
+    results = {panel: read(root/f'{panel}-result.json') for panel in plan.get('panels', ['self', 'adjacent'])}
     out = root/'report'
     out.mkdir(exist_ok=True)
     sections = []
@@ -35,6 +35,12 @@ def render(root):
                  f"Checkpoint 4 score: {100*result['score']:.2f}% across {result['games']:,} games. "
                  f"95% paired-block bootstrap interval: {100*result['ci95'][0]:.2f}–{100*result['ci95'][1]:.2f}%. "
                  'Rows are checkpoint 4 decks; columns are checkpoint 3 decks. Draws score one half.')
+        if panel == 'mirror':
+            title = 'Checkpoint 4: same-model, same-deck mirrors'
+            intro = (f"First-player win rate: {100*result['score']:.2f}% in {result['games']:,} games; "
+                     f"95% opening-pair bootstrap interval {100*result['ci95'][0]:.2f}–{100*result['ci95'][1]:.2f}%. "
+                     '200 games per deck, with 100 starts in each engine seat. Both players use checkpoint 4. '
+                     'Table scores are from the first player’s perspective; each deck-level sample is exploratory.')
         table = '<tr><th>Deck / opponent</th>'+''.join(f'<th>{html.escape(n)}</th>' for n in names)+'</tr>'
         for a in names:
             table += '<tr><th>'+html.escape(a)+'</th>'
@@ -63,18 +69,20 @@ Per-matchup samples are small: treat individual cell differences cautiously. No 
     return results, out
 
 
-def publish(root, results, out):
+def publish(root, results, out, run_id=None):
     import gc
     import wandb
     from digimon_gym.agents.card_eval import publish_report
     plan = read(root/'plan.json')
+    mirrors = 'mirror' in results
+    run_id = run_id or ('true-mirror-eval-20261026' if mirrors else 'final-policy-eval-20261026')
     run = wandb.init(project='digimon-rl', entity='james-peters97-mammal',
-        id='final-policy-eval-20261026', name='Checkpoint 4: self-match matrix and vs checkpoint 3',
+        id=run_id, name='Checkpoint 4: true deck mirrors' if mirrors else 'Checkpoint 4: self-match matrix and vs checkpoint 3',
         job_type='evaluation', resume='allow', config=plan)
     try:
-        artifact = wandb.Artifact('final-policy-eval-20261026-results', type='evaluation', metadata=plan)
+        artifact = wandb.Artifact(run_id+'-results', type='evaluation', metadata=plan)
         artifact.add_dir(str(out), name='report')
-        for name in ['plan.json', 'self-result.json', 'adjacent-result.json', 'self-schedule.json', 'adjacent-schedule.json']:
+        for name in ['plan.json']+[f'{p}-{s}.json' for p in results for s in ['result', 'schedule']]:
             artifact.add_file(str(root/name), name=name)
         run.log_artifact(artifact).wait()
         payload = {'evaluation/report': wandb.Html((out/'index.html').read_text(encoding='utf-8'), inject=False)}
@@ -84,9 +92,12 @@ def publish(root, results, out):
                 columns = list(dict.fromkeys(k for row in rows for k in row))
                 payload[f'{panel}/{kind}'] = wandb.Table(columns=columns, data=[[r.get(k) for k in columns] for r in rows])
         run.log(payload)
-        run.summary.update(dict(status='complete', adjacent_score=results['adjacent']['score'],
-            adjacent_ci95=results['adjacent']['ci95'], self_games=results['self']['games'],
-            adjacent_games=results['adjacent']['games'], automatic_promotion=False))
+        run.summary.update(dict(status='complete', automatic_promotion=False))
+        for panel, result in results.items():
+            run.summary[panel+'_games'] = result['games']
+            if 'score' in result:
+                run.summary[panel+'_score'] = result['score']
+                run.summary[panel+'_ci95'] = result['ci95']
         for path in sorted(root.glob('*/shard*/reports/checkpoint_*.json')):
             report = read(path)
             if not publish_report(report, path, run, wait=True):
@@ -103,6 +114,7 @@ if __name__ == '__main__':
     ap.add_argument('--root', type=Path, default=Path('/evaluation'))
     ap.add_argument('--wait', action='store_true')
     ap.add_argument('--publish', action='store_true')
+    ap.add_argument('--run-id')
     args = ap.parse_args()
     while True:
         state = read(args.root/'state.json')
@@ -113,5 +125,5 @@ if __name__ == '__main__':
         time.sleep(10)
     results, out = render(args.root)
     if args.publish:
-        publish(args.root, results, out)
+        publish(args.root, results, out, args.run_id)
     print(json.dumps(dict(report=str(out/'index.html'), status='complete')))

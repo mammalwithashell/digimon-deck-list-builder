@@ -16,6 +16,9 @@ log = logging.getLogger(__name__)
 SCHEMA_VERSION = 1
 CARD_COUNTERS = ("plays", "plays_direct", "plays_effect", "hatches", "digivolves_battle",
                  "digivolves_raising", "dna_digivolves", "promotions", "attacks", "memory_paid")
+EFFECT_COUNTERS = ("opportunities", "order_selected", "order_declined", "partner_accepted",
+                   "partner_declined", "target_accepted", "target_declined", "dna_completed",
+                   "attack_opportunities", "attack_accepted", "attack_declined", "attacks_declared")
 
 
 def decision_routes(state: dict, ui: dict, mask) -> dict[int, tuple[str, str]]:
@@ -63,12 +66,18 @@ class CardEvalCollector:
         self.context = {}
         self.provenance = {}
         self.card_lookup = card_lookup
+        self.effect_context_supported = False
+        self._effect_actions = []
+        self._effect_seen = set()
 
     def start_game(self, ui: dict, decks: tuple, seed):
         # A reset without a terminal is visible as incomplete, never a loss.
         if self.current is not None:
             self.finish_game(None, "reset_before_terminal")
+        self._effect_seen = set()
+        self._effect_actions = []
         self.current = dict(game_id=len(self.games), seed=seed, cards={}, routes={},
+                            route_decisions={}, effect_sequences={},
                             context=dict(self.context), steps=0)
         for pid, deck in enumerate(decks, 1):
             for card, copies in Counter(deck).items():
@@ -91,12 +100,17 @@ class CardEvalCollector:
             for card in ui.get(f"player{pid}", {}).get("handIds", []):
                 self.card(pid, card)["seen_in_hand"] = True
 
-    def before_step(self, state, ui, mask, action):
+    def before_step(self, state, ui, mask, action, effect_context=None):
         if self.current is None:
             return
         pid = state["current_player_id"]
         self.observe_hand(ui)
         routes = decision_routes(state, ui, mask)
+        for route in {route for _, route in routes.values()}:
+            row = self.current["route_decisions"].setdefault((pid, route), dict(
+                player=pid, route=route, opportunities=0, choices=0))
+            row["opportunities"] += 1
+            row["choices"] += int(routes.get(int(action), (None, None))[1] == route)
         for card, route in set(routes.values()):
             key = (pid, card, route)
             row = self.current["routes"].setdefault(key, dict(
@@ -104,12 +118,59 @@ class CardEvalCollector:
             row["opportunities"] += 1
             if routes.get(int(action)) == (card, route):
                 row["choices"] += 1
+        self._effect_actions = []
+        if effect_context and effect_context.get("schema_version") == 1:
+            self.effect_context_supported = True
+            for effect in effect_context.get("effects", []):
+                if effect["card_id"] != "EX12-001":
+                    continue
+                owner = effect["player"]
+                key = (owner, effect["card_id"])
+                row = self.current["effect_sequences"].setdefault(key, dict(
+                    player=owner, card_id=effect["card_id"], **dict.fromkeys(EFFECT_COUNTERS, 0)))
+                sequence = (owner, effect["sequence"])
+                stage = effect["stage"]
+                def once(counter):
+                    token = (*sequence, counter)
+                    if token not in self._effect_seen:
+                        row[counter] += 1
+                        self._effect_seen.add(token)
+                if stage in {"trigger_order", "dna_partner", "dna_result"}:
+                    once("opportunities")
+                elif stage == "followup_attack":
+                    once("attack_opportunities")
+                accepted = int(action) in effect["accept_actions"] and bool(mask[int(action)])
+                declined = int(action) == 62 and bool(mask[62])
+                prefix = {"trigger_order": "order", "dna_partner": "partner",
+                          "dna_result": "target", "followup_attack": "attack"}.get(stage)
+                if prefix and (accepted or declined):
+                    counter = ("order_selected" if stage == "trigger_order" else prefix+"_accepted") if accepted else prefix+"_declined"
+                    once(counter)
+                if accepted and stage in {"dna_result", "followup_attack"}:
+                    self._effect_actions.append((effect, row, sequence, int(action)))
 
     def after_step(self, state, ui, events, terminated, truncated):
         if self.current is None:
             return
         self.current["steps"] += 1
         self.observe_hand(ui)
+        for effect, row, sequence, action in self._effect_actions:
+            stage = effect["stage"]
+            if stage == "dna_result":
+                target = effect.get("result_cards", {}).get(str(action))
+                completed = target is not None and any(e.get("type") in {"Digivolve", "EvalDigivolve"}
+                    and e.get("player") == effect["player"] and e.get("source_card_id") == target
+                    and (e.get("meta") or {}).get("was_dna") for e in events)
+                counter = "dna_completed"
+            else:
+                completed = any(e.get("type") == "Attack" and e.get("player") == effect["player"]
+                    and e.get("source_slot") == effect.get("attacker_slot") for e in events)
+                counter = "attacks_declared"
+            token = (*sequence, counter)
+            if completed and token not in self._effect_seen:
+                row[counter] += 1
+                self._effect_seen.add(token)
+        self._effect_actions = []
         for ev in events:
             kind = ev.get("type")
             card = ev.get("source_card_id")
@@ -151,15 +212,27 @@ class CardEvalCollector:
         game.update(winner_id=winner, terminal_reason=reason)
         game["cards"] = list(game["cards"].values())
         game["routes"] = list(game["routes"].values())
+        game["route_decisions"] = list(game["route_decisions"].values())
+        game["effect_sequences"] = list(game["effect_sequences"].values())
         self.games.append(game)
         self.current = None
 
     def report(self):
         cards, routes = {}, {}
+        decisions, effects = {}, {}
         for game in self.games:
             context = game["context"]
             scope = {name: context.get(name, "") for name in ("panel", "anchor", "evaluation_mode")}
             group = (context.get("agent_archetype", ""), context.get("opponent_archetype", ""), *scope.values())
+            for name, target_rows, dimensions, counters in [
+                    ("route_decisions", decisions, ("player", "route"), ("opportunities", "choices")),
+                    ("effect_sequences", effects, ("player", "card_id"), EFFECT_COUNTERS)]:
+                for row in game.get(name, []):
+                    key = (*group, *(row[k] for k in dimensions))
+                    target = target_rows.setdefault(key, dict(agent_archetype=group[0], opponent_archetype=group[1],
+                        **scope, **{k: row[k] for k in dimensions}, **dict.fromkeys(counters, 0)))
+                    for counter in counters:
+                        target[counter] += row[counter]
             for row in game["cards"]:
                 key = (*group, row["player"], row["card_id"])
                 target = cards.setdefault(key, dict(agent_archetype=group[0], opponent_archetype=group[1],
@@ -190,7 +263,10 @@ class CardEvalCollector:
                 target["choices"] += row["choices"]
         return dict(**self.identity, provenance=self.provenance,
                     games=self.games, cards=list(cards.values()), routes=list(routes.values()),
+                    route_decisions=list(decisions.values()), effect_sequences=list(effects.values()),
                     coverage={"opportunities": "main play/digivolve/DNA/attack, counter digivolve, breeding promote; pending selections excluded",
+                              "route_decisions": "one opportunity per player/route/decision, regardless of distinct legal cards",
+                              "effect_sequences": "EX12-001 legal DNA trigger-order/partner/result and follow-up attack prompts; per physical egg per global turn" if self.effect_context_supported else "unmeasured",
                               "entries": "resolved Play, Digivolve, EvalDigivolve, Hatch and BreedingMove events; promotion counts top card only",
                               "hand": "seen at decision boundaries; not a count of draws",
                               "turn": "engine global turn count at end of resolving step"})
@@ -228,8 +304,8 @@ def publish_report(report: dict, path: Path, run=None, *, step=None, wait=False,
         artifact.add_file(str(path), name="report.json")
         run.define_metric("card_eval/*", step_metric="card_eval/checkpoint_step")
         payload = {"card_eval/checkpoint_step": report["checkpoint_step"]}
-        for key in ("cards", "routes"):
-            rows = report[key]
+        for key in ("cards", "routes", "route_decisions", "effect_sequences"):
+            rows = report.get(key, [])
             # Stay under W&B's default per-table row limit. The artifact's
             # report.json is always complete, regardless of the number of parts.
             for offset in range(0, len(rows), 10000):

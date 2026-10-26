@@ -66,7 +66,9 @@ def summarize_report(report, identity, arm, signature, dna_lists=None):
                 status=provenance.get("status", "unknown"), provenance=provenance,
                 outcomes=list(outcomes.values()), dna=list(dna.values()), coverage=report.get("coverage", {}),
                 cards=[r for r in report.get("cards", []) if r.get("player") == 1],
-                routes=[r for r in report.get("routes", []) if r.get("player") == 1])
+                routes=[r for r in report.get("routes", []) if r.get("player") == 1],
+                route_decisions=[r for r in report.get("route_decisions", []) if r.get("player") == 1],
+                effect_sequences=[r for r in report.get("effect_sequences", []) if r.get("player") == 1])
 
 
 def collect(root, known=None, now=None, dna_catalog=None):

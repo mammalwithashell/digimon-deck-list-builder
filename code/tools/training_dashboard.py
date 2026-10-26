@@ -151,6 +151,24 @@ def behavior_view(st, reports):
         choice["choice_percent"] = 100*choice.choices/choice.opportunities.replace(0, float("nan"))
         st.dataframe(choice, hide_index=True, use_container_width=True)
     st.caption("Opportunities are card-route exposures at legal decision boundaries, not distinct games. Choices are attempts; entries are resolved effects. Omitted routes are unmeasured.")
+    decisions = frame(reports, "route_decisions")
+    st.subheader("Choices when a route is available")
+    if decisions.empty:
+        st.info("Decision-level opportunities were not measured in these reports.")
+    else:
+        decisions = decisions[decisions.anchor.isin(anchors) & decisions.agent_archetype.isin(archetypes)]
+        totals = decisions.groupby(["arm", "checkpoint", "route"])[["opportunities", "choices"]].sum().reset_index()
+        totals["choice_percent"] = 100*totals.choices/totals.opportunities.replace(0, float("nan"))
+        st.dataframe(totals, hide_index=True, use_container_width=True)
+        st.caption("One opportunity per decision with any legal card for this route. Card choices are not counted separately.")
+    effects = frame(reports, "effect_sequences")
+    st.subheader("Nyaromon DNA sequence")
+    if effects.empty:
+        st.info("No measured Nyaromon sequences in this selection. Check coverage: older reports cannot measure this effect.")
+    else:
+        effects = effects[effects.anchor.isin(anchors) & effects.agent_archetype.isin(archetypes)]
+        st.dataframe(effects, hide_index=True, use_container_width=True)
+        st.caption("Legal sequence opportunities include declines at trigger ordering. Target acceptance, completed DNA, and follow-up attack declarations are separate.")
     dna = frame(reports, "dna")
     if not dna.empty:
         dna = dna[dna.anchor.isin(anchors) & dna.archetype.isin(archetypes)]

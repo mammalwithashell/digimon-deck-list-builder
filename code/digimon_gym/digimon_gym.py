@@ -416,7 +416,10 @@ class DigimonEnv(gymnasium.Env):
 
         card_eval = getattr(self, "card_eval_collector", None)
         if card_eval is not None:
-            card_eval.before_step(self._rl_state(), self.runner.to_ui_json(), self.action_mask(), action)
+            # Observer-only context: never enters the policy tensor or mask.
+            context_reader = getattr(self.runner, "get_eval_decision_context", None)
+            extra = {"effect_context": context_reader()} if callable(context_reader) else {}
+            card_eval.before_step(self._rl_state(), self.runner.to_ui_json(), self.action_mask(), action, **extra)
         self.runner.step(action)
         self._step_count += 1
 
