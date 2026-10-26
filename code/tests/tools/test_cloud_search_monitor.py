@@ -58,6 +58,20 @@ def test_summary_loss_replaces_rounded_stdout(tmp_path):
     assert monitor.epoch_events(tmp_path, log)[0]["train/policy_loss"] == 1.234567
 
 
+def test_combined_campaign_metrics_keep_their_panel(tmp_path):
+    write(tmp_path, 'experiment_state.json', dict(stage='checkpoint_evaluation', generation_index=1))
+    write(tmp_path, 'deployment-plan.json', dict(games=1100,
+        evaluation_panels=[['combined_validation', 'combined_snapshot.json']]))
+    directory = tmp_path/'generation/gen1'
+    directory.mkdir(parents=True)
+    (directory/'combined_validation.txt').write_text('vs mixed-start 1371-1229-0 WR=52.7% (n=2600)')
+    result = monitor.collect(tmp_path, 100)
+    assert result['pipeline/stage_code'] >= 0
+    assert result['pipeline/target_games'] == 1100
+    assert result['evaluation/combined_validation/mixed-start/wins'] == 1371
+    assert not any(k.startswith('evaluation/meta_validation') for k in result)
+
+
 def test_checkpoint_must_be_stable_and_valid(tmp_path):
     path = tmp_path / "generation/gen0/model.zip"
     path.parent.mkdir(parents=True)

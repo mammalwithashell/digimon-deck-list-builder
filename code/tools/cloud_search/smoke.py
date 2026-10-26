@@ -39,6 +39,8 @@ def main():
             break
     assert deck, "No admitted legal smoke deck"
     game = digimon_engine.RustHeadlessGame(deck, deck, seed=20261025, observation_profile="standard_lite_v2")
+    assert digimon_engine.CARD_EVAL_EVENT_VERSION >= 2
+    assert game.get_eval_decision_context()["schema_version"] == 1
     for _ in range(8):
         state = game.get_card_eval_state()
         full = game.to_ui_json()

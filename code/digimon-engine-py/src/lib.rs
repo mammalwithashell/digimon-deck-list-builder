@@ -1041,6 +1041,11 @@ impl RustHeadlessGame {
         json_to_pyobject(py, &value)
     }
 
+    /// Observer-only sequence diagnostics; never included in policy inputs.
+    fn get_eval_decision_context(&self, py: Python) -> PyResult<PyObject> {
+        json_to_pyobject(py, &::digimon_engine::evaluation_context::decision_context(&self.inner.game))
+    }
+
     /// Decoded list of every currently-legal action for the current decision
     /// player, each carrying source-card and effect identity (`card_id`,
     /// `card_name`, `effect_name`, `source_zone`, `source_index`, `label`).
@@ -2026,7 +2031,7 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;
-    m.add("CARD_EVAL_EVENT_VERSION", 1)?;
+    m.add("CARD_EVAL_EVENT_VERSION", 2)?;
     m.add("ACTION_SCHEMA_VERSION", ::digimon_engine::action::space::SCHEMA_VERSION)?;
     // Source-selection sub-range boundaries — Python callers (digimon_gym)
     // pin ACTION_SOURCE_END to SOURCE_SELECT_END - 1, and use the breeding

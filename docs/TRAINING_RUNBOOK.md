@@ -1322,9 +1322,56 @@ passes the recorded game-268 search regression. It does not modify or resume
 the failed baseline. W&B has one run per arm, including bootstrap counts,
 checkpoint artifacts and per-card evaluation reports.
 
+An explicitly approved retry before search starts can use
+`--validate-resume`, followed by `--resume-before-search`, on the same root.
+The gate requires a failed comparison, unchanged frozen inputs/settings and
+runtime contract, qualified bootstrap corpora, byte-identical saved seed copies,
+the shared anchor, and no generation beyond `gen0`. Completed evaluation windows
+are reused only after model/cohort provenance and complete paired-game checks.
+Failed windows move into a timestamped `resume-history` directory before being
+rerun in full; old reports are never mixed into the replacement window. No
+bootstrap recollection or fitting occurs. The resume record preserves old/new
+image digests, controller hash, seed hashes and archived deployment metadata.
+This is not automatic recovery or support for resuming interrupted search.
+
+For a controller-only operational overlay, mount the committed controller file
+read-only into the tested immutable image and retain its source commit and
+SHA-256 in the host resume record. Keep `Restart=no`, preserve the original
+service definition, and verify the resumed stage and existing W&B run IDs.
+
 Preserve any `failure.json`, partial shards and recording. Investigate and use
 a new directory/image for a changed teacher; do not skip a failed game, resume
 into an altered corpus, or fit from partial outputs. DNA denominators are exact
 lists containing printed DNA targets, not archetype names. Per-action net hand
 changes are available; gross draw/search/retrieval counts remain unmeasured
 where native events do not distinguish them.
+
+For a live, read-only local dashboard of progress, checkpoint comparisons and
+card behavior, see [Live experiment dashboard](CARD_EVALUATION.md#live-experiment-dashboard).
+Its SSH collector caches compact summaries and never starts or stops training.
+The dashboard distinguishes stale observations, saved models, completed
+evaluation panels and per-game progress (when supported by the deployed image).
+
+### Frozen mixed/development head-to-head
+
+`python -m tools.cloud_search.head_to_head --prepare --source /source --root /experiment`
+validates the completed seed comparison, checkpoint-1 model contracts, card-data
+hash and native-image identity. It combines the frozen held-out meta and pet
+snapshots through the existing admission gate, copies both models, and saves
+the exact game schedule. Run the same command without `--prepare` to evaluate;
+the root cannot be silently restarted or overwritten.
+
+Default coverage is 6,760 policy-only games: 13 x 13 ordered deck cells x 40
+games. Each model is the candidate in one 3,380-game evaluator process, with
+opposite first players for each deck pair. Both processes use Torch inference,
+unchanged action masks and fresh fixed seeds, with per-card reports and progress
+heartbeats. No optimizer or search runs. Meta/pet source identities remain in
+the plan; the joint pool adds the previously missing cross-pool matchups.
+
+The result normalizes both engine roles to mixed's perspective and emits a full
+matrix plus a 95% bootstrap interval over four-game blocks (both roles/openers).
+Missing, duplicate, mismatched or incomplete games fail the comparison rather
+than counting as draws. A small per-cell sample is descriptive; the aggregate
+interval does not certify every matchup. Use the same immutable native image
+plus a recorded, committed read-only Python overlay; retain failure recordings
+and keep `Restart=no`. No automatic model promotion follows evaluation.

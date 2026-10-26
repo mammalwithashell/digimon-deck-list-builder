@@ -55,6 +55,95 @@ def test_deduplicated_decision_exposures_choices_and_seat():
     assert {r["player"] for r in routes} == {1, 2}
 
 
+def test_route_decisions_count_one_opportunity_across_distinct_cards():
+    c = CardEvalCollector(4, 0)
+    c.start_game(board(), (["A", "B"], ["X"]), 1)
+    # A (twice) and B all offer raising evolution, but this is one decision.
+    c.before_step({"current_player_id": 1, "phase": "Main"}, board(), mask(414, 429, 444, 62), 444)
+    c.before_step({"current_player_id": 1, "phase": "Main"}, board(), mask(414, 444, 62), 62)
+    c.finish_game(1, "security_attack")
+    row = c.report()["route_decisions"][0]
+    assert (row["opportunities"], row["choices"]) == (2, 1)
+    assert sum(r["opportunities"] for r in c.report()["routes"]) == 4
+
+
+def effect_context(stage, sequence="1:7", source=7, **extra):
+    return {"schema_version": 1, "effects": [dict(card_id="EX12-001", player=1,
+            stage=stage, sequence=sequence, source_handle=source, accept_actions=[0], **extra)]}
+
+
+def test_nyaromon_funnel_deduplicates_order_and_counts_resolved_events():
+    c = CardEvalCollector(4, 0)
+    c.start_game(board(), (["EX12-001", "A"], ["X"]), 1)
+    state = {"current_player_id": 1, "phase": "SelectTarget", "turn_count": 1}
+    pending = {**board(), "pendingSelection": {"kind": "Target"}}
+    for stage in ["trigger_order", "trigger_order", "dna_partner", "dna_result"]:
+        c.before_step(state, pending, mask(0, 62), 0,
+                      effect_context(stage, result_cards={"0": "A"}))
+        events = [{"type": "EvalDigivolve", "player": 1, "source_card_id": "A",
+                   "source_slot": 0, "meta": {"was_dna": True}}] if stage == "dna_result" else []
+        c.after_step(state, pending, events, False, False)
+    c.before_step(state, pending, mask(0, 62), 0, effect_context("followup_attack", attacker_slot=0))
+    c.after_step(state, pending, [{"type": "Attack", "player": 1, "source_card_id": "A", "source_slot": 0}], False, False)
+    c.finish_game(1, "security_attack")
+    row = c.report()["effect_sequences"][0]
+    assert row["opportunities"] == row["dna_completed"] == row["attacks_declared"] == 1
+    assert row["attack_opportunities"] == row["target_accepted"] == 1
+    assert c.report()["coverage"]["effect_sequences"] != "unmeasured"
+
+
+def test_nyaromon_decline_all_tracks_each_egg_and_does_not_credit_unrelated_dna():
+    c = CardEvalCollector(4, 0)
+    c.start_game(board(), (["EX12-001"]*2, ["X"]), 1)
+    context = effect_context("trigger_order")
+    context["effects"] += effect_context("trigger_order", sequence="1:8", source=8)["effects"]
+    c.before_step({"current_player_id": 1, "phase": "SelectTarget"}, board(), mask(0, 62), 62, context)
+    c.after_step({"turn_count": 1}, board(), [{"type": "EvalDigivolve", "player": 1,
+                 "source_card_id": "A", "meta": {"was_dna": True}}], False, False)
+    c.finish_game(None, "draw")
+    row = c.report()["effect_sequences"][0]
+    assert row["opportunities"] == row["order_declined"] == 2
+    assert row["dna_completed"] == 0
+
+
+def test_legacy_engine_leaves_effect_coverage_unmeasured():
+    c = CardEvalCollector(4, 0)
+    c.start_game(board(), (["EX12-001"], ["X"]), 1)
+    c.finish_game(1, "security_attack")
+    assert c.report()["coverage"]["effect_sequences"] == "unmeasured"
+
+
+@pytest.mark.parametrize("stage,counter", [("dna_partner", "partner_declined"),
+                                           ("dna_result", "target_declined"),
+                                           ("followup_attack", "attack_declined")])
+def test_nyaromon_declines_do_not_count_completion(stage, counter):
+    c = CardEvalCollector(4, 0)
+    c.start_game(board(), (["EX12-001"], ["X"]), 1)
+    c.before_step({"current_player_id": 1, "phase": "SelectTarget"}, board(), mask(0, 62), 62,
+                  effect_context(stage, result_cards={"0": "A"}, attacker_slot=0))
+    c.after_step({"turn_count": 1}, board(), [], False, False)
+    c.finish_game(1, "security_attack")
+    row = c.report()["effect_sequences"][0]
+    assert row[counter] == 1
+    assert row["dna_completed"] == row["attacks_declared"] == 0
+
+
+def test_nyaromon_selected_target_requires_matching_resolved_dna_event():
+    c = CardEvalCollector(4, 0)
+    c.start_game(board(), (["EX12-001"], ["X"]), 1)
+    c.before_step({"current_player_id": 1, "phase": "SelectTarget"}, board(), mask(0, 62), 0,
+                  effect_context("dna_result", result_cards={"0": "A"}))
+    c.after_step({"turn_count": 1}, board(), [
+        {"type": "EvalDigivolve", "player": 2, "source_card_id": "A", "meta": {"was_dna": True}},
+        {"type": "EvalDigivolve", "player": 1, "source_card_id": "B", "meta": {"was_dna": True}},
+        {"type": "EvalDigivolve", "player": 1, "source_card_id": "A", "meta": {"was_dna": False}},
+    ], False, False)
+    c.finish_game(1, "security_attack")
+    row = c.report()["effect_sequences"][0]
+    assert row["target_accepted"] == 1
+    assert row["dna_completed"] == 0
+
+
 def test_resolved_entries_independent_of_choices_and_bo3_boundaries(tmp_path):
     c = CardEvalCollector(100, 0)
     c.context = {"agent_archetype": "deck", "opponent_archetype": "opp"}
@@ -157,10 +246,11 @@ def test_wandb_tables_artifact_roundtrip_and_failure_keeps_local(tmp_path):
     run = MagicMock(id="run1")
     with patch.dict("sys.modules", {"wandb": wb}):
         publish_report(report, path, run)
-    assert wb.Table.call_count == 2
+    assert wb.Table.call_count == 3
     run.log_artifact.assert_called_once()
     payload = run.log.call_args.args[0]
     assert payload["card_eval/checkpoint_step"] == 123
+    assert "card_eval/route_decisions" in payload
     assert "step" not in run.log.call_args.kwargs
     artifact = MagicMock(type="card-evaluation")
     artifact.get_path.return_value.download.return_value = str(path)

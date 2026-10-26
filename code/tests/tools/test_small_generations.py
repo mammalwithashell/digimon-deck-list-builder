@@ -8,7 +8,7 @@ import pytest
 from tools.cloud_search.card_eval_worker import due_checkpoint
 from tools.cloud_search.replay_window import appearance_counts, bounded_window
 from digimon_gym.agents.anchored_eval import balanced_deck_pairs, _seat_balanced_seed
-from tools.cloud_search.run_small_generations import validate
+from tools.cloud_search.run_small_generations import validate, evaluation_options
 from tools.selfplay_scheduler import sha256
 
 
@@ -88,6 +88,22 @@ def campaign(tmp_path, monkeypatch):
 
 def test_campaign_accepts_validated_parent(campaign):
     assert len(validate(*campaign)) == 12
+
+
+def test_combined_evaluation_requires_hash_bound_snapshot(campaign):
+    root, plan = campaign
+    plan.update(evaluation_panels=[['combined_validation', 'combined_snapshot.json']], evaluation_seed=7)
+    with pytest.raises(ValueError, match='hash-bound'):
+        validate(root, plan)
+    path = root / 'inputs/combined_snapshot.json'
+    path.write_text('{}')
+    plan['files']['inputs/combined_snapshot.json'] = sha256(path)
+    validate(root, plan)
+    options = evaluation_options(plan)
+    assert options.seed == 7 and options.games_per_archetype == 200
+    plan['evaluation_panels'] = [['../escape', 'combined_snapshot.json']]
+    with pytest.raises(ValueError, match='local labels'):
+        validate(root, plan)
 
 
 def test_campaign_accepts_two_remaining_updates_with_fresh_replay(campaign):

@@ -25,10 +25,10 @@
 # [Main] (OnDeclaration, maxCountPerTurn 1, not optional at activation):
 #   use condition = a [TS] Tamer with a play cost in trash; pick canNoSelect:
 #   true over trash; play it paying cost-2 (PlayPermanentCards payCost: true +
-#   ChangeCostClass -2); RemoveUse when nothing picked.
+#   ChangeCostClass -2). DCGO refunds a declined pick, but CR 4.3
+#   15-14-1-4 counts the declared activation even when processing is declined.
 #   → main_on_field + once_per_turn + count_gte gate; optional select_trash
-#   (declining refunds the [Once Per Turn] via `refund_opt` on
-#   `binding_absent`); play_from_trash { cost_delta: { reduce: 2 } }.
+#   (declining retains the spent use); play_from_trash { cost_delta: { reduce: 2 } }.
 # Inherited (OnAllyAttack + CanTriggerOnPermanentAttack(any battle-area
 #   Digimon)): fires when ANY Digimon (either player's, including the carrier)
 #   attacks; Once Per Turn; skippable; activate condition = ≥1 hand card.
@@ -101,13 +101,10 @@ effects:
               - kind: tamer
               - trait_has: TS
           prompt: "You may play 1 [TS] trait Tamer card from your trash with the cost reduced by 2"
-      # DCGO `if (!isUsed) activateClass.RemoveUse()`: declining the pick does
-      # not spend the [Once Per Turn] (BT25-060 / BT25-085 idiom). Checked
-      # BEFORE the play (the play consumes the trash-index binding).
+      # Declining processing does not undo the Main activation (CR 15-14-1-4).
       - if:
           condition: { binding_absent: tamer_pick }
-          then:
-            - refund_opt: {}
+          then: []
           else:
             - play_from_trash:
                 of: you
