@@ -32,6 +32,8 @@ effects:
   - when: on_ally_played
     once_per_turn: true
     active_when: { all_turns: true }
+    trigger_if:
+      event_target_kind: digimon
     summary: "[All Turns][OPT] When any of your Digimon are played, De-Digivolve 2 one opponent Digimon; then 1 opponent Digimon gets -6000 DP"
     process:
       - select_opponent_permanent:

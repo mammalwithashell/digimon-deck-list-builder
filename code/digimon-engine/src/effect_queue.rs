@@ -2788,6 +2788,30 @@ impl Game {
         if context.source_effect.is_none() {
             context.source_effect = self.current_effect_attribution();
         }
+        // CR 4.3 15-16-15-1: printed [End of Attack] belongs to the
+        // Digimon which performed the attack, not every carrier scanned by
+        // the broad timing broadcast. Capture its stable event referent here
+        // so DSL trigger qualifiers can distinguish the attacker while native
+        // "at the end of an attack" observers and scheduled processing still
+        // receive the timing. The identity/snapshot capture below keeps this
+        // referent correct through cloning and field compaction.
+        if timing == EffectTiming::EndOfAttack {
+            let attacker = if self.pending_attack.is_some() {
+                self.pending_attack
+                    .as_ref()
+                    .filter(|attack| attack.declaration_committed)
+                    .and_then(|_| self.live_attack_attacker())
+            } else if let TriggerSource::Permanent(handle) = *source {
+                // Explicit single-carrier timing injection (DebugRunner and
+                // rule fixtures) names the card whose attack ended. A broad
+                // field scan without an attack does not invent an attacker.
+                Some(handle)
+            } else {
+                None
+            };
+            context.event_permanent = attacker;
+            context.event_card = attacker.and_then(|handle| self.top_card_handle(handle));
+        }
         // Capture before any observer resolves. The existing stack identity is
         // shared with battle/replacement tracking: it survives ordinary stack
         // edits, is invalidated by every DNA path, and is absent on a new play.
@@ -4816,12 +4840,14 @@ impl Game {
         }
 
         let event_delay_source = self.event_gated_delay_source(&qe);
+        let start_delay_source = self.native_start_delay_cleanup_source(&qe);
         if activation_cost_paid {
             self.run_queued_effect_process_tail_after_activation_cost(&qe);
         } else {
             self.run_queued_effect_process_tail(&qe);
         }
         self.trash_event_gated_delay_after_activation(event_delay_source);
+        self.cleanup_native_start_delay_after_activation(start_delay_source);
     }
 
     /// Variant of [`Self::run_queued_effect_process_tail`] used after a
@@ -4962,6 +4988,87 @@ impl Game {
             return None;
         }
         Some((owner, qe.source_card.0, timing))
+    }
+
+    fn native_start_delay_cleanup_source(
+        &mut self,
+        qe: &QueuedEffect,
+    ) -> Option<(PlayerId, u16, u16, u64)> {
+        if qe.timing != EffectTiming::DelayEffect {
+            return None;
+        }
+        let effects = self.effects_for_card(&qe.card_id, qe.source_card)?;
+        let effect = effects.get(qe.effect_slot as usize)?;
+        if effect.delay_cost_in_body || effect.ordinary_field_option {
+            return None;
+        }
+        let handle = qe.source_permanent?;
+        let perm = self
+            .players
+            .get(handle.player as usize)?
+            .battle_area
+            .get(handle.index as usize)?;
+        let OptionState::Delayed {
+            trigger: DelayTrigger::StartOfYourNextTurn,
+            trash_on_turn,
+            ..
+        } = perm.option_state
+        else {
+            return None;
+        };
+        if trash_on_turn <= self.turn_count || perm.card_sources.last()?.handle() != qe.source_card
+        {
+            return None;
+        }
+        // A native body can remove and re-place this physical Option. Pin
+        // the old permanent, not merely the card or its next due turn.
+        let identity = match perm.battle_identity {
+            Some(identity) => identity,
+            None => {
+                let identity = self.next_battle_identity;
+                self.next_battle_identity =
+                    identity.checked_add(1).expect("stack identity exhausted");
+                self.player_mut(handle.player).battle_area[handle.index as usize].battle_identity =
+                    Some(identity);
+                identity
+            }
+        };
+        Some((handle.player, qe.source_card.0, trash_on_turn, identity))
+    }
+
+    fn cleanup_native_start_delay_after_activation(
+        &mut self,
+        source: Option<(PlayerId, u16, u16, u64)>,
+    ) {
+        let Some((owner, card, next_turn, carrier_identity)) = source else {
+            return;
+        };
+        if self.pending_selection.is_some() {
+            let cleanup = DelayedOptionLifecycleResume {
+                turn: next_turn,
+                kind: DelayedOptionLifecycleResumeKind::CapturedStartTurnDelay { carrier_identity },
+                pending_delete_key: Some((owner, card)),
+                skip_key: None,
+            };
+            // This body can be selected after the outer StartTurn resume
+            // was parked by TriggerOrder. Finish its inner cost cleanup
+            // before that outer continuation advances into draw/main.
+            if let Some(outer) = self.pending_delayed_option_lifecycle.replace(cleanup) {
+                self.pending_delayed_option_lifecycle_stack.push(outer);
+            }
+        } else if let Some(handle) = self
+            .find_delayed_permanent_by_key(
+                (owner, card),
+                next_turn,
+                &[DelayTrigger::StartOfYourNextTurn],
+            )
+            .filter(|h| {
+                self.player(h.player).battle_area[h.index as usize].battle_identity
+                    == Some(carrier_identity)
+            })
+        {
+            self.delete_permanent_with_cause(handle, ReplacementCause::Cost);
+        }
     }
 
     fn trash_event_gated_delay_after_activation(
@@ -5391,8 +5498,10 @@ impl Game {
         self.effect_source_permanent = qe.source_permanent;
         self.current_trigger_context = qe.trigger_context.clone();
         let event_delay_source = self.event_gated_delay_source(&qe);
+        let start_delay_source = self.native_start_delay_cleanup_source(&qe);
         self.run_queued_effect_process_tail(&qe);
         self.trash_event_gated_delay_after_activation(event_delay_source);
+        self.cleanup_native_start_delay_after_activation(start_delay_source);
         self.current_trigger_context = prev_trigger_context;
         self.effect_source_permanent = prev_effect_source_permanent;
         self.effect_source_card = prev_effect_source_card;
@@ -5986,6 +6095,17 @@ impl Game {
         else {
             return;
         };
+        // Start-turn Delay entries are captured into the simultaneous pool
+        // and their next window is already advanced. A decline runs neither
+        // DSL cost nor native cleanup, so no serial-scan key must survive.
+        if matches!(perm.option_state, crate::permanent::OptionState::Delayed {
+            trigger: crate::enums::DelayTrigger::StartOfYourNextTurn,
+            trash_on_turn,
+            ..
+        } if trash_on_turn > self.turn_count)
+        {
+            return;
+        }
         // Same stable key the scan uses: an Option has no digivolution stack,
         // so its bottom card is the Option itself.
         // ONLY the turn-scheduled triggers need this. An `OnEvent` Delay already

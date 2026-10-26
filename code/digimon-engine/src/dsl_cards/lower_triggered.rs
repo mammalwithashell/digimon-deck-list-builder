@@ -373,8 +373,19 @@ pub fn lower_for_kind_with_clause_index(
         // (`Game::discard_entries_not_triggered`, §15-8-3-1 / §15-8-3-4);
         // `EffectBuilder::build` folds it into the activation-time
         // `condition` above (§15-4-4-5).
-        if trigger_if.is_some() || security_check_gate.is_some() {
+        // CR 4.3 15-16-15-1: the printed [End of Attack] timing is scoped to
+        // the attacking carrier, including an inherited effect's host. The
+        // engine timing remains broad for native observers and scheduled
+        // processing; only the printed DSL clause gets this qualifier.
+        let end_of_attack_carrier = engine_timing == EffectTiming::EndOfAttack;
+        if trigger_if.is_some() || security_check_gate.is_some() || end_of_attack_carrier {
             builder = builder.trigger_qualifier(move |rctx| {
+                if end_of_attack_carrier
+                    && (rctx.source_permanent.is_none()
+                        || rctx.event_permanent() != rctx.source_permanent)
+                {
+                    return false;
+                }
                 let subject = predicate_subject_for_source(rctx);
                 trigger_if
                     .as_ref()

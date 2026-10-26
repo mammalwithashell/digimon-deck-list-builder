@@ -23,8 +23,10 @@
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{decode_digivolve, encode_digivolve, PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword};
 
 /// Vanilla Digimon fixture: `level` + `dp` + a single `Red` color.
@@ -554,20 +556,17 @@ effects:
       - delete_permanent: { target: source }
 "#;
 
-const EOA_ALLY_YAML: &str = r#"
-card: LEAVE-EOA
-name: Afterattackmon
-kind: digimon
-level: 3
-color: [red]
-cost: 2
-dp: 1000
-effects:
-  - when: end_of_attack
-    summary: "[All Turns] At the end of an attack, gain 1 memory."
-    process:
-      - gain_memory: 1
-"#;
+/// A broad timing witness, not a printed carrier-scoped `[End of Attack]`
+/// clause. The native observer survives the attacking Digimon's departure.
+struct BroadEndOfAttackWitness;
+impl CardEffect for BroadEndOfAttackWitness {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_attack(card)
+            .name("At the end of an attack, gain 1 memory")
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
 
 const COUNTER_MEM_YAML: &str = r#"
 card: LEAVE-COUNTER
@@ -602,17 +601,20 @@ fn counter_accepted_after_attacker_left_then_no_block_and_attack_ends() {
     use digimon_engine::action::space::encode_attack;
     use digimon_engine::events::GameEvent;
 
+    let mut witness_card = dgmn("LEAVE-EOA", 3, 1000);
+    witness_card.card_name = "Afterattackmon".to_string();
+    witness_card.play_cost = 2;
     let mut r = DebugRunner::builder()
         .from_dsl_yaml(KAMIKAZE_YAML)
         .expect("attacker loads")
-        .from_dsl_yaml(EOA_ALLY_YAML)
-        .expect("end-of-attack ally loads")
+        .add_card(witness_card)
         .from_dsl_yaml(COUNTER_MEM_YAML)
         .expect("counter card loads")
         .add_card(dgmn("BLK", 4, 9000))
         .add_card(dgmn("FILL", 3, 1000))
         .security(1, &["FILL", "FILL", "FILL"])
         .start();
+    r.register_effect("LEAVE-EOA", std::sync::Arc::new(BroadEndOfAttackWitness));
     let atk = r.place_on_field(0, "LEAVE-ATK", Some(0));
     let ally = r.place_on_field(0, "LEAVE-EOA", Some(0));
     assert_eq!((atk.index, ally.index), (0, 1));

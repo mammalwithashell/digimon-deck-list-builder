@@ -114,6 +114,11 @@ pub(crate) enum DelayedOptionLifecycleResumeKind {
     Event {
         timing: crate::enums::EffectTiming,
     },
+    /// Cleanup of a native Delay body captured in the simultaneous start pool.
+    /// Its due turn has already advanced; no phase scan resumes after cleanup.
+    CapturedStartTurnDelay {
+        carrier_identity: u64,
+    },
     /// Standard `<Delay>` activated by a player `[Main]`-phase action
     /// (PUPPETS-G009). The Option's `DelayEffect` body installed a pending
     /// selection; once it resolves, the Option is trashed as the activation

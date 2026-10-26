@@ -89,6 +89,22 @@ fn digimon_card(card_id: &str) -> digimon_engine::CardData {
     cd
 }
 
+fn choose_start_trigger(r: &mut DebugRunner, card_id: &str) {
+    let view = r.pending_selection_view().expect("shared start-turn pool");
+    assert_eq!(
+        view.kind,
+        digimon_engine::selection::SelectionKind::TriggerOrder
+    );
+    let action = view
+        .effect_choices
+        .unwrap()
+        .iter()
+        .find(|entry| entry.label.contains(card_id))
+        .expect("requested start trigger")
+        .action_id;
+    r.execute_action(view.selecting_player, action).unwrap();
+}
+
 #[test]
 fn start_of_your_next_turn_delay_fires_at_turn_start_not_end() {
     let witness = Arc::new(Mutex::new(0));
@@ -197,6 +213,11 @@ fn start_delay_waits_when_start_observer_installs_selection() {
     r.game.enter_main_phase();
     r.end_turn();
 
+    // Start-turn clauses are simultaneous; explicitly choose the ordinary
+    // observer first, then preserve the parked-selection continuation checks.
+    assert_eq!(*selector_seen.lock().unwrap(), 0);
+    assert_eq!(*delay_seen.lock().unwrap(), 0);
+    choose_start_trigger(&mut r, "RED-MATCH");
     assert_eq!(*selector_seen.lock().unwrap(), 1);
     assert_eq!(
         *delay_seen.lock().unwrap(),
@@ -302,6 +323,10 @@ fn start_delay_scan_stops_when_delay_effect_installs_selection() {
     r.game.enter_main_phase();
     r.end_turn();
 
+    // Both due Delay bodies are in one pool; choose the selecting one first.
+    assert_eq!(*first_seen.lock().unwrap(), 0);
+    assert_eq!(*second_seen.lock().unwrap(), 0);
+    choose_start_trigger(&mut r, "DELAY-SELECT");
     assert_eq!(*first_seen.lock().unwrap(), 1);
     assert_eq!(
         *second_seen.lock().unwrap(),

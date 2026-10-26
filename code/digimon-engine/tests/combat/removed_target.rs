@@ -73,20 +73,18 @@ effects:
       - delete_permanent: { target: victim }
 "#;
 
-const EOA_YAML: &str = r#"
-card: RT-EOA
-name: Afterattackmon
-kind: digimon
-level: 3
-color: [red]
-cost: 2
-dp: 1000
-effects:
-  - when: end_of_attack
-    summary: "[All Turns] At the end of an attack, gain 1 memory."
-    process:
-      - gain_memory: 1
-"#;
+/// A broad timing witness, distinct from a printed carrier-scoped
+/// `[End of Attack]` DSL clause. It observes an attack even after its
+/// attacker has left, so it can prove that the timing occurred once.
+struct BroadEndOfAttackWitness;
+impl CardEffect for BroadEndOfAttackWitness {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_attack(card)
+            .name("At the end of an attack, gain 1 memory")
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
 
 fn digimon(id: &str, dp: i32) -> digimon_engine::CardData {
     let mut c = make_test_card(id, id);
@@ -136,15 +134,19 @@ fn settle(r: &mut DebugRunner) {
 /// attacker's slot, gains memory exactly once).
 #[test]
 fn attacker_and_target_both_leave_one_unsuccessful_end() {
+    let mut witness_card = digimon("RT-EOA", 1000);
+    witness_card.card_name = "Afterattackmon".to_string();
+    witness_card.level = Some(3);
+    witness_card.play_cost = 2;
     let mut r = DebugRunner::builder()
         .from_dsl_yaml(DEL4K_THEN_SELF_YAML)
         .expect("attacker loads")
-        .from_dsl_yaml(EOA_YAML)
-        .expect("end-of-attack ally loads")
+        .add_card(witness_card)
         .add_card(digimon("FILL", 1000))
         .add_card(digimon("BIG", 7000))
         .security(1, &["FILL", "FILL", "FILL"])
         .start();
+    r.register_effect("RT-EOA", Arc::new(BroadEndOfAttackWitness));
     let atk = r.place_on_field(0, "RT-ATK-BOTH", Some(0));
     let ally = r.place_on_field(0, "RT-EOA", Some(0));
     assert_eq!((atk.index, ally.index), (0, 1));

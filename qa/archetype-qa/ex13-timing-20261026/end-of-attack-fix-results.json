@@ -1,0 +1,64 @@
+{
+  "scope": "Printed EndOfAttack carrier scoping; no cloud/runtime or model contract change",
+  "engine_files": [
+    "code/digimon-engine/src/effect_queue.rs",
+    "code/digimon-engine/src/dsl_cards/lower_triggered.rs"
+  ],
+  "test_files": [
+    "code/digimon-engine/tests/archetype_audit_regressions.rs",
+    "code/digimon-engine/tests/end_of_attack_scope.rs"
+  ],
+  "red": {
+    "log": "end-of-attack-red.log",
+    "tests": 12,
+    "passed": 8,
+    "failed": 4,
+    "seconds": 54.79,
+    "note": "Three original negative test functions plus one six-card aggregate negative fail. All six added positive card controls pass."
+  },
+  "green_card_regressions": {
+    "log": "focused-green.log",
+    "tests": 12,
+    "passed": 12,
+    "failed": 0,
+    "seconds": 51.18,
+    "note": "This combined attempt subsequently stopped on two faulty synthetic control fixtures, which were corrected. Do not report the entire combined attempt as passing."
+  },
+  "green_scope_controls": {
+    "log": "end-of-attack-controls-final.log",
+    "tests": 5,
+    "passed": 5,
+    "failed": 0,
+    "seconds": 5.49
+  },
+  "scope_controls": [
+    "native broad observers plus scheduled processing",
+    "clone and field compaction after actual simultaneous observer resolves",
+    "departed attacker cannot transfer printed trigger to compacted bystander",
+    "pre-declaration cancellation cannot trigger printed carrier timing",
+    "unsuccessful declared attack still triggers its surviving carrier"
+  ],
+  "rule_sources": [
+    "CR4.3 15-16-15-1",
+    "CR4.3 11-1-5",
+    "CR4.3 11-5-1-4",
+    "CR4.3 11-6-2"
+  ],
+  "affected_frozen_pool_cards": [
+    "AD1-015",
+    "BT25-041",
+    "EX11-012",
+    "EX12-046",
+    "EX13-057",
+    "EX4-074",
+    "P-153",
+    "ST23-04"
+  ],
+  "authored_scope_scan": "end-of-attack-scope-audit.json",
+  "limits": [
+    "No DCGO oracle games executed",
+    "No full 13-archetype recertification",
+    "Broader phase/delay changes owned by another agent need their own validation",
+    "No inference about corrected win-rate magnitude"
+  ]
+}

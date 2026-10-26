@@ -1375,3 +1375,44 @@ than counting as draws. A small per-cell sample is descriptive; the aggregate
 interval does not certify every matchup. Use the same immutable native image
 plus a recorded, committed read-only Python overlay; retain failure recordings
 and keep `Restart=no`. No automatic model promotion follows evaluation.
+
+### Versioned global EX13 pool refresh
+
+The prepared October 26 pool lives in
+[`data/training_pools/ex13-20261026`](../data/training_pools/ex13-20261026/README.md).
+It retains the same 13 archetypes and uses exact global lists; English-only
+legality is not a source filter. The report separates competitive qualification,
+lower-evidence published variants, engine admission and original pet fallbacks.
+Never substitute cards to make a sourced list pass admission.
+
+`decks.json` is the native flat-sampler input. Repeated `:slotN` entries give
+archetypes equal sampling weight when they have fewer distinct training lists;
+they are not additional deck variants. `train_snapshot.json` preserves distinct
+training lists, `heldout_snapshot.json` contains unseen list fingerprints, and
+`pet_regression_snapshot.json` preserves the five original pets. Use
+`combined_diagnostic_snapshot.json` for an all-archetype panel, retaining its
+explicit same-list fallback labels rather than calling the entire panel held out.
+
+Rebuild into a fresh directory using the prepared source evidence and the actual
+baseline snapshot being excluded from held-out selection:
+
+```bash
+python -m tools.cloud_search.prepare_ex13_pool prepare \
+  --sources data/training_pools/ex13-20261026/source_candidates.json \
+  --baseline data/training_pools/ex13-20261026/source_baseline_train_snapshot.json \
+  --cli-bin /path/to/digimon-engine-cli --out /new-pool
+```
+
+The native registry must agree with the Python binding registry. The preparer
+checks current admission and standard deck legality, records source/gate/binary
+hashes, rejects an existing output, and does not deploy a run. Record a fresh
+engine image and pool identity before using the new assets; keep affected
+diagnostic replay and evaluation results separate from repaired-engine results.
+
+Balanced evaluation now records `cohort_scheme=archetype-paired-v2`. Within each
+ordered archetype matchup it rotates through the Cartesian product of list
+variants while preserving paired first-player balance. With two variants per
+side, four pairs per cell are needed to visit all four list combinations once.
+Smaller quotas do not certify full variant coverage. Preserve the saved schedule
+and its hash when comparing checkpoints; do not compare a new multi-list cohort
+to an old lockstep cohort as if the deck schedule were unchanged.

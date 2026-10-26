@@ -1,5 +1,64 @@
 # Rust Engine Gaps
 
+## Shared start-turn ordering and usage reset [G-ENGINE-START-TURN-CAPTURE-RESET] — resolved, focused verification (2026-10-26)
+
+Due start-turn Delay effects were collected after ordinary start-turn effects
+had resolved. LM-027 Red Scramble and BT24-088 Asuna reproduced the missing
+simultaneous ordering choice. Both now enter one queue before draining.
+Processing conditions are rechecked at activation rather than filtering out
+triggered entries at capture, so another simultaneous effect can enable a Delay.
+Capture advances each surviving carrier's next legal window, including declined
+or unavailable entries, without re-offering it in the same window. DSL bodies retain
+trash-before-processing costs; native bodies retain their legacy cleanup through
+stable-source continuations, including selection and phase resumption.
+
+The same audit reproduced per-turn usage resetting too late: a prior-turn use
+could suppress BT25-077 Bacchusmon after Asuna played a Digimon at turn start;
+alternatively, a successful start-turn use was erased before Main. Per-turn
+reset now runs once before start-turn trigger collection (CR 4.3 15-14-1-5-1).
+The witness combines real pool cards to isolate the shared timing substrate;
+it is not a claim about how often those cards share a tournament list.
+
+Twenty-two timing regressions and all 143 option-flow tests pass, covering the four
+event-kind repairs below, either start-turn order, clone/decline recurrence,
+processing conditions becoming true or false, native cleanup and both OPT
+boundaries. Native cleanup also retains the old permanent's stack identity:
+two valid bounce/replay witnesses pass, including a cloned selection, and fail
+when only those identity guards are removed. Earlier invalid reseating fixtures
+are excluded as evidence. This does not certify out-of-pool opponent-start dispatch or all
+end-turn scheduling APIs. No action or observation contract changed.
+
+## Printed End of Attack carrier scope [G-ENGINE-PRINTED-END-ATTACK-CARRIER] — resolved, focused verification (2026-10-26)
+
+The shared EndOfAttack broadcast activated printed effects on unrelated allies
+and opponents. CR 4.3 15-16-15-1 scopes printed `[End of Attack]` to the Digimon
+that performed the attack, including the host of an inherited effect. Capture
+now records the declared attacker's stable identity; DSL lowering conjoins that
+carrier qualification with authored trigger predicates. Native broad observers
+and scheduled attack-end callbacks retain their existing broadcast semantics.
+
+Failing production regressions covered ST23-04, EX4-074, AD1-015, BT25-041,
+EX11-012, EX12-046, EX13-057 and P-153. The repaired scope and independent
+controls pass in `archetype_audit_regressions.rs` and `end_of_attack_scope.rs`,
+including cloning, field compaction, attacker departure, declaration cancellation
+and a declared attack that cannot complete. Static review covered all 22 printed
+EndOfAttack clauses in the production YAML registry; that review is not 22-card
+behavioral or DCGO certification. No action/tensor contract changed.
+
+This closes the carrier-scope part of the October 4 Glowing Dawn finding below.
+Its separate payability and face-down inherited-source findings are not closed
+by this change.
+
+## Digimon-play event-kind qualification [G-DSL-ALLY-PLAYED-DIGIMON-KIND] — resolved, focused verification (2026-10-26)
+
+`on_ally_played` also observes Tamer plays. EX12-034, EX12-036, EX12-057 and
+BT25-013 omitted the printed Digimon-only qualification, allowing those plays
+to activate their effects. Their YAML now combines `event_target_kind: digimon`
+with the existing controller/color requirements. Twelve production-card tests
+in `training_pool_timing_audit.rs` cover own-Digimon positives, opponent-event
+negatives and Tamer negatives. This repairs four authored clauses; it does not
+narrow the generic event, which is also needed by legitimate Tamer observers.
+
 ## End-of-turn DNA success receipts [G-DSL-EOT-DNA-SUCCESS-RECEIPT] — resolved, focused verification (2026-10-26)
 
 The cloneable `may_dna_digivolve_now` partner/result chain did not publish the

@@ -31,6 +31,8 @@ effects:
   - when: on_ally_played
     once_per_turn: true
     active_when: { all_turns: true }
+    trigger_if:
+      event_target_kind: digimon
     summary: "[All Turns][OPT] When any of your Digimon are played, return opponent's lowest-level Digimon to deck bottom"
     process:
       - select_opponent_permanent:

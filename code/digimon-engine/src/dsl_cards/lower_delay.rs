@@ -117,6 +117,7 @@ pub fn lower_with_raw(
     let pays_own_cost = !process_steps.is_empty();
     let mut builder = EffectBuilder::new(card, EffectTiming::DelayEffect)
         .delay(delay_trigger)
+        .delay_cost_in_body()
         .process(move |ctx| {
             if pays_own_cost {
                 if let Some((source_player, source_card)) = delay_carrier(ctx) {

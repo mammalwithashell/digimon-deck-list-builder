@@ -471,6 +471,9 @@ pub struct Effect {
     pub explicit_self_placement: bool,
     /// Delay trigger for a Delay Option's body. Set by `.delay(trigger)`.
     pub delay_trigger: Option<DelayTrigger>,
+    /// The Delay body pays its own trash cost before processing (DSL lowering).
+    /// Native legacy Delay bodies otherwise retain lifecycle-owned cleanup.
+    pub delay_cost_in_body: bool,
     /// Memory cost paid to link this card to a host Digimon. Set by
     /// `.link(cost, filter)`. `None` for non-link Options.
     pub link_cost: Option<u16>,
@@ -995,6 +998,7 @@ impl EffectBuilder {
                 option_color_requirement_bypass: None,
                 explicit_self_placement: false,
                 delay_trigger: None,
+                delay_cost_in_body: false,
                 link_cost: None,
                 link_filter: None,
                 succession_filter: None,
@@ -1598,6 +1602,11 @@ impl EffectBuilder {
     pub fn ordinary_field_option(mut self) -> Self {
         self.inner.delay_trigger = None;
         self.inner.ordinary_field_option = true;
+        self
+    }
+
+    pub fn delay_cost_in_body(mut self) -> Self {
+        self.inner.delay_cost_in_body = true;
         self
     }
 
