@@ -38,12 +38,14 @@ fn ch11_14() -> DebugRunnerBuilder {
 /// P0 (memory 5) to move, P1 with the security stack `security` (bottom
 /// first).
 fn board(security: &[&str]) -> DebugRunner {
-    ch11_14()
+    let mut runner = ch11_14()
         .deck(0, &[FILL; 4])
         .deck(1, &[FILL; 4])
         .security(1, security)
         .memory(5)
-        .start()
+        .start();
+    fixtures::register_attack_end_observer(&mut runner);
+    runner
 }
 
 /// Place a suspended `card_id` on `player`'s field (a legal attack target).

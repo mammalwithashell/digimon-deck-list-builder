@@ -9,13 +9,37 @@
 //! phrasing (mandatory text stays mandatory; only "may" / "up to" is
 //! optional), never to the engine's current behaviour. Change a `common/` card
 //! only if every chapter using it still reads the same printed text.
+//! The broad EOA_OBS timing witness uses a native observer registered below;
+//! its YAML retains card metadata, since printed [End of Attack] is narrower.
 //!
 //! Adding a card: create the file and append its `include_str!` to the list
 //! below (kept sorted by card id).
 
 #![allow(dead_code)] // each chapter uses a subset
 
+use std::sync::Arc;
+
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
+use digimon_engine::effect::{CardEffect, Effect};
+
+struct AttackEndObserver;
+
+impl CardEffect for AttackEndObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_attack(card)
+            .name("[All Turns] At the end of an attack, gain 1 memory.")
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
+
+/// Witness the broad attack-end timing even when another Digimon attacked
+/// or the attacker left. This is not a printed [End of Attack] clause
+/// (§15-16-15-1), which applies only to the attacking carrier.
+pub fn register_attack_end_observer(runner: &mut DebugRunner) {
+    runner.register_effect("EOA_OBS", Arc::new(AttackEndObserver));
+}
 
 /// Cards shared by several chapters.
 const COMMON: &[&str] = &[

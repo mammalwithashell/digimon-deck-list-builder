@@ -39,6 +39,23 @@ def test_balanced_cohort_has_exact_quotas_and_both_opening_orders():
         list(balanced_deck_pairs(pool, 199, 1))
 
 
+@pytest.mark.parametrize('counts', [[2] * 13, [2] * 12, [1, 2, 3]])
+def test_balanced_cohort_visits_every_variant_matchup(counts):
+    """Adding held-out variants must not silently omit half their matchups."""
+    pool = SimpleNamespace(archetypes={
+        f'A{i:02d}': [SimpleNamespace(archetype_name=f'A{i:02d}', deck_id=f'A{i:02d}-{j}')
+                     for j in range(count)]
+        for i, count in enumerate(counts)})
+    quota = 2 * len(counts) * max(counts) ** 2
+    cohort = list(balanced_deck_pairs(pool, quota, 47))
+    seen = {(a.deck_id, b.deck_id) for a, b in cohort}
+    expected = {(a.deck_id, b.deck_id)
+                for first in pool.archetypes.values() for second in pool.archetypes.values()
+                for a in first for b in second}
+    assert seen == expected
+    assert all(cohort[i] == cohort[i + 1] for i in range(0, len(cohort), 2))
+
+
 def test_replay_caps_old_large_generation_and_is_stable(tmp_path):
     for generation, chunks in [(0, 825), (1, 250), (2, 250)]:
         for i in range(chunks):

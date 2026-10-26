@@ -36,6 +36,7 @@ from digimon_gym.agents.pilot_training import (
 
 # Safety rail so a pathological non-terminating game can't hang a sweep.
 MAX_STEPS = 4000
+BALANCED_COHORT_SCHEME = "archetype-paired-v2"
 
 
 @dataclass
@@ -135,8 +136,9 @@ def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
 def balanced_deck_pairs(deck_pool, games_per_archetype: int, seed: int):
     """Fixed cohort: exact candidate quotas and paired opening-order games.
 
-    Each deck pair plays twice with opposite first player. Opponent archetypes
-    and list variants rotate independently of candidate strength or outcomes.
+    Each deck pair plays twice with opposite first player. For each archetype
+    matchup, successive rounds traverse the Cartesian product of list variants.
+    Neither scheduling nor coverage depends on candidate strength or outcomes.
     """
     if games_per_archetype <= 0 or games_per_archetype % 2:
         raise ValueError("games_per_archetype must be positive and even")
@@ -148,10 +150,15 @@ def balanced_deck_pairs(deck_pool, games_per_archetype: int, seed: int):
     for ai, name in enumerate(names):
         firsts = sorted(deck_pool.archetypes[name], key=lambda d: d.deck_id)
         for pair in range(games_per_archetype // 2):
-            other = opponents[(pair + ai) % len(names)]
+            round_index, opponent_index = divmod(pair, len(names))
+            other = opponents[(opponent_index + ai) % len(names)]
             seconds = sorted(deck_pool.archetypes[other], key=lambda d: d.deck_id)
-            first = firsts[pair % len(firsts)]
-            second = seconds[(pair // len(names) + ai) % len(seconds)]
+            # Rotating both variants in lockstep misses combinations (and can
+            # pin one candidate variant when archetype/list counts share a
+            # factor). Advance the opponent variant after a full candidate
+            # variant cycle within this archetype matchup instead.
+            first = firsts[(round_index + opponent_index) % len(firsts)]
+            second = seconds[(round_index // len(firsts) + ai) % len(seconds)]
             yield first, second
             yield first, second
 

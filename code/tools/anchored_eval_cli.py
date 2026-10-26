@@ -23,7 +23,7 @@ import sys
 from pathlib import Path
 
 from digimon_gym.agents.anchored_eval import (
-    MatchRecord, evaluate_against_anchors,
+    BALANCED_COHORT_SCHEME, MatchRecord, evaluate_against_anchors,
 )
 from digimon_gym.agents.champion_registry import ChampionRegistry
 from digimon_gym.agents.gauntlet import GeneralistDeckPool, load_generalist_deck_pool
@@ -157,7 +157,7 @@ def main() -> None:
             card_eval_event_version=digimon_engine.CARD_EVAL_EVENT_VERSION,
             base_seed=args.seed, requested_games_per_anchor=args.n,
             games_per_archetype=args.games_per_archetype,
-            cohort_scheme="archetype-paired-v1" if args.games_per_archetype else "random-v1",
+            cohort_scheme=BALANCED_COHORT_SCHEME if args.games_per_archetype else "random-v1",
             snapshot_sha256=hashlib.sha256(Path(args.deck_pool_snapshot).read_bytes()).hexdigest() if args.deck_pool_snapshot else None,
             anchors_sha256=hashlib.sha256(Path(args.champions).read_bytes()).hexdigest(),
             anchor_model_hashes={champ.name: hashlib.sha256(Path(champ.weights_path).read_bytes()).hexdigest()

@@ -88,6 +88,7 @@ def summarize(games, schedule, samples=10000):
 
 
 def prepare(source, root, pairs, seed):
+    from digimon_gym.agents.anchored_eval import BALANCED_COHORT_SCHEME
     from sb3_contrib import MaskablePPO
     from model_contract import validate_checkpoint
     import digimon_engine
@@ -129,6 +130,7 @@ def prepare(source, root, pairs, seed):
     if contracts[ARMS[0]] != contracts[ARMS[1]]:
         raise ValueError("Model contracts differ")
     plan = dict(kind="mixed-development-head-to-head", seed=seed, pairs_per_cell=pairs,
+                cohort_scheme=BALANCED_COHORT_SCHEME,
                 games_per_evaluation=len(schedule), total_games=2*len(schedule),
                 games_per_archetype=len(schedule)//len(pool.archetypes),
                 archetypes=pool.archetype_names, meta_archetypes=pools[0].archetype_names,

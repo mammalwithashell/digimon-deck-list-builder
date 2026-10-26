@@ -113,6 +113,7 @@ effects:
       all_turns: true
     trigger_if:
       event_target_owner: you
+      event_target_kind: digimon
     summary: "[All Turns][OPT] When any of your Digimon are played or digivolve, 1 opponent Digimon can't activate WD effects or suspend until their turn ends"
     process:
       - select_opponent_permanent:

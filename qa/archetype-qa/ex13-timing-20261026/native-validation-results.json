@@ -1,0 +1,201 @@
+{
+  "status": "scoped_validation_passed_with_explicit_ignored_and_full_suite_limits",
+  "source_commit": "f733e07546ac7e0640507046a711f9f7a3e6fb36",
+  "uncommitted_sources": true,
+  "final_library_suites": [
+    {
+      "suite": "combat",
+      "log": "combat-final.log",
+      "status": "ok",
+      "passed": 299,
+      "failed": 0,
+      "ignored": 1,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 17.9
+    },
+    {
+      "suite": "dsl_focused",
+      "log": "dsl-focused-final.log",
+      "status": "ok",
+      "passed": 102,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 1495,
+      "seconds": 104.22
+    },
+    {
+      "suite": "cards_behavioral_35_modules",
+      "log": "cards-behavioral-final.log",
+      "status": "ok",
+      "passed": 457,
+      "failed": 0,
+      "ignored": 4,
+      "measured": 0,
+      "filtered_out": 12312,
+      "seconds": 257.69
+    },
+    {
+      "suite": "option_flow",
+      "log": "timing-options-final-verified.log",
+      "status": "ok",
+      "passed": 143,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 12.81
+    },
+    {
+      "suite": "training_pool_timing_audit",
+      "log": "timing-options-final-verified.log",
+      "status": "ok",
+      "passed": 22,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "seconds": 35.83
+    }
+  ],
+  "final_library_passes": 1023,
+  "prior_unaffected_integration_suites": [
+    {
+      "suite": "archetype_audit_regressions",
+      "status": "ok",
+      "passed": 12,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 53.89,
+      "log": "native-integration.log"
+    },
+    {
+      "suite": "effects",
+      "status": "ok",
+      "passed": 18,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 3.39,
+      "log": "native-integration.log"
+    },
+    {
+      "suite": "end_of_attack_scope",
+      "status": "ok",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 6.53,
+      "log": "native-integration.log"
+    },
+    {
+      "suite": "event_emission",
+      "status": "ok",
+      "passed": 25,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 4.8,
+      "log": "native-integration.log"
+    },
+    {
+      "suite": "phase_flow",
+      "status": "ok",
+      "passed": 73,
+      "failed": 0,
+      "ignored": 0,
+      "seconds": 5.35,
+      "log": "native-integration.log"
+    }
+  ],
+  "prior_unaffected_passes": 133,
+  "prior_note": "These five suites ran after EndOfAttack and StartTurn/OPT repairs, before only the final native Delay cleanup incarnation identity guard. Final option/timing/DSL/card runs cover that last guard.",
+  "total_complete_passes": 1156,
+  "total_ignored": 5,
+  "ignored": [
+    {
+      "log": "combat-final.log",
+      "test": "test overclock::overclock_attack_declared_before_the_rest_of_the_pool_when_its_cost_parks ... ignored, G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL ordering half: stays open, non-blocking by controller ruling (\u00a711-1-4, \u00a716-34-2; Task 21 re-review M-4 / Task 36 brief)"
+    },
+    {
+      "log": "cards-behavioral-final.log",
+      "test": "test bt21::bt21_029::bt21_029_clause_a_security_attack_plus_1_installed_on_field ... ignored, pending: G-DECLARATIVE-KEYWORD \u2014 EffectTiming::Declarative not yet fired by engine; grant_keyword modifier is compiled but never installed at runtime"
+    },
+    {
+      "log": "cards-behavioral-final.log",
+      "test": "test bt21::bt21_029::bt21_029_clause_c_opt_blocks_second_activation_same_turn ... ignored, pending: card-local OPT body not authored \u2014 G-OPT-TRIGGERED closed by Phase 2 Track C; sibling cards cover lockout dispatch"
+    },
+    {
+      "log": "cards-behavioral-final.log",
+      "test": "test bt21::bt21_029::bt21_029_clause_c_selection_restricted_to_lowest_dp_digimon_only ... ignored, pending: G-PREDICATE-DP-FILTER \u2014 dp_lte formula predicates not yet evaluated; selection offers all opponent Digimon instead of only the lowest-DP ones"
+    },
+    {
+      "log": "cards-behavioral-final.log",
+      "test": "test bt21::bt21_029::bt21_029_clause_d_opt_blocks_second_activation_same_turn ... ignored, pending: card-local OPT body not authored \u2014 G-OPT-TRIGGERED closed by Phase 2 Track C; sibling cards cover lockout dispatch"
+    }
+  ],
+  "partial_dsl": {
+    "status": "interrupted_for_target_handoff",
+    "suite": "dsl",
+    "planned": 1597,
+    "completed_before_stop": 478,
+    "failed_before_stop": 0,
+    "elapsed_seconds": 306.0,
+    "long_test_warnings": 0,
+    "reason": "Full suite projected about 13 more minutes; focused native Delay repair and scoped final DSL controls take priority. No full-suite pass claimed.",
+    "binary": "D:\\cargo-target\\p3-eval-telemetry-fast\\debug\\deps\\dsl-725af7d0c90fd80e.exe"
+  },
+  "scope_manifests": [
+    "dsl-focused-scope.json",
+    "cards-behavioral-scope.json"
+  ],
+  "build_log": "native-final-build.log",
+  "target": "D:/cargo-target/p3-eval-telemetry-fast",
+  "build": {
+    "cargo_jobs": 2,
+    "dev_opt_level": 0,
+    "engine_opt_level": 1,
+    "dev_debug": 0,
+    "incremental": false
+  },
+  "runtime": {
+    "combat_threads": 4,
+    "dsl_threads": 4,
+    "cards_threads": 8,
+    "final_rust_min_stack": 268435456
+  },
+  "source_sha256": {
+    "code/digimon-engine/src/effect_queue.rs": "e2a11c25963bb77cca0330714a5cb0f5a2db2362e602356b68f125b59347729e",
+    "code/digimon-engine/src/dsl_cards/lower_triggered.rs": "42218eb465dc50ba1caf11c7be4d8fadc0af6695d917f4cd30c133b9726b5b34",
+    "code/digimon-engine/src/dsl_cards/lower_delay.rs": "8e233d009c72235fdc19fa1805140e2b4905064303bbd4b785564297c6ee5e02",
+    "code/digimon-engine/src/effect.rs": "55d8fcc046505b32d3cac7930ff74e999350c2c3b69bcaf4d7e3c74a52e73095",
+    "code/digimon-engine/src/game/mod.rs": "f422e1b6a8bd491c771e18bdb8497cdfc2a5c4a961bb78884e2e3c19ee572ed9",
+    "code/digimon-engine/src/game_phases.rs": "6397562d98ca2a13ce3d75821ac6020fa4036bc257121065f4d19d6ec1e4ee56",
+    "code/digimon-engine/cards/bt25/BT25-013.yaml": "504e177b980eaf819e513e8c85896240d292fe99ef655075b13cb11d7ebfc1dc",
+    "code/digimon-engine/cards/ex12/EX12-034.yaml": "71be08d9eeaafdc9b0e9b2b95f1c8865560d934ad5a5c57fc60c2d57fe9c377b",
+    "code/digimon-engine/cards/ex12/EX12-036.yaml": "3058a823bd9183949b3d91b408af4a22bdf7eb5c4ebe72ad59b59180975a04bb",
+    "code/digimon-engine/cards/ex12/EX12-057.yaml": "180fde07c194f2133d3ffac4de61bd5b92abdf8379b16ac28d5be31bd19cd976"
+  },
+  "limits": [
+    "No full 1597-test DSL-suite pass: interrupted after478 passes; later102 focused controls completed.",
+    "No full cards_behavioral-suite pass:461 selected,457passed,4pre-existingignored;12312filtered.",
+    "No whole-311-card or thirteen-archetype recertification.",
+    "No DCGO oracle games run; no cloud image, training, model contract, replay, or search budget changed."
+  ],
+  "initial_failure_resolution": {
+    "combat": "Two synthetic broad timing witnesses were expressed as printed EndOfAttack DSL clauses; migrated only fixtures to explicit native broad observers, preserving assertions and original card metadata. Full combat now299pass/1ignored.",
+    "native_incarnation": "Initial invalid fixtures are excluded. Final two-case valid bounce/replay witness RED is recorded in timing-native-incarnation-red-valid.log; final repaired165tests in timing-options-final-verified.log."
+  },
+  "source_sha256_lf_normalized": {
+    "code/digimon-engine/src/effect_queue.rs": "e2a11c25963bb77cca0330714a5cb0f5a2db2362e602356b68f125b59347729e",
+    "code/digimon-engine/src/dsl_cards/lower_triggered.rs": "42218eb465dc50ba1caf11c7be4d8fadc0af6695d917f4cd30c133b9726b5b34",
+    "code/digimon-engine/src/dsl_cards/lower_delay.rs": "f03a3eaa9d7b0de19fd7d8f8ac6f6c8f82a6522e2f92ccd543888f803f57dd1c",
+    "code/digimon-engine/src/effect.rs": "55d8fcc046505b32d3cac7930ff74e999350c2c3b69bcaf4d7e3c74a52e73095",
+    "code/digimon-engine/src/game/mod.rs": "f422e1b6a8bd491c771e18bdb8497cdfc2a5c4a961bb78884e2e3c19ee572ed9",
+    "code/digimon-engine/src/game_phases.rs": "6397562d98ca2a13ce3d75821ac6020fa4036bc257121065f4d19d6ec1e4ee56",
+    "code/digimon-engine/cards/bt25/BT25-013.yaml": "504e177b980eaf819e513e8c85896240d292fe99ef655075b13cb11d7ebfc1dc",
+    "code/digimon-engine/cards/ex12/EX12-034.yaml": "71be08d9eeaafdc9b0e9b2b95f1c8865560d934ad5a5c57fc60c2d57fe9c377b",
+    "code/digimon-engine/cards/ex12/EX12-036.yaml": "3058a823bd9183949b3d91b408af4a22bdf7eb5c4ebe72ad59b59180975a04bb",
+    "code/digimon-engine/cards/ex12/EX12-057.yaml": "180fde07c194f2133d3ffac4de61bd5b92abdf8379b16ac28d5be31bd19cd976"
+  },
+  "source_hash_line_endings": "source_sha256 preserves the original Windows validation bytes. source_sha256_lf_normalized supports verification after Git CRLF/LF normalization; no source code was changed to add this packaging metadata."
+}

@@ -1,0 +1,56 @@
+{
+  "schema": "ex13-pool-offline-reproduction-v1",
+  "checked_utc": "2026-10-26T20:15:00.636813+00:00",
+  "result": "passed",
+  "command": "python -m tools.cloud_search.prepare_ex13_pool prepare (exact versioned source_candidates and recorded baseline/native CLI)",
+  "network_fetches": 0,
+  "artifacts": [
+    {
+      "artifact": "train_snapshot.json",
+      "identical_snapshot_fingerprint": true,
+      "identical_content_except_generated_at": true,
+      "versioned_bytes_preserved": true
+    },
+    {
+      "artifact": "heldout_snapshot.json",
+      "identical_snapshot_fingerprint": true,
+      "identical_content_except_generated_at": true,
+      "versioned_bytes_preserved": true
+    },
+    {
+      "artifact": "pet_regression_snapshot.json",
+      "identical_snapshot_fingerprint": true,
+      "identical_content_except_generated_at": true,
+      "versioned_bytes_preserved": true
+    },
+    {
+      "artifact": "supplemental_snapshot.json",
+      "identical_snapshot_fingerprint": true,
+      "identical_content_except_generated_at": true,
+      "versioned_bytes_preserved": true
+    },
+    {
+      "artifact": "distinct_training_decks.json",
+      "byte_identical_regeneration": true,
+      "versioned_bytes_preserved": true
+    },
+    {
+      "artifact": "decks.json",
+      "byte_identical_regeneration": true,
+      "versioned_bytes_preserved": true
+    },
+    {
+      "artifact": "combined_diagnostic_snapshot.json",
+      "identical_snapshot_fingerprint": true,
+      "identical_content_except_generated_at": true,
+      "versioned_bytes_preserved": true
+    }
+  ],
+  "panels_and_selected_metadata_identical": true,
+  "versioned_consumer_bytes_preserved": true,
+  "tests": "43 passed:31 pool tests plus12 archetype audit tests",
+  "native_extension_suffixes": [
+    ".pyd",
+    ".so"
+  ]
+}
