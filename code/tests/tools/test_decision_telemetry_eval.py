@@ -31,6 +31,17 @@ def test_actual_model_and_deck_attribution_across_role_swaps():
     assert all(r["choice_rate"] == (.5 if r["archetype"] == "VB" else .8) for r in result["route_decisions"])
 
 
+def test_nyaromon_attack_requires_dna_by_its_own_player_not_opponent():
+    reports, expected = fixture()
+    for game in reports[0]["games"]:
+        game["effect_sequences"][0]["attacks_declared"] = 1
+        game["cards"] = [dict(player=1, dna_digivolves=0), dict(player=2, dna_digivolves=1)]
+    reports[0]["games"][1]["cards"][0]["dna_digivolves"] = 1
+    bad = behavior_rows(reports, expected)["nyaromon_attacks_without_player_dna"]
+    assert len(bad) == 1
+    assert bad[0]["index"] == 0 and bad[0]["checkpoint"] == 3 and bad[0]["player"] == 1
+
+
 @pytest.mark.parametrize("failure", ["missing", "duplicate", "outcome", "context", "coverage", "counters"])
 def test_rejects_incomplete_or_misattributed_telemetry(failure):
     reports, expected = fixture()

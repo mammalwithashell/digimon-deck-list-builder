@@ -86,6 +86,7 @@ def behavior_rows(reports, expected):
     """Attribute each player to its actual model, including swapped model roles."""
     routes, effects, appearances = defaultdict(Counter), defaultdict(Counter), Counter()
     observed = set()
+    unexplained_attacks = []
     for report in reports:
         if report.get("coverage", {}).get("effect_sequences", "unmeasured") == "unmeasured":
             raise ValueError("Missing native effect telemetry coverage")
@@ -113,6 +114,12 @@ def behavior_rows(reports, expected):
                 player = row["player"]
                 key = context[f"model{player}"], context[f"deck{player}"], row["card_id"]
                 effects[key].update({k: v for k, v in row.items() if k not in ("player", "card_id")})
+                if row["card_id"] == "EX12-001" and row.get("attacks_declared", 0):
+                    dna = sum(card["dna_digivolves"] for card in game["cards"] if card["player"] == player)
+                    if dna == 0:
+                        unexplained_attacks.append(dict(index=index, seed=context["seed"],
+                            player=player, checkpoint=context[f"model{player}"],
+                            archetype=context[f"deck{player}"], declarations=row["attacks_declared"]))
     if observed != set(expected):
         raise ValueError("Missing telemetry games")
     def rows(groups, dimension):
@@ -123,6 +130,7 @@ def behavior_rows(reports, expected):
     for row in route_rows:
         row["choice_rate"] = row["choices"] / row["opportunities"] if row["opportunities"] else None
     return dict(route_decisions=route_rows, effect_sequences=rows(effects, "card_id"),
+                nyaromon_attacks_without_player_dna=unexplained_attacks,
                 appearances=[dict(checkpoint=model, archetype=deck, games=n)
                              for (model, deck), n in sorted(appearances.items())])
 
@@ -145,6 +153,7 @@ def analyze(source, root):
     paths = [next((root / "adjacent" / f"shard{i}" / "reports").glob("checkpoint_*.json")) for i in range(4)]
     result = behavior_rows((read(path) for path in paths), expected)
     result.update(status="complete", games=len(new), changed_outcomes=len(differences),
+                  analysis_sha256=sha256(Path(__file__)),
                   replay=True, independent_strength_sample=False, automatic_promotion=False,
                   interpretation="Choice rates are conditional on the states each model reaches, not causal skill estimates.")
     out = root / "report"
@@ -173,6 +182,13 @@ def publish(source, root, run_id):
                 "It is not another independent strength sample. All 6,760 outcomes "
                 "match the original evaluation. Rates are conditional on the states "
                 "each policy reaches; they do not prove causal skill.</p>"]
+    if result["nyaromon_attacks_without_player_dna"]:
+        count = len(result["nyaromon_attacks_without_player_dna"])
+        sections.append(f"<p><strong>Rules-fidelity warning:</strong> {count} player-games "
+            "contain Nyaromon attack declarations but no DNA evolution by that player. "
+            "These are not successful DNA follow-ups. The card requires the DNA-digivolved "
+            "Digimon; investigate this existing engine behavior before further training "
+            "or interpreting Virus Busters performance as rules-faithful.</p>")
     for title, rows in [
         ("Raising evolution when available", [r for r in result["route_decisions"] if r["route"] == "digivolve_raising"]),
         ("Nyaromon DNA sequence", result["effect_sequences"]),
