@@ -184,3 +184,18 @@ interaction. It retains all four accept/decline branches and adds explicit
 checks that the inner replacement belongs to MarineBullmon and blocking occurs.
 Both repaired regressions pass without changing production engine code or the
 historical replay JSON.
+The full selection suite passes 87/87. The 12-game clone fuzz check verifies
+856 decision forks and 176 continuation-from-clone swaps. Regenerating the
+lowering-coverage artifact removes the obsolete printed-DSL fixture references;
+all 13 Tier 0 checks, including 183 verification-tool tests, pass afterward.
+
+A separate follow-up surfaced while minimizing game 850: putting MarineBullmon
+immediately after the departing Option suppresses the nested Decode prompt,
+whereas retaining the original relative order with another permanent between
+them preserves it. Source inspection identifies interacting causes: deletion
+inference treats an active attack as battle before consulting the active effect,
+and the replacement guard keys events by field slot while the owned-leave
+continuation deletes again with `OwnEffect`. A stable-identity change alone is
+not enough to establish correct event handling. This remains unresolved; the
+continuation regression is not proof that deletion-cause attribution or every
+replacement ordering is faithful.

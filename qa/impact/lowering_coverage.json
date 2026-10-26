@@ -53596,18 +53596,6 @@
     "rules_conformance::ch11_14_attack_procedure.rs::attack_does_not_end_until_all_processing_resolved": [
      "fixture"
     ],
-    "rules_conformance::ch11_14_attack_procedure.rs::attack_timings_continue_when_attacker_leaves_mid_resolution": [
-     "fixture"
-    ],
-    "rules_conformance::ch11_14_attack_procedure.rs::block_not_offered_when_attacker_left_battle_area": [
-     "fixture"
-    ],
-    "rules_conformance::ch11_14_attack_procedure.rs::unsuccessful_attack_reaches_end_of_attack_timing": [
-     "fixture"
-    ],
-    "rules_conformance::ch16_attack_keywords.rs::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack": [
-     "fixture"
-    ],
     "rules_conformance::ch18_pending_overwrite.rs::piercing_checks_security_once_however_many_instances": [
      "fixture"
     ],
@@ -53630,10 +53618,6 @@
     "lib::src/dsl_cards/expiry_map.rs::validator_keys_match_engine_table",
     "replacements::attack_cancel.rs::dsl_end_attack_step_cancels_pending_attack",
     "rules_conformance::ch11_14_attack_procedure.rs::attack_does_not_end_until_all_processing_resolved",
-    "rules_conformance::ch11_14_attack_procedure.rs::attack_timings_continue_when_attacker_leaves_mid_resolution",
-    "rules_conformance::ch11_14_attack_procedure.rs::block_not_offered_when_attacker_left_battle_area",
-    "rules_conformance::ch11_14_attack_procedure.rs::unsuccessful_attack_reaches_end_of_attack_timing",
-    "rules_conformance::ch16_attack_keywords.rs::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack",
     "rules_conformance::ch18_pending_overwrite.rs::piercing_checks_security_once_however_many_instances",
     "rules_conformance::ch18_pending_overwrite.rs::piercing_is_pending_processing_before_end_of_attack",
     "rules_conformance::ch18_pending_overwrite.rs::piercing_without_the_attacker_checks_nothing"
@@ -66325,9 +66309,6 @@
     "rules_conformance::ch11_14_attack_procedure.rs::battle_compares_dp_then_deletes_loser_then_end_of_battle": [
      "fixture"
     ],
-    "rules_conformance::ch11_14_attack_procedure.rs::block_not_offered_when_attacker_left_battle_area": [
-     "fixture"
-    ],
     "rules_conformance::ch11_14_attack_procedure.rs::non_digimon_security_card_skips_battle_and_is_trashed": [
      "fixture"
     ],
@@ -66491,9 +66472,6 @@
      "fixture"
     ],
     "rules_conformance::ch16_attack_keywords.rs::execute_kind_matches_rule": [
-     "fixture"
-    ],
-    "rules_conformance::ch16_attack_keywords.rs::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack": [
      "fixture"
     ],
     "rules_conformance::ch16_attack_keywords.rs::overclock_kind_matches_rule": [
@@ -67233,7 +67211,6 @@
     "rules_conformance::ch11_14_attack_procedure.rs::attack_does_not_end_until_all_processing_resolved",
     "rules_conformance::ch11_14_attack_procedure.rs::attack_timings_continue_when_attacker_leaves_mid_resolution",
     "rules_conformance::ch11_14_attack_procedure.rs::battle_compares_dp_then_deletes_loser_then_end_of_battle",
-    "rules_conformance::ch11_14_attack_procedure.rs::block_not_offered_when_attacker_left_battle_area",
     "rules_conformance::ch11_14_attack_procedure.rs::non_digimon_security_card_skips_battle_and_is_trashed",
     "rules_conformance::ch11_14_attack_procedure.rs::removed_target_stays_the_target_and_attack_fails",
     "rules_conformance::ch11_14_attack_procedure.rs::security_check_trigger_whose_condition_lapsed_before_activation_cannot_activate",
@@ -67289,7 +67266,6 @@
     "rules_conformance::ch16_attack_keywords.rs::blitz_attack_proceeds_after_memory_returns_to_zero_or_more",
     "rules_conformance::ch16_attack_keywords.rs::deletion_observer_activates_after_on_deletion_pauses_for_a_decision",
     "rules_conformance::ch16_attack_keywords.rs::execute_kind_matches_rule",
-    "rules_conformance::ch16_attack_keywords.rs::execute_optional_eot_attack_then_pending_deletion_at_end_of_attack",
     "rules_conformance::ch16_attack_keywords.rs::overclock_kind_matches_rule",
     "rules_conformance::ch16_attack_keywords.rs::raid_kind_matches_rule",
     "rules_conformance::ch16_attack_keywords.rs::retaliation_kind_matches_rule",
