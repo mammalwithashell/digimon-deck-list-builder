@@ -1,8 +1,11 @@
 from copy import deepcopy
+import json
 
 import pytest
 
-from tools.cloud_search.decision_telemetry_eval import behavior_rows
+from tools.cloud_search.decision_telemetry_eval import behavior_rows, checked_source
+from tools.cloud_search.final_policy_eval import schedule
+from tools.selfplay_scheduler import sha256
 
 
 def fixture():
@@ -45,3 +48,28 @@ def test_rejects_incomplete_or_misattributed_telemetry(failure):
         del reports[0]["games"][0]["route_decisions"]
     with pytest.raises(ValueError):
         behavior_rows(reports, expected)
+
+
+@pytest.mark.parametrize("failure", [None, "input", "incomplete", "failed_game"])
+def test_replay_source_requires_frozen_complete_evaluation(tmp_path, failure):
+    rows = schedule([f"deck{i}" for i in range(13)], "adjacent", 42)
+    for name in ("pool.json", "checkpoint3.zip", "checkpoint4.zip"):
+        (tmp_path / name).write_text("frozen fixture")
+    (tmp_path / "adjacent-schedule.json").write_text(json.dumps(rows))
+    files = {p.name: sha256(p) for p in tmp_path.iterdir()}
+    (tmp_path / "plan.json").write_text(json.dumps(dict(files=files)))
+    (tmp_path / "state.json").write_text(json.dumps(dict(stage="failed" if failure == "incomplete" else "complete")))
+    for shard in range(4):
+        folder = tmp_path / "adjacent" / f"shard{shard}"
+        folder.mkdir(parents=True)
+        outcomes = [dict(row, winner=1, terminal_reason="security_attack") for row in rows if row["block"] % 4 == shard]
+        if failure == "failed_game" and shard == 0:
+            outcomes[0]["terminal_reason"] = "truncated"
+        (folder / "outcomes.json").write_text(json.dumps(outcomes))
+    if failure == "input":
+        (tmp_path / "checkpoint4.zip").write_text("changed")
+    if failure:
+        with pytest.raises(ValueError):
+            checked_source(tmp_path)
+    else:
+        assert len(checked_source(tmp_path)[2]) == 6760
