@@ -85,7 +85,9 @@ def overview(st, snapshot, reports, now):
                 url = arm.get("wandb", {}).get("url", "")
                 if url.startswith("https://"):
                     st.link_button("Open W&B run", url)
-    st.caption("Checkpoint 0 is the fitted heuristic seed. Checkpoint 1 is the model after its search update. "
+    parent = snapshot.get("plan", {}).get("parent_run")
+    st.caption(("Checkpoint 0 is the frozen parent model; later checkpoints are continuation updates. " if parent else
+                "Checkpoint 0 is the fitted heuristic seed. Checkpoint 1 is the model after its search update. ") +
                "Search ETA covers game collection, not subsequent fitting and evaluation.")
 
 

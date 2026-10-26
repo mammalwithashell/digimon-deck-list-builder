@@ -17,6 +17,23 @@ from tools.cloud_search.card_eval_worker import evaluate_window
 from tools.selfplay_scheduler import atomic_json, controller_lock, sha256
 
 
+def evaluation_options(plan):
+    panels = plan.get('evaluation_panels', [('meta_validation', 'heldout_snapshot.json'),
+                                          ('pet_same_list', 'pet_evaluation_snapshot.json')])
+    for panel, filename in panels:
+        if any(not value or Path(value).name != value or '/' in value or '\\' in value
+               for value in (panel, filename)):
+            raise ValueError('Evaluation panels must use local labels and filenames')
+        if f'inputs/{filename}' not in plan['files']:
+            raise ValueError('Evaluation snapshot must be hash-bound')
+    games = plan.get('evaluation_games_per_archetype_per_anchor', 200)
+    if not panels or games <= 0 or games % 2:
+        raise ValueError('Use nonempty panels and positive even evaluation quotas')
+    return SimpleNamespace(panels=panels, games=games, games_per_archetype=games,
+                           seed=plan.get('evaluation_seed', 28261025),
+                           profile='standard_lite_v2', timeout=10800)
+
+
 def validate(root, plan):
     if plan['generations'] not in range(1, 5) or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
         raise ValueError('Unexpected campaign scope')
@@ -48,6 +65,7 @@ def validate(root, plan):
         raise ValueError('Expected prepared parent state')
     if any((root / 'generation' / f'gen{i}').exists() for i in range(1, 5)):
         raise ValueError('Existing campaign output; explicit recovery required')
+    evaluation_options(plan)
     return slots
 
 
@@ -77,14 +95,13 @@ def main():
             model = root / 'generation' / f'gen{index}' / 'model.zip'
             checkpoint = dict(path=str(model), sha256=sha256(model), step=index)
             atomic_json(out / 'status.json', dict(status='running', checkpoint=checkpoint, window=index))
-            options = SimpleNamespace(panels=[('meta_validation', 'heldout_snapshot.json'),
-                ('pet_same_list', 'pet_evaluation_snapshot.json')], games=200,
-                games_per_archetype=200, seed=28261025, profile='standard_lite_v2', timeout=10800)
+            options = evaluation_options(plan)
             result = evaluate_window(root, out, checkpoint, index, 'new_checkpoint', options)
             directory = root / 'generation' / f'gen{index}'
             # Keep monitor-compatible scalar summaries alongside full card reports.
             import shutil
-            for panel, target in [('meta_validation', 'anchored_eval.txt'), ('pet_same_list', 'pet_anchored_eval.txt')]:
+            for panel, _ in options.panels:
+                target = {'meta_validation': 'anchored_eval.txt', 'pet_same_list': 'pet_anchored_eval.txt'}.get(panel, f'{panel}.txt')
                 shutil.copyfile(out / f'window-{index:06d}' / f'{panel}.log', directory / target)
             atomic_json(out / 'status.json', dict(result, worker_status='waiting'))
             if result['status'] != 'complete':
