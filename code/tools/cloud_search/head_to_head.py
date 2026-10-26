@@ -9,9 +9,14 @@ import subprocess
 import sys
 import time
 
-from tools.selfplay_scheduler import atomic_json, controller_lock, sha256
+from tools.selfplay_scheduler import atomic_json as _atomic_json, controller_lock, sha256
 
 ARMS = ("mixed", "development")
+
+
+def atomic_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    _atomic_json(path, value)
 
 
 def read(path):
