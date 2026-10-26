@@ -69,7 +69,7 @@ Per-matchup samples are small: treat individual cell differences cautiously. No 
     return results, out
 
 
-def publish(root, results, out, run_id=None):
+def publish(root, results, out, run_id=None, run_name=None):
     import gc
     import wandb
     from digimon_gym.agents.card_eval import publish_report
@@ -77,7 +77,7 @@ def publish(root, results, out, run_id=None):
     mirrors = 'mirror' in results
     run_id = run_id or ('true-mirror-eval-20261026' if mirrors else 'final-policy-eval-20261026')
     run = wandb.init(project='digimon-rl', entity='james-peters97-mammal',
-        id=run_id, name='Checkpoint 4: true deck mirrors' if mirrors else 'Checkpoint 4: self-match matrix and vs checkpoint 3',
+        id=run_id, name=run_name or ('Checkpoint 4: true deck mirrors' if mirrors else 'Checkpoint 4: self-match matrix and vs checkpoint 3'),
         job_type='evaluation', resume='allow', config=plan)
     try:
         artifact = wandb.Artifact(run_id+'-results', type='evaluation', metadata=plan)

@@ -38,7 +38,7 @@ def checked_source(source):
     return plan, files, outcomes
 
 
-def prepare(source, root, source_commit, ci_run):
+def prepare(source, root, source_commit, ci_run, rules_fix=False):
     import digimon_engine
     from sb3_contrib import MaskablePPO
     from model_contract import validate_checkpoint
@@ -77,6 +77,8 @@ def prepare(source, root, source_commit, ci_run):
         source_outcomes_sha256={str(i): sha256(source / "adjacent" / f"shard{i}" / "outcomes.json")
                                for i in range(4)},
         replay=True, independent_strength_sample=False,
+        comparison_type="rules_fix" if rules_fix else "telemetry_only",
+        rules_fix="EX12-001 attack requires this effect's successful DNA" if rules_fix else None,
         training=False, search=False, automatic_promotion=False)
     atomic_json(root / "plan.json", plan)
     print(json.dumps(plan), flush=True)
@@ -135,6 +137,13 @@ def behavior_rows(reports, expected):
                              for (model, deck), n in sorted(appearances.items())])
 
 
+def validate_comparison(plan, result):
+    if result["changed_outcomes"] and plan.get("comparison_type", "telemetry_only") == "telemetry_only":
+        raise ValueError("Replay outcomes changed: inspect before claiming observer equivalence")
+    if plan.get("comparison_type") == "rules_fix" and result["nyaromon_attacks_without_player_dna"]:
+        raise ValueError("Nyaromon attacks without DNA remain after the rules fix")
+
+
 def analyze(source, root):
     plan = final_policy_eval.validate(root)
     if read(root / "state.json")["stage"] != "complete":
@@ -168,20 +177,24 @@ def analyze(source, root):
                 writer.writeheader()
                 writer.writerows(rows)
     print(json.dumps(result), flush=True)
-    if differences:
-        raise ValueError("Replay outcomes changed: inspect before claiming observer equivalence")
+    validate_comparison(plan, result)
     return result
 
 
 def publish(source, root, run_id):
     from tools.cloud_search.final_policy_report import render, publish as publish_report
     result = analyze(source, root)
+    plan = read(root / "plan.json")
     results, out = render(root)
     sections = ["<h2>Decision telemetry: checkpoint 3 versus 4</h2>"
                 "<p>This replays the previous schedule with new telemetry. "
-                "It is not another independent strength sample. All 6,760 outcomes "
-                "match the original evaluation. Rates are conditional on the states "
+                "It is not another independent strength sample. "
+                f"{result['changed_outcomes']} of 6,760 outcomes changed from the original evaluation. "
+                "Rates are conditional on the states "
                 "each policy reaches; they do not prove causal skill.</p>"]
+    if plan.get("comparison_type") == "rules_fix":
+        sections.append("<p>Nyaromon's DNA-success gate is fixed in this runtime. "
+                        "Changed outcomes are expected and are retained in the difference report.</p>")
     if result["nyaromon_attacks_without_player_dna"]:
         count = len(result["nyaromon_attacks_without_player_dna"])
         sections.append(f"<p><strong>Rules-fidelity warning:</strong> {count} player-games "
@@ -204,7 +217,8 @@ def publish(source, root, run_id):
         sections.append("</table></div>")
     path = out / "index.html"
     path.write_text(path.read_text(encoding="utf-8").replace("</html>", "".join(sections) + "</html>"), encoding="utf-8")
-    publish_report(root, results, out, run_id)
+    publish_report(root, results, out, run_id, run_name="Checkpoint 3 vs 4: " +
+                   ("Nyaromon rules fix" if plan.get("comparison_type") == "rules_fix" else "evolution diagnostics"))
 
 
 if __name__ == "__main__":
@@ -214,12 +228,13 @@ if __name__ == "__main__":
     parser.add_argument("--prepare", action="store_true")
     parser.add_argument("--source-commit")
     parser.add_argument("--ci-run")
+    parser.add_argument("--rules-fix", action="store_true")
     parser.add_argument("--publish", action="store_true")
     parser.add_argument("--wait", action="store_true")
     parser.add_argument("--run-id", default="decision-telemetry-eval-20261026")
     args = parser.parse_args()
     if args.prepare:
-        prepare(args.source, args.root, args.source_commit, args.ci_run)
+        prepare(args.source, args.root, args.source_commit, args.ci_run, args.rules_fix)
     elif args.publish:
         while args.wait:
             state = read(args.root / "state.json") if (args.root / "state.json").exists() else {"stage": "preparing"}

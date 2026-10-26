@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from tools.cloud_search.decision_telemetry_eval import behavior_rows, checked_source
+from tools.cloud_search.decision_telemetry_eval import behavior_rows, checked_source, validate_comparison
 from tools.cloud_search.final_policy_eval import schedule
 from tools.selfplay_scheduler import sha256
 
@@ -40,6 +40,22 @@ def test_nyaromon_attack_requires_dna_by_its_own_player_not_opponent():
     bad = behavior_rows(reports, expected)["nyaromon_attacks_without_player_dna"]
     assert len(bad) == 1
     assert bad[0]["index"] == 0 and bad[0]["checkpoint"] == 3 and bad[0]["player"] == 1
+
+
+@pytest.mark.parametrize("mode,changed,unearned,valid", [
+    ("telemetry_only", 0, [1], True),
+    ("telemetry_only", 1, [], False),
+    ("rules_fix", 1, [], True),
+    ("rules_fix", 1, [1], False),
+])
+def test_rules_fix_comparison_allows_changed_outcomes_but_not_unearned_attacks(mode, changed, unearned, valid):
+    plan = dict(comparison_type=mode)
+    result = dict(changed_outcomes=changed, nyaromon_attacks_without_player_dna=unearned)
+    if valid:
+        validate_comparison(plan, result)
+    else:
+        with pytest.raises(ValueError):
+            validate_comparison(plan, result)
 
 
 @pytest.mark.parametrize("failure", ["missing", "duplicate", "outcome", "context", "coverage", "counters"])

@@ -18,6 +18,8 @@ def main():
     parser.add_argument("--overlay", type=Path, required=True)
     parser.add_argument("--overlay-sha256", required=True)
     parser.add_argument("--overlay-commit", required=True)
+    parser.add_argument("--run-id", default="decision-telemetry-eval-20261026")
+    parser.add_argument("--rules-fix", action="store_true")
     args = parser.parse_args()
     if "@sha256:" not in args.image:
         raise ValueError("An immutable image is required")
@@ -32,7 +34,9 @@ def main():
         if status in ("active", "activating", "deactivating"):
             raise ValueError(f"Training service is still running: {name}")
     base = Path("/opt/digimon-search")
-    root = base / "decision-telemetry-eval-20261026"
+    if not args.run_id or any(c not in "abcdefghijklmnopqrstuvwxyz0123456789-" for c in args.run_id):
+        raise ValueError("Run id must be a simple lowercase directory name")
+    root = base / args.run_id
     source = base / "final-policy-eval-20261026"
     root.mkdir(exist_ok=False)
     (root / "deployment.json").write_text(json.dumps(vars(args), default=str, indent=2))
@@ -45,19 +49,19 @@ def main():
         "--mount", f"type=bind,src={root},dst=/work", args.image,
         "python", "-m", "tools.cloud_search.decision_telemetry_eval",
         "--prepare", "--source", "/source", "--root", "/work/evaluation",
-        "--source-commit", args.commit, "--ci-run", args.ci_run])
+        "--source-commit", args.commit, "--ci-run", args.ci_run] + (["--rules-fix"] if args.rules_fix else []))
     evaluation_mount = f"type=bind,src={root / 'evaluation'},dst=/evaluation"
-    evaluate = common + ["--name", "digimon-decision-telemetry-eval", "--network=none",
+    evaluate = common + ["--name", f"digimon-{args.run_id}-eval", "--network=none",
         "--memory=16g", "--cpus=4", "--stop-timeout=120", "--mount", evaluation_mount,
         args.image, "python", "-m", "tools.cloud_search.final_policy_eval", "--root", "/evaluation"]
-    publish = common + ["--name", "digimon-decision-telemetry-report", "--memory=4g", "--cpus=1",
+    publish = common + ["--name", f"digimon-{args.run_id}-report", "--memory=4g", "--cpus=1",
         "--env-file", str(base / "monitor/credentials.env"), "--mount", evaluation_mount,
         args.image, "python", "-m", "tools.cloud_search.decision_telemetry_eval",
         "--source", "/source", "--root", "/evaluation", "--publish", "--wait",
-        "--run-id", "decision-telemetry-eval-20261026"]
+        "--run-id", args.run_id]
     units = []
     for suffix, command in [("eval", evaluate), ("report", publish)]:
-        name = f"digimon-decision-telemetry-{suffix}.service"
+        name = f"digimon-{args.run_id}-{suffix}.service"
         path = Path("/etc/systemd/system") / name
         # Fixed no-space paths; no shell interpretation or credential contents.
         text = "\n".join(["[Unit]", "Description=Digimon checkpoint decision diagnostics",

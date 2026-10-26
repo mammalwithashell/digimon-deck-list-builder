@@ -2552,14 +2552,28 @@ fn run_may_dna_result_selection_step(
         )
         .unwrap_or(state.cost as i32)
     };
-    ctx.effect_initiated_dna_digivolve(
+    let result = ctx.effect_initiated_dna_digivolve(
         state.anchor,
         state.partner,
         card,
         charge,
         state.ignore_requirements,
     );
-    run_outer_conts(ctx.game, state.outer_conts);
+    let mut continuations = state.outer_conts;
+    if let Some(result) = result {
+        // Only the initiating clause earns the completed-evolution receipt.
+        // A selected target or an unavailable/failed DNA operation is not success.
+        // Match the synchronous EffectInitiatedDnaDigivolve lowering so guarded
+        // follow-ups also work across these cloneable partner/result prompts.
+        for continuation in &mut continuations {
+            if continuation.source_card == state.prov.source_card
+                && continuation.player == state.prov.controller
+            {
+                continuation.bindings.record_digivolved(result);
+            }
+        }
+    }
+    run_outer_conts(ctx.game, continuations);
 }
 
 /// Executor for a `use_option_from_hand` selection (mirrors
