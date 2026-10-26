@@ -17586,12 +17586,14 @@
     "EX12-001": {
       "path": "ex12/EX12-001.yaml",
       "predicates": [
+        "effect_digivolved_any_digimon",
         "source_permanent_trait_has"
       ],
       "timings": [
         "end_of_your_turn"
       ],
       "verbs": [
+        "if",
         "may_attack_now",
         "may_dna_digivolve_now"
       ]
@@ -32069,6 +32071,7 @@
     ],
     "effect_digivolved_any_digimon": [
       "BT26-085",
+      "EX12-001",
       "EX13-004",
       "EX5-070"
     ],
@@ -43243,6 +43246,7 @@
       "EX11-046",
       "EX11-060",
       "EX11-065",
+      "EX12-001",
       "EX12-002",
       "EX12-005",
       "EX12-006",

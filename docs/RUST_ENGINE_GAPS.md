@@ -1,5 +1,25 @@
 # Rust Engine Gaps
 
+## End-of-turn DNA success receipts [G-DSL-EOT-DNA-SUCCESS-RECEIPT] — resolved, focused verification (2026-10-26)
+
+The cloneable `may_dna_digivolve_now` partner/result chain did not publish the
+initiating clause's completed-evolution receipt. EX12-001 also authored its
+attack as an unconditional next step, allowing an attack when DNA had no legal
+target or its result disappeared before commitment. Both cases were reproduced
+by failing behavioral tests and a frozen cloud game (seed 44522532).
+
+The result-selection executor now records success only after the DNA primitive
+returns a committed result, and only in continuations belonging to the same
+source card/controller. EX12-001 gates its optional attack with the existing
+`effect_digivolved_any_digimon` predicate; its source resolves to the actual
+carrier after field compaction. No new actions, tensors or automatic choices.
+
+Eight Nyaromon behavioral tests, 25 event-emission tests and four DNA cost/recipe
+controls pass. Coverage includes unavailable target/partner, declines at both
+prompts, invalidated target, rejected commit, successful attack, and cloning
+with a lower-index partner. Full corrected cloud evaluation is recorded in the
+training research handoff when complete; this is not a whole-pool oracle claim.
+
 ## Face-down source characteristic filters [G-ENGINE-FACE-DOWN-SOURCE-INFORMATION] — fix authored, verification pending (2026-10-24)
 
 CR 4-7-9 removes card information from face-down cards underneath cards;

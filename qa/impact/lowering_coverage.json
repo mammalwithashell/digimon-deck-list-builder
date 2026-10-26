@@ -20839,8 +20839,10 @@
    "behaviourally_covered": true,
    "clause_count": 1,
    "constructs": [
+    "verb:if",
     "verb:may_attack_now",
     "verb:may_dna_digivolve_now",
+    "predicate:effect_digivolved_any_digimon",
     "predicate:source_permanent_trait_has",
     "timing:end_of_your_turn"
    ],
