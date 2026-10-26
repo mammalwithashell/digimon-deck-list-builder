@@ -57,3 +57,56 @@ frozen-input guards, complete source outcomes and telemetry coverage. The CI
 image smoke verified native event version 2 and the new decision-context API.
 The deployed image passed preparation and all four workers began completing
 games. At launch, no training container or training controller was active.
+
+## Completed results and fidelity finding
+
+All 6,760 games finished in 331 seconds (about 1,225 games/minute). Every outcome
+matched the original evaluation, with no missing or incomplete games. Checkpoint
+4's win score remains 50.473%; this replay adds measurements, not statistical
+strength evidence. The runtime therefore preserved sampled game behavior.
+
+| Measurement | Checkpoint 3 | Checkpoint 4 |
+| --- | ---: | ---: |
+| Raising choices / legal decision opportunities | 25,415 / 33,509 (75.85%) | 25,342 / 33,477 (75.70%) |
+| Virus Busters appearances | 520 | 520 |
+| Nyaromon legal sequence opportunities | 20 | 16 |
+| Nyaromon completed DNA evolutions | 19 | 12 |
+| All resolved Virus Busters DNA evolutions | 61 | 45 |
+| VB player-games with Nyaromon attacks but no DNA by that player | 44 | 54 |
+
+Raising behavior is essentially stable by this aggregate descriptive measure.
+The Nyaromon DNA samples are small and do not establish regression or a need to
+reward every available evolution. Critically, the final row is an existing
+rules-fidelity problem, not evidence of successful DNA follow-up play.
+
+The diagnostics found 109 Nyaromon-attributed attack declarations across 98
+player-games with no DNA evolution by that player anywhere in the game. This
+is a conservative detectable subset; attacks following an unrelated earlier
+DNA evolution are not flagged by this check.
+
+Replayed game index 480, seed 44522532, reproduces the problem. At step 53,
+player 2 (checkpoint 3, Virus Busters) receives EX12-001's follow-up attack
+prompt while `p2_dna_digivolutions` is zero, selects action 159, and declares
+an attack with EX12-032 WereGarurumon. The only DNA event in the entire game
+belongs to player 1 and occurs later, at step 79. The trace is saved in
+`report/nyaromon-trace-480.json`.
+
+Printed image `EX12-001.webp` explicitly says the DNA-digivolved Digimon may
+attack. DCGO's `EX12/Yellow/EX12_001.cs` puts that attack inside the DNA operation's
+`SuccessProcess`. Our YAML instead places an unconditional `may_attack_now`
+after `may_dna_digivolve_now`; the latter returns without a prompt when there
+is no legal partner/target, allowing the following attack step to execute.
+No gameplay fix was applied during this evaluation, preserving its provenance.
+
+The analysis follow-up, commit `cc60e86ed`, adds a report warning and retains
+the affected game indices. Its deployed analyzer SHA-256 is
+`8cb31f4e5d82e1a72feb1b70d21aacc94613e430ce5ab665d641411590c229af`;
+the original preparation overlay and plan remain unchanged. The revised HTML,
+raw warning rows, and reproduction trace are published to the same W&B run as
+an updated result artifact. All 19 focused tests pass, including a check that
+an opponent's DNA cannot justify the affected player's Nyaromon attack.
+
+Next priority: gate the attack on this effect's successful DNA result and test
+unavailable/declined DNA plus result identity, then repeat the evaluation on the
+fixed engine before choosing another training run. Do not treat the present
+Virus Busters scores as rules-faithful. Training remains stopped.
