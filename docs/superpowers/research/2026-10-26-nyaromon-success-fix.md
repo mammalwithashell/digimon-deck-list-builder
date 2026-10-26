@@ -46,8 +46,41 @@ gate rejects remaining Nyaromon attack declarations in games where that player
 never DNA evolved. This conservative audit complements the focused native tests;
 it does not certify every possible timing interaction.
 
-Planned root: `/opt/digimon-search/nyaromon-fixed-eval-20261026/evaluation`.
-Planned W&B run: `james-peters97-mammal/digimon-rl/nyaromon-fixed-eval-20261026`.
+Root: `/opt/digimon-search/nyaromon-fixed-eval-20261026/evaluation`.
+W&B run: `james-peters97-mammal/digimon-rl/nyaromon-fixed-eval-20261026`.
 The deployment verifies the immutable image label and frozen inputs, refuses
 overwrites, checks that training services are inactive, and starts only bounded
-evaluation/report services. Runtime results are recorded below after completion.
+evaluation/report services.
+
+## Completed cloud verification
+
+CI build 40370197866 passed the native/Python smoke and published immutable image
+`ghcr.io/mammalwithashell/digimon-search-cpu@sha256:705f2c4b86c5458a2df7f09ded1e1d9cc49160f65bca442cd187b0b1480f0711`.
+The deployed diagnostic overlay is from the same source commit, SHA-256
+`8a4d2d6e2240a9dddba0636c897e6a1e47d7f6c57e86638b7ea537053a333bfc`.
+
+Preflight replay of original game 480 (seed 44522532) completed in 94 decisions,
+instead of 96, without offering Nyaromon's unsupported attack. Its trace is
+retained in `report/fixed-game480.json` alongside the full evaluation artifacts.
+
+All 6,760 scheduled games then completed with no incomplete outcomes. The audit
+found **zero Nyaromon attacks in games without DNA by that player**, versus 109
+declarations across 98 player-games on the old engine. Legitimate sequences remain:
+
+| Virus Busters metric (520 appearances/model) | Checkpoint 3 | Checkpoint 4 |
+| --- | ---: | ---: |
+| Legal Nyaromon sequence opportunities | 19 | 14 |
+| Completed Nyaromon DNA evolutions | 18 | 11 |
+| Follow-up attack offers | 18 | 11 |
+| Accepted and declared follow-up attacks | 18 | 11 |
+
+Seventeen game outcomes changed, all involving Virus Busters. No matchup without
+Virus Busters changed outcome. The fixed-engine checkpoint-4 score is 3,414 wins
+and 3,346 losses, **50.503%**, with paired-block 95% interval **49.689–51.346%**.
+This still does not establish improvement over checkpoint 3. Raising decision
+choice rates remain similar: 25,442/33,557 (75.82%) for checkpoint 3 and
+25,369/33,519 (75.69%) for checkpoint 4.
+
+These are the existing frozen models evaluated under corrected rules. They were
+not retrained, and the repeated schedule is not another independent strength
+sample. Training remains stopped; no model promotion was performed.
