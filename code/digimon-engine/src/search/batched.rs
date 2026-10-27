@@ -60,9 +60,9 @@ impl Tree {
         self.arena[parent].edges[edge].child = Some(child);
     }
 
-    fn next_request(&mut self, mcts: &Mcts<'_>) -> Option<EvalRequest> {
-        if let Some(Pending::Root(prepared)) = &self.pending {
-            return Some(mcts.node_request(prepared, &self.config));
+    fn next_request(&mut self, mcts: &Mcts<'_>) -> Option<Vec<EvalRequest>> {
+        if let Some(Pending::Root(prepared)) = &mut self.pending {
+            return Some(mcts.node_requests(prepared));
         }
         assert!(
             self.pending.is_none(),
@@ -96,7 +96,7 @@ impl Tree {
                         mover: node.mover,
                         path,
                     });
-                    return Some(request);
+                    return Some(vec![request]);
                 }
                 let edge = select_edge(&self.arena[cur], self.config.c_puct);
                 path.push((cur, edge));
@@ -106,7 +106,7 @@ impl Tree {
                         let parent = &self.arena[cur];
                         let mut game = measure("clone", || parent.game.clone());
                         measure("step", || {
-                            game.decode_action(parent.edges[edge].action, parent.mover)
+                            apply_plan(&mut game, parent.mover, &parent.edges[edge].plan)
                         });
                         match mcts.prepare_node(game, true, &self.config) {
                             PreparedNode::Ready(node, value) => {
@@ -115,8 +115,8 @@ impl Tree {
                                 self.backup(&path, value, mover);
                                 break;
                             }
-                            prepared => {
-                                let request = mcts.node_request(&prepared, &self.config);
+                            mut prepared => {
+                                let request = mcts.node_requests(&mut prepared);
                                 self.pending = Some(Pending::Expand {
                                     prepared,
                                     parent: cur,
@@ -133,10 +133,10 @@ impl Tree {
         None
     }
 
-    fn accept(&mut self, mcts: &Mcts<'_>, evaluation: &Evaluation) {
+    fn accept(&mut self, mcts: &Mcts<'_>, evaluations: &[Evaluation]) {
         match self.pending.take().expect("unsolicited neural evaluation") {
             Pending::Root(prepared) => {
-                let (mut node, _) = mcts.finish_node(prepared, evaluation);
+                let (mut node, _) = mcts.finish_node(prepared, evaluations);
                 if self.config.dirichlet_epsilon > 0.0 && node.edges.len() > 1 {
                     let noise = sample_dirichlet(
                         &mut self.rng,
@@ -156,35 +156,26 @@ impl Tree {
                 edge,
                 path,
             } => {
-                let (node, value) = mcts.finish_node(prepared, evaluation);
+                let (node, value) = mcts.finish_node(prepared, evaluations);
                 let mover = node.mover;
                 self.attach(parent, edge, node);
                 self.backup(&path, value, mover);
             }
-            Pending::Depth { mover, path } => self.backup(&path, evaluation.value, mover),
+            Pending::Depth { mover, path } => self.backup(&path, evaluations[0].value, mover),
         }
     }
 
     fn result(&self) -> SearchResult {
         let root = &self.arena[0];
-        if root.terminal_value.is_some() || root.edges.is_empty() {
-            return SearchResult {
-                root_visits: Vec::new(),
-                root_q: Vec::new(),
-                root_value: root.terminal_value.unwrap_or(0.),
-                simulations_run: 0,
-            };
-        }
         let total_visits: u32 = root.edges.iter().map(|e| e.visits).sum();
         let total_w: f32 = root.edges.iter().map(|e| e.w).sum();
-        SearchResult {
-            root_visits: root.edges.iter().map(|e| (e.action, e.visits)).collect(),
-            root_q: root
-                .edges
+        SearchResult::from_plans(
+            root.edges
                 .iter()
                 .map(|e| {
                     (
-                        e.action,
+                        e.plan.clone(),
+                        e.visits,
                         if e.visits > 0 {
                             e.w / e.visits as f32
                         } else {
@@ -193,13 +184,15 @@ impl Tree {
                     )
                 })
                 .collect(),
-            root_value: if total_visits > 0 {
-                total_w / total_visits as f32
-            } else {
-                0.
-            },
-            simulations_run: self.completed,
-        }
+            root.terminal_value.unwrap_or_else(|| {
+                if total_visits > 0 {
+                    total_w / total_visits as f32
+                } else {
+                    0.
+                }
+            }),
+            self.completed,
+        )
     }
 }
 
@@ -226,21 +219,22 @@ impl Mcts<'_> {
             let mut slots = Vec::new();
             for (slot, tree) in trees.iter_mut().enumerate() {
                 if let Some(request) = tree.next_request(self) {
-                    slots.push(slot);
-                    requests.push(request);
+                    let start = requests.len();
+                    requests.extend(request);
+                    slots.push((slot, start..requests.len()));
                 }
             }
             if requests.is_empty() {
                 break;
             }
-            let evaluations = evaluator.evaluate_batch(&requests);
+            let evaluations = evaluate_requests(&requests, evaluator, roots.len());
             assert_eq!(
                 evaluations.len(),
                 requests.len(),
                 "evaluator returned wrong batch size"
             );
-            for (slot, evaluation) in slots.into_iter().zip(&evaluations) {
-                trees[slot].accept(self, evaluation);
+            for (slot, range) in slots {
+                trees[slot].accept(self, &evaluations[range]);
             }
         }
         trees.iter().map(Tree::result).collect()

@@ -1096,6 +1096,23 @@ superseded as a gate).
 
 ## Independent-world search evaluation batching
 
+Physical card menus are searched as complete commitments across all pages.
+Serial MCTS, batched PIMC and IS-MCTS evaluate each permitted page and expand
+routes ending in a card commit or a legal decline. Navigation does not create
+game-tree edges or consume additional simulations. The native self-play actor
+selects a complete route once, validates each transport action against the live
+mask, and records conditional visit targets on every non-forced page along it.
+Search consumers must execute `SearchResult::best_plan()` (or sample
+`root_plans` by visits) rather than re-searching after page navigation.
+`root_visits` and `root_q` are projections for the current page, not complete
+card-choice rankings. The public action IDs, tensor layout and model contracts
+are unchanged; all physical candidates remain available.
+
+The generation-3 Proximamon mirror failure (game 398, seed
+5215200225685576850, 2026-10-27) demonstrated why this matters: fresh searches
+alternated pages for 991 decisions. Raising the decision cap cannot repair that
+cycle. Preserve the source shards and checkpoint when replacing an affected run.
+
 Native search self-play and `run_selfplay_generation.py` accept
 `--eval-batch-size` (default 4). This batches the next required evaluation of
 independent PIMC world trees; each tree finishes its own evaluation and backup

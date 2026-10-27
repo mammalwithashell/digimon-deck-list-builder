@@ -107,6 +107,36 @@ def test_campaign_accepts_validated_parent(campaign):
     assert len(validate(*campaign)) == 12
 
 
+def test_search_repair_keeps_logical_generation_and_requires_baseline_receipt(campaign):
+    root, plan = campaign
+    parent = root / 'generation/gen2'
+    parent.mkdir()
+    for suffix in ('zip', 'onnx'):
+        old = f'generation/gen0/model.{suffix}'
+        new = f'generation/gen2/model.{suffix}'
+        (root / new).write_bytes((root / old).read_bytes())
+        plan['files'][new] = sha256(root / new)
+    (root / 'generation/state.json').write_text(json.dumps(dict(next_gen=3,
+        prev=dict(model_zip=str(parent / 'model.zip'), model_onnx=str(parent / 'model.onnx')))))
+    plan.update(first_generation=3, reuse_parent_evaluation=True,
+                evaluation_panels=[['heldout', 'heldout_snapshot.json']],
+                evaluation_seed=7, evaluation_games_per_archetype_per_anchor=200)
+    with pytest.raises(ValueError, match='hash-bound receipt'):
+        validate(root, plan)
+    receipt = dict(status='complete', checkpoint_sha256=sha256(parent / 'model.zip'),
+        evaluation_panels=plan['evaluation_panels'], evaluation_seed=7,
+        games_per_archetype=200, policy_evaluation_unchanged=True)
+    path = root / 'validation/parent-evaluation.json'
+    path.write_text(json.dumps(receipt))
+    plan['files']['validation/parent-evaluation.json'] = sha256(path)
+    assert len(validate(root, plan)) == 12
+    receipt['checkpoint_sha256'] = 'wrong'
+    path.write_text(json.dumps(receipt))
+    plan['files']['validation/parent-evaluation.json'] = sha256(path)
+    with pytest.raises(ValueError, match='reuse evidence differs'):
+        validate(root, plan)
+
+
 def test_combined_evaluation_requires_hash_bound_snapshot(campaign):
     root, plan = campaign
     plan.update(evaluation_panels=[['combined_validation', 'combined_snapshot.json']], evaluation_seed=7)
