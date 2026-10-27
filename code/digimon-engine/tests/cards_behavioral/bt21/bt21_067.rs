@@ -2,7 +2,7 @@
 //! Traits: Beast / ADVENTURE. Attribute: Vaccine.
 //!
 //! Printed (official observation / data/card_bundles/BT21-067.md):
-//!   Standard digivolve: Purple Lv.3 / cost 2   (cards.json drifts: says 3)
+//!   Standard digivolve: Purple Lv.3 / cost 2   (cards.json ALSO carries a stale cost-3 circle — open data drift)
 //!   [Digivolve] Lv.3 w/[Gabumon] in name or w/[ADVENTURE] trait: Cost 2
 //!   [Security] At the end of the battle, play this card without paying the cost.
 //!   [On Play] [When Digivolving] You may return 1 Digimon card with the
@@ -76,20 +76,10 @@ fn flat(p: &CompiledPredicate) -> Vec<&CompiledPredicate> {
 // ─── Structural ──────────────────────────────────────────────────────────────
 
 #[test]
-fn bt21_067_alt_paths_cover_printed_purple_cost_2_and_gabumon_or_adventure() {
+fn bt21_067_alt_path_gabumon_or_adventure_lv3_cost_2() {
     let r = base().start();
     let card = r.compiled_card(CARD_ID).expect("compiled");
     assert_eq!(card.color, vec![CompiledColor::Purple]);
-    // Printed standard circle: Purple Lv.3 / cost 2 (official DB).
-    assert!(card.alt_paths.iter().any(|p| {
-        p.kind == CompiledAltPathKind::Digivolve
-            && matches!(p.cost, Some(CompiledCost::Literal(2)))
-            && p.from.as_ref().is_some_and(|f| {
-                let ps = flat(f);
-                ps.iter().any(|q| q.level_eq == Some(3))
-                    && ps.iter().any(|q| q.color_is == Some(CompiledColor::Purple))
-            })
-    }));
     // Special condition: Lv.3 with [Gabumon] in name OR [ADVENTURE] trait.
     assert!(card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
@@ -160,10 +150,32 @@ fn bt21_067_on_play_non_adventure_or_non_digimon_not_selectable() {
     let mut r = base().hand(0, &[CARD_ID]).start();
     push_trash(&mut r, "NON-ADV");
     push_trash(&mut r, "ADV-OPT");
+    push_trash(&mut r, "ADV-DIGI");
     r.play(0, 0).expect("play");
-    if let Some(sel) = r.pending_selection() {
-        assert!(sel.valid_action_ids.iter().all(|a| *a == PASS));
-    }
+    let view = r
+        .pending_selection_view()
+        .expect("the trash pick must install (ADV-DIGI is eligible)");
+    let picks: Vec<_> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|a| *a != PASS)
+        .collect();
+    assert_eq!(
+        picks.len(),
+        1,
+        "only the ADVENTURE Digimon is offered; the non-ADVENTURE Digimon and the ADVENTURE Option are not"
+    );
+    r.execute_action(view.selecting_player, picks[0]).expect("pick");
+    r.auto_resolve().expect("finish");
+    let in_hand = |id: &str| {
+        r.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == id)
+    };
+    assert!(in_hand("ADV-DIGI"));
+    assert!(!in_hand("NON-ADV") && !in_hand("ADV-OPT"));
 }
 
 #[test]
@@ -224,4 +236,62 @@ fn bt21_067_inherited_when_attacking_draws_then_trashes_one() {
     r.game.drain_effect_queue();
     let _ = r.auto_resolve();
     assert_eq!(r.deck_size(0), deck_before - 1, "only once per turn");
+}
+
+// ─── Production evo_costs regression (BLOCKED on data correction) ────────────
+
+/// Using PRODUCTION card data (data/cards.json), digivolving BT21-067 from a
+/// plain Purple Lv.3 base must cost exactly 2 with no cost-choice prompt: the
+/// official DB / card image print a single Purple Lv.3 circle, cost 2.
+///
+/// BLOCKED: data/card_overrides.json (frozen legacy input) adds a second
+/// Purple Lv.3 / cost-3 circle that flows into data/cards.json, so the engine
+/// installs a 2-vs-3 cost-choice prompt. The fix is a data/card_corrections.json
+/// evo_costs entry citing an official observation for BT21-067, which is not
+/// committed under data/card_sources/observations/official/ yet. Un-ignore
+/// once the corrected cards.json lands.
+#[test]
+#[ignore = "BLOCKED: stale Purple Lv.3 cost-3 circle in data/cards.json (card_overrides.json); needs card_corrections entry + official observation"]
+fn bt21_067_production_purple_lv3_route_costs_exactly_2_with_no_choice() {
+    use digimon_engine::enums::{CardColor, PlaySource};
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/cards.json");
+    let prod = CardData::load_from_file(&path).expect("load data/cards.json");
+    let card = prod.get(CARD_ID).expect("BT21-067 in cards.json").clone();
+    let purple_lv3_circles: Vec<_> = card
+        .evo_costs
+        .iter()
+        .filter(|e| e.level == 3 && e.card_color == CardColor::Purple as u8)
+        .map(|e| e.memory_cost)
+        .collect();
+    assert_eq!(
+        purple_lv3_circles,
+        vec![2],
+        "production data must carry exactly one Purple Lv.3 circle, cost 2"
+    );
+
+    let mut purple_base = digimon("PURPLE-L3", &["Beast"]);
+    purple_base.colors = vec![CardColor::Purple];
+    let mut r = DebugRunner::builder()
+        .add_card(card) // production CardData wins over the compiled-card default
+        .dsl_card(CARD_ID)
+        .expect("BT21-067 YAML in embedded pack")
+        .add_card(purple_base)
+        .add_card(make_test_card("PAD", "PAD"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["PAD"; 5])
+        .deck(1, &["PAD"; 5])
+        .memory(10)
+        .start();
+    let base = r.place_on_field(0, "PURPLE-L3", Some(0));
+    r.game.enter_main_phase();
+    let mem = r.memory();
+    let ok = r
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve);
+    assert!(
+        r.pending_selection().is_none(),
+        "no digivolution cost-choice prompt may be offered (single printed cost)"
+    );
+    assert!(ok, "digivolve succeeds");
+    assert_eq!(mem - r.memory(), 2, "pays the printed cost 2");
 }

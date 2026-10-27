@@ -11,11 +11,14 @@
 #   Inherited: [When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in
 #     your hand.
 #
-# DATA DRIFT: data/cards.json (and the generated cards/bt21/BT21-067.json)
-# give the standard Purple Lv.3 circle memory_cost 3; the official DB says 2.
-# The printed circle is authored below as an explicit alt-path so the printed
-# cost is reachable; the stale cost-3 circle remains until the generated data
-# is corrected (reported, not hand-edited).
+# Standard circle (Purple Lv.3 / 2) comes from data/cards.json evo_costs; no
+# alt_paths entry is authored for it.
+# DATA DRIFT (open): data/card_overrides.json (frozen legacy input) carries an
+# extra Purple Lv.3 / cost-3 circle alongside the printed cost-2 one, and it
+# flows into data/cards.json, so production offers an illegal 2-vs-3 cost
+# choice. Needs a data/card_corrections.json evo_costs entry; blocked on a
+# committed official observation for BT21-067 (none under
+# data/card_sources/observations/official/).
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Purple/BT21_067.cs
 #   - Alt digivolve: (ContainsCardName("Gabumon") || EqualsTraits("ADVENTURE"))
@@ -37,10 +40,6 @@ traits: [Beast, ADVENTURE]
 attribute: Vaccine
 
 alt_paths:
-  # Printed standard circle (official): Purple Lv.3 / Cost 2.
-  - kind: digivolve
-    from: { level_eq: 3, color_is: purple }
-    cost: 2
   # [Digivolve] Lv.3 w/[Gabumon] in name or w/[ADVENTURE] trait: Cost 2.
   - kind: digivolve
     from:

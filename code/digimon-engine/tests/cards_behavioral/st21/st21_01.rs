@@ -140,15 +140,24 @@ fn st21_01_non_adventure_and_tamer_cards_are_not_offered() {
     let host = r.place_stack(0, &[CARD_ID, "HOST"]);
     push_trash(&mut r, "NON-ADV");
     push_trash(&mut r, "ADV-TAMER");
+    push_trash(&mut r, "ADV-DIGI");
 
     r.game
         .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
-    if let Some(view) = r.pending_selection_view() {
-        assert!(
-            view.valid_action_ids.iter().all(|a| *a == PASS),
-            "neither a non-ADVENTURE Digimon nor an ADVENTURE Tamer may be returned"
-        );
-    }
+    let view = r
+        .pending_selection_view()
+        .expect("the trash pick must install (ADV-DIGI is eligible)");
+    let picks: Vec<_> = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|a| *a != PASS)
+        .collect();
+    assert_eq!(
+        picks.len(),
+        1,
+        "neither a non-ADVENTURE Digimon nor an ADVENTURE Tamer may be returned"
+    );
 }
 
 #[test]

@@ -2,7 +2,7 @@
 //! Traits: Cyborg / ADVENTURE. Attribute: Data.
 //!
 //! Printed (official observation / data/card_bundles/ST21-11.md):
-//!   Standard digivolve: Purple Lv.5 / 4, Blue Lv.5 / 4  (cards.json drops Blue)
+//!   Standard digivolve: Purple Lv.5 / 4, Blue Lv.5 / 4  (from cards.json evo_costs)
 //!   [Digivolve] Lv.5 w/[ADVENTURE] trait: Cost 3
 //!   {Hand} [Counter] <Blast Digivolve>
 //!   [On Play] [When Digivolving] Return 1 of your opponent's level 4 or lower
@@ -106,15 +106,6 @@ fn st21_11_stats_overflow_and_alt_paths() {
         .alt_paths
         .iter()
         .any(|p| p.kind == CompiledAltPathKind::BurstDigivolve));
-    assert!(card.alt_paths.iter().any(|p| {
-        p.kind == CompiledAltPathKind::Digivolve
-            && matches!(p.cost, Some(CompiledCost::Literal(4)))
-            && p.from.as_ref().is_some_and(|f| {
-                let ps = flat(f);
-                ps.iter().any(|q| q.level_eq == Some(5))
-                    && ps.iter().any(|q| q.color_is == Some(CompiledColor::Blue))
-            })
-    }), "printed blue Lv.5 / 4 circle (dropped by cards.json) must be authored");
     assert!(card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && matches!(p.cost, Some(CompiledCost::Literal(3)))
@@ -277,4 +268,51 @@ fn st21_11_when_attacking_decline_plays_nothing() {
         r.execute_action(p, PASS).expect("PASS legal ('you may')");
     }
     assert!(!on_field(&r, "TRASH-L4"));
+}
+
+// ─── {Hand}[Counter] <Blast Digivolve> ───────────────────────────────────────
+
+/// When the opponent attacks, the Counter window offers digivolving ST21-11
+/// from hand onto an eligible Lv.5 [ADVENTURE] Digimon; taking it digivolves
+/// for free (no memory paid). DebugRunner DSL cards carry no printed
+/// evo_costs, so the eligible route here is the Lv.5 [ADVENTURE] alt-path.
+#[test]
+fn st21_11_blast_digivolve_from_hand_in_counter_window_is_free() {
+    use digimon_engine::action::space::encode_digivolve;
+    use digimon_engine::combat::AttackResult;
+    use digimon_engine::enums::GamePhase;
+
+    let mut adv5 = digimon("ADV-L5", 5);
+    adv5.traits = vec!["ADVENTURE".to_string()];
+    let mut r = base()
+        .add_card(adv5)
+        .add_card(digimon("ATK", 6))
+        .hand(1, &[CARD_ID])
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let target = r.place_on_field(1, "ADV-L5", Some(0));
+    let mem_before = r.memory();
+
+    let result = r.attack_digimon(atk, target, false);
+    assert_eq!(result, AttackResult::InProgress);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    let view = r.pending_selection_view().expect("Counter window installs");
+    assert_eq!(view.selecting_player, 1, "the defender decides");
+    assert!(view.is_optional, "Blast Digivolve is a 'may'");
+    let blast = encode_digivolve(0, target.index as u16);
+    assert!(
+        view.valid_action_ids.contains(&blast),
+        "Blast Digivolve (hand 0 → ADV-L5) must be offered; got {:?}",
+        view.valid_action_ids
+    );
+    r.execute_action(1, blast).expect("take Blast Digivolve");
+
+    assert_eq!(
+        r.game.players[1].battle_area[target.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        CARD_ID,
+        "ST21-11 digivolved onto the attacked Digimon"
+    );
+    assert_eq!(r.memory(), mem_before, "Blast Digivolve pays no cost");
 }

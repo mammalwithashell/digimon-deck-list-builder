@@ -190,3 +190,44 @@ fn st20_07_baseline_without_tentomon_allows_digivolution_cost_reductions() {
         "digivolution cost reducer should apply normally without Tentomon"
     );
 }
+
+/// The gate is `[Opponent's Turn]` and targets the opponent only: on
+/// Tentomon's owner's OWN turn, the owner's digivolution cost reductions
+/// apply normally (EVO cost 4 - 3 = 1).
+#[test]
+fn st20_07_owner_own_turn_reductions_are_unaffected() {
+    let mut registry = digimon_engine::cards::build_registry();
+    registry.insert("REDUCER", Arc::new(FieldCostReducer));
+    let mut runner = DebugRunner::builder()
+        .with_registry(registry)
+        .dsl_card("ST20-07")
+        .expect("ST20-07 found in embedded DSL pack")
+        .add_card(make_level_digimon("BASE", 3))
+        .add_card(make_evo_digimon("EVO", 4, 3, 4))
+        .add_card(make_level_digimon("REDUCER", 4))
+        .add_card(make_test_card("FILLER", "FILLER"))
+        .hand(0, &["EVO"])
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "ST20-07", Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    runner.place_on_field(0, "REDUCER", Some(0));
+    runner.game.enter_main_phase();
+    runner.game.set_memory(10);
+    runner.game.tick_declarative_effects();
+    assert_eq!(runner.turn_player(), 0, "it is Tentomon's owner's turn");
+
+    let memory_before = runner.memory();
+    let digivolved = runner
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve);
+    assert!(digivolved, "owner's digivolve is legal");
+    assert_eq!(
+        memory_before - runner.memory(),
+        1,
+        "on its owner's own turn Tentomon's gate is off: the -3 reducer applies"
+    );
+}

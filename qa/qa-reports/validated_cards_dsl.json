@@ -15963,7 +15963,7 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/st20/ST20-07.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_07.rs",
-      "test_count": 3,
+      "test_count": 4,
       "patterns": [
         "FLOOD-GATE"
       ],
@@ -16027,14 +16027,14 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/st21/ST21-11.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_11.rs",
-      "test_count": 8,
+      "test_count": 9,
       "patterns": [
         "BLAST-DIGIVOLVE",
         "TAMER-COLOR-FORMULA",
         "RETURN-TO-DECK-BOTTOM",
         "PLAY-FROM-TRASH"
       ],
-      "notes": "EX13 Adventure lane C: Blast Digivolve marker; ace_overflow -4; [OP][WD] bottom-deck opp Digimon level <= 4 + floor(tamer colors/2) (floor_div((8+c),2)); [WA][OPT] may play Lv.4- Digimon from trash free. Official blue Lv.5/4 circle authored as alt-path (cards.json drops it)."
+      "notes": "EX13 Adventure lane C: Blast Digivolve marker; ace_overflow -4; [OP][WD] bottom-deck opp Digimon level <= 4 + floor(tamer colors/2) (floor_div((8+c),2)); [WA][OPT] may play Lv.4- Digimon from trash free. Standard Purple/Blue Lv.5/4 circles come from cards.json. Blast Digivolve counter-window behaviour tested."
     },
     "BT21-067": {
       "card_name": "Garurumon",
@@ -16045,13 +16045,13 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-067.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_067.rs",
-      "test_count": 8,
+      "test_count": 9,
       "patterns": [
         "SECURITY-PLAY-SELF",
         "TRASH-TO-HAND",
         "INHERITED-WA-OPT"
       ],
-      "notes": "EX13 Adventure lane C: [Security] play self; [OP][WD] may return ADVENTURE Digimon trash->hand; Gabumon-name/ADVENTURE Lv.3 alt cost 2; inherited [WA][OPT] Draw 1 + trash 1. DATA DRIFT: cards.json standard purple Lv.3 circle cost 3, official 2 (authored cost-2 alt-path; stale cost-3 path remains until data fixed)."
+      "notes": "EX13 Adventure lane C: [Security] play self; [OP][WD] may return ADVENTURE Digimon trash->hand; Gabumon-name/ADVENTURE Lv.3 alt cost 2; inherited [WA][OPT] Draw 1 + trash 1. OPEN DATA DRIFT: data/card_overrides.json -> data/cards.json carries an extra Purple Lv.3 cost-3 circle (official: cost 2 only) => production offers an illegal 2-vs-3 cost choice. Needs a card_corrections.json evo_costs entry; blocked on a committed official observation (base-only untracked a8a8f98c...). Regression test bt21_067_production_purple_lv3_route_costs_exactly_2_with_no_choice is #[ignore]d BLOCKED."
     },
     "BT21-075": {
       "card_name": "SkullGreymon",
@@ -16068,7 +16068,7 @@
         "PLAY-FROM-TRASH",
         "INHERITED-ON-DELETION"
       ],
-      "notes": "EX13 Adventure lane C: [OP][WD] 1 own Digimon gains Raid+Retaliation until opp turn ends; face-up + inherited [On Deletion] may play ADVENTURE Digimon/Tamer cost<=4 from trash free; Greymon-name/ADVENTURE Lv.4 alt cost 3. Official red Lv.4/4 circle authored as alt-path (cards.json drops it)."
+      "notes": "EX13 Adventure lane C: [OP][WD] 1 own Digimon gains Raid+Retaliation until opp turn ends; face-up + inherited [On Deletion] may play ADVENTURE Digimon/Tamer cost<=4 from trash free; Greymon-name/ADVENTURE Lv.4 alt cost 3. Standard Purple/Red Lv.4/4 circles come from cards.json."
     }
   }
 }

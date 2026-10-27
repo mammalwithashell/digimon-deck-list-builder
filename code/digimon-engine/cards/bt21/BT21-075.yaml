@@ -12,8 +12,8 @@
 #   Inherited: [On Deletion] You may play 1 [ADVENTURE] trait card with a play
 #     cost 4 or less from your trash without paying the cost.
 #
-# DATA DRIFT: data/cards.json evo_costs lists only the Purple Lv.4 circle
-# (multi-colour circle dropped). The Red Lv.4 / 4 circle is authored below.
+# Standard circles (Purple Lv.4 / 4, Red Lv.4 / 4) come from data/cards.json
+# evo_costs, which carries both; no alt_paths entry is authored for them.
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Purple/BT21_075.cs
 #   - Alt digivolve: (EqualsTraits("ADVENTURE") || ContainsCardName("Greymon"))
@@ -38,10 +38,6 @@ traits: [Undead, ADVENTURE]
 attribute: Virus
 
 alt_paths:
-  # Printed standard circle dropped by cards.json: Red Lv.4 / Cost 4.
-  - kind: digivolve
-    from: { level_eq: 4, color_is: red }
-    cost: 4
   # [Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3.
   - kind: digivolve
     from:

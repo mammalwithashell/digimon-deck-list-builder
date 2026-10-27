@@ -2,7 +2,7 @@
 //! Traits: Undead / ADVENTURE. Attribute: Virus.
 //!
 //! Printed (official observation / data/card_bundles/BT21-075.md):
-//!   Standard digivolve: Purple Lv.4 / 4, Red Lv.4 / 4  (cards.json drops Red)
+//!   Standard digivolve: Purple Lv.4 / 4, Red Lv.4 / 4  (from cards.json evo_costs)
 //!   [Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3
 //!   [On Play] [When Digivolving] 1 of your Digimon gains <Raid> and
 //!     <Retaliation> until your opponent's turn ends.
@@ -105,15 +105,6 @@ fn bt21_075_alt_paths_include_red_circle_and_greymon_or_adventure() {
     assert_eq!(card.level, Some(5));
     assert_eq!(card.dp, Some(8000));
     assert!(card.color.contains(&CompiledColor::Purple) && card.color.contains(&CompiledColor::Red));
-    assert!(card.alt_paths.iter().any(|p| {
-        p.kind == CompiledAltPathKind::Digivolve
-            && matches!(p.cost, Some(CompiledCost::Literal(4)))
-            && p.from.as_ref().is_some_and(|f| {
-                let ps = flat(f);
-                ps.iter().any(|q| q.level_eq == Some(4))
-                    && ps.iter().any(|q| q.color_is == Some(CompiledColor::Red))
-            })
-    }), "printed red Lv.4 / 4 circle (dropped by cards.json) must be authored");
     assert!(card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && matches!(p.cost, Some(CompiledCost::Literal(3)))
