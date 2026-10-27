@@ -196,6 +196,9 @@ them preserves it. Source inspection identifies interacting causes: deletion
 inference treats an active attack as battle before consulting the active effect,
 and the replacement guard keys events by field slot while the owned-leave
 continuation deletes again with `OwnEffect`. A stable-identity change alone is
-not enough to establish correct event handling. This remains unresolved; the
-continuation regression is not proof that deletion-cause attribution or every
-replacement ordering is faithful.
+not enough to establish correct event handling. The follow-up
+`fix-deletion-event-identity` repairs cause inference, original-window ownership,
+and incarnation/event guards together; its separate native tests cover both
+layouts and legal orders. See `2026-10-26-deletion-event-identity.md` for evidence
+and validation limits. The earlier continuation regression alone was not proof
+that deletion-cause attribution or every replacement ordering was faithful.

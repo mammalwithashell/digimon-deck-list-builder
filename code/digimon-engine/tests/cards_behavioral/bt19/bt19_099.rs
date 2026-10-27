@@ -43,10 +43,10 @@
 //!   `delete_permanent { target: source }` → `select_union_zone` (filter
 //!   includes `play_cost_eq_binding { binding: replacement_subject, offset:
 //!   1, op: eq }`, G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT) →
-//!   `play_union_bound_free`. The flow owns the leave (the subject still
-//!   leaves — G-ENGINE-DELAY-SELF-TRASH-THEN-FREE-PLAY-IN-LEAVE-REPLACEMENT,
-//!   RESOLVED 2026-07-04) and evaluates the comparator against the subject's
-//!   pre-leave top-card snapshot.
+//!   `play_union_bound_free`. The original removal remains pending while the
+//!   reward resolves; its replacement window preserves identity, cause and
+//!   destination, then commits that removal after all immediate effects.
+//!   The comparator reads the subject's pre-leave top-card snapshot.
 //! - Clause C (Security inherited): bare mandatory `place_self_as_delay_option`.
 
 #![allow(unused_imports, dead_code)]
@@ -710,8 +710,8 @@ fn bt19_099_offer_installs_even_with_zero_reward_candidates() {
 
 /// Positive end-to-end (the reviewer-named defect repro): accepting the
 /// replacement pays the <Delay> cost (BT19-099 trashes itself) and the
-/// leaving Millenniummon completes its leave; the reward's union-zone pick
-/// then offers the [Wicked God] Digimon in hand whose play cost is EXACTLY
+/// leaving Millenniummon remains pending while the reward's union-zone pick
+/// offers the [Wicked God] Digimon in hand whose play cost is EXACTLY
 /// the leaving Millenniummon's cost + 1 — accepting plays it for free ONTO
 /// THE BATTLE AREA (regression: it used to land in trash while the
 /// Millenniummon survived — G-ENGINE-DELAY-SELF-TRASH-THEN-FREE-PLAY-IN-
@@ -748,19 +748,23 @@ fn bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free() {
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept the <Delay> response");
 
-    // The <Delay> cost is paid and the owned leave completes BEFORE the
-    // reward pick (DCGO order: self-trash first; the leave is not prevented).
+    // Only the Delay cost is paid here. The original removal stays pending
+    // throughout the reward and remaining immediate effects (CR 15-8-5).
     assert!(
         in_trash(&runner, 0, "BT19-099"),
         "BT19-099 must trash itself to pay the <Delay> cost"
     );
     assert!(
         runner.game.players[0]
-            .trash
+            .battle_area
             .iter()
-            .any(|c| c.handle() == mm_card),
-        "the leaving Millenniummon completes its leave to the trash before the reward"
+            .any(|p| p.top_card().handle() == mm_card),
+        "the same Millenniummon remains on field while selecting the reward"
     );
+    assert!(!runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.handle() == mm_card));
 
     // The reward's union-zone pick installs (hand + trash surface).
     let sel = runner
@@ -810,6 +814,18 @@ fn bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free() {
         0,
         "the [Wicked God] Digimon must leave the hand once played"
     );
+    assert_eq!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .filter(|c| c.handle() == mm_card)
+            .count(),
+        1
+    );
+    assert!(!runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().handle() == mm_card));
 }
 
 /// The reward also plays from the TRASH — the printed "from your hand or
@@ -831,7 +847,7 @@ fn bt19_099_reward_plays_wicked_god_from_trash() {
         .start();
 
     // The [Wicked God] candidate sits in the TRASH (index 0 — seeded before
-    // the self-trash and the leave add more cards behind it).
+    // the self-trash adds a card behind it; the subject has not left yet).
     seed_trash(&mut runner, 0, "BT19099-WG-T");
 
     let bt19_099 = runner.place_on_field(0, "BT19-099", Some(0));
@@ -852,7 +868,7 @@ fn bt19_099_reward_plays_wicked_god_from_trash() {
         .as_ref()
         .expect("union-zone [Wicked God] pick installs");
     // Exactly one candidate action, in the TRASH action range (the just-
-    // trashed BT19-099 and Millenniummon are filtered out by trait/cost).
+    // trashed BT19-099 is filtered out; Millenniummon is still on field).
     let non_pass: Vec<u16> = sel
         .valid_action_ids
         .iter()
@@ -887,8 +903,7 @@ fn bt19_099_reward_plays_wicked_god_from_trash() {
 /// cost-10 [Wicked God] in hand, only the cost-11 candidate is offered — the
 /// comparator reads the leaving subject's PRE-LEAVE printed cost (DCGO:
 /// `permanent.TopCard.GetCostItself + 1 == candidate.GetCostItself` over the
-/// trigger-hashtable snapshot), even though the subject has already completed
-/// its leave by the time the pick installs.
+/// trigger-hashtable snapshot), while the original leave remains pending.
 #[test]
 fn bt19_099_reward_offers_only_exact_cost_plus_one() {
     let mm = make_millenniummon_named("BT19099-MM-P", 10);
@@ -1045,8 +1060,8 @@ fn bt19_099_reward_filter_rejects_non_wicked_god_at_correct_cost() {
 }
 
 /// Declining the reward's union-zone pick (PASS) still leaves BT19-099 in the
-/// trash (the Delay cost was already paid) and plays nothing; the leave has
-/// already completed.
+/// trash (the Delay cost was already paid) and plays nothing; the original
+/// leave completes after the reward is declined.
 #[test]
 fn bt19_099_reward_can_be_declined_after_delay_cost_paid() {
     let mm = make_millenniummon_named("BT19099-MM-D", 10);

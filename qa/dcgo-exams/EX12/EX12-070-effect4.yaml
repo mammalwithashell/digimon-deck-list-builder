@@ -125,22 +125,21 @@ steps:
   - actor: 0
     do: { pass: {} }
     expect: { prompt: breeding_action }
-# CAVEAT (probed empirically, 2026-08-22): with the Delay ACCEPTED, our
-# engine sends the bounced Shishimamon to the TRASH instead of the hand --
-# the would-leave replacement appears to swallow the return-to-hand
-# destination. Card text and DCGO keep the bounce a bounce (the Delay only
-# trashes the option and plays a Sanmyojin). The assert below pins OUR
-# engine's state so the line runs sim-clean; if the oracle pass diffs here
-# (DCGO: EX12-046 in hand, not trash), that is an engine finding to triage,
-# not a scripting slip. Compare effect3: with the Delay DECLINED the bounce
-# reaches the hand correctly.
+# SIM-ONLY REGRESSION (corrected 2026-10-26): the original assertion
+# deliberately pinned the simulator's 2026-08-22 bug, which sent the bounced
+# Shishimamon to trash after accepting Delay. The repaired continuation
+# preserves MarineBullmon's return-to-hand destination: Arrival trashes
+# only itself and plays a Sanmyojin before the original bounce resumes.
+# Printed text and DCGO source support this expectation. This is a native
+# regression assertion, not an oracle backfill; the historical unreachable
+# verdict from the prompt-shape review above remains unchanged.
 assert:
   - at: 15
     that:
       p0.memory: 4
       p0.security: 5
-      p0.trash: [EX12-009, EX12-046, EX12-070]
-      p0.hand: [EX12-074, EX12-074, EX12-020, EX12-020, EX12-020]
+      p0.trash: [EX12-009, EX12-070]
+      p0.hand: [EX12-074, EX12-074, EX12-020, EX12-020, EX12-020, EX12-046]
       p0.field:
         - { card_id: EX12-065, dp: 12000, suspended: false, sources: [] }
       p1.security: 5

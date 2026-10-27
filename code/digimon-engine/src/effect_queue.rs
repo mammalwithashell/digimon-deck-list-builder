@@ -4576,7 +4576,7 @@ impl Game {
         if qe.dna_origin_context.is_some() {
             self.current_dna_origin = qe.dna_origin_context;
         }
-        let out = self.run_queued_effect_inner(qe);
+        let out = crate::replacement::with_effect_body(self, |game| game.run_queued_effect_inner(qe));
         if is_pending_option_main {
             self.option_first_main_resolved = true;
         }
@@ -5499,7 +5499,7 @@ impl Game {
         self.current_trigger_context = qe.trigger_context.clone();
         let event_delay_source = self.event_gated_delay_source(&qe);
         let start_delay_source = self.native_start_delay_cleanup_source(&qe);
-        self.run_queued_effect_process_tail(&qe);
+        crate::replacement::with_effect_body(self, |game| game.run_queued_effect_process_tail(&qe));
         self.trash_event_gated_delay_after_activation(event_delay_source);
         self.cleanup_native_start_delay_after_activation(start_delay_source);
         self.current_trigger_context = prev_trigger_context;

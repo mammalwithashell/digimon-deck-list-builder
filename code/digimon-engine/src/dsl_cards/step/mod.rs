@@ -320,11 +320,13 @@ pub(crate) fn drain_or_rewrap_pending_tail_with_bindings(
     // (§15-2-1-1): a zone lookup would miss a source that has left play (a
     // deleted token is removed from the game, §4-21-5) and fall back to a rule
     // effect. G-ENGINE-DEPARTED-TOKEN-CONTEXT-FALLS-BACK-TO-RULE.
-    let mut ctx = match runtime.source_kind() {
-        Some(kind) => EffectContext::new_with_source_kind(game, source_card, live_source, kind, player),
-        None => EffectContext::new(game, source_card, live_source, player),
-    };
-    run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
+    crate::replacement::with_effect_body(game, |game| {
+        let mut ctx = match runtime.source_kind() {
+            Some(kind) => EffectContext::new_with_source_kind(game, source_card, live_source, kind, player),
+            None => EffectContext::new(game, source_card, live_source, player),
+        };
+        run_steps_with_runtime(&outer_tail, &mut ctx, &mut bindings, &runtime);
+    });
     (game.effect_source_player, game.effect_source_card, game.effect_source_permanent) = previous_source;
     game.current_trigger_context = previous;
     Some(bindings)
