@@ -67,6 +67,10 @@ class ShardDataset:
     observation_profile: str
     terminated: np.ndarray
     game_ids: np.ndarray
+    # (N,) f32 per-row policy-loss weight: 1 for a full search, 0 for a cheap
+    # value-only search (playout-cap randomization). Shards without a
+    # policy_weight.npy array are full searches throughout.
+    policy_weight: np.ndarray
     manifests: list[dict] = field(default_factory=list)
     exclusions: list[dict] = field(default_factory=list)
     # Own the temporary backing file for as long as the dataset is alive.
@@ -83,6 +87,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
     Original committed shard files remain untouched for replay and auditing.
     """
     off_parts, act_parts, vis_parts, z_parts, end_parts, game_parts = [], [], [], [], [], []
+    weight_parts = []
     observation_storage = tempfile.TemporaryFile(prefix="digimon-replay-")
     observation_rows = 0
     manifests: list[dict] = []
@@ -152,6 +157,13 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                 raise ValueError(f"{s}: invalid sparse policy offsets")
             if obs.shape[1] != manifest["obs_dim"] or not np.isfinite(obs).all() or not np.isfinite(vis).all() or np.any(vis < 0) or np.any(act < 0) or np.any(act >= manifest["action_dim"]):
                 raise ValueError(f"{s}: invalid observations or policy targets")
+            weight_path = s / "policy_weight.npy"
+            if weight_path.exists():
+                weight = np.load(weight_path)
+                if weight.shape != (rows,) or not np.isfinite(weight).all() or np.any(weight < 0):
+                    raise ValueError(f"{s}: invalid policy_weight array")
+            else:
+                weight = np.ones(rows, np.float32)
             # Preserve rebasing across chunks even when their highest game ID
             # is excluded. Filtering is local to this manifest, before rebasing.
             max_game = max(max_game, int(games.max(initial=-1)))
@@ -162,6 +174,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                 lengths = np.diff(off)
                 edges = np.repeat(keep, lengths)
                 obs, z, terminated, games = obs[keep], z[keep], terminated[keep], games[keep]
+                weight = weight[keep]
                 act, vis = act[edges], vis[edges]
                 off = np.concatenate(([0], np.cumsum(lengths[keep], dtype=np.int64)))
             # Rebase this shard's offsets onto the pooled nnz axis. The
@@ -180,6 +193,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
             z_parts.append(z.astype(np.float32, copy=False))
             end_parts.append(terminated.astype(bool))
             game_parts.append(games.astype(np.int64) + game_base)
+            weight_parts.append(weight.astype(np.float32, copy=False))
         if excluded_ids - seen_ids:
             raise ValueError(f"{quarantine_path}: exclusion refers to absent game IDs {sorted(excluded_ids - seen_ids)}")
         if quarantine is not None:
@@ -204,6 +218,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
         observation_profile=profile,
         terminated=np.concatenate(end_parts),
         game_ids=np.concatenate(game_parts),
+        policy_weight=np.concatenate(weight_parts),
         manifests=manifests,
         exclusions=exclusions,
         _observation_storage=observation_storage,
@@ -266,10 +281,14 @@ def train(
         raise ValueError(f"model action dim {policy.action_space.n} != shard {ds.action_dim}")
 
     truncated = int((~ds.terminated).sum())
+    policy_rows = int((ds.policy_weight > 0).sum())
+    if policy_rows == 0:
+        raise ValueError("No policy-target rows (every row has policy_weight 0); refusing to train the actor on nothing")
     print(
         f"azero_trainer: {len(ds)} rows from {len(shard_dirs)} dir(s), "
         f"obs_dim {ds.obs.shape[1]}, profile {ds.observation_profile}, "
         f"{truncated} truncated-game rows (z=0), "
+        f"{len(ds) - policy_rows} cheap value-only rows excluded from the policy loss, "
         f"{sum(q['excluded_rows'] for q in ds.exclusions)} quarantined rows excluded from both losses",
         flush=True,
     )
@@ -308,7 +327,12 @@ def train(
             # evaluator (illegal mass exactly excluded from the CE).
             masked_logits = logits.masked_fill(~mask_t, torch.finfo(logits.dtype).min)
             logp = torch.log_softmax(masked_logits, dim=-1)
-            policy_loss = -(pi_t * logp.masked_fill(~mask_t, 0.0)).sum(dim=-1).mean()
+            # Cheap (value-only) rows carry policy_weight 0 and drop out of
+            # the actor loss; the mean runs over the policy-target rows only.
+            row_ce = -(pi_t * logp.masked_fill(~mask_t, 0.0)).sum(dim=-1)
+            weight_t = torch.as_tensor(ds.policy_weight[idx], device=dev)
+            weight_total = weight_t.sum()
+            policy_loss = (row_ce * weight_t).sum() / weight_total if weight_total > 0 else row_ce.sum() * 0.0
             terminal = torch.as_tensor(ds.terminated[idx], device=dev)
             value_loss = torch.nn.functional.mse_loss(values[terminal], z_t[terminal]) if terminal.any() else values.sum() * 0.0
             loss = policy_loss + value_coef * value_loss

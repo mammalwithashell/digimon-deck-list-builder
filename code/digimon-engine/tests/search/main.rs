@@ -9,7 +9,10 @@
 //!   - determinism per seed,
 //!   - completes within budget on messy mid-game states from real decks,
 //!   - determinized aggregation (PIMC / IS-MCTS, task 2.3) and the
-//!     no-X-ray guard (task 2.5) in `determinized.rs`.
+//!     no-X-ray guard (task 2.5) in `determinized.rs`,
+//!   - the Gumbel sequential-halving root (`RootPolicy::Gumbel`) finding the
+//!     same forced win on a small budget, serial == batched, and its PIMC
+//!     aggregation, in `gumbel.rs`.
 //!
 //! Registry construction recurses deeply — every test body runs on a
 //! 256 MB-stack thread (same mitigation as `tests/clone_fuzz/main.rs`).
@@ -17,6 +20,7 @@
 
 mod batching;
 mod determinized;
+mod gumbel;
 mod midgame;
 mod perfect_information;
 mod profile;

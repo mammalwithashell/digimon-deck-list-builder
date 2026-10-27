@@ -24,6 +24,9 @@ struct Tree {
     rng: StdRng,
     completed: u32,
     pending: Option<Pending>,
+    /// Gumbel root scheduler (`RootPolicy::Gumbel`), created once the root
+    /// node exists; `None` under PUCT.
+    gumbel: Option<GumbelRoot>,
 }
 
 impl Tree {
@@ -35,9 +38,13 @@ impl Tree {
             rng: StdRng::seed_from_u64(config.seed),
             completed: 0,
             pending: None,
+            gumbel: None,
         };
         match mcts.prepare_node(measure("clone", || root.clone()), false, config) {
-            PreparedNode::Ready(node, _) => tree.arena.push(node),
+            PreparedNode::Ready(node, value) => {
+                tree.gumbel = gumbel_root_for(&node, value, config);
+                tree.arena.push(node);
+            }
             prepared => tree.pending = Some(Pending::Root(prepared)),
         }
         tree
@@ -98,7 +105,12 @@ impl Tree {
                     });
                     return Some(request);
                 }
-                let edge = select_edge(&self.arena[cur], self.config.c_puct);
+                let edge = match (cur, self.gumbel.as_mut()) {
+                    (0, Some(root)) => root
+                        .next_edge(&root_stats(&self.arena[0]))
+                        .expect("Gumbel root budget equals the simulation count"),
+                    _ => select_edge(&self.arena[cur], self.config.c_puct),
+                };
                 path.push((cur, edge));
                 match self.arena[cur].edges[edge].child {
                     Some(child) => cur = child,
@@ -136,8 +148,14 @@ impl Tree {
     fn accept(&mut self, mcts: &Mcts<'_>, evaluation: &Evaluation) {
         match self.pending.take().expect("unsolicited neural evaluation") {
             Pending::Root(prepared) => {
-                let (mut node, _) = mcts.finish_node(prepared, evaluation);
-                if self.config.dirichlet_epsilon > 0.0 && node.edges.len() > 1 {
+                let (mut node, value) = mcts.finish_node(prepared, evaluation);
+                // Same rule as the serial searcher: a Gumbel root supplies
+                // its own exploration, so Dirichlet noise is skipped.
+                self.gumbel = gumbel_root_for(&node, value, &self.config);
+                if self.gumbel.is_none()
+                    && self.config.dirichlet_epsilon > 0.0
+                    && node.edges.len() > 1
+                {
                     let noise = sample_dirichlet(
                         &mut self.rng,
                         self.config.dirichlet_alpha as f64,
@@ -173,10 +191,13 @@ impl Tree {
                 root_q: Vec::new(),
                 root_value: root.terminal_value.unwrap_or(0.),
                 simulations_run: 0,
+                root_policy: None,
+                chosen_action: None,
             };
         }
         let total_visits: u32 = root.edges.iter().map(|e| e.visits).sum();
         let total_w: f32 = root.edges.iter().map(|e| e.w).sum();
+        let (root_policy, chosen_action) = gumbel_outputs(root, self.gumbel.as_ref());
         SearchResult {
             root_visits: root.edges.iter().map(|e| (e.action, e.visits)).collect(),
             root_q: root
@@ -199,6 +220,8 @@ impl Tree {
                 0.
             },
             simulations_run: self.completed,
+            root_policy,
+            chosen_action,
         }
     }
 }

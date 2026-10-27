@@ -45,9 +45,40 @@ use crate::observation::{
 
 use super::dirichlet::sample_dirichlet;
 use super::evaluator::{EvalRequest, Evaluation, PolicyValueFn};
+use super::gumbel::GumbelRoot;
 
 #[path = "batched.rs"]
 mod batched;
+
+/// How the ROOT picks the edge each simulation starts with. Selection below
+/// the root is always PUCT.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum RootPolicy {
+    /// PUCT with Dirichlet exploration noise — the AlphaZero reference.
+    Puct,
+    /// Gumbel sequential halving over at most `max_candidates` root actions
+    /// (Danihelka et al. 2022; `search::gumbel`). The Gumbel sample replaces
+    /// Dirichlet noise, the survivor is the action to play
+    /// (`SearchResult::chosen_action`) and the completed-Q improved policy is
+    /// the training target (`SearchResult::root_policy`).
+    Gumbel {
+        max_candidates: u32,
+        /// `σ(q) = (c_visit + max_visits) · c_scale · q`.
+        c_visit: f32,
+        c_scale: f32,
+    },
+}
+
+impl RootPolicy {
+    /// Gumbel root with the paper's defaults (`c_visit` 50, `c_scale` 1).
+    pub fn gumbel(max_candidates: u32) -> Self {
+        Self::Gumbel {
+            max_candidates,
+            c_visit: 50.0,
+            c_scale: 1.0,
+        }
+    }
+}
 
 /// Tunables for one search. `Default` is a sensible AlphaZero-style setting
 /// for interactive budgets.
@@ -76,6 +107,12 @@ pub struct SearchConfig {
     /// auto-advance loop and the selection path length. Rollouts truncated
     /// by the cap are scored by the evaluator (not as terminals).
     pub max_decisions: u32,
+    /// Root selection rule (see [`RootPolicy`]). `Puct` is the reference.
+    pub root: RootPolicy,
+    /// Seed for the Gumbel root noise when several searches of the SAME
+    /// decision must share one sample (PIMC worlds); `None` derives it from
+    /// `seed`. Ignored under `RootPolicy::Puct`.
+    pub root_noise_seed: Option<u64>,
 }
 
 impl Default for SearchConfig {
@@ -88,6 +125,8 @@ impl Default for SearchConfig {
             seed: 0,
             observation_profile: default_observation_profile(),
             max_decisions: 512,
+            root: RootPolicy::Puct,
+            root_noise_seed: None,
         }
     }
 }
@@ -107,6 +146,15 @@ pub struct SearchResult {
     pub root_value: f32,
     /// Simulations actually run (0 if the root was terminal / choiceless).
     pub simulations_run: u32,
+    /// Gumbel root only: the completed-Q improved policy over the root
+    /// edges — same order as `root_visits`, sums to one — which is the
+    /// policy TARGET under `RootPolicy::Gumbel`. `None` under PUCT (train on
+    /// the visit counts).
+    pub root_policy: Option<Vec<(u16, f32)>>,
+    /// Gumbel root only: the action the search says to PLAY — the
+    /// sequential-halving survivor, whose Gumbel sample already supplies the
+    /// exploration. `None` under PUCT (sample / argmax the visit counts).
+    pub chosen_action: Option<u16>,
 }
 
 /// The player whose decision a state is waiting on: the mulligan decider,
@@ -204,7 +252,7 @@ impl<'a> Mcts<'a> {
         let mut rng = StdRng::seed_from_u64(config.seed);
         let mut arena: Vec<Node> = Vec::new();
 
-        let (root_node, _root_eval) =
+        let (root_node, root_eval) =
             self.make_node(measure("clone", || root.clone()), false, evaluator, config);
         if root_node.terminal_value.is_some() || root_node.edges.is_empty() {
             return SearchResult {
@@ -212,13 +260,19 @@ impl<'a> Mcts<'a> {
                 root_q: Vec::new(),
                 root_value: root_node.terminal_value.unwrap_or(0.0),
                 simulations_run: 0,
+                root_policy: None,
+                chosen_action: None,
             };
         }
         arena.push(root_node);
 
+        // Gumbel root: the Gumbel sample IS the exploration, so Dirichlet
+        // noise is skipped and the priors stay pure.
+        let mut gumbel = gumbel_root_for(&arena[0], root_eval, config);
+
         // Root Dirichlet exploration noise (root ONLY): mix
         // (1-eps)*prior + eps*Dirichlet(alpha) over the legal edges.
-        if config.dirichlet_epsilon > 0.0 && arena[0].edges.len() > 1 {
+        if gumbel.is_none() && config.dirichlet_epsilon > 0.0 && arena[0].edges.len() > 1 {
             let noise = sample_dirichlet(
                 &mut rng,
                 config.dirichlet_alpha as f64,
@@ -256,7 +310,12 @@ impl<'a> Mcts<'a> {
                     let eval = evaluator.evaluate_batch(&[EvalRequest { obs, mask }]);
                     break (eval[0].value, node.mover);
                 }
-                let edge_idx = select_edge(&arena[cur], config.c_puct);
+                let edge_idx = match (cur, gumbel.as_mut()) {
+                    (0, Some(root)) => root
+                        .next_edge(&root_stats(&arena[0]))
+                        .expect("Gumbel root budget equals the simulation count"),
+                    _ => select_edge(&arena[cur], config.c_puct),
+                };
                 path.push((cur, edge_idx));
                 match arena[cur].edges[edge_idx].child {
                     Some(child) => cur = child,
@@ -312,11 +371,14 @@ impl<'a> Mcts<'a> {
         } else {
             0.0
         };
+        let (root_policy, chosen_action) = gumbel_outputs(root, gumbel.as_ref());
         SearchResult {
             root_visits,
             root_q,
             root_value,
             simulations_run: config.simulations,
+            root_policy,
+            chosen_action,
         }
     }
 
@@ -521,6 +583,71 @@ pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
         forced_steps += 1;
     }
     mask
+}
+
+/// Per-edge `(visits, mean Q)` of a node in edge order — the Gumbel root's
+/// input. Q is already in the node mover's perspective (`Edge::w`).
+fn root_stats(node: &Node) -> Vec<(u32, f32)> {
+    node.edges
+        .iter()
+        .map(|e| {
+            let q = if e.visits > 0 {
+                e.w / e.visits as f32
+            } else {
+                0.0
+            };
+            (e.visits, q)
+        })
+        .collect()
+}
+
+/// Build the Gumbel root scheduler when the config asks for one and the
+/// root has edges. `root_value` is the network value for the root mover
+/// (the mixed-value anchor for unvisited actions).
+fn gumbel_root_for(node: &Node, root_value: f32, config: &SearchConfig) -> Option<GumbelRoot> {
+    match config.root {
+        RootPolicy::Puct => None,
+        RootPolicy::Gumbel {
+            max_candidates,
+            c_visit,
+            c_scale,
+        } => {
+            if node.edges.is_empty() {
+                return None;
+            }
+            let priors: Vec<f32> = node.edges.iter().map(|e| e.prior).collect();
+            Some(GumbelRoot::new(
+                &priors,
+                root_value,
+                config.simulations,
+                max_candidates,
+                c_visit,
+                c_scale,
+                config.root_noise_seed.unwrap_or(config.seed),
+            ))
+        }
+    }
+}
+
+/// The Gumbel root's two outputs — improved policy (edge order) and the
+/// action to play — or `(None, None)` under PUCT.
+fn gumbel_outputs(
+    root: &Node,
+    gumbel: Option<&GumbelRoot>,
+) -> (Option<Vec<(u16, f32)>>, Option<u16>) {
+    match gumbel {
+        None => (None, None),
+        Some(g) => {
+            let stats = root_stats(root);
+            let policy = g
+                .improved_policy(&stats)
+                .into_iter()
+                .zip(root.edges.iter())
+                .map(|(p, e)| (e.action, p))
+                .collect();
+            (Some(policy), Some(root.edges[g.chosen(&stats)].action))
+        }
+    }
 }
 
 /// Standard PUCT selection: `argmax_a Q(s,a) + c * P(s,a) * sqrt(N(s)) / (1 + N(s,a))`

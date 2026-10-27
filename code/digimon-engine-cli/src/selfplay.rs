@@ -14,7 +14,8 @@ use std::process::ExitCode;
 use digimon_engine::card_data::CardData;
 use digimon_engine::inference::BatchedPolicyValueEvaluator;
 use digimon_engine::search::{
-    DeterminizationMode, DeterminizedConfig, MemoizedEvaluator, PolicyValueFn, UniformEvaluator,
+    DeterminizationMode, DeterminizedConfig, MemoizedEvaluator, PolicyValueFn, RootPolicy,
+    UniformEvaluator,
 };
 use digimon_engine::selfplay::{run_self_play, SelfPlayConfig};
 
@@ -91,12 +92,43 @@ pub fn run(
     temperature_decisions: u32,
     decision_cap: u32,
     shard_rows: usize,
+    reduced_sims: Option<u32>,
+    full_search_fraction: f32,
+    cheap_sims: u32,
+    root: String,
+    gumbel_candidates: u32,
     tensor_profile: Option<String>,
     card_data: HashMap<String, CardData>,
     admission_dir: PathBuf,
 ) -> ExitCode {
     if eval_batch_size == 0 {
         eprintln!("--eval-batch-size must be positive");
+        return ExitCode::from(2);
+    }
+    let root_policy = match root.as_str() {
+        "puct" => RootPolicy::Puct,
+        "gumbel" => {
+            if gumbel_candidates == 0 {
+                eprintln!("--gumbel-candidates must be positive");
+                return ExitCode::from(2);
+            }
+            RootPolicy::gumbel(gumbel_candidates)
+        }
+        other => {
+            eprintln!("unknown --root {other:?} (expected `puct` or `gumbel`)");
+            return ExitCode::from(2);
+        }
+    };
+    if !(0.0..=1.0).contains(&full_search_fraction) {
+        eprintln!("--full-search-fraction must lie in [0, 1]");
+        return ExitCode::from(2);
+    }
+    if full_search_fraction < 1.0 && cheap_sims == 0 {
+        eprintln!("--cheap-sims must be positive when --full-search-fraction < 1");
+        return ExitCode::from(2);
+    }
+    if reduced_sims == Some(0) {
+        eprintln!("--reduced-sims must be positive");
         return ExitCode::from(2);
     }
     // Opt in for a frozen deterministic MLP only. This never caches engine
@@ -208,12 +240,16 @@ pub fn run(
         decision_cap,
         shard_rows,
         evaluation_batch_size: eval_batch_size,
+        reduced_simulations: reduced_sims,
+        full_search_fraction,
+        cheap_simulations: cheap_sims,
         search: DeterminizedConfig::default(),
     };
     config.search.mode = mode;
     config.search.worlds = worlds;
     config.search.search.simulations = sims;
     config.search.search.observation_profile = profile;
+    config.search.search.root = root_policy;
     let active_cache_entries = if uniform { 0 } else { cache_entries };
 
     eprintln!(
@@ -226,6 +262,17 @@ pub fn run(
         profile.as_str(),
         model_desc
     );
+    match reduced_sims {
+        Some(reduced) => eprintln!("phase budget: Main roots {sims} sims, other roots {reduced} sims"),
+        None => eprintln!("phase budget: every root {sims} sims"),
+    }
+    if full_search_fraction < 1.0 {
+        eprintln!(
+            "playout-cap randomization: full search with probability {full_search_fraction}, \
+             else {cheap_sims} noise-free sims recorded with policy_weight 0"
+        );
+    }
+    eprintln!("root policy: {root_policy:?}");
     eprintln!("exact-input evaluator cache: {active_cache_entries} entries");
     eprintln!(
         "independent-world evaluation batch size: {eval_batch_size} (IS-MCTS remains serial)"

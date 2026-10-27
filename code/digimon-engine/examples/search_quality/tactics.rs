@@ -117,7 +117,7 @@ pub fn run(registry: &CardRegistry, evaluator: &mut dyn PolicyValueFn, plan: &Va
         let pid = decision_player(&f.game);
         for settings in plan["grid"].as_array().unwrap() {
             for seed in plan["tactical_seeds"].as_array().unwrap() {
-                let c = config(settings, seed.as_u64().unwrap(), 0.);
+                let c = config(settings, seed.as_u64().unwrap(), 0., super::main_root(&f.game));
                 for guidance in ["uniform", "frozen_model"] {
                     let before = Instant::now();
                     let result = if guidance == "uniform" {

@@ -76,7 +76,7 @@ use super::dirichlet::sample_dirichlet;
 use super::evaluator::{EvalRequest, PolicyValueFn};
 use super::mcts::{
     advance_forced_chain, decision_player, puct_argmax_q, signed_value, terminal_value, Mcts,
-    SearchConfig, SearchResult,
+    RootPolicy, SearchConfig, SearchResult,
 };
 
 /// How hidden-information uncertainty is aggregated (design D1).
@@ -158,6 +158,8 @@ pub fn determinized_search_batched(
             root_q: Vec::new(),
             root_value: terminal_value(root, viewer),
             simulations_run: 0,
+            root_policy: None,
+            chosen_action: None,
         };
     }
     assert_eq!(
@@ -205,9 +207,19 @@ fn pimc_search(
     };
     let mcts = Mcts::new(registry);
 
+    // Gumbel root: every world of this decision shares ONE Gumbel sample
+    // (derived from the decision seed, never a world seed) so the candidate
+    // sets agree and the worlds' survivors are comparable. The improved
+    // policies are averaged over worlds; the action to play is the plurality
+    // survivor (ties → more aggregated visits, then lower action id).
+    let gumbel_root = matches!(config.search.root, RootPolicy::Gumbel { .. });
+    let shared_noise_seed = derive_seed(config.search.seed, STREAM_NOISE, 1);
+
     let mut ref_legal: Option<Vec<u16>> = None;
     let mut visits: BTreeMap<u16, u32> = BTreeMap::new();
     let mut weighted_q: BTreeMap<u16, f64> = BTreeMap::new();
+    let mut policy_sum: BTreeMap<u16, f64> = BTreeMap::new();
+    let mut chosen_votes: BTreeMap<u16, u32> = BTreeMap::new();
     let mut value_sum = 0.0f64;
     let mut sims_total = 0u32;
 
@@ -224,6 +236,11 @@ fn pimc_search(
             configs.push(SearchConfig {
                 simulations: per_world,
                 seed: derive_seed(world_seed, STREAM_SEARCH, world_idx as u64),
+                root_noise_seed: if gumbel_root {
+                    Some(shared_noise_seed)
+                } else {
+                    config.search.root_noise_seed
+                },
                 ..config.search.clone()
             });
         }
@@ -241,8 +258,34 @@ fn pimc_search(
                 *visits.entry(*action).or_insert(0) += v;
                 *weighted_q.entry(*action).or_insert(0.0) += (*q as f64) * (*v as f64);
             }
+            if let Some(policy) = &result.root_policy {
+                for (action, p) in policy {
+                    *policy_sum.entry(*action).or_insert(0.0) += *p as f64;
+                }
+            }
+            if let Some(action) = result.chosen_action {
+                *chosen_votes.entry(action).or_insert(0) += 1;
+            }
         }
     }
+
+    let root_policy = gumbel_root.then(|| {
+        visits
+            .keys()
+            .map(|&a| {
+                let mean = policy_sum.get(&a).copied().unwrap_or(0.0) / worlds as f64;
+                (a, mean as f32)
+            })
+            .collect::<Vec<_>>()
+    });
+    let chosen_action = chosen_votes
+        .iter()
+        .max_by(|(a, va), (b, vb)| {
+            va.cmp(vb)
+                .then(visits[*a].cmp(&visits[*b]))
+                .then(b.cmp(a))
+        })
+        .map(|(&a, _)| a);
 
     let root_visits: Vec<(u16, u32)> = visits.iter().map(|(&a, &v)| (a, v)).collect();
     let root_q: Vec<(u16, f32)> = visits
@@ -261,6 +304,8 @@ fn pimc_search(
         root_q,
         root_value: (value_sum / worlds as f64) as f32,
         simulations_run: sims_total,
+        root_policy,
+        chosen_action,
     }
 }
 
@@ -446,6 +491,8 @@ fn ismcts_search(
         .collect();
     let total_visits: u32 = root.edges.values().map(|e| e.visits).sum();
     let total_w: f32 = root.edges.values().map(|e| e.w).sum();
+    // IS-MCTS keeps PUCT at its single root; a Gumbel `RootPolicy` is not
+    // applied here (the Gumbel path is PIMC-only for now).
     SearchResult {
         root_visits,
         root_q,
@@ -455,6 +502,8 @@ fn ismcts_search(
             0.0
         },
         simulations_run: search.simulations,
+        root_policy: None,
+        chosen_action: None,
     }
 }
 

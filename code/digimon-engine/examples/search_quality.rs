@@ -12,7 +12,7 @@ use digimon_engine::{
     rules::Rules,
     search::{
         decision_player, determinized_search_batched, DeterminizedConfig, EvalRequest,
-        PolicyValueFn, SearchResult,
+        PolicyValueFn, RootPolicy, SearchResult,
     },
 };
 use serde_json::{json, Value};
@@ -45,7 +45,20 @@ fn legal(mask: &[f32]) -> Vec<u16> {
         .collect()
 }
 fn choose(result: &SearchResult) -> u16 {
-    // First-max in original mask order, matching the native driver.
+    // Evaluation play is deterministic: under a Gumbel root take the argmax
+    // of the completed-Q improved policy (the survivor in `chosen_action`
+    // carries the Gumbel exploration sample, which belongs to self-play);
+    // otherwise first-max visits in original mask order, matching the
+    // native driver.
+    if let Some(policy) = &result.root_policy {
+        let mut best = (f32::NEG_INFINITY, policy[0].0);
+        for &(a, p) in policy {
+            if p > best.0 {
+                best = (p, a);
+            }
+        }
+        return best.1;
+    }
     let mut best = (0, result.root_visits[0].0);
     for &(a, v) in &result.root_visits {
         if v > best.0 {
@@ -54,13 +67,40 @@ fn choose(result: &SearchResult) -> u16 {
     }
     best.1
 }
-fn config(v: &Value, seed: u64, noise: f32) -> DeterminizedConfig {
+/// Whether `game` sits at an unconstrained Main-phase root (the driver's
+/// phase-budget rule): no pending selection, no mulligan, Main phase.
+fn main_root(game: &Game) -> bool {
+    game.pending_selection.is_none()
+        && game.mulligan_current_player().is_none()
+        && game.current_phase == digimon_engine::enums::GamePhase::Main
+}
+/// Search settings from a request object. Beyond `simulations`/`worlds`,
+/// the search-budget experiments add optional `reduced_simulations` (the
+/// budget for non-Main roots, applied when `main_root` is false), `root`
+/// (`"puct"` default or `"gumbel"`) and `gumbel_candidates` (default 16).
+fn config(v: &Value, seed: u64, noise: f32, main_root: bool) -> DeterminizedConfig {
     let mut c = DeterminizedConfig::default();
     c.worlds = number(v, "worlds") as u32;
     c.search.simulations = number(v, "simulations") as u32;
+    if !main_root {
+        if let Some(reduced) = v["reduced_simulations"].as_u64() {
+            c.search.simulations = c.search.simulations.min(reduced as u32);
+        }
+    }
     c.search.seed = seed;
     c.search.dirichlet_epsilon = noise;
     c.search.observation_profile = PROFILE;
+    c.search.root = match v["root"].as_str().unwrap_or("puct") {
+        "puct" => RootPolicy::Puct,
+        // Optional `gumbel_c_visit` / `gumbel_c_scale` override the paper's
+        // σ(q) = (c_visit + max_visits) · c_scale · q constants (50 / 1).
+        "gumbel" => RootPolicy::Gumbel {
+            max_candidates: v["gumbel_candidates"].as_u64().unwrap_or(16) as u32,
+            c_visit: v["gumbel_c_visit"].as_f64().unwrap_or(50.0) as f32,
+            c_scale: v["gumbel_c_scale"].as_f64().unwrap_or(1.0) as f32,
+        },
+        other => panic!("unknown root policy {other}"),
+    };
     c
 }
 fn policy(
@@ -211,11 +251,7 @@ fn run() {
             )
             .unwrap();
             let seed = number(&request, "seed");
-            let c = config(
-                &request["config"],
-                seed,
-                request["noise"].as_f64().unwrap_or(0.) as f32,
-            );
+            let noise = request["noise"].as_f64().unwrap_or(0.) as f32;
             let mut rows = Vec::new();
             for node in corpus["nodes"].as_array().unwrap() {
                 let game = replay(&data, &decks_for(&plan, node), node);
@@ -225,12 +261,16 @@ fn run() {
                     legal(&mask),
                     serde_json::from_value::<Vec<u16>>(node["legal_actions"].clone()).unwrap()
                 );
+                // Per node: a `reduced_simulations` setting applies to
+                // non-Main roots only, so the effective budget is root-specific.
+                let c = config(&request["config"], seed, noise, main_root(&game));
                 let before = Instant::now();
                 let result =
                     determinized_search_batched(&registry, &game, pid, &mut evaluator, &c, 4);
                 assert_eq!(result.simulations_run, c.search.simulations);
                 rows.push(json!({"node":node["id"],"archetype":node["archetype"],"action":choose(&result),
                     "visits":result.root_visits,"q":result.root_q,"value":result.root_value,
+                    "policy":result.root_policy,"survivor":result.chosen_action,
                     "seconds":before.elapsed().as_secs_f64(),"simulations_run":result.simulations_run}));
                 write(
                     &out.with_extension("progress.json"),
@@ -292,6 +332,7 @@ fn run() {
                                     settings,
                                     seed_for(number(&request, "search_seed"), decisions, pid),
                                     0.,
+                                    main_root(&game),
                                 );
                                 let result = determinized_search_batched(
                                     &registry,
