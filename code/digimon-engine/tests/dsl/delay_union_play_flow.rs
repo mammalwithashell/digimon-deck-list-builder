@@ -12,11 +12,11 @@
 //! at the freshly played reward card (the self-trash shifted the subject down,
 //! the play pushed the reward into the subject's old slot). Net effect: the
 //! reward card went to the trash and the leaving subject survived on the
-//! field. The flow instead marks the replacement `handled()`, pays the
-//! self-trash, finishes the OWNED leave by stable card handle, then runs the
-//! reward steps with `replacement_subject` re-bound as the subject's stable
-//! top-card snapshot (so `play_cost_eq_binding` reads the pre-leave printed
-//! cost — the DCGO BT19_099.cs:261 hashtable-snapshot comparator).
+//! field. The reward must run while the original removal remains pending.
+//! Its existing replacement window retains stable identity, cause, destination
+//! and remaining immediate effects; it commits the original removal only after
+//! the reward and other immediate effects finish. The comparator still reads
+//! the subject snapshot (DCGO BT19_099.cs:261).
 //!
 //! Reference card: BT19-099 (tests/cards_behavioral/bt19/bt19_099.rs);
 //! hand-only sibling: ST20-14 (`DelaySelfTrashPlayFromHandFlow`).
@@ -111,8 +111,8 @@ fn seat_as_delay_option(
 }
 
 /// The full-flow contract: accept the <Delay>, the option self-trashes, the
-/// subject completes its leave (it is NOT prevented), the reward pick offers
-/// the exact cost+1 candidate, and resolving it plays the reward ONTO THE
+/// subject remains pending while the reward pick offers the exact cost+1
+/// candidate, and resolving it plays the reward ONTO THE
 /// BATTLE AREA — not into the trash (the historical failure mode).
 #[test]
 fn delay_union_flow_plays_reward_on_field_and_subject_completes_leave() {
@@ -148,7 +148,7 @@ fn delay_union_flow_plays_reward_on_field_and_subject_completes_leave() {
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept the <Delay> response");
 
-    // Cost paid + owned leave finished BEFORE the reward pick.
+    // The Delay cost is paid, but the interrupted removal remains pending.
     assert!(
         runner.game.players[0]
             .trash
@@ -158,11 +158,15 @@ fn delay_union_flow_plays_reward_on_field_and_subject_completes_leave() {
     );
     assert!(
         runner.game.players[0]
-            .trash
+            .battle_area
             .iter()
-            .any(|c| c.handle() == subject_card),
-        "the leaving subject completes its leave to the trash (not prevented)"
+            .any(|p| p.top_card().handle() == subject_card),
+        "the physical subject stays on field while the reward is selected"
     );
+    assert!(!runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.handle() == subject_card));
 
     // The reward pick surfaces as the ordinary union-zone selection.
     let sel = runner
@@ -217,11 +221,20 @@ fn delay_union_flow_plays_reward_on_field_and_subject_completes_leave() {
         "the subject must not survive on the field — the historical defect left \
          it alive after the stale-index commit hit the reward card instead"
     );
+    assert_eq!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .filter(|c| c.handle() == subject_card)
+            .count(),
+        1,
+        "the original physical subject is deleted once after the reward"
+    );
 }
 
 /// Snapshot comparator: the `play_cost_eq_binding { binding:
 /// replacement_subject }` filter reads the subject's PRE-LEAVE printed cost
-/// (the subject is already in the trash when the pick installs). A candidate
+/// while its original removal is still pending. A candidate
 /// at the subject's own cost (not +1) is rejected; the whiff still pays the
 /// cost and the leave still completes.
 #[test]

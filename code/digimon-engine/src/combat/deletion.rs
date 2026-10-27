@@ -20,7 +20,7 @@ impl Game {
     /// Also clears any modifiers attached to the handle.
     ///
     /// Phase 7: this entry point infers the `ReplacementCause` from live game
-    /// state (security-resolution / pending-attack / effect_source_player) and
+    /// state (effect_source_player / security-resolution fallback) and
     /// delegates to `delete_permanent_with_cause`. Callers that already know
     /// the cause (e.g. `resolve_battle` → `Battle`) should invoke
     /// `delete_permanent_with_cause` directly.
@@ -142,7 +142,9 @@ impl Game {
         receipt: Option<u64>,
     ) -> crate::deletion_batch::DeletionBatchOutcome {
         self.with_deletion_receipt(receipt, |game| {
-            game.delete_permanents_batch_scoped(handles, cause)
+            crate::replacement::with_deletion_event(game, |game| {
+                game.delete_permanents_batch_scoped(handles, cause)
+            })
         })
     }
 

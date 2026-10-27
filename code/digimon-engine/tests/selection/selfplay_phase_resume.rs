@@ -1,5 +1,5 @@
 //! Regressions from capped self-play games 340 and 850: spent Main activations
-//! and nested leave continuations must survive selection and search cloning.
+//! and interrupted leave continuations must survive selection and search cloning.
 use digimon_engine::{
     action::{
         build_action_mask,
@@ -8,34 +8,70 @@ use digimon_engine::{
     card_data::CardData,
     debug_runner::DebugRunner,
     enums::GamePhase,
+    game::Game,
     runners::HeadlessRunner,
     selection::SelectionKind,
     serialization::to_ui_json,
 };
 
-#[test]
-fn capped_game_850_resumes_after_nested_replacement_and_block() {
-    // Preserve game 850's actual card path without replaying 179 historical
-    // numeric choices. That prefix now diverges at decision 41: PASS tries to
-    // skip mandatory BT26-092/BT26-009 start-main triggers. The historical JSON
-    // remains unchanged. Here Chronomon's real attack effect deletes MarineBullmon;
-    // Sanmyojin Arrival owns the leave and must preserve its nested Decode
-    // choice before offering the Ryugumon reward. Susanoomon then really blocks.
+// A deliberately synthetic immediate effect reacts to the Delay COST, not to
+// MarineBullmon's original leave. It preserves genuine nested-resume coverage
+// without relying on the old bug that mislabeled attack-effect deletion Battle
+// and then manufactured a second OwnEffect deletion for the same Digimon.
+const NESTED_COST_WITNESS: &str = r#"
+card: NESTED-COST-WITNESS
+name: Nested Delay Cost Witness
+kind: tamer
+color: [blue]
+cost: 3
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: option
+    process:
+      - select_hand:
+          of: you
+          bind_as: witness_card
+          filter: { level_lte: 4 }
+          prompt: "Nested cost witness: choose the level 4 card to trash"
+      - trash_from_hand_by_index: { of: you, hand_index: witness_card }
+"#;
+
+fn masked(game: &mut Game, player: u8, action: u16) {
+    assert_eq!(
+        build_action_mask(game, player)[action as usize],
+        1.0,
+        "{action}: {:?}",
+        game.pending_selection
+    );
+    game.decode_action(action, player);
+}
+
+fn arrival_boundary(nested_cost: bool) -> Game {
+    // The original recording remains immutable. Its 179-action prefix now
+    // diverges at decision41 (PASS over mandatory start-main effects). Use the
+    // same printed cards and a real masked attack/target choice instead.
     let raw = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../data/cards.json"
     ))
     .unwrap();
     let mut cards = CardData::load_from_str(&raw).unwrap();
-    let ids = [
-        "BT26-016", "EX12-031", "EX12-070", "EX12-036", "EX12-076", "EX12-026", "BT1-019",
-    ];
     let mut builder = DebugRunner::builder();
-    for id in ids {
+    for id in [
+        "BT26-016", "EX12-031", "EX12-070", "EX12-036", "EX12-076", "EX12-026", "BT1-019",
+    ] {
         builder = builder.add_card(cards.remove(id).unwrap());
         if id != "BT1-019" {
             builder = builder.dsl_card(id).unwrap();
         }
+    }
+    if nested_cost {
+        builder = builder.from_dsl_yaml(NESTED_COST_WITNESS).unwrap();
     }
     let mut runner = builder
         .deck(0, &["BT1-019"; 12])
@@ -59,148 +95,177 @@ fn capped_game_850_resumes_after_nested_replacement_and_block() {
     runner.place_on_field(1, "EX12-076", Some(0));
     let marine = runner.place_on_field(1, "EX12-031", Some(0));
     runner.push_source(marine, "EX12-026");
-    let attack_action = encode_attack(attacker.index as u16, SECURITY_TARGET);
-    assert_eq!(
-        build_action_mask(&runner.game, 0)[attack_action as usize],
-        1.0
+    if nested_cost {
+        runner.place_on_field(1, "NESTED-COST-WITNESS", Some(0));
+    }
+    masked(
+        &mut runner.game,
+        0,
+        encode_attack(attacker.index as u16, SECURITY_TARGET),
     );
-    runner.game.decode_action(attack_action, 0);
-    let delete_prompt = runner
+    assert!(runner
         .game
         .pending_selection
         .as_ref()
-        .expect("Chronomon attack deletion choice");
-    assert!(
-        delete_prompt.prompt.contains("delete 1 of your opponent"),
-        "{delete_prompt:?}"
-    );
-    let delete_marine = ATTACK_START + marine.index as u16;
-    assert_eq!(
-        build_action_mask(&runner.game, 0)[delete_marine as usize],
-        1.0
-    );
-    runner.game.resolve_selection(0, delete_marine).unwrap();
-    let outer = runner
-        .game
-        .pending_selection
+        .unwrap()
+        .prompt
+        .contains("delete 1 of your opponent"));
+    masked(&mut runner.game, 0, ATTACK_START + marine.index as u16);
+    let order = runner.game.pending_selection.as_ref().unwrap();
+    assert_eq!(order.previous_phase, GamePhase::Main);
+    let choices = order
+        .effect_choices
         .as_ref()
-        .expect("Arrival replacement before Decode");
-    assert_eq!(outer.kind, SelectionKind::Replacement, "{outer:?}");
-    assert_eq!(
-        runner.game.card(outer.source_card).card_id,
-        "EX12-070",
-        "{outer:?}"
-    );
-    assert_eq!(
-        build_action_mask(&runner.game, 1)[REPLACEMENT_ACCEPT as usize],
-        1.0
-    );
-    runner
-        .game
-        .resolve_selection(1, REPLACEMENT_ACCEPT)
-        .unwrap();
+        .expect("Arrival and Decode are one original immediate window");
+    let mut ids: Vec<_> = choices
+        .iter()
+        .map(|c| runner.game.card(c.source_card.unwrap()).card_id.as_str())
+        .collect();
+    ids.sort();
+    assert_eq!(ids, ["EX12-031", "EX12-070"]);
+    let choose_arrival = choices
+        .iter()
+        .find(|c| runner.game.card(c.source_card.unwrap()).card_id == "EX12-070")
+        .unwrap()
+        .action_id;
+    masked(&mut runner.game, 1, choose_arrival);
+    let outer = runner.game.pending_selection.as_ref().unwrap();
+    assert_eq!(outer.kind, SelectionKind::Replacement);
+    assert_eq!(runner.game.card(outer.source_card).card_id, "EX12-070");
+    masked(&mut runner.game, 1, REPLACEMENT_ACCEPT);
+    if nested_cost {
+        let inner = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("actual nested Delay-cost reaction");
+        assert_eq!(inner.kind, SelectionKind::Replacement, "{inner:?}");
+        assert_eq!(
+            runner.game.card(inner.source_card).card_id,
+            "NESTED-COST-WITNESS"
+        );
+        assert_eq!(inner.previous_phase, GamePhase::Main);
+    }
+    runner.game
+}
 
-    // Previously overwritten by the hand reward (whose previous_phase then
-    // incorrectly became EffectChoice). The repaired game exposes this choice.
-    let nested = runner.game.pending_selection.as_ref().unwrap();
-    assert_eq!(nested.kind, SelectionKind::Replacement, "{nested:?}");
+fn finish_arrival_branch(
+    initial: &Game,
+    accept_decode: bool,
+    accept_cost: bool,
+    play_reward: bool,
+    nested_cost: bool,
+) {
+    let mut game = initial.clone();
+    let mut cloned = game.clone();
+    let mut rewards = 0;
+    let mut blocks = 0;
+    let mut decode_choices = 0;
+    let mut cost_choices = 0;
+    for _ in 0..60 {
+        let Some(s) = game.pending_selection.as_ref() else {
+            break;
+        };
+        assert_eq!(s.previous_phase, GamePhase::Main, "{s:?}");
+        let pid = s.selecting_player;
+        let mask = build_action_mask(&game, pid);
+        assert_eq!(mask, build_action_mask(&cloned, pid));
+        let source = game
+            .card_data_for_handle(s.source_card)
+            .map(|c| c.card_id.as_str());
+        let reward = s.prompt == "Play 1 [Sanmyojin] Digimon from hand without paying the cost";
+        let action = if s.kind == SelectionKind::Replacement && source == Some("EX12-031") {
+            decode_choices += 1;
+            if accept_decode {
+                REPLACEMENT_ACCEPT
+            } else {
+                PASS
+            }
+        } else if s.kind == SelectionKind::Replacement && source == Some("NESTED-COST-WITNESS") {
+            cost_choices += 1;
+            if accept_cost {
+                REPLACEMENT_ACCEPT
+            } else {
+                PASS
+            }
+        } else if reward {
+            rewards += 1;
+            if play_reward {
+                s.valid_action_ids[0]
+            } else {
+                PASS
+            }
+        } else if game.current_phase == GamePhase::BlockTiming {
+            blocks += 1;
+            let index = game.players[1]
+                .battle_area
+                .iter()
+                .position(|p| p.top_card().card_id(&game.card_data) == "EX12-076")
+                .unwrap();
+            ATTACK_START + index as u16
+        } else if mask[PASS as usize] > 0.0 {
+            PASS
+        } else {
+            s.valid_action_ids[0]
+        };
+        masked(&mut game, pid, action);
+        masked(&mut cloned, pid, action);
+        assert_eq!(to_ui_json(&game), to_ui_json(&cloned));
+    }
     assert_eq!(
-        runner.game.card(nested.source_card).card_id,
-        "EX12-031",
-        "{nested:?}"
+        rewards, 1,
+        "the suspended Delay reward must still be offered exactly once"
     );
-    assert!(
-        nested.prompt.contains("when_would_leave_battle_area"),
-        "{nested:?}"
+    assert_eq!(blocks, 1, "Susanoomon must actually block");
+    assert_eq!(
+        decode_choices, 1,
+        "the original Decode candidate remains available exactly once"
     );
-    assert_eq!(nested.previous_phase, GamePhase::Main);
-    let player = nested.selecting_player;
-    for accept_nested in [false, true] {
+    assert_eq!(cost_choices, usize::from(nested_cost));
+    if nested_cost {
+        assert_eq!(
+            game.players[1]
+                .hand
+                .iter()
+                .filter(|c| c.card_id(&game.card_data) == "EX12-026")
+                .count(),
+            usize::from(!accept_cost)
+        );
+    }
+    assert!(game.pending_selection.is_none(), "choices must finish");
+    assert!(game.pending_attack.is_none(), "combat must finish");
+    if game.game_over {
+        assert_eq!(game.current_phase, GamePhase::GameOver);
+        assert!(game.winner.is_some(), "loop draws do not count as repaired");
+    } else {
+        assert_eq!(game.current_phase, GamePhase::Main);
+        assert!(
+            build_action_mask(&game, game.turn_player())
+                .iter()
+                .filter(|x| **x > 0.0)
+                .count()
+                > 1,
+            "real Main choices replace orphan PASS"
+        );
+    }
+}
+
+#[test]
+fn capped_game_850_resumes_after_same_event_replacements_and_block() {
+    let game = arrival_boundary(false);
+    for accept_decode in [false, true] {
         for play_reward in [false, true] {
-            let mut game = runner.game.clone();
-            game.resolve_selection(
-                player,
-                if accept_nested {
-                    REPLACEMENT_ACCEPT
-                } else {
-                    PASS
-                },
-            )
-            .unwrap();
-            let mut cloned = game.clone();
-            let mut saw_reward = false;
-            let mut saw_block = false;
-            for _ in 0..40 {
-                let Some(selection) = game.pending_selection.as_ref() else {
-                    break;
-                };
-                assert_eq!(
-                    selection.previous_phase,
-                    GamePhase::Main,
-                    "{}",
-                    selection.prompt
-                );
-                let pid = selection.selecting_player;
-                let mask = build_action_mask(&game, pid);
-                assert_eq!(mask, build_action_mask(&cloned, pid));
-                let reward = selection.prompt
-                    == "Play 1 [Sanmyojin] Digimon from hand without paying the cost";
-                saw_reward |= reward;
-                let action = if reward && play_reward {
-                    selection.valid_action_ids[0]
-                } else if game.current_phase == GamePhase::BlockTiming {
-                    let blocker = game.players[1]
-                        .battle_area
-                        .iter()
-                        .position(|p| p.top_card().card_id(&game.card_data) == "EX12-076")
-                        .expect("Susanoomon remains");
-                    let block = ATTACK_START + blocker as u16;
-                    assert_eq!(
-                        mask[block as usize], 1.0,
-                        "Susanoomon must be a legal blocker"
-                    );
-                    saw_block = true;
-                    block
-                } else if mask[PASS as usize] > 0.0 {
-                    PASS
-                } else {
-                    selection.valid_action_ids[0]
-                };
-                assert!(mask[action as usize] > 0.0);
-                game.decode_action(action, pid);
-                cloned.decode_action(action, pid);
-                assert_eq!(to_ui_json(&game), to_ui_json(&cloned));
-            }
-            assert!(
-                saw_reward,
-                "the suspended Delay reward must still be offered"
-            );
-            assert!(
-                saw_block,
-                "the scenario must include Susanoomon's real block"
-            );
-            assert!(
-                game.pending_selection.is_none(),
-                "nested choices must finish"
-            );
-            assert!(game.pending_attack.is_none(), "combat must finish");
-            if game.game_over {
-                assert_eq!(game.current_phase, GamePhase::GameOver);
-                assert!(
-                    game.winner.is_some(),
-                    "a loop draw must not count as repaired"
-                );
-                continue;
-            }
-            assert_eq!(game.current_phase, GamePhase::Main);
-            assert!(
-                build_action_mask(&game, game.turn_player())
-                    .iter()
-                    .filter(|v| **v > 0.0)
-                    .count()
-                    > 1,
-                "real main-phase choices must replace the orphan PASS fallback"
-            );
+            finish_arrival_branch(&game, accept_decode, false, play_reward, false);
+        }
+    }
+}
+
+#[test]
+fn nested_delay_cost_replacement_preserves_main_and_search_clone() {
+    let game = arrival_boundary(true);
+    for accept_cost in [false, true] {
+        for play_reward in [false, true] {
+            finish_arrival_branch(&game, false, accept_cost, play_reward, true);
         }
     }
 }

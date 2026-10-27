@@ -439,9 +439,19 @@ impl<'a> EffectContext<'a> {
         }
         // Route through the Game-level fire-site so OnDeletion observers and
         // WhenWouldBeDeleted replacements run. `delete_permanent_with_effects`
-        // infers cause from `effect_source_player` / `pending_attack` /
-        // `security_resolution`.
-        self.game.delete_permanent_with_effects(target);
+        // This API is an effect action even when called directly or resumed
+        // inside an attack/security procedure. Pin its controller for mixed
+        // owner batches and observer provenance as well as replacement filters.
+        let previous = self.game.effect_source_player.replace(self.player);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            crate::replacement::with_effect_body(self.game, |game| {
+                game.delete_permanent_with_effects(target);
+            });
+        }));
+        self.game.effect_source_player = previous;
+        if let Err(payload) = result {
+            std::panic::resume_unwind(payload);
+        }
     }
 
     /// Pay the source permanent's return-self-to-deck-bottom activation

@@ -1004,23 +1004,23 @@ pub struct Game {
     /// reducer/replacement re-entries). `None` means "no pending choice".
     pub(crate) pending_digivolve_route_choice: Option<crate::dna_digivolve::DigivolveRouteMatch>,
 
-    /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
-    /// have already fired within the current `try_replace` call chain so a
+    /// Spec §7.5 once-per-event guard. Records `(timing, stable subject)` pairs
+    /// already offered for the current interrupting cause so a
     /// redirected route does not re-fire the same timing for the same subject
     /// (e.g. `WhenWouldLeaveBattleArea` super-timing double-fire when a
     /// `Redirected(Deck)` outcome on `WhenWouldBeDeleted` routes through
     /// `return_to_deck`, which would otherwise re-invoke
     /// `WhenWouldLeaveBattleArea` for the same permanent).
     ///
-    /// Cleared at the outermost entry (when `replacement_depth == 0`) of
-    /// `try_replace_impl` — unless `in_replacement_commit` is set, in which
-    /// case we are continuing the original call chain across a callback
-    /// resolution boundary and the set must be preserved. See
-    /// `replacement::try_replace_impl`.
+    /// Fresh deletion calls isolate this ledger from enclosing events. Owned
+    /// windows retain consumed candidates across selections and reconstruct
+    /// their commit guard; permanent keys survive compaction and distinguish
+    /// replayed incarnations. See `replacement::with_deletion_event` and
+    /// `replacement::run_commit_with_flag`.
     #[doc(hidden)]
     pub replacement_fired: std::collections::HashSet<(
         crate::enums::EffectTiming,
-        crate::replacement::ReplacementSubject,
+        crate::replacement::ReplacementSubjectIdentity,
     )>,
 
     /// Spec §7.5 continuation marker. Set by the optional-replacement callback
@@ -1065,7 +1065,7 @@ pub struct Game {
     /// commit may never re-offer the window it is committing, full stop.
     pub(crate) replacement_commit_key: Option<(
         crate::enums::EffectTiming,
-        crate::replacement::ReplacementSubject,
+        crate::replacement::ReplacementSubjectIdentity,
     )>,
 
     /// Controller of the effect whose `process` is currently running, if
@@ -2254,34 +2254,17 @@ impl Game {
         crate::replacement::try_replace_impl(self, timing, subject, cause, original_destination)
     }
 
-    /// Infer the `ReplacementCause` for a deletion of `target_handle` given
-    /// the current game state. Priority:
-    ///   1. `security_resolution.is_some()` → `SecurityCheck`
-    ///   2. `pending_attack.is_some()` → `Battle`
-    ///   3. `effect_source_player.is_some()` — an effect is currently
-    ///      running; `Own` if its controller equals the target's
-    ///      controller, otherwise `Opponent`.
-    ///   4. Fallback → `OwnEffect`.
+    /// Infer provenance for an effect-driven deletion. An attack or security
+    /// check can contain resolving card effects; neither ambient procedure
+    /// turns an effect deletion into battle deletion. Actual normal and
+    /// security battles pass `ReplacementCause::Battle` explicitly.
     ///
     /// Consumed by the deletion fire-site in `combat::delete_permanent_with_effects`.
     pub(crate) fn infer_deletion_cause(
         &self,
         target_handle: crate::permanent::PermanentHandle,
     ) -> crate::replacement::ReplacementCause {
-        use crate::replacement::ReplacementCause;
-        if self.security_resolution.is_some() {
-            return ReplacementCause::SecurityCheck;
-        }
-        if self.pending_attack.is_some() {
-            return ReplacementCause::Battle;
-        }
-        if let Some(acting) = self.effect_source_player {
-            if acting == target_handle.player {
-                return ReplacementCause::OwnEffect;
-            }
-            return ReplacementCause::OpponentEffect;
-        }
-        ReplacementCause::OwnEffect
+        self.infer_effect_cause(target_handle.player)
     }
 
     /// The observer-facing `EventCause` for the deletion currently being
@@ -2310,9 +2293,8 @@ impl Game {
     /// (return-to-hand/deck, trash-by-effect, draw, place-in-security,
     /// de-digivolve, etc.).
     ///
-    /// Differs from `infer_deletion_cause` in that `Battle` is NOT a candidate:
-    /// non-deletion routes are never reached via `resolve_battle`, so the only
-    /// live signals are security-resolution and the effect-source player.
+    /// `Battle` is never inferred from an ambient attack. Battle fire-sites
+    /// provide their cause explicitly; deletion uses this same effect path.
     ///
     /// Priority:
     ///   1. `effect_source_player.is_some()` — compare against `target_player`;
