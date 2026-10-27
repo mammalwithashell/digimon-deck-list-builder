@@ -15946,7 +15946,7 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/st20/ST20-02.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_02.rs",
-      "test_count": 9,
+      "test_count": 10,
       "patterns": [
         "REVEAL-BUCKETS",
         "INHERITED-DP-AURA",
@@ -15963,13 +15963,13 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/st20/ST20-03.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_03.rs",
-      "test_count": 9,
+      "test_count": 10,
       "patterns": [
         "CONDITIONAL-SELF-DIGIVOLVE",
         "DISTINCT-FILTERED-COLORS",
         "INHERITED-DP-AURA"
       ],
-      "notes": "[OP][WD] free requirement-respecting self-digivolve into ADVENTURE hand card gated on ADVENTURE-Tamer colours >= 3 via new `distinct_colors_gte` leaf (G-DSL-DISTINCT-FILTERED-COLORS)."
+      "notes": "[OP][WD] free requirement-respecting self-digivolve into ADVENTURE hand card gated on ADVENTURE-Tamer colours >= 3 via new `distinct_colors_gte` leaf (G-DSL-DISTINCT-FILTERED-COLORS). Colour count reads rules colours (gained colours count) via the shared distinct_colors_in_zone helper."
     },
     "ST21-05": {
       "card_name": "Angemon",
@@ -16013,13 +16013,13 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/st21/ST21-08.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_08.rs",
-      "test_count": 9,
+      "test_count": 10,
       "patterns": [
         "CONDITIONAL-SELF-DIGIVOLVE",
         "DISTINCT-FILTERED-COLORS",
         "INHERITED-DP-AURA"
       ],
-      "notes": "Same body as ST20-03; inherited [All Turns] +1000."
+      "notes": "Same body as ST20-03; inherited [All Turns] +1000. Colour count reads rules colours (gained colours count) via the shared distinct_colors_in_zone helper."
     },
     "ST21-10": {
       "card_name": "Gabumon",
@@ -16053,7 +16053,7 @@
         "DELAY-MAIN-ACTIVATED",
         "SECURITY-PLACE-SELF"
       ],
-      "notes": "ADVENTURE Digimon/Tamer on field (incl. breeding, per official Q&A) bypasses colour via use_requirement (+flood_gate as BT25-098); [Main] reveal 3 add 1 ADVENTURE, bottom rest, auto-seat as Delay; <Delay> gain 2; [Security] place self."
+      "notes": "ADVENTURE Digimon/Tamer on field (incl. breeding, per official Q&A) bypasses colour via use_requirement (no flood_gate: it had no observable effect); [Main] reveal 3 add 1 ADVENTURE, bottom rest, auto-seat as Delay; <Delay> gain 2; [Security] place self."
     },
     "AD1-022": {
       "card_name": "Izzy Izumi & Tai Kamiya",

@@ -380,7 +380,7 @@ pub struct PredicateSpec {
     /// collectively carry at least `n` DISTINCT colors. A no-subject global
     /// predicate - does not inspect the candidate. Filtered generalisation of
     /// `distinct_tamer_colors_gte` (which counts every Tamer). Driver:
-    /// ST20-03 / ST21-08 â€” "If your Tamers with the [ADVENTURE] trait have 3
+    /// ST20-03 / ST21-08 — "If your Tamers with the [ADVENTURE] trait have 3
     /// or more total colors" (`filter: { kind: tamer, trait_has: ADVENTURE }`).
     /// G-DSL-DISTINCT-FILTERED-COLORS.
     #[serde(skip_serializing_if = "Option::is_none")]
