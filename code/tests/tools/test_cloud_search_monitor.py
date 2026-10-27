@@ -172,3 +172,14 @@ def test_ex13_run_config_preserves_panel_scope_and_checkpoint_lineage(tmp_path):
     assert config['input_hashes'] == {'inputs/seed.zip': 'checkpoint-hash'}
     assert config['fresh_replay'] is True and config['replay_window'] == 3
     assert config['generation'] == {'generations': 4, 'games': 1100, 'workers': 8}
+
+
+def test_recovery_config_distinguishes_inherited_checkpoint_from_remaining_work(tmp_path):
+    recovery = dict(baseline_checkpoint=1, first_generation=2, final_generation=4,
+        remaining_generations=3, inherited_collection=dict(games=1100, rows=105563, truncated_games=0),
+        source_image='old-image', source_plan_sha256='original-plan')
+    write(tmp_path, 'deployment-plan.json', dict(generations=4, games=1100, workers=8,
+        fresh_replay=True, **recovery))
+    config = monitor.wandb_config(tmp_path)
+    assert config['recovery'] == recovery
+    assert config['fresh_replay'] is True

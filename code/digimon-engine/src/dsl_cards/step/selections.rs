@@ -6357,6 +6357,7 @@ fn install_select_own_permanent(
     let target_player = ctx.player;
     let candidates = collect_matching_permanents(ctx, target_player, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
+    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
     if candidates.is_empty() {
         return;
     }
@@ -6399,6 +6400,7 @@ fn install_select_own_permanent(
                 PredicateSubject::Permanent(handle),
                 Some(&filter_bindings),
             ) && matches_selected_field(game, handle, selector, selected_field)
+                && (!deletion_payment || super::deletion_payment::can_pay(&read_ctx, handle))
         },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
@@ -7414,6 +7416,7 @@ fn install_select_opponent_permanent(
     // candidate; it is chosen and not affected.
     let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
+    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
     if candidates.is_empty() {
         return;
     }
@@ -7454,6 +7457,7 @@ fn install_select_opponent_permanent(
                 PredicateSubject::Permanent(handle),
                 Some(&filter_bindings),
             ) && matches_selected_field(game, handle, selector, selected_field)
+                && (!deletion_payment || super::deletion_payment::can_pay(&read_ctx, handle))
         },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
@@ -7596,9 +7600,11 @@ fn install_select_any_permanent(
 
     let handles = collect_matching_any_permanents(ctx, excluded, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &handles, selector);
+    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
     let candidates: Vec<(u16, PermanentHandle)> = handles
         .into_iter()
         .filter(|handle| matches_selected_field(ctx.game, *handle, selector, selected_field))
+        .filter(|handle| !deletion_payment || super::deletion_payment::can_pay(&ctx.as_read(), *handle))
         .map(|handle| {
             (
                 encode_attack(handle.player as u16, handle.index as u16),

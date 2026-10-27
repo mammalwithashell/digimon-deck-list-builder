@@ -514,7 +514,7 @@ fn replacement_process_has_payable_required_selection(
     if let Some(subject) = subject.permanent() {
         bindings.insert_permanent("replacement_subject", subject);
     }
-    required_selection_step_has_candidate(first, ctx, &bindings)
+    required_selection_step_has_candidate(first, &process[1..], ctx, &bindings)
 }
 
 fn process_places_permanent_in_security(process: &[CompiledStep]) -> bool {
@@ -550,6 +550,7 @@ fn step_places_permanent_in_security(step: &CompiledStep) -> bool {
 
 fn required_selection_step_has_candidate(
     step: &CompiledStep,
+    tail: &[CompiledStep],
     ctx: &EffectReadContext<'_>,
     bindings: &Bindings,
 ) -> bool {
@@ -568,17 +569,20 @@ fn required_selection_step_has_candidate(
             )
         }
         CompiledStep::SelectOwnPermanent {
-            filter, selector, ..
-        } => has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings),
+            filter, selector, bind_as, then, ..
+        } => has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings,
+            super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail)),
         CompiledStep::SelectOpponentPermanent {
-            filter, selector, ..
+            filter, selector, bind_as, then, ..
         } => {
             let opponent = ctx.game.next_clockwise(ctx.player);
-            has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings)
+            has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings,
+                super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail))
         }
         CompiledStep::SelectAnyPermanent {
-            filter, selector, ..
-        } => has_matching_permanent(ctx, None, filter, *selector, bindings),
+            filter, selector, bind_as, then, ..
+        } => has_matching_permanent(ctx, None, filter, *selector, bindings,
+            super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail)),
         CompiledStep::SelectHand { of, filter, .. } => {
             has_matching_card_in_zone(ctx, *of, CompiledZone::Hand, filter, bindings)
         }
@@ -873,7 +877,7 @@ fn replacement_process_has_payable_required_selection_without_subject(
 ) -> bool {
     process
         .first()
-        .is_none_or(|step| required_selection_step_has_candidate(step, ctx, bindings))
+        .is_none_or(|step| required_selection_step_has_candidate(step, &process[1..], ctx, bindings))
 }
 
 fn resolve_player_ref(ctx: &EffectReadContext<'_>, player: CompiledPlayerRef) -> PlayerId {
@@ -891,6 +895,7 @@ fn has_matching_permanent(
     filter: &CompiledPredicate,
     selector: Option<CompiledFieldSelector>,
     bindings: &Bindings,
+    deletion_payment: bool,
 ) -> bool {
     let mut handles = Vec::new();
     let players: Box<dyn Iterator<Item = PlayerId>> = if let Some(player) = player {
@@ -919,7 +924,8 @@ fn has_matching_permanent(
     let selected = selected_field_extreme(ctx, &handles, selector);
     handles
         .into_iter()
-        .any(|handle| matches_selected_field(ctx, handle, selector, selected))
+        .any(|handle| matches_selected_field(ctx, handle, selector, selected)
+            && (!deletion_payment || super::step::deletion_payment::can_pay(ctx, handle)))
 }
 
 /// Result of resolving a `CompiledFieldSelector` over a candidate set.

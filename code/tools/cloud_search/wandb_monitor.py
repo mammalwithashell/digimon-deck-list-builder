@@ -193,6 +193,9 @@ def wandb_config(root):
         "evaluation_protocol": plan.get("evaluation_protocol"), "games_per_evaluation": plan.get("games_per_evaluation"),
         "parent_run": plan.get("parent_run"), "parent_checkpoint": plan.get("parent_checkpoint"),
         "parent_checkpoint_sha256": plan.get("parent_checkpoint_sha256"),
+        "recovery": {key: plan.get(key) for key in (
+            "baseline_checkpoint", "first_generation", "final_generation", "remaining_generations",
+            "inherited_collection", "source_image", "source_plan_sha256")},
         "fresh_replay": plan.get("fresh_replay"), "replay_window": plan.get("replay_window"),
         "search": plan.get("search"),
         "throughput_scope": "saved training positions; diagnostics logged separately",
