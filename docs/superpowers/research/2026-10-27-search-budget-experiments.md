@@ -275,3 +275,37 @@ Readings:
   prior tilted by Q — i.e. it recovers the PUCT result rather than beating it.
   The evaluation plays the argmax of the improved policy; the Gumbel survivor
   (which carries the exploration sample) is for self-play only.
+
+## Generation comparison: playout-cap randomization (started 2026-10-27 14:26)
+
+Play-time search is unchanged under C2, so the only test that can judge it is
+a training generation. Driver: `code/tools/cap_randomization_generation.py`
+(`D:/wt/bench-runs/2026-10-27/cap-generation/`), preregistered as follows.
+
+- **Parent:** the archetype-audit 2.4 model. The trainer needs it as an SB3
+  `.zip`; only the ONNX exists locally (the cloud host that held the `.zip` is
+  unreachable), so `code/tools/sb3_from_onnx.py` rebuilt it from the ONNX
+  initializers — verified to ≤1e-6 max logit/value difference against
+  onnxruntime on 64 random and 72 real observations, argmax agreement 1.0.
+- **Arms**, same master seed `27102026` (game `k` draws the same deck pair and
+  shuffle in every arm), 320 sims / 4 worlds / eval batch 4, decision cap 1200,
+  16 temperature decisions, 24-slot EX13 pool:
+  - `full`: every non-forced decision searched in full, games 0–999.
+  - `cap`: `--full-search-fraction 0.25 --cheap-sims 64`, the same games
+    0–999 (equal games; ≈0.36× the search compute; ≈25% policy-target rows).
+  - `cap_eq`: `cap` plus games 1000–2999 (equal search compute at the
+    measured 0.36 ratio, rounded up to whole 250-game partitions).
+- **Update:** one `azero_trainer` update per arm from the same parent — 2
+  epochs, batch 512, lr 1e-4 (the cloud campaign's settings), cheap rows
+  weighted 0 in the policy loss, value loss on every completed row.
+- **Judgement:** `code/tools/policy_head_to_head.py`, deterministic masked
+  policy without search, four-game blocks per ordered archetype pair (both
+  deck assignments × both opening orders), interval over blocks. Panels: each
+  child vs parent, each child vs greedy, parent vs greedy, `cap` vs `full`,
+  `cap_eq` vs `full`.
+- **Reading the result:** `cap` ≈ `full` on equal games means the policy
+  targets lost to cheap rows did not matter at this scale; `cap_eq` > `full`
+  is the KataGo claim (more games per unit compute buys more); `cap` < `full`
+  with `cap_eq` ≈ `full` means the lever is neutral per compute and only
+  changes the games/positions mix. One generation from a weak parent is a
+  small-effect regime, so a null here does not refute the lever at scale.
