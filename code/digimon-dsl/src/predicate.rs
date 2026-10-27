@@ -376,6 +376,15 @@ pub struct PredicateSpec {
     /// names". G-DSL-DISTINCT-NAMED-PERMANENT-COUNT.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distinct_named_count_gte: Option<DistinctNamedCountPredicate>,
+    /// True when the observer's battle-area permanents matching `filter`
+    /// collectively carry at least `n` DISTINCT colors. A no-subject global
+    /// predicate - does not inspect the candidate. Filtered generalisation of
+    /// `distinct_tamer_colors_gte` (which counts every Tamer). Driver:
+    /// ST20-03 / ST21-08 â€” "If your Tamers with the [ADVENTURE] trait have 3
+    /// or more total colors" (`filter: { kind: tamer, trait_has: ADVENTURE }`).
+    /// G-DSL-DISTINCT-FILTERED-COLORS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distinct_colors_gte: Option<DistinctColorsCountPredicate>,
     /// True when the observer's battle-area Tamer permanents collectively
     /// carry at least N face-down digivolution sources. A no-subject global
     /// predicate â€” does not inspect the candidate. Gates the `[Then]` clause of
@@ -1267,6 +1276,21 @@ pub struct DistinctNamedCountPredicate {
 
 fn default_distinct_named_of() -> PlayerRef {
     PlayerRef::You
+}
+
+/// Payload for the `distinct_colors_gte` predicate leaf - at least `n`
+/// distinct colors across the observer's battle-area permanents matching
+/// `filter`. G-DSL-DISTINCT-FILTERED-COLORS.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DistinctColorsCountPredicate {
+    /// Owner of the permanents to scan. Defaults to `you`.
+    #[serde(default = "default_distinct_named_of")]
+    pub of: PlayerRef,
+    /// Filter each battle-area permanent must satisfy to contribute colors.
+    pub filter: Box<PredicateSpec>,
+    /// Minimum number of DISTINCT colors (top card's printed colors) required.
+    pub n: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]

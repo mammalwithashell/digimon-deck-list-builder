@@ -3294,6 +3294,20 @@ impl Walk for digimon_dsl::compiled::CompiledPlayCostBindingPredicate {
         op.walk(c, &format!("{}.op", path), "UNCLASSIFIED_STRING");
     }
 }
+impl Walk for digimon_dsl::compiled::CompiledDistinctColorsCount {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(
+            path,
+            "digimon_dsl::compiled::CompiledDistinctColorsCount",
+            "COMPOSITE",
+            serde_json::Value::Null,
+        );
+        let digimon_dsl::compiled::CompiledDistinctColorsCount { of, filter, n } = self;
+        of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
+        filter.walk(c, &format!("{}.filter", path), "UNCLASSIFIED_STRING");
+        n.walk(c, &format!("{}.n", path), "UNCLASSIFIED_STRING");
+    }
+}
 impl Walk for digimon_dsl::compiled::CompiledDistinctNamedCount {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(

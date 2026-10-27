@@ -588,6 +588,43 @@ fn eval_predicate_ref_known(
             return false;
         }
     }
+    if let Some(spec) = &pred.distinct_colors_gte {
+        // G-DSL-DISTINCT-FILTERED-COLORS - count the DISTINCT colors across
+        // `of`'s battle-area permanents matching `filter` (each contributes
+        // its top card's colors), then require >= `n`. Filtered sibling of
+        // `distinct_tamer_colors_gte`. Driver: ST20-03 / ST21-08 ("If your
+        // Tamers with the [ADVENTURE] trait have 3 or more total colors").
+        // No-subject global leaf.
+        let mut colors: Vec<CardColor> = Vec::new();
+        for player in resolve_predicate_players(spec.of, rctx) {
+            let battle_len = rctx.game.player(player).battle_area.len();
+            for index in 0..battle_len {
+                let handle = PermanentHandle {
+                    player,
+                    index: index as u8,
+                };
+                if !eval_predicate_with_bindings(
+                    &spec.filter,
+                    rctx,
+                    PredicateSubject::Permanent(handle),
+                    bindings,
+                ) {
+                    continue;
+                }
+                let Some(perm) = permanent_for_handle(rctx, handle) else {
+                    continue;
+                };
+                for c in perm.top_card().colors(rctx.card_data()) {
+                    if !colors.contains(c) {
+                        colors.push(*c);
+                    }
+                }
+            }
+        }
+        if colors.len() < usize::from(spec.n) {
+            return false;
+        }
+    }
     if let Some(floor) = pred.face_down_sources_under_tamers_gte {
         // G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER: face-down digivolution
         // cards under the observer's battle-area Tamers.

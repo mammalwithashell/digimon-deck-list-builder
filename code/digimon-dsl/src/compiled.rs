@@ -524,6 +524,12 @@ pub struct CompiledPredicate {
     /// packs loadable.
     #[serde(default)]
     pub distinct_named_count_gte: Option<CompiledDistinctNamedCount>,
+    /// True when the observer's battle-area permanents matching the inner
+    /// filter collectively carry >= N distinct colors.
+    /// G-DSL-DISTINCT-FILTERED-COLORS. `#[serde(default)]` keeps older packs
+    /// loadable.
+    #[serde(default)]
+    pub distinct_colors_gte: Option<CompiledDistinctColorsCount>,
     /// True when the observer's battle-area Tamers collectively carry at least
     /// N face-down digivolution sources. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
     pub face_down_sources_under_tamers_gte: Option<u8>,
@@ -899,6 +905,14 @@ pub struct CompiledPlayCostBindingPredicate {
 /// Compiled `distinct_named_count_gte`. G-DSL-DISTINCT-NAMED-PERMANENT-COUNT.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledDistinctNamedCount {
+    pub of: CompiledPlayerRef,
+    pub filter: Box<CompiledPredicate>,
+    pub n: u8,
+}
+
+/// Compiled `distinct_colors_gte`. G-DSL-DISTINCT-FILTERED-COLORS.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDistinctColorsCount {
     pub of: CompiledPlayerRef,
     pub filter: Box<CompiledPredicate>,
     pub n: u8,

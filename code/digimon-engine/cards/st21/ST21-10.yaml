@@ -1,0 +1,88 @@
+# ST21-10 Gabumon — Lv3, Purple, Reptile / ADVENTURE, Rookie / Data,
+# DP 1000, Cost 3.
+#
+# Printed card text (official bundle data/card_bundles/ST21-10.md):
+#
+#   Digivolve: Purple Lv.2 / cost 0; Blue Lv.2 / cost 0.
+#   [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0
+#
+#   [Your Turn] While your opponent has a Digimon with 10000 DP or more, or
+#   your Tamers have 3 or more total colors, this Digimon can digivolve into
+#   [MetalGarurumon] in the hand for a digivolution cost of 4, ignoring
+#   digivolution requirements.
+#
+#   Inherited: [When Attacking] [Once Per Turn] <Draw 1>. Then, trash 1 card
+#   in your hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Purple/ST21_10.cs
+#   (DCGO notes it is copied from ST21's Agumon — the ST20-10 shape here.)
+#   - Alt requirement: Lv2 && (HasAdventureTraits || HERO), cost 0. The printed
+#     box reads "Lv.2 w/[ADVENTURE] trait" only — the print governs, so the
+#     [Hero] branch is NOT authored (DCGO over-admits).
+#   - Warp: AddSelfDigivolutionRequirementStaticEffect(permanent == self, card
+#     name == "MetalGarurumon", cost 4, ignoreDigivolutionRequirement: true),
+#     Condition = IsOwnerTurn && on field && (opp Digimon DP >= 10000 ||
+#     GetDifferenetColorCardCount(all own Tamers) >= 3).
+#   - Inherited OnAllyAttack, maxCount 1 (OPT), not optional: <Draw 1>, then
+#     SelectHandEffect(Discard, maxCount 1, canNoSelect: false) — mandatory.
+#
+# Data drift: generated `cards/st21/ST21-10.json` lists only the Purple circle;
+# official DB + data/cards.json carry Purple AND Blue Lv.2/0. Both authored.
+#
+# Verdict: IMPLEMENTED.
+
+card: ST21-10
+name: Gabumon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: [Reptile, ADVENTURE]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: ADVENTURE }
+    cost: 0
+  # [Your Turn] warp into [MetalGarurumon] for 4, ignoring requirements.
+  # Same `direction: into` + condition shape as ST20-10 Agumon.
+  - kind: digivolve
+    direction: into
+    from:
+      zone: [hand]
+      of: you
+      name_is: "MetalGarurumon"
+    cost: 4
+    ignore_requirements: true
+    condition:
+      all_of:
+        - your_turn: true
+        - any_of:
+            - any_permanent:
+                of: opponent
+                zone: [battle_area]
+                kind: digimon
+                dp_gte: 10000
+            - distinct_tamer_colors_gte: 3
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] <Draw 1>, then trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
