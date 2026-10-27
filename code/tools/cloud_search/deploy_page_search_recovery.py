@@ -1,5 +1,6 @@
 """Launch the prepared CP2 continuation once; keep the failed source untouched."""
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import shlex
@@ -32,6 +33,7 @@ def main():
     command = ['/usr/bin/docker', 'run', '--rm', '--init', '--name', name,
         '--memory=24g', '--cpus=8', '--stop-timeout=120', '--network=none',
         '-e', f'DIGIMON_DEPLOYED_IMAGE={args.image}', '-e', 'DIGIMON_ONNX_OPPONENT=0',
+        '-e', 'DIGIMON_SELFPLAY_TRACE_DECISIONS=1',
         '-e', 'DIGIMON_SEARCH_EVAL_CACHE_ENTRIES=0', '-e', 'OMP_NUM_THREADS=1',
         '-e', 'MKL_NUM_THREADS=1', '-e', 'OPENBLAS_NUM_THREADS=1',
         '--mount', f'type=bind,src={source},dst=/archive,readonly',
@@ -66,6 +68,7 @@ def main():
     install(name + '-monitor', logger, 'monitor.log')
     (root / 'started.json').write_text(json.dumps(dict(time_unix=time.time(), image=args.image,
         source_commit=args.commit, run_id=run_id, parent_checkpoint=2,
+        deployment_script_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         first_generation=3, final_generation=4), indent=2))
     subprocess.run(['systemctl', 'daemon-reload'], check=True)
     subprocess.run(['systemctl', 'start', name + '.service'], check=True)
