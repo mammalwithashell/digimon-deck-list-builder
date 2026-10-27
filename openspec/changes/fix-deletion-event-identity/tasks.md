@@ -19,4 +19,4 @@
 ## 4. Package evidence
 
 - [x] 4.1 Update gap/evidence documentation with tested guarantees and remaining limitations; validate OpenSpec strictly.
-- [ ] 4.2 Create and attach a scoped follow-up PR with validation evidence without changing the live diagnostic run.
+- [x] 4.2 Create and attach a scoped follow-up PR with validation evidence without changing the live diagnostic run (PR #753).
