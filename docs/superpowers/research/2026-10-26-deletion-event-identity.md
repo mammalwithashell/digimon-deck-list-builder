@@ -57,16 +57,28 @@ DCGO source inspection is supporting evidence, not a live oracle run.
 - Final selection suite: 88 passed (67.33 seconds with four threads).
 - Final replacement suite: 139 passed with four test threads (21.03 seconds).
 - Focused union Delay DSL contracts: 3 passed (2.57 seconds).
+- Affected card regressions: BT19-099 22 passed, EX12-036 13 passed, and
+  ST20-14 18 passed.
 - Repository Tier 0: 13 checks passed, including 183 verification-tool tests.
 - OpenSpec strict validation and diff whitespace checks passed.
 
-These final-source suites total 741 passing tests; the 13 focused regressions
+These final-source suites total 794 passing tests; the 13 focused regressions
 are a subset of the replacement suite. An earlier broader build passed combat
 (299, one pre-existing ignore), cost hooks (100), and deletion batching (13),
 but found the ordinary-deletion lazy-identity regression. The repair preserves
 the existing assertion, which passes in the final 511-test unit suite. That
 older build was stopped during DSL execution so it is not a completed broad
 suite result. Full Linux CI remains the broader integration gate.
+
+Initial Linux CI passed the rules/core groups but failed one of 1,171 exam
+scenarios: `EX12-070-effect4.yaml` deliberately asserted the old simulator bug
+documented in its own caveat (the bounced Shishimamon went to trash). The native
+harness reproduced exactly that hand/trash mismatch. The expectation now keeps
+Shishimamon in hand, as printed MarineBullmon/Arrival text and DCGO source
+require; the corrected scenario passes locally. All other asserted state and
+scripted decisions are unchanged. This is a rules-backed simulator regression,
+not a new oracle result: the historical `unreachable` prompt-shape verdict is
+preserved. The complete exam corpus remains part of the follow-up CI gate.
 
 Two concurrent focused runs were
 stopped after several minutes without completion, while serial tests passed.
