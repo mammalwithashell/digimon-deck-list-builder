@@ -59,6 +59,41 @@ rather than deleted; and an unfinished generation continues through
 and committed chunk hashes. A generation that already wrote training
 artifacts is refused rather than overwritten.
 
+## Repaired-image checkpoint transitions
+
+`evaluate_checkpoint_transition.py` evaluates saved checkpoints 3 and 4 from a
+stopped campaign under one new immutable image. It requires explicit parent
+plan/checkpoint hashes and a new output directory. Mount a parent directory and
+create the assessment below it; the output itself must not already exist.
+Keep that same absolute assessment path when mounting it for later preparation,
+because the frozen anchor registry contains absolute container paths.
+
+Both checkpoints use the original frozen decks and learned anchors, the same
+seeds and the current `archetype-paired-v2` schedule. Complete canonical card
+reports, exact cohorts, runtime/card/input hashes and paired intervals are
+required. Historical reports from a different engine or schedule are not
+substituted. Selection is a conservative continuation choice, not promotion.
+
+`prepare_checkpoint_continuation.py` consumes the completed assessment and an
+explicit selected checkpoint hash. It accepts a saved checkpoint from a failed
+parent without changing that failure or its evidence. It validates the full
+assessment bundle and the refreshed EX13 pool, copies weights only, and requires
+full-budget native health games before writing a usable campaign plan. The
+default remains four 1,100-game generations, eight workers, 320 simulations,
+four worlds, leaf batch four and a three-generation fresh-replay window.
+
+The EX13 combined diagnostic and original-pet regression panels are evaluated
+separately, totaling 10,800 games per checkpoint. Preserve their explicit
+same-list/held-out denominators in the plan and W&B config. The supplemental
+pool is retained but is not evaluated by default.
+
+`publish_checkpoint_transition.py` publishes the completed assessment's two
+card reports and paired comparison to a separate W&B run. It receives a
+read-only assessment mount and a separate writable publisher-state directory;
+only this logging process receives W&B credentials. New campaign telemetry
+continues through the existing read-only `wandb_monitor.py` sidecar. None of
+these helpers starts training or changes the archived campaign automatically.
+
 ## W&B monitoring
 
 ### Smaller-generation campaign
