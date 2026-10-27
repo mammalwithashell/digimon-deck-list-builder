@@ -1,3 +1,6 @@
+mod st20_04;
+mod st20_06;
+mod st20_09;
 mod st20_10;
 mod st20_11;
 mod st20_14;

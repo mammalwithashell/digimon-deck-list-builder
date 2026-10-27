@@ -2,6 +2,111 @@
   "version": 1,
   "last_updated": "2026-10-25",
   "cards": {
+    "ST20-04": {
+      "card_name": "Garudamon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_04.rs",
+      "test_count": 15,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "Shared ADVENTURE Lv.5 observer clause authored + exhaustively tested here (OPT, your-turn gate, own/other/opponent scope, non-ADVENTURE ignored without consuming OPT, digivolve trigger, mandatory chosen Alliance, optional attack decline + accept through normal attack flow). OP/WD S.A.+1 + multiply(floor_div(tamer colours,2),2000) DP for the turn."
+    },
+    "ST20-06": {
+      "card_name": "Angewomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_06.rs",
+      "test_count": 5,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD optional free digivolve of another Digimon into an [ADVENTURE] hand card (has_digivolve_candidate + can_digivolve_onto, cost free; normal requirements). Shared ADVENTURE observer (ST20-04 idiom)."
+    },
+    "ST20-09": {
+      "card_name": "MegaKabuterimon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_09.rs",
+      "test_count": 6,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD mandatory unsuspend; then clamp_to_available suspend pick sized floor_div(distinct colours of [ADVENTURE] Tamers, 2). Shared ADVENTURE observer."
+    },
+    "ST21-04": {
+      "card_name": "Zudomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_04.rs",
+      "test_count": 5,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD: trash floor(tamer colours/2) sources from ONE opp Digimon (printed card + DCGO isFromOnly1Permanent; official DB bundle wording drifts — see YAML header), clamp_to_available; then mandatory bounce of opp Digimon with <=1 sources. Shared ADVENTURE observer."
+    },
+    "ST21-09": {
+      "card_name": "Lillymon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_09.rs",
+      "test_count": 4,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD suspend all opp <=5000 DP Digimon (for_each), then clamp_to_available bottom-deck pick over suspended opp Digimon sized floor(tamer colours/2). Shared ADVENTURE observer."
+    },
+    "BT21-061": {
+      "card_name": "MetalGreymon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_061.rs",
+      "test_count": 5,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD formula de_digivolve = floor(tamer colours/2) separate <De-Digivolve 1> on 1 opp Digimon (gated on >=2 colours). Alt box Lv.4 [Greymon]-name or [ADVENTURE]. Shared ADVENTURE observer."
+    },
+    "BT21-078": {
+      "card_name": "WereGarurumon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-078.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_078.rs",
+      "test_count": 5,
+      "patterns": [
+        "ADVENTURE-ALLIANCE-ATTACK-OBSERVER"
+      ],
+      "notes": "OP/WD mandatory delete of opp Lv.4- Digimon, Lv.5- with >=2 Tamer colours (if/else). Alt box Lv.4 [Garurumon]-name or [ADVENTURE]. Shared ADVENTURE observer."
+    },
     "ST2-01": {
       "card_name": "Tsunomon",
       "validated_date": "2026-06-14",

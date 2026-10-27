@@ -1,0 +1,126 @@
+# ST20-09 MegaKabuterimon — Lv.5, Green, DP 7000, Cost 7.
+# Traits: Insectoid, ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/ST20-09.md; matches
+# data/cards.json):
+#   Digivolve: Green Lv.4 / Cost 3
+#   [Digivolve] Lv.4 w/[ADVENTURE] trait: Cost 3
+#   [On Play] [When Digivolving] 1 of your Digimon unsuspends. Then, for every
+#     2 colors your Tamers with the [ADVENTURE] trait have, suspend 1 of your
+#     opponent's Digimon.
+#   [Your Turn] [Once Per Turn] When your other Digimon are played or
+#     digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
+#     gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
+#   Inherited: <Alliance>
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/ST20/Green/ST20_09.cs
+#   - OP / WD: mandatory own-Digimon pick (canNoSelect false, Mode.UnTap).
+#     Then, if colours > 0: mandatory pick of exactly
+#     min(opponent Digimon count, floor(colours/2)) opponent Digimon
+#     (canNoSelect false, canEndNotMax false, Mode.Tap). colours = distinct
+#     colours of your battle-area Tamers whose top card HasAdventureTraits.
+#   - Your Turn OPT observer + inherited <Alliance>: identical to ST20-04
+#     (hash "alliance-attack-ST20_09").
+#
+# Authoring: the suspend count is `select_count_capped_multi` with a
+# `floor_div(distinct_colors_count(your [ADVENTURE] Tamers), 2)` max and
+# `clamp_to_available` (min(N, available), mandatory — ST20-11 / AD1-014
+# idiom), then `per_selected` suspend. The observer clause is the shared
+# ADVENTURE Lv.5 idiom documented in ST20-04.yaml.
+#
+# | Clause                                              | Status      |
+# | Green Lv.4 / Cost 3 circle                          | IMPLEMENTED |
+# | Lv.4 [ADVENTURE] / Cost 3 box                       | IMPLEMENTED |
+# | [OP][WD] unsuspend 1; suspend 1 per 2 ADVENTURE-Tamer colours | IMPLEMENTED |
+# | [Your Turn][OPT] ADVENTURE observer → Alliance; may attack | IMPLEMENTED |
+# | Inherited <Alliance>                                | IMPLEMENTED |
+
+card: ST20-09
+name: MegaKabuterimon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Insectoid, ADVENTURE]
+attribute: Vaccine
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: ADVENTURE }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your Digimon unsuspends. Then, for every 2 colors your [ADVENTURE] Tamers have, suspend 1 of your opponent's Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: wake
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to unsuspend"
+      - unsuspend: { target: wake }
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              floor_div:
+                - base: 0
+                  per:
+                    distinct_colors_count:
+                      of: you
+                      zone: battle_area
+                      filter:
+                        all_of:
+                          - kind: tamer
+                          - trait_has: ADVENTURE
+                  delta: 1
+                - 2
+          clamp_to_available: true
+          filter: { kind: digimon }
+          bind_as: suspend_picks
+          prompt: "Choose 1 of your opponent's Digimon to suspend for every 2 colors your [ADVENTURE] Tamers have"
+      - per_selected:
+          selection: suspend_picks
+          bind_as: suspend_one
+          body:
+            - suspend: { target: suspend_one }
+
+  - when: [on_ally_played, on_digivolve]
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+        - event_target_trait_has: ADVENTURE
+    process:
+      - select_own_permanent:
+          bind_as: alliance_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
+      - grant_keyword:
+          target: alliance_target
+          keyword: Alliance
+          expiry: end_of_turn
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { kind: digimon, can_attack: { targets: any } }
+          prompt: "Choose 1 of your Digimon that may attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+          prompt: "Attack with the selected Digimon?"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance
+    summary: "Inherited <Alliance>"

@@ -1,0 +1,121 @@
+# BT21-061 MetalGreymon — Lv.5, Black, DP 7000, Cost 7.
+# Traits: Cyborg, ADVENTURE. Form: Ultimate. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB, data/card_bundles/BT21-061.md; matches
+# data/cards.json):
+#   Digivolve: Black Lv.4 / Cost 3
+#   [Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3
+#   [On Play] [When Digivolving] To 1 of your opponent's Digimon,
+#     <De-Digivolve 1> for every 2 of your Tamers' colors.
+#   [Your Turn] [Once Per Turn] When your other Digimon are played or
+#     digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon
+#     gains <Alliance> for the turn. Then, 1 of your Digimon may attack.
+#   Inherited: <Alliance>
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_061.cs
+#   - OP / WD: mandatory opponent-Digimon pick (canNoSelect false), then
+#     `for i < colours/2: IDegeneration(permanent, 1)` — floor(colours/2)
+#     SEPARATE <De-Digivolve 1> instances.
+#   - Your Turn OPT observer + inherited <Alliance>: identical to ST20-04.
+#
+# Authoring: `de_digivolve` with a formula `amount` runs that many separate
+# <De-Digivolve 1> instances with no count declaration (§16-12-7/8 — the
+# DeDigivolveArgs formula semantics). The clause is gated on
+# `distinct_tamer_colors_gte: 2` so a zero-instance resolution does not raise
+# a target prompt that cannot affect anything (DCGO prompts and does
+# nothing). The observer clause is the shared ADVENTURE Lv.5 idiom documented
+# in ST20-04.yaml.
+#
+# | Clause                                              | Status      |
+# | Black Lv.4 / Cost 3 circle                          | IMPLEMENTED |
+# | Lv.4 [Greymon]-name or [ADVENTURE] / Cost 3 box     | IMPLEMENTED |
+# | [OP][WD] <De-Digivolve 1> per 2 Tamer colours on 1 opp Digimon | IMPLEMENTED |
+# | [Your Turn][OPT] ADVENTURE observer → Alliance; may attack | IMPLEMENTED |
+# | Inherited <Alliance>                                | IMPLEMENTED |
+
+card: BT21-061
+name: MetalGreymon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Cyborg, ADVENTURE]
+attribute: Vaccine
+form: Ultimate
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - name_contains: "Greymon"
+            - trait_has: ADVENTURE
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] To 1 of your opponent's Digimon, <De-Digivolve 1> for every 2 of your Tamers' colors"
+    condition:
+      all_of:
+        - distinct_tamer_colors_gte: 2
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigi_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1> for every 2 of your Tamers' colors"
+      - de_digivolve:
+          target: dedigi_target
+          amount:
+            floor_div:
+              - base: 0
+                per:
+                  distinct_colors_count:
+                    of: you
+                    zone: battle_area
+                    filter: { kind: tamer }
+                delta: 1
+              - 2
+
+  - when: [on_ally_played, on_digivolve]
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+        - event_target_trait_has: ADVENTURE
+    process:
+      - select_own_permanent:
+          bind_as: alliance_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
+      - grant_keyword:
+          target: alliance_target
+          keyword: Alliance
+          expiry: end_of_turn
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { kind: digimon, can_attack: { targets: any } }
+          prompt: "Choose 1 of your Digimon that may attack"
+      - may_attack_now:
+          attacker: attacker
+          targets: any
+          optional: true
+          prompt: "Attack with the selected Digimon?"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Alliance
+    summary: "Inherited <Alliance>"
