@@ -323,6 +323,24 @@ fn st21_04_one_color_skips_strip_but_still_bounces() {
     assert_eq!(stack_len(&runner, a), 4);
 }
 
+/// 2 Tamer colours but no opponent Digimon has digivolution cards → the
+/// strip has no host and is skipped; "Then" still reaches the bounce.
+#[test]
+fn st21_04_strip_without_any_sources_still_bounces() {
+    let mut runner = builder().start();
+    runner.game.turn_count = 1;
+    runner.place_on_field(0, "T-RB", Some(0));
+    let b = runner.place_on_field(1, "TOP-B", Some(0));
+    let zudo = runner.place_on_field(0, CARD_ID, None);
+    fire_on_play(&mut runner, zudo);
+    let v = runner.pending_selection_view().expect("bounce pick");
+    assert_eq!(v.kind, SelectionKind::OppField);
+    assert_eq!(v.valid_action_ids, vec![opp_field_action(b.index)]);
+    runner.execute_action(0, opp_field_action(b.index)).unwrap();
+    runner.auto_resolve().unwrap();
+    assert!(opp_hand_has(&runner, "TOP-B"));
+}
+
 #[test]
 fn st21_04_shared_observer() {
     assert_shared_observer();

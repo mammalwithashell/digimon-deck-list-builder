@@ -263,7 +263,10 @@ fn bt21_061_one_color_does_nothing() {
     let tgt = runner.place_stack(1, &["L5", "L6"]);
     let mg = runner.place_stack(0, &["ALLY", CARD_ID]);
     fire_when_digivolving(&mut runner, mg);
-    runner.auto_resolve().unwrap();
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "floor(1/2) = 0 instances: no De-Digivolve target prompt"
+    );
     assert_eq!(stack_len(&runner, tgt), 2);
 }
 
