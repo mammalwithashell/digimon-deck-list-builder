@@ -81,3 +81,23 @@ regression so a stale wheel cannot silently ship the original loop.
 The archive was copied back locally and hash-verified. Old replay remains intact
 in the original campaign. The new image, source commit, CI run, preparation
 evidence and live outcome are recorded in the recovery's deployment artifacts.
+
+## Medusamon current-DP follow-up
+
+EX11-012's shared When Digivolving / End of Attack deletion clause also used a
+fixed 12,000-DP threshold. Its printed text compares against this Digimon's DP;
+CR 4.3 section 15-8-3-7 reads that value while processing. Both the availability
+condition and target filter now use the existing `source_dp` formula, which
+reads effective DP including bonuses and reductions. No engine, action or
+observation contract changes are required.
+
+Four regressions in the card's behavioral module cover increased and reduced
+DP, equality, changed DP between triggering and processing, and the absence of
+any qualifying target or trash follow-up. Both printed timings exercise real
+pending choices and action masks, including cloned target selection. The
+existing source-liveness check continues to prevent a departed source's queued
+effect from activating; this patch does not add last-known-DP fallback logic.
+
+This follow-up is a subsequent image revision. The payment-recovery experiment
+retains its frozen image until an explicit rollout; editing the card definition
+does not alter the running container or its evaluation baseline.
