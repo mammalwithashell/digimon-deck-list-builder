@@ -25,7 +25,7 @@
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_digivolve, SEL_REVEAL_START};
+use digimon_engine::action::space::{encode_digivolve, PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -173,6 +173,10 @@ fn st20_02_on_play_adds_one_adventure_digimon_and_one_adventure_tamer() {
     assert!(offered(&runner, "ADV-DIGI"), "Digimon bucket offers the ADVENTURE Digimon");
     assert!(!offered(&runner, "PLAIN-DIGI"), "non-ADVENTURE Digimon is not offered");
     assert!(!offered(&runner, "ADV-TAMER"), "Tamer is not a Digimon-bucket candidate");
+    assert!(
+        !runner.pending_selection_view().unwrap().valid_action_ids.contains(&PASS),
+        "a matching Digimon is revealed: the add is mandatory (no PASS)"
+    );
     pick(&mut runner, "ADV-DIGI");
     assert!(offered(&runner, "ADV-TAMER"), "Tamer/Option bucket offers the ADVENTURE Tamer");
     pick(&mut runner, "ADV-TAMER");
@@ -196,6 +200,20 @@ fn st20_02_option_card_fills_the_second_bucket() {
     let hand = hand_ids(&runner);
     assert!(hand.contains(&"ADV-OPTION".to_string()));
     assert!(!hand.contains(&"PLAIN-TAMER".to_string()));
+}
+
+#[test]
+fn st20_02_only_the_tamer_option_slot_has_a_candidate() {
+    let mut runner = play_biyomon(&["FILL", "FILL", "PLAIN-DIGI", "ADV-TAMER"]);
+    let view = runner.pending_selection_view().expect("Tamer/Option bucket prompt");
+    assert!(offered(&runner, "ADV-TAMER"));
+    assert!(!offered(&runner, "PLAIN-DIGI"));
+    assert!(!view.valid_action_ids.contains(&PASS), "matching Tamer revealed: mandatory add");
+    pick(&mut runner, "ADV-TAMER");
+    let _ = runner.auto_resolve();
+    assert_eq!(hand_ids(&runner), vec!["ADV-TAMER"]);
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(runner.deck_size(0), 3, "the other two revealed cards return to the bottom");
 }
 
 #[test]

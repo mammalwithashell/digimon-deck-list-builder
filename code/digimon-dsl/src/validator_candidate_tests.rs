@@ -304,6 +304,7 @@ pub(super) fn additional_binding_contexts(predicate: &str) -> Vec<(String, Strin
         ("source_count.filter", format!("{{source_count: {{filter: {predicate}, at_least: 1}}}}")),
         ("link_card_count.filter", format!("{{link_card_count: {{filter: {predicate}, at_least: 1}}}}")),
         ("distinct_named_count_gte.filter", format!("{{distinct_named_count_gte: {{of: you, filter: {predicate}, n: 1}}}}")),
+        ("distinct_colors_gte.filter", format!("{{distinct_colors_gte: {{of: you, filter: {predicate}, n: 1}}}}")),
     ].into_iter().map(|(name, wrapped)| (name.into(), document(&format!("  - when: on_play\n    process:\n      - if:\n          condition: {wrapped}\n          then: [{{gain_memory: 1}}]")))).collect()
 }
 

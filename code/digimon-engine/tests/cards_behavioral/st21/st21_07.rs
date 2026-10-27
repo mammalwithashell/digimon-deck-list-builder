@@ -44,6 +44,12 @@ fn builder() -> DebugRunnerBuilder {
     adv_lv2.level = Some(2);
     adv_lv2.colors = vec![CardColor::Black];
     adv_lv2.traits = vec!["ADVENTURE".to_string()];
+    let mut green_lv2 = make_test_card("GREEN-LV2", "Green Baby");
+    green_lv2.level = Some(2);
+    green_lv2.colors = vec![CardColor::Green];
+    let mut plain_lv2 = make_test_card("PLAIN-LV2", "Plain Baby");
+    plain_lv2.level = Some(2);
+    plain_lv2.colors = vec![CardColor::Black];
     let mut carrier = make_test_card("CARRIER", "Carrier");
     carrier.level = Some(4);
     carrier.dp = Some(4000);
@@ -54,6 +60,8 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(adv_opt)
         .add_card(make_test_card("PLAIN", "Plain"))
         .add_card(adv_lv2)
+        .add_card(green_lv2)
+        .add_card(plain_lv2)
         .add_card(carrier)
         .add_card(make_test_card("FILL", "Fill"))
 }
@@ -180,15 +188,27 @@ fn st21_07_without_an_adventure_card_in_hand_nothing_happens() {
 
 // ─── Section 4 — digivolve box + inherited ───────────────────────────────────
 
+/// Digivolve routes through the action mask: Green Lv.2 circle (cost 0),
+/// off-colour [ADVENTURE] Lv.2 box (cost 0), and an off-colour plain Lv.2 is
+/// masked out.
 #[test]
-fn st21_07_digivolves_from_an_off_color_adventure_lv2_for_0() {
-    let mut runner = builder().hand(0, &[CARD_ID]).deck(0, &["FILL", "FILL"]).memory(5).start();
-    runner.skip_mulligan();
-    let base = runner.place_on_field(0, "ADV-LV2", Some(0));
-    let before = runner.memory();
-    runner.game.decode_action(encode_digivolve(0, base.index as u16), 0);
-    assert_eq!(runner.game.players[base.player as usize].battle_area[base.index as usize].top_card().card_id(&runner.game.card_data), CARD_ID);
-    assert_eq!(before, runner.memory());
+fn st21_07_digivolve_routes_via_action_mask() {
+    for (base_id, legal) in [("GREEN-LV2", true), ("ADV-LV2", true), ("PLAIN-LV2", false)] {
+        let mut runner = builder().hand(0, &[CARD_ID]).deck(0, &["FILL", "FILL"]).memory(5).start();
+        runner.skip_mulligan();
+        let base = runner.place_on_field(0, base_id, Some(0));
+        let action = encode_digivolve(0, base.index as u16);
+        let mask = digimon_engine::build_action_mask(&runner.game, 0);
+        assert_eq!(mask[action as usize] == 1.0, legal, "digivolve from {base_id} mask bit");
+        if !legal {
+            continue;
+        }
+        let before = runner.memory();
+        runner.game.decode_action(action, 0);
+        let top = runner.game.players[0].battle_area[base.index as usize].top_card();
+        assert_eq!(top.card_id(&runner.game.card_data), CARD_ID, "from {base_id}");
+        assert_eq!(before, runner.memory(), "cost 0 from {base_id}");
+    }
 }
 
 #[test]

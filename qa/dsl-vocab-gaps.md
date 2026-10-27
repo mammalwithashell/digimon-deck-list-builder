@@ -9404,7 +9404,7 @@ claimed. Exact cumulative verification and admission denominators are in
 
 - Effect text: ST20-03 Birdramon / ST21-08 Togemon — "[On Play] [When Digivolving] If your Tamers with the [ADVENTURE] trait have 3 or more total colors, this Digimon may digivolve into a Digimon card with the [ADVENTURE] trait in the hand without paying the cost."
 - Gap: `distinct_tamer_colors_gte` counts the colours of EVERY own Tamer; DCGO `ST20_03.cs` / `ST21_08.cs` count only Tamers whose top card has the [ADVENTURE] trait, so a non-ADVENTURE Tamer's colour must not satisfy the gate. No predicate compared a filtered colour count to a threshold.
-- Resolution: new no-subject predicate leaf `distinct_colors_gte: { of, filter, n }` — true when `of`'s battle-area permanents matching `filter` collectively carry >= `n` distinct (top-card) colours. Filtered sibling of `distinct_tamer_colors_gte`, modelled on `distinct_named_count_gte`. Files: `code/digimon-dsl/src/{predicate,compiled,compile,validator,pack}.rs`, `code/digimon-dsl/src/bin/implementation_inventory/{reference_predicates,references}.rs`, `code/digimon-engine/src/dsl_cards/predicate.rs`.
+- Resolution: new no-subject predicate leaf `distinct_colors_gte: { of, filter, n }` — true when `of`'s battle-area permanents matching `filter` collectively carry >= `n` distinct RULES colours (gained colours count, DCGO `TopCard.CardColors`; evaluated through the shared `formula_eval::distinct_colors_in_zone` used by the `distinct_colors_count` formula). Follow-up (not done): `distinct_tamer_colors_gte` still reads printed top-card colours and ignores gained colours. Filtered sibling of `distinct_tamer_colors_gte`, modelled on `distinct_named_count_gte`. Files: `code/digimon-dsl/src/{predicate,compiled,compile,validator,pack}.rs`, `code/digimon-dsl/src/bin/implementation_inventory/{reference_predicates,references}.rs`, `code/digimon-engine/src/dsl_cards/predicate.rs`.
 - DSL syntax:
   ```yaml
   condition:
@@ -9413,4 +9413,4 @@ claimed. Exact cumulative verification and admission denominators are in
       filter: { all_of: [{ kind: tamer }, { trait_has: ADVENTURE }] }
       n: 3
   ```
-- Coverage: `st20_03_non_adventure_tamer_colors_do_not_count`, `st21_08_non_adventure_tamer_colors_do_not_count` (+ positive/threshold tests in the same files).
+- Coverage: `st20_03_gained_tamer_color_counts`, `st20_03_non_adventure_tamer_colors_do_not_count`, `code/digimon-dsl/tests/distinct_colors_gte_schema.rs`, `st21_08_non_adventure_tamer_colors_do_not_count` (+ positive/threshold tests in the same files).

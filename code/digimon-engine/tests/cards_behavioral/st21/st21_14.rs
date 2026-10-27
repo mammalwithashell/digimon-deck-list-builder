@@ -109,27 +109,27 @@ fn st21_14_clause_shape() {
     assert_eq!(card.kind, CompiledCardKind::Option);
     assert_eq!(card.cost, Some(3));
     assert!(card.traits.iter().any(|t| t == "ADVENTURE"));
-    assert_eq!(card.effects.len(), 4, "flood_gate, [Main], <Delay>, [Security]");
-    assert!(matches!(
-        &card.effects[0],
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. })
-            if modifier == "IgnoreColorRequirement"
-    ));
-    match &card.effects[2] {
+    assert_eq!(card.effects.len(), 3, "[Main], <Delay>, [Security]");
+    assert!(card.use_requirement.is_some(), "colour bypass is the use_requirement");
+    assert!(!card.effects.iter().any(|c| matches!(
+        c,
+        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { .. })
+    )));
+    match &card.effects[1] {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay { trigger, process, .. }) => {
             assert_eq!(*trigger, CompiledTiming::Delayed, "[Main] <Delay> is player-activated");
             assert!(process.iter().any(|s| matches!(s, CompiledStep::GainMemory(2))));
         }
-        other => panic!("clause 2 must be the Delay; got {other:?}"),
+        other => panic!("clause 1 must be the Delay; got {other:?}"),
     }
-    match &card.effects[3] {
+    match &card.effects[2] {
         CompiledClause::Triggered(t) => {
             assert_eq!(t.scope, CompiledScope::Inherited);
             assert!(t.when.contains(&CompiledTiming::OnSecurity));
             assert!(!t.optional);
             assert!(t.process.iter().any(|s| matches!(s, CompiledStep::PlaceSelfAsDelayOption)));
         }
-        other => panic!("clause 3 must be the [Security] clause; got {other:?}"),
+        other => panic!("clause 2 must be the [Security] clause; got {other:?}"),
     }
 }
 

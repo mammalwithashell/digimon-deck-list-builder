@@ -232,6 +232,35 @@ fn st20_03_non_adventure_tamer_colors_do_not_count() {
     assert_eq!(top_id(&runner, me), CARD_ID);
 }
 
+/// A colour GAINED by an [ADVENTURE] Tamer counts (rules colours, DCGO
+/// `TopCard.CardColors`): Red + Blue ADVENTURE Tamers, the Blue one also
+/// gaining Green via an `AddColor` modifier → 3 colours.
+#[test]
+fn st20_03_gained_tamer_color_counts() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::{ModifierEntry, ModifierPayload};
+    let mut runner = builder()
+        .hand(0, &[CARD_ID, "ADV-LV5"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+    runner.skip_mulligan();
+    runner.place_on_field(0, "T-RED", None);
+    let blue = runner.place_on_field(0, "T-BLUE", None);
+    runner.game.modifiers.add(
+        blue,
+        ModifierEntry::simple(ModifierType::AddColor, 0, Expiry::Permanent, 0)
+            .with_payload(ModifierPayload::Colors { value: vec![CardColor::Green], base: false }),
+    );
+    let slot = hand_index(&runner, CARD_ID);
+    let field = runner.play(0, slot).expect("card plays");
+    let me = PermanentHandle { player: 0, index: field as u8 };
+    pick(&mut runner, "ADV-LV5");
+    let _ = runner.auto_resolve();
+    assert_eq!(top_id(&runner, me), "ADV-LV5", "gained Green makes 3 [ADVENTURE] Tamer colours");
+}
+
 #[test]
 fn st20_03_two_adventure_tamer_colors_is_not_enough() {
     let (runner, me) = play_with_tamers(&["T-RED", "T-BLUE"], &["ADV-LV5"]);
