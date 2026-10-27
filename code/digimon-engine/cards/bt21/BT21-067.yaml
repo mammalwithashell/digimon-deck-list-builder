@@ -1,0 +1,89 @@
+# BT21-067 Garurumon — Digimon, Lv.4, Purple, DP 4000, Cost 4.
+# Traits: Beast, ADVENTURE. Attribute: Vaccine.
+#
+# Printed text (official observation, data/card_official.json +
+# data/card_bundles/BT21-067.md):
+#   Standard digivolve: Purple Lv.3 / Cost 2
+#   [Digivolve] Lv.3 w/[Gabumon] in name or w/[ADVENTURE] trait: Cost 2
+#   [Security] At the end of the battle, play this card without paying the cost.
+#   [On Play] [When Digivolving] You may return 1 Digimon card with the
+#     [ADVENTURE] trait from your trash to the hand.
+#   Inherited: [When Attacking] [Once Per Turn] <Draw 1> and trash 1 card in
+#     your hand.
+#
+# DATA DRIFT: data/cards.json (and the generated cards/bt21/BT21-067.json)
+# give the standard Purple Lv.3 circle memory_cost 3; the official DB says 2.
+# The printed circle is authored below as an explicit alt-path so the printed
+# cost is reachable; the stale cost-3 circle remains until the generated data
+# is corrected (reported, not hand-edited).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Purple/BT21_067.cs
+#   - Alt digivolve: (ContainsCardName("Gabumon") || EqualsTraits("ADVENTURE"))
+#     && Level == 3, cost 2.
+#   - SecuritySkill: PlaySelfDigimonAfterBattleSecurityEffect.
+#   - OP / WD: SelectCardEffect Root.Trash Mode.AddHand canNoSelect true,
+#     filter EqualsTraits("ADVENTURE") && IsDigimon (BT21-070 idiom).
+#   - ESS OnAllyAttack maxUsableCount 1: Draw 1, then SelectHandEffect Discard
+#     1 canNoSelect false (BT26-061 idiom).
+
+card: BT21-067
+name: Garurumon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 4000
+traits: [Beast, ADVENTURE]
+attribute: Vaccine
+
+alt_paths:
+  # Printed standard circle (official): Purple Lv.3 / Cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 2
+  # [Digivolve] Lv.3 w/[Gabumon] in name or w/[ADVENTURE] trait: Cost 2.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: "Gabumon"
+            - trait_has: ADVENTURE
+    cost: 2
+
+effects:
+  # ─── [Security] At the end of the battle, play this card for free ─────────
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # ─── [On Play][When Digivolving] you may return 1 ADVENTURE Digimon ───────
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: ADVENTURE
+          prompt: "You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  # ─── Inherited [When Attacking][OPT] Draw 1 and trash 1 card in hand ──────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] <Draw 1> and trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

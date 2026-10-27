@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-25",
+  "last_updated": "2026-10-27",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -15936,6 +15936,139 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_088.rs",
       "test_count": 10,
       "notes": "Ten behavioral tests pass after independent review: activation decline preserves OPT, accepted activation spends it even when processing is declined/impossible, and Q3046 permits activation without an illegal nested attack. Thirteen-source placement uses the repaired full count bound. Shared immediate-attack guard preserves deferred keyword activation; 33 focused controls pass. No active action/tensor contract change or new live DCGO parity."
+    },
+    "ST20-05": {
+      "card_name": "Gatomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_05.rs",
+      "test_count": 9,
+      "patterns": [
+        "SECURITY-PLAY-SELF",
+        "SELECT-COUNT-CAPPED-CLAMP",
+        "INHERITED-WA-OPT"
+      ],
+      "notes": "EX13 Adventure lane C: [Security] play self after battle; [OP][WD] 2 opp Digimon <Security A. -1> until their turn ends (select_count_capped_multi max 2 clamp_to_available, DCGO min(2,n) canEndNotMax false); ADVENTURE Lv.3 alt-digivolve cost 2; inherited [WA][OPT] -2000 DP for the turn."
+    },
+    "ST20-07": {
+      "card_name": "Tentomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_07.rs",
+      "test_count": 3,
+      "patterns": [
+        "FLOOD-GATE"
+      ],
+      "notes": "EX13 Adventure lane C: [Opponent's Turn] CannotReduceDigivolveCost flood gate on opponent (BT5-033 hook); ADVENTURE Lv.2 alt-digivolve cost 0."
+    },
+    "ST21-01": {
+      "card_name": "Tsunomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_01.rs",
+      "test_count": 5,
+      "patterns": [
+        "INHERITED-ON-DELETION",
+        "TRASH-TO-HAND"
+      ],
+      "notes": "EX13 Adventure lane C: inherited [On Deletion] optional return 1 ADVENTURE Digimon card trash->hand (decline tested). cards.json files the text under effect_description_eng (compat layout drift; official = Inherited Effect)."
+    },
+    "ST21-02": {
+      "card_name": "Gomamon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_02.rs",
+      "test_count": 2,
+      "patterns": [
+        "FLOOD-GATE"
+      ],
+      "notes": "EX13 Adventure lane C: [All Turns] CannotGainMemoryExceptFromTamers on opponent (EX8-030 hook); ADVENTURE Lv.2 alt-digivolve cost 0."
+    },
+    "ST21-03": {
+      "card_name": "Ikkakumon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_03.rs",
+      "test_count": 7,
+      "patterns": [
+        "SECURITY-PLAY-SELF",
+        "TRASH-TOP-SOURCES",
+        "CANNOT-ATTACK-BLOCK",
+        "INHERITED-WA-OPT"
+      ],
+      "notes": "EX13 Adventure lane C: [Security] play self; [OP][WD] trash top 2 sources of any opp Digimon then lock 1 sourceless opp Digimon (CannotAttack+CannotBlock until their turn ends); inherited [WA][OPT] hand<=7 Draw 1."
+    },
+    "ST21-11": {
+      "card_name": "MetalGarurumon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_11.rs",
+      "test_count": 8,
+      "patterns": [
+        "BLAST-DIGIVOLVE",
+        "TAMER-COLOR-FORMULA",
+        "RETURN-TO-DECK-BOTTOM",
+        "PLAY-FROM-TRASH"
+      ],
+      "notes": "EX13 Adventure lane C: Blast Digivolve marker; ace_overflow -4; [OP][WD] bottom-deck opp Digimon level <= 4 + floor(tamer colors/2) (floor_div((8+c),2)); [WA][OPT] may play Lv.4- Digimon from trash free. Official blue Lv.5/4 circle authored as alt-path (cards.json drops it)."
+    },
+    "BT21-067": {
+      "card_name": "Garurumon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_067.rs",
+      "test_count": 8,
+      "patterns": [
+        "SECURITY-PLAY-SELF",
+        "TRASH-TO-HAND",
+        "INHERITED-WA-OPT"
+      ],
+      "notes": "EX13 Adventure lane C: [Security] play self; [OP][WD] may return ADVENTURE Digimon trash->hand; Gabumon-name/ADVENTURE Lv.3 alt cost 2; inherited [WA][OPT] Draw 1 + trash 1. DATA DRIFT: cards.json standard purple Lv.3 circle cost 3, official 2 (authored cost-2 alt-path; stale cost-3 path remains until data fixed)."
+    },
+    "BT21-075": {
+      "card_name": "SkullGreymon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-c",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-075.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_075.rs",
+      "test_count": 8,
+      "patterns": [
+        "GRANT-KEYWORD-EXPIRY",
+        "PLAY-FROM-TRASH",
+        "INHERITED-ON-DELETION"
+      ],
+      "notes": "EX13 Adventure lane C: [OP][WD] 1 own Digimon gains Raid+Retaliation until opp turn ends; face-up + inherited [On Deletion] may play ADVENTURE Digimon/Tamer cost<=4 from trash free; Greymon-name/ADVENTURE Lv.4 alt cost 3. Official red Lv.4/4 circle authored as alt-path (cards.json drops it)."
     }
   }
 }

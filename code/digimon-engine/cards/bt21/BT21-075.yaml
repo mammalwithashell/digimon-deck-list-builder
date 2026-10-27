@@ -1,0 +1,110 @@
+# BT21-075 SkullGreymon — Digimon, Lv.5, Purple/Red, DP 8000, Cost 8.
+# Traits: Undead, ADVENTURE. Attribute: Virus.
+#
+# Printed text (official observation, data/card_official.json +
+# data/card_bundles/BT21-075.md):
+#   Standard digivolve: Purple Lv.4 / Cost 4, Red Lv.4 / Cost 4
+#   [Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3
+#   [On Play] [When Digivolving] 1 of your Digimon gains <Raid> and
+#     <Retaliation> until your opponent's turn ends.
+#   [On Deletion] You may play 1 [ADVENTURE] trait card with a play cost of 4
+#     or less from your trash without paying the cost.
+#   Inherited: [On Deletion] You may play 1 [ADVENTURE] trait card with a play
+#     cost 4 or less from your trash without paying the cost.
+#
+# DATA DRIFT: data/cards.json evo_costs lists only the Purple Lv.4 circle
+# (multi-colour circle dropped). The Red Lv.4 / 4 circle is authored below.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Purple/BT21_075.cs
+#   - Alt digivolve: (EqualsTraits("ADVENTURE") || ContainsCardName("Greymon"))
+#     && Level == 4, cost 3.
+#   - OP / WD: SelectPermanentEffect over own battle-area Digimon, canNoSelect
+#     false → GainRaid + GainRetaliation UntilOpponentTurnEnd (BT24-072 idiom).
+#   - On Deletion (face-up) and On Deletion (SetIsInheritedEffect) — two
+#     separate isOptional ActivateClasses, identical bodies: SelectCardEffect
+#     Root.Trash canNoSelect true, filter EqualsTraits("ADVENTURE") &&
+#     HasPlayCost && GetCostItself <= 4 → PlayPermanentCards payCost false.
+#     "HasPlayCost" excludes Digi-Eggs and Options (Options are used, not
+#     played), so the filter is restricted to Digimon/Tamer cards.
+
+card: BT21-075
+name: SkullGreymon
+kind: digimon
+level: 5
+color: [purple, red]
+cost: 8
+dp: 8000
+traits: [Undead, ADVENTURE]
+attribute: Virus
+
+alt_paths:
+  # Printed standard circle dropped by cards.json: Red Lv.4 / Cost 4.
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  # [Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - name_contains: "Greymon"
+            - trait_has: ADVENTURE
+    cost: 3
+
+effects:
+  # ─── [On Play][When Digivolving] 1 own Digimon gains Raid + Retaliation ───
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your Digimon gains <Raid> and <Retaliation> until your opponent's turn ends"
+    process:
+      - select_own_permanent:
+          bind_as: buff
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gains <Raid> and <Retaliation> until your opponent's turn ends"
+      - grant_keyword:
+          target: buff
+          keyword: Raid
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: buff
+          keyword: Retaliation
+          expiry: end_of_opponents_turn
+
+  # ─── [On Deletion] you may play 1 ADVENTURE card (cost <= 4) from trash ───
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive_pick
+          optional: true
+          filter:
+            all_of:
+              - trait_has: ADVENTURE
+              - play_cost_lte: 4
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive_pick }
+
+  # ─── Inherited [On Deletion] — same body ──────────────────────────────────
+  - scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion] You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: inh_revive_pick
+          optional: true
+          filter:
+            all_of:
+              - trait_has: ADVENTURE
+              - play_cost_lte: 4
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: inh_revive_pick }

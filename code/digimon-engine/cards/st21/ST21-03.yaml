@@ -1,0 +1,88 @@
+# ST21-03 Ikkakumon — Digimon, Lv.4, Blue, DP 4000, Cost 4.
+# Traits: Sea Beast, ADVENTURE. Attribute: Vaccine.
+#
+# Printed text (official observation, data/card_official.json):
+#   Standard digivolve: Blue Lv.3 / Cost 2 (cards.json evo_costs).
+#   [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2
+#   [Security] At the end of the battle, play this card without paying the cost.
+#   [On Play] [When Digivolving] Trash the top 2 digivolution cards of 1 of your
+#     opponent's Digimon. Then, 1 of their Digimon with no digivolution cards
+#     can't attack or block until their turn ends.
+#   Inherited: [When Attacking] [Once Per Turn] If you have 7 or fewer cards in
+#     your hand, <Draw 1>.
+# Official Q&A: the lock keeps applying even if that Digimon later gains a
+#   digivolution card (modifier is installed on the permanent, not gated).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Blue/ST21_03.cs
+#   - Shared OP/WD body: pick 1 of ANY opponent Digimon (canNoSelect false) →
+#     TrashDigivolutionCardsFromTopOrBottom(2, fromTop); then, if any opponent
+#     Digimon HasNoDigivolutionCards, pick 1 (canNoSelect false) →
+#     GainCanNotAttack + GainCanNotBlock UntilOpponentTurnEnd.
+#   - ESS OnAllyAttack, maxUsableCount 1, CanActivate: HandCards.Count <= 7.
+#
+# Same body shape as BT16-021 (count 1 → 2) and BT13-030
+# (`trash_top_stacked_sources`, top card stays).
+
+card: ST21-03
+name: Ikkakumon
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 4000
+traits: [Sea Beast, ADVENTURE]
+attribute: Vaccine
+
+alt_paths:
+  # [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  # ─── [Security] At the end of the battle, play this card for free ─────────
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # ─── [On Play][When Digivolving] strip 2, then lock a sourceless Digimon ──
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash the top 2 digivolution cards of 1 opponent Digimon; then 1 of their Digimon with no digivolution cards can't attack or block until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: strip_target
+          filter: { kind: digimon }
+          prompt: "Trash the top 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_top_stacked_sources:
+          target: strip_target
+          count: 2
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "1 of your opponent's Digimon with no digivolution cards can't attack or block until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotAttack
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: lock_target
+          modifier: CannotBlock
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Inherited [When Attacking][OPT] if hand <= 7, Draw 1 ─────────────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 7
+    summary: "[Inherited][When Attacking][Once Per Turn] If you have 7 or fewer cards in your hand, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
