@@ -1,0 +1,93 @@
+# ST21-08 Togemon — Lv4, Green, Vegetation / ADVENTURE, Champion / Data,
+# DP 4000, Cost 4.
+#
+# Printed card text (official bundle data/card_bundles/ST21-08.md):
+#
+#   Digivolve: Green Lv.3 / cost 2.
+#   [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2
+#
+#   [On Play] [When Digivolving] If your Tamers with the [ADVENTURE] trait
+#   have 3 or more total colors, this Digimon may digivolve into a Digimon
+#   card with the [ADVENTURE] trait in the hand without paying the cost.
+#
+#   Inherited: [All Turns] This Digimon gets +1000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Green/ST21_08.cs
+#   (copied from ST20-03 Birdramon in DCGO too)
+#   - Alt requirement: Lv3 && HasAdventureTraits, cost 2.
+#   - [On Play] / [When Digivolving] (two ActivateClasses, optional=true):
+#     CanActivate = GetDifferenetColorCardCount(own battle-area Tamers whose
+#     TopCard.HasAdventureTraits) >= 3; body DigivolveIntoHandOrTrashCard(
+#     this, IsDigimon && HasAdventureTraits, payCost: false,
+#     ignoreDigivolutionRequirementFixedCost: -1, isHand: true) — the
+#     digivolution requirements are NOT ignored.
+#   - Inherited ChangeSelfDPStaticEffect(+1000, condition: null).
+#
+# The colour gate counts ONLY [ADVENTURE] Tamers, so the ST20-10 leaf
+# `distinct_tamer_colors_gte` (every Tamer) is not faithful here. It uses the
+# filtered leaf `distinct_colors_gte` (G-DSL-DISTINCT-FILTERED-COLORS, added
+# for this card). Official Q&A: "3 or more" counts as many or more colours.
+#
+# The hand pick only offers [ADVENTURE] Digimon this Digimon can legally
+# digivolve into for free (`can_digivolve_onto_with_cost`), so the RL agent
+# never sees a pick that silently fails; PASS = "may" decline.
+#
+# Shared body with ST20-03 Birdramon.
+#
+# Verdict: IMPLEMENTED.
+
+card: ST21-08
+name: Togemon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+traits: [Vegetation, ADVENTURE]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] If your [ADVENTURE] Tamers have 3+ colors, may digivolve into an [ADVENTURE] Digimon in hand for free"
+    condition:
+      distinct_colors_gte:
+        of: you
+        filter:
+          all_of:
+            - kind: tamer
+            - trait_has: ADVENTURE
+        n: 3
+    process:
+      - select_hand:
+          of: you
+          bind_as: adv_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: ADVENTURE
+              - can_digivolve_onto_with_cost: { target: source, cost: free }
+          prompt: "Digivolve this Digimon into an [ADVENTURE] Digimon card in your hand without paying the cost"
+      - if:
+          condition: { binding_present: adv_evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: adv_evo
+                cost: free
+
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] This Digimon gets +1000 DP"

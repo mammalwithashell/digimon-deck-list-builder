@@ -1,0 +1,94 @@
+# ST21-14 Believe in Our Friendship — Option, Purple, Cost 3, traits: [ADVENTURE].
+#
+# Printed card text (official bundle data/card_bundles/ST21-14.md):
+#
+#   While you have a Digimon or Tamer with the [ADVENTURE] trait on the field,
+#   you can ignore this card's color requirements.
+#   [Main] Reveal the top 3 cards of your deck. Add 1 card with the
+#   [ADVENTURE] trait among them to the hand. Return the rest to the bottom of
+#   the deck. Then, place this card in the battle area.
+#   [Main] <Delay> (By trashing this card after the placing turn, activate the
+#   effect.) ・Gain 2 memory.
+#
+#   Security Effect: [Security] Place this card in the battle area.
+#
+#   Official Q&A: "on the field" means the battle area or the breeding area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Purple/ST21_14.cs
+#   - IgnoreColorConditionClass(card == self) while HasMatchConditionPermanent(
+#     (Tamer || Digimon) && TopCard.HasAdventureTraits).
+#   - OptionSkill: RevealDeckTopCardsAndSelect(3, [ADVENTURE, AddHand, max 1,
+#     canNoSelect: false], DeckBottom); then PlaceDelayOptionCards(self).
+#   - OnDeclaration Delay: delete (trash) self, then gain 2 memory.
+#   - SecuritySkill: PlaceSelfDelayOptionSecurityEffect.
+#
+# Same shape as BT22-099 Kuremi Detective Agency ([CS] → [ADVENTURE]). The
+# colour-bypass gate uses `any_field_permanent` (battle area + breeding) per
+# the official Q&A. "Then, place this card in the battle area" is the engine's
+# Delay-Option auto-seat (classify_option_subtype sees the `kind: delay`
+# clause and seats the Option as OptionState::Delayed after the [Main] body),
+# exactly as BT22-099 / BT25-098 do.
+#
+# Verdict: IMPLEMENTED.
+
+card: ST21-14
+name: "Believe in Our Friendship"
+kind: option
+color: [purple]
+cost: 3
+traits: [ADVENTURE]
+
+# The hand-use colour bypass is driven by `use_requirement:` (lowered to the
+# MainFromHand effect's `option_color_requirement_bypass`, consulted by the
+# action mask and the option-play validator). The flood_gate below alone does
+# NOT relax the from-hand colour check (it was the BT22-099 shape and failed
+# st21_14_adventure_*_bypasses_color); the pair mirrors BT25-098.
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: ADVENTURE
+    any_of:
+      - kind: digimon
+      - kind: tamer
+
+effects:
+  - kind: flood_gate
+    active_when:
+      any_field_permanent:
+        of: you
+        trait_has: ADVENTURE
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "ST21-14" }
+    summary: "While you have an [ADVENTURE] Digimon or Tamer on the field, ignore color requirements for this card"
+
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal 3; add 1 [ADVENTURE] card to hand; bottom the rest; place self in the battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: adv_pick
+              min: 1
+              max: 1
+              filter: { trait_has: ADVENTURE }
+          prompt: "Select 1 [ADVENTURE] card to add to hand"
+      - add_to_hand_from_reveal: { of: you, card: adv_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: delay
+    trigger: delayed
+    summary: "[Main] <Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

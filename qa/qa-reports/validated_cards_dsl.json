@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-10-25",
+  "last_updated": "2026-10-27",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -15936,6 +15936,143 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_088.rs",
       "test_count": 10,
       "notes": "Ten behavioral tests pass after independent review: activation decline preserves OPT, accepted activation spends it even when processing is declined/impossible, and Q3046 permits activation without an illegal nested attack. Thirteen-source placement uses the repaired full count bound. Shared immediate-attack guard preserves deferred keyword activation; 33 focused controls pass. No active action/tensor contract change or new live DCGO parity."
+    },
+    "ST20-02": {
+      "card_name": "Biyomon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_02.rs",
+      "test_count": 9,
+      "patterns": [
+        "REVEAL-BUCKETS",
+        "INHERITED-DP-AURA",
+        "ALT-PATH-TRAIT"
+      ],
+      "notes": "Reveal 3 → 1 ADVENTURE Digimon + 1 ADVENTURE Tamer/Option (disjoint buckets), rest bottom; Lv.2 w/[ADVENTURE] box; inherited [Your Turn] +2000."
+    },
+    "ST20-03": {
+      "card_name": "Birdramon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_03.rs",
+      "test_count": 9,
+      "patterns": [
+        "CONDITIONAL-SELF-DIGIVOLVE",
+        "DISTINCT-FILTERED-COLORS",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "[OP][WD] free requirement-respecting self-digivolve into ADVENTURE hand card gated on ADVENTURE-Tamer colours >= 3 via new `distinct_colors_gte` leaf (G-DSL-DISTINCT-FILTERED-COLORS)."
+    },
+    "ST21-05": {
+      "card_name": "Angemon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_05.rs",
+      "test_count": 9,
+      "patterns": [
+        "FREE-PLAY-FROM-HAND",
+        "INHERITED-WHEN-ATTACKING-OPT",
+        "DP-DEBUFF"
+      ],
+      "notes": "[WD] <=1 Tamer → may play ADVENTURE Tamer free; inherited [WA][OPT] -2000 for the turn."
+    },
+    "ST21-07": {
+      "card_name": "Palmon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_07.rs",
+      "test_count": 7,
+      "patterns": [
+        "OPTIONAL-HAND-TRASH-COST",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "[OP] by trashing 1 ADVENTURE card from hand, <Draw 2> (EX13-018 cost idiom); inherited [All Turns] +1000."
+    },
+    "ST21-08": {
+      "card_name": "Togemon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_08.rs",
+      "test_count": 9,
+      "patterns": [
+        "CONDITIONAL-SELF-DIGIVOLVE",
+        "DISTINCT-FILTERED-COLORS",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "Same body as ST20-03; inherited [All Turns] +1000."
+    },
+    "ST21-10": {
+      "card_name": "Gabumon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_10.rs",
+      "test_count": 9,
+      "patterns": [
+        "WARP-ALT-PATH-INTO",
+        "INHERITED-WHEN-ATTACKING-OPT"
+      ],
+      "notes": "ST20-10 warp shape into [MetalGarurumon]; Purple+Blue Lv.2 circles (per-card JSON drops Blue — data drift); inherited [WA][OPT] draw 1 then mandatory trash 1. DCGO's extra [Hero] alt-req not authored (print governs)."
+    },
+    "ST21-14": {
+      "card_name": "Believe in Our Friendship",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_14.rs",
+      "test_count": 10,
+      "patterns": [
+        "OPTION-USE-REQUIREMENT",
+        "REVEAL-BUCKETS",
+        "DELAY-MAIN-ACTIVATED",
+        "SECURITY-PLACE-SELF"
+      ],
+      "notes": "ADVENTURE Digimon/Tamer on field (incl. breeding, per official Q&A) bypasses colour via use_requirement (+flood_gate as BT25-098); [Main] reveal 3 add 1 ADVENTURE, bottom rest, auto-seat as Delay; <Delay> gain 2; [Security] place self."
+    },
+    "AD1-022": {
+      "card_name": "Izzy Izumi & Tai Kamiya",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_022.rs",
+      "test_count": 13,
+      "patterns": [
+        "START-OF-MAIN-MEMORY",
+        "ALLY-PLAYED-OBSERVER",
+        "ACTIVATION-COST-SUSPEND-SELF",
+        "EFFECT-DIGIVOLVE-FORMULA-REDUCE",
+        "SECURITY-PLAY-SELF"
+      ],
+      "notes": "[Your Turn] other ADVENTURE Digimon/Tamer played → optional suspend-self → may pick own Digimon with payable ADVENTURE hand candidate → digivolve with cost -floor(Tamer colours/2)."
     }
   }
 }
