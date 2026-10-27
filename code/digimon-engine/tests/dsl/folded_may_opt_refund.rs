@@ -191,6 +191,10 @@ const REVIEWED: &[&str] = &[
     // P-176's whole-effect may: p_176.rs tests decline preserving OPT and
     // successful activation spending it until the next turn.
     "P-176#0",
+    // ST21-11 [When Attacking][OPT] "You may play 1 level 4 or lower Digimon
+    // card from your trash": whole-effect may, no Then tail (Q1818).
+    // st21_11.rs tests decline preserving OPT and use spending it.
+    "ST21-11#1",
 ];
 
 #[test]

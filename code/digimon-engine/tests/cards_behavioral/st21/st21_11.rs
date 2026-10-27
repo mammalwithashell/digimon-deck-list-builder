@@ -270,6 +270,32 @@ fn st21_11_when_attacking_decline_plays_nothing() {
     assert!(!on_field(&r, "TRASH-L4"));
 }
 
+/// Q1818: declining the "you may" does not use up the [Once Per Turn] — a
+/// second attack the same turn offers the play again.
+#[test]
+fn st21_11_when_attacking_decline_keeps_once_per_turn() {
+    let mut r = base().start();
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    push_trash(&mut r, "TRASH-L4");
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(me));
+    r.game.drain_effect_queue();
+    while let Some(sel) = r.pending_selection() {
+        let p = sel.selecting_player;
+        r.execute_action(p, PASS).expect("PASS legal ('you may')");
+    }
+    assert!(!on_field(&r, "TRASH-L4"));
+
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(me));
+    r.game.drain_effect_queue();
+    accept_outer(&mut r);
+    assert!(
+        r.pending_selection().is_some(),
+        "a declined [Once Per Turn] 'you may' is offered again"
+    );
+}
+
 // ─── {Hand}[Counter] <Blast Digivolve> ───────────────────────────────────────
 
 /// When the opponent attacks, the Counter window offers digivolving ST21-11
