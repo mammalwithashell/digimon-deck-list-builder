@@ -12,6 +12,7 @@ use digimon_engine::action::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::CardColor;
+use digimon_engine::player::OriginalDeckCardCount;
 use digimon_engine::search::{
     determinized_search_batched, DeterminizedConfig, Mcts, RootPolicy, SearchConfig,
     SearchResult, UniformEvaluator,
@@ -47,6 +48,16 @@ fn forced_win_position() -> (DebugRunner, HashMap<String, digimon_engine::card_d
     r.place_on_field(tp, "ATK", Some(0));
     r.place_on_field(opp, "DEF", Some(0));
     r.game.enter_main_phase();
+    // DebugRunner boards are staged outside the normal deal, so `original_deck`
+    // starts empty; the debug-build world-invariant checker in the determinized
+    // path audits every sampled card against it — declare the decklist (as the
+    // PUCT fixture in `determinized.rs` does).
+    for p in r.game.players.iter_mut() {
+        p.original_deck = vec![
+            OriginalDeckCardCount { card_id: "ATK".to_string(), count: 4, is_digitama: false },
+            OriginalDeckCardCount { card_id: "DEF".to_string(), count: 8, is_digitama: false },
+        ];
+    }
     let win_action = encode_attack(0, SECURITY_TARGET);
     let mask = digimon_engine::build_action_mask(&r.game, tp);
     assert_eq!(mask[win_action as usize], 1.0);

@@ -6725,3 +6725,37 @@ Two defects, either of which would close the loop:
 
 Not scored in the experiment (`--on-engine-error skip` records the game as
 `incomplete`). No other engine fault appeared in 19,000 panel games.
+
+## Medusamon's leave-replacement offers an unaffectable token and refuses the pick [G-ENGINE-REPLACEMENT-PICK-UNAFFECTABLE-TOKEN] — OPEN (2026-10-28)
+
+Found by the phase-budget generation panels (`policy_head_to_head.py`, seed
+54204079, Chronicle (P1) vs Medusamon (P2), turn 9). Repro:
+`qa/engine-faults/2026-10-28-attack-noop-pending-selection/recording.json`
+(300 actions; `context.json` has decks + seed). View with
+`digimon-engine-cli --pool implemented --cards-json data/cards.json replay <rec> --step 291 --show pending --player 1`.
+
+Symptom: Medusamon (EX11-012)'s `when_would_leave_battle_area` replacement
+("by deleting 1 Token, this Digimon doesn't leave") installs an optional
+`AnyField` selection for P2 with two options, action ids 102 and 104 — the
+two Petrification Tokens Medusamon had gifted to P1's field (P1s2 and P1s4).
+P1s2 carries a `CannotBeAffected` modifier (Chronicle board: Kota Domoto &
+Yuji Musya, Kota Domoto, Alphamon: Ouryuken). The policy picks 102; `Game`
+applies it with **no state change** — the selection stays pending with the same
+options — and after 8 repeats the no-op tripwire (`NoOpLoopError`) ends the
+game. The action list at that step still shows 102 as a legal `selection`.
+
+Reading: the `select_any_permanent` step builds its options from the
+`{ kind: token }` filter alone, while resolution (or the following
+`delete_permanent` / `cancel_replacement`) refuses the unaffectable token and
+leaves the prompt open instead of consuming the pick. Compare the per-colour
+delete terminal in `dsl_cards/step/selections.rs` (`run_per_color_delete_terminal`),
+which under CR 4.3 §15-15-5-1/-3 lets an unaffectable permanent be *picked*
+and then simply does not delete it. Either rule is acceptable, but mask and
+execution must agree: (a) exclude unaffectable permanents from the option set,
+or (b) accept the pick, apply no deletion, and resolve the selection (in which
+case the replacement cost was not paid, so Medusamon must still leave). (b)
+matches the §15-15-5 pattern already used for deletes. Rule 3 forbids an
+agent-side workaround.
+
+Not scored in the experiment (`incomplete`). Hypothesis on the cause is from
+the recording and the YAML, not yet confirmed in the resolver.
