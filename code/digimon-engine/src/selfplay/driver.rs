@@ -39,7 +39,6 @@ use crate::observation::build_observation_tensor_with_mask;
 use crate::rules::Rules;
 use crate::search::{
     determinized_search_batched, DeterminizationMode, DeterminizedConfig, PolicyValueFn,
-    RootPolicy,
 };
 
 use super::npy;
@@ -138,9 +137,8 @@ struct PhaseStat {
 struct PendingRecord {
     obs: Vec<f32>,
     actions: Vec<u16>,
-    /// Sparse policy target parallel to `actions`: raw root visit counts
-    /// under a PUCT root, the completed-Q improved policy under a Gumbel
-    /// root (manifest `policy_semantics` says which).
+    /// Sparse policy target parallel to `actions`: the root visit counts
+    /// conditional on the chosen plan prefix (`SearchResult::training_visits`).
     policy: Vec<f32>,
     mover: PlayerId,
     game_id: u32,
@@ -415,74 +413,84 @@ pub fn run_self_play(
                 stat.simulations += result.simulations_run as u64;
             }
 
-            // Record BEFORE acting: obs is the pre-action state the π
-            // target was computed for.
-            let obs = build_observation_tensor_with_mask(&game, pid, &registry, profile, &mask);
-            if buffer.obs_dim == 0 {
-                buffer.obs_dim = obs.len();
-            }
-            let (actions, visits): (Vec<u16>, Vec<u32>) =
-                result.root_visits.iter().copied().unzip();
-            let total_visits: u32 = visits.iter().sum();
-            // Policy target: the Gumbel improved policy when the root
-            // produced one (parallel to `root_visits` by contract), else the
-            // raw visit counts.
-            let policy_target: Vec<f32> = match &result.root_policy {
-                Some(improved) => {
-                    debug_assert!(improved.iter().zip(&actions).all(|((a, _), b)| a == b));
-                    improved.iter().map(|(_, p)| *p).collect()
-                }
-                None => visits.iter().map(|&v| v as f32).collect(),
-            };
-
-            let action = if let Some(chosen) = result.chosen_action {
-                // Gumbel root: play the sequential-halving survivor. Its
-                // Gumbel sample is the exploration, so the temperature stage
-                // does not apply.
-                chosen
-            } else if total_visits == 0 {
-                // Degenerate budget (0 sims): fall back to uniform-legal.
-                legal[temp_rng.gen_range(0..legal.len())]
+            // Pick a complete physical commitment once. Navigation is only
+            // its transport route; never re-search between its pages.
+            let total_visits: u32 = result.root_plans.iter().map(|(_, v, _)| v).sum();
+            let route = if total_visits == 0 {
+                result.root_plans[temp_rng.gen_range(0..result.root_plans.len())]
+                    .0
+                    .clone()
             } else if non_forced < config.temperature_decisions {
-                // τ = 1: sample proportional to visit counts.
                 let mut ticket = temp_rng.gen_range(0..total_visits);
-                let mut chosen = actions[0];
-                for (a, v) in actions.iter().zip(visits.iter()) {
-                    if ticket < *v {
-                        chosen = *a;
+                let mut chosen = &result.root_plans[0].0;
+                for (plan, visits, _) in &result.root_plans {
+                    if ticket < *visits {
+                        chosen = plan;
                         break;
                     }
-                    ticket -= v;
+                    ticket -= visits;
                 }
-                chosen
+                chosen.clone()
             } else {
-                // Argmax, first-max tie-break in mask order.
-                let mut best = (0u32, actions[0]);
-                for (a, v) in actions.iter().zip(visits.iter()) {
-                    if *v > best.0 {
-                        best = (*v, *a);
-                    }
-                }
-                best.1
+                result
+                    .best_plan()
+                    .expect("search must return a legal plan")
+                    .to_vec()
             };
-
-            buffer.records.push(PendingRecord {
-                obs,
-                actions,
-                policy: policy_target,
-                mover: pid,
-                game_id: game_idx,
-                policy_weight: if full_search { 1.0 } else { 0.0 },
-                z: 0.0,
-                terminated: false,
-            });
-
-            if trace_decisions {
-                eprintln!("game {game_idx} decision {decisions}: search action {action}");
+            for (index, &action) in route.iter().enumerate() {
+                if decisions >= config.decision_cap {
+                    break;
+                }
+                assert_eq!(
+                    decision_player(&game),
+                    pid,
+                    "search route changed player before commitment"
+                );
+                let next_mask;
+                let step_mask = if index == 0 {
+                    &mask
+                } else {
+                    next_mask = build_action_mask(&game, pid);
+                    &next_mask
+                };
+                assert!(
+                    step_mask[action as usize] > 0.5,
+                    "search route must respect the live mask"
+                );
+                if step_mask.iter().filter(|&&m| m > 0.5).count() > 1 {
+                    let obs = build_observation_tensor_with_mask(
+                        &game, pid, &registry, profile, step_mask,
+                    );
+                    if buffer.obs_dim == 0 {
+                        buffer.obs_dim = obs.len();
+                    }
+                    // Shards also encode the complete engine legality mask.
+                    // Rejected/backward page moves remain legal with ZERO
+                    // target mass, so fitting can learn not to browse in circles.
+                    let (actions, visits): (Vec<u16>, Vec<u32>) = result
+                        .training_visits(&route[..index], step_mask)
+                        .into_iter()
+                        .unzip();
+                    buffer.records.push(PendingRecord {
+                        obs,
+                        actions,
+                        policy: visits.into_iter().map(|v| v as f32).collect(),
+                        mover: pid,
+                        game_id: game_idx,
+                        policy_weight: if full_search { 1.0 } else { 0.0 },
+                        z: 0.0,
+                        terminated: false,
+                    });
+                    non_forced += 1;
+                } else {
+                    stats.forced_decisions_total += 1;
+                }
+                if trace_decisions {
+                    eprintln!("game {game_idx} decision {decisions}: search action {action}");
+                }
+                game.decode_action(action, pid);
+                decisions += 1;
             }
-            game.decode_action(action, pid);
-            decisions += 1;
-            non_forced += 1;
         }
 
         // z backfill for this game's records.
@@ -549,7 +557,6 @@ pub fn run_self_play(
             "reduced_simulations": config.reduced_simulations,
             "full_search_fraction": config.full_search_fraction,
             "cheap_simulations": config.cheap_simulations,
-            "root_policy": format!("{:?}", config.search.search.root),
         },
         "temperature_decisions": config.temperature_decisions,
         "decision_cap": config.decision_cap,
@@ -586,10 +593,7 @@ pub fn run_self_play(
             .map(|(d, r)| serde_json::json!({ "dir": d, "rows": r }))
             .collect::<Vec<_>>(),
         "z_semantics": "±1 terminal outcome from mover perspective; 0 = draw or truncation; terminated.npy distinguishes them, exclude truncated rows from value training",
-        "policy_semantics": match config.search.search.root {
-            RootPolicy::Puct => "raw root visit counts over root-legal actions (sparse via offsets); normalize before use",
-            RootPolicy::Gumbel { .. } => "Gumbel completed-Q improved policy over root-legal actions, averaged over PIMC worlds (sparse via offsets; sums to one, normalize anyway)",
-        },
+        "policy_semantics": "raw root visit counts over the page's legal actions, conditional on the chosen plan prefix (sparse via offsets); normalize before use",
         "policy_weight_semantics": "1.0 = full search, the row trains the policy head; 0.0 = cheap value-only search, exclude the row from the policy loss (its visits still define the legality mask)",
     });
     let manifest_path = out_dir.join("manifest.json");

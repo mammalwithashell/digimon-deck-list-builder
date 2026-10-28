@@ -1,11 +1,23 @@
 //! Commit an already processed simultaneous departure, then enqueue its events.
 use crate::{
+    card_source::CardHandle,
     enums::{CardKind, EffectTiming, StackPosition},
     game::Game,
     permanent::PermanentHandle,
     selection::TriggerSource,
     trigger_context::EventCause,
 };
+
+/// A completed return and its distinct physical hand-addition outcome.
+/// A departing token satisfies the former but never the latter (CR 4.3
+/// §§4-21-5, 15-1-9, 15-1-10).
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct ReturnedCard {
+    pub card: CardHandle,
+    pub to_hand: bool,
+    pub added_to_hand: bool,
+}
+
 impl Game {
     pub(crate) fn commit_simultaneous_returns(
         &mut self,
@@ -76,14 +88,28 @@ impl Game {
                     } else {
                         self.insert_card_into_deck(owner, top, position);
                     }
-                    completed.push((card, false));
                 }
-            } else if !token {
+                completed.push(ReturnedCard {
+                    card,
+                    to_hand: false,
+                    added_to_hand: false,
+                });
+            } else if token {
+                completed.push(ReturnedCard {
+                    card,
+                    to_hand: true,
+                    added_to_hand: false,
+                });
+            } else {
                 if top.card_kind(&self.card_data) == CardKind::DigiEgg {
                     self.player_mut(owner).insert_in_digi_egg_deck(0, top);
                 } else {
                     self.player_mut(owner).put_in_hand(top);
-                    completed.push((card, true));
+                    completed.push(ReturnedCard {
+                        card,
+                        to_hand: true,
+                        added_to_hand: true,
+                    });
                     hand_events.push(owner);
                 }
             }

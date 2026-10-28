@@ -22,16 +22,14 @@
 //!     materialized worlds + the no-X-ray canonicalization (tasks 2.3/2.5).
 //!   - `dirichlet` — seeded Dirichlet root noise (Marsaglia–Tsang gamma;
 //!     no `rand_distr` dependency).
-//!   - `gumbel` — Gumbel sequential-halving root + completed-Q improved
-//!     policy (`RootPolicy::Gumbel`; search-budget experiments).
 //!
 //! Integration tests: `tests/search/` (perfect-information forced-win,
 //! same-player sign handling, determinism, mid-game robustness).
 
 mod determinized;
+mod decision;
 mod dirichlet;
 mod evaluator;
-mod gumbel;
 mod mcts;
 mod memoized;
 mod onnx_adapter;
@@ -40,7 +38,7 @@ pub use determinized::{
     determinized_search, determinized_search_batched, DeterminizationMode, DeterminizedConfig,
 };
 pub use evaluator::{EvalRequest, Evaluation, PolicyValueFn, UniformEvaluator};
-pub use mcts::{decision_player, Mcts, RootPolicy, SearchConfig, SearchResult};
+pub use mcts::{decision_player, Mcts, SearchConfig, SearchResult};
 pub use memoized::MemoizedEvaluator;
 
 /// Opt-in native search timing diagnostics.

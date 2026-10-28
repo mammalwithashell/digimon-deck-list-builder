@@ -335,7 +335,19 @@ impl Game {
             debug_field(&mut h, "replacement_native_tail_lengths", &native_tails);
         }
         if !self.return_receipts.is_empty() {
-            debug_field(&mut h,"return_receipts",&self.return_receipts);
+            // Preserve existing replay digests for ordinary returns. The
+            // extra distinction only exists for processed returns whose
+            // physical hand addition was prevented by token rules.
+            let destinations: Vec<_> = self.return_receipts.iter().map(|(id, results)| {
+                (*id, results.iter().map(|r| (r.card, r.to_hand)).collect::<Vec<_>>())
+            }).collect();
+            debug_field(&mut h, "return_receipts", &destinations);
+            let removed: Vec<_> = self.return_receipts.iter().flat_map(|(id, results)| {
+                results.iter().filter(|r| r.to_hand && !r.added_to_hand).map(|r| (*id, r.card))
+            }).collect();
+            if !removed.is_empty() {
+                debug_field(&mut h, "returns_without_hand_addition", &removed);
+            }
         }
         if !self.deletion_receipts.is_empty() {
             debug_field(&mut h, "deletion_receipts", &self.deletion_receipts);

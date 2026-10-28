@@ -37,8 +37,6 @@ from tools.selfplay_scheduler import atomic_json, sha256
 DEFAULT_CANDIDATES = [
     {"id": "s320-w4", "simulations": 320, "worlds": 4},
     {"id": "c1-main320-other64", "simulations": 320, "worlds": 4, "reduced_simulations": 64},
-    {"id": "g1-gumbel128-m16", "simulations": 128, "worlds": 4, "root": "gumbel", "gumbel_candidates": 16},
-    {"id": "g2-gumbel64-m8", "simulations": 64, "worlds": 4, "root": "gumbel", "gumbel_candidates": 8},
 ]
 
 

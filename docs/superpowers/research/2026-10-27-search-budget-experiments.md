@@ -462,3 +462,15 @@ did not recur in the 4-block schedule): Medusamon (EX11-012)'s
 leave-replacement offered a `CannotBeAffected` token and the pick resolved to
 no state change — `G-ENGINE-REPLACEMENT-PICK-UNAFFECTABLE-TOKEN` in
 `docs/RUST_ENGINE_GAPS.md`, repro under `qa/engine-faults/2026-10-28-attack-noop-pending-selection/`.
+
+## Gumbel root removed (2026-10-28)
+
+When PR #754 (plan-based `SearchResult::root_plans`, multi-page card choices
+searched as complete physical commitments) was merged into this branch, the
+Gumbel root (`search/gumbel.rs`, `RootPolicy::Gumbel`, `--root gumbel`,
+`--gumbel-candidates`, `SearchResult::root_policy` / `chosen_action`) was
+removed rather than ported: it had measured worse than PUCT at every budget
+tried, is not part of the adopted generation default, and porting the
+improved-policy target onto plan routes would have been untested new work.
+The implementation and its tests are recoverable from commit `451ae4de1`
+(this branch) if the idea is revisited with a smaller `c_scale`.

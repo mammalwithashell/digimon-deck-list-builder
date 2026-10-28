@@ -30,7 +30,6 @@ def test_benchmark_candidates_reduce_to_baseline_flags():
     assert "--reduced-sims" in c["C1-main320-other64"]["flags"]
     assert "--full-search-fraction" in c["C2-cap0.25-cheap64"]["flags"]
     # Budget overrides go through `sims`, never a duplicated --sims flag.
-    assert c["G1-gumbel128-m16"]["sims"] == 128
     assert all("--sims" not in cand["flags"] for cand in c.values())
     for guard in benchmark_search_budget.GUARDS.values():
         assert guard["flags"], "every guard changes a flag that must not change the output"

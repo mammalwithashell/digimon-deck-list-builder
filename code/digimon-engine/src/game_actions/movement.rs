@@ -59,10 +59,11 @@ impl Game {
     /// Bounce a permanent to its owner's hand: the top card moves to hand,
     /// every card beneath it goes to the owner's trash (per DCGO leave-field
     /// rules). Linked cards go to trash. Returns the handle of the card that
-    /// ended up in hand.
+    /// was returned, including a token removed by §4-21-5. This is a processed
+    /// return (§15-1-9), not proof of an actual hand addition (§15-1-10).
     ///
-    /// Does not fire OnLeaveField observers — that's Phase 1 timing-dispatch
-    /// infrastructure. Modifiers targeting the returned permanent are cleared.
+    /// Fires OnLeaveField observers after removing the permanent and clearing
+    /// its modifiers; OnAddToHand requires an actual hand addition.
     ///
     /// Phase 7 Task 4: fires `WhenWouldLeaveBattleArea` + `WhenWouldBeReturnedToHand`
     /// replacement windows before committing. See spec §4.1, §7.
@@ -70,6 +71,14 @@ impl Game {
         &mut self,
         handle: PermanentHandle,
     ) -> Option<crate::card_source::CardHandle> {
+        self.return_to_hand_with_receipt(handle)
+            .map(|result| result.card)
+    }
+
+    pub(crate) fn return_to_hand_with_receipt(
+        &mut self,
+        handle: PermanentHandle,
+    ) -> Option<super::ReturnedCard> {
         use crate::enums::{EffectTiming, Zone};
         use crate::replacement::{ReplacementOutcome, ReplacementSubject};
 
@@ -128,7 +137,7 @@ impl Game {
                 // Fall through and commit the original return-to-hand.
             }
             ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => {
-                return self.return_to_hand(other);
+                return self.return_to_hand_with_receipt(other);
             }
             ReplacementOutcome::Substituted(_) => {
                 debug_assert!(
@@ -206,6 +215,7 @@ impl Game {
         };
         let top_handle = top.handle();
         let top_owner = top.owner;
+        let top_is_token = top.is_token;
         let mut leaving_sources = sources.clone();
         leaving_sources.push(top.clone());
         self.apply_ace_overflow_for_sources(&leaving_sources);
@@ -216,7 +226,7 @@ impl Game {
         if top_is_egg {
             // Rule 3-1-3-9-2: a Digi-Egg cannot enter hand.
             self.player_mut(top_owner).insert_in_digi_egg_deck(0, top);
-        } else {
+        } else if !top_is_token {
             self.player_mut(top_owner).put_in_hand(top);
         }
 
@@ -278,8 +288,14 @@ impl Game {
         if top_is_egg {
             None
         } else {
-            self.fire_on_add_to_hand_by_effect(top_owner);
-            Some(top_handle)
+            if !top_is_token {
+                self.fire_on_add_to_hand_by_effect(top_owner);
+            }
+            Some(super::ReturnedCard {
+                card: top_handle,
+                to_hand: true,
+                added_to_hand: !top_is_token,
+            })
         }
     }
 

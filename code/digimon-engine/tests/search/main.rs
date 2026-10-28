@@ -24,4 +24,5 @@ mod gumbel;
 mod midgame;
 mod perfect_information;
 mod profile;
+mod paging;
 mod support;

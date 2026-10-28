@@ -35,13 +35,18 @@ def evaluation_options(plan):
 
 
 def validate(root, plan):
-    if plan['generations'] not in range(1, 5) or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
+    first = plan.get('first_generation', 1)
+    last = plan['generations']
+    if type(first) is not int or type(last) is not int or not 1 <= first <= last:
+        raise ValueError('Invalid first generation')
+    if last - first + 1 not in range(1, 5) or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
         raise ValueError('Unexpected campaign scope')
     if os.environ.get('DIGIMON_DEPLOYED_IMAGE') != plan['image']:
         raise ValueError('Image differs from approved engine')
+    parent = first - 1
     required = {'inputs/decks.json', 'inputs/seed.zip', 'inputs/seed.onnx',
                 'inputs/heldout_snapshot.json', 'inputs/pet_evaluation_snapshot.json',
-                'inputs/anchors.json', 'generation/gen0/model.zip', 'generation/gen0/model.onnx',
+                'inputs/anchors.json', f'generation/gen{parent}/model.zip', f'generation/gen{parent}/model.onnx',
                 'validation/generation0-recovery.json'}
     if not required <= set(plan['files']):
         raise ValueError('Missing required input hashes')
@@ -54,16 +59,29 @@ def validate(root, plan):
             raise ValueError(f'Runtime hash mismatch: {name}')
     report = json.loads((root / 'validation/generation0-recovery.json').read_text())
     if (report.get('status') != 'passed' or report.get('image') != plan['image']
-            or report.get('checkpoint_sha256') != sha256(root / 'generation/gen0/model.zip')):
+            or report.get('checkpoint_sha256') != sha256(root / f'generation/gen{parent}/model.zip')):
         raise ValueError('Parent checkpoint validation differs')
+    if plan.get('reuse_parent_evaluation', False):
+        receipt_path = 'validation/parent-evaluation.json'
+        if receipt_path not in plan['files']:
+            raise ValueError('Reusing evaluation requires a hash-bound receipt')
+        receipt = json.loads((root / receipt_path).read_text())
+        if (receipt.get('status') != 'complete'
+                or receipt.get('checkpoint_sha256') != report['checkpoint_sha256']
+                or receipt.get('evaluation_panels') != plan.get('evaluation_panels')
+                or receipt.get('evaluation_seed') != plan.get('evaluation_seed')
+                or receipt.get('games_per_archetype') != plan.get('evaluation_games_per_archetype_per_anchor')
+                or not receipt.get('policy_evaluation_unchanged')):
+            raise ValueError('Parent evaluation reuse evidence differs')
     slots = Counter(d['name'].split(':sha256:', 1)[0] for d in json.loads((root / 'inputs/decks.json').read_text()))
     if len(set(slots.values())) != 1 or plan['games'] * 2 / len(slots) < 150:
         raise ValueError('Pool must have equal archetype weight and >=150 expected appearances')
     state = json.loads((root / 'generation/state.json').read_text())
-    if state != dict(next_gen=1, prev=dict(model_zip=str(root / 'generation/gen0/model.zip'),
-                                          model_onnx=str(root / 'generation/gen0/model.onnx'))):
+    if state != dict(next_gen=first, prev=dict(model_zip=str(root / f'generation/gen{parent}/model.zip'),
+                                          model_onnx=str(root / f'generation/gen{parent}/model.onnx'))):
         raise ValueError('Expected prepared parent state')
-    if any((root / 'generation' / f'gen{i}').exists() for i in range(1, 5)):
+    if any(p.name[3:].isdigit() and int(p.name[3:]) >= first
+           for p in (root / 'generation').glob('gen*')):
         raise ValueError('Existing campaign output; explicit recovery required')
     evaluation_options(plan)
     return slots
@@ -120,11 +138,13 @@ def main():
             if result['status'] != 'complete':
                 raise RuntimeError(f'Checkpoint evaluation failed: {result}')
 
-        index = 0
+        first = plan.get('first_generation', 1)
+        index = first - 1
         try:
-            stage('checkpoint_evaluation', 0)
-            evaluate(0)  # once on the same fixed cohort as all subsequent models
-            for index in range(1, plan['generations'] + 1):
+            if not plan.get('reuse_parent_evaluation', False):
+                stage('checkpoint_evaluation', index)
+                evaluate(index)
+            for index in range(first, plan['generations'] + 1):
                 stage('generation', index, games=plan['games'], workers=plan['workers'])
                 print(f'=== GENERATION_MONITOR_INDEX={index} ===', flush=True)
                 subprocess.run(generation_command(root, plan), check=True)

@@ -3,7 +3,8 @@
 //! Tree shape (design D3): a node is a DECISION POINT — the player the
 //! state is waiting on (mulligan decider, `pending_selection.selecting_player`,
 //! or the turn player) plus that player's action mask — and an edge is a
-//! masked `action_id`. Mid-effect selections are ordinary nodes; there is no
+//! masked action, or a complete presentation route ending in a physical card
+//! commitment. Mid-effect selections are ordinary nodes; there is no
 //! turn-level abstraction and no board-symmetry augmentation.
 //!
 //! **Search granularity (design Open Question, resolved here): forced nodes
@@ -43,42 +44,12 @@ use crate::observation::{
     build_observation_tensor_with_mask, default_observation_profile, ObservationProfileId,
 };
 
+use super::decision::{apply_plan, evaluate_requests, Surface};
 use super::dirichlet::sample_dirichlet;
 use super::evaluator::{EvalRequest, Evaluation, PolicyValueFn};
-use super::gumbel::GumbelRoot;
 
 #[path = "batched.rs"]
 mod batched;
-
-/// How the ROOT picks the edge each simulation starts with. Selection below
-/// the root is always PUCT.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum RootPolicy {
-    /// PUCT with Dirichlet exploration noise — the AlphaZero reference.
-    Puct,
-    /// Gumbel sequential halving over at most `max_candidates` root actions
-    /// (Danihelka et al. 2022; `search::gumbel`). The Gumbel sample replaces
-    /// Dirichlet noise, the survivor is the action to play
-    /// (`SearchResult::chosen_action`) and the completed-Q improved policy is
-    /// the training target (`SearchResult::root_policy`).
-    Gumbel {
-        max_candidates: u32,
-        /// `σ(q) = (c_visit + max_visits) · c_scale · q`.
-        c_visit: f32,
-        c_scale: f32,
-    },
-}
-
-impl RootPolicy {
-    /// Gumbel root with the paper's defaults (`c_visit` 50, `c_scale` 1).
-    pub fn gumbel(max_candidates: u32) -> Self {
-        Self::Gumbel {
-            max_candidates,
-            c_visit: 50.0,
-            c_scale: 1.0,
-        }
-    }
-}
 
 /// Tunables for one search. `Default` is a sensible AlphaZero-style setting
 /// for interactive budgets.
@@ -107,12 +78,6 @@ pub struct SearchConfig {
     /// auto-advance loop and the selection path length. Rollouts truncated
     /// by the cap are scored by the evaluator (not as terminals).
     pub max_decisions: u32,
-    /// Root selection rule (see [`RootPolicy`]). `Puct` is the reference.
-    pub root: RootPolicy,
-    /// Seed for the Gumbel root noise when several searches of the SAME
-    /// decision must share one sample (PIMC worlds); `None` derives it from
-    /// `seed`. Ignored under `RootPolicy::Puct`.
-    pub root_noise_seed: Option<u64>,
 }
 
 impl Default for SearchConfig {
@@ -125,8 +90,6 @@ impl Default for SearchConfig {
             seed: 0,
             observation_profile: default_observation_profile(),
             max_decisions: 512,
-            root: RootPolicy::Puct,
-            root_noise_seed: None,
         }
     }
 }
@@ -134,8 +97,12 @@ impl Default for SearchConfig {
 /// Outcome of one search from a root state.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SearchResult {
-    /// Per root edge: `(action_id, visit count)`, in mask order. Visit
-    /// counts are the search policy (normalize / temperature-sample them).
+    /// Complete routes to a game decision. Choose one route before navigating;
+    /// root_visits projects these onto the first legal transport action.
+    pub root_plans: Vec<(Vec<u16>, u32, f32)>,
+    /// Visits projected onto the current page's legal actions, in mask order.
+    /// Training targets may normalize these; actors must select a complete
+    /// root_plan first, not repeatedly argmax this projection on each page.
     pub root_visits: Vec<(u16, u32)>,
     /// Per root edge: `(action_id, mean action-value Q)` from the ROOT
     /// mover's perspective (0.0 for unvisited edges). Diagnostic + review
@@ -146,15 +113,67 @@ pub struct SearchResult {
     pub root_value: f32,
     /// Simulations actually run (0 if the root was terminal / choiceless).
     pub simulations_run: u32,
-    /// Gumbel root only: the completed-Q improved policy over the root
-    /// edges — same order as `root_visits`, sums to one — which is the
-    /// policy TARGET under `RootPolicy::Gumbel`. `None` under PUCT (train on
-    /// the visit counts).
-    pub root_policy: Option<Vec<(u16, f32)>>,
-    /// Gumbel root only: the action the search says to PLAY — the
-    /// sequential-halving survivor, whose Gumbel sample already supplies the
-    /// exploration. `None` under PUCT (sample / argmax the visit counts).
-    pub chosen_action: Option<u16>,
+}
+
+impl SearchResult {
+    pub(crate) fn from_plans(
+        root_plans: Vec<(Vec<u16>, u32, f32)>,
+        root_value: f32,
+        simulations_run: u32,
+    ) -> Self {
+        let mut projected = std::collections::BTreeMap::<u16, (u32, f64)>::new();
+        for (route, visits, q) in &root_plans {
+            let entry = projected.entry(route[0]).or_default();
+            entry.0 += visits;
+            entry.1 += *visits as f64 * *q as f64;
+        }
+        Self {
+            root_visits: projected.iter().map(|(&a, &(v, _))| (a, v)).collect(),
+            root_q: projected
+                .iter()
+                .map(|(&a, &(v, w))| (a, if v > 0 { (w / v as f64) as f32 } else { 0. }))
+                .collect(),
+            root_plans,
+            root_value,
+            simulations_run,
+        }
+    }
+
+    /// Conditional visit targets after a chosen presentation-route prefix.
+    /// The full action space remains the engine's original paged contract.
+    pub fn visits_after(&self, prefix: &[u16]) -> Vec<(u16, u32)> {
+        let mut counts = std::collections::BTreeMap::<u16, u32>::new();
+        for (route, visits, _) in &self.root_plans {
+            if route.starts_with(prefix) && route.len() > prefix.len() {
+                *counts.entry(route[prefix.len()]).or_default() += visits;
+            }
+        }
+        counts.into_iter().collect()
+    }
+
+    pub fn best_plan(&self) -> Option<&[u16]> {
+        self.root_plans
+            .iter()
+            .enumerate()
+            .max_by_key(|(i, (_, v, _))| (*v, std::cmp::Reverse(*i)))
+            .map(|(_, (route, _, _))| route.as_slice())
+    }
+
+    /// Shard action IDs encode legality as well as target mass. In particular,
+    /// retain a legal backward page move with zero visits after choosing a route.
+    pub fn training_visits(&self, prefix: &[u16], mask: &[f32]) -> Vec<(u16, u32)> {
+        let conditional: std::collections::BTreeMap<_, _> =
+            self.visits_after(prefix).into_iter().collect();
+        assert!(
+            conditional.keys().all(|&a| mask[a as usize] > 0.5),
+            "stale route target"
+        );
+        mask.iter()
+            .enumerate()
+            .filter(|(_, m)| **m > 0.5)
+            .map(|(a, _)| (a as u16, conditional.get(&(a as u16)).copied().unwrap_or(0)))
+            .collect()
+    }
 }
 
 /// The player whose decision a state is waiting on: the mulligan decider,
@@ -195,7 +214,7 @@ pub(super) fn terminal_value(game: &Game, perspective: PlayerId) -> f32 {
 }
 
 struct Edge {
-    action: u16,
+    plan: Vec<u16>,
     prior: f32,
     child: Option<usize>,
     visits: u32,
@@ -219,8 +238,7 @@ enum PreparedNode {
     Evaluate {
         game: Game,
         mover: PlayerId,
-        mask: Vec<f32>,
-        legal: Vec<u16>,
+        surface: Surface,
     },
 }
 
@@ -252,27 +270,22 @@ impl<'a> Mcts<'a> {
         let mut rng = StdRng::seed_from_u64(config.seed);
         let mut arena: Vec<Node> = Vec::new();
 
-        let (root_node, root_eval) =
+        let (root_node, _root_eval) =
             self.make_node(measure("clone", || root.clone()), false, evaluator, config);
         if root_node.terminal_value.is_some() || root_node.edges.is_empty() {
             return SearchResult {
+                root_plans: Vec::new(),
                 root_visits: Vec::new(),
                 root_q: Vec::new(),
                 root_value: root_node.terminal_value.unwrap_or(0.0),
                 simulations_run: 0,
-                root_policy: None,
-                chosen_action: None,
             };
         }
         arena.push(root_node);
 
-        // Gumbel root: the Gumbel sample IS the exploration, so Dirichlet
-        // noise is skipped and the priors stay pure.
-        let mut gumbel = gumbel_root_for(&arena[0], root_eval, config);
-
         // Root Dirichlet exploration noise (root ONLY): mix
         // (1-eps)*prior + eps*Dirichlet(alpha) over the legal edges.
-        if gumbel.is_none() && config.dirichlet_epsilon > 0.0 && arena[0].edges.len() > 1 {
+        if config.dirichlet_epsilon > 0.0 && arena[0].edges.len() > 1 {
             let noise = sample_dirichlet(
                 &mut rng,
                 config.dirichlet_alpha as f64,
@@ -310,12 +323,7 @@ impl<'a> Mcts<'a> {
                     let eval = evaluator.evaluate_batch(&[EvalRequest { obs, mask }]);
                     break (eval[0].value, node.mover);
                 }
-                let edge_idx = match (cur, gumbel.as_mut()) {
-                    (0, Some(root)) => root
-                        .next_edge(&root_stats(&arena[0]))
-                        .expect("Gumbel root budget equals the simulation count"),
-                    _ => select_edge(&arena[cur], config.c_puct),
-                };
+                let edge_idx = select_edge(&arena[cur], config.c_puct);
                 path.push((cur, edge_idx));
                 match arena[cur].edges[edge_idx].child {
                     Some(child) => cur = child,
@@ -324,7 +332,7 @@ impl<'a> Mcts<'a> {
                         let parent = &arena[cur];
                         let mut game = measure("clone", || parent.game.clone());
                         measure("step", || {
-                            game.decode_action(parent.edges[edge_idx].action, parent.mover)
+                            apply_plan(&mut game, parent.mover, &parent.edges[edge_idx].plan)
                         });
                         let (node, value) = self.make_node(game, true, evaluator, config);
                         let mover = node.mover;
@@ -350,36 +358,30 @@ impl<'a> Mcts<'a> {
 
         // ── Result extraction ───────────────────────────────────────────
         let root = &arena[0];
-        let root_visits: Vec<(u16, u32)> =
-            root.edges.iter().map(|e| (e.action, e.visits)).collect();
-        let root_q: Vec<(u16, f32)> = root
-            .edges
-            .iter()
-            .map(|e| {
-                let q = if e.visits > 0 {
-                    e.w / e.visits as f32
-                } else {
-                    0.0
-                };
-                (e.action, q)
-            })
-            .collect();
         let total_visits: u32 = root.edges.iter().map(|e| e.visits).sum();
         let total_w: f32 = root.edges.iter().map(|e| e.w).sum();
-        let root_value = if total_visits > 0 {
-            total_w / total_visits as f32
-        } else {
-            0.0
-        };
-        let (root_policy, chosen_action) = gumbel_outputs(root, gumbel.as_ref());
-        SearchResult {
-            root_visits,
-            root_q,
-            root_value,
-            simulations_run: config.simulations,
-            root_policy,
-            chosen_action,
-        }
+        SearchResult::from_plans(
+            root.edges
+                .iter()
+                .map(|e| {
+                    (
+                        e.plan.clone(),
+                        e.visits,
+                        if e.visits > 0 {
+                            e.w / e.visits as f32
+                        } else {
+                            0.
+                        },
+                    )
+                })
+                .collect(),
+            if total_visits > 0 {
+                total_w / total_visits as f32
+            } else {
+                0.
+            },
+            config.simulations,
+        )
     }
 
     /// Materialize a node from a game state, optionally auto-advancing
@@ -398,10 +400,10 @@ impl<'a> Mcts<'a> {
         let prepared = self.prepare_node(game, auto_advance, config);
         match prepared {
             PreparedNode::Ready(node, value) => (node, value),
-            prepared => {
-                let request = self.node_request(&prepared, config);
-                let evaluations = evaluator.evaluate_batch(&[request]);
-                self.finish_node(prepared, &evaluations[0])
+            mut prepared => {
+                let requests = self.node_requests(&mut prepared);
+                let evaluations = evaluate_requests(&requests, evaluator, 1);
+                self.finish_node(prepared, &evaluations)
             }
         }
     }
@@ -458,86 +460,50 @@ impl<'a> Mcts<'a> {
             );
         }
 
+        let surface = Surface::new(
+            &game,
+            mover,
+            self.registry,
+            config.observation_profile,
+            mask,
+        );
         PreparedNode::Evaluate {
             game,
             mover,
-            mask,
-            legal,
+            surface,
         }
     }
 
-    fn node_request(&self, prepared: &PreparedNode, config: &SearchConfig) -> EvalRequest {
-        let _profile = span("node_request");
-        let PreparedNode::Evaluate {
-            game, mover, mask, ..
-        } = prepared
-        else {
+    fn node_requests(&self, prepared: &mut PreparedNode) -> Vec<EvalRequest> {
+        let PreparedNode::Evaluate { surface, .. } = prepared else {
             unreachable!("terminal nodes do not need inference");
         };
-        EvalRequest {
-            obs: build_observation_tensor_with_mask(
-                game,
-                *mover,
-                self.registry,
-                config.observation_profile,
-                mask,
-            ),
-            mask: mask.clone(),
-        }
+        std::mem::take(&mut surface.requests)
     }
 
-    fn finish_node(&self, prepared: PreparedNode, evaluation: &Evaluation) -> (Node, f32) {
+    fn finish_node(&self, prepared: PreparedNode, evaluations: &[Evaluation]) -> (Node, f32) {
         let _profile = span("finish_node");
         let PreparedNode::Evaluate {
             game,
             mover,
-            mask,
-            legal,
+            surface,
         } = prepared
         else {
             unreachable!("terminal nodes are already complete");
         };
-        debug_assert_eq!(
-            evaluation.policy.len(),
-            mask.len(),
-            "evaluator policy length must match the mask"
-        );
-        // Mask discipline: the evaluator must put zero mass on illegal
-        // actions (masked_softmax guarantees this for the ONNX path).
-        debug_assert!(
-            evaluation
-                .policy
-                .iter()
-                .zip(mask.iter())
-                .filter(|(_, &m)| m <= 0.5)
-                .map(|(p, _)| p.abs())
-                .sum::<f32>()
-                < 1e-5,
-            "evaluator leaked probability mass onto illegal actions"
-        );
-
-        // Priors over the legal edges, renormalized defensively (an
-        // all-zero legal slice falls back to uniform).
-        let legal_mass: f32 = legal.iter().map(|&a| evaluation.policy[a as usize]).sum();
-        let edges: Vec<Edge> = legal
-            .iter()
-            .map(|&a| {
-                let prior = if legal_mass > 0.0 {
-                    evaluation.policy[a as usize] / legal_mass
-                } else {
-                    1.0 / legal.len() as f32
-                };
-                Edge {
-                    action: a,
-                    prior,
-                    child: None,
-                    visits: 0,
-                    w: 0.0,
-                }
+        let (priors, value) = surface.evaluate(evaluations);
+        let edges = surface
+            .plans
+            .into_iter()
+            .zip(priors)
+            .map(|(plan, prior)| Edge {
+                plan,
+                prior,
+                child: None,
+                visits: 0,
+                w: 0.,
             })
             .collect();
-
-        let value = evaluation.value;
         (
             Node {
                 game,
@@ -583,71 +549,6 @@ pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
         forced_steps += 1;
     }
     mask
-}
-
-/// Per-edge `(visits, mean Q)` of a node in edge order — the Gumbel root's
-/// input. Q is already in the node mover's perspective (`Edge::w`).
-fn root_stats(node: &Node) -> Vec<(u32, f32)> {
-    node.edges
-        .iter()
-        .map(|e| {
-            let q = if e.visits > 0 {
-                e.w / e.visits as f32
-            } else {
-                0.0
-            };
-            (e.visits, q)
-        })
-        .collect()
-}
-
-/// Build the Gumbel root scheduler when the config asks for one and the
-/// root has edges. `root_value` is the network value for the root mover
-/// (the mixed-value anchor for unvisited actions).
-fn gumbel_root_for(node: &Node, root_value: f32, config: &SearchConfig) -> Option<GumbelRoot> {
-    match config.root {
-        RootPolicy::Puct => None,
-        RootPolicy::Gumbel {
-            max_candidates,
-            c_visit,
-            c_scale,
-        } => {
-            if node.edges.is_empty() {
-                return None;
-            }
-            let priors: Vec<f32> = node.edges.iter().map(|e| e.prior).collect();
-            Some(GumbelRoot::new(
-                &priors,
-                root_value,
-                config.simulations,
-                max_candidates,
-                c_visit,
-                c_scale,
-                config.root_noise_seed.unwrap_or(config.seed),
-            ))
-        }
-    }
-}
-
-/// The Gumbel root's two outputs — improved policy (edge order) and the
-/// action to play — or `(None, None)` under PUCT.
-fn gumbel_outputs(
-    root: &Node,
-    gumbel: Option<&GumbelRoot>,
-) -> (Option<Vec<(u16, f32)>>, Option<u16>) {
-    match gumbel {
-        None => (None, None),
-        Some(g) => {
-            let stats = root_stats(root);
-            let policy = g
-                .improved_policy(&stats)
-                .into_iter()
-                .zip(root.edges.iter())
-                .map(|(p, e)| (e.action, p))
-                .collect();
-            (Some(policy), Some(root.edges[g.chosen(&stats)].action))
-        }
-    }
 }
 
 /// Standard PUCT selection: `argmax_a Q(s,a) + c * P(s,a) * sqrt(N(s)) / (1 + N(s,a))`

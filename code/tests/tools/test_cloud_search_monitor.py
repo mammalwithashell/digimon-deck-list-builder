@@ -145,3 +145,41 @@ def test_seed_comparison_logs_bootstrap_qualification_separately(tmp_path):
     assert result["bootstrap/requested"] == 416
     assert "selfplay/committed_games" not in result
     assert monitor.wandb_config(tmp_path)["bootstrap_arm"] == "mixed"
+
+
+def test_ex13_run_config_preserves_panel_scope_and_checkpoint_lineage(tmp_path):
+    denominators = {
+        'training': {'archetypes': 13, 'distinct_lists': 21, 'native_sampling_slots': 26,
+                     'slots_by_archetype': {'Light Hybrid': 2, 'Virus Busters': 2}},
+        'combined_diagnostic': {'archetypes': 13, 'distinct_lists': 24,
+                                'same_list_archetypes': ['Light Hybrid'], 'all_heldout': False},
+        'original_pet_regression': {'archetypes': 5, 'distinct_lists': 5},
+    }
+    write(tmp_path, 'deployment-plan.json', dict(generations=4, games=1100, workers=8,
+        controller_commit='source-commit', files={'inputs/seed.zip': 'checkpoint-hash'},
+        parent_run='prior-run', parent_checkpoint=4, parent_checkpoint_sha256='checkpoint-hash',
+        fresh_replay=True, replay_window=3, pool_denominators=denominators,
+        evaluation_protocol='archetype-paired-v2', games_per_evaluation=10800,
+        evaluation_panels=[['combined_diagnostic', 'combined_diagnostic_snapshot.json'],
+                           ['original_pet_regression', 'pet_evaluation_snapshot.json']]))
+    config = monitor.wandb_config(tmp_path)
+    assert config['pool_denominators'] == denominators
+    assert config['evaluation_protocol'] == 'archetype-paired-v2'
+    assert config['games_per_evaluation'] == 10800
+    assert config['evaluation_scope'] == 'Versioned panels; consult pool_denominators for same-list and held-out coverage'
+    assert config['parent_run'] == 'prior-run' and config['parent_checkpoint'] == 4
+    assert config['parent_checkpoint_sha256'] == 'checkpoint-hash'
+    assert config['input_hashes'] == {'inputs/seed.zip': 'checkpoint-hash'}
+    assert config['fresh_replay'] is True and config['replay_window'] == 3
+    assert config['generation'] == {'generations': 4, 'games': 1100, 'workers': 8}
+
+
+def test_recovery_config_distinguishes_inherited_checkpoint_from_remaining_work(tmp_path):
+    recovery = dict(baseline_checkpoint=1, first_generation=2, final_generation=4,
+        remaining_generations=3, inherited_collection=dict(games=1100, rows=105563, truncated_games=0),
+        source_image='old-image', source_plan_sha256='original-plan')
+    write(tmp_path, 'deployment-plan.json', dict(generations=4, games=1100, workers=8,
+        fresh_replay=True, **recovery))
+    config = monitor.wandb_config(tmp_path)
+    assert config['recovery'] == recovery
+    assert config['fresh_replay'] is True

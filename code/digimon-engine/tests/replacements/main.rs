@@ -11,6 +11,7 @@ mod declined_replacements;
 mod deletion_replacements;
 mod deletion_event_identity;
 mod deletion_event_routes;
+mod deletion_payment;
 mod dispatcher_core;
 mod dispatcher_guard;
 mod enum_and_context;

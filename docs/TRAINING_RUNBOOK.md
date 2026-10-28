@@ -560,7 +560,7 @@ champion pool; Tier 2 distributed league with a shared store + per-round barrier
 ### Standard Training Chain
 
 ```
-DigimonEnv                        (1375-obs, 2192-action, reward shaping)
+DigimonEnv                        (selected observation layout, exported action space, reward shaping)
   → OpponentWrapper              (single-agent MDP, auto-plays P2)
   → DeckPoolWrapper              (agent deck variation, optional)
   → GauntletWrapper              (opponent deck sampling from MetaGauntlet, optional)
@@ -1125,10 +1125,28 @@ pair; the default 1 block gives 528-game panels that cannot separate arms)
 against a full-search lineage. Fixed-root panel agreement and the in-run
 vs-greedy score do not measure this; both were saturated or misleading.
 
-Do not use `--root gumbel` for generation: with the paper constants it was
-worse than PUCT at 64–320 simulations.
+There is no Gumbel root: it was built, measured (worse than PUCT at 64–320
+simulations with the paper constants) and removed when the plan-based search
+results from PR #754 landed; the research doc keeps the numbers.
 
 ## Independent-world search evaluation batching
+
+Physical card menus are searched as complete commitments across all pages.
+Serial MCTS, batched PIMC and IS-MCTS evaluate each permitted page and expand
+routes ending in a card commit or a legal decline. Navigation does not create
+game-tree edges or consume additional simulations. The native self-play actor
+selects a complete route once, validates each transport action against the live
+mask, and records conditional visit targets on every non-forced page along it.
+Search consumers must execute `SearchResult::best_plan()` (or sample
+`root_plans` by visits) rather than re-searching after page navigation.
+`root_visits` and `root_q` are projections for the current page, not complete
+card-choice rankings. The public action IDs, tensor layout and model contracts
+are unchanged; all physical candidates remain available.
+
+The generation-3 Proximamon mirror failure (game 398, seed
+5215200225685576850, 2026-10-27) demonstrated why this matters: fresh searches
+alternated pages for 991 decisions. Raising the decision cap cannot repair that
+cycle. Preserve the source shards and checkpoint when replacing an affected run.
 
 Native search self-play and `run_selfplay_generation.py` accept
 `--eval-batch-size` (default 4). This batches the next required evaluation of
@@ -1450,3 +1468,192 @@ side, four pairs per cell are needed to visit all four list combinations once.
 Smaller quotas do not certify full variant coverage. Preserve the saved schedule
 and its hash when comparing checkpoints; do not compare a new multi-list cohort
 to an old lockstep cohort as if the deck schedule were unchanged.
+
+## EX13 training lessons and raising diagnostic (2026-10-28)
+
+These are dated experiment findings, not proof of model proficiency or agreement
+with tournament meta rankings. The portable [raising experiment evidence](training-evidence/2026-10-28-raising-diagnostic.json)
+records model/input hashes, counts, estimates and the selected counterexample.
+
+### Collection, fitting, evaluation and promotion are separate
+
+The EX13 campaign uses **13 archetypes, 21 distinct training lists and 26
+equally weighted native sampling slots**. Repeated slots balance archetype
+weight; they do not create new lists. Each 1,100-game generation supplies about
+169 expected player-side appearances per archetype. Three generations provide
+up to 3,300 replay games, or about 508 expected appearances per archetype per
+update. These are expectations, not quotas; longer games supply more decision
+rows. Scale generation size with pool size to preserve the rough floor of 150
+appearances per archetype. More training alone does not establish strength.
+
+The recorded operating point is **320 total simulations, four worlds, leaf
+batch four and eight workers**. Four worlds divide the simulation budget;
+batching and workers control throughput. This is not a demonstrated optimal
+search budget. The fit uses two epochs, batch 512, learning rate 0.0001 and a
+three-generation replay window. Do not change rewards, search quality or
+sampling to conceal a rules failure or improve a throughput headline.
+
+This search/self-play path fits policy visit targets and a terminal-outcome
+value head (+1/-1 from the mover's perspective; 0 for a completed draw). It is
+not a PPO update and does not use the dense PPO gameplay reward profile above.
+Truncation is marked separately and excluded from terminal-value fitting;
+verified bad games are quarantined before either training loss. Changing a PPO
+quick-win or digivolution reward will not change this native search objective.
+The recorded models use `standard_lite_v2`, feature schema `standard_lite_v2.4`,
+9,434 floats and action schema 2 with 2,192 actions. Validate exported layout
+metadata rather than assuming these dated dimensions apply to future images.
+
+Evaluate stable new checkpoints with the frozen policy-only panel. The 10,800
+games comprise **7,800 combined diagnostic games** (13 archetypes x three
+anchors x 200 games) and **3,000 original-pet regression games** (five
+archetypes x three anchors x 200). The combined panel has 24 distinct lists,
+including a same-list Light Hybrid fallback; it is not entirely held out. The
+five-list pet panel stays separate. Anchors are greedy, `parent-checkpoint4`
+and `development-fixed`.
+
+Checkpoint numbers are local to their campaign. The anchor named
+`parent-checkpoint4` is an earlier campaign's model, not the page-recovery
+campaign's checkpoint 4. Identify models by campaign and artifact hash. Compare
+complete, seat-paired cohorts with matching seeds, lists, inference mode,
+engine and observation/action contracts. A high greedy win rate can coexist
+with weakness against learned anchors. A simulator matchup matrix measures
+model-plus-deck performance under that protocol, not tournament meta strength.
+A saved checkpoint, completed generation or lower fit loss is not promotion
+evidence.
+
+### Continuation lineage and the latest interruption
+
+The page-search recovery warm-started from checkpoint 2 and regenerated
+generations 3–4. After completion, the continuation copied checkpoint 4 plus
+generations 3–4 and requested bounded updates 5–8. Those **2,200 inherited
+replay games are not new collection progress**. `extend_completed_campaign`
+validates the completed source, checkpoint, runtime, full evaluation and chunk
+hashes before copying replay; preparation and launch are separate commands.
+`run_small_generations` allows one to four updates at continuing logical
+indices and rejects existing output. No automatic restart or promotion follows.
+
+As of October 28, checkpoint 5 has a complete evaluation. Checkpoint 6 was
+fitted, but its combined evaluation failed at seed **44524569**, SW versus Toho
+Braves. Its completed pet panel does not make the whole evaluation complete.
+Updates 7–8 did not run. The failed source and weights remain preserved;
+training is stopped. The token repair and raising diagnostic below were
+validated locally and have not been deployed to this cloud run.
+
+The failure exposed a token returned into hand and subsequently offered by the
+play mask. **CR 4.3 4-21-5, 15-1-9 and 15-1-10** distinguish a processed return
+or placement from an actual addition: a departing token is removed from the
+game, still counts for applicable return/placement conditions, and does not
+trigger an actual hand/deck addition. The repair covers zone-entry guards,
+return receipts, grouped moves and resumable security placement.
+`token_departure_rules` verifies the 88-step recording prefix, resumes action
+62, and reaches game over after 263 continuation decisions with matching clone
+digests. Eleven token regressions and 94 adjacent tests passed. This is
+simulator evidence, not new DCGO oracle certification.
+
+Earlier failures established two further invariants: deletion replacements
+must verify that their payment succeeded, and paged search must commit a
+complete physical-card route. Preserve exact executed decisions from
+`DIGIMON_SELFPLAY_TRACE_DECISIONS`; projected visit argmax is not an action log.
+Action IDs are phase-dependent, so include pending-selection/phase context
+when diagnosing a loop.
+
+Before resuming on a repaired image, qualify the checkpoint on that exact image,
+preserve the failed root and explicitly validate reused replay/evaluation.
+Do not relabel old-engine data as repaired-engine evidence. A fresh logger
+heartbeat is not game progress: compare committed games/rows, controller stage
+and evaluation progress, allowing for fitting and worker deadlines. Local
+committed artifacts remain the evidence source when W&B is stale or out of
+storage. A healthy logger does not establish healthy training.
+
+### Matched raising experiment
+
+This tests **promotion out of raising**, not digivolving in raising or DNA
+digivolution. Keep these routes separate and measure opportunities as well as
+choices. For Virus Busters, use its egg-mediated DNA sequence telemetry;
+a low generic DNA-action count alone is not decisive.
+
+We generated 52 source games (four per archetype, balanced between checkpoints
+2/5 and seats, against checkpoint 4), then reservoir-sampled one legal
+promote/wait position per completed game. Eight games offered no such position,
+leaving **44 unique roots across all 13 archetypes and 23 of the 24 panel
+lists**. Rootless games were not replaced. Each root was replayed exactly and
+tested with both policies and noise-free search at 320 simulations/four
+worlds/batch four on the same local token-corrected engine, with frozen model,
+executable and input hashes.
+
+| Model | Policy promotes | Search promotes |
+|---|---:|---:|
+| Checkpoint 2 | 44/44 (100%) | 35/44 (79.5%) |
+| Checkpoint 5 | 31/44 (70.5%) | 34/44 (77.3%) |
+
+For each root, force promotion or waiting, then finish with each actor policy
+(checkpoints 2/5) against each opponent policy (checkpoints 2/4/6). All **528
+continuations, or 264 action pairs**, completed without failure or truncation.
+They are midgame counterfactuals, not 528 independent full-game strength tests.
+The same source-game root is the comparison/resampling unit across opponents.
+
+- **Policy/search disagreement:** checkpoint 5 waits where search promotes in
+  eight roots. A Chronomon root changes losses into wins against checkpoints
+  2 and 4 when promotion is forced. The other seven disagreements do not change
+  terminal outcomes under these policy continuations.
+- **A search/value counterexample:** in SW root `06-0-2` (seed `28267029`),
+  checkpoint 5 and root search wait. Search repeats that choice under five
+  seeds. Against checkpoint 2, promoting wins and waiting loses even when the
+  actor uses full search for subsequent decisions (38 and 31 searched decisions
+  respectively). Inspect the value estimates and sampled worlds; one actual
+  hidden realization does not prove an engine bug or an expected-value failure
+  across all hidden states.
+- **Waiting does not explain the whole decline:** among checkpoint 5's 13 wait
+  roots across three opponents, promotion improves five outcomes, worsens two
+  and leaves 32 unchanged. Always promoting adds zero net wins against
+  checkpoint 2. Averaged over three opponents, the estimated gain is 2.3
+  percentage points, with a 95% paired bootstrap interval of -2.3 to +7.6.
+  Do not hard-code promotion from this evidence.
+- **Opponent diversity remains an open hypothesis:** the change in waiting's
+  advantage against checkpoint 6 versus checkpoint 2 is 0 points (95% interval
+  -11.4 to +11.4). This screen does not establish that waiting works only against
+  recent models, nor rule out broader opponent overfitting.
+
+The 4,000-resample bootstrap keeps action pairs together and samples roots
+within archetype. Conditional subsets with a single root in an archetype do
+not get a falsely precise interval. The cohort is small, per-archetype findings
+are exploratory, and search uses exact-composition open-decklist PIMC.
+Policy-only continuations alone cannot diagnose search quality; the selected
+SW case therefore also received two complete searched continuations. No model
+was fitted, promoted or deployed by this diagnostic.
+
+Next priorities are the saved SW value/search trace and the eight policy/search
+disagreements. Check target-to-policy learning and continuation play before
+changing reward shaping, forcing promotions or attributing the regression to
+opponent diversity.
+
+### Reproducing the raising screen
+
+Build the native example from the engine revision being tested. From the repo
+root, with `PYTHONPATH=code`, use a new diagnostic directory containing
+`inputs/cp2.onnx`, `cp4.onnx`, `cp5.onnx`, `cp6.onnx`, their `.onnx.meta.json`
+sidecars and `inputs/combined_diagnostic_snapshot.json`:
+
+```bash
+cargo build -p digimon-engine --example raising_diagnostic
+python -m tools.cloud_search.raising_diagnostic prepare \
+  --root /new-diagnostic --engine /path/to/raising_diagnostic
+python -m tools.cloud_search.raising_diagnostic collect --root /new-diagnostic --workers 4
+python -m tools.cloud_search.raising_diagnostic probe --root /new-diagnostic --workers 8
+python -m tools.cloud_search.raising_diagnostic summarize --root /new-diagnostic
+```
+
+The frozen plan records identities, hashes, search budget, sampling and limits.
+Results retain exact prefixes, choices, search values/visits and branch traces.
+Incomplete branches never count as draws; both actions must complete before a
+pair enters outcome summaries. Preserve partial/failed output and investigate
+before explicitly retrying.
+
+For the exploratory SW follow-up, copy the plan to a separate directory, retain
+all model entries, set actors to `[2]` (checkpoint 5) and opponents to `[0]`
+(checkpoint 2), and copy request `probe-06-0-2.json` with its `plan` path updated
+and `search_continuations: true`. Run the same native example as
+`raising_diagnostic probe REQUEST.json NEW_RESULT.json`. For root-only seed
+sensitivity, use another plan with opponents `[]`, omit the continuation flag,
+and vary only `search_seed`. These post-screen checks are selected
+counterexamples, not additional independent population samples.

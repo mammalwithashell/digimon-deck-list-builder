@@ -32,8 +32,6 @@ CANDIDATES: dict[str, dict] = {
     "C1-main320-other64": {"flags": ["--reduced-sims", "64"]},
     "C2-cap0.25-cheap64": {"flags": ["--full-search-fraction", "0.25", "--cheap-sims", "64"]},
     "C3-both": {"flags": ["--reduced-sims", "64", "--full-search-fraction", "0.25", "--cheap-sims", "64"]},
-    "G1-gumbel128-m16": {"flags": ["--root", "gumbel", "--gumbel-candidates", "16"], "sims": 128},
-    "G2-gumbel64-m8": {"flags": ["--root", "gumbel", "--gumbel-candidates", "8"], "sims": 64},
 }
 
 # Guard candidates: settings that must be byte-identical to the baseline.

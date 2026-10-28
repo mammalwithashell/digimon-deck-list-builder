@@ -182,14 +182,6 @@ enum Command {
         /// --full-search-fraction < 1.
         #[arg(long, default_value_t = 64)]
         cheap_sims: u32,
-        /// Root selection rule: `puct` (Dirichlet noise + visit-count
-        /// targets, the reference) or `gumbel` (sequential halving, plays the
-        /// survivor, trains on the completed-Q improved policy).
-        #[arg(long, default_value = "puct")]
-        root: String,
-        /// Maximum Gumbel-sampled root candidates under --root gumbel.
-        #[arg(long, default_value_t = 16)]
-        gumbel_candidates: u32,
         /// Observation profile override. Defaults to the model's
         /// embedded training contract.
         #[arg(long)]
@@ -302,8 +294,6 @@ fn run() -> ExitCode {
             reduced_sims,
             full_search_fraction,
             cheap_sims,
-            root,
-            gumbel_candidates,
             tensor_profile,
         } => {
             let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
@@ -331,8 +321,6 @@ fn run() -> ExitCode {
                 reduced_sims,
                 full_search_fraction,
                 cheap_sims,
-                root,
-                gumbel_candidates,
                 tensor_profile,
                 card_data,
                 cli.cards_json
