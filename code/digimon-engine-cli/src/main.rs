@@ -169,6 +169,22 @@ enum Command {
         /// Rows per shard flush (checked on game boundaries).
         #[arg(long, default_value_t = 4096)]
         shard_rows: usize,
+        /// Phase budget: TOTAL simulations for roots that are not an
+        /// unconstrained Main-phase decision (pending selections, mulligan,
+        /// breeding, block/counter/alliance windows). Omit to search every
+        /// root with --sims.
+        #[arg(long)]
+        reduced_sims: Option<u32>,
+        /// Playout-cap randomization: probability that a non-forced
+        /// decision receives the full search and becomes a policy target.
+        /// Below 1.0 the other decisions get a cheap noise-free
+        /// --cheap-sims search recorded with policy_weight 0.
+        #[arg(long, default_value_t = 1.0)]
+        full_search_fraction: f32,
+        /// TOTAL simulations for the cheap searches when
+        /// --full-search-fraction < 1.
+        #[arg(long, default_value_t = 64)]
+        cheap_sims: u32,
         /// Observation profile override. Defaults to the model's
         /// embedded training contract.
         #[arg(long)]
@@ -279,6 +295,9 @@ fn run() -> ExitCode {
             temperature_decisions,
             decision_cap,
             shard_rows,
+            reduced_sims,
+            full_search_fraction,
+            cheap_sims,
             tensor_profile,
         } => {
             let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
@@ -304,6 +323,9 @@ fn run() -> ExitCode {
                 temperature_decisions,
                 decision_cap,
                 shard_rows,
+                reduced_sims,
+                full_search_fraction,
+                cheap_sims,
                 tensor_profile,
                 card_data,
                 cli.cards_json

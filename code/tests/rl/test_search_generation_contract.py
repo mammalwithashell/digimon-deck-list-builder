@@ -58,6 +58,34 @@ def test_selfplay_workers_receive_batch_size_without_changing_search_budget(monk
         assert command[command.index("--worlds") + 1] == "4"
 
 
+def test_search_budget_defaults_to_both_levers_and_full_search_disables_them(monkeypatch, tmp_path):
+    defaults = job.build_parser().parse_args(["--run-dir", "r", "--seed-model", "m.zip", "--decks", "d.json"])
+    assert job.search_budget_flags(defaults) == [
+        "--reduced-sims", "64", "--full-search-fraction", "0.25", "--cheap-sims", "64"]
+    off = job.build_parser().parse_args(["--run-dir", "r", "--seed-model", "m.zip", "--decks", "d.json", "--full-search"])
+    assert job.search_budget_flags(off) == []
+    assert job.search_budget_flags(SimpleNamespace(full_search=True, reduced_sims=64, full_search_fraction=0.25,
+                                                   cheap_sims=64)) == []
+    assert job.search_budget_flags(SimpleNamespace(full_search=False, reduced_sims=0, full_search_fraction=1.0,
+                                                   cheap_sims=64)) == []
+    assert job.search_budget_flags(SimpleNamespace(full_search=False, reduced_sims=0, full_search_fraction=0.5,
+                                                   cheap_sims=32)) == ["--full-search-fraction", "0.5", "--cheap-sims", "32"]
+    commands = []
+    class Worker:
+        def __init__(self, cmd, **kwargs):
+            commands.append(cmd)
+        def wait(self):
+            return 0
+    monkeypatch.setattr(job.subprocess, "Popen", Worker)
+    job.run_selfplay_stage("engine", tmp_path, "model.onnx", False, tmp_path / "decks.json",
+        4, 2, 320, 4, "pimc", 19, 16, 1200, 4096, None, "implemented", scheduling="static",
+        budget_flags=["--reduced-sims", "64", "--full-search-fraction", "0.25", "--cheap-sims", "64"])
+    for command in commands:
+        assert command[command.index("--reduced-sims") + 1] == "64"
+        assert command[command.index("--full-search-fraction") + 1] == "0.25"
+        assert command[command.index("--sims") + 1] == "320"  # the Main-root budget is unchanged
+
+
 def test_zero_batch_size_does_not_launch_workers(tmp_path):
     with pytest.raises(ValueError, match="positive"):
         job.run_selfplay_stage("engine", tmp_path, "model.onnx", False, tmp_path / "decks.json",

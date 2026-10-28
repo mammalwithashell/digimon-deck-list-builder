@@ -37,7 +37,9 @@ impl Tree {
             pending: None,
         };
         match mcts.prepare_node(measure("clone", || root.clone()), false, config) {
-            PreparedNode::Ready(node, _) => tree.arena.push(node),
+            PreparedNode::Ready(node, _) => {
+                tree.arena.push(node);
+            }
             prepared => tree.pending = Some(Pending::Root(prepared)),
         }
         tree

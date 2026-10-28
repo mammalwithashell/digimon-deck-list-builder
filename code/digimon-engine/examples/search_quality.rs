@@ -47,10 +47,25 @@ fn legal(mask: &[f32]) -> Vec<u16> {
 fn choose(result: &SearchResult) -> u16 {
     result.best_plan().expect("search must have a legal plan")[0]
 }
-fn config(v: &Value, seed: u64, noise: f32) -> DeterminizedConfig {
+/// Whether `game` sits at an unconstrained Main-phase root (the driver's
+/// phase-budget rule): no pending selection, no mulligan, Main phase.
+fn main_root(game: &Game) -> bool {
+    game.pending_selection.is_none()
+        && game.mulligan_current_player().is_none()
+        && game.current_phase == digimon_engine::enums::GamePhase::Main
+}
+/// Search settings from a request object. Beyond `simulations`/`worlds`,
+/// the search-budget experiments add optional `reduced_simulations` (the
+/// budget for non-Main roots, applied when `main_root` is false).
+fn config(v: &Value, seed: u64, noise: f32, main_root: bool) -> DeterminizedConfig {
     let mut c = DeterminizedConfig::default();
     c.worlds = number(v, "worlds") as u32;
     c.search.simulations = number(v, "simulations") as u32;
+    if !main_root {
+        if let Some(reduced) = v["reduced_simulations"].as_u64() {
+            c.search.simulations = c.search.simulations.min(reduced as u32);
+        }
+    }
     c.search.seed = seed;
     c.search.dirichlet_epsilon = noise;
     c.search.observation_profile = PROFILE;
@@ -204,11 +219,7 @@ fn run() {
             )
             .unwrap();
             let seed = number(&request, "seed");
-            let c = config(
-                &request["config"],
-                seed,
-                request["noise"].as_f64().unwrap_or(0.) as f32,
-            );
+            let noise = request["noise"].as_f64().unwrap_or(0.) as f32;
             let mut rows = Vec::new();
             for node in corpus["nodes"].as_array().unwrap() {
                 let game = replay(&data, &decks_for(&plan, node), node);
@@ -218,6 +229,9 @@ fn run() {
                     legal(&mask),
                     serde_json::from_value::<Vec<u16>>(node["legal_actions"].clone()).unwrap()
                 );
+                // Per node: a `reduced_simulations` setting applies to
+                // non-Main roots only, so the effective budget is root-specific.
+                let c = config(&request["config"], seed, noise, main_root(&game));
                 let before = Instant::now();
                 let result =
                     determinized_search_batched(&registry, &game, pid, &mut evaluator, &c, 4);
@@ -303,6 +317,7 @@ fn run() {
                                     settings,
                                     seed_for(number(&request, "search_seed"), decisions, pid),
                                     0.,
+                                    main_root(&game),
                                 );
                                 let result = determinized_search_batched(
                                     &registry,
