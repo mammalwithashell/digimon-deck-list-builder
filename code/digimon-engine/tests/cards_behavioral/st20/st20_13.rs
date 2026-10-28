@@ -135,3 +135,13 @@ fn st20_13_opponents_turn_blocker_aura() {
         .unwrap();
     assert!(!r.game.has_keyword(adv_now, Keyword::Blocker));
 }
+
+#[test]
+fn st20_13_reduction_not_on_cost_paying_trash_play() {
+    suite::reduction_not_on_cost_paying_trash_play(CARD_ID);
+}
+
+#[test]
+fn st20_13_reduction_not_on_adventure_option() {
+    suite::reduction_not_on_adventure_option(CARD_ID);
+}

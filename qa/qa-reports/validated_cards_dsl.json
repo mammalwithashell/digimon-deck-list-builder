@@ -2079,7 +2079,7 @@
         "D4",
         "H1"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust.",
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust. 2026-10-28: added cost_target_from_hand (trash play not reduced) + digivolve-not-reduced tests.",
       "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale."
     },
     "BT17-095": {
@@ -16321,7 +16321,7 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/st20/ST20-12.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_12.rs",
-      "test_count": 11,
+      "test_count": 13,
       "notes": "TDD RED->GREEN. Official bundle + image + DCGO ST20_12.cs. Optional suspend-self play-cost reducer (decline, ADVENTURE Digimon only, your turn, unsuspended only, stacks per Q&A, not on digivolve), SoMP memory, Security play. Shared suite reused by ST21-12/ST20-13. Fixed G-COST-REDUCTION-ALLY-PLAYED-ON-DIGIVOLVE."
     },
     "ST21-12": {
@@ -16333,7 +16333,7 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/st21/ST21-12.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_12.rs",
-      "test_count": 11,
+      "test_count": 13,
       "notes": "TDD RED->GREEN. Same text as ST20-12 (DCGO ST21_12.cs is a copy); runs the st20_12 shared suite incl. ST21-12+ST20-12 Q&A stacking."
     },
     "ST20-13": {
@@ -16345,7 +16345,7 @@
       "archetype": "Adventure",
       "yaml_path": "code/digimon-engine/cards/st20/ST20-13.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_13.rs",
-      "test_count": 11,
+      "test_count": 13,
       "notes": "TDD RED->GREEN. Official bundle + image + DCGO ST20_13.cs. Shared reducer suite + [Opponent's Turn] ADVENTURE-Digimon Blocker aura (own Digimon only, opp turn only, clears when source leaves) + Security play."
     },
     "AD1-020": {

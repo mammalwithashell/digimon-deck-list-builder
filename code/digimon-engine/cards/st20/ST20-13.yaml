@@ -24,6 +24,9 @@ effects:
       all_of:
         - kind: digimon
         - trait_has: ADVENTURE
+    # "from your hand" (DCGO PlayCardCondition IsExistOnHand): not a cost-paying
+    # effect play from trash/reveal (BT14-046 / EX2-007 idiom).
+    condition: { cost_target_from_hand: true }
     amount: 1
     summary: "[Your Turn] Suspend this Tamer: -1 play cost on your [ADVENTURE] Digimon"
     pay_cost:

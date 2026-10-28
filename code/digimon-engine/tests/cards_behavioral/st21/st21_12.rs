@@ -75,3 +75,13 @@ fn st21_12_reduction_not_on_digivolve() {
 fn st21_12_security_plays_self_free() {
     suite::security_plays_self_free(CARD_ID);
 }
+
+#[test]
+fn st21_12_reduction_not_on_cost_paying_trash_play() {
+    suite::reduction_not_on_cost_paying_trash_play(CARD_ID);
+}
+
+#[test]
+fn st21_12_reduction_not_on_adventure_option() {
+    suite::reduction_not_on_adventure_option(CARD_ID);
+}

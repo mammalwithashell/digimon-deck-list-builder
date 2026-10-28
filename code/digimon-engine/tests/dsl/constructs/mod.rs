@@ -4,6 +4,7 @@ mod light_hybrid_predicates;
 pub mod security_stack;
 pub mod play_digivolve_link;
 pub mod cost_target_event;
+pub mod ally_played_reducer_scope;
 pub mod identity_state;
 pub mod zone_moves;
 pub mod protection;

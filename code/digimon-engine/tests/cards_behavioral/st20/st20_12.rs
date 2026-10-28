@@ -31,11 +31,11 @@
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_digivolve, PASS};
+use digimon_engine::action::space::{encode_digivolve, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::build_action_mask;
-use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlaySource};
+use digimon_engine::enums::{CardColor, CardKind, GamePhase};
 use digimon_engine::permanent::PermanentHandle;
 
 const CARD_ID: &str = "ST20-12";
@@ -72,6 +72,18 @@ pub(crate) fn tamer(id: &str, adventure: bool) -> CardData {
     c
 }
 
+/// A red, cost-2 Option card with the [ADVENTURE] trait and no effect text.
+pub(crate) fn adventure_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 2;
+    c.colors = vec![CardColor::Red];
+    c.traits = vec!["ADVENTURE".to_string()];
+    c
+}
+
 /// Builder with `ids` (DSL cards) + the synthetic pool.
 pub(crate) fn builder(ids: &[&str]) -> DebugRunnerBuilder {
     let mut b = DebugRunner::builder();
@@ -91,6 +103,7 @@ pub(crate) fn builder(ids: &[&str]) -> DebugRunnerBuilder {
         .add_card(digimon("BASE", 3, 3, false))
         .add_card(evo)
         .add_card(tamer("ADV-TAMER", true))
+        .add_card(adventure_option("ADV-OPT"))
         .add_card(make_test_card("FILL", "Fill"))
 }
 
@@ -108,6 +121,13 @@ fn start(ids: &[&str], hand: &[&str]) -> DebugRunner {
 
 fn suspended(r: &DebugRunner, h: PermanentHandle) -> bool {
     r.game.players[h.player as usize].battle_area[h.index as usize].is_suspended
+}
+
+fn top_id(r: &DebugRunner, h: PermanentHandle) -> String {
+    r.game.players[h.player as usize].battle_area[h.index as usize]
+        .top_card()
+        .card_id(&r.game.card_data)
+        .to_string()
 }
 
 fn hand_slot(r: &DebugRunner, player: usize, id: &str) -> usize {
@@ -266,19 +286,63 @@ pub(crate) fn reduction_not_on_digivolve(id: &str) {
     let base = r.place_on_field(0, "BASE", Some(0));
     let before = r.memory();
     let slot = hand_slot(&r, 0, "ADV-EVO");
-    let mask = build_action_mask(&r.game, 0);
-    assert!(mask[encode_digivolve(slot as u16, base.index as u16) as usize] > 0.5);
-    let done = r.game.digivolve_from_hand(0, slot, base.index as usize, PlaySource::ByHand);
+    let action = encode_digivolve(slot as u16, base.index as u16);
+    assert!(build_action_mask(&r.game, 0)[action as usize] > 0.5, "{id}: digivolve masked in");
+    r.game.decode_action(action, 0);
     assert!(
         r.pending_selection().is_none(),
         "{id}: no reduction prompt on digivolve: {:?}",
         r.pending_selection_view()
     );
-    assert!(done, "digivolve resolves");
-    assert!(r.pending_selection().is_none(), "{id}: no reduction on digivolve");
+    assert_eq!(top_id(&r, base), "ADV-EVO", "{id}: digivolve resolved");
     let _ = r.auto_resolve();
     assert_eq!(before - r.memory(), 2, "{id}: printed digivolve cost");
     assert!(!suspended(&r, t));
+}
+
+/// "would be played FROM YOUR HAND": a cost-paying effect play of an
+/// [ADVENTURE] Digimon from the trash is not reduced (DCGO `IsExistOnHand`).
+pub(crate) fn reduction_not_on_cost_paying_trash_play(id: &str) {
+    let mut r = start(&[id], &[]);
+    let t = r.place_on_field(0, id, Some(0));
+    r.inject_trash(0, "ADV-DIGI");
+    let before = r.memory();
+    let idx = r.game.players[0]
+        .trash
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "ADV-DIGI")
+        .unwrap();
+    let _ = r.game.play_from_trash(0, idx);
+    assert!(
+        r.pending_selection().is_none(),
+        "{id}: no reduction prompt for a play from trash: {:?}",
+        r.pending_selection_view()
+    );
+    let _ = r.auto_resolve();
+    assert!(on_field(&r, 0, "ADV-DIGI"), "{id}: the trash play resolved");
+    assert_eq!(before - r.memory(), 5, "{id}: full play cost from trash");
+    assert!(!suspended(&r, t));
+}
+
+/// "Digimon cards": using an [ADVENTURE] Option card from hand (masked
+/// play-hand action) is not reduced.
+pub(crate) fn reduction_not_on_adventure_option(id: &str) {
+    let mut r = start(&[id], &["ADV-OPT"]);
+    let t = r.place_on_field(0, id, Some(0));
+    r.place_on_field(0, "BASE", Some(0)); // red Digimon → Option colour requirement
+    let before = r.memory();
+    let action = PLAY_HAND_START + hand_slot(&r, 0, "ADV-OPT") as u16;
+    assert!(build_action_mask(&r.game, 0)[action as usize] > 0.5, "{id}: Option usable");
+    r.game.decode_action(action, 0);
+    assert!(
+        r.pending_selection().is_none(),
+        "{id}: no reduction prompt for an Option: {:?}",
+        r.pending_selection_view()
+    );
+    let _ = r.auto_resolve();
+    assert_eq!(before - r.memory(), 2, "{id}: full Option cost");
+    assert!(!suspended(&r, t));
+    assert!(r.game.players[0].hand.is_empty(), "{id}: Option was used");
 }
 
 /// `[Security] Play this card without paying the cost.`
@@ -423,4 +487,14 @@ fn st20_12_reduction_not_on_digivolve() {
 #[test]
 fn st20_12_security_plays_self_free() {
     security_plays_self_free(CARD_ID);
+}
+
+#[test]
+fn st20_12_reduction_not_on_cost_paying_trash_play() {
+    reduction_not_on_cost_paying_trash_play(CARD_ID);
+}
+
+#[test]
+fn st20_12_reduction_not_on_adventure_option() {
+    reduction_not_on_adventure_option(CARD_ID);
 }

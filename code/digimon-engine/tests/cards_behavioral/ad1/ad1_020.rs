@@ -31,10 +31,11 @@
 use digimon_engine::{
     action::{
         build_action_mask,
-        space::{PASS, TRASH_EFFECT_START},
+        space::{encode_attack, PASS, SECURITY_TARGET, TRASH_EFFECT_START},
     },
     debug_runner::{make_test_card, DebugRunner},
-    enums::{CardColor, CardKind, EffectTiming, GamePhase, ModifierType},
+    enums::{CardColor, CardKind, EffectTiming, Expiry, GamePhase, ModifierType},
+    modifiers::ModifierEntry,
     permanent::PermanentHandle,
     TriggerSource,
 };
@@ -218,14 +219,25 @@ fn ad1_020_inherited_attack_checks_one_extra_security_for_the_attack() {
         let mut r = setup(&[]);
         r.game.turn_count = 3;
         let h = r.place_stack(0, &[ID, top]);
+        // A suspended opposing Digimon so `targets: any` has two legal targets.
+        let opp = r.place_on_field(1, "N", Some(0));
+        r.game.players[1].battle_area[opp.index as usize].is_suspended = true;
         trigger(&mut r, h, EffectTiming::EndOfYourTurn);
         let view = r.pending_selection_view().expect("activation prompt");
         assert!(view.is_optional, "{top}: optional activation");
         accept(&mut r);
-        // "By attacking": once activated, the attack is not declinable.
-        if let Some(p) = r.pending_selection() {
-            assert!(!p.valid_action_ids.contains(&PASS), "{top}: attack is the cost");
-        }
+        // "By attacking": once activated, the attack target choice is required
+        // and not declinable.
+        let p = r.pending_selection().expect("attack target prompt");
+        let player_target = encode_attack(h.index as u16, SECURITY_TARGET);
+        let digimon_target = encode_attack(h.index as u16, opp.index as u16);
+        assert!(p.valid_action_ids.contains(&player_target), "{top}: player target");
+        assert!(p.valid_action_ids.contains(&digimon_target), "{top}: Digimon target");
+        assert!(!p.valid_action_ids.contains(&PASS), "{top}: attack is the cost");
+        let mask = build_action_mask(&r.game, p.selecting_player);
+        assert!(mask[player_target as usize] > 0.5 && mask[digimon_target as usize] > 0.5);
+        assert!(mask[PASS as usize] < 0.5, "{top}: PASS masked out");
+        pick(&mut r, player_target);
         r.auto_resolve().unwrap();
         assert_eq!(r.game.players[1].security.len(), 3, "{top}: 1 + 1 checks");
         assert!(r.game.players[0].battle_area[0].is_suspended, "{top}: attacked");
@@ -267,6 +279,18 @@ fn ad1_020_inherited_requires_hybrid_or_ten_warriors_and_an_able_attacker() {
     r.game.players[0].battle_area[0].is_suspended = true;
     trigger(&mut r, h, EffectTiming::EndOfYourTurn);
     assert!(r.pending_selection().is_none(), "cannot attack → cannot activate");
+    assert_eq!(r.game.players[1].security.len(), 5);
+    // An unsuspended carrier under a CannotAttack effect cannot pay either.
+    let mut r = setup(&[]);
+    r.game.turn_count = 3;
+    let h = r.place_stack(0, &[ID, "R"]);
+    r.game.modifiers.add(
+        h,
+        ModifierEntry::simple(ModifierType::CannotAttack, 0, Expiry::EndOfTurn, 1),
+    );
+    trigger(&mut r, h, EffectTiming::EndOfYourTurn);
+    assert!(r.pending_selection().is_none(), "CannotAttack → cannot activate");
+    assert!(!r.game.players[0].battle_area[0].is_suspended);
     assert_eq!(r.game.players[1].security.len(), 5);
 }
 
