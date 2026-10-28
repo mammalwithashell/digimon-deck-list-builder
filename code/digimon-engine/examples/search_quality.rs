@@ -45,14 +45,7 @@ fn legal(mask: &[f32]) -> Vec<u16> {
         .collect()
 }
 fn choose(result: &SearchResult) -> u16 {
-    // First-max in original mask order, matching the native driver.
-    let mut best = (0, result.root_visits[0].0);
-    for &(a, v) in &result.root_visits {
-        if v > best.0 {
-            best = (v, a);
-        }
-    }
-    best.1
+    result.best_plan().expect("search must have a legal plan")[0]
 }
 fn config(v: &Value, seed: u64, noise: f32) -> DeterminizedConfig {
     let mut c = DeterminizedConfig::default();
@@ -229,8 +222,23 @@ fn run() {
                 let result =
                     determinized_search_batched(&registry, &game, pid, &mut evaluator, &c, 4);
                 assert_eq!(result.simulations_run, c.search.simulations);
+                let selected_plan = result.best_plan().unwrap().to_vec();
+                let after_plan = if request["verify_plan"].as_bool().unwrap_or(false) {
+                    let mut copy = game.clone();
+                    for &action in &selected_plan {
+                        assert_eq!(decision_player(&copy), pid);
+                        assert!(build_action_mask(&copy, pid)[action as usize] > 0.5);
+                        copy.decode_action(action, pid);
+                    }
+                    Some(json!({"phase":format!("{:?}",copy.current_phase),
+                        "prompt":copy.pending_selection.as_ref().map(|s| &s.prompt),
+                        "card_prompt":copy.pending_selection.as_ref().and_then(|s| s.card_choice.as_ref()).map(|o| o.token().prompt_id)}))
+                } else {
+                    None
+                };
                 rows.push(json!({"node":node["id"],"archetype":node["archetype"],"action":choose(&result),
                     "visits":result.root_visits,"q":result.root_q,"value":result.root_value,
+                    "selected_plan":selected_plan,"plans":result.root_plans,"after_plan":after_plan,
                     "seconds":before.elapsed().as_secs_f64(),"simulations_run":result.simulations_run}));
                 write(
                     &out.with_extension("progress.json"),
@@ -263,6 +271,7 @@ fn run() {
                 if collect_metrics {
                     game.drain_events();
                 }
+                let mut pending_route = std::collections::VecDeque::<u16>::new();
                 while !game.game_over && decisions < number(&plan, "decision_cap") {
                     let pid = decision_player(&game);
                     let phase = format!("{:?}", game.current_phase);
@@ -276,6 +285,8 @@ fn run() {
                             .as_u64()
                             .expect("replay exhausted before terminal")
                             as u16
+                    } else if let Some(action) = pending_route.pop_front() {
+                        action
                     } else if valid.len() == 1 {
                         valid[0]
                     } else {
@@ -302,7 +313,8 @@ fn run() {
                                     4,
                                 );
                                 searched += 1;
-                                choose(&result)
+                                pending_route.extend(result.best_plan().unwrap().iter().copied());
+                                pending_route.pop_front().unwrap()
                             }
                             other => panic!("unknown policy {other}"),
                         }

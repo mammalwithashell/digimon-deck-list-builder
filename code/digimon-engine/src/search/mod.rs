@@ -27,6 +27,7 @@
 //! same-player sign handling, determinism, mid-game robustness).
 
 mod determinized;
+mod decision;
 mod dirichlet;
 mod evaluator;
 mod mcts;

@@ -1845,7 +1845,8 @@ fn search_own_security_stack_installs_selection_with_matching_filter() {
 }
 
 #[test]
-fn search_own_security_stack_silent_noop_with_no_match() {
+fn search_own_security_stack_keeps_private_inspection_with_no_match() {
+    use digimon_engine::action::{build_action_mask, space::PASS};
     use digimon_engine::effect_context::EffectContext;
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("FILLER", "F", 1))
@@ -1858,13 +1859,23 @@ fn search_own_security_stack_silent_noop_with_no_match() {
             "Search",
             false,
             |_g, _c| false, // matches nothing
-            |_ctx, _idx| {},
+            |_ctx, _idx| panic!("no matching security card can be picked"),
         );
     }
-    assert!(
-        r.game_mut().pending_selection.is_none(),
-        "no candidates → no selection installed (silent no-op contract)"
-    );
+    // Searching a nonempty private stack still permits inspection when no
+    // card is eligible; Done closes it without selecting a card.
+    let pending = r.game.pending_selection.as_ref().expect("inspection prompt");
+    assert_eq!(pending.valid_action_ids, vec![PASS]);
+    let choice = pending.card_choice.as_ref().unwrap();
+    assert_eq!(choice.view(&r.game, 0).rows.iter()
+        .filter(|row| row.card_id.as_deref() == Some("FILLER")).count(), 2);
+    assert!(choice.view(&r.game, 1).rows.iter().all(|row| row.card_id.is_none()));
+    assert!(r.game.players[0].face_up_security.is_empty());
+    assert!(build_action_mask(&r.game, 0)[PASS as usize] > 0.0);
+    r.game.resolve_selection(0, PASS).unwrap();
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.game.players[0].security.len(), 2);
+    assert!(r.game.players[0].hand.is_empty());
 }
 
 // ─── trash_opponent_hand_to_count ─────────────────────────────────────────────

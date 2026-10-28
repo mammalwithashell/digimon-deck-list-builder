@@ -124,6 +124,9 @@ enum Command {
         /// output). Mutually exclusive with --uniform.
         #[arg(long)]
         model: Option<PathBuf>,
+        /// Frozen weighted historical-opponent manifest. Requires --model.
+        #[arg(long)]
+        opponent_pool: Option<PathBuf>,
         /// Use the uniform stub evaluator (cold start / smoke runs).
         #[arg(long)]
         uniform: bool,
@@ -262,6 +265,7 @@ fn run() -> ExitCode {
         }
         Command::Selfplay {
             model,
+            opponent_pool,
             uniform,
             decks,
             games,
@@ -286,6 +290,7 @@ fn run() -> ExitCode {
             };
             selfplay::run(
                 model,
+                opponent_pool,
                 uniform,
                 decks,
                 games,

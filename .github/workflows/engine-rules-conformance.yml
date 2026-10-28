@@ -161,6 +161,7 @@ jobs:
           cargo test -p digimon-engine
           --test phase_flow --test effects --test effect_source_kind
           --test event_emission --test deletion_batching --test option_flow
+          --test token_departure_rules --test token_source_destination
           --test flood_gates --test dual_cards --test policies --test infra
           --no-fail-fast -- --test-threads=8
 

@@ -635,14 +635,27 @@ pub(crate) fn deletion_passively_prevented(
     handle: PermanentHandle,
     cause: ReplacementCause,
 ) -> bool {
-    collect_candidates(
+    deletion_passively_prevented_by(game, handle, cause, game.effect_source_player)
+}
+
+/// Payment preflight has its own effect controller, which may differ from the
+/// initiating effect still stored on the game while a replacement is parked.
+pub(crate) fn deletion_passively_prevented_by(
+    game: &crate::game::Game,
+    handle: PermanentHandle,
+    cause: ReplacementCause,
+    source_controller: Option<PlayerId>,
+) -> bool {
+    // Do not evaluate effect replacement conditions here. Besides being
+    // irrelevant to passive restrictions, their payment preflight can recurse.
+    !passive_modifier_candidates(
         game,
         EffectTiming::WhenWouldBeDeleted,
         ReplacementSubject::Permanent(handle),
         cause,
+        source_controller,
     )
-    .iter()
-    .any(|c| matches!(c.kind, CandidateKind::PassiveCancel))
+    .is_empty()
 }
 
 fn collect_candidates(
@@ -978,7 +991,7 @@ fn collect_candidates_inner(
     // permanent- and player-scoped `CannotBe*` entries that map to this
     // timing via `passive_modifier_to_would`. Each match emits a
     // `PassiveCancel` candidate that synthesizes `Cancelled` at dispatch.
-    out.extend(passive_modifier_candidates(game, timing, subject, cause));
+    out.extend(passive_modifier_candidates(game, timing, subject, cause, game.effect_source_player));
 
     out
 }
@@ -1033,6 +1046,7 @@ fn passive_modifier_candidates(
     timing: EffectTiming,
     subject: ReplacementSubject,
     cause: ReplacementCause,
+    source_controller: Option<PlayerId>,
 ) -> Vec<Candidate> {
     let mut out: Vec<Candidate> = Vec::new();
 
@@ -1063,7 +1077,7 @@ fn passive_modifier_candidates(
                     EffectReadContext::new(game, CardHandle(0), Some(handle), handle.player)
                         .with_replacement_context(
                             cause,
-                            game.effect_source_player,
+                            source_controller,
                             subject.controller(game),
                         );
                 if !cond(&read_ctx, &subject) {
@@ -1105,7 +1119,7 @@ fn passive_modifier_candidates(
             let read_ctx = EffectReadContext::new(game, CardHandle(0), source_perm, target_player)
                 .with_replacement_context(
                     cause,
-                    game.effect_source_player,
+                    source_controller,
                     subject.controller(game),
                 );
             if !cond(&read_ctx, &subject) {

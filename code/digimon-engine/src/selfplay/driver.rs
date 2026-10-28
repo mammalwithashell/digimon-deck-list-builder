@@ -171,7 +171,7 @@ impl ShardBuffer {
 
 /// Split-mix style seed derivation so every (game, decision) search and
 /// every sampling stream is deterministic from the master seed alone.
-fn derive_seed(master: u64, stream: u64, index: u64) -> u64 {
+pub(super) fn derive_seed(master: u64, stream: u64, index: u64) -> u64 {
     let mut x = master
         .wrapping_add(stream.wrapping_mul(0x9E3779B97F4A7C15))
         .wrapping_add(index.wrapping_mul(0xBF58476D1CE4E5B9));
@@ -202,6 +202,26 @@ pub fn run_self_play(
     out_dir: &Path,
     model_desc: &str,
 ) -> Result<SelfPlayStats, String> {
+    run_self_play_with_opponents(
+        card_data, decks, deck_names, evaluator, config, out_dir, model_desc, None,
+    )
+}
+
+/// Optional historical opponent seats; only the current actor emits training rows.
+#[allow(clippy::too_many_arguments)]
+pub fn run_self_play_with_opponents(
+    card_data: &HashMap<String, CardData>,
+    decks: &[Vec<String>],
+    deck_names: &[String],
+    evaluator: &mut dyn PolicyValueFn,
+    config: &SelfPlayConfig,
+    out_dir: &Path,
+    model_desc: &str,
+    mut opponents: Option<&mut super::opponents::HistoricalOpponents>,
+) -> Result<SelfPlayStats, String> {
+    if let Some(pool) = &opponents {
+        pool.validate()?;
+    }
     crate::search::profiling::reset(std::env::var("DIGIMON_SEARCH_PROFILE").as_deref() == Ok("1"));
     let game_end = config
         .game_start
@@ -232,6 +252,7 @@ pub fn run_self_play(
         written: Vec::new(),
     };
     let mut game_decks: Vec<(usize, usize)> = Vec::with_capacity(config.games as usize);
+    let mut opponent_games = Vec::new();
     let started = std::time::Instant::now();
     let trace_decisions = std::env::var_os("DIGIMON_SELFPLAY_TRACE_DECISIONS").is_some();
 
@@ -253,6 +274,13 @@ pub fn run_self_play(
         // Same contract as HeadlessRunner: turn 1 is exposed during the
         // mulligan window.
         game.turn_count = 1;
+        let first_player = game.turn_order[0];
+        let historical = opponents
+            .as_ref()
+            .and_then(|pool| pool.manifest.assignment(config.seed, game_idx));
+        let learner = historical.map(|_| first_player ^ (game_idx % 2) as u8);
+        let mut searched_by_seat = [0u32; 2];
+        let mut rows_by_seat = [0usize; 2];
 
         let mut temp_rng = StdRng::seed_from_u64(derive_seed(config.seed, 2, game_idx as u64));
         let mut decisions = 0u32;
@@ -312,67 +340,104 @@ pub fn run_self_play(
             let mut search_cfg = config.search.clone();
             search_cfg.search.seed =
                 derive_seed(config.seed, 3 + game_idx as u64, decisions as u64);
+            let acting_evaluator: &mut dyn PolicyValueFn = match (historical, learner) {
+                (Some(index), Some(current)) if current != pid => {
+                    opponents.as_mut().unwrap().evaluators[index].as_mut()
+                }
+                _ => &mut *evaluator,
+            };
+            searched_by_seat[pid as usize] += 1;
             let result = determinized_search_batched(
                 &registry,
                 &game,
                 pid,
-                evaluator,
+                acting_evaluator,
                 &search_cfg,
                 config.evaluation_batch_size,
             );
 
-            // Record BEFORE acting: obs is the pre-action state the π
-            // target was computed for.
-            let obs = build_observation_tensor_with_mask(&game, pid, &registry, profile, &mask);
-            if buffer.obs_dim == 0 {
-                buffer.obs_dim = obs.len();
-            }
-            let (actions, visits): (Vec<u16>, Vec<u32>) =
-                result.root_visits.iter().copied().unzip();
-            let total_visits: u32 = visits.iter().sum();
-
-            let action = if total_visits == 0 {
-                // Degenerate budget (0 sims): fall back to uniform-legal.
-                legal[temp_rng.gen_range(0..legal.len())]
+            // Pick a complete physical commitment once. Navigation is only
+            // its transport route; never re-search between its pages.
+            let total_visits: u32 = result.root_plans.iter().map(|(_, v, _)| v).sum();
+            let route = if total_visits == 0 {
+                result.root_plans[temp_rng.gen_range(0..result.root_plans.len())]
+                    .0
+                    .clone()
             } else if non_forced < config.temperature_decisions {
-                // τ = 1: sample proportional to visit counts.
                 let mut ticket = temp_rng.gen_range(0..total_visits);
-                let mut chosen = actions[0];
-                for (a, v) in actions.iter().zip(visits.iter()) {
-                    if ticket < *v {
-                        chosen = *a;
+                let mut chosen = &result.root_plans[0].0;
+                for (plan, visits, _) in &result.root_plans {
+                    if ticket < *visits {
+                        chosen = plan;
                         break;
                     }
-                    ticket -= v;
+                    ticket -= visits;
                 }
-                chosen
+                chosen.clone()
             } else {
-                // Argmax, first-max tie-break in mask order.
-                let mut best = (0u32, actions[0]);
-                for (a, v) in actions.iter().zip(visits.iter()) {
-                    if *v > best.0 {
-                        best = (*v, *a);
-                    }
-                }
-                best.1
+                result
+                    .best_plan()
+                    .expect("search must return a legal plan")
+                    .to_vec()
             };
-
-            buffer.records.push(PendingRecord {
-                obs,
-                actions,
-                visits,
-                mover: pid,
-                game_id: game_idx,
-                z: 0.0,
-                terminated: false,
-            });
-
-            if trace_decisions {
-                eprintln!("game {game_idx} decision {decisions}: search action {action}");
+            for (index, &action) in route.iter().enumerate() {
+                if decisions >= config.decision_cap {
+                    break;
+                }
+                assert_eq!(
+                    decision_player(&game),
+                    pid,
+                    "search route changed player before commitment"
+                );
+                let next_mask;
+                let step_mask = if index == 0 {
+                    &mask
+                } else {
+                    next_mask = build_action_mask(&game, pid);
+                    &next_mask
+                };
+                assert!(
+                    step_mask[action as usize] > 0.5,
+                    "search route must respect the live mask"
+                );
+                if step_mask.iter().filter(|&&m| m > 0.5).count() > 1 {
+                    // The temperature clock covers BOTH actors even when only
+                    // the current actor's rows are retained for training.
+                    non_forced += 1;
+                    if learner.is_none_or(|current| current == pid) {
+                        let obs = build_observation_tensor_with_mask(
+                            &game, pid, &registry, profile, step_mask,
+                        );
+                        if buffer.obs_dim == 0 {
+                            buffer.obs_dim = obs.len();
+                        }
+                        // Shards also encode the complete engine legality mask.
+                        // Rejected/backward page moves remain legal with ZERO
+                        // target mass, so fitting can learn not to browse in circles.
+                        let (actions, visits) = result
+                            .training_visits(&route[..index], step_mask)
+                            .into_iter()
+                            .unzip();
+                        buffer.records.push(PendingRecord {
+                            obs,
+                            actions,
+                            visits,
+                            mover: pid,
+                            game_id: game_idx,
+                            z: 0.0,
+                            terminated: false,
+                        });
+                        rows_by_seat[pid as usize] += 1;
+                    }
+                } else {
+                    stats.forced_decisions_total += 1;
+                }
+                if trace_decisions {
+                    eprintln!("game {game_idx} decision {decisions}: search action {action}");
+                }
+                game.decode_action(action, pid);
+                decisions += 1;
             }
-            game.decode_action(action, pid);
-            decisions += 1;
-            non_forced += 1;
         }
 
         // z backfill for this game's records.
@@ -397,6 +462,15 @@ pub fn run_self_play(
         }
         stats.games += 1;
         stats.decisions_total += decisions as u64;
+        if let Some(pool) = &opponents {
+            opponent_games.push(serde_json::json!({
+                "game_id": game_idx, "game_seed": game_seed,
+                "opponent_id": historical.map(|i| pool.manifest.opponents[i].id.as_str()).unwrap_or("current"),
+                "learner_seat": learner, "first_player": first_player,
+                "winner": game.winner, "truncated": truncated,
+                "searched_decisions_by_seat": searched_by_seat, "training_rows_by_seat": rows_by_seat,
+            }));
+        }
         let progress = serde_json::json!({"games": stats.games, "requested_games": config.games,
             "truncated_games": stats.truncated_games, "wins": stats.wins,
             "elapsed_seconds": started.elapsed().as_secs_f64(), "decisions": stats.decisions_total});
@@ -417,7 +491,7 @@ pub fn run_self_play(
     buffer.flush(out_dir)?;
     stats.shards = buffer.written.len();
 
-    let manifest = serde_json::json!({
+    let mut manifest = serde_json::json!({
         "schema": "selfplay-shards-v1",
         "model": model_desc,
         "obs_dim": buffer.obs_dim,
@@ -458,6 +532,12 @@ pub fn run_self_play(
         "z_semantics": "±1 terminal outcome from mover perspective; 0 = draw or truncation; terminated.npy distinguishes them, exclude truncated rows from value training",
         "policy_semantics": "raw root visit counts over root-legal actions (sparse via offsets); normalize before use",
     });
+    if let Some(pool) = &opponents {
+        manifest["opponent_pool"] = serde_json::to_value(&pool.manifest).unwrap();
+        manifest["opponent_games"] = serde_json::to_value(opponent_games).unwrap();
+        manifest["training_actor_semantics"] =
+            "both current actors in self-play; current actor only against history".into();
+    }
     let manifest_path = out_dir.join("manifest.json");
     std::fs::write(
         &manifest_path,

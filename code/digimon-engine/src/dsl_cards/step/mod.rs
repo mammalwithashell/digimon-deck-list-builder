@@ -7,6 +7,7 @@ pub mod as_selecting_player;
 pub mod combat;
 pub mod control_flow;
 mod deletion_results;
+pub(super) mod deletion_payment;
 mod return_results;
 pub mod digixros_transaction;
 pub mod dna_digivolve;
@@ -785,6 +786,9 @@ fn run_steps_with_runtime_inner(
         }
         if let Some(mut expanded) = return_results::expand(step, ctx, bindings) {
             expanded.extend_from_slice(&steps[i + 1..]);
+            return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
+        }
+        if let Some(expanded) = deletion_payment::expand(&steps[i..], ctx, bindings) {
             return run_steps_with_runtime(&expanded, ctx, bindings, runtime);
         }
         if let Some(mut expanded) = deletion_results::expand(step, ctx, bindings) {

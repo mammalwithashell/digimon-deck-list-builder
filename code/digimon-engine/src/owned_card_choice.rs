@@ -335,6 +335,13 @@ impl OwnedCardChoice {
         self.page.token()
     }
 
+    /// Search may collapse presentation routes only for a current multi-page
+    /// prompt. Recovery operations are real transitions, not page navigation.
+    pub(crate) fn search_page_shape(&self, game: &Game) -> Option<(usize, usize)> {
+        (self.page.page_count() > 1 && self.recovery(game) == CardChoiceRecovery::Current)
+            .then(|| (self.page.page_index(), self.page.page_count()))
+    }
+
     pub fn grant_security_inspection(&mut self, observer: PlayerId, eligible_indices: &[usize]) {
         let Some((owner, _, order)) = &self.security_order else { return; };
         self.selectable_pins = Some(eligible_indices.iter().filter_map(|&index| order.get(index))

@@ -107,6 +107,102 @@ def test_campaign_accepts_validated_parent(campaign):
     assert len(validate(*campaign)) == 12
 
 
+def historical_campaign(campaign):
+    from tools.search_opponents import CONTRACT_KEYS, checkpoint_entry, metadata_path, SCHEMA
+    root, plan = campaign
+    current = root / 'generation/gen0/model.onnx'
+    old = root / 'inputs/old.onnx'
+    old.write_text('old-model')
+    for model in (current, old):
+        metadata_path(model).write_text(json.dumps({**{key: key for key in CONTRACT_KEYS},
+                                                   'value_semantics': 'terminal_outcome'}))
+    pool = root / 'inputs/opponents.json'
+    pool.write_text(json.dumps(dict(schema=SCHEMA, selfplay_probability=0.5,
+                                   opponents=[checkpoint_entry('older-campaign', old)])))
+    plan.update(games=1200, seed=17, historical_opponents=dict(pool='inputs/opponents.json'))
+    for path in (old, metadata_path(old), metadata_path(current), pool):
+        plan['files'][path.relative_to(root).as_posix()] = sha256(path)
+    return root, plan
+
+
+def test_cloud_plan_forwards_pinned_opponents_without_reducing_search(campaign):
+    from tools.cloud_search.run_small_generations import generation_command
+    root, plan = historical_campaign(campaign)
+    assert len(validate(root, plan)) == 12
+    command = generation_command(root, plan)
+    assert command[command.index('--opponent-pool') + 1] == str(root / 'inputs/opponents.json')
+    assert command[command.index('--sims') + 1] == '320'
+    assert command[command.index('--worlds') + 1] == '4'
+    assert command[command.index('--eval-batch-size') + 1] == '4'
+
+
+def test_cloud_plan_requires_hashes_for_opponent_models_and_sidecars(campaign):
+    root, plan = historical_campaign(campaign)
+    del plan['files']['inputs/old.onnx.meta.json']
+    with pytest.raises(ValueError, match='Missing historical opponent input hash'):
+        validate(root, plan)
+
+
+def test_cloud_plan_counts_learner_appearances_not_historical_actor_appearances(campaign):
+    root, plan = historical_campaign(campaign)
+    plan['games'] = 1000
+    with pytest.raises(ValueError, match='learner appearances'):
+        validate(root, plan)
+
+
+@pytest.mark.parametrize('first,last', [(5, 8), (9, 10)])
+def test_completed_campaign_can_continue_with_logical_indices(campaign, first, last):
+    root, plan = campaign
+    parent = root / 'generation' / f'gen{first - 1}'
+    parent.mkdir()
+    for suffix in ('zip', 'onnx'):
+        old = root / f'generation/gen0/model.{suffix}'
+        target = parent / f'model.{suffix}'
+        target.write_bytes(old.read_bytes())
+        plan['files'][target.relative_to(root).as_posix()] = sha256(target)
+    (root / 'generation/state.json').write_text(json.dumps(dict(next_gen=first,
+        prev=dict(model_zip=str(parent / 'model.zip'), model_onnx=str(parent / 'model.onnx')))))
+    plan.update(first_generation=first, generations=last)
+    assert len(validate(root, plan)) == 12
+    plan['generations'] = first + 4
+    with pytest.raises(ValueError, match='scope'):
+        validate(root, plan)
+    plan['generations'] = last
+    (root / 'generation' / f'gen{last + 1}').mkdir()
+    with pytest.raises(ValueError, match='Existing campaign output'):
+        validate(root, plan)
+
+
+def test_search_repair_keeps_logical_generation_and_requires_baseline_receipt(campaign):
+    root, plan = campaign
+    parent = root / 'generation/gen2'
+    parent.mkdir()
+    for suffix in ('zip', 'onnx'):
+        old = f'generation/gen0/model.{suffix}'
+        new = f'generation/gen2/model.{suffix}'
+        (root / new).write_bytes((root / old).read_bytes())
+        plan['files'][new] = sha256(root / new)
+    (root / 'generation/state.json').write_text(json.dumps(dict(next_gen=3,
+        prev=dict(model_zip=str(parent / 'model.zip'), model_onnx=str(parent / 'model.onnx')))))
+    plan.update(first_generation=3, reuse_parent_evaluation=True,
+                evaluation_panels=[['heldout', 'heldout_snapshot.json']],
+                evaluation_seed=7, evaluation_games_per_archetype_per_anchor=200)
+    with pytest.raises(ValueError, match='hash-bound receipt'):
+        validate(root, plan)
+    receipt = dict(status='complete', checkpoint_sha256=sha256(parent / 'model.zip'),
+        evaluation_panels=plan['evaluation_panels'], evaluation_seed=7,
+        games_per_archetype=200, policy_evaluation_unchanged=True)
+    path = root / 'validation/parent-evaluation.json'
+    path.write_text(json.dumps(receipt))
+    plan['files']['validation/parent-evaluation.json'] = sha256(path)
+    assert len(validate(root, plan)) == 12
+    receipt['checkpoint_sha256'] = 'wrong'
+    path.write_text(json.dumps(receipt))
+    plan['files']['validation/parent-evaluation.json'] = sha256(path)
+    with pytest.raises(ValueError, match='reuse evidence differs'):
+        validate(root, plan)
+
+
 def test_combined_evaluation_requires_hash_bound_snapshot(campaign):
     root, plan = campaign
     plan.update(evaluation_panels=[['combined_validation', 'combined_snapshot.json']], evaluation_seed=7)

@@ -293,7 +293,7 @@ pub(crate) fn delete_selected_and_cancel_after_payment(
     );
 }
 
-fn start_deletion_payment(
+pub(super) fn start_deletion_payment(
     ctx: &mut EffectContext<'_>, payer_handle: crate::permanent::PermanentHandle,
 ) -> Option<(u64,(u8,u16,u64))> {
     if !ctx.can_affect_permanent(payer_handle) { return None; }

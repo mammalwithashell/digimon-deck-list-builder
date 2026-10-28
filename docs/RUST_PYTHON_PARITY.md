@@ -967,6 +967,19 @@ surfaces tokens today).
 **Coverage:** `code/digimon-engine/tests/cards_behavioral/tokens.rs` +
 `code/digimon-engine/src/token_registry.rs` unit tests.
 
+**CR 4.3 departure contract:** Sections 4-21-5, 15-1-9 and 15-1-10
+distinguish a processed return/placement from a card actually added to an
+area. Departing tokens are removed from the game; hand/deck return receipts
+still count the return, but no hand/deck addition observer fires. Security
+placement uses the same resumable departure path for self and selected
+permanents, without storing a token or a face-up security marker. Player
+zone-entry helpers also reject tokens as a final storage invariant. The
+regressions in `code/digimon-engine/tests/token_departure_rules.rs` include
+the interrupted MarineBullmon/Erlangmon return from training seed 44524569,
+plus ordinary-card controls, grouped returns, prevented departures and
+clone/replay continuation checks. This is simulator evidence; it does not
+assert new DCGO oracle certification.
+
 ### 11.2 🟢 De-Digivolve N — implemented (superset of Python)
 
 **Python** — per-archetype scripts call `card.lose_digivolution(N)` or
