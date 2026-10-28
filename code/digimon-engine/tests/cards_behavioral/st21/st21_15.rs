@@ -275,3 +275,69 @@ fn st21_15_security_effect_can_be_declined() {
         .iter()
         .any(|c| c.card_id(&r.game.card_data) == "LV3"));
 }
+
+/// [Main] with an EMPTY security stack: there is no bottom card to add, but
+/// "Then, place this card face up as the bottom security card" still happens
+/// (DCGO ReplaceBottomSecurityWithFaceUpOptionEffect: the add-to-hand half is
+/// gated on SecurityCards.Count >= 1, the placement is not).
+#[test]
+fn st21_15_main_with_empty_security_still_places_self_face_up() {
+    let mut r = builder()
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    r.game.enter_main_phase();
+    assert_eq!(r.security_count(0), 0);
+    let hand_before = r.game.players[0].hand.len();
+    let result = r.game.play_option_from_hand(0, 0);
+    assert_ne!(result, OptionPlayResult::Invalid);
+    let _ = r.auto_resolve();
+    let sec = &r.game.players[0].security;
+    assert_eq!(sec.len(), 1, "the Option becomes the only security card");
+    assert_eq!(sec[0].card_id(&r.game.card_data), CARD_ID);
+    assert!(r.game.players[0].face_up_security.contains(&sec[0].card_index), "face up");
+    assert_eq!(r.game.players[0].hand.len(), hand_before - 1, "nothing was added to hand");
+    assert!(
+        !r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == CARD_ID),
+        "the Option is not trashed"
+    );
+}
+
+/// [Security] effect with no level 3 Digimon card in trash: no card can be
+/// chosen, nothing is played, and the attack resolves normally.
+#[test]
+fn st21_15_security_effect_with_no_lv3_in_trash_plays_nothing() {
+    let mut r = builder()
+        .security(1, &[CARD_ID])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(5)
+        .start();
+    push_trash(&mut r, 1, "LV2");
+    push_trash(&mut r, 1, "LV4");
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    let _ = r.attack_player(attacker, 1, false);
+    if let Some(v) = r.pending_selection_view() {
+        assert!(
+            v.valid_action_ids.iter().all(|a| *a == PASS),
+            "no level 3 Digimon card may be offered: {v:?}"
+        );
+        r.execute_action(v.selecting_player, PASS).expect("pass");
+    }
+    let _ = r.auto_resolve();
+    assert!(r.game.players[1].battle_area.is_empty(), "nothing was played");
+    assert!(r.game.players[1]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "LV2"));
+    assert!(r.game.players[1]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&r.game.card_data) == "LV4"));
+    assert_eq!(r.security_count(1), 0, "the security card was checked");
+}

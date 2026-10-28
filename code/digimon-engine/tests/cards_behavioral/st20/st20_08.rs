@@ -87,16 +87,17 @@ fn hand_actions(runner: &DebugRunner, id: &str) -> [u16; 2] {
     [PLAY_HAND_START + slot, HAND_EFFECT_START + slot]
 }
 
+/// The [When Digivolving] play choice: when the clause fires, the very first
+/// pending prompt must be the Hand pick (no other prompt may precede it).
+/// Returns `None` only when nothing is pending (the clause did not fire).
 fn walk_to_hand_prompt(runner: &mut DebugRunner) -> Option<digimon_engine::selection::PendingSelectionView> {
-    for _ in 0..4 {
-        let view = runner.pending_selection_view()?;
-        if view.kind == SelectionKind::Hand {
-            return Some(view);
-        }
-        let action = view.valid_action_ids.iter().copied().find(|&a| a != PASS)?;
-        runner.execute_action(view.selecting_player, action).expect("accept gate");
-    }
-    None
+    let view = runner.pending_selection_view()?;
+    assert_eq!(
+        view.kind,
+        SelectionKind::Hand,
+        "expected the [ADVENTURE] Tamer hand pick, got {view:?}"
+    );
+    Some(view)
 }
 
 fn on_field(runner: &DebugRunner, id: &str) -> bool {
@@ -245,14 +246,10 @@ fn st20_08_only_adventure_tamers_are_offered() {
 #[test]
 fn st20_08_play_is_optional() {
     let mut runner = digivolve_with(&[], &["ADV-TAMER"]);
-    let mut prompted = false;
-    for _ in 0..4 {
-        let Some(view) = runner.pending_selection_view() else { break };
-        prompted = true;
-        assert!(view.is_optional);
-        runner.execute_action(view.selecting_player, PASS).expect("decline");
-    }
-    assert!(prompted, "the choice must surface");
+    let view = walk_to_hand_prompt(&mut runner).expect("the choice must surface");
+    assert!(view.is_optional, "'you may'");
+    runner.execute_action(view.selecting_player, PASS).expect("decline");
+    assert!(runner.pending_selection_view().is_none(), "declining ends the effect");
     assert!(!on_field(&runner, "ADV-TAMER"));
 }
 

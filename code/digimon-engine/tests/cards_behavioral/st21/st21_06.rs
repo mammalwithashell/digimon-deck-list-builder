@@ -69,6 +69,10 @@ fn builder() -> DebugRunnerBuilder {
         .add_card(tamer("T-RB", &[CardColor::Red, CardColor::Blue], &["ADVENTURE"]))
         .add_card(tamer("T-YG", &[CardColor::Yellow, CardColor::Green], &["ADVENTURE"]))
         .add_card(tamer("T-R", &[CardColor::Red], &["ADVENTURE"]))
+        .add_card(tamer("T-R2", &[CardColor::Red], &["ADVENTURE"]))
+        .add_card(tamer("T-Y", &[CardColor::Yellow], &["ADVENTURE"]))
+        .add_card(digimon("OPP-SRC-A", CardColor::Blue, 3, 3000, &[]))
+        .add_card(digimon("OPP-SRC-B", CardColor::Blue, 2, 2000, &[]))
         .add_card(digimon("SEC", CardColor::Blue, 3, 1000, &[]))
         .add_card(make_test_card("FILL", "Filler"))
         .deck(0, &["FILL", "FILL", "FILL"])
@@ -254,6 +258,59 @@ fn st21_06_one_tamer_color_keeps_cap_at_6000() {
     let (mut runner, magna) = setup(&["T-R"]);
     runner.fire_on_play(0, magna.index as usize);
     assert_eq!(offered(&runner, &OPPS), vec!["OPP6K"]);
+}
+
+/// Two Tamers of the SAME colour: 1 distinct colour → floor(1/2) = 0 → 6000.
+#[test]
+fn st21_06_two_same_colour_tamers_keep_cap_at_6000() {
+    let (mut runner, magna) = setup(&["T-R", "T-R2"]);
+    runner.fire_on_play(0, magna.index as usize);
+    assert_eq!(offered(&runner, &OPPS), vec!["OPP6K"], "colours, not Tamers, are counted");
+}
+
+/// 3 distinct Tamer colours (Red/Blue + Yellow): floor(3/2) = 1 → 8000.
+#[test]
+fn st21_06_three_tamer_colors_raise_cap_to_8000() {
+    let (mut runner, magna) = setup(&["T-RB", "T-Y"]);
+    runner.fire_on_play(0, magna.index as usize);
+    assert_eq!(offered(&runner, &OPPS), vec!["OPP6K", "OPP7K", "OPP8K"]);
+}
+
+/// A target with digivolution cards: only its top card goes face down onto the
+/// opponent's security top; its digivolution cards go to their owner's trash.
+#[test]
+fn st21_06_target_with_sources_top_card_to_security_sources_to_trash() {
+    let mut runner = builder().start();
+    runner.game.turn_count = 1;
+    let target = runner.place_stack(1, &["OPP-SRC-B", "OPP-SRC-A", "OPP6K"]);
+    assert_eq!(runner.game.player(1).battle_area[target.index as usize].card_sources.len(), 3);
+    let sec_before = runner.security_count(1);
+    let trash_before = runner.game.player(1).trash.len();
+    let magna = runner.place_on_field(0, CARD_ID, None);
+    runner.fire_on_play(0, magna.index as usize);
+    let a = field_action(opp_index(&runner, "OPP6K"));
+    runner.execute_action(0, a).unwrap();
+    runner.auto_resolve().unwrap();
+
+    assert!(runner.game.player(1).battle_area.is_empty(), "the whole permanent leaves the field");
+    assert_eq!(runner.security_count(1), sec_before + 1, "only ONE card is added to security");
+    assert_eq!(top_security_id(&runner, 1), "OPP6K", "the top card is the new top security card");
+    let top_idx = runner.game.player(1).security.last().unwrap().card_index;
+    assert!(!runner.game.player(1).face_up_security.contains(&top_idx), "face down");
+    let trash: Vec<String> = runner
+        .game
+        .player(1)
+        .trash
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(trash.len(), trash_before + 2, "both digivolution cards are trashed: {trash:?}");
+    assert!(trash.iter().any(|id| id == "OPP-SRC-A") && trash.iter().any(|id| id == "OPP-SRC-B"));
+    assert!(!trash.iter().any(|id| id == "OPP6K"));
+    assert!(runner.game.player(0).trash.iter().all(|c| {
+        let id = c.card_id(&runner.game.card_data);
+        id != "OPP-SRC-A" && id != "OPP-SRC-B"
+    }), "sources go to their OWNER's trash");
 }
 
 /// 2 Tamer colours → cap 8000.

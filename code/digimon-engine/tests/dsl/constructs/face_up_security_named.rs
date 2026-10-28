@@ -127,9 +127,11 @@ use_requirement:
 effects: []
 "#,
     );
-    if let Ok(spec) = spec {
-        assert!(digimon_dsl::compile::compile(&spec).is_err(), "an identity filter is required");
-    }
+    let rejected = match spec {
+        Err(_) => true,
+        Ok(spec) => digimon_dsl::compile::compile(&spec).is_err(),
+    };
+    assert!(rejected, "a leaf with no identity filter must fail to parse or compile");
 }
 
 #[test]
