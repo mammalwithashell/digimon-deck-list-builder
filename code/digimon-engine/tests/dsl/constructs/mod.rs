@@ -41,3 +41,5 @@ mod controller_security_add_eligibility;
 mod effect_play_results;
 
 mod tamer_color_predicates;
+
+mod face_up_security_named;
