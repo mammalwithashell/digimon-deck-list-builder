@@ -1094,6 +1094,40 @@ reads the report and can raise `OracleReadinessMissingError`. Spec:
 `docs/superpowers/specs/2026-10-04-dcgo-oracle-readiness-design.md` (§4.7 is
 superseded as a gate).
 
+## Search budget for self-play generation (default since 2026-10-28)
+
+`run_selfplay_generation.py` now generates with **both budget levers on by
+default**; nothing has to be passed to get them:
+
+| Lever | Flag (selfplay and the generation driver) | Default | What it does |
+|---|---|---|---|
+| Phase budget | `--reduced-sims N` | 64 | Roots that are not an unconstrained Main-phase decision (pending selections, mulligan, breeding, block/counter/alliance windows) get N total simulations; Main roots keep `--sims`/`--worlds` (320/4). |
+| Playout-cap randomization | `--full-search-fraction p --cheap-sims n` | 0.25 / 64 | Only a fraction p of non-forced decisions gets the full search and becomes a policy target; the rest get a cheap noise-free n-sim search recorded with `policy_weight 0` (value-only). `azero_trainer` weights the policy loss by `policy_weight.npy`. |
+
+Together they cost **~0.27× the search seconds** of full 320/4 search (phase
+alone 0.55×, cap alone 0.38×, measured in-run — the per-decision estimates
+understated it). `--full-search` restores the old behaviour (every root at
+320/4); `--reduced-sims 0` or `--full-search-fraction 1` turns one lever off.
+The flags are recorded in each generation's `summary.json` and are part of
+the frozen identity a dynamic `--resume-selfplay` validates, so a run cannot
+silently change budget mid-stage.
+
+Why this is the default (`docs/superpowers/research/2026-10-27-search-budget-experiments.md`):
+one generation from the archetype-audit parent, 1000 games per arm, children
+compared in 2112-game seat-balanced no-search panels. At equal games every
+reduced-budget child matched the full-search child (cap 0.507, phase 0.492,
+both 0.492; all intervals span 0.5) and beat the parent by the same 2–3
+points. Spending the saving on more games per generation (`cap_eq`,
+`phase_eq`, `both_eq`) did **not** help, so the saving is banked as **more
+generations**, roughly 3.7 per former full generation. Re-check the decision
+after 3+ generations with `code/tools/policy_head_to_head.py` (4 blocks per
+pair; the default 1 block gives 528-game panels that cannot separate arms)
+against a full-search lineage. Fixed-root panel agreement and the in-run
+vs-greedy score do not measure this; both were saturated or misleading.
+
+Do not use `--root gumbel` for generation: with the paper constants it was
+worse than PUCT at 64–320 simulations.
+
 ## Independent-world search evaluation batching
 
 Native search self-play and `run_selfplay_generation.py` accept
