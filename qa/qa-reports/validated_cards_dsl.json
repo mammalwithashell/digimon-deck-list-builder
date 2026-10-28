@@ -16311,6 +16311,54 @@
         "INHERITED-ON-DELETION"
       ],
       "notes": "EX13 Adventure lane C: [OP][WD] 1 own Digimon gains Raid+Retaliation until opp turn ends; face-up + inherited [On Deletion] may play ADVENTURE Digimon/Tamer cost<=4 from trash free; Greymon-name/ADVENTURE Lv.4 alt cost 3. Standard Purple/Red Lv.4/4 circles come from cards.json."
+    },
+    "ST20-12": {
+      "card_name": "Sora Takenouchi & Kari Kamiya",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-d",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_12.rs",
+      "test_count": 11,
+      "notes": "TDD RED->GREEN. Official bundle + image + DCGO ST20_12.cs. Optional suspend-self play-cost reducer (decline, ADVENTURE Digimon only, your turn, unsuspended only, stacks per Q&A, not on digivolve), SoMP memory, Security play. Shared suite reused by ST21-12/ST20-13. Fixed G-COST-REDUCTION-ALLY-PLAYED-ON-DIGIVOLVE."
+    },
+    "ST21-12": {
+      "card_name": "Joe Kido & Mimi Tachikawa",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-d",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_12.rs",
+      "test_count": 11,
+      "notes": "TDD RED->GREEN. Same text as ST20-12 (DCGO ST21_12.cs is a copy); runs the st20_12 shared suite incl. ST21-12+ST20-12 Q&A stacking."
+    },
+    "ST20-13": {
+      "card_name": "Tai Kamiya & Izzy Izumi",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-d",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_13.rs",
+      "test_count": 11,
+      "notes": "TDD RED->GREEN. Official bundle + image + DCGO ST20_13.cs. Shared reducer suite + [Opponent's Turn] ADVENTURE-Digimon Blocker aura (own Digimon only, opp turn only, clears when source leaves) + Security play."
+    },
+    "AD1-020": {
+      "card_name": "Tommy, Takuya, & Zoe",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-d",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Hybrid",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_020.rs",
+      "test_count": 12,
+      "notes": "TDD RED->GREEN. Official bundle + image + DCGO AD1_020.cs. OP/SoMP up-to-2 different-colour Hybrid placement from hand/trash (AD1-023 shape), draw iff placed, independent 4+ Hybrid -> +2 memory; name aliases; inherited [End of Your Turn][OPT] 'by attacking' with Security A.+1 for the attack (may_attack_now cost_upgrade; not offered when carrier can't attack; attack mandatory once activated); Security play. cards.json mislabels the inherited box as Security Effect."
     }
   }
 }
