@@ -78391,7 +78391,7 @@
     "used_untested": 7
    }
   },
-  "ex13_lists": 568,
+  "ex13_lists": 1554,
   "parse_only_files": [
    "src/dsl_cards/binding_ref.rs",
    "src/dsl_cards/expiry_map.rs",
@@ -78508,143 +78508,148 @@
   "scanned_tests": 2545,
   "top_untested": [
    {
-    "cards_blocked": 1,
-    "construct": "timing:main_from_trash",
-    "ex13_lists_blocked": 26
-   },
-   {
     "cards_blocked": 3,
     "construct": "predicate:can_unsuspend",
-    "ex13_lists_blocked": 20
+    "ex13_lists_blocked": 76
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "timing:main_from_trash",
+    "ex13_lists_blocked": 62
    },
    {
     "cards_blocked": 6,
     "construct": "predicate:self_digivolution_sources_trait_has",
-    "ex13_lists_blocked": 19
+    "ex13_lists_blocked": 55
    },
    {
     "cards_blocked": 5,
     "construct": "verb:trash_bottom_security",
-    "ex13_lists_blocked": 15
-   },
-   {
-    "cards_blocked": 2,
-    "construct": "timing:on_use_option",
-    "ex13_lists_blocked": 12
+    "ex13_lists_blocked": 41
    },
    {
     "cards_blocked": 3,
     "construct": "verb:substitute_replacement",
-    "ex13_lists_blocked": 10
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_discarded_card_any",
-    "ex13_lists_blocked": 10
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:in_event_discarded_cards",
-    "ex13_lists_blocked": 10
+    "ex13_lists_blocked": 33
    },
    {
     "cards_blocked": 6,
     "construct": "predicate:event_card_kind",
-    "ex13_lists_blocked": 8
-   },
-   {
-    "cards_blocked": 5,
-    "construct": "predicate:stack_size_lte",
-    "ex13_lists_blocked": 8
-   },
-   {
-    "cards_blocked": 4,
-    "construct": "predicate:has_alt_path",
-    "ex13_lists_blocked": 7
+    "ex13_lists_blocked": 31
    },
    {
     "cards_blocked": 2,
     "construct": "timing:before_pay_cost_observe",
-    "ex13_lists_blocked": 7
-   },
-   {
-    "cards_blocked": 3,
-    "construct": "predicate:event_add_to_hand_player",
-    "ex13_lists_blocked": 6
-   },
-   {
-    "cards_blocked": 3,
-    "construct": "timing:on_add_to_hand",
-    "ex13_lists_blocked": 6
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_target_level_lte",
-    "ex13_lists_blocked": 6
+    "ex13_lists_blocked": 31
    },
    {
     "cards_blocked": 2,
-    "construct": "verb:effect_initiated_dna_digivolve_trash_partner",
-    "ex13_lists_blocked": 5
+    "construct": "timing:on_use_option",
+    "ex13_lists_blocked": 30
+   },
+   {
+    "cards_blocked": 5,
+    "construct": "predicate:stack_size_lte",
+    "ex13_lists_blocked": 29
    },
    {
     "cards_blocked": 1,
-    "construct": "predicate:event_card_text_contains",
-    "ex13_lists_blocked": 5
+    "construct": "predicate:event_discarded_card_any",
+    "ex13_lists_blocked": 26
    },
    {
-    "cards_blocked": 3,
-    "construct": "predicate:printed_keyword",
-    "ex13_lists_blocked": 4
+    "cards_blocked": 1,
+    "construct": "predicate:in_event_discarded_cards",
+    "ex13_lists_blocked": 26
    },
    {
     "cards_blocked": 3,
     "construct": "predicate:rules_text_contains",
-    "ex13_lists_blocked": 4
+    "ex13_lists_blocked": 20
+   },
+   {
+    "cards_blocked": 3,
+    "construct": "predicate:printed_keyword",
+    "ex13_lists_blocked": 19
    },
    {
     "cards_blocked": 1,
-    "construct": "predicate:color_matches_returned_card",
-    "ex13_lists_blocked": 2
+    "construct": "predicate:event_target_level_lte",
+    "ex13_lists_blocked": 18
    },
    {
     "cards_blocked": 1,
-    "construct": "predicate:event_target_has_inherited",
-    "ex13_lists_blocked": 2
+    "construct": "predicate:event_card_text_contains",
+    "ex13_lists_blocked": 16
+   },
+   {
+    "cards_blocked": 4,
+    "construct": "predicate:has_alt_path",
+    "ex13_lists_blocked": 15
+   },
+   {
+    "cards_blocked": 3,
+    "construct": "predicate:event_add_to_hand_player",
+    "ex13_lists_blocked": 15
+   },
+   {
+    "cards_blocked": 3,
+    "construct": "timing:on_add_to_hand",
+    "ex13_lists_blocked": 15
+   },
+   {
+    "cards_blocked": 2,
+    "construct": "verb:effect_initiated_dna_digivolve_trash_partner",
+    "ex13_lists_blocked": 15
    },
    {
     "cards_blocked": 1,
     "construct": "verb:trash_breeding_permanent",
-    "ex13_lists_blocked": 2
-   },
-   {
-    "cards_blocked": 2,
-    "construct": "verb:preattach_digixros_material",
-    "ex13_lists_blocked": 1
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:can_gain_memory",
-    "ex13_lists_blocked": 1
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:effect_trashed_any_hand_card",
-    "ex13_lists_blocked": 1
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_card_name_is",
-    "ex13_lists_blocked": 1
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:has_security_attack_change",
-    "ex13_lists_blocked": 1
+    "ex13_lists_blocked": 15
    },
    {
     "cards_blocked": 1,
     "construct": "predicate:is_event_host",
+    "ex13_lists_blocked": 10
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:event_target_has_inherited",
+    "ex13_lists_blocked": 6
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:color_matches_returned_card",
+    "ex13_lists_blocked": 5
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:has_security_attack_change",
+    "ex13_lists_blocked": 5
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:effect_trashed_any_hand_card",
+    "ex13_lists_blocked": 3
+   },
+   {
+    "cards_blocked": 2,
+    "construct": "verb:preattach_digixros_material",
+    "ex13_lists_blocked": 2
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:can_gain_memory",
+    "ex13_lists_blocked": 2
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:event_card_name_is",
+    "ex13_lists_blocked": 2
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "timing:on_option_trashed",
     "ex13_lists_blocked": 1
    },
    {
@@ -78675,11 +78680,6 @@
    {
     "cards_blocked": 1,
     "construct": "predicate:event_card_color_only",
-    "ex13_lists_blocked": 0
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "timing:on_option_trashed",
     "ex13_lists_blocked": 0
    },
    {
