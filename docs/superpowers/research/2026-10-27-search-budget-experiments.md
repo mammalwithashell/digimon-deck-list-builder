@@ -402,3 +402,63 @@ Reading rules fixed in advance: an interval that excludes 0.5 against `full`
 is a result; one that spans it at equal games is "no measurable loss for the
 compute saved" (the same rule the cap test used); a child below `full` at
 equal games with an interval excluding 0.5 rejects the arm for generation.
+
+### Result (generation 2026-10-27 22:40 – 2026-10-28 ~05:00, panels 07:05 – 09:30)
+
+Generation: 27 partitions, 6750 games, no truncation. The in-run search cost
+came out above the per-decision estimates (the reduced roots are cheaper per
+simulation than Main roots, so their share of the seconds is smaller than
+their share of the decisions):
+
+| Arm | Games | Rows | Policy rows | Search s | vs `full` |
+|---|---|---|---|---|---|
+| `full` | 1000 | 89,487 | 89,487 | 45,018 | 1.00 |
+| `phase` | 1000 | 89,441 | 89,441 | 24,782 | **0.55** (est. 0.44) |
+| `phase_eq` | 2500 | 221,798 | 221,798 | 58,458 | 1.30 |
+| `both` | 1000 | 85,133 | 21,171 | 12,118 | **0.27** (est. 0.24) |
+| `both_eq` | 4250 | 357,036 | 89,145 | 46,737 | 1.04 |
+
+Head-to-head, 2112 seat-balanced games per panel, candidate score with 95%
+block interval (the first pass was run at 1 block per pair by mistake — 528
+games — and is kept under `eval/blocks1/`; the table is the 4-block rerun):
+
+| Candidate | vs parent | vs `full` child |
+|---|---|---|
+| `full` | 0.523 [0.501, 0.544] | — |
+| `cap` (0.38×) | 0.527 [0.506, 0.549] | 0.507 [0.486, 0.527] |
+| `phase` (0.55×) | 0.529 [0.508, 0.550] | 0.492 [0.472, 0.513] |
+| `both` (0.27×) | 0.531 [0.509, 0.552] | 0.492 [0.470, 0.514] |
+| `cap_eq` (1.10×) | 0.548 [0.528, 0.568] | 0.517 [0.497, 0.537] |
+| `phase_eq` (1.30×) | 0.527 [0.507, 0.547] | 0.502 [0.481, 0.523] |
+| `both_eq` (1.04×) | 0.525 [0.504, 0.546] | 0.494 [0.473, 0.516] |
+
+Readings, against the preregistered rules:
+
+1. **Equal games: `phase` ≈ `full`** (0.492, interval spans 0.5). Cutting the
+   search at pending / mulligan / breeding / timing-window roots to 64 sims
+   did not measurably degrade the training targets — the play-time c1 deficit
+   (44%) does not carry into generation. No measurable loss for 0.55× compute.
+2. **Equal games: `both` ≈ `full`** (0.492) and ≈ `cap`: the two levers stack
+   without a measurable cost. 0.27× compute. Every child beats the parent by
+   the same 2–3 points (0.525–0.531); one update cannot separate them.
+3. **Equal compute: no gain.** `phase_eq` (0.502 vs full) and `both_eq`
+   (0.494 vs full, with 4.25× the games) did not improve on `full`, so the
+   "spend the saving on more games" effect that `cap_eq` suggested (0.517 vs
+   full, 0.548 vs parent) is **not reproduced** by the other two equal-compute
+   arms. Read `cap_eq` as the top of the noise band rather than as a KataGo
+   effect confirmed here; a multi-generation run is still the only place the
+   per-generation saving can show as strength.
+
+**Decision.** Generate with **both levers**:
+`--reduced-sims 64 --full-search-fraction 0.25 --cheap-sims 64` (≈0.27× the
+search seconds of 320/4 everywhere, ≈3.7 generations per `full` generation),
+keeping 320/4 at the Main-phase roots that win the full-search draw. The
+equal-compute arms say the saving should be banked as more generations, not
+as more games per generation. Re-check after 3+ generations with the same
+seat-balanced panel against the `full` lineage.
+
+**Second engine fault** (1 game of 8448 in the 1-block pass, seed 54204079;
+did not recur in the 4-block schedule): Medusamon (EX11-012)'s
+leave-replacement offered a `CannotBeAffected` token and the pick resolved to
+no state change — `G-ENGINE-REPLACEMENT-PICK-UNAFFECTABLE-TOKEN` in
+`docs/RUST_ENGINE_GAPS.md`, repro under `qa/engine-faults/2026-10-28-attack-noop-pending-selection/`.
