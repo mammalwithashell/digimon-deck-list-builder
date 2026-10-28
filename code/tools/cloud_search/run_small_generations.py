@@ -35,13 +35,14 @@ def evaluation_options(plan):
 
 
 def validate(root, plan):
-    if plan['generations'] not in range(1, 5) or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
+    first = plan.get('first_generation', 1)
+    last = plan['generations']
+    if type(first) is not int or type(last) is not int or not 1 <= first <= last:
+        raise ValueError('Invalid first generation')
+    if last - first + 1 not in range(1, 5) or plan['games'] < 1000 or plan['workers'] not in range(1, 9):
         raise ValueError('Unexpected campaign scope')
     if os.environ.get('DIGIMON_DEPLOYED_IMAGE') != plan['image']:
         raise ValueError('Image differs from approved engine')
-    first = plan.get('first_generation', 1)
-    if not 1 <= first <= plan['generations']:
-        raise ValueError('Invalid first generation')
     parent = first - 1
     required = {'inputs/decks.json', 'inputs/seed.zip', 'inputs/seed.onnx',
                 'inputs/heldout_snapshot.json', 'inputs/pet_evaluation_snapshot.json',
@@ -79,7 +80,8 @@ def validate(root, plan):
     if state != dict(next_gen=first, prev=dict(model_zip=str(root / f'generation/gen{parent}/model.zip'),
                                           model_onnx=str(root / f'generation/gen{parent}/model.onnx'))):
         raise ValueError('Expected prepared parent state')
-    if any((root / 'generation' / f'gen{i}').exists() for i in range(first, 5)):
+    if any(p.name[3:].isdigit() and int(p.name[3:]) >= first
+           for p in (root / 'generation').glob('gen*')):
         raise ValueError('Existing campaign output; explicit recovery required')
     evaluation_options(plan)
     return slots

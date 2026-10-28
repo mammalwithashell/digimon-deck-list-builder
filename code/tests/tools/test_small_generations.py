@@ -107,6 +107,29 @@ def test_campaign_accepts_validated_parent(campaign):
     assert len(validate(*campaign)) == 12
 
 
+@pytest.mark.parametrize('first,last', [(5, 8), (9, 10)])
+def test_completed_campaign_can_continue_with_logical_indices(campaign, first, last):
+    root, plan = campaign
+    parent = root / 'generation' / f'gen{first - 1}'
+    parent.mkdir()
+    for suffix in ('zip', 'onnx'):
+        old = root / f'generation/gen0/model.{suffix}'
+        target = parent / f'model.{suffix}'
+        target.write_bytes(old.read_bytes())
+        plan['files'][target.relative_to(root).as_posix()] = sha256(target)
+    (root / 'generation/state.json').write_text(json.dumps(dict(next_gen=first,
+        prev=dict(model_zip=str(parent / 'model.zip'), model_onnx=str(parent / 'model.onnx')))))
+    plan.update(first_generation=first, generations=last)
+    assert len(validate(root, plan)) == 12
+    plan['generations'] = first + 4
+    with pytest.raises(ValueError, match='scope'):
+        validate(root, plan)
+    plan['generations'] = last
+    (root / 'generation' / f'gen{last + 1}').mkdir()
+    with pytest.raises(ValueError, match='Existing campaign output'):
+        validate(root, plan)
+
+
 def test_search_repair_keeps_logical_generation_and_requires_baseline_receipt(campaign):
     root, plan = campaign
     parent = root / 'generation/gen2'

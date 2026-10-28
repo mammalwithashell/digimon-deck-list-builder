@@ -188,3 +188,22 @@ To disable evaluation, stop its service and remove the evaluation result mount
 from the monitor service (preserve the directory for harvest). Evaluation
 failure never stops or resumes training. Copy this directory when harvesting
 the experiment; the original checkpoint backup helper covers training files.
+
+## EX13 continuation and diagnosis
+
+The [October 28 training lessons](../../../docs/TRAINING_RUNBOOK.md#ex13-training-lessons-and-raising-diagnostic-2026-10-28)
+record the 13-archetype pool denominators, 10,800-game checkpoint evaluation,
+checkpoint lineage, token-departure interruption and matched raising study.
+Use the dated protocol rather than applying the older 12-archetype examples
+above to a new campaign.
+
+`extend_completed_campaign prepare` verifies a completed source and copies its
+parent checkpoint plus two replay generations into a fresh root. Its separate
+`start` subcommand changes live services and requires explicit rollout scope.
+The small-generation controller accepts up to four updates at continuing
+logical checkpoint indices; inherited replay is not new progress.
+
+`raising_diagnostic` is a local diagnostic only: frozen-position policy/search
+comparisons and paired continuations, with no training or model promotion.
+Build its Rust example and follow the runbook's commands and interpretation
+limits. The October 28 repairs have not been deployed by these diagnostics.
