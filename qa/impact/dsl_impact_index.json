@@ -463,6 +463,36 @@
         "select_hand"
       ]
     },
+    "AD1-020": {
+      "path": "ad1/AD1-020.yaml",
+      "predicates": [
+        "any_of",
+        "any_permanent",
+        "binding_present",
+        "can_attack",
+        "is_source",
+        "kind",
+        "owner",
+        "source_count",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "end_of_your_turn",
+        "on_play",
+        "on_security",
+        "start_of_your_main_phase"
+      ],
+      "verbs": [
+        "draw",
+        "gain_memory",
+        "if",
+        "may_attack_now",
+        "place_cards_as_bottom_sources",
+        "play_from_security",
+        "select_zone_cards"
+      ]
+    },
     "AD1-021": {
       "path": "ad1/AD1-021.yaml",
       "predicates": [
@@ -26724,6 +26754,16 @@
         "select_opponent_permanent"
       ]
     },
+    "ST20-01": {
+      "path": "st20/ST20-01.yaml",
+      "predicates": [
+        "all_of",
+        "all_turns",
+        "trait_has"
+      ],
+      "timings": [],
+      "verbs": []
+    },
     "ST20-02": {
       "path": "st20/ST20-02.yaml",
       "predicates": [
@@ -26865,6 +26905,26 @@
       "timings": [],
       "verbs": []
     },
+    "ST20-08": {
+      "path": "st20/ST20-08.yaml",
+      "predicates": [
+        "all_of",
+        "color_is",
+        "count_lte",
+        "kind",
+        "level_eq",
+        "owner",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "when_digivolving"
+      ],
+      "verbs": [
+        "play_from_hand_free",
+        "select_hand"
+      ]
+    },
     "ST20-09": {
       "path": "st20/ST20-09.yaml",
       "predicates": [
@@ -26941,6 +27001,48 @@
         "per_selected",
         "select_count_capped_multi",
         "select_opponent_permanent"
+      ]
+    },
+    "ST20-12": {
+      "path": "st20/ST20-12.yaml",
+      "predicates": [
+        "all_of",
+        "any_permanent",
+        "cost_target_from_hand",
+        "kind",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_security",
+        "start_of_your_main_phase"
+      ],
+      "verbs": [
+        "gain_memory",
+        "play_from_security",
+        "suspend"
+      ]
+    },
+    "ST20-13": {
+      "path": "st20/ST20-13.yaml",
+      "predicates": [
+        "all_of",
+        "cost_target_from_hand",
+        "kind",
+        "opponents_turn",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_security"
+      ],
+      "verbs": [
+        "play_from_security",
+        "suspend"
       ]
     },
     "ST20-14": {
@@ -27097,6 +27199,38 @@
         "select_opponent_permanent"
       ]
     },
+    "ST21-06": {
+      "path": "st21/ST21-06.yaml",
+      "predicates": [
+        "all_of",
+        "can_attack",
+        "color_is",
+        "dp_lte",
+        "event_permanent_is_source",
+        "event_target_kind",
+        "event_target_owner",
+        "event_target_trait_has",
+        "kind",
+        "level_eq",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_ally_played",
+        "on_digivolve",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "grant_keyword",
+        "may_attack_now",
+        "place_on_security",
+        "select_opponent_permanent",
+        "select_own_permanent"
+      ]
+    },
     "ST21-07": {
       "path": "st21/ST21-07.yaml",
       "predicates": [
@@ -27226,12 +27360,35 @@
         "select_trash"
       ]
     },
+    "ST21-12": {
+      "path": "st21/ST21-12.yaml",
+      "predicates": [
+        "all_of",
+        "any_permanent",
+        "cost_target_from_hand",
+        "kind",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_security",
+        "start_of_your_main_phase"
+      ],
+      "verbs": [
+        "gain_memory",
+        "play_from_security",
+        "suspend"
+      ]
+    },
     "ST21-13": {
       "path": "st21/ST21-13.yaml",
       "predicates": [
         "all_of",
         "any_permanent",
         "card_number_is",
+        "cost_target_from_hand",
         "is_unsuspended",
         "kind",
         "level_gte",
@@ -27268,6 +27425,29 @@
         "place_self_as_delay_option",
         "reveal_top_deck",
         "select_reveal_buckets"
+      ]
+    },
+    "ST21-15": {
+      "path": "st21/ST21-15.yaml",
+      "predicates": [
+        "all_of",
+        "kind",
+        "level_eq",
+        "level_gte",
+        "name_is",
+        "no_face_up_security_named",
+        "owner",
+        "your_turn"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_security"
+      ],
+      "verbs": [
+        "add_bottom_security_to_hand",
+        "place_on_security",
+        "play_from_trash_free",
+        "select_trash"
       ]
     },
     "ST22-08": {
@@ -29894,23 +30074,30 @@
       "ST2-06",
       "ST2-08",
       "ST2-09",
+      "ST20-01",
       "ST20-02",
       "ST20-03",
       "ST20-04",
       "ST20-06",
+      "ST20-08",
       "ST20-09",
       "ST20-10",
       "ST20-11",
+      "ST20-12",
+      "ST20-13",
       "ST20-14",
       "ST21-01",
       "ST21-03",
       "ST21-04",
       "ST21-05",
+      "ST21-06",
       "ST21-08",
       "ST21-09",
       "ST21-10",
       "ST21-11",
+      "ST21-12",
       "ST21-13",
+      "ST21-15",
       "ST22-08",
       "ST22-11",
       "ST22-12",
@@ -30148,6 +30335,7 @@
       "ST12-03",
       "ST12-13",
       "ST13-08",
+      "ST20-01",
       "ST21-02",
       "ST21-07",
       "ST21-08",
@@ -30229,6 +30417,7 @@
       "AD1-016",
       "AD1-017",
       "AD1-018",
+      "AD1-020",
       "AD1-021",
       "AD1-022",
       "AD1-023",
@@ -30791,6 +30980,7 @@
       "AD1-014",
       "AD1-017",
       "AD1-019",
+      "AD1-020",
       "AD1-021",
       "AD1-022",
       "AD1-023",
@@ -31034,7 +31224,9 @@
       "ST2-12",
       "ST20-10",
       "ST20-11",
+      "ST20-12",
       "ST21-10",
+      "ST21-12",
       "ST21-13",
       "ST22-11",
       "ST23-01",
@@ -31146,6 +31338,7 @@
       "AD1-005",
       "AD1-011",
       "AD1-015",
+      "AD1-020",
       "AD1-022",
       "AD1-023",
       "BT10-048",
@@ -31351,6 +31544,7 @@
     "can_attack": [
       "AD1-004",
       "AD1-009",
+      "AD1-020",
       "AD1-021",
       "BT17-081",
       "BT19-090",
@@ -31372,6 +31566,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09"
     ],
     "can_change_orientation": [
@@ -32178,11 +32373,13 @@
       "ST20-03",
       "ST20-04",
       "ST20-06",
+      "ST20-08",
       "ST20-09",
       "ST20-10",
       "ST20-11",
       "ST21-04",
       "ST21-05",
+      "ST21-06",
       "ST21-07",
       "ST21-08",
       "ST21-09",
@@ -32286,7 +32483,11 @@
       "BT5-092",
       "BT7-038",
       "EX2-007",
-      "EX2-046"
+      "EX2-046",
+      "ST20-12",
+      "ST20-13",
+      "ST21-12",
+      "ST21-13"
     ],
     "cost_target_permanent": [
       "BT7-038"
@@ -32531,6 +32732,7 @@
       "P-196",
       "P-224",
       "P-250",
+      "ST20-08",
       "ST21-03",
       "ST21-05",
       "ST23-07",
@@ -32685,6 +32887,7 @@
       "RB1-010",
       "ST1-15",
       "ST20-11",
+      "ST21-06",
       "ST21-09",
       "ST22-08",
       "ST22-12",
@@ -33093,6 +33296,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09",
       "ST23-06",
       "ST24-04"
@@ -33300,6 +33504,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09",
       "ST24-11",
       "ST3-01",
@@ -33501,6 +33706,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09",
       "ST24-11",
       "ST3-01",
@@ -33557,6 +33763,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09"
     ],
     "event_winner_is_source": [
@@ -33801,6 +34008,7 @@
     ],
     "is_source": [
       "AD1-015",
+      "AD1-020",
       "AD1-023",
       "AD1-024",
       "BT11-112",
@@ -33944,6 +34152,7 @@
       "AD1-017",
       "AD1-018",
       "AD1-019",
+      "AD1-020",
       "AD1-021",
       "AD1-022",
       "AD1-023",
@@ -34794,21 +35003,27 @@
       "ST20-04",
       "ST20-05",
       "ST20-06",
+      "ST20-08",
       "ST20-09",
       "ST20-10",
       "ST20-11",
+      "ST20-12",
+      "ST20-13",
       "ST20-14",
       "ST20-15",
       "ST21-01",
       "ST21-03",
       "ST21-04",
       "ST21-05",
+      "ST21-06",
       "ST21-08",
       "ST21-09",
       "ST21-10",
       "ST21-11",
+      "ST21-12",
       "ST21-13",
       "ST21-14",
+      "ST21-15",
       "ST22-08",
       "ST22-11",
       "ST22-12",
@@ -35570,6 +35785,7 @@
       "ST20-05",
       "ST20-06",
       "ST20-07",
+      "ST20-08",
       "ST20-09",
       "ST20-10",
       "ST20-11",
@@ -35577,11 +35793,13 @@
       "ST21-03",
       "ST21-04",
       "ST21-05",
+      "ST21-06",
       "ST21-07",
       "ST21-08",
       "ST21-09",
       "ST21-10",
       "ST21-11",
+      "ST21-15",
       "ST23-02",
       "ST23-03",
       "ST23-04",
@@ -35686,6 +35904,7 @@
       "ST20-14",
       "ST20-15",
       "ST21-13",
+      "ST21-15",
       "ST22-08",
       "ST22-11",
       "ST4-01",
@@ -36415,7 +36634,8 @@
       "P-244",
       "P-250",
       "ST20-10",
-      "ST21-10"
+      "ST21-10",
+      "ST21-15"
     ],
     "name_not_in_binding": [
       "BT26-086"
@@ -36428,7 +36648,8 @@
     ],
     "no_face_up_security_named": [
       "EX10-020",
-      "ST20-15"
+      "ST20-15",
+      "ST21-15"
     ],
     "no_permanent": [
       "BT12-016",
@@ -36654,6 +36875,7 @@
       "P-094",
       "P-240",
       "ST20-07",
+      "ST20-13",
       "ST3-12",
       "ST5-14"
     ],
@@ -36717,6 +36939,7 @@
       "AD1-017",
       "AD1-018",
       "AD1-019",
+      "AD1-020",
       "AD1-021",
       "AD1-022",
       "AD1-023",
@@ -37261,19 +37484,25 @@
       "ST2-12",
       "ST20-03",
       "ST20-06",
+      "ST20-08",
       "ST20-10",
       "ST20-11",
+      "ST20-12",
+      "ST20-13",
       "ST20-14",
       "ST20-15",
       "ST21-03",
       "ST21-05",
+      "ST21-06",
       "ST21-07",
       "ST21-08",
       "ST21-09",
       "ST21-10",
       "ST21-11",
+      "ST21-12",
       "ST21-13",
       "ST21-14",
+      "ST21-15",
       "ST22-08",
       "ST22-11",
       "ST23-01",
@@ -37674,6 +37903,7 @@
     ],
     "source_count": [
       "AD1-015",
+      "AD1-020",
       "AD1-023",
       "BT13-112",
       "BT18-042",
@@ -37933,6 +38163,7 @@
       "AD1-015",
       "AD1-016",
       "AD1-019",
+      "AD1-020",
       "AD1-022",
       "AD1-023",
       "AD1-024",
@@ -38542,26 +38773,32 @@
       "ST19-09",
       "ST19-11",
       "ST19-12",
+      "ST20-01",
       "ST20-02",
       "ST20-03",
       "ST20-04",
       "ST20-05",
       "ST20-06",
       "ST20-07",
+      "ST20-08",
       "ST20-09",
       "ST20-10",
       "ST20-11",
+      "ST20-12",
+      "ST20-13",
       "ST20-14",
       "ST21-01",
       "ST21-02",
       "ST21-03",
       "ST21-04",
       "ST21-05",
+      "ST21-06",
       "ST21-07",
       "ST21-08",
       "ST21-09",
       "ST21-10",
       "ST21-11",
+      "ST21-12",
       "ST21-13",
       "ST21-14",
       "ST22-12",
@@ -38936,10 +39173,15 @@
       "ST20-06",
       "ST20-09",
       "ST20-10",
+      "ST20-12",
+      "ST20-13",
       "ST21-04",
+      "ST21-06",
       "ST21-09",
       "ST21-10",
+      "ST21-12",
       "ST21-13",
+      "ST21-15",
       "ST23-02",
       "ST23-03",
       "ST23-04",
@@ -38971,6 +39213,7 @@
       "AD1-017",
       "AD1-018",
       "AD1-019",
+      "AD1-020",
       "AD1-021",
       "AD1-022",
       "AD1-024",
@@ -39447,14 +39690,19 @@
       "ST19-05",
       "ST19-14",
       "ST20-06",
+      "ST20-08",
       "ST20-10",
       "ST20-11",
+      "ST20-12",
+      "ST20-13",
       "ST21-03",
       "ST21-05",
+      "ST21-06",
       "ST21-07",
       "ST21-09",
       "ST21-10",
       "ST21-11",
+      "ST21-12",
       "ST21-13",
       "ST22-11",
       "ST23-01",
@@ -39548,6 +39796,7 @@
     "end_of_your_turn": [
       "AD1-004",
       "AD1-009",
+      "AD1-020",
       "AD1-021",
       "BT1-090",
       "BT12-021",
@@ -39770,6 +40019,7 @@
       "ST20-14",
       "ST20-15",
       "ST21-14",
+      "ST21-15",
       "ST22-08",
       "ST22-11",
       "ST23-15",
@@ -39897,6 +40147,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09"
     ],
     "on_ally_won_battle": [
@@ -40161,6 +40412,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09"
     ],
     "on_discard_hand": [
@@ -40367,6 +40619,7 @@
       "AD1-014",
       "AD1-017",
       "AD1-018",
+      "AD1-020",
       "AD1-023",
       "AD1-025",
       "BT1-087",
@@ -40821,6 +41074,7 @@
       "ST20-11",
       "ST21-03",
       "ST21-04",
+      "ST21-06",
       "ST21-07",
       "ST21-08",
       "ST21-09",
@@ -40851,6 +41105,7 @@
       "AD1-017",
       "AD1-018",
       "AD1-019",
+      "AD1-020",
       "AD1-021",
       "AD1-022",
       "AD1-023",
@@ -41125,11 +41380,15 @@
       "ST2-15",
       "ST2-16",
       "ST20-05",
+      "ST20-12",
+      "ST20-13",
       "ST20-14",
       "ST20-15",
       "ST21-03",
+      "ST21-12",
       "ST21-13",
       "ST21-14",
+      "ST21-15",
       "ST22-08",
       "ST22-11",
       "ST23-13",
@@ -41237,6 +41496,7 @@
     ],
     "start_of_your_main_phase": [
       "AD1-019",
+      "AD1-020",
       "AD1-022",
       "AD1-023",
       "BT11-095",
@@ -41326,6 +41586,8 @@
       "P-212",
       "P-224",
       "P-249",
+      "ST20-12",
+      "ST21-12",
       "ST23-13",
       "ST23-14",
       "ST23-15",
@@ -42095,11 +42357,13 @@
       "ST20-04",
       "ST20-05",
       "ST20-06",
+      "ST20-08",
       "ST20-09",
       "ST20-11",
       "ST21-03",
       "ST21-04",
       "ST21-05",
+      "ST21-06",
       "ST21-08",
       "ST21-09",
       "ST21-11",
@@ -42238,7 +42502,8 @@
       "BT25-102",
       "BT26-100",
       "EX12-069",
-      "EX12-074"
+      "EX12-074",
+      "ST21-15"
     ],
     "add_dp_modifier": [
       "AD1-015",
@@ -43143,6 +43408,7 @@
       "AD1-002",
       "AD1-010",
       "AD1-015",
+      "AD1-020",
       "AD1-021",
       "AD1-023",
       "BT10-003",
@@ -43569,6 +43835,7 @@
     ],
     "gain_memory": [
       "AD1-019",
+      "AD1-020",
       "AD1-022",
       "AD1-023",
       "BT1-090",
@@ -43732,6 +43999,8 @@
       "ST16-14",
       "ST2-12",
       "ST2-13",
+      "ST20-12",
+      "ST21-12",
       "ST21-14",
       "ST23-13",
       "ST23-14",
@@ -43841,6 +44110,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09",
       "ST22-11",
       "ST23-14",
@@ -43892,6 +44162,7 @@
       "AD1-011",
       "AD1-015",
       "AD1-017",
+      "AD1-020",
       "AD1-021",
       "AD1-022",
       "AD1-023",
@@ -44380,6 +44651,7 @@
     "may_attack_now": [
       "AD1-004",
       "AD1-009",
+      "AD1-020",
       "AD1-021",
       "BT16-077",
       "BT16-101",
@@ -44430,6 +44702,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09"
     ],
     "may_dna_digivolve_now": [
@@ -44647,6 +44920,7 @@
       "EX9-074"
     ],
     "place_cards_as_bottom_sources": [
+      "AD1-020",
       "AD1-023",
       "BT18-081",
       "BT18-088",
@@ -44697,6 +44971,8 @@
       "EX9-021",
       "LM-020",
       "ST20-15",
+      "ST21-06",
+      "ST21-15",
       "ST23-05"
     ],
     "place_remainder_on_deck": [
@@ -45039,6 +45315,7 @@
       "P-207",
       "P-249",
       "ST19-09",
+      "ST20-08",
       "ST20-14",
       "ST20-15",
       "ST21-05",
@@ -45096,6 +45373,7 @@
     ],
     "play_from_security": [
       "AD1-019",
+      "AD1-020",
       "AD1-021",
       "AD1-022",
       "AD1-023",
@@ -45228,7 +45506,10 @@
       "ST19-14",
       "ST2-12",
       "ST20-05",
+      "ST20-12",
+      "ST20-13",
       "ST21-03",
+      "ST21-12",
       "ST21-13",
       "ST23-13",
       "ST23-14",
@@ -45300,6 +45581,7 @@
       "P-209",
       "P-220",
       "ST21-11",
+      "ST21-15",
       "ST6-13",
       "ST6-16"
     ],
@@ -46431,6 +46713,7 @@
       "ST19-09",
       "ST20-03",
       "ST20-06",
+      "ST20-08",
       "ST20-14",
       "ST20-15",
       "ST21-05",
@@ -46879,6 +47162,7 @@
       "ST21-03",
       "ST21-04",
       "ST21-05",
+      "ST21-06",
       "ST21-11",
       "ST22-08",
       "ST22-11",
@@ -47221,6 +47505,7 @@
       "ST20-06",
       "ST20-09",
       "ST21-04",
+      "ST21-06",
       "ST21-09",
       "ST22-08",
       "ST22-11",
@@ -47537,6 +47822,7 @@
       "P-210",
       "ST21-01",
       "ST21-11",
+      "ST21-15",
       "ST23-12",
       "ST24-12",
       "ST6-04",
@@ -47668,6 +47954,7 @@
     ],
     "select_zone_cards": [
       "AD1-015",
+      "AD1-020",
       "AD1-023",
       "BT18-081",
       "BT18-097",
@@ -47836,7 +48123,10 @@
       "ST18-14",
       "ST19-14",
       "ST20-09",
+      "ST20-12",
+      "ST20-13",
       "ST21-09",
+      "ST21-12",
       "ST21-13",
       "ST23-09",
       "ST24-09",
