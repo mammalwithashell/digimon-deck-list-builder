@@ -103,12 +103,15 @@ def run_selfplay_stage(
     resume: bool = False,
     max_retries: int = 1,
     worker_timeout_seconds: float = 3600,
+    opponent_pool: Path | None = None,
 ) -> list[Path]:
     """Run bounded native workers; return only successful, published outputs."""
     if eval_batch_size < 1:
         raise ValueError("eval_batch_size must be positive")
     if min(games, procs) < 1:
         raise ValueError("games and procs must be positive")
+    if opponent_pool and (uniform or scheduling != "dynamic"):
+        raise ValueError("Historical opponents require model-based dynamic scheduling")
     if scheduling == "dynamic":
         from tools.selfplay_scheduler import run_queue, sha256
         command = [cli_bin, "--pool", pool]
@@ -129,6 +132,10 @@ def run_selfplay_stage(
             for index, candidate in enumerate((Path(str(model_onnx) + ".meta.json"),
                                                Path(model_onnx).with_suffix(".meta.json"))):
                 assets[f"model_meta_{index}"] = candidate
+        if opponent_pool:
+            from tools.search_opponents import pool_assets
+            assets.update(pool_assets(opponent_pool, Path(model_onnx)))
+            command += ["--opponent-pool", str(opponent_pool)]
         identity = {"assets": {key: sha256(path) if path.exists() else None
                                 for key, path in assets.items()},
                     "search": {"sims": sims, "worlds": worlds, "mode": mode,
@@ -298,6 +305,12 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
         str(resolve_seed_model_onnx(args.seed_model, args.seed_model_onnx)) if is_gen0 else prev["model_onnx"]
     )
     warm_start_zip = str(seed_model) if is_gen0 else prev["model_zip"]
+    from tools.search_opponents import freeze_pool, summarize_opponents
+    opponent_pool = freeze_pool(Path(args.run_dir), gen,
+        Path(model_onnx_for_selfplay) if model_onnx_for_selfplay else None,
+        checkpoints=args.opponent_checkpoint, source=Path(args.opponent_pool) if args.opponent_pool else None,
+        history_window=args.history_window, selfplay_probability=args.selfplay_probability,
+        resume=args.resume_selfplay)
 
     print(f"=== generation {gen} ===", flush=True)
     print(f"self-play: {args.games} games / {args.procs} procs, warm-start selfplay model = "
@@ -325,6 +338,7 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
         resume=args.resume_selfplay,
         max_retries=args.worker_retries,
         worker_timeout_seconds=args.worker_timeout_seconds,
+        opponent_pool=opponent_pool,
     )
     t_selfplay = time.time() - t0
 
@@ -333,6 +347,9 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
     # Optional provenance on older/test fixtures without game-deck metadata.
     if all('game_decks' in json.loads((p / 'manifest.json').read_text()) for p in proc_dirs):
         atomic_json(gen_dir / 'archetype_coverage.json', appearance_counts(proc_dirs))
+    opponent_coverage = summarize_opponents(proc_dirs) if opponent_pool else None
+    if opponent_coverage is not None:
+        atomic_json(gen_dir / 'opponent_coverage.json', opponent_coverage)
 
     if getattr(args, "fail_on_truncation", False):
         truncated = sum(json.loads((p / "manifest.json").read_text())["truncated_games"] for p in proc_dirs)
@@ -387,6 +404,8 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
 
     summary = {
         "generation": gen,
+        "opponent_coverage": opponent_coverage,
+        "opponent_pool": str(opponent_pool) if opponent_pool else None,
         "search": {"mode": args.mode, "simulations_total_per_decision": args.sims,
             "worlds": args.worlds, "evaluation_batch_size_requested": args.eval_batch_size},
         "scheduling": {"mode": args.scheduling, "workers": args.procs,
@@ -438,6 +457,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--run-dir", required=True, help="root directory for this self-play run")
     p.add_argument("--seed-model", required=True, help="SB3 .zip to warm-start generation 0's TRAINING from")
     p.add_argument("--seed-model-onnx", default=None, help="policy+value ONNX for generation 0's SELF-PLAY (default: a same-stem .onnx sibling of --seed-model)")
+    p.add_argument("--opponent-pool", help="Hash-pinned search-opponent-pool-v1 JSON")
+    p.add_argument("--opponent-checkpoint", action="append", default=[], metavar="ID=PATH",
+                   help="Add a frozen historical ONNX checkpoint (repeatable, equal weights)")
+    p.add_argument("--history-window", type=int, default=0,
+                   help="Include N latest completed generations older than the current actor")
+    p.add_argument("--selfplay-probability", type=float, default=None,
+                   help="Current-current fraction; default 0.5 with pins/window, or pool's value")
     p.add_argument("--uniform", action="store_true", help="gen 0 self-plays with the uniform stub evaluator instead of an ONNX export")
     p.add_argument("--decks", required=True, help="deck-pool JSON for the selfplay driver")
     p.add_argument("--cli-bin", default=None, help="path to digimon-engine-cli (default: auto-detect target/{release,debug})")

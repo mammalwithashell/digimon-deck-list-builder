@@ -207,3 +207,11 @@ logical checkpoint indices; inherited replay is not new progress.
 comparisons and paired continuations, with no training or model promotion.
 Build its Rust example and follow the runbook's commands and interpretation
 limits. The October 28 repairs have not been deployed by these diagnostics.
+
+Historical-checkpoint opponents are now an opt-in native search feature; see
+the [configuration and coverage guide](../../../docs/TRAINING_RUNBOOK.md#historical-checkpoints-as-search-training-opponents).
+Campaign plans can supply a hash-pinned pool and a recent-generation window.
+Both actors retain the full search budget, but only learner decisions become
+targets against history. Scale games using learner appearances, freeze the pool
+per generation, and retain independent evaluation anchors. This feature does
+not change or restart an existing deployment.

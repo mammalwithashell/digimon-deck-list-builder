@@ -1622,3 +1622,156 @@ and `search_continuations: true`. Run the same native example as
 sensitivity, use another plan with opponents `[]`, omit the continuation flag,
 and vary only `search_seed`. These post-screen checks are selected
 counterexamples, not additional independent population samples.
+
+## Historical checkpoints as search-training opponents
+
+Native search self-play can opt into frozen historical opponents. This is
+separate from replaying old training shards (`--window`) and from PPO's
+`--opponent pool`. Without any history options, the native driver retains the
+existing current-versus-current behavior, seeds and targets.
+
+Use named ONNX checkpoints, a recent completed-generation window, or both:
+
+```bash
+python -m tools.run_selfplay_generation \
+  --run-dir runs/history-experiment --seed-model models/current.zip \
+  --seed-model-onnx models/current.onnx --decks training_jobs/decks.json \
+  --cli-bin target/release/digimon-engine-cli --generations 4 \
+  --games 1300 --procs 8 --chunk-games 4 --sims 320 --worlds 4 \
+  --eval-batch-size 4 --decision-cap 1200 --fail-on-truncation \
+  --window 3 --replay-games-per-generation 1300 \
+  --opponent-checkpoint previous-campaign-cp2=models/older-cp2.onnx \
+  --history-window 3 --selfplay-probability 0.5 \
+  --deck-pool-snapshot evaluation/heldout.json --champions evaluation/anchors.json
+```
+
+The example illustrates configuration, not an approved cloud rollout or a
+claim that 50/50 is optimal. Keep evaluation anchors fixed so opponent-pool
+changes do not change the strength measurement. An anchor used in training is
+no longer an unseen opponent; retain additional frozen evaluation-only models.
+Existing cloud campaigns continue to use their separate checkpoint evaluator.
+
+`--opponent-checkpoint ID=PATH` is repeatable and gives each explicit opponent
+weight one. `--history-window N` adds the latest N completed generations older
+than the current actor's generation, also with weight one. A generation needs
+its summary, ZIP, ONNX and canonical `model.onnx.meta.json` to qualify. Current,
+future and incomplete generations are excluded. Checkpoint IDs should include
+campaign provenance when numbering could be ambiguous. Duplicate IDs or model
+hashes, including a copy of the current actor, are rejected. A window alone at
+bootstrap fails with an empty-history error; provide explicit older models or
+start from a later generation with existing completed history.
+
+For weighted pins, use `--opponent-pool opponents.json`:
+
+```json
+{
+  "schema": "search-opponent-pool-v1",
+  "selfplay_probability": 0.5,
+  "opponents": [{
+    "id": "older-campaign-cp2",
+    "path": "models/cp2.onnx",
+    "sha256": "<64 lowercase hex characters for the ONNX>",
+    "metadata_sha256": "<64 lowercase hex characters for cp2.onnx.meta.json>",
+    "weight": 2.0
+  }]
+}
+```
+
+Paths in a source manifest are relative to that manifest. Use real SHA256
+values (`sha256sum` on Linux, `Get-FileHash -Algorithm SHA256` on PowerShell,
+converting hex to lowercase). Explicit CLI pins compute these hashes for you.
+All models must share the current observation/action contract and have a
+terminal-outcome value head; both sidecars and embedded ONNX contracts are
+checked. A shaped-value PPO export is rejected. The probability flag overrides
+the manifest value; with pins/window alone the default is 0.5. The remaining
+probability is split proportionally among historical weights.
+
+Each generation freezes `opponent_pool.json` and its request receipt before
+collection. Scheduler identity binds the manifest and every opponent's model
+and sidecar. Resume (`--resume-selfplay`) must use the same inputs; mutation,
+removal or addition of a history pool fails without overwriting evidence.
+Use dynamic scheduling; legacy static scheduling and uniform bootstrap do not
+support historical opponents. Do not modify model files while workers run.
+
+Opponent selection uses a separate random stream and one assignment per global
+game pair, independent of worker count, chunk boundaries or retries. The
+learner opens the even-indexed game and plays second in its paired odd game.
+Deck sampling and shuffled game seeds remain unchanged: these are balanced
+opening-order assignments, **not** identical-deal evaluation pairs. An odd
+tail can leave one unmatched opening order. Realized opponent frequencies are
+random, not exact quotas.
+
+At each real decision the acting seat supplies its own evaluator to the full
+existing search. Both actors keep the same simulation/world/batch budget and
+temperature schedule. Within a search tree, that actor's evaluator still
+evaluates all leaves; this is not opponent-model-aware tree search. Separate
+models also have separate optional evaluation caches. Nothing here changes
+the current open-decklist PIMC information assumptions or tensor/action layout.
+
+Current-current games emit both seats' targets. Against history, only the
+current actor's rows enter the learner's policy and value losses. The older
+actor still searches and executes its complete legal choice, including page
+navigation; its decisions do not supply training targets. Terminal labels and
+truncation/quarantine handling are unchanged.
+
+This changes coverage accounting. With G games, A equally weighted archetypes
+and current-self-play probability p, expected learner appearances per
+archetype are `G * (1 + p) / A`. At 13 archetypes and p=0.5, 1,100 games yield
+about 127 learner appearances; **1,300 games yield 150**. Old replay remains
+valid, but a game's learner-row count can differ across generations. Compare
+retained training rows and learner coverage alongside games and compute.
+
+Native manifests record `opponent_pool` and `opponent_games`: stable identities,
+game seeds, learner seat, opening seat, winner, truncation, searched decisions
+and training rows by seat. Generation `opponent_coverage.json` separates learner
+deck appearances from all-player appearances. At collection completion the
+W&B monitor logs `selfplay/opponent_games/*`,
+`selfplay/learner_archetype_appearances/*`,
+`selfplay/historical_learner_first`, `selfplay/historical_learner_second` and
+`selfplay/learner_training_rows`. These are collection counts before quarantine,
+not evaluation win rates or post-quarantine fitting counts.
+
+A new cloud campaign plan can include:
+
+```json
+"historical_opponents": {
+  "pool": "inputs/opponents.json",
+  "history_window": 3,
+  "selfplay_probability": 0.5
+}
+```
+
+Place pins inside the campaign root. Include the source manifest, selected
+models and canonical sidecars, current sidecar, and initial historical
+generation summaries/ZIPs in the plan's `files` hashes. Validation checks these
+before launch and enforces at least 150 **expected learner** appearances per
+archetype for the configured mixture. Later generations freeze their newly
+eligible history independently. A new image containing this implementation is
+required. This documentation/PR does not start training or deploy an image.
+
+Historical diversity remains an experiment: the matched raising study did not
+establish it as the cause of the regression. Test the mixture against a
+current-only control with matched search budgets and fixed evaluation panels;
+report rows, compute, archetype coverage and uncertainty. Additional resident
+ONNX models consume memory per worker, so use a bounded history window.
+
+Validation for this addition: 100 Python regressions passed (one platform
+skip), all 24 native search/self-play tests passed, and all 13 tier-zero checks
+passed. Native tests compare retained observations, policy visits, terminal
+labels and mover IDs against an identical-evaluator baseline; they also cover
+split game pairs, opening-order assignment, artifact drift and byte-identical
+targets with a 100% current-current mixture. This establishes pipeline
+behavior, not a strength benefit from historical opponents.
+
+The local real-model check used checkpoint 5 versus checkpoint 2 at 320/four
+worlds/batch four on Chronicle/Chronomon decks. One full game completed with 46
+decisions, 28 learner rows and no truncation. The second exceeded the local
+600-second Windows dev-build worker deadline; the failed attempt is preserved
+under `runs/history-opponent-smoke-20261028`. This is a development validation
+limit, not a measured strength or production throughput result. Qualify the
+release image separately before an unattended cloud run.
+
+A separate six-decision routing probe completed both opening orders at the
+same search budget, emitting four learner rows and no historical-actor rows.
+Its two truncations were intentional; these probe shards were not fitted or
+used to measure strength (`runs/history-opponent-routing-probe-20261028`).

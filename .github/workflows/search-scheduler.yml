@@ -5,6 +5,8 @@ on:
     paths:
       - code/tools/selfplay_scheduler.py
       - code/tools/run_selfplay_generation.py
+      - code/tools/search_opponents.py
+      - code/tests/rl/test_search_opponents.py
       - code/tests/rl/test_selfplay_scheduler.py
       - code/tests/rl/test_search_generation_contract.py
       - code/tools/search_quality_study.py
@@ -22,6 +24,8 @@ on:
     paths:
       - code/tools/selfplay_scheduler.py
       - code/tools/run_selfplay_generation.py
+      - code/tools/search_opponents.py
+      - code/tests/rl/test_search_opponents.py
       - code/tests/rl/test_selfplay_scheduler.py
       - code/tests/rl/test_search_generation_contract.py
       - code/tools/search_quality_study.py
@@ -53,4 +57,4 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install pytest numpy
-      - run: python -m pytest code/tests/rl/test_selfplay_scheduler.py code/tests/rl/test_search_generation_contract.py code/tests/rl/test_search_quality_study.py code/tests/rl/test_search_budget_confirmation.py code/tests/tools/test_raising_diagnostic.py code/tests/tools/test_analyze_page_search_results.py -q
+      - run: python -m pytest code/tests/rl/test_selfplay_scheduler.py code/tests/rl/test_search_generation_contract.py code/tests/rl/test_search_opponents.py code/tests/rl/test_search_quality_study.py code/tests/rl/test_search_budget_confirmation.py code/tests/tools/test_raising_diagnostic.py code/tests/tools/test_analyze_page_search_results.py -q

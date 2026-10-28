@@ -21,6 +21,7 @@ use std::collections::HashMap;
 use digimon_engine::card_data::CardData;
 use digimon_engine::search::{DeterminizedConfig, UniformEvaluator};
 use digimon_engine::selfplay::{npy, run_self_play, SelfPlayConfig};
+mod opponents;
 
 const D1: &[&str] = &[
     "ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-02", "ST1-02", "ST1-02", "ST1-02", "ST1-03",

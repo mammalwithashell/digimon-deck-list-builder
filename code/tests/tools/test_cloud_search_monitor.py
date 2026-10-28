@@ -58,6 +58,20 @@ def test_summary_loss_replaces_rounded_stdout(tmp_path):
     assert monitor.epoch_events(tmp_path, log)[0]["train/policy_loss"] == 1.234567
 
 
+def test_historical_opponents_log_learner_coverage_separately(tmp_path):
+    write(tmp_path, 'generation/gen0/archetype_coverage.json', {'appearances': {'A': 8}})
+    write(tmp_path, 'generation/gen0/opponent_coverage.json', {
+        'games_by_opponent': {'current': 2, 'cp2': 2}, 'learner_appearances': {'A': 6},
+        'historical_learner_opening_order': {'first': 1, 'second': 1}, 'training_rows': 70})
+    result = monitor.collect(tmp_path, 100)
+    assert result['selfplay/archetype_appearances/A'] == 8
+    assert result['selfplay/learner_archetype_appearances/A'] == 6
+    assert result['selfplay/opponent_games/cp2'] == 2
+    assert result['selfplay/historical_learner_first'] == 1
+    assert result['selfplay/historical_learner_second'] == 1
+    assert result['selfplay/learner_training_rows'] == 70
+
+
 def test_combined_campaign_metrics_keep_their_panel(tmp_path):
     write(tmp_path, 'experiment_state.json', dict(stage='checkpoint_evaluation', generation_index=1))
     write(tmp_path, 'deployment-plan.json', dict(games=1100,
