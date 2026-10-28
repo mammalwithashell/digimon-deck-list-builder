@@ -68,9 +68,18 @@ def test_block_interval_resamples_blocks_not_games():
 
 def test_plan_shares_cap_partitions_with_equal_compute_arm(tmp_path):
     args = SimpleNamespace(games=1000, partition=250, cap_cost_ratio=0.36, seed=1, sims=320, worlds=4,
-                           eval_batch_size=4, decision_cap=1200, temperature_decisions=16, out=tmp_path)
+                           eval_batch_size=4, decision_cap=1200, temperature_decisions=16, out=tmp_path,
+                           arms=["full", "cap", "cap_eq", "phase", "phase_eq", "both_eq"])
     p = gen.plan(args)
     assert p["cap_eq_games"] == 3000  # ceil(1000/0.36 / 250) * 250
+    assert p["arms"]["phase"]["flags"] == ["--reduced-sims", "64"]
+    assert p["arms"]["phase_eq"]["games"] == 2500  # ceil(1000/0.44 / 250) * 250
+    assert p["arms"]["phase_eq"]["generate_partitions"][0] == (1000, 250)
+    assert p["arms"]["both_eq"]["games"] == 4250 and p["arms"]["both_eq"]["flags"][:2] == ["--reduced-sims", "64"]
+    assert gen.shard_dirs(args, "phase_eq", p)[0] == tmp_path / "shards" / "phase" / "g00000-250"
+    assert gen.shard_dirs(args, "phase_eq", p)[4] == tmp_path / "shards" / "phase_eq" / "g01000-250"
+    with pytest.raises(SystemExit, match="unknown arm"):
+        gen.plan(SimpleNamespace(**{**vars(args), "arms": ["gumbel"]}))
     assert p["arms"]["cap"]["generate_partitions"] == [(0, 250), (250, 250), (500, 250), (750, 250)]
     assert p["arms"]["cap_eq"]["generate_partitions"][0] == (1000, 250)
     assert len(p["arms"]["cap_eq"]["partitions"]) == 12

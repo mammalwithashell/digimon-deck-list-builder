@@ -15,6 +15,11 @@ every arm):
 - ``cap_eq``: cap randomization over ``games / 0.36`` game indices — the
               ``cap`` partitions plus extra ones (equal search compute).
 
+Further arms (``--arms``), same construction: ``phase`` (C1 phase budget,
+``--reduced-sims 64`` at every root that is not an unconstrained Main-phase
+decision; 0.44x), ``both`` (C1 + C2; 0.24x) and their ``_eq`` twins. A later run
+in the same ``--out`` reuses the ``full`` shards, child and panels.
+
 Stages (re-runnable; each writes under ``--out``):
 
     generate  spawn partitioned ``digimon-engine-cli selfplay`` jobs (``--jobs`` at once)
@@ -47,33 +52,60 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS = REPO_ROOT / "code" / "tools"
 
 CAP_FLAGS = ["--full-search-fraction", "0.25", "--cheap-sims", "64"]
+PHASE_FLAGS = ["--reduced-sims", "64"]
+
+# Base arms: selfplay flags + measured search seconds per decision relative to `full`
+# (research doc, "per-decision cost" table: C2 0.36, C1 0.44, C3 0.24). An arm named
+# `<base>_eq` is the equal-search-compute twin: the base arm's games plus a generated
+# tail up to games / cost_ratio, rounded up to whole partitions.
+BASE_ARMS = {
+    "full": dict(flags=[], cost_ratio=1.0),
+    "cap": dict(flags=CAP_FLAGS, cost_ratio=0.36),
+    "phase": dict(flags=PHASE_FLAGS, cost_ratio=0.44),
+    "both": dict(flags=PHASE_FLAGS + CAP_FLAGS, cost_ratio=0.24),
+}
+DEFAULT_ARMS = ["full", "cap", "cap_eq"]
 
 
 def partitions(start: int, games: int, size: int) -> list[tuple[int, int]]:
     return [(g, min(size, start + games - g)) for g in range(start, start + games, size)]
 
 
+def base_of(arm: str) -> str:
+    return arm[: -len("_eq")] if arm.endswith("_eq") else arm
+
+
 def plan(args) -> dict:
-    cap_eq_games = int(math.ceil(args.games / args.cap_cost_ratio / args.partition)) * args.partition
-    arms = {
-        "full": dict(flags=[], partitions=partitions(0, args.games, args.partition)),
-        "cap": dict(flags=CAP_FLAGS, partitions=partitions(0, args.games, args.partition)),
-        "cap_eq": dict(flags=CAP_FLAGS, partitions=partitions(0, cap_eq_games, args.partition)),
-    }
-    # cap_eq shares cap's data for the first `games` indices; generate only the tail.
-    arms["cap_eq"]["generate_partitions"] = partitions(args.games, cap_eq_games - args.games, args.partition)
-    arms["cap"]["generate_partitions"] = arms["cap"]["partitions"]
-    arms["full"]["generate_partitions"] = arms["full"]["partitions"]
-    return dict(games=args.games, cap_eq_games=cap_eq_games, seed=args.seed, sims=args.sims,
-                worlds=args.worlds, eval_batch_size=args.eval_batch_size, decision_cap=args.decision_cap,
-                temperature_decisions=args.temperature_decisions, cap_flags=CAP_FLAGS, arms=arms)
+    arms = {}
+    for arm in args.arms:
+        base = base_of(arm)
+        if base not in BASE_ARMS:
+            raise SystemExit(f"unknown arm {arm!r}; bases are {sorted(BASE_ARMS)} (+ `_eq`)")
+        spec = BASE_ARMS[base]
+        ratio = args.cap_cost_ratio if base == "cap" else spec["cost_ratio"]
+        if arm == base:
+            total = args.games
+            generate = partitions(0, total, args.partition)
+        else:
+            total = int(math.ceil(args.games / ratio / args.partition)) * args.partition
+            # The `_eq` arm shares the base arm's data for the first `games` indices; generate only the tail.
+            generate = partitions(args.games, total - args.games, args.partition)
+        arms[arm] = dict(flags=spec["flags"], cost_ratio=ratio, games=total,
+                         partitions=partitions(0, total, args.partition), generate_partitions=generate)
+    p = dict(games=args.games, seed=args.seed, sims=args.sims, worlds=args.worlds,
+             eval_batch_size=args.eval_batch_size, decision_cap=args.decision_cap,
+             temperature_decisions=args.temperature_decisions, cap_flags=CAP_FLAGS, phase_flags=PHASE_FLAGS,
+             arms=arms)
+    if "cap_eq" in arms:
+        p["cap_eq_games"] = arms["cap_eq"]["games"]
+    return p
 
 
 def shard_dirs(args, arm: str, p: dict) -> list[Path]:
-    source_arm = "cap" if arm == "cap_eq" else arm
+    base = base_of(arm)
     dirs = []
     for start, count in p["arms"][arm]["partitions"]:
-        owner = source_arm if start < args.games else "cap_eq"
+        owner = base if start < args.games else arm
         dirs.append(args.out / "shards" / owner / f"g{start:05d}-{count}")
     return dirs
 
@@ -108,21 +140,25 @@ def selfplay_job(args, arm: str, start: int, count: int, flags: list[str]) -> di
 
 def stage_generate(args, p: dict) -> list[dict]:
     jobs = []
-    for arm in ("full", "cap", "cap_eq"):
+    for arm in args.arms:
         for start, count in p["arms"][arm]["generate_partitions"]:
             jobs.append((arm, start, count, p["arms"][arm]["flags"]))
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         records = list(pool.map(lambda j: selfplay_job(args, *j), jobs))
     failed = [r for r in records if r.get("returncode", 0) != 0]
-    (args.out / "generate.json").write_text(json.dumps(records, indent=2), encoding="utf-8")
+    # Merge with earlier runs in the same --out (e.g. the `full` partitions a later arm set reuses).
+    path = args.out / "generate.json"
+    merged = {r["directory"]: r for r in (json.loads(path.read_text(encoding="utf-8")) if path.exists() else [])}
+    merged.update({r["directory"]: r for r in records if not r.get("skipped")})
+    path.write_text(json.dumps(list(merged.values()), indent=2), encoding="utf-8")
     if failed:
         raise SystemExit(f"{len(failed)} selfplay partition(s) failed; see generate.json")
     return records
 
 
 def stage_train(args, p: dict) -> dict:
-    out = {}
-    for arm in ("full", "cap", "cap_eq"):
+    out = json.loads((args.out / "train.json").read_text(encoding="utf-8")) if (args.out / "train.json").exists() else {}
+    for arm in args.arms:
         model_dir = args.out / "models" / arm
         model_dir.mkdir(parents=True, exist_ok=True)
         zip_path, onnx_path = model_dir / "model.zip", model_dir / "model.onnx"
@@ -167,16 +203,20 @@ def h2h_job(args, name: str, candidate: Path, opponent: str) -> dict:
 
 
 def stage_evaluate(args) -> dict:
-    models = {arm: args.out / "models" / arm / "model.zip" for arm in ("full", "cap", "cap_eq")}
+    models = {arm: args.out / "models" / arm / "model.zip" for arm in args.arms}
     jobs = {f"{arm}-vs-parent": (models[arm], str(args.parent_zip)) for arm in models}
-    jobs.update({f"{arm}-vs-greedy": (models[arm], "greedy") for arm in models})
-    jobs["parent-vs-greedy"] = (args.parent_zip, "greedy")
-    jobs["cap_eq-vs-full"] = (models["cap_eq"], str(models["full"]))
-    jobs["cap-vs-full"] = (models["cap"], str(models["full"]))
+    if args.greedy:
+        jobs.update({f"{arm}-vs-greedy": (models[arm], "greedy") for arm in models})
+        jobs["parent-vs-greedy"] = (args.parent_zip, "greedy")
+    full_zip = args.out / "models" / "full" / "model.zip"
+    if full_zip.exists():
+        # Every non-full child is also measured directly against the full-search child.
+        jobs.update({f"{arm}-vs-full": (models[arm], str(full_zip)) for arm in models if arm != "full"})
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         results = dict(zip(jobs, pool.map(lambda kv: h2h_job(args, kv[0], *kv[1]), jobs.items())))
-    summary = {name: {k: r.get(k, 0) for k in ("games", "wins", "losses", "draws", "incomplete", "score", "score_ci95")}
-               for name, r in results.items()}
+    summary = json.loads((args.out / "evaluate.json").read_text(encoding="utf-8")) if (args.out / "evaluate.json").exists() else {}
+    summary.update({name: {k: r.get(k, 0) for k in ("games", "wins", "losses", "draws", "incomplete", "score", "score_ci95")}
+                    for name, r in results.items()})
     (args.out / "evaluate.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2), flush=True)
     return summary
@@ -187,7 +227,7 @@ def stage_report(args, p: dict) -> dict:
                   trained=json.loads((args.out / "train.json").read_text(encoding="utf-8")),
                   evaluated=json.loads((args.out / "evaluate.json").read_text(encoding="utf-8")))
     per_arm = {}
-    for arm in ("full", "cap", "cap_eq"):
+    for arm in args.arms:
         recs = [r for r in report["generated"] if Path(r["directory"]) in set(shard_dirs(args, arm, p))]
         per_arm[arm] = dict(
             games=sum(r["count"] for r in recs), rows=sum(r.get("rows", 0) for r in recs),
@@ -196,7 +236,7 @@ def stage_report(args, p: dict) -> dict:
             policy_rows=sum((r.get("full_search_decisions") or r.get("rows", 0)) for r in recs),
             truncated_games=sum(r.get("truncated_games", 0) for r in recs))
     report["per_arm"] = per_arm
-    (args.out / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    (args.out / args.report_name).write_text(json.dumps(report, indent=2), encoding="utf-8")
     print(json.dumps(per_arm, indent=2), flush=True)
     return report
 
@@ -210,6 +250,11 @@ def main(argv=None) -> int:
     ap.add_argument("--parent-zip", type=Path, required=True, help="same parent as SB3 .zip for the trainer")
     ap.add_argument("--decks", type=Path, required=True)
     ap.add_argument("--cards-json", type=Path, required=True)
+    ap.add_argument("--arms", default=",".join(DEFAULT_ARMS),
+                    help=f"comma-separated arms from {sorted(BASE_ARMS)}, each optionally with an `_eq` "
+                         "equal-compute twin; `full` shards/model/panels are reused when they already exist")
+    ap.add_argument("--greedy", action=argparse.BooleanOptionalAction, default=True,
+                    help="also run every child (and the parent) against greedy")
     ap.add_argument("--games", type=int, default=1000)
     ap.add_argument("--partition", type=int, default=250)
     ap.add_argument("--cap-cost-ratio", type=float, default=0.36, help="measured cap/full seconds per decision")
@@ -224,9 +269,11 @@ def main(argv=None) -> int:
     ap.add_argument("--batch-size", type=int, default=512)
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--blocks-per-pair", type=int, default=1)
+    ap.add_argument("--report-name", default="report.json", help="report file name under --out")
     ap.add_argument("--on-engine-error", choices=["fail", "skip"], default="skip",
                     help="head-to-head games an engine fault aborts are recorded as incomplete, never scored")
     args = ap.parse_args(argv)
+    args.arms = [a.strip() for a in args.arms.split(",") if a.strip()]
     args.out.mkdir(parents=True, exist_ok=True)
     p = plan(args)
     (args.out / "plan.json").write_text(json.dumps(p, indent=2), encoding="utf-8")

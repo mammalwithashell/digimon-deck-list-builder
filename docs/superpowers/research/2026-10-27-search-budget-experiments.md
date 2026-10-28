@@ -370,3 +370,35 @@ sat in player 2's **hand**, the mask offered "Play Kotenken Token from hand 9"
 and execution refused it — the no-op tripwire fired. Filed in
 `docs/RUST_ENGINE_GAPS.md` as `G-ENGINE-TOKEN-RETURNED-TO-HAND`. The game is
 recorded as `incomplete`, never scored (`--on-engine-error skip`).
+
+## Phase-budget generation test (preregistered 2026-10-28, before generation)
+
+Same protocol, parent, seed, deck pool and panel as the cap-randomization
+generation test; the `full` shards, child and `full-vs-parent` panel are
+reused unchanged (`--arms full,phase,phase_eq,both,both_eq`, same `--out`).
+
+| Arm | Selfplay flags | Games | Search cost vs `full` |
+|---|---|---|---|
+| `phase` | `--reduced-sims 64` (C1: every root that is not an unconstrained Main-phase decision gets 64 total sims; Main roots keep 320/4) | 1000 (same indices) | 0.44× (measured per decision) |
+| `phase_eq` | same | 2500 = ceil(1000/0.44/250)·250 | ≈1.1× |
+| `both` | `--reduced-sims 64 --full-search-fraction 0.25 --cheap-sims 64` (C1 + C2) | 1000 | 0.24× |
+| `both_eq` | same | 4250 | ≈1.0× |
+
+Panels: each child vs parent and vs the `full` child, 2112 games, seat-balanced,
+block-bootstrap interval, engine faults recorded as `incomplete`. The greedy
+panel is dropped: it was saturated (≥0.97) for every arm last time.
+
+Questions, in order:
+1. Does cutting the search at pending/mulligan/breeding/timing-window roots
+   degrade the **training targets**? `phase` vs `full` at equal games. The
+   play-time match had c1 at 44% (inconclusive); a child at or above `full`
+   here would say the targets at those roots were already cheap to get right.
+2. Equal compute: `phase_eq` and `both_eq` vs `full` and vs parent, read
+   against `cap_eq`'s 0.548 / 0.517.
+3. Is C3 safe to stack — `both` vs `cap` at equal games (both children exist),
+   and `both_eq` is the first arm with >4× the games of `full`.
+
+Reading rules fixed in advance: an interval that excludes 0.5 against `full`
+is a result; one that spans it at equal games is "no measurable loss for the
+compute saved" (the same rule the cap test used); a child below `full` at
+equal games with an interval excluding 0.5 rejects the arm for generation.
