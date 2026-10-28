@@ -56,7 +56,7 @@ fn main_root(game: &Game) -> bool {
 }
 /// Search settings from a request object. Beyond `simulations`/`worlds`,
 /// the search-budget experiments add optional `reduced_simulations` (the
-/// budget for non-Main roots, applied when `main_root` is false), `root`
+/// budget for non-Main roots, applied when `main_root` is false).
 fn config(v: &Value, seed: u64, noise: f32, main_root: bool) -> DeterminizedConfig {
     let mut c = DeterminizedConfig::default();
     c.worlds = number(v, "worlds") as u32;
