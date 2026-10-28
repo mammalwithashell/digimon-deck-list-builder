@@ -817,7 +817,7 @@ pub struct Game {
     pub(crate) prepared_source_plays: Vec<(u64, Option<PreparedSourcePlay>)>,
     pub(crate) deletion_receipts: Vec<(u64, Vec<(PermanentHandle, Option<i32>, bool, (u16, u64))>)>,
     pub(crate) next_deletion_receipt: u64,
-    pub(crate) return_receipts: Vec<(u64, Vec<(CardHandle, bool)>)>,
+    pub(crate) return_receipts: Vec<(u64, Vec<crate::game_actions::ReturnedCard>)>,
     pub(crate) next_return_receipt: u64,
     pub(crate) field_source_receipts: Vec<(u64, Option<crate::card_source::CardHandle>)>,
     pub(crate) current_deletion_receipt: Option<u64>,

@@ -42,6 +42,7 @@ pub use link::LinkRuleTarget;
 mod misc;
 mod movement;
 mod grouped_return;
+pub(crate) use grouped_return::ReturnedCard;
 pub(crate) mod options;
 mod play;
 mod security;
@@ -3443,7 +3444,8 @@ impl Game {
     /// Gates on `CannotAddSecurityByEffect` (player-scoped, checked against
     /// `observer_player`). Routes through `WhenWouldLeaveBattleArea` then
     /// `WhenWouldPlaceInSecurity` replacements; bails (`false`) on any
-    /// non-`None` outcome or installed pending selection.
+    /// blocked move or installed pending selection. A pending move resumes
+    /// through the shared security-placement continuation.
     ///
     /// Used by `EffectContext::place_self_at_security` (Track E) — printed
     /// text "place this Digimon at the bottom of your security stack face
@@ -3465,142 +3467,10 @@ impl Game {
         face_up: bool,
         observer_player: PlayerId,
     ) -> bool {
-        use crate::enums::{EffectTiming, Zone};
-        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
-
-        if self
-            .modifiers
-            .player_has(observer_player, ModifierType::CannotAddSecurityByEffect)
-        {
-            return false;
-        }
-
-        let Some(permanent) = self
-            .player(target.player)
-            .battle_area
-            .get(target.index as usize)
-        else {
-            return false;
-        };
-        if permanent.card_sources.is_empty() {
-            return false;
-        }
-
-        let source_card = permanent.top_card().handle();
-        let cause = self.infer_effect_cause(player_id);
-        let leave_subject = ReplacementSubject::Permanent(target);
-        let leave_outcome = self.try_replace(
-            EffectTiming::WhenWouldLeaveBattleArea,
-            leave_subject,
-            cause,
-            Some(Zone::Security),
-        );
-        if self.pending_selection.is_some() || !matches!(leave_outcome, ReplacementOutcome::None) {
-            return false;
-        }
-
-        let place_subject = ReplacementSubject::Card(source_card, Zone::BattleArea);
-        let place_outcome = self.try_replace(
-            EffectTiming::WhenWouldPlaceInSecurity,
-            place_subject,
-            cause,
-            Some(Zone::Security),
-        );
-        if self.pending_selection.is_some() || !matches!(place_outcome, ReplacementOutcome::None) {
-            return false;
-        }
-
-        let mut permanent = self
-            .player_mut(target.player)
-            .battle_area
-            .remove(target.index as usize);
-
-        // Pop top card; if somehow empty (shouldn't happen — we checked
-        // above), bail without further state changes.
-        let Some(card) = permanent.card_sources.pop() else {
-            return false;
-        };
-
-        // Modifier cleanup BEFORE the source-trash dispatch — modifiers are
-        // keyed on `PermanentHandle`, which becomes invalid after `remove()`
-        // shifts indices. Mirrors `attach_tamer_to_digimon`.
-        self.clear_permanent_full(target);
-        self.modifiers.expire_player_on_permanent_leave(target);
-        // The `remove()` above shifted every higher-indexed permanent down;
-        // re-key the modifier registry and the in-flight attack's handles
-        // (EX8-028 pays a battle-area Digimon into security MID-ATTACK —
-        // without these, higher-indexed permanents' modifiers migrate to the
-        // wrong permanent and the attacker's handle goes stale, fizzling the
-        // attack before its security check).
-        self.modifiers
-            .shift_after_battle_area_remove(target.player, target.index);
-        self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
-        self.shift_effect_queue_after_battle_area_remove(target.player, target.index);
-
-        // Sources-below-top → each source's owner's trash, all at the same
-        // time: ONE `OnDigivolutionCardTrashed` event (§15-5-2). Nothing
-        // activates before this placement has finished (§15-8-3-2): the
-        // queue is drained (if no effect is resolving) after the top card
-        // reaches security.
-        let had_sources = !permanent.card_sources.is_empty();
-        for source in permanent.card_sources.drain(..) {
-            let owner = source.owner;
-            self.player_mut(owner).put_in_trash(source);
-        }
-        if had_sources {
-            for pid in 0..self.players.len() {
-                self.enqueue_triggered(
-                    EffectTiming::OnDigivolutionCardTrashed,
-                    TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                );
-            }
-        }
-
-        // Linked cards → controller's trash; fire OnLinkedCardTrashed once
-        // if any were present. Mirrors `attach_tamer_to_digimon`.
-        let had_linked = !permanent.linked_cards.is_empty();
-        for linked in permanent.linked_cards.drain(..) {
-            let owner = linked.owner;
-            self.player_mut(owner).put_in_trash(linked);
-        }
-        if had_linked {
-            for pid in 0..self.players.len() {
-                self.enqueue_triggered(
-                    EffectTiming::OnLinkedCardTrashed,
-                    TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                );
-            }
-        }
-
-        // Place top card in security at the requested position.
-        let face_up_key = card.card_index;
-        match position {
-            crate::enums::StackPosition::Top => {
-                self.player_mut(player_id).put_on_security_top(card);
-            }
-            crate::enums::StackPosition::Bottom => {
-                self.player_mut(player_id).insert_in_security(0, card);
-            }
-            crate::enums::StackPosition::Random => {
-                use rand::Rng;
-                let sec_len = self.player(player_id).security.len();
-                let idx = if sec_len == 0 {
-                    0
-                } else {
-                    self.rng.gen_range(0..=sec_len)
-                };
-                self.player_mut(player_id).insert_in_security(idx, card);
-            }
-        }
-        if face_up {
-            self.player_mut(player_id)
-                .face_up_security
-                .insert(face_up_key);
-        }
-        // The placement has finished: the trash observers enqueued above may
-        // activate now, unless an effect is still resolving (§15-8-3-2).
-        self.maybe_drain_effect_queue();
-        true
+        // Use the same resumable departure and placement receipts as selected
+        // permanents. In particular, tokens are removed by §4-21-5 without
+        // adding a security card or a face-up marker.
+        self.place_permanent_on_security(player_id, target, position, face_up, observer_player)
     }
 
     /// Place a battle-area Digimon with no digivolution cards at the bottom of

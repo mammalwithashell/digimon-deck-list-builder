@@ -192,10 +192,16 @@ impl Player {
     // into another area. A source-scan guard
     // (`player::tests::zone_entries_go_through_the_player_helpers`) keeps
     // direct pushes into those zones out of `src/`.
+    // Tokens are removed from the game on leaving the field (§4-21-5).
+    // Movement callers own the successful-placement receipts (§15-1-9);
+    // these storage boundaries must never turn them into actual additions.
 
     /// Put `card` on top of the trash. The trash is a public area; cards are
     /// placed face-up in it (§3-6-3).
     pub fn put_in_trash(&mut self, mut card: CardSource) {
+        if card.is_token {
+            return;
+        }
         card.face_down = false;
         self.trash.push(card);
     }
@@ -203,6 +209,9 @@ impl Player {
     /// As [`Self::put_in_trash`], at `index` (a rollback restoring a card to
     /// the position it was taken from, §3-6-2 lets the order change anyway).
     pub fn insert_in_trash(&mut self, index: usize, mut card: CardSource) {
+        if card.is_token {
+            return;
+        }
         card.face_down = false;
         self.trash.insert(index, card);
     }
@@ -218,12 +227,18 @@ impl Player {
     /// they may always look at (§3-5-3): a hand card carries no face-down
     /// placement.
     pub fn put_in_hand(&mut self, mut card: CardSource) {
+        if card.is_token {
+            return;
+        }
         card.face_down = false;
         self.hand.push(card);
     }
 
     /// As [`Self::put_in_hand`], at `index`.
     pub fn insert_in_hand(&mut self, index: usize, mut card: CardSource) {
+        if card.is_token {
+            return;
+        }
         card.face_down = false;
         self.hand.insert(index, card);
     }
@@ -248,6 +263,9 @@ impl Player {
 
     /// As [`Self::put_on_security_top`], at `index` (0 = bottom).
     pub fn insert_in_security(&mut self, index: usize, mut card: CardSource) {
+        if card.is_token {
+            return;
+        }
         if !card.is_opaque_placeholder {
             card.face_down = false;
         }
@@ -274,6 +292,9 @@ impl Player {
 
     /// As [`Self::put_on_deck_top`], at `index` (0 = bottom).
     pub fn insert_in_deck(&mut self, index: usize, mut card: CardSource) {
+        if card.is_token {
+            return;
+        }
         card.face_down = false;
         self.deck.insert(index, card);
     }
@@ -288,7 +309,7 @@ impl Player {
     /// Insert `cards` at `index` of the deck in order (0 = bottom), as one
     /// block: `cards[0]` ends at `index`.
     pub fn insert_all_in_deck(&mut self, index: usize, cards: impl IntoIterator<Item = CardSource>) {
-        for (offset, card) in cards.into_iter().enumerate() {
+        for (offset, card) in cards.into_iter().filter(|card| !card.is_token).enumerate() {
             self.insert_in_deck(index + offset, card);
         }
     }
@@ -303,6 +324,9 @@ impl Player {
 
     /// As [`Self::put_on_digi_egg_deck_top`], at `index` (0 = bottom).
     pub fn insert_in_digi_egg_deck(&mut self, index: usize, mut card: CardSource) {
+        if card.is_token {
+            return;
+        }
         card.face_down = false;
         self.digitama_deck.insert(index, card);
     }
@@ -313,7 +337,7 @@ impl Player {
         index: usize,
         cards: impl IntoIterator<Item = CardSource>,
     ) {
-        for (offset, card) in cards.into_iter().enumerate() {
+        for (offset, card) in cards.into_iter().filter(|card| !card.is_token).enumerate() {
             self.insert_in_digi_egg_deck(index + offset, card);
         }
     }
