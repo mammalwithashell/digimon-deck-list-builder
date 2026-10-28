@@ -128,6 +128,15 @@ def collect(root, now):
     coverage = read_json(gen_dir / 'archetype_coverage.json') or {}
     for name, count in coverage.get('appearances', {}).items():
         metrics[f'selfplay/archetype_appearances/{name}'] = count
+    opponents = read_json(gen_dir / 'opponent_coverage.json') or {}
+    for name, count in opponents.get('games_by_opponent', {}).items():
+        metrics[f'selfplay/opponent_games/{name}'] = count
+    for name, count in opponents.get('learner_appearances', {}).items():
+        metrics[f'selfplay/learner_archetype_appearances/{name}'] = count
+    for order, count in opponents.get('historical_learner_opening_order', {}).items():
+        metrics[f'selfplay/historical_learner_{order}'] = count
+    if opponents:
+        metrics['selfplay/learner_training_rows'] = opponents['training_rows']
     replay = read_json(gen_dir / 'replay_selection.json') or {}
     for source in replay.get('generations', []):
         metrics[f'replay/generation_{source["generation"]}_games_before_quarantine'] = source['games_before_quarantine']

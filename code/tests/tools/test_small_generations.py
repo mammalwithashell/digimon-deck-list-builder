@@ -107,6 +107,49 @@ def test_campaign_accepts_validated_parent(campaign):
     assert len(validate(*campaign)) == 12
 
 
+def historical_campaign(campaign):
+    from tools.search_opponents import CONTRACT_KEYS, checkpoint_entry, metadata_path, SCHEMA
+    root, plan = campaign
+    current = root / 'generation/gen0/model.onnx'
+    old = root / 'inputs/old.onnx'
+    old.write_text('old-model')
+    for model in (current, old):
+        metadata_path(model).write_text(json.dumps({**{key: key for key in CONTRACT_KEYS},
+                                                   'value_semantics': 'terminal_outcome'}))
+    pool = root / 'inputs/opponents.json'
+    pool.write_text(json.dumps(dict(schema=SCHEMA, selfplay_probability=0.5,
+                                   opponents=[checkpoint_entry('older-campaign', old)])))
+    plan.update(games=1200, seed=17, historical_opponents=dict(pool='inputs/opponents.json'))
+    for path in (old, metadata_path(old), metadata_path(current), pool):
+        plan['files'][path.relative_to(root).as_posix()] = sha256(path)
+    return root, plan
+
+
+def test_cloud_plan_forwards_pinned_opponents_without_reducing_search(campaign):
+    from tools.cloud_search.run_small_generations import generation_command
+    root, plan = historical_campaign(campaign)
+    assert len(validate(root, plan)) == 12
+    command = generation_command(root, plan)
+    assert command[command.index('--opponent-pool') + 1] == str(root / 'inputs/opponents.json')
+    assert command[command.index('--sims') + 1] == '320'
+    assert command[command.index('--worlds') + 1] == '4'
+    assert command[command.index('--eval-batch-size') + 1] == '4'
+
+
+def test_cloud_plan_requires_hashes_for_opponent_models_and_sidecars(campaign):
+    root, plan = historical_campaign(campaign)
+    del plan['files']['inputs/old.onnx.meta.json']
+    with pytest.raises(ValueError, match='Missing historical opponent input hash'):
+        validate(root, plan)
+
+
+def test_cloud_plan_counts_learner_appearances_not_historical_actor_appearances(campaign):
+    root, plan = historical_campaign(campaign)
+    plan['games'] = 1000
+    with pytest.raises(ValueError, match='learner appearances'):
+        validate(root, plan)
+
+
 @pytest.mark.parametrize('first,last', [(5, 8), (9, 10)])
 def test_completed_campaign_can_continue_with_logical_indices(campaign, first, last):
     root, plan = campaign
