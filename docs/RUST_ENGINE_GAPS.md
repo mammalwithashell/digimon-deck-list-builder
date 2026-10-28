@@ -6692,3 +6692,36 @@ CR 4.3 section 1-3-11-4 requires completing as much Assembly processing as neede
 `install_assembly_element` now makes the zero-pick gate optional only if the pending cost without Assembly is payable by that player, using `PlayCostAdjustments::final_cost` and `can_pay_memory_for`. The exact flag is also stored in `NonDslCountCappedStep` for clone/resume. Effect reductions and assigned bases are included. All material choices remain explicit; decline remains legal when the unreduced payment is affordable. The broad greedy material-preference workaround was removed.
 
 Evidence: the new required-payment Rust regression fails on the old engine; 36 `dsl::assembly_play` tests and 28 policy/cast-time/assignment controls pass after repair. Controls cover exact memory boundary, explicit legal material actions, cloned states, full-cost decline, effect reductions and assigned costs. Logs and original replay trace are under `runs/2026-10-23-assembly-payment-fix/` and `runs/2026-10-23-english-search/assembly-loop-trace.json`. This is simulator evidence, with no new DCGO confirmation or action/tensor contract expansion. The partial v2 search check is invalidated and preserved; full-run replay/restart evidence is recorded in the English search pilot report.
+
+## Token returned to hand is offered as a play the engine refuses [G-ENGINE-TOKEN-RETURNED-TO-HAND] — OPEN (2026-10-27)
+
+Found by the seat-balanced head-to-head panels of the cap-randomization
+generation experiment (`code/tools/policy_head_to_head.py`, seed 54207751,
+Toho Braves (P1) vs SW (P2), both the parent and the `full` child as P2 hit it
+on turn 13). Repro: `qa/engine-faults/2026-10-27-token-in-hand/recording.json`
+(`DigimonEnv.get_recording()` format, 286 actions; `context.json` has decks and
+seed). View the state with
+`digimon-engine-cli --pool implemented --cards-json data/cards.json replay <rec> --step 278 --show hand --player 1`.
+
+Symptom: P2's hand holds `TOKEN_KOTENKEN` (Kotenken Token, play cost 0) at
+hand index 9; `--show actions --player 1` lists "Play Kotenken Token from hand
+9" as legal, and `Game::step` refuses it with no state change, so the policy
+re-picks it until the no-op tripwire (`NoOpLoopError`, 8 repeats) ends the
+game. Board at that point: P1 Kaguyamon (EX12-065, suspended, attacked this
+turn), MarineBullmon; P2 Kunlun (BT26-104), Saneiketsu Invitation (EX12-071)
+as a placed option.
+
+Two defects, either of which would close the loop:
+
+1. **A token reached a hand.** CR 4.3 4-21-5: when a token leaves the field it is removed from
+   the game; it never enters hand, deck, trash or security. Some return-to-hand/bounce path (candidates on this board:
+   Kaguyamon EX12-065, Saneiketsu Invitation EX12-071, MarineBullmon) moved the
+   token card object into P2's hand instead of discarding it. The zone-move
+   facade for bounce should drop tokens (`is_token`) rather than append them.
+2. **Mask/execution mismatch.** The action mask treated the hand entry as a
+   playable 0-cost Digimon while play execution refused it. Whatever rule
+   execution applies (token card data not playable from hand) must be applied
+   by the mask too; rule 3 forbids the agent side from papering over this.
+
+Not scored in the experiment (`--on-engine-error skip` records the game as
+`incomplete`). No other engine fault appeared in 19,000 panel games.

@@ -309,3 +309,64 @@ a training generation. Driver: `code/tools/cap_randomization_generation.py`
   with `cap_eq` ≈ `full` means the lever is neutral per compute and only
   changes the games/positions mix. One generation from a weak parent is a
   small-effect regime, so a null here does not refute the lever at scale.
+
+### Result (generation finished 2026-10-27 19:00, panels 19:06–20:05)
+
+All 16 partitions completed (250 games each, 0 truncated). Compute and rows
+per arm (`report.json`; search seconds are the CLI's own timers, summed over
+partitions run 6-wide on one box, so they are relative not absolute):
+
+| Arm | Games | Search s | vs `full` | Rows (value) | Policy-target rows |
+|---|---|---|---|---|---|
+| `full` | 1000 | 45,018 | 1.00× | 89,487 | 89,487 |
+| `cap` | 1000 | 17,281 | 0.38× | 83,652 | 20,732 (24.8%) |
+| `cap_eq` | 3000 | 49,401 | 1.10× | 251,005 | 62,243 |
+
+The in-run cost ratio was 0.384, not the 0.36 the plan assumed, so `cap_eq`
+is an *equal-plus-10%* compute arm, not exactly equal. Trainer wall: 108 s /
+48 s / 144 s.
+
+Head-to-head (candidate score, 95% block interval, 2,112 games per panel =
+4 blocks × 132 ordered pairs × 4 seat/order games; `n` is scored games):
+
+| Candidate | Opponent | n | W–L | Score | 95% |
+|---|---|---|---|---|---|
+| `full` | parent | 2112 | 1104–1008 | 0.523 | 0.501–0.544 |
+| `cap` | parent | 2112 | 1114–998 | 0.527 | 0.506–0.549 |
+| `cap_eq` | parent | 2111 | 1157–954 | **0.548** | 0.528–0.568 |
+| parent | greedy | 2112 | 2046–66 | 0.969 | 0.961–0.976 |
+| `full` | greedy | 2112 | 2068–44 | 0.979 | 0.973–0.985 |
+| `cap` | greedy | 2112 | 2049–63 | 0.970 | 0.963–0.977 |
+| `cap_eq` | greedy | 2112 | 2065–47 | 0.978 | 0.971–0.984 |
+| `cap` | `full` | 2112 | 1071–1041 | 0.507 | 0.486–0.527 |
+| `cap_eq` | `full` | 2111 | 1092–1019 | 0.517 | 0.497–0.537 |
+
+Readings:
+
+- **Equal games: `cap` ≈ `full`.** Direct panel 0.507 (0.486–0.527); both
+  gain the same ~2.5 points over the parent. Discarding 75% of the policy
+  targets cost nothing measurable at this scale, for 0.38× the search
+  compute. This is the solid result.
+- **Equal(+10%) compute: `cap_eq` is the best child.** 0.548 vs parent
+  against `full`'s 0.523 (intervals overlap by ~1.6 points), and 0.517
+  (0.497–0.537) against `full` directly — suggestive of the KataGo claim,
+  not conclusive at one generation from a weak parent, and bought with 10%
+  more compute than `full`.
+- vs greedy is saturated (all ≥0.97) and cannot separate the arms; it only
+  shows no child regressed.
+- One generation here moves a policy ~2–5 points vs its parent, so the
+  per-update effect size is small; a multi-generation run is where 0.38×
+  per generation compounds (≈2.6 generations per `full` generation).
+
+**Decision:** adopt playout-cap randomization (`--full-search-fraction 0.25
+--cheap-sims 64`) for self-play generation; keep 320/4 at the full-search
+roots. Re-check after a few generations with the same seat-balanced panel.
+The phase budget (C1) still needs its own generation test; its 32-game match
+was inconclusive.
+
+**Engine fault found by the panels** (1 game, seed 54207751, same in both
+`cap_eq` panels; recorded under `eval/engine-faults/`): a `Kotenken Token`
+sat in player 2's **hand**, the mask offered "Play Kotenken Token from hand 9"
+and execution refused it — the no-op tripwire fired. Filed in
+`docs/RUST_ENGINE_GAPS.md` as `G-ENGINE-TOKEN-RETURNED-TO-HAND`. The game is
+recorded as `incomplete`, never scored (`--on-engine-error skip`).

@@ -92,6 +92,7 @@ def run(args) -> dict:
     from sb3_contrib import MaskablePPO
 
     from digimon_gym.agents.anchored_eval import play_one
+    from digimon_gym.digimon_gym import NoOpLoopError
     from model_contract import validate_checkpoint
 
     candidate = MaskablePPO.load(str(args.candidate), device="cpu")
@@ -104,9 +105,21 @@ def run(args) -> dict:
         rows = rows[: args.limit]
     started = time.perf_counter()
     games = []
+    incomplete = []
     for row in rows:
-        winner = play_one(candidate, opponent, row["candidate_deck"], row["opponent_deck"],
-                          row["seed"], profile)
+        try:
+            winner = play_one(candidate, opponent, row["candidate_deck"], row["opponent_deck"],
+                              row["seed"], profile)
+        except (NoOpLoopError, RuntimeError) as exc:
+            # An engine fault (mask/execution mismatch, safety cap) is evidence about
+            # the engine, not about either policy: it is never scored, only counted.
+            if args.on_engine_error != "skip":
+                raise
+            incomplete.append(dict(index=row["index"], block=row["block"], seed=row["seed"],
+                                   candidate_archetype=row["candidate_archetype"],
+                                   opponent_archetype=row["opponent_archetype"], error=str(exc)))
+            print(f"game {row['index']} incomplete (engine fault): {str(exc)[:160]}", flush=True)
+            continue
         score = 1.0 if winner == 1 else 0.0 if winner == 2 else 0.5
         games.append(dict(index=row["index"], block=row["block"], winner=winner, score=score,
                           candidate_archetype=row["candidate_archetype"],
@@ -125,6 +138,7 @@ def run(args) -> dict:
                 games=len(games), wins=sum(g["winner"] == 1 for g in games),
                 losses=sum(g["winner"] == 2 for g in games),
                 draws=sum(g["winner"] not in (1, 2) for g in games),
+                incomplete=len(incomplete), incomplete_games=incomplete,
                 score=mean, score_ci95=interval, per_candidate_archetype=per_arch,
                 elapsed_seconds=time.perf_counter() - started, game_log=games,
                 scope="deterministic masked policy, no search; four-game blocks per ordered "
@@ -141,11 +155,15 @@ def main(argv=None) -> int:
     p.add_argument("--seed", type=int, default=27102026)
     p.add_argument("--limit", type=int, default=0, help="debug: play only the first N scheduled games")
     p.add_argument("--progress", type=int, default=50)
+    p.add_argument("--on-engine-error", choices=["fail", "skip"], default="fail",
+                   help="skip: record an engine-faulted game as incomplete (unscored) and continue; "
+                        "set DIGIMON_EVAL_FAILURE_DIR to keep each fault's recording")
     args = p.parse_args(argv)
     result = run(args)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(result, indent=2), encoding="utf-8")
-    summary = {k: result[k] for k in ("candidate", "opponent", "games", "wins", "losses", "draws", "score", "score_ci95")}
+    summary = {k: result[k] for k in ("candidate", "opponent", "games", "wins", "losses", "draws", "incomplete",
+                                      "score", "score_ci95")}
     print(json.dumps(summary), flush=True)
     return 0
 

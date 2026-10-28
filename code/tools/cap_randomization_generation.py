@@ -157,7 +157,8 @@ def h2h_job(args, name: str, candidate: Path, opponent: str) -> dict:
     result_path.parent.mkdir(parents=True, exist_ok=True)
     command = [sys.executable, str(TOOLS / "policy_head_to_head.py"), "--candidate", str(candidate),
                "--opponent", opponent, "--decks", str(args.decks), "--out", str(result_path),
-               "--blocks-per-pair", str(args.blocks_per_pair), "--seed", str(args.seed)]
+               "--blocks-per-pair", str(args.blocks_per_pair), "--seed", str(args.seed),
+               "--on-engine-error", args.on_engine_error]
     with (args.out / "eval" / f"{name}.log").open("w", encoding="utf-8") as log:
         result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, env=os.environ.copy(), cwd=str(REPO_ROOT))
     if result.returncode != 0:
@@ -174,7 +175,7 @@ def stage_evaluate(args) -> dict:
     jobs["cap-vs-full"] = (models["cap"], str(models["full"]))
     with ThreadPoolExecutor(max_workers=args.jobs) as pool:
         results = dict(zip(jobs, pool.map(lambda kv: h2h_job(args, kv[0], *kv[1]), jobs.items())))
-    summary = {name: {k: r[k] for k in ("games", "wins", "losses", "draws", "score", "score_ci95")}
+    summary = {name: {k: r.get(k, 0) for k in ("games", "wins", "losses", "draws", "incomplete", "score", "score_ci95")}
                for name, r in results.items()}
     (args.out / "evaluate.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print(json.dumps(summary, indent=2), flush=True)
@@ -223,6 +224,8 @@ def main(argv=None) -> int:
     ap.add_argument("--batch-size", type=int, default=512)
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--blocks-per-pair", type=int, default=1)
+    ap.add_argument("--on-engine-error", choices=["fail", "skip"], default="skip",
+                    help="head-to-head games an engine fault aborts are recorded as incomplete, never scored")
     args = ap.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
     p = plan(args)
