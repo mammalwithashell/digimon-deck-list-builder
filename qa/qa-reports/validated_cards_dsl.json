@@ -16311,6 +16311,73 @@
         "INHERITED-ON-DELETION"
       ],
       "notes": "EX13 Adventure lane C: [OP][WD] 1 own Digimon gains Raid+Retaliation until opp turn ends; face-up + inherited [On Deletion] may play ADVENTURE Digimon/Tamer cost<=4 from trash free; Greymon-name/ADVENTURE Lv.4 alt cost 3. Standard Purple/Red Lv.4/4 circles come from cards.json."
+    },
+    "ST20-01": {
+      "card_name": "Koromon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-e",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_01.rs",
+      "test_count": 4,
+      "patterns": [
+        "INHERITED-CONDITIONAL-SELF-AURA"
+      ],
+      "notes": "Inherited [All Turns] +1000 DP while the carrier has [ADVENTURE]."
+    },
+    "ST20-08": {
+      "card_name": "Kabuterimon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-e",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_08.rs",
+      "test_count": 9,
+      "patterns": [
+        "FREE-PLAY-FROM-HAND",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "[WD] <=1 Tamer -> may play ADVENTURE Tamer free; inherited <Piercing>; green Lv3 circle + Lv3 [ADVENTURE] box cost 2."
+    },
+    "ST21-06": {
+      "card_name": "MagnaAngemon",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-e",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_06.rs",
+      "test_count": 10,
+      "patterns": [
+        "PLACE-PERMANENT-IN-SECURITY",
+        "FORMULA-DP-CAP",
+        "ADVENTURE-ALLIANCE-OBSERVER",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "[OP][WD] place opp Digimon DP<=6000+2000*floor(tamer colours/2) as top security (mandatory); shared ADVENTURE Alliance observer; inherited <Alliance>."
+    },
+    "ST21-15": {
+      "card_name": "Gennai's House",
+      "validated_date": "2026-10-27",
+      "report": "ex13-adventure-lane-e",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Adventure",
+      "yaml_path": "code/digimon-engine/cards/st21/ST21-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st21/st21_15.rs",
+      "test_count": 9,
+      "patterns": [
+        "USE-REQUIREMENT-COLOR-WAIVER",
+        "SECURITY-ZONE-AURA",
+        "OPTION-SELF-TO-SECURITY",
+        "SECURITY-PLAY-FROM-TRASH"
+      ],
+      "notes": "use_requirement no_face_up_security_named(name_is); [Security][Your Turn] +3000 to own Lv3+; [Main] bottom security to hand + self face-up bottom; [Security] may play Lv3 from trash free."
     }
   }
 }
